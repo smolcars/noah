@@ -38,6 +38,14 @@ class HomeRulesTest {
         assertNull(HomeRules.fiat(1000, null, "USD", Locale.US, false))
         assertNull(HomeRules.fiat(1000, Double.NaN, "USD", Locale.US, false))
     }
+    @Test fun visibleFiatWaitsForBothBalanceAndPriceInEitherArrivalOrder() {
+        assertNull(HomeRules.fiat(null, 100_000.0, "USD", Locale.US, false))
+        assertNull(HomeRules.fiat(1000, null, "USD", Locale.US, false))
+        assertEquals("$1.00", HomeRules.fiat(1000, 100_000.0, "USD", Locale.US, false))
+        assertEquals("$0.00", HomeRules.fiat(0, 100_000.0, "USD", Locale.US, false))
+        assertEquals("$ ••••", HomeRules.fiat(null, null, "USD", Locale.US, true))
+    }
+
     @Test fun backupFailuresAreRetryableAndPendingSuccessIsHidden() {
         val failed = HomeRules.backup(PersistedBackupState(lastBackupStatus = "failed"), 0, Locale.US)!!
         assertTrue(failed.retry); assertTrue(failed.failed)

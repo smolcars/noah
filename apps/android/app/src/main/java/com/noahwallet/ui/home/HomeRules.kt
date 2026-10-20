@@ -9,8 +9,8 @@ import com.noahwallet.formatting.FiatCurrency
 object HomeRules {
     private val symbols = mapOf("USD" to "$", "EUR" to "€", "GBP" to "£", "CAD" to "CA$", "CHF" to "CHF", "AUD" to "A$",
         "JPY" to "¥", "BRL" to "R$", "KRW" to "₩", "INR" to "₹", "MXN" to "MX$", "SGD" to "S$")
-    fun fiat(sats: Long, price: Double?, currency: String, locale: Locale, hidden: Boolean): String? =
-        if (hidden) "${symbols.getValue(currency)} ••••" else price?.takeIf { it.isFinite() && it > 0 }?.let { FiatCurrency.display(sats, it, currency, locale) }
+    fun fiat(sats: Long?, price: Double?, currency: String, locale: Locale, hidden: Boolean): String? =
+        if (hidden) "${symbols.getValue(currency)} ••••" else sats?.let { balance -> price?.takeIf { it.isFinite() && it > 0 }?.let { FiatCurrency.display(balance, it, currency, locale) } }
     const val successMillis = 5_000L
     data class Banner(val title: String, val message: String, val failed: Boolean = false, val retry: Boolean = false)
     fun backup(state: PersistedBackupState, now: Long, locale: Locale): Banner? = when {

@@ -87,7 +87,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                     style = MaterialTheme.typography.labelMedium)
                 com.noahwallet.ui.home.HomeBanners(model, refreshRevision)
                 val locale = java.util.Locale.forLanguageTag(model.localeIdentifier)
-                val fiat = com.noahwallet.ui.home.HomeRules.fiat(model.summary?.balance?.totalSats?.toLong() ?: 0, price, currency, locale, model.hidden)
+                val fiat = com.noahwallet.ui.home.HomeRules.fiat(model.summary?.balance?.totalSats?.toLong(), price, currency, locale, model.hidden)
                 if (fiat != null) Text(fiat, style = MaterialTheme.typography.headlineMedium)
                 else CircularProgressIndicator(Modifier.size(24.dp))
                 Text(if (model.hidden) "••••" else model.summary?.let {

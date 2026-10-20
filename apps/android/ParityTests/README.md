@@ -96,3 +96,78 @@ See `evidence/results.json` for final counts and `evidence/device-cleanup.txt` f
 AVD identity, shutdown and deletion. PNG evidence includes live Home/privacy,
 battery launch/system dialog, QR code/missing/scan/Send routing, notification
 requirement, status banners, pending-round details, and UnifiedPush selection/retry.
+
+## Round 1 review fixes (base `17e7b76f`)
+
+Six commits address the Android Home/launch/gate/QR/version findings:
+
+- Round progression observes background activity plus a completion revision. Busy
+  work pauses queries; completion immediately retries even if a job starts and
+  ends between polls, the first query failed, or the previous result was empty.
+  Known active rounds keep their 30-second timer across transient errors and
+  refresh/foreground; inactive Home has no round timer.
+- Home checks the version independently of registration, with its own mutex and
+  observable result. Failure remains cached and warning-only. A held version
+  response cannot block registration or Emergency Email.
+- Backup snapshots publish after persistence (and reset after wallet deletion).
+  Boarding already publishes through the existing Compose completion state.
+  Home observes both instead of decoding backup state every second. Success
+  banners use one-shot five-second deadlines and refresh their clock on foreground,
+  matching the iOS expiry semantics; historical outcomes do not replay.
+- The hub QR exposes one accessible button, “Copy Lightning address”. The device
+  check decodes the QR, verifies button semantics and copies the literal address.
+- Activity startup awaits model/services construction on IO before attaching UI.
+  Ordered recovery, seed/launch decisions, wallet opening, status queries and
+  auth-token calls run on IO. Recovery eligibility is a snapshot, with existing
+  action-time safety validation retained. Permission history uses `apply()` on IO;
+  battery persistence/sync and UnifiedPush discovery/selection/register are awaited
+  on IO before their results advance the UI. Biometric invalidation during startup
+  is retained. Debug launches enable thread disk-read/write/network StrictMode
+  with `penaltyLog()`; checks are never suppressed.
+- Visible fiat waits for both balance and price. A loaded zero balance still
+  renders zero; hidden fiat retains the persisted currency symbol without either.
+
+Verification:
+
+- The exact full command above ran once: **2,880 tests / 82 suites**, zero
+  failures/errors/skips; regtest debug APK built. A final review then added a
+  regression for a failed first query after refresh/foreground with known active
+  rounds and moved Home query preflights to IO. The final focused command covered
+  Home, backup coordinator, all server tests, launch and gate rules: **71 tests /
+  10 suites**, zero failures/errors/skips, and rebuilt the APK. The full suite was
+  not repeated after that narrow follow-up.
+- **Four distinct device checks passed** across focused runs: interrupted recovery
+  ahead of gates/Home, notification actions + battery Skip, QR accessibility/copy,
+  and non-GMS distributor selection + timeout/retry. Private wallet preparation
+  also passed (no phrase displayed and no payment submitted); initialized launch,
+  battery Skip and Home were checked live. The snapshot helper's UiAutomation
+  connection initially conflicted with instrumentation; stopping that helper on the
+  owned AVD resolved the harness conflict. QR semantics were corrected against
+  the device check before its passing run.
+- Only `NoahAndroidFixR1_5598`, explicitly launched on port **5598**, was used.
+  Non-GMS was exercised by disabling Play Services on that AVD. Its identity was
+  confirmed with `adb -s emulator-5598 emu avd name`, then it was shut down; the
+  missing device and closed console port were confirmed before deleting the AVD.
+  Both its `.avd` directory and `.ini` were confirmed absent. Other emulators,
+  the physical device, simulators and Docker were not operated.
+
+StrictMode findings and remaining scope:
+
+- The first fresh cold launch logged **32 disk-read violations** from service
+  construction (scratch sweep, wallet/log/seed-store setup, HTTP client setup)
+  and restore-journal checks. After moving those calls, fresh launch and the
+  focused recovery/battery/UnifiedPush paths logged **zero violations**.
+- An initialized-wallet sample initially logged 55 violations. Moving the shared
+  wallet-open and token entrypoints to IO removed the direct seed/auth work.
+  A subsequent initialized-wallet sample still logged **37 disk violations**
+  through the existing Send observer and recurring executor: the Send reservation
+  suspension check constructs SettingsStorage (`SendRuntime.kt:25` →
+  `WalletSession.kt:474`); recurring readiness/binding reads wallet files and
+  inspects/copies the database (`RecurringRuntime.kt:28`, `RecurringStore.kt:89`);
+  recurring refresh writes widget preferences (`RecurringRuntime.kt:41` →
+  `WidgetDataWriter.kt:35`). These require changes in the explicitly excluded
+  Send/Recurring execution internals, so they remain open. This is **not** a clean
+  initialized-launch StrictMode claim or a claim that the earlier ANR is resolved.
+- Actual distributor endpoint delivery, physical notification gating, funded
+  rounds/boarding and ANR performance profiling were not repeated. No iOS,
+  Send/Recurring/Onchain internals, scan-lock behavior or EAN-13 support changed.

@@ -197,6 +197,9 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] BatteryOptimizationScreen: after email (or UnifiedPush), one-time initialized-wallet fallback, per-app exemption/list/app-settings fallback, foreground auto-continue and persisted Skip — Android
 - [x] UnifiedPushScreen: non-GMS onboarding and Settings, saved/connected distributor selection, endpoint polling/copy, backend registration, Skip/Continue — Android (connector storage and `noah-<variant>` preserved; deliberate improvement: 30 s timeout permits retry instead of leaving RN’s spinner stuck)
 
+- [x] Android M1 round-1 scoped fixes: background-job completion resumes Home rounds (including jobs between polls and refresh/foreground query failures); independent cached version check; observable backup/boarding status with one-shot 5 s expiry; accessible QR copy button; awaited IO startup/recovery/gates/token calls and debug StrictMode; fiat waits for balance + price. Full JVM/APK command once: 2,880 tests / 82 suites / zero failures; final follow-up: 71 focused tests / 10 suites + rebuilt APK; four distinct device checks and private setup passed; owned port-5598 AVD identity/shutdown/deletion verified — `apps/android/ParityTests/README.md`.
+- [ ] Android initialized-launch StrictMode follow-up outside M1 round-1 scope: Send observer reservation preflight and recurring readiness/binding/database inspection/widget writes still run on main (37 violations in the follow-up sample). Fresh launch and focused recovery/battery/UnifiedPush paths are clean; earlier ANR is not claimed resolved. Requires the explicitly excluded Send/Recurring execution changes; details in `apps/android/ParityTests/README.md`.
+
 ## M2 — Receive
 - [x] ReceiveScreen (BIP-321 unified QR, amount/description sheet, copy sheet, share, completion subscriptions) — iOS
 - [x] ReceiveSuccessScreen + animation — iOS
