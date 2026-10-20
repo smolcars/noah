@@ -3,6 +3,107 @@
 Initial implementation base: `feat/native-rewrite` at `1aa9a61852c7e06797e729ee90b49dfec802b6d6`.
 Kotlin / Compose, API 24 minimum, bark-bolt-ffi **0.4.0**.
 
+## Durable occurrence settlement (2026-10-20)
+
+Base: `feat/native-rewrite` at `7e88fdd8`. This supersedes the earlier retained
+Send-result cache and the consume-before-history tradeoff documented below.
+
+The recurring journal is now **version 3**. Each current occurrence keeps its
+wallet binding (fingerprint, network, local instance), schedule ID/revision, plan,
+marker time and original policy snapshot. Its `terminal` value contains a stable
+`settlementID`, the complete exact Send attempt, submission and wallet-load
+`generation`/`walletGeneration`, outcome and original message/time. The attempt
+contains `recurringAttemptID`, the occurrence key, payment and quote amount/fee,
+and the receipt's exact txid/hash/movement or proven Ark-return evidence. Unknown
+amounts/fees remain unknown rather than being manufactured from history.
+
+Send durably saves this evidence using the existing atomic replacement, file-sync
+and directory-sync writer **before publishing a terminal result**. Live Send
+startup installs the handoff before loading restored receipts. Failed handoff
+keeps Send blocked with its original receipt. Done acknowledges only the UI/Send
+slot; the occurrence proof survives a restart, another Send and a failed policy
+write. An audited override also cannot erase a proven receipt before handoff.
+Settlement never obtains its result from Send or an in-memory cache.
+
+Settlement advances through separate durable writes:
+
+1. `resolved` and `consumed` plus the existing timestamp/index watermarks.
+2. The paid/failed policy row through the policy ledger's write-ahead record,
+   keyed by `settlementID`. The ledger retains the pending row and exact previous
+   digest until settings persistence succeeds. Recovery can finish only that
+   unfinished predecessor; it cannot repair a later rollback or undo a pause.
+3. `historyApplied`, after the row is durable. A crash after row persistence but
+   before this flag uses the ledger key to avoid recording the run twice.
+4. `released`, after history application is complete. Send may already have been
+   acknowledged/reused once terminal evidence was durable; cleanup still checks
+   the exact attempt ID and both generations before touching a visible receipt.
+
+Cancellation and a different policy revision are never resurrected or advanced.
+Original live-result notifications still describe the paid policy. Suspension,
+failure/stop latches, storage health, explicit reapproval, lifecycle admission,
+wallet binding and normal Send exact-txid recovery rules remain in place.
+Ambiguity remains stopped and never retries automatically. Audited ambiguity
+skips remain released after restart and cannot be changed back to uncertainty.
+The result-generation map and transient settlement-result API have been removed.
+
+Old v2 pending attempts can acquire exact proof from their original Send receipt
+and upgrade in place. Old resolved/consumed/application claims cannot establish
+whether paid history was written: those scopes retain their evidence and show
+`needs_attention` through the existing legacy-history message. No paid count is
+guessed. Earlier v1/dictionary uncertainty, corrupt/unknown-version quarantine,
+failed writes and explicit approval requirements retain their fail-closed rules.
+
+Permanent regression suites: `RecurringSettlementDurabilityTest` (**6 JUnit
+tests**) and `RecurringSettlementCrashTest` (**5 JUnit tests**, including four
+post-fsync crash boundaries). The four original round-eight probes failed on the
+base: restarted Done, replacement Send, the consumed/application claim and five
+stale generations. They now pass. Expanded cases additionally cover failed
+terminal writes (including an attempted override), old-v2 pending/claimed
+journals, explicit ambiguity override after restart, policy write-ahead before
+settings persistence, the policy-row-before-history-flag window, completed-row
+rollback, repeated recovery and exact-once paid history. The manual Send case
+submits one recurring payment and one intentional manual payment; recovery adds
+no submission. Successful-occurrence cases assert one paid count/history run.
+Existing settlement, journal/version, loading and valid-proof fixtures were
+updated for v3 and for Send being releasable before consumption.
+
+Final focused verification: **2,500 tests / 50 suites**, zero failures/errors/skips.
+The required full command ran once after the last Android source/test change:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+**3,504 tests / 125 suites passed**, zero failures/errors/skips; regtest APK assembly
+succeeded in the same **2m 55s** invocation. Logs, baseline/final XML and summary:
+`/private/tmp/noah-durability-48f6-android-*`.
+
+Finding locations in this tree:
+
+- Restarted Done: `SendController.kt:38` restores through the handoff;
+  `SendController.kt:244` cannot remove untransferred evidence.
+- Replacement Send: `RecurringJournal.kt:128` owns the terminal proof;
+  `SendController.kt:191` saves it before publishing the outcome.
+- Interrupted consumption/history: `RecurringExecutor.kt:233`,
+  `RecurringStore.kt:53`, `RecurringPolicyLedger.kt:77` and `:86` replay the
+  pending row, retain its idempotency key and finish the separate journal steps.
+- Stale generations: `SendController.kt:8` has no result cache;
+  `SendController.kt:164` releases only the exact ID and both generations.
+
+Commits (each carries the requested GPT-6.1 Sol co-author):
+
+- `5cfdc681` feat(android): journal recurring terminal evidence and settlement steps
+- `9feef525` fix(android): hand recurring Send outcomes to durable occurrence records
+- `c5e0c62f` fix(android): replay recurring consumption and paid history separately
+- `ec29f2fe` refactor(android): remove transient recurring result generations
+- `78ad23e0` fix(android): preserve settlement evidence through audited overrides
+- `00de709f` test(android): cover recurring settlement crash and restart boundaries
+
+Crash/death boundaries are deterministic fault injection and fresh-instance
+recovery, not real power cuts or funded-device kills. No Android emulator,
+physical phone, Docker, server or RN client was used or changed. The task-owned
+iOS simulator and build cleanup are recorded in the iOS notes.
+
 ## Done before submission returns (2026-10-20)
 
 Base `a184db6b`. The iOS review's early-Done race also reproduces on Android

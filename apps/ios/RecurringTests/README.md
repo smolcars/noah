@@ -3,6 +3,133 @@
 Implementation base: `feat/native-rewrite` at `cb802af7` (round-8 Send audit).
 Swift 6, iOS 18 minimum, bark-bolt-ffi **0.4.0**.
 
+## Durable occurrence settlement (2026-10-20)
+
+Base: `feat/native-rewrite` at `7e88fdd8`. This supersedes the earlier retained
+Send-result cache and the consume-before-history tradeoff documented below.
+
+The recurring journal is now **version 3**. Each current occurrence keeps its
+wallet binding (fingerprint, network, local instance), schedule ID/revision, plan,
+marker time and original policy snapshot. Its `terminal` value contains a stable
+`settlementID`, the complete exact Send attempt, submission and wallet-load
+`generation`/`walletGeneration`, outcome and original message/time. The attempt
+contains `recurringAttemptID`, the occurrence key, payment and quote amount/fee,
+and the receipt's exact txid/hash/movement or proven Ark-return evidence. Unknown
+amounts/fees remain unknown rather than being manufactured from history.
+
+Send durably saves this evidence using the existing atomic replacement, file-sync
+and directory-sync writer **before publishing a terminal result**. Live Send
+startup installs the handoff before loading restored receipts. Failed handoff
+keeps Send blocked with its original receipt. Done acknowledges only the UI/Send
+slot; the occurrence proof survives a restart, another Send and a failed policy
+write. An audited override also cannot erase a proven receipt before handoff.
+Settlement never obtains its result from Send or an in-memory cache.
+
+Settlement advances through separate durable writes:
+
+1. `resolved` and `consumed` plus the existing timestamp/index watermarks.
+2. The paid/failed policy row through the policy ledger's write-ahead record,
+   keyed by `settlementID`. The ledger retains the pending row and exact previous
+   digest until settings persistence succeeds. Recovery can finish only that
+   unfinished predecessor; it cannot repair a later rollback or undo a pause.
+3. `historyApplied`, after the row is durable. A crash after row persistence but
+   before this flag uses the ledger key to avoid recording the run twice.
+4. `released`, after history application is complete. Send may already have been
+   acknowledged/reused once terminal evidence was durable; cleanup still checks
+   the exact attempt ID and both generations before touching a visible receipt.
+
+Cancellation and a different policy revision are never resurrected or advanced.
+Original live-result notifications still describe the paid policy. Suspension,
+failure/stop latches, storage health, explicit reapproval, lifecycle admission,
+wallet binding and normal Send exact-txid recovery rules remain in place.
+Ambiguity remains stopped and never retries automatically. Audited ambiguity
+skips remain released after restart and cannot be changed back to uncertainty.
+The result-generation map and transient settlement-result API have been removed.
+
+Old v2 pending attempts can acquire exact proof from their original Send receipt
+and upgrade in place. Old resolved/consumed/application claims cannot establish
+whether paid history was written: those scopes retain their evidence and show
+`needs_attention` through the existing legacy-history message. No paid count is
+guessed. Earlier v1/dictionary uncertainty, corrupt/unknown-version quarantine,
+failed writes and explicit approval requirements retain their fail-closed rules.
+
+Permanent regressions: `RecurringSettlementDurabilityTests` (**7 definitions /
+8 expanded cases**) and `RecurringSettlementCrashTests` (**4 definitions /
+8 expanded cases**). The four supplied review probes failed on the base:
+**4/4 failed with 6 issues**, covering restarted Done, a replacement Send,
+consumption/application before policy persistence and five stale generations.
+Their permanent versions now pass, with exact-once paid count/history and no
+recovery submission. The manual Send case makes one recurring submission plus
+one intentional manual submission. Expanded cases include every post-fsync
+journal step, a failed terminal write/attempted override, ledger-before-settings
+and row-before-history-flag crashes, old v2 upgrade/attention, explicit ambiguity
+override after restart, later rollback and repeated recovery.
+
+A final synchronous publication regression failed **1/1 before** the iOS restore
+ordering correction and **passed 1/1 after**. It asserts that the restored success
+state is still unpublished inside the evidence sink. Android already constructs
+its loaded outcome locally and publishes only after the handoff returns.
+
+Final focused verification before that ordering correction passed
+**72 definitions / 140 expanded passes / 8 suites**, zero failures/skips.
+A broader **253-definition / 55-suite** run exposed the byte-stability check
+for unchanged ambiguous evidence; unchanged attempts now retain their original
+evidence bytes and generation. The last focused run passed that check too.
+
+The completed full **NoahTests** run happened once after the last iOS source/test
+change, with no exclusions: **714 definitions / 146 suites**, **690 passed /
+24 opt-in skipped / zero failed**; **1,451 expanded passes / 24 skips**, **267.521
+seconds** of test execution. One earlier full invocation was interrupted before
+completion to correct synchronous restored-success publication and add its
+regression; its partial result is not included in these counts. The final full
+run included both new regression suites: **11 definitions / 16 expanded passes**.
+
+All Xcode runs used Nix, XcodeGen, normal code signing,
+`ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two jobs, disabled parallel testing and
+`-collect-test-diagnostics never`, with task-owned DerivedData under `/private/tmp`.
+Individual method selectors included their trailing `()`. The final full selector
+was `-only-testing:NoahTests`. Logs and exported summary/test-tree JSON remain at
+`/private/tmp/noah-durability-48f6-ios-*`; Android's complete JVM/APK result is in
+its corresponding notes.
+
+Finding locations in this tree:
+
+- Restarted Done: `SendPayment.swift:207` and `:262` transfer the recovered
+  receipt before publishing it; `SendPayment.swift:492` cannot discard a receipt
+  whose occurrence handoff has failed.
+- Replacement Send: `RecurringJournal.swift:174` owns the terminal evidence;
+  `RecurringExecutor.swift:305` reads only that record for settlement.
+- Interrupted consumption/history: `RecurringStore.swift:166` and
+  `RecurringPolicyLedger.swift:107` / `:117` replay the exact pending policy row;
+  `RecurringExecutor.swift:305` writes consumption, history completion and
+  release separately.
+- Stale generations: `SendPayment.swift:191` no longer retains a result map or
+  transient result API; `SendPayment.swift:309` releases only the exact attempt
+  and both generations.
+
+Commits (each carries the requested GPT-6.1 Sol co-author):
+
+- `2ad792f4` feat(ios): journal recurring terminal evidence and settlement steps
+- `da18a4bb` fix(ios): hand recurring Send outcomes to durable occurrence records
+- `574f29e6` fix(ios): replay recurring consumption and paid history separately
+- `aeacd892` refactor(ios): remove transient recurring result generations
+- `6d8a9103` fix(ios): preserve settlement evidence through audited overrides
+- `1bfbb1dc` test(ios): cover recurring settlement crash and restart boundaries
+- `9631f508` fix(ios): publish restored success only after durable occurrence handoff
+
+Owned iPhone 17 / iOS 27.0 simulator **Noah Settlement Durability Sol 48f6**,
+UDID **7400C6D1-FEF9-4454-9048-5E144093FB91**, was shown in T3's Device panel.
+Its exact identity/runtime and **Shutdown** state were confirmed before deletion;
+absence was confirmed afterward. Exported every result summary/test tree, then
+removed owned DerivedData and all **10** result bundles. Cleanup receipt:
+`/private/tmp/noah-durability-48f6-cleanup.json`. No owned build/test process
+remains; other agents' builds and shared daemons/devices were left alone.
+
+Real power cuts, funded payments, live UI acceptance and physical-device process
+kills were not induced. Crash evidence uses deterministic post-fsync/write-failure
+injection and fresh controller/store/journal instances. No Docker command was
+issued. Server, RN client, translation lookups and Esplora settings were untouched.
+
 ## Done before submission returns (2026-10-20)
 
 Base `a184db6b`. Send freezes an immutable occurrence key, submission/wallet-load

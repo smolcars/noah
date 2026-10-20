@@ -1,5 +1,18 @@
 # Android native Send (M3) verification
 
+## Recurring occurrence handoff (2026-10-20)
+
+Base `7e88fdd8`. A recurring terminal receipt is now copied into its occurrence's
+fsynced journal before success is published or the shared Send slot can be
+cleared/reused. Restored receipts use the same handoff. Handoff failure preserves
+the receipt and blocks both Done and destructive removal until its evidence is
+safe. Done and an unrelated Send cannot affect recurring settlement, which reads
+only the occurrence journal. The retained-result cache/API is gone; normal Send
+submission, exact-txid journaling/recovery and chain-status evidence are unchanged.
+Full format, crash-boundary tests, counts and cleanup are recorded in
+[RecurringTests](../RecurringTests/README.md#durable-occurrence-settlement-2026-10-20).
+
+
 ## Real Pixel 6 Send (2026-10-20)
 
 Regtest debug APK on the Pixel 6 (`26011FDF600649`, Android 17), installed with
