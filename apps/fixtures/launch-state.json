@@ -110,6 +110,11 @@
       "name": "corrupt secondary seed source with DB",
       "input": {"seed": "unavailable", "walletDatabaseExists": true},
       "expected": "secureStorageUnavailable"
+    },
+    {
+      "name": "valid seed disagrees with DB fingerprint: SDK preflight blocks recovery",
+      "input": { "seed": "unavailable", "walletDatabaseExists": true, "reason": "walletFingerprintMismatch" },
+      "expected": "secureStorageUnavailable"
     }
   ]
 }

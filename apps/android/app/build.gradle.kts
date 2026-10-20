@@ -47,7 +47,8 @@ android {
     defaultConfig {
         minSdk = 24
         targetSdk = 37
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = if (providers.gradleProperty("noahRNUpgradeBaseline").orNull == "true")
+            "com.noahwallet.services.RNPushBaseline" else "androidx.test.runner.AndroidJUnitRunner"
         // Regtest stack host: the emulator's alias for the Mac by default; a
         // phone uses 127.0.0.1 with `adb reverse` (-PnoahRegtestHost=127.0.0.1).
         val regtestHost = providers.gradleProperty("noahRegtestHost").orElse("10.0.2.2").get()

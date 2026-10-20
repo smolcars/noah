@@ -1,0 +1,9 @@
+appId: com.noahwallet.regtest
+---
+- extendedWaitUntil:
+    visible: "Add to home screen"
+    timeout: 10000
+- tapOn: "Add to home screen"
+- pressKey: HOME
+
+# The launcher may place it on another page; dumpsys and native assertions check ID/component.

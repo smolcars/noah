@@ -1,0 +1,5 @@
+appId: com.noahwallet.regtest
+---
+- tapOn:
+    id: "send-success-done"
+- tapOn: "Home"

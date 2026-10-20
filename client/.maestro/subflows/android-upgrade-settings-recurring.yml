@@ -1,0 +1,68 @@
+# Existing funded RN wallet. No clearState, restore or developer storage injection.
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Home"
+- tapOn: "Open settings"
+- tapOn:
+    id: "settings-bitcoinUnit"
+- tapOn:
+    id: "bitcoin-unit-option-sats"
+- tapOn:
+    id: "settings-currency"
+- tapOn:
+    id: "currency-option-EUR"
+- scrollUntilVisible:
+    element:
+      id: "settings-recurring-payments"
+    direction: DOWN
+- tapOn:
+    id: "settings-recurring-payments"
+- tapOn:
+    id: "recurring-new-button"
+- tapOn:
+    id: "recurring-label-input"
+- inputText: "Android upgrade safety"
+- tapOn:
+    id: "recurring-recipient-input"
+- inputText: "upgrade@example.com"
+- tapOn:
+    id: "recurring-amount-input"
+- inputText: "1234"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "recurring-start-date-input"
+    direction: DOWN
+- tapOn:
+    id: "recurring-start-date-input"
+- eraseText: 20
+- inputText: "2099-01-01"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "recurring-save-button"
+    direction: DOWN
+- tapOn:
+    id: "recurring-save-button"
+- extendedWaitUntil:
+    visible: "Android upgrade safety"
+    timeout: 15000
+- tapOn:
+    id: "recurring-pause-.*"
+- assertVisible: "Paused"
+- tapOn:
+    id: "recurring-payments-back-button"
+# RN's navigate-to-list leaves the editor and original list below the new list.
+- pressKey: BACK
+- tapOn:
+    id: "recurring-payments-back-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-back-button"
+    direction: UP
+- tapOn:
+    id: "settings-back-button"
+- tapOn: "Home"
+- tapOn: "Hide wallet balance"
+- assertVisible: "Show wallet balance"

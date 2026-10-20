@@ -1,0 +1,46 @@
+appId: com.noahwallet.regtest
+---
+# Requires Ark funds and no onchain funds. Does not start an exit.
+- launchApp
+- setOrientation: PORTRAIT
+- tapOn: "Home"
+- tapOn: "Open settings"
+- scrollUntilVisible:
+    element:
+      id: "settings-emergencyExit"
+    direction: DOWN
+- tapOn:
+    id: "settings-emergencyExit"
+- scrollUntilVisible:
+    element:
+      text: "Deposit Onchain Funds"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Deposit Onchain Funds"
+- extendedWaitUntil:
+    visible:
+      id: "exit-deposit-copy-button"
+    timeout: 15000
+- setOrientation: LANDSCAPE_LEFT
+- scrollUntilVisible:
+    element:
+      id: "exit-deposit-copy-button"
+    direction: DOWN
+- tapOn:
+    id: "exit-deposit-copy-button"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: "Address copied"
+# Android's clipboard toast outlasts the 2s label; the harness checks the clipboard.
+- setOrientation: PORTRAIT
+- scrollUntilVisible:
+    element:
+      text: "Close deposit details"
+    direction: UP
+- tapOn: "Close deposit details"
+- pressKey: BACK
+- pressKey: BACK
+- assertVisible:
+    id: "home-content"

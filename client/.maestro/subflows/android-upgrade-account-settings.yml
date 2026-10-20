@@ -1,0 +1,23 @@
+appId: com.noahwallet.regtest
+---
+- tapOn: "Open settings"
+- tapOn:
+    id: "settings-profile"
+- tapOn: "Edit name"
+- tapOn:
+    id: "profile-name-input"
+- eraseText: 80
+- inputText: "Android upgrade"
+- tapOn: "Save name"
+- extendedWaitUntil:
+    visible: "Edit name"
+    timeout: 15000
+- tapOn:
+    id: "profile-back-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-back-button"
+    direction: UP
+- tapOn:
+    id: "settings-back-button"
+- tapOn: "Dismiss emergency email prompt"

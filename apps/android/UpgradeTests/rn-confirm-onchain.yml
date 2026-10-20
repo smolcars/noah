@@ -1,0 +1,18 @@
+appId: com.noahwallet.regtest
+---
+- launchApp
+- tapOn: "Home"
+- extendedWaitUntil:
+    visible: "No, turn off"
+    timeout: 60000
+- tapOn: "No, turn off"
+- assertNotVisible: "Yes, board"
+- tapOn: "Show wallet balance"
+- extendedWaitUntil:
+    visible: "125,000.*"
+    timeout: 60000
+- tapOn: "Toggle balance details"
+- assertVisible: "30,000.*"
+- tapOn: "Toggle balance details"
+- tapOn: "Hide wallet balance"
+- runFlow: ../../../client/.maestro/subflows/android-upgrade-account-settings.yml

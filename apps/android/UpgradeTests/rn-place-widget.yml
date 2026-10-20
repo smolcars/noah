@@ -1,0 +1,19 @@
+# Pixel Launcher (Google APIs image). Place RN's widget before replacing the APK.
+appId: com.noahwallet.regtest
+---
+- pressKey: HOME
+- longPressOn:
+    point: "50%,40%"
+- tapOn: "Widgets"
+- scrollUntilVisible:
+    element:
+      text: "Noah.*"
+    direction: DOWN
+- tapOn: "Noah.*"
+- scrollUntilVisible:
+    element:
+      text: 'Noah \(Regtest\) widget,.*'
+    direction: DOWN
+- tapOn: 'Noah \(Regtest\) widget,.*'
+- tapOn: "Add"
+- pressKey: HOME
