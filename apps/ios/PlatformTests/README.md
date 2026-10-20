@@ -4,7 +4,7 @@ Bark 0.5.0's generated `BarkLogger.log(level:target:message:)` is called synchro
 
 AppLog redacts before OSLog and at file admission. The shared detector covers NFKD/case-folded BIP39 word runs across punctuation/JSON/newlines (omitting the whole message when original offsets are uncertain), credential labels with prefixes/suffixes and punctuation/quote/whitespace separators, URL userinfo on any scheme, Bearer credentials/JWTs, Expo tokens, extended/WIF private keys, labelled hex keys/signatures, presigned URL parameters and email/Lightning addresses. Oversized messages are omitted before regex processing. Unlabelled txids/hashes, ordinary prose, amounts and Ark addresses remain available for diagnostics; URL queries remain conservatively omitted.
 
-The iOS writer admits at most 256 pending records, writes in admission order on a serial queue, and emits `[dropped N log records]` on overflow. Disk work holds no admission lock. Export awaits `flushAsync()` and reads through `linesForExport()`. Active/background lifecycle callbacks and SwiftUI scene notifications drain accepted records for at most 200 ms while execution time remains. Push/BGTask completion uses an asynchronous bounded drain capped by the original deadline; expiry still completes immediately and exactly once. SDK/Rust callbacks only enqueue and never wait on disk. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines.
+The iOS writer admits at most 256 pending records, writes in admission order on a serial queue, and emits `[dropped N log records]` on overflow. Disk work holds no admission lock. Export awaits `flushAsync()` and reads through `linesForExport()`. Active/background lifecycle callbacks and SwiftUI scene notifications start an asynchronous drain and return immediately. A UIKit background execution lease bounds the drain to the smaller of 200 ms and the remaining OS execution time; it ends exactly once on drain completion or expiry. Push/BGTask completion uses an asynchronous bounded drain capped by the original deadline; expiry still completes immediately and exactly once. SDK/Rust callbacks only enqueue and never wait on disk. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines.
 
 ## RN Sentry parity
 
@@ -458,3 +458,97 @@ owned DerivedData and all **six** owned result bundles were removed after
 exporting summaries. Cleanup evidence, logs and test summaries remain under the
 evidence prefix. Protected/shared simulators, Android emulators, physical devices
 and Docker were untouched.
+
+## Native background admission, lifecycle drains and observer teardown (2026-10-20)
+
+Base: `feat/native-rewrite` at `32e1b6ef`. Scope: native wallet admission,
+Android push stages, iOS lifecycle drain and SDK observer lifetime only.
+RecurringExecutor/RecurringStore/RecurringPolicyLedger, settings/MMKV/launch
+gates, log redaction/telemetry, RN and server were unchanged.
+
+Android carries the caller's cancellation and push budget across uncancellable
+native settlement, checks immediately before opening or starting a new body,
+after discard cleanup, and after waiting for a send reservation. Creation and
+verification preserve the same admission boundary. Once admitted, native work
+and cleanup still finish before close. FCM and UnifiedPush enqueue the same
+WorkManager runner; every independent push stage checks the inherited 25-second
+budget and cancellation, including reporting, notification publication and
+widget refresh. This does not impose a 25-second interruption on an admitted
+native call.
+
+iOS lifecycle callbacks no longer wait for the writer semaphore. They start a
+UIKit background task and use the existing exactly-once BackgroundExecution
+completion path with a deadline capped at 200 ms and remaining execution time.
+The writer barrier and dropped-count marker retain serial admission order.
+`LogFile.drainAsync` races the writer barrier with a dispatch timer through an
+atomic once-only continuation, without parking a main or worker thread. Push
+and BGTask expiry still complete immediately even if the writer has stalled.
+
+Receive and state-change readers stop via the SDK's per-wait native cancel
+method, then return normally before wallet close. They are never cancelled as
+Swift tasks while an FFI future is pending. Native stop retries every 5 ms cover
+the SDK's unregistered-wait gap. Closing from a cancelled caller still suspends
+between retries. Stream consumer cancellation follows the same shutdown path.
+Permanent coverage includes 50 immediate receive shutdowns, 25 pending
+receive/state-change shutdown cycles (both close and consumer cancellation),
+and a deterministic native-wait-registration-gap test.
+
+The upstream draft [bark-bolt-ffi-notification-teardown.md](../../../docs/native-rewrite/upstream/bark-bolt-ffi-notification-teardown.md)
+records the generated Swift driver's cancellation/queued-repoll lifetime race,
+historical crash stacks, suggested upstream fix and Android audit. The atomic
+Swift continuation prevents a second Swift resume; it does not protect a queued
+native poll from cancellation/free. A literal second call of the native
+completion export was not established. Android's shipped AAR has a sequential
+coroutine poll loop and removes continuation handles once; it has no equivalent
+queued Swift poll task. Its existing observer cancellation/close implementation
+is retained, with JVM regressions rather than a claim of native-race immunity.
+
+Verification evidence and commands: `/private/tmp/noah-reliability-6ec1/`.
+The prior agent's evidence is `/private/tmp/noah-background-1504133e/`; its long
+observer stress run was interrupted and is not used as a completed measurement.
+
+Results on the owned iPhone 17 / iOS 27.0 simulator `Noah Reliability 6ec1`
+(`2DFDE5EB-544B-49EC-B2BF-8E4DD4CC9719`), Xcode 27.1:
+
+- Original observer implementation: **0 failures / 50 repetitions (0%)** of
+  `closeStopsReceiveObserversAndWaitsForThem()`. Fixed implementation: **0 / 50
+  (0%)** using the same selector and `-test-iterations 50`. Xcode reports one
+  aggregate test for each 50-repetition run; the logs contain all 50 repetition
+  starts. Neither sample reproduced the intermittent crash, so no measured
+  reduction in failure rate is claimed. Two historical faulting stacks confirm
+  that the notification-poll crash has occurred; the exact interleaving remains
+  inferred from the driver source.
+- Lifecycle baseline: **7 test functions / 5 passed / 2 failed**, with failures
+  in all three stalled-writer callback cases (about 200 ms each) and both
+  delayed-writer cases (over 50 ms). Fixed focused iOS: **32 passed / 0 failed**,
+  four suites, including lifecycle latency, ordered overflow-marker drain,
+  expiry/exactly-once completion, wait-registration race and repeated shutdowns.
+- Android added admission regressions: **two / two failed** before the extra
+  reserved/create admission checks; the mutex regression independently failed
+  with its new check removed. Final focused wallet/push run: **45 passed / 0
+  failed**. The cherry-picked commits' earlier failing wallet/push evidence is
+  retained under the prior evidence prefix.
+- Full `NoahTests` ran **once after the last code change**: **655 total / 632
+  passed / 23 existing opt-in skips / 0 failed**, 125 suites, 168.383 seconds of
+  Swift Testing execution. No SDK observer panic or test-host restart occurred.
+- The exact requested final Android command ran **once** through Nix:
+  `nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'`.
+  **2,972 tests / 95 suites / 0 failures / 0 skips**, followed by a successful
+  regtest debug APK assembly; 3 minutes 30 seconds total.
+- iOS regenerated with `xcodegen generate` through Nix before the final suite,
+  with `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two jobs, no parallel testing,
+  `CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES`,
+  `-packageAuthorizationProvider netrc` and `-collect-test-diagnostics never`.
+  Individual method selectors retained the required trailing `()`.
+
+The evidence directory keeps text logs, result summaries, Android XML results,
+the generated Swift driver excerpt, Android driver bytecode and historical
+stack excerpts. Owned DerivedData and all six result bundles were deleted. The
+owned simulator's exact name/UDID and Shutdown state were verified before
+deletion, and absence was verified afterward. All owned builds completed;
+protected/shared simulators, physical devices, emulators and Docker were untouched.
+No real push delivery, OS scheduling, Android JNI stress test or external issue
+filing was attempted. Client/server checks and their Husky hook were omitted
+for these native-only commits. SDK crash reproduction is still intermittent;
+the measured baseline was clean, and the upstream diagnosis is explicitly an
+inference rather than a demonstrated second completion call.

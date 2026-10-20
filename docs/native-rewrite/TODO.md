@@ -119,7 +119,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
   - [x] Android device pass: placed widget ID 2/provider/host/metadata and controlled pinned MainActivity shortcut survived `install -r` — `apps/android/UpgradeTests/DEVICE.md`.
 
 ### 0.6 Platform services
-- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, bounded async writer/overflow markers, prefixed/escaped JSON credentials, redaction-only Unicode mnemonic skeleton, URL userinfo and address privacy; 147 shared vectors; bounded lifecycle drains)
+- [x] Redacting logger (file-backed, rotating, exportable) — iOS (`AppLog`, bounded async writer/overflow markers, prefixed/escaped JSON credentials, redaction-only Unicode mnemonic skeleton, URL userinfo and address privacy; 147 shared vectors; nonblocking lifecycle drains with bounded UIKit background execution)
 - [x] Redacting logger — Android (same secret/address detector contract, including decoded JSON views, Unicode skeleton and URL userinfo; 147 shared vectors)
 - [x] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — iOS (ordered bounded async admission, no disk waits in Rust callbacks, RN Debug verbosity)
 - [ ] Route bark-bolt-ffi `BarkLogger` callbacks into the app log — Android
@@ -132,9 +132,10 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] App-version check — iOS (existing server client, process-cached fail-open Home warning; M1)
 - [x] Server registration + last-login + device info, app-version check, email and Lightning identity services — Android
 - [x] Push iOS: permission, APNs token → Expo token (RN installation ID, provisioning aps-environment), `register_push_token`, silent-push handler with 25 s budget, jobs for maintenance / invoice / claim / backup / heartbeat with job-status reports, widget refresh; expiry checks between stages, at wallet-open admission and immediately before native opening; bounded completion log drain
+- [x] iOS SDK observer teardown: stop native notification/state-change waits and await uncancelled readers, retrying the wait-registration gap; repeated close/consumer-cancellation regressions and [upstream draft](upstream/bark-bolt-ffi-notification-teardown.md), including Android polling audit — `apps/ios/PlatformTests/README.md`
 - [x] Push iOS: register the push token after server registration once onboarding is done (RN `usePushNotifications` gating)
 - [ ] Push iOS: recurring_payment_due (M7); verify real delivery on a device (simctl push does not run the background handler)
-- [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; backup/recurring log-only pending their ports; background entry checks cancellation and detached recurring work checks budget before opening)
+- [x] FirebaseMessagingService + Expo token, onboarding/permission/server gates, expedited push work, maintenance/invoice/claim + status/heartbeat — Android (real Expo heartbeat + maintenance delivered; backup/recurring log-only pending their ports; caller/budget admission rechecked before native work and after cleanup/reservation waits; every independent push stage including reports/widgets is gated)
 - [x] UnifiedPush (Android, non-GMS) in pure Kotlin — Android (shared jobs, preserved endpoint/connector storage; live distributor test pending)
 - [ ] Background tasks: BGTaskScheduler / WorkManager (maintenance, recurring)
   - [x] iOS: 15-minute opportunistic app refresh (sync/recurring/widget), 6-hour network processing (also maintenance/enabled backup), shared push deadline/submission budget, expiration/foreground revocation, stage/open-admission checks, bounded completion log drains and session settlement; `apps/ios/PlatformTests/README.md`
