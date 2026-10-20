@@ -24,3 +24,10 @@ only platform/network dependencies are mocked. `exit-fee-estimate` (82),
 `exit-cancellation` (56), `exit-timeline` (12), `exit-overview-coordination` (16),
 and `auto-boarding` (21) contain 187 portable cases. Swift runs these in
 `ExitFixtureTests`; Android can reuse the files without running React Native.
+
+M7 unattended fee cap: `recurring-fee-cap` (24 cases) is native-only (RN pays recurring
+Lightning without a cap) and hand-specified from the decision recorded in
+`docs/native-rewrite/TODO.md` (M7). The cap comes from `ArkInfo.feeSchedule.lightningSend`,
+with the published fallback schedule when ArkInfo is unavailable. The description field
+states the formula. The regtest cases use captaind's local schedule
+(`scripts/captaind.toml`) and include the two BOLT11 quotes verified on the Pixel.

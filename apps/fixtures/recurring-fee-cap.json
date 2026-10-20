@@ -1,0 +1,556 @@
+{
+  "description": "Unattended recurring payment fee cap (native only; RN has no cap). Lightning: worstCaseFeeSat F(a) = max(minFeeSats, baseFeeSats + ceil(a * maxPpm / 1,000,000)), maxPpm = highest ppm in ppmExpiryTable (0 if empty), from ArkInfo.feeSchedule.lightningSend; schedule null = ArkInfo unavailable, use the published fallback (min 20, base 0, max 5000 ppm). capSat = min(2 * F(a), max(200, floor(a / 50))). Reason order: quote_exceeds_cap (quoteFeeSat > capSat), then schedule_exceeds_cap (F(a) > capSat), else within_cap; autoPay only for within_cap. Ark: autoPay only when quoteFeeSat == 0 (reason ark_fee otherwise), schedule ignored. Use overflow-safe arithmetic (saturate; a saturated value exceeds the cap). Values stay below 2^53. Shared by Android and iOS.",
+  "cases": [
+    {
+      "name": "fallback: 1 sat uses the 20-sat minimum",
+      "input": {
+        "amountSat": 1,
+        "method": "lightning",
+        "quoteFeeSat": 0,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 20,
+        "capSat": 40,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "fallback: 1,000 sats at the minimum fee",
+      "input": {
+        "amountSat": 1000,
+        "method": "lightning",
+        "quoteFeeSat": 20,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 20,
+        "capSat": 40,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "fallback: 1,000 sats one sat over the cap",
+      "input": {
+        "amountSat": 1000,
+        "method": "lightning",
+        "quoteFeeSat": 41,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 20,
+        "capSat": 40,
+        "autoPay": false,
+        "reason": "quote_exceeds_cap"
+      }
+    },
+    {
+      "name": "fallback: 10,000 sats",
+      "input": {
+        "amountSat": 10000,
+        "method": "lightning",
+        "quoteFeeSat": 50,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 50,
+        "capSat": 100,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "fallback: 21,000 sats bound by twice the schedule fee",
+      "input": {
+        "amountSat": 21000,
+        "method": "lightning",
+        "quoteFeeSat": 105,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 105,
+        "capSat": 210,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "fallback: 100,000 sats at the published 0.5% tier",
+      "input": {
+        "amountSat": 100000,
+        "method": "lightning",
+        "quoteFeeSat": 500,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 500,
+        "capSat": 1000,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "fallback: 100,000 sats one sat over the cap",
+      "input": {
+        "amountSat": 100000,
+        "method": "lightning",
+        "quoteFeeSat": 1001,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 500,
+        "capSat": 1000,
+        "autoPay": false,
+        "reason": "quote_exceeds_cap"
+      }
+    },
+    {
+      "name": "fallback: 1,000,000 sats",
+      "input": {
+        "amountSat": 1000000,
+        "method": "lightning",
+        "quoteFeeSat": 5000,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 5000,
+        "capSat": 10000,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "published mainnet schedule matches the fallback",
+      "input": {
+        "amountSat": 100000,
+        "method": "lightning",
+        "quoteFeeSat": 400,
+        "schedule": {
+          "minFeeSats": 20,
+          "baseFeeSats": 0,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 2000
+            },
+            {
+              "expiryBlocksThreshold": 1008,
+              "ppm": 4000
+            },
+            {
+              "expiryBlocksThreshold": 2016,
+              "ppm": 5000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 500,
+        "capSat": 1000,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "fallback: 21 million BTC stays within 2^53",
+      "input": {
+        "amountSat": 2100000000000000,
+        "method": "lightning",
+        "quoteFeeSat": 0,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": 10500000000000,
+        "capSat": 21000000000000,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "regtest: 100 sats rounds the ppm fee up",
+      "input": {
+        "amountSat": 100,
+        "method": "lightning",
+        "quoteFeeSat": 75,
+        "schedule": {
+          "minFeeSats": 10,
+          "baseFeeSats": 75,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            },
+            {
+              "expiryBlocksThreshold": 97,
+              "ppm": 1000
+            },
+            {
+              "expiryBlocksThreshold": 199,
+              "ppm": 4000
+            },
+            {
+              "expiryBlocksThreshold": 2161,
+              "ppm": 8000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 76,
+        "capSat": 152,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "regtest: 333 sats rounds the ppm fee up",
+      "input": {
+        "amountSat": 333,
+        "method": "lightning",
+        "quoteFeeSat": 77,
+        "schedule": {
+          "minFeeSats": 10,
+          "baseFeeSats": 75,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            },
+            {
+              "expiryBlocksThreshold": 97,
+              "ppm": 1000
+            },
+            {
+              "expiryBlocksThreshold": 199,
+              "ppm": 4000
+            },
+            {
+              "expiryBlocksThreshold": 2161,
+              "ppm": 8000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 78,
+        "capSat": 156,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "regtest: Pixel 1,000-sat BOLT11 quote",
+      "input": {
+        "amountSat": 1000,
+        "method": "lightning",
+        "quoteFeeSat": 79,
+        "schedule": {
+          "minFeeSats": 10,
+          "baseFeeSats": 75,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            },
+            {
+              "expiryBlocksThreshold": 97,
+              "ppm": 1000
+            },
+            {
+              "expiryBlocksThreshold": 199,
+              "ppm": 4000
+            },
+            {
+              "expiryBlocksThreshold": 2161,
+              "ppm": 8000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 83,
+        "capSat": 166,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "regtest: Pixel 2,000-sat BOLT11 quote",
+      "input": {
+        "amountSat": 2000,
+        "method": "lightning",
+        "quoteFeeSat": 83,
+        "schedule": {
+          "minFeeSats": 10,
+          "baseFeeSats": 75,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            },
+            {
+              "expiryBlocksThreshold": 97,
+              "ppm": 1000
+            },
+            {
+              "expiryBlocksThreshold": 199,
+              "ppm": 4000
+            },
+            {
+              "expiryBlocksThreshold": 2161,
+              "ppm": 8000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 91,
+        "capSat": 182,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "regtest: 20,000 sats limited by 2% of the amount",
+      "input": {
+        "amountSat": 20000,
+        "method": "lightning",
+        "quoteFeeSat": 155,
+        "schedule": {
+          "minFeeSats": 10,
+          "baseFeeSats": 75,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            },
+            {
+              "expiryBlocksThreshold": 97,
+              "ppm": 1000
+            },
+            {
+              "expiryBlocksThreshold": 199,
+              "ppm": 4000
+            },
+            {
+              "expiryBlocksThreshold": 2161,
+              "ppm": 8000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 235,
+        "capSat": 400,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "regtest: 20,000 sats quote over the cap",
+      "input": {
+        "amountSat": 20000,
+        "method": "lightning",
+        "quoteFeeSat": 401,
+        "schedule": {
+          "minFeeSats": 10,
+          "baseFeeSats": 75,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            },
+            {
+              "expiryBlocksThreshold": 97,
+              "ppm": 1000
+            },
+            {
+              "expiryBlocksThreshold": 199,
+              "ppm": 4000
+            },
+            {
+              "expiryBlocksThreshold": 2161,
+              "ppm": 8000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 235,
+        "capSat": 400,
+        "autoPay": false,
+        "reason": "quote_exceeds_cap"
+      }
+    },
+    {
+      "name": "empty ppm table uses the minimum fee",
+      "input": {
+        "amountSat": 10000,
+        "method": "lightning",
+        "quoteFeeSat": 20,
+        "schedule": {
+          "minFeeSats": 20,
+          "baseFeeSats": 0,
+          "ppmExpiryTable": []
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 20,
+        "capSat": 40,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "schedule base fee above the 200-sat ceiling",
+      "input": {
+        "amountSat": 1000,
+        "method": "lightning",
+        "quoteFeeSat": 1000,
+        "schedule": {
+          "minFeeSats": 0,
+          "baseFeeSats": 1000,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 1000,
+        "capSat": 200,
+        "autoPay": false,
+        "reason": "quote_exceeds_cap"
+      }
+    },
+    {
+      "name": "schedule base fee within the ceiling with a low quote",
+      "input": {
+        "amountSat": 1000,
+        "method": "lightning",
+        "quoteFeeSat": 50,
+        "schedule": {
+          "minFeeSats": 0,
+          "baseFeeSats": 150,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 0
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 150,
+        "capSat": 200,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "schedule minimum fee above the 200-sat ceiling",
+      "input": {
+        "amountSat": 1000,
+        "method": "lightning",
+        "quoteFeeSat": 300,
+        "schedule": {
+          "minFeeSats": 300,
+          "baseFeeSats": 0,
+          "ppmExpiryTable": []
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 300,
+        "capSat": 200,
+        "autoPay": false,
+        "reason": "quote_exceeds_cap"
+      }
+    },
+    {
+      "name": "schedule 5% tier exceeds the ceiling despite a low quote",
+      "input": {
+        "amountSat": 100000,
+        "method": "lightning",
+        "quoteFeeSat": 100,
+        "schedule": {
+          "minFeeSats": 0,
+          "baseFeeSats": 0,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 1000
+            },
+            {
+              "expiryBlocksThreshold": 2016,
+              "ppm": 50000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 5000,
+        "capSat": 2000,
+        "autoPay": false,
+        "reason": "schedule_exceeds_cap"
+      }
+    },
+    {
+      "name": "schedule 100% ppm at 21 million BTC",
+      "input": {
+        "amountSat": 2100000000000000,
+        "method": "lightning",
+        "quoteFeeSat": 0,
+        "schedule": {
+          "minFeeSats": 0,
+          "baseFeeSats": 0,
+          "ppmExpiryTable": [
+            {
+              "expiryBlocksThreshold": 0,
+              "ppm": 1000000
+            }
+          ]
+        }
+      },
+      "expected": {
+        "worstCaseFeeSat": 2100000000000000,
+        "capSat": 42000000000000,
+        "autoPay": false,
+        "reason": "schedule_exceeds_cap"
+      }
+    },
+    {
+      "name": "ark: zero fee pays automatically",
+      "input": {
+        "amountSat": 1000,
+        "method": "ark",
+        "quoteFeeSat": 0,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": null,
+        "capSat": null,
+        "autoPay": true,
+        "reason": "within_cap"
+      }
+    },
+    {
+      "name": "ark: any fee needs approval",
+      "input": {
+        "amountSat": 1000,
+        "method": "ark",
+        "quoteFeeSat": 1,
+        "schedule": null
+      },
+      "expected": {
+        "worstCaseFeeSat": null,
+        "capSat": null,
+        "autoPay": false,
+        "reason": "ark_fee"
+      }
+    }
+  ]
+}
