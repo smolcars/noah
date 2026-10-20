@@ -136,20 +136,27 @@ final class HistoryModel {
 
     private func enrich(_ rows: [HistoryTransaction], currency: String, generation: UUID) async {
         var latest = rows
+        var dirty = false
+        @MainActor func publish() async {
+            guard !Task.isCancelled, self.generation == generation, dirty else { return }
+            transactions = Self.unified(latest)
+            dirty = false
+            await Task.yield()
+        }
         for index in latest.indices {
             if Task.isCancelled || self.generation != generation { return }
             if latest[index].source == "onchain-wallet", latest[index].hasConfirmation == true,
                let txid = latest[index].txid {
                 let time: Date?
                 if let cached = blockTimes[txid] { time = cached }
-                else { time = try? await dependencies.blockTime(txid) }
+                else { await publish(); time = try? await dependencies.blockTime(txid) }
                 guard !Task.isCancelled, self.generation == generation else { return }
                 if let time {
                     blockTimes[txid] = time
                     latest[index].date = HistoryRules.isoDate(time)
                     latest[index].dateLabel = nil
                     latest[index].sortTimestamp = time.timeIntervalSince1970 * 1000
-                    transactions = Self.unified(latest)
+                    dirty = true
                 }
             }
             if let date = latest[index].timestamp, date.timeIntervalSince1970 > 0 {
@@ -157,7 +164,7 @@ final class HistoryModel {
                 let key = "\(currency):\(latest[index].date.prefix(10))"
                 let price: Double?
                 if let cached = prices[key] { price = cached }
-                else { price = try? await dependencies.price(seconds, currency) }
+                else { await publish(); price = try? await dependencies.price(seconds, currency) }
                 guard !Task.isCancelled, self.generation == generation else { return }
                 if let price, price.isFinite, price > 0 {
                     if prices[key] == nil { priceKeys.append(key) }
@@ -165,12 +172,15 @@ final class HistoryModel {
                     if priceKeys.count > 200 { prices.removeValue(forKey: priceKeys.removeFirst()) }
                     latest[index].btcPrice = price
                 } else {
-                    // RN falls back to today's quote, without caching it as historical.
+                    // Publish completed rows before a cache miss can stall the single worker.
+                    await publish()
                     latest[index].btcPrice = try? await dependencies.currentPrice(currency)
                 }
             }
             guard !Task.isCancelled, self.generation == generation else { return }
-            transactions = Self.unified(latest)
+            dirty = true
+            // Cached quotes never suspend: bound merge/sort work and let wallet events run.
+            if (index + 1) % 32 == 0 || index == latest.indices.last { await publish() }
         }
     }
 }

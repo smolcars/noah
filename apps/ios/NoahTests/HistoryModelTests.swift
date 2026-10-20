@@ -167,6 +167,50 @@ struct HistoryModelTests {
         #expect(await probe.canceled >= 1)
     }
 
+    @Test func warmQuoteCacheYieldsToWalletEventsDuringLargeEnrichment() async {
+        @MainActor final class Probe {
+            var rows: [HistoryTransaction] = []
+            var quotes = 0
+            var settled = false
+            var enrichedAtEvent: Int?
+            weak var model: HistoryModel?
+            func load() -> [HistoryTransaction] {
+                if settled { enrichedAtEvent = model?.transactions.filter { $0.btcPrice != nil }.count }
+                return rows
+            }
+            func quote() -> Double { quotes += 1; return 100000 }
+        }
+        let probe = Probe()
+        probe.rows = [transaction()]
+        let (stream, continuation) = AsyncThrowingStream<String, Error>.makeStream()
+        var dependencies = dependencies([])
+        dependencies.changes = { stream }
+        dependencies.load = { await probe.load() }
+        dependencies.price = { _, _ in await probe.quote() }
+        let model = HistoryModel(dependencies: dependencies)
+        probe.model = model
+        await model.refresh(currency: "USD"); await model.awaitEnrichment()
+        probe.rows = (1...3000).map {
+            var row = transaction("movement-\($0)")
+            row.sortTimestamp = 1784116800000
+            return row
+        }
+        let observation = Task { await model.observe(currency: "USD") }
+        let deadline = ContinuousClock.now + .seconds(10)
+        while (model.transactions.count != 3000 || model.transactions.allSatisfy { $0.btcPrice == nil }),
+              ContinuousClock.now < deadline { await Task.yield() }
+        #expect(model.transactions.contains { $0.btcPrice != nil })
+        #expect(model.transactions.filter { $0.btcPrice != nil }.count < 3000,
+                "cached enrichment must yield before completing all rows")
+        probe.settled = true; continuation.yield("databaseChanged")
+        while (probe.enrichedAtEvent == nil || model.isRefreshing), ContinuousClock.now < deadline { await Task.yield() }
+        #expect((probe.enrichedAtEvent ?? 3000) < 3000, "wallet event must be consumed during enrichment")
+        await model.awaitEnrichment()
+        #expect(model.transactions.allSatisfy { $0.btcPrice == 100000 })
+        #expect(probe.quotes == 1)
+        observation.cancel(); await observation.value
+    }
+
     @Test func csvUsesFilteredSignedAccountingAndEscapesFields() {
         var outgoing = transaction()
         outgoing.direction = "outgoing"

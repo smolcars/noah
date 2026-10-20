@@ -195,6 +195,8 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 
 - [x] History CSV lifetime: Android startup sweep, failed-share deletion and scheduled 24-hour expiry; iOS uses in-memory `DataRepresentation` without app-owned CSV files
 
+- [x] History review A4: cached enrichment merges/sorts once per 32-row batch, yields between batches, and flushes completed rows before network misses; warmed 3,000-row cache tests consume wallet events during enrichment on both platforms
+
 ## M5 — Settings & recovery
 - [x] SettingsScreen (biometrics, auto-board preference, mailbox, version/debug unlock) — iOS
 - [x] Suspend/resume, delete wallet (files before seed, under a reservation; refused while a restore is pending), re-register: model layer + suspended Home — iOS

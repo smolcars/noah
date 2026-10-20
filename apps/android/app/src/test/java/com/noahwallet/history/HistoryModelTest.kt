@@ -144,6 +144,37 @@ class HistoryModelTest {
         observation.cancelAndJoin(); assertEquals(0, active)
     }
 
+    @Test(timeout = 30_000) fun warmQuoteCacheYieldsToWalletEventsDuringLargeEnrichment() = runBlocking {
+        val events = Channel<String>(Channel.UNLIMITED)
+        var rows = listOf(row())
+        var quotes = 0
+        var settled = false
+        var enrichedAtEvent: Int? = null
+        lateinit var model: HistoryModel
+        model = HistoryModel(dependencies().copy(
+            changes = { events.receiveAsFlow() },
+            load = {
+                if (settled) enrichedAtEvent = model.transactions.count { it.btcPrice != null }
+                rows
+            }, price = { _, _ -> quotes++; 100000.0 }))
+        model.refresh("USD"); model.awaitEnrichment() // warm the real day/currency cache
+        rows = (1..3000).map { row("movement-$it").copy(sortTimestamp = 1784116800000.0) }
+        val observation = launch { model.observe("USD") }
+        try {
+            withTimeout(5000) {
+                while (model.transactions.size != rows.size || model.transactions.none { it.btcPrice != null }) yield()
+                assertTrue("cached enrichment must yield before completing all rows",
+                    model.transactions.count { it.btcPrice != null } < rows.size)
+                settled = true; events.send("databaseChanged")
+                while (enrichedAtEvent == null) yield()
+                assertTrue("wallet event must be consumed during enrichment", enrichedAtEvent!! < rows.size)
+            }
+            model.awaitEnrichment()
+            assertTrue(model.transactions.all { it.btcPrice == 100000.0 })
+            assertEquals(1, quotes)
+        } finally { observation.cancelAndJoin() }
+    }
+
     @Test fun filteredCSVUsesSignedAccountingAndEscapesFields() {
         val outgoing = row().copy(direction = "outgoing", destination = "a,\"b\"\nc")
         val canceled = row("movement-2").copy(type = "Onchain", movementKind = "exit", movementStatus = "canceled")

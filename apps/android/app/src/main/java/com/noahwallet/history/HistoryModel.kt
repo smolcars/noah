@@ -147,38 +147,49 @@ class HistoryModel(private val dependencies: Dependencies) {
 
     private suspend fun enrich(rows: List<HistoryTransaction>, currency: String, request: Long) {
         val latest = rows.toMutableList()
+        var dirty = false
+        suspend fun publish() {
+            currentCoroutineContext().ensureActive()
+            if (request != generation || !dirty) return
+            transactions = HistoryRules.unified(latest)
+            dirty = false
+            yield()
+        }
         for (index in latest.indices) {
             currentCoroutineContext().ensureActive()
             if (request != generation) return
             var row = latest[index]
             if (row.source == "onchain-wallet" && row.hasConfirmation == true && row.txid != null) {
                 val txid = row.txid
-                val time = blockTimes[txid] ?: optional { dependencies.blockTime(txid) }
+                val time = blockTimes[txid] ?: run { publish(); optional { dependencies.blockTime(txid) } }
                 currentCoroutineContext().ensureActive()
                 if (request != generation) return
                 if (time != null) {
                     blockTimes[txid] = time
                     row = row.copy(date = HistoryRules.isoDate(time), dateLabel = null, sortTimestamp = time.time.toDouble())
                     latest[index] = row
-                    transactions = HistoryRules.unified(latest)
+                    dirty = true
                 }
             }
             val date = row.timestamp
             if (date != null && date.time > 0) {
                 val key = "$currency:${row.date.take(10)}"
-                val price = prices[key] ?: optional { dependencies.price(date.time / 1000, currency) }.validRate()
+                // Publish completed rows before a cache miss can stall the single worker.
+                val price = prices[key] ?: run { publish(); optional { dependencies.price(date.time / 1000, currency) }.validRate() }
                 currentCoroutineContext().ensureActive()
                 if (request != generation) return
                 if (price != null) {
                     prices[key] = price
                     if (prices.size > 200) prices.remove(prices.keys.first())
                     row = row.copy(btcPrice = price)
-                } else row = row.copy(btcPrice = optional { dependencies.currentPrice(currency) }.validRate())
+                } else { publish(); row = row.copy(btcPrice = optional { dependencies.currentPrice(currency) }.validRate()) }
             }
             currentCoroutineContext().ensureActive()
             if (request != generation) return
             latest[index] = row
-            transactions = HistoryRules.unified(latest)
+            dirty = true
+            // Cached quotes never suspend: bound merge/sort work and let wallet events run.
+            if ((index + 1) % 32 == 0 || index == latest.lastIndex) publish()
         }
     }
 }
