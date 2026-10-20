@@ -58,6 +58,14 @@ class UpgradeCompatibilityTest {
         }
         assertTrue("RN wallet DB missing", WalletDataLocation(context.filesDir, "regtest").databaseExists)
         assertEquals(LaunchState.existingWallet, LaunchState.current(context))
+        // Import a disposable copy independently; never map the live RN files.
+        val comparisonRoot = File(context.cacheDir, "upgrade-rn-settings").apply { deleteRecursively(); mkdirs() }
+        val comparisonContext = object : android.content.ContextWrapper(context) {
+            override fun getFilesDir() = File(comparisonRoot, "files").apply { mkdirs() }
+            override fun getNoBackupFilesDir() = File(comparisonRoot, "no_backup").apply { mkdirs() }
+        }
+        File(context.filesDir, "mmkv").copyRecursively(File(comparisonContext.filesDir, "mmkv"))
+        val rnSettings = SettingsStorage(comparisonContext)
         val settings = SettingsStorage(context)
         settings.validateStores()
         val envelopesBefore = RNStoreCodec.versions.keys.associateWith(settings::string)
@@ -67,6 +75,7 @@ class UpgradeCompatibilityTest {
         val mailboxBefore = PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled
         val funded = args.getString("funded") == "1"
         if (funded) {
+            assertEquals("RN language preference changed", "sv", LegacyLocale.read(context))
             assertEquals(true, PersistedServerState.decode(settings.string(PersistedServerState.key)).isEmailPromptDismissed)
             assertEquals("Android upgrade", SettingsPreferences.state(settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.content)
             assertEquals("sats", SettingsPreferences.state(settings.string("profile-storage"))["bitcoinAmountUnit"]?.jsonPrimitive?.content)
@@ -74,7 +83,15 @@ class UpgradeCompatibilityTest {
             assertEquals(true, SettingsPreferences.state(settings.string("privacy-storage"))["isHomeBalanceHidden"]?.jsonPrimitive?.boolean)
             assertEquals(false, SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.boolean)
             assertTrue("RN schedules must never import", RecurringStore(settings).load().schedules.isEmpty())
-            assertTrue("Recurring upgrade notice must be recorded", settings.nativeFile.load().recurringNoticePending)
+            assertTrue("RN baseline must contain a recurring upgrade notice", rnSettings.nativeFile.load().recurringNoticePending)
+            // The runner checks the visible notice before instrumentation, then restarts
+            // Home and requires it to be absent. Do not require an already consumed flag.
+            assertFalse("Recurring notice must be consumed once by Home", settings.nativeFile.load().recurringNoticePending)
+            for (key in listOf("profile-storage", "privacy-storage", "transaction-storage", "esplora-storage")) {
+                assertEquals("Imported RN preference differs: $key", rnSettings.string(key), settings.string(key))
+            }
+            assertEquals("Biometrics flag differs", rnSettings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isBiometricsEnabled,
+                settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isBiometricsEnabled)
             assertTrue("Native import marker missing", settings.nativeFile.exists)
         }
         val state = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
@@ -101,9 +118,13 @@ class UpgradeCompatibilityTest {
         assertEquals("Wallet identity changed", fingerprint, summary.fingerprint)
         assertEquals("History differs from RN", movements, summary.movementCount)
         assertEquals("Spendable balance differs from RN", spendable, summary.spendableSats)
+        assertEquals(spendable, summary.balance.offchainSats)
+        assertEquals(0uL, summary.balance.pendingSats)
         if (funded) {
             val expectedOnchain = requireNotNull(args.getString("expectedOnchain")?.toULongOrNull())
             assertEquals("Confirmed onchain balance differs", expectedOnchain, summary.balance.onchain.confirmed)
+            assertEquals(expectedOnchain, summary.balance.onchain.total)
+            assertEquals(spendable + expectedOnchain, summary.balance.totalSats)
             val history = session.transactionHistory()
             assertEquals("RN movement identities changed", args.getString("expectedMovementIds"),
                 history.mapNotNull { it.movementId }.sorted().joinToString(","))
@@ -167,6 +188,24 @@ class UpgradeCompatibilityTest {
             assertEquals(com.noahwallet.services.push.PushRegistration.Outcome.registered, outcome)
             assertTrue("Expo token changed", actual == expected)
         }
+        val finalSummary = requireNotNull(session.summary())
+        File(context.filesDir, "noah-upgrade-result.json").writeText(buildJsonObject {
+            put("loginKey", com.noahwallet.services.server.ServerClient.loginKey("regtest", oldValue))
+            put("fingerprint", finalSummary.fingerprint)
+            put("movements", finalSummary.movementCount)
+            put("spendable", finalSummary.spendableSats.toString())
+            put("onchainConfirmed", finalSummary.balance.onchain.confirmed.toString())
+            put("language", LegacyLocale.read(context))
+            put("displayUnit", SettingsPreferences.state(settings.string("profile-storage"))["bitcoinAmountUnit"] ?: JsonNull)
+            put("currency", SettingsPreferences.state(settings.string("profile-storage"))["preferredCurrency"] ?: JsonNull)
+            put("hiddenBalance", SettingsPreferences.state(settings.string("privacy-storage"))["isHomeBalanceHidden"] ?: JsonNull)
+            put("biometrics", state?.isBiometricsEnabled)
+            put("autoBoarding", SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"] ?: JsonNull)
+            put("recurringSchedules", RecurringStore(settings).load().schedules.size)
+            put("expoIdSha256", args.getString("expoIdSha256"))
+            put("expoTokenSha256", args.getString("expoTokenSha256"))
+        }.toString())
+        comparisonRoot.deleteRecursively()
         val id = expo.getOrCreate()
         assertTrue("Expo UUID changed across reads", id == ExpoInstallationID(context).getOrCreate())
     }

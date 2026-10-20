@@ -1,0 +1,14 @@
+appId: com.noahwallet.regtest
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Recurring payments need to be set up again after this update."
+    timeout: 30000
+- assertVisible: "Show wallet balance|Visa plånbokens saldo"
+- assertNotVisible: "Some settings couldn't be carried over.*|Some display settings couldn't be carried over.*"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Show wallet balance|Visa plånbokens saldo"
+    timeout: 30000
+- assertNotVisible: "Recurring payments need to be set up again after this update."

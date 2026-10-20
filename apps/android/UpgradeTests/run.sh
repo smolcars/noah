@@ -7,6 +7,7 @@
 # FUNDED uses the RN prepare flow, which resets only the fresh test install.
 set -euo pipefail
 umask 077
+SECONDS=0
 
 SERIAL="${1:?Pass a fresh Android emulator serial}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -86,6 +87,21 @@ PY_READY
 run_flow() {
     maestro --device "$SERIAL" test --debug-output "$ARTIFACTS" --test-output-dir "$ARTIFACTS" "$1"
 }
+# Keep client sources unchanged; standalone post-onboarding flows need to wait
+# for RN's cold-start icon/wallet loading screen on the emulator.
+run_ready_rn_flow() {
+    local prepared="$ARTIFACTS/$(basename "$1")"
+    python3 - "$1" "$prepared" <<'PY_READY_RN'
+from pathlib import Path
+import sys
+source = Path(sys.argv[1]).read_text()
+launch = '- launchApp\n'
+assert launch in source
+ready = '- extendedWaitUntil:\n    visible: "Home"\n    timeout: 60000\n'
+Path(sys.argv[2]).write_text(source.replace(launch, launch + ready, 1))
+PY_READY_RN
+    run_flow "$prepared"
+}
 # ark-dev.sh uses compose run without --no-deps, which can recreate the live stack
 # when this worktree's config differs. Keep the existing services and volumes.
 bark() { docker compose -f "$ROOT/scripts/docker-compose.yml" run --rm --no-deps bark bark --quiet --no-logfile "$@"; }
@@ -99,10 +115,10 @@ if [[ "${FUNDED:-0}" == 1 ]]; then
     bark_address="$(printf '%s\n' "$bark_output" | sed -n '/^tark1/p' | tail -n 1)"
     [[ "$bark_address" =~ ^tark1 ]] || { echo 'Bark address unavailable'; exit 1; }
     printf '%s' "$bark_address" | python3 "$HERE/clipboard.py" "$SERIAL" set
-    run_flow "$ROOT/client/.maestro/subflows/send-funded-ark.yml"
+    maestro --device "$SERIAL" test --debug-output "$ARTIFACTS" --test-output-dir "$ARTIFACTS" -e "DESTINATION=$bark_address" "$ROOT/apps/ios/UpgradeTests/rn-send-funded.yml"
     run_flow "$HERE/rn-finish-send.yml"
-    run_flow "$ROOT/client/.maestro/subflows/android-upgrade-settings-recurring.yml"
-    run_flow "$ROOT/client/.maestro/subflows/android-upgrade-onchain-address.yml"
+    run_ready_rn_flow "$ROOT/client/.maestro/subflows/android-upgrade-settings-recurring.yml"
+    run_ready_rn_flow "$ROOT/client/.maestro/subflows/android-upgrade-onchain-address.yml"
     onchain_address="$(python3 "$HERE/clipboard.py" "$SERIAL" get | tr -d '\r\n')"
     [[ "$onchain_address" =~ ^bcrt1 ]] || { echo 'RN onchain address missing'; exit 1; }
     (cd "$ROOT" && just bcli sendtoaddress "$onchain_address" 0.00030000)
@@ -125,8 +141,10 @@ echo 'Real Expo token provisioned in RN sandbox (SHA-256 only)'
 WIDGET_INFO_HASH="$(sed -n 's/^INSTRUMENTATION_RESULT: widgetInfoSha256=//p' "$ARTIFACTS/expo-baseline.txt" | tr -d '\r')"
 [[ "$WIDGET_INFO_HASH" =~ ^[0-9a-f]{64}$ ]] || { echo 'RN widget provider baseline missing'; exit 1; }
 run_flow "$HERE/rn-confirm-shortcut.yml"
+if [[ "${FUNDED:-0}" == 1 ]]; then run_flow "$HERE/rn-locale.yml"; fi
 "$ADB" -s "$SERIAL" shell am force-stop "$BUNDLE"
 "$ADB" -s "$SERIAL" shell test -f "/data/user/0/$BUNDLE/files/noah-data-regtest/db.sqlite"
+db_inode="$("$ADB" -s "$SERIAL" shell stat -c %i "/data/user/0/$BUNDLE/files/noah-data-regtest/db.sqlite" | tr -d '\r')"
 echo 'RN wallet ready: DB present'
 # Force-stop first; pull the full directory so any WAL accompanies the DB.
 "$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/files/noah-data-regtest" "$ARTIFACTS/wallet" >/dev/null
@@ -181,15 +199,17 @@ PY
 )"
 [[ "$EXPO_HASH" != absent ]] || { echo 'RN Expo installation UUID missing'; exit 1; }
 echo 'RN Expo ID captured (SHA-256 only)'
-# Preserve the exact RN MMKV bytes until the native decoder opens them.
+# Preserve every live RN data/CRC file before replacement.
+"$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/files/mmkv" "$ARTIFACTS/mmkv-stopped" >/dev/null
+python3 "$ROOT/apps/ios/UpgradeTests/check-mmkv.py" record "$ARTIFACTS/mmkv-stopped" "$ARTIFACTS/mmkv-stopped.json"
 mmkv_hash="$("$ADB" -s "$SERIAL" shell sha256sum "/data/user/0/$BUNDLE/files/mmkv/noah-wallet-storage" | awk '{print $1}')"
 "$ADB" -s "$SERIAL" shell dumpsys appwidget > "$ARTIFACTS/widgets-before.txt"
 "$ADB" -s "$SERIAL" shell dumpsys shortcut > "$ARTIFACTS/shortcuts-before.txt"
 if [[ "${INSTALL_WHILE_RUNNING:-1}" == 1 ]]; then
-    maestro --device "$SERIAL" test --debug-output "$ARTIFACTS/writer" "$HERE/rn-write-during-install.yml" > "$ARTIFACTS/writer.log" 2>&1 &
+    maestro --device "$SERIAL" test --debug-output "$ARTIFACTS/writer" --test-output-dir "$ARTIFACTS/writer" "$HERE/rn-write-during-install.yml" > "$ARTIFACTS/writer.log" 2>&1 &
     writer_pid=$!
     changed=0
-    for attempt in {1..60}; do
+    for attempt in {1..120}; do
         current="$("$ADB" -s "$SERIAL" shell sha256sum "/data/user/0/$BUNDLE/files/mmkv/noah-wallet-storage" | awk '{print $1}')"
         if grep -q 'currency-option-EUR.*COMPLETED' "$ARTIFACTS/writer.log" &&
            [[ "$mmkv_hash" != "$current" ]] && kill -0 "$writer_pid" 2>/dev/null; then changed=1; break; fi
@@ -199,11 +219,19 @@ if [[ "${INSTALL_WHILE_RUNNING:-1}" == 1 ]]; then
     [[ "$changed" == 1 ]] || { echo 'RN did not write MMKV before replacement'; exit 1; }
     echo 'Replacing RN while running and writing MMKV'
 fi
+sync_since="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 "$ADB" -s "$SERIAL" install -r "$NATIVE_APK"
 if [[ -n "${writer_pid:-}" ]]; then kill "$writer_pid" 2>/dev/null || true; wait "$writer_pid" 2>/dev/null || true; unset writer_pid; fi
 if [[ "${INSTALL_WHILE_RUNNING:-1}" != 1 ]]; then
     [[ "$mmkv_hash" == "$("$ADB" -s "$SERIAL" shell sha256sum "/data/user/0/$BUNDLE/files/mmkv/noah-wallet-storage" | awk '{print $1}')" ]] || { echo 'RN MMKV bytes changed during replacement'; exit 1; }
 fi
+# Replacement has stopped the last RN writer; native has not launched yet.
+"$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/files/mmkv" "$ARTIFACTS/mmkv-final" >/dev/null
+if [[ "${INSTALL_WHILE_RUNNING:-1}" == 0 ]]; then
+    python3 "$ROOT/apps/ios/UpgradeTests/check-mmkv.py" check "$ARTIFACTS/mmkv-final" "$ARTIFACTS/mmkv-stopped.json"
+fi
+python3 "$ROOT/apps/ios/UpgradeTests/check-mmkv.py" record "$ARTIFACTS/mmkv-final" "$ARTIFACTS/mmkv-final.json"
+if [[ "${FUNDED:-0}" == 1 ]]; then run_flow "$HERE/native-notice.yml"; fi
 "$ADB" -s "$SERIAL" shell dumpsys appwidget > "$ARTIFACTS/widgets-after.txt"
 "$ADB" -s "$SERIAL" shell dumpsys shortcut > "$ARTIFACTS/shortcuts-after.txt"
 python3 "$HERE/check-launcher.py" "$BUNDLE" "$ARTIFACTS"
@@ -215,5 +243,24 @@ python3 "$HERE/check-launcher.py" "$BUNDLE" "$ARTIFACTS"
     -e expectedFingerprint "$fingerprint" -e expectedMovementIds "$movement_ids" -e expectedMovements "$movements" -e expectedSpendable "$spendable" \
     "$BUNDLE.test/androidx.test.runner.AndroidJUnitRunner" | tee "$ARTIFACTS/instrumentation.txt"
 grep -q 'OK (1 test)' "$ARTIFACTS/instrumentation.txt"
-"$ADB" -s "$SERIAL" shell am start -W -n "$BUNDLE/com.noahwallet.MainActivity" >/dev/null
-echo 'Upgrade compatibility assertions passed (wallet, settings, Expo and launcher)'
+# Freeze the final database/WAL generation after all foreground assertions.
+"$ADB" -s "$SERIAL" shell am force-stop "$BUNDLE"
+[[ "$db_inode" == "$("$ADB" -s "$SERIAL" shell stat -c %i "/data/user/0/$BUNDLE/files/noah-data-regtest/db.sqlite" | tr -d '\r')" ]] || { echo 'Wallet DB was replaced'; exit 1; }
+"$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/files/mmkv" "$ARTIFACTS/mmkv-after" >/dev/null
+python3 "$ROOT/apps/ios/UpgradeTests/check-mmkv.py" check "$ARTIFACTS/mmkv-after" "$ARTIFACTS/mmkv-final.json"
+"$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/no_backup/mmkv.native-backup" "$ARTIFACTS/mmkv-snapshot" >/dev/null
+python3 "$ROOT/apps/ios/UpgradeTests/check-mmkv.py" snapshot "$ARTIFACTS/mmkv-snapshot" "$ARTIFACTS/mmkv-final.json"
+"$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/files/noah-data-regtest" "$ARTIFACTS/wallet-after" >/dev/null
+python3 - "$ARTIFACTS/wallet/db.sqlite" "$ARTIFACTS/wallet-after/db.sqlite" <<'PY_HISTORY'
+import sqlite3, sys
+connections = [sqlite3.connect('file:' + p + '?mode=ro', uri=True) for p in sys.argv[1:]]
+query = 'select id, status, subsystem_name, movement_kind, intended_balance, effective_balance, offchain_fee from bark_movements order by id'
+assert connections[0].execute(query).fetchall() == connections[1].execute(query).fetchall(), 'Upgrade changed RN movements or made a payment'
+PY_HISTORY
+"$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/files/noah-upgrade-result.json" "$ARTIFACTS/result.json" >/dev/null
+if [[ "${FUNDED:-0}" == 1 ]]; then
+    login_key="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["loginKey"])' "$ARTIFACTS/result.json")"
+    python3 "$ROOT/apps/ios/UpgradeTests/check-server-sync.py" "$sync_since" "$login_key" "ktor-client"
+fi
+cp "$ARTIFACTS/result.json" "${UPGRADE_EVIDENCE:-/private/tmp/noah-android-upgrade-evidence.json}"
+echo "Upgrade compatibility assertions passed (wallet, settings, notices, MMKV, server sync, Expo and launcher); elapsed ${SECONDS}s"

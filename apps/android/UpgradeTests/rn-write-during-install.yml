@@ -3,6 +3,9 @@
 appId: com.noahwallet.regtest
 ---
 - launchApp
+- extendedWaitUntil:
+    visible: "Home|Hem"
+    timeout: 60000
 - tapOn: "Home|Hem"
 - tapOn: "Open settings|Öppna inställningar"
 - tapOn:
