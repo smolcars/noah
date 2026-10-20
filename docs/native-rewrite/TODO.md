@@ -165,7 +165,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Shared receive-request (9 cases) and fiat-currency (48 cases) fixtures in JUnit; session observer cancellation/close regressions — Android
 
 ## M3 — Send
-- [ ] Android Send port (based on round-6 iOS): adopt round-7 audited destructive override for unresolved receipts (warn that Bark's stored transaction/retries continue and sending again may spend twice; show proven conflicts), preserve last proven receipts on failed refresh without upgrading crash recovery, and retain/retry preparation discard in session-owned work shielded from caller cancellation. See `apps/ios/SendTests/README.md`.
+- [x] Android Send round-1 review fixes: iOS rounds 7–8 audited destructive override for unresolved receipts; durable original/legacy evidence and corrupt journal/audit quarantine; retained, coalesced, bounded session-owned discard retries and failed-close ownership; last-known receipts after refresh errors; version-2 prepared input outpoints and confirmed competing-spend detection. Bounded Android/iOS Send amount parsing shares 90 adversarial vectors. Full suites once: Android 1,113 passed / 0 failed or skipped plus regtest APK; iOS 378 total / 362 passed / 16 opt-in skipped / 0 failed. Dedicated simulator/build cleanup complete. See `apps/android/SendTests/README.md`.
 - [x] Input parsing (BIP21/BIP321, bolt11, bolt12, lightning address/LNURL, Ark address, onchain) — iOS; RN-generated `send-utils`, `send-flow`, `onchain-send`, `lightning-invoice` fixtures; shared `fiat-currency` reused
 - [x] SendScreen (amount-first + recipient-first, MAX, method/source choice, fee review, notes, suggestions) — iOS
 - [x] AmountKeypad (custom keypad, never with system keyboard) — iOS

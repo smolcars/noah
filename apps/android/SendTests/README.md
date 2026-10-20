@@ -1,5 +1,101 @@
 # Android native Send (M3) verification
 
+## Round-1 review fixes (2026-10-19)
+
+Base: `feat/native-rewrite` HEAD `c1a1c8aca99f1136864e78d17ca9c0f780f62d6f`.
+This section supersedes the older receipt override restrictions and version-1
+journal notes below. Behaviour follows iOS Send rounds 7–8 and the SDK 0.4.0
+prepared-send contract.
+
+- Broadcast-pending, unlocated and conflicted receipts retain ordinary sending
+  and Done locks, but allow the explicit two-step destructive history-check
+  override. The confirmation says that forgetting the attempt does not cancel
+  Bark's stored transaction or future broadcast retries, and sending again may
+  spend twice. Accepted/confirmed receipts and active submissions retain their
+  ordinary controls.
+- Before removal, `noah-send-overrides.json` durably records the timestamp,
+  exact title/warning/confirmation, status/message, original txid, candidates,
+  possible txids and complete original journal (including prepared input
+  outpoints). Identity-free legacy evidence has `ownershipUnverified: true`
+  without claiming the current wallet's identity. Audit history keeps its last
+  100 entries. Corrupt audit files are renamed to unique `.unreadable-<UUID>`
+  siblings and never deleted. Unreadable active journals and their sidecars are
+  copied and fsynced to quarantine before audit/removal; the active file stays
+  in place until that sequence succeeds. Quarantine, audit or removal failures
+  retain the lock. These files stay in the wallet-private, backup-excluded datadir.
+- Session-owned disposal retains the native preparation until discard succeeds,
+  blocks claiming/consuming once disposal starts, coalesces concurrent callers,
+  and tries at most three times per pass. It outlives caller cancellation,
+  including native cancellation failures. Failed quote validation uses the same
+  ownership path. Exhausted cleanup retries on counted wallet activity or close;
+  close retains the open session/native handles when cleanup still fails.
+- Refresh exceptions preserve the last receipt, outcome and durable journal.
+  The UI says "Couldn't check the latest status; showing the last known status."
+  A successful check clears that warning. Failed sync never promotes cached
+  crash-recovery evidence or clears broadcast locks.
+- Journal version 2 persists prepared input outpoints. Version-1 journals migrate
+  durably without discarding proven receipts or inventing inputs; unversioned or
+  unsafe evidence remains conservative. A different **confirmed** transaction
+  sharing an original outpoint proves conflict, including after original-tx
+  eviction. Older quotes can use cached original transaction bytes. Missing,
+  malformed, unrelated and unconfirmed evidence cannot prove conflict. The
+  receipt and override name the competitor; conflict retains the lock.
+- BIP21/321 amount parsing bounds ASCII syntax, mantissa digits (32), exponent
+  and effective decimal scale (-32…32) before conversion, preserving half-up
+  satoshi rounding. Arithmetic failures return invalid destinations. All **90**
+  shared `send-amount-safety.json` vectors cover extreme exponents, supply limits,
+  small/large/negative values, NaN-like text, excess decimals and Unicode digits.
+  iOS used the same vectors: its permissive Decimal prefix parsing accepted
+  `1abc`, `1e` and `1e+` as 1 BTC; the Send-only parser fix is a separate commit.
+
+Regressions: `SendUnresolvedOverrideTest`, `SendOverrideAuditTest`,
+`SendDiscardTest`, `SendRefreshTest`, `SendConflictTest`, `SendAmountTest`,
+updated `SendPreparedTest`/`SendSafetyTest` and counted `WalletSessionTest`
+activity/close cases. Real temporary files exercise corrupt-byte preservation,
+quarantine naming failure and missing-parent write failure; injected directory
+sync/removal/native-discard errors exercise the remaining failure boundaries.
+The amount vectors and all 394 existing RN Send fixtures passed together
+(**484 JUnit cases**, no failures/errors/skips).
+
+The full Android suite ran **once** after the final Android code/test changes:
+**1,113 JUnit cases passed**, **56 suites**, **0 failures, errors or skips**.
+That includes **540 Send cases** and **20 WalletSession cases**. Regtest APK
+assembly passed in the same **3m 55s** invocation, with no exclusions:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
+```
+
+The signed iOS parser/fixture target run passed **7 tests**, zero failures/skips.
+The full signed `NoahTests` suite ran **once** after the final iOS changes,
+without target/suite exclusions: **378 total, 362 passed, 16 opt-in skipped,
+0 failed**, **84 suites**. Parameterized execution reports **476 passed /
+16 skipped individual runs**. Both platforms consume the same 90 safety vectors.
+iOS changes are limited to `SendDestination.swift` and `SendAmountTests.swift`.
+
+All iOS runs used Nix, normal simulator code signing, `ARCHS=arm64
+ONLY_ACTIVE_ARCH=YES`, `-jobs 2` and disabled parallel testing. XcodeGen used its
+installed absolute path (`/opt/homebrew/bin/xcodegen`) because the Nix shell did
+not expose it. Full-suite command:
+
+```sh
+nix develop --command sh -c 'cd apps/ios && xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest -destination "platform=iOS Simulator,id=8A272030-EEBD-4281-94EB-8D12AA45EB6E" -derivedDataPath /private/tmp/noah-send-android-r1-ios-dd -resultBundlePath /private/tmp/noah-send-android-r1-ios-full.xcresult -jobs 2 -parallel-testing-enabled NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES test'
+```
+
+Cleanup completed: the dedicated **Noah Android Send R1 Parser Sol 1fb73e40**
+iPhone 17 / iOS 27.0 (`8A272030-EEBD-4281-94EB-8D12AA45EB6E`) was shut down
+through the Device panel, its exact identity and Shutdown state verified, then
+deleted and confirmed absent. Removed the owned DerivedData and all three iOS
+xcresult bundles after exporting summaries. Logs and summary JSON remain under
+`/private/tmp/noah-send-android-r1-*`; Android Gradle output stays in this worktree.
+No other devices or Docker were changed.
+
+No new funded payment, live RBF/offline-broadcast injection or emulator was needed;
+existing live M3 acceptance evidence below remains the live baseline. External
+LNURL/BOLT12 and physical-camera limits remain as documented below.
+
+## Initial Android M3 port verification
+
 Ported against `feat/native-rewrite` at `4fa48411`, using the checked-in iOS Send
 implementation as the behavior reference and RN copy/flow fixtures as the UX
 reference. SDK: bark-bolt-ffi **0.4.0**. Verification ran October 19, 2026
@@ -139,8 +235,9 @@ keypad never requests a system keyboard. History repeat prefill uses the existin
 shared metadata codec and always returns to recipient validation. The process
 controller survives navigation; the session's wallet-change flow supplies the
 lifecycle hook (this checkout has no separate WalletLifecycle wallet-changed
-callback). Android's new journal format starts at version 1; unsafe/unversioned
-records are treated conservatively rather than importing iOS journal versions.
+callback). Android's journal now uses version 2; version 1 migrates without losing proven
+receipts, while unsafe/unversioned records stay conservative rather than importing
+iOS journal versions.
 
 SDK limitations match iOS: external offboard chain status and durable Ark/offboard
 operation IDs are still unavailable (handoff items 15/16). Offboards retain estimate
