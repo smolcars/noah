@@ -111,7 +111,8 @@ internal class OnchainOperations(
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (reviewed.preparedBoard == null) fail(OnchainFailure.changed)
-            if (reviewed.automatic && (wallet.confirmed() != reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve)) fail(OnchainFailure.changed)
+            // Added funds leave at least the reviewed reserve; only a decrease can break it (iOS parity).
+            if (reviewed.automatic && (wallet.confirmed() < reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve)) fail(OnchainFailure.changed)
             wallet.claimBoard(reviewed)
         } else {
             val fresh = quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic)

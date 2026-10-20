@@ -137,6 +137,20 @@ class OnchainOperationsTest {
         assertTrue(wallet.bound.isEmpty())
         assertTrue(wallet.calls.isEmpty())
     } }
+    @Test fun automaticBoardAcceptsAddedFundsButRejectsAReducedBalance() = runBlocking {
+        fixture { wallet, ops, _, _ ->
+            val quote = checkNotNull(ops.autoBoardQuote())
+            wallet.balance -= 1
+            assertTrue(runCatching { ops.execute(quote) }.isFailure)
+            assertTrue(wallet.calls.isEmpty())
+        }
+        fixture { wallet, ops, _, _ ->
+            val quote = checkNotNull(ops.autoBoardQuote())
+            wallet.balance += 10_000
+            ops.execute(quote)
+            assertEquals(listOf("submit:${quote.preparedBoard!!.id}"), wallet.calls)
+        }
+    }
     @Test fun automaticSizingStartsFundableWithManyInputsAndHighFees() = runBlocking { fixture { wallet, ops, _, _ ->
         wallet.chainRate = 2500; wallet.exactFee = 8570; wallet.inputCount = 15
         assertTrue(runCatching { ops.quote(OnchainAction.board, amount = 92_920) }.isFailure)
