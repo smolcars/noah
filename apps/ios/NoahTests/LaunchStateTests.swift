@@ -10,7 +10,7 @@ struct LaunchStateTests {
 
     @Test func matchesSharedFixture() throws {
         let cases = try Fixtures.load("launch-state", input: Input.self, expected: String.self)
-        #expect(cases.count == 6)
+        #expect(cases.count == 23)
         for testCase in cases {
             let seed = try #require(LaunchState.SeedStatus(rawValue: testCase.input.seed))
             let state = LaunchState.resolve(
