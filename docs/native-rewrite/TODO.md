@@ -77,12 +77,14 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Launch decision — Android
 - [x] BIP39 validation of the stored seed; conflict handling
   - [x] iOS: validate 12/24-word BIP39 before create/open/restore; block corrupt/ambiguous seeds and fingerprint conflicts without overwriting data; fixed support guidance, shared safety fixture and real SDK no-write tests
+  - [x] Review round 1: one normalization path for wallet/auth SDK input, original RN backup passwords retained; explicit read-only Android background opens and foreground-only idempotent migration; iOS transient Keychain retry; shared raw-source launch diagnostics (including empty seeds) and Unicode vectors — `apps/fixtures/README.md`
   - [x] Android: 12/24-word/checksum validation, all-source agreement, read-only seed reads, SDK fingerprint rejection before migration, blocking support state; negative device checks keep DB/source bytes unchanged — `apps/android/UpgradeTests/DEVICE.md`.
 - [x] Server auth token reader (`com.noah.auth-token.<variant>`) — iOS
 - [x] Server auth token reader/writer (RN_KEYCHAIN, existing GCM/CBC alias; excluded from backup) — Android
 - [x] MMKV: open `noah-wallet-storage` + zustand envelope codec, `wallet-storage` decoded — iOS
 - [x] MMKV — Android
 - [ ] Remaining RN store shapes (decode as their screens land)
+  - [x] Review round 1: exact raw version tokens; recoverable profile fallback without stored-value repair; one deterministic RN Zustand generator/196-case raw fixture consumed by both native suites — `apps/fixtures/README.md`
   - [x] iOS: inventory all 8 stores; validate consumed envelopes/versions, preserve unknown JSON tokens, apply transaction v0 migration; RN-generated fixtures; Esplora decoder remains inactive until its native screen lands — `apps/ios/UpgradeTests/README.md`
   - [x] Android: all 8 RN envelopes inventoried/validated; unknown fields retained on writes, transaction v0 migration matched; Esplora has a decoder but no native consumer — `apps/android/UpgradeTests/STORES.md`.
 - [x] Verify against a real RN-written MMKV file (in the upgrade test) — iOS

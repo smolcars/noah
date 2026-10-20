@@ -54,13 +54,29 @@ extension LaunchState.SeedStatus {
 }
 
 extension LaunchState {
+    enum Diagnostic: String { case none, invalidMnemonic, sourceUnavailable, sourceConflict, walletFingerprintMismatch, multipleDatabases }
+    struct Inspection { let state: LaunchState; let reason: Diagnostic }
+
+    static func inspect(sources: [KeychainPassword.ReadResult], walletDatabaseExists: Bool,
+                        fingerprintMatches: Bool = true, multipleDatabases: Bool = false) -> Inspection {
+        if multipleDatabases { return .init(state: .seedConflict, reason: .multipleDatabases) }
+        let status = SeedStatus(StoredSeed.agree(sources))
+        if status == .present, walletDatabaseExists, !fingerprintMatches {
+            return .init(state: .seedConflict, reason: .walletFingerprintMismatch)
+        }
+        let reason: Diagnostic = switch status {
+        case .invalid: .invalidMnemonic
+        case .conflict: .sourceConflict
+        case .unavailable: .sourceUnavailable
+        case .present, .absent: .none
+        }
+        return .init(state: resolve(seed: status, walletDatabaseExists: walletDatabaseExists), reason: reason)
+    }
+
     /// Reads the current state from the Keychain and the filesystem.
     static func current(variant: AppVariant = .current) -> LaunchState {
         let location = WalletDataLocation(variant: variant)
-        if location.hasMultipleDatabases { return .seedConflict }
-        return resolve(
-            seed: SeedStatus(KeychainPassword.mnemonic(for: variant).read()),
-            walletDatabaseExists: WalletDataLocation(variant: variant).hasAnyData
-        )
+        return inspect(sources: [KeychainPassword.mnemonic(for: variant).read()],
+                       walletDatabaseExists: location.hasAnyData, multipleDatabases: location.hasMultipleDatabases).state
     }
 }

@@ -1,120 +1,123 @@
 {
-  "description": "Launch decision from the seed (Keychain/Keystore) and the bark wallet database. Must never lead to deleting the seed or creating a wallet over existing data.",
+  "description": "Source-level launch decisions; only public BIP39 test vectors. notChecked never grants wallet access.",
   "cases": [
     {
       "name": "existing wallet",
-      "input": { "seed": "present", "walletDatabaseExists": true },
-      "expected": "existingWallet"
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "matchesSeed",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "reason": "none"
+      }
     },
     {
       "name": "fresh install",
-      "input": { "seed": "absent", "walletDatabaseExists": false },
-      "expected": "onboarding"
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "absent"
+          },
+          {
+            "name": "native",
+            "read": "absent"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "onboarding",
+        "reason": "none"
+      }
     },
     {
-      "name": "reinstall: seed survived, data did not",
-      "input": { "seed": "present", "walletDatabaseExists": false },
-      "expected": "seedWithoutWalletData"
+      "name": "seed survived data did not",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedWithoutWalletData",
+        "reason": "none"
+      }
     },
     {
-      "name": "data without seed: ask for recovery phrase",
-      "input": { "seed": "absent", "walletDatabaseExists": true },
-      "expected": "walletDataWithoutSeed"
+      "name": "database without any seed",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "absent"
+          },
+          {
+            "name": "native",
+            "read": "absent"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "walletDataWithoutSeed",
+        "reason": "none"
+      }
     },
     {
-      "name": "keychain locked with data",
-      "input": { "seed": "unavailable", "walletDatabaseExists": true },
-      "expected": "secureStorageUnavailable"
+      "name": "secure storage locked False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "unavailable"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "secureStorageUnavailable",
+        "reason": "sourceUnavailable"
+      }
     },
     {
-      "name": "keychain locked without data",
-      "input": { "seed": "unavailable", "walletDatabaseExists": false },
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "invalid BIP39 word list without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "invalid BIP39 word list with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "invalid BIP39 checksum without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "invalid BIP39 checksum with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "unsupported word count without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "unsupported word count with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "empty stored seed without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "empty stored seed with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "RN DataStore and legacy preferences disagree without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "RN DataStore and legacy preferences disagree with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "RN and native seeds disagree without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "RN and native seeds disagree with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "fallback and RN seeds disagree without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "fallback and RN seeds disagree with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "corrupt secondary seed source without DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": false},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "corrupt secondary seed source with DB",
-      "input": {"seed": "unavailable", "walletDatabaseExists": true},
-      "expected": "secureStorageUnavailable"
-    },
-    {
-      "name": "valid seed disagrees with DB fingerprint: SDK preflight blocks recovery",
-      "input": { "seed": "unavailable", "walletDatabaseExists": true, "reason": "walletFingerprintMismatch" },
-      "expected": "secureStorageUnavailable"
+      "name": "secure storage locked True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "unavailable"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "secureStorageUnavailable",
+        "reason": "sourceUnavailable"
+      }
     }
   ]
 }

@@ -6,36 +6,66 @@ import Testing
 @MainActor
 struct RNStoreTests {
     struct Input: Decodable { let key: String; let raw: String }
-    struct Expected: Decodable { let version: Int }
+    struct Expected: Decodable {
+        let available: Bool
+        let version: Int?
+        let stateRaw: String?
+        let consumed: [String: String]?
+        let preservedTokens: [String: String]?
+    }
 
-    @Test func actualRNStoresDecodeAndPreserveUnknownFields() throws {
+    @Test func unifiedRNFixturesValidateMigrateAndPreserveOriginalBytes() throws {
         SettingsStorage.bootstrap()
         let root = FileManager.default.temporaryDirectory.appending(path: "rn-stores-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         let storage = try SettingsStorage(rootPath: root.path)
-        let cases = try Fixtures.load("rn-stores", input: Input.self, expected: Expected.self)
-        #expect(cases.count == 8)
-        for item in cases where item.input.key != RecurringStore.key {
+        let cases = try Fixtures.load("rn-store-compatibility", input: Input.self, expected: Expected.self)
+        #expect(cases.count == 196)
+        for item in cases {
             let key = item.input.key
-            var envelope = try RawObject(item.input.raw)
-            var state = try RawObject(envelope.fields["state"]!)
-            state.fields["futureNumber"] = "9223372036854775000"
-            envelope.fields["state"] = try state.json()
-            envelope.fields["futureRoot"] = #"{"nested":[1,true,null]}"#
-            let raw = try envelope.json()
+            let raw = item.input.raw
             storage.set(raw, forKey: key)
-            let merged = try RNStoreCodec.merging(item.input.raw, into: raw, key: key)
-            let result = try RawObject(merged)
-            #expect(try RawObject(result.fields["state"]!).fields["futureNumber"] == "9223372036854775000")
-            #expect(result.fields["futureRoot"] == envelope.fields["futureRoot"])
+            let recurring = RecurringStore(settings: storage)
+            if !item.expected.available {
+                if key == RecurringStore.key {
+                    #expect(throws: (any Error).self) { try recurring.load() }
+                    #expect(throws: (any Error).self) { try recurring.setPending(false) }
+                } else {
+                    #expect(throws: (any Error).self) { try RNStoreCodec.decode(raw, key: key) }
+                    #expect(throws: (any Error).self) {
+                        try RNStoreCodec.merging(#"{"state":{},"version":0}"#, into: raw, key: key)
+                    }
+                }
+                #expect(storage.string(forKey: key) == raw, "\(item.name)")
+                continue
+            }
+            let decoded: RawObject
+            if key == RecurringStore.key { _ = try recurring.load(); decoded = try RawObject(raw) }
+            else { decoded = try RNStoreCodec.decode(raw, key: key) }
+            let state = try RawObject(decoded.fields["state"]!)
+            let wanted = try RawObject(try #require(item.expected.stateRaw))
+            for (field, token) in wanted.fields {
+                #expect(state.fields[field]?.trimmingCharacters(in: .whitespacesAndNewlines) == token, "\(item.name): \(field)")
+            }
+            #expect(storage.string(forKey: key) == raw, "Reads must not migrate bytes: \(item.name)")
+            if let consumed = item.expected.consumed {
+                let profile = try #require(storage.persistedState(PersistedProfileState.self, key: key))
+                #expect(profile.currency == consumed["preferredCurrency"])
+                #expect(profile.amountUnit.rawValue == consumed["bitcoinAmountUnit"])
+            }
+            if key == RecurringStore.key { try recurring.setPending(false) }
+            else {
+                let incoming = "{\"state\":\(item.expected.stateRaw!),\"version\":\(item.expected.version!)}"
+                try storage.setDurably(RNStoreCodec.merging(incoming, into: raw, key: key), forKey: key)
+            }
+            let saved = try RawObject(try #require(storage.string(forKey: key)))
+            let savedState = try RawObject(saved.fields["state"]!)
+            for (path, token) in item.expected.preservedTokens ?? [:] {
+                let parts = path.split(separator: ".")
+                let value = parts[0] == "root" ? saved.fields[String(parts[1])] : savedState.fields[String(parts[1])]
+                #expect(value?.trimmingCharacters(in: .whitespacesAndNewlines) == token, "\(item.name): \(path)")
+            }
         }
-        #expect(storage.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
-        #expect(storage.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.preferredCurrency == "EUR")
-        #expect(storage.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?.isHomeBalanceHidden == true)
-        #expect(!PersistedTransactionState.load(from: storage).isAutoBoardingEnabled)
-        #expect(storage.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.isMailboxAuthorizationEnabled == false)
-        #expect(storage.persistedState(PersistedBackupState.self, key: PersistedBackupState.key)?.lastBackupId == "fixture-backup")
-        #expect(storage.persistedState(PersistedEsploraState.self, key: PersistedEsploraState.key)?.endpointOverride == "https://fixture.invalid/api")
     }
 
     @Test func badAndFutureEnvelopesAreNeverReplaced() throws {

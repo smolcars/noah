@@ -18,6 +18,10 @@ struct PersistedProfileState: Codable, Equatable, Sendable {
     var preferredCurrency: String?
     var bitcoinAmountUnit: String?
 
+    var currency: String {
+        preferredCurrency.flatMap { FiatCurrency.supported.contains($0) ? $0 : nil } ?? "USD"
+    }
+
     var amountUnit: BitcoinAmountUnit {
         bitcoinAmountUnit.flatMap(BitcoinAmountUnit.init(rawValue:)) ?? .bip177
     }

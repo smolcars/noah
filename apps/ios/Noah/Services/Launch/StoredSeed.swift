@@ -16,6 +16,19 @@ enum StoredSeed {
         return phrase
     }
 
+    /// Each independent source must be readable, valid and byte-identical.
+    static func agree(_ sources: [KeychainPassword.ReadResult]) -> KeychainPassword.ReadResult {
+        let checked = sources.map { result -> KeychainPassword.ReadResult in
+            if case .found(let value) = result, (try? normalized(value)) == nil { return .unavailable(errSecDecode) }
+            return result
+        }
+        if let failure = checked.first(where: { if case .unavailable = $0 { true } else { false } }) { return failure }
+        let values = checked.compactMap { if case .found(let value) = $0 { value } else { nil as String? } }
+        guard let first = values.first else { return .notFound }
+        guard values.allSatisfy({ $0.utf8.elementsEqual(first.utf8) }) else { return .unavailable(errSecDuplicateItem) }
+        return .found(first)
+    }
+
     static func requireUsable(_ result: KeychainPassword.ReadResult) throws {
         switch result {
         case .found(let value): _ = try normalized(value)

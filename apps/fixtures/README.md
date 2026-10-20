@@ -65,29 +65,74 @@ created/updated, retry, in-flight and run-history times. The factory/validator c
 accept synthetic fractional inputs (as these range rows demonstrate), but native
 classifies any fractional time field as an unsupported row and preserves its values.
 
-Upgrade safety: `launch-seed-safety.json` adds invalid/ambiguous seed decisions
-without embedding any phrase. iOS `SeedSafetyTests` also drives the real SDK's
-read-only fingerprint rejection and asserts that database bytes and directory
-entries do not change.
+Upgrade safety: both platforms consume `launch-state.json` (6 cases) and
+`launch-seed-safety.json` (30 cases). Inputs are individual source reads (`found`
+with the raw string, `absent`, `unavailable`, duplicate/conflicting candidates or
+invalid encoding), plus database presence, multiple database candidates and the
+SDK fingerprint relation. No case substitutes a final unavailable seed status
+for validation. Only public BIP39 vectors are present. These fixtures exercise
+production validation/agreement/launch inspection; iOS additionally checks real
+SDK fingerprint rejection without DB changes. An `existingWallet` inspection is
+a candidate to open: the SDK must still verify the fingerprint before migration.
 
-RN store envelopes: run `NODE_PATH=<installed-repo>/node_modules bun
---tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-rn-stores.ts`
-from the repository root. The generator executes all eight actual RN Zustand
-stores through `persist`/`createJSONStorage`, mocking MMKV, logging and an unused
-number formatter only. `rn-stores.json` includes partialization, real envelope
-versions and non-default values. RN's existing `recurring-storage.json` and
-`recurring-rn-range.json` additionally exercise complete policies and numeric
-edge cases. iOS rejects unknown versions/types without overwriting the input,
-preserves unknown JSON tokens on writes, and applies transaction v0→v1's
-`hasAttemptedAutoBoarding = false` migration in memory before any write.
+| Source/database condition | Shared outcome | Diagnostic reason |
+| --- | --- | --- |
+| All sources absent, no data | `onboarding` | `none` |
+| All sources absent, data present | `walletDataWithoutSeed` | `none` |
+| Valid byte-identical sources, no data | `seedWithoutWalletData` | `none` |
+| Valid byte-identical sources, matching DB | `existingWallet` | `none` |
+| Empty/invalid BIP39 or invalid credential encoding | `invalidSeed` | `invalidMnemonic` |
+| Unavailable source, even with another valid source | `secureStorageUnavailable` | `sourceUnavailable` |
+| Disagreeing original bytes or duplicate/foreign Keychain candidates | `seedConflict` | `sourceConflict` |
+| Valid seed, SDK fingerprint mismatch | `seedConflict` | `walletFingerprintMismatch` |
+| Two database candidates | `seedConflict` | `multipleDatabases` |
 
-Android RN store shapes: `rn-stores-android-shapes.json` is produced by
-`bun --tsconfig-override ./client/tsconfig.json apps/fixtures/tools/generate-rn-stores-android.ts`.
-It executes all eight actual Zustand stores and the transaction v0 migration.
-See `apps/android/UpgradeTests/STORES.md` for keys, fields, versions, native consumers
-and unknown-field preservation. The Android-specific name avoids concurrent iOS
-fixture edits. `launch-state.json` additionally covers invalid/empty BIP39 records,
-conflicting sources and corrupt secondary sources with and without a wallet DB,
-plus the blocking state after SDK fingerprint preflight fails. The device upgrade
-test exercises that preflight with a different valid seed and hashes all DB files
-to prove the rejection performs no writes.
+Multiple database candidates take precedence. Source failures block before
+agreement/fingerprint checks; if several sources fail, the first source failure
+is reported. Absence never overrides another source's failure. All blocking
+outcomes preserve source and database bytes, with no automatic create/restore.
+
+`stored-mnemonic.json` (37 cases) shares normalization vectors: NFKD, lowercase,
+Unicode White_Space splitting, and joining words with one ASCII space. The space
+set is U+0009–000D, U+0020, U+0085, U+00A0, U+1680, U+2000–200A, U+2028–2029,
+U+202F, U+205F and U+3000. U+001C–001F, U+180E, U+200B and U+FEFF are not word
+separators. Normalization applies to wallet SDK input, auth `m/350/0` derivation
+and signing. Validation retains the original credential and agreement compares
+its bytes, including canonically equivalent whitespace with different UTF-8.
+
+RN itself performs **no normalization** in `crypto.ts` Keychain reads/writes or
+`walletApi.ts` wallet/auth calls. Its restore screen calls JavaScript `trim()`
+(ECMAScript WhiteSpace + LineTerminator, including U+FEFF, excluding U+0085),
+then passes the remaining string unchanged to Nitro/Bark. Native's existing
+BIP39 acceptance of NFKD/case/Unicode spacing is intentionally broader and must
+be consistent across every SDK input. Backups always use the original string:
+iOS PBKDF2 receives its UTF-8 bytes; Android receives its original character array
+(UTF-8 PBKDF2 semantics). Neither backup encryption nor decryption normalizes it.
+The four decorated crypto vectors exercise original-password backup round trips;
+iOS uses real SDK auth and offline open, Android checks SDK argument boundaries.
+
+RN store envelopes: from the repository root, run:
+
+```sh
+NODE_PATH=<installed-repo>/node_modules bun --tsconfig-override client/tsconfig.json \
+  apps/fixtures/tools/generate-rn-store-compatibility.ts
+```
+
+`rn-store-compatibility.json` (196 cases) is the **single** generated contract for
+both platforms. The generator executes all eight actual RN Zustand stores with
+`persist`/`createJSONStorage`, the real transaction v0→v1 migration, and profile
+merge/fallback. Only MMKV, logging and unused formatting are mocked; the clock is
+fixed. It preserves the complete `input: {key, raw}` string. Native tests never
+parse/stringify the envelope before passing it to the codec, so `-0`, `0e5`,
+`1e-400` and `0.0` retain their spelling. Native version/type/envelope probes are
+labelled separately from actual RN writes.
+
+Every store accepts only absent version or exact numeric `0`;
+`transaction-storage` also accepts exact `1`. Other tokens block that store and
+its writes, keeping original bytes. Reads apply transaction migration in memory;
+a save writes v1. Shared cases check unknown root/state numeric tokens (wide
+integers, underflow and negative zero) survive writes, nullability, and RN's
+USD/bip177 fallback for future or null preferences without repairing the stored
+values. Recurring fixtures go through the existing recurring codecs, whose
+financial-policy tests remain in `recurring-storage.json` and
+`recurring-rn-range.json`. Esplora remains inactive until a native consumer lands.

@@ -26,16 +26,25 @@ struct SeedSafetyTests {
     }
 
     @Test func formattedSeedsUseTheSameWalletAndAuthenticationIdentityButOriginalBackupPassword() throws {
-        let canonical = (Array(repeating: RecoveryPhraseInput.wordList[0], count: 11) + [RecoveryPhraseInput.wordList[3]]).joined(separator: " ")
-        let variants = [canonical.uppercased(), " \n" + canonical.replacingOccurrences(of: " ", with: "\t  ") + "\n",
-                        canonical.applyingTransform(.fullwidthToHalfwidth, reverse: true)!]
-        let key = try ServerClient.loginKey(variant: .regtest, mnemonic: canonical)
-        let signature = try ServerClient.signChallenge("public test challenge", variant: .regtest, mnemonic: canonical)
-        for original in variants {
-            let sameParserInput = try StoredSeed.normalized(original) == canonical
-            #expect(sameParserInput)
-            #expect(try ServerClient.loginKey(variant: .regtest, mnemonic: original) == key)
-            let sameSignature = try ServerClient.signChallenge("public test challenge", variant: .regtest, mnemonic: original) == signature
+        struct Input: Decodable { let raw: String; let exerciseCrypto: Bool }
+        struct Expected: Decodable { let normalized: String? }
+        let cases = try Fixtures.load("stored-mnemonic", input: Input.self, expected: Expected.self)
+        #expect(cases.count == 37)
+        let item = KeychainPassword(service: "com.noah.mnemonic.fixture-\(UUID().uuidString)", account: "noah")
+        defer { item.remove() }
+        for vector in cases {
+            let original = vector.input.raw
+            let normalized = try? StoredSeed.normalized(original)
+            let matches = normalized == vector.expected.normalized
+            #expect(matches, "\(vector.name)")
+            try item.save(original)
+            _ = LaunchState.SeedStatus(item.read())
+            let preserved = item.read() == .found(original)
+            #expect(preserved)
+            guard vector.input.exerciseCrypto, let canonical = vector.expected.normalized else { continue }
+            #expect(try ServerClient.loginKey(variant: .regtest, mnemonic: original) == ServerClient.loginKey(variant: .regtest, mnemonic: canonical))
+            let sameSignature = try ServerClient.signChallenge("public test challenge", variant: .regtest, mnemonic: original)
+                == ServerClient.signChallenge("public test challenge", variant: .regtest, mnemonic: canonical)
             #expect(sameSignature)
             let sealed = try BackupCrypto.encrypt(Data([1, 2, 3]), mnemonic: original, version: .snapshot)
             #expect(try BackupCrypto.decrypt(sealed, mnemonic: original, expecting: .snapshot) == Data([1, 2, 3]))
@@ -45,13 +54,33 @@ struct SeedSafetyTests {
         }
     }
 
-    @Test func launchSafetyFixture() throws {
-        let cases = try Fixtures.load("launch-seed-safety", input: LaunchStateTests.Input.self, expected: String.self)
-        #expect(cases.count == 8)
-        for item in cases {
-            let status = try #require(LaunchState.SeedStatus(rawValue: item.input.seed))
-            #expect(LaunchState.resolve(seed: status, walletDatabaseExists: item.input.walletDatabaseExists).rawValue == item.expected)
+    @Test func sharedFormattingVariantsOpenTheSameSDKWalletOffline() async throws {
+        struct Input: Decodable { let raw: String; let exerciseCrypto: Bool }
+        struct Expected: Decodable { let normalized: String? }
+        let cases = try Fixtures.load("stored-mnemonic", input: Input.self, expected: Expected.self)
+        let root = FileManager.default.temporaryDirectory.appending(path: "normalized-open-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
+        let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
+            let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test")
+            let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
+            let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
+                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
+                                     createWithoutServer: true, skipRecovery: true), onchain: onchain)
+            return .init(wallet: wallet, onchain: onchain)
         }
+        try await session.createNew(mnemonic: cases[0].input.raw, runDaemon: false, appVersion: "test")
+        try await session.close()
+        for vector in cases where vector.input.exerciseCrypto {
+            // The same normalized input used by the live opener must pass real SDK fingerprint preflight.
+            let onchain = try await OnchainWallet.openExisting(network: .regtest, mnemonic: StoredSeed.normalized(vector.input.raw),
+                config: WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test"), datadir: location.directory.path)
+            _ = onchain
+        }
+    }
+
+    @Test func launchSafetyFixture() throws {
+        try LaunchStateTests.checkFixture("launch-seed-safety", count: 30)
     }
 
     @Test func multipleKeychainCandidatesAreNeverChosenOrChanged() throws {

@@ -37,7 +37,7 @@ final class AppModel {
         change(&profile)
         try settings.setPersistedState(profile, key: PersistedProfileState.key, version: PersistedProfileState.version)
         amountUnit = profile.amountUnit
-        preferredCurrency = profile.preferredCurrency ?? "USD"
+        preferredCurrency = profile.currency
     }
 
     func setLanguage(_ code: String) {

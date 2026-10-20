@@ -1,0 +1,2137 @@
+{
+  "description": "One deterministic RN Zustand generator; input.raw retains original numeric token spelling. Real RN writes, transaction migration and profile merge; explicitly labelled native envelope/type/version rejection probes. Unknown raw tokens must survive native writes.",
+  "cases": [
+    {
+      "name": "RN backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+      }
+    },
+    {
+      "name": "unknown tokens backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+      }
+    },
+    {
+      "name": "reject version -0 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+      }
+    },
+    {
+      "name": "spaced zero backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+      }
+    },
+    {
+      "name": "version one backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"backupPending\":false,\"lastBackupAt\":1800000000000,\"lastBackupAttemptAt\":null,\"lastBackupStatus\":\"success\",\"lastBackupError\":null,\"lastBackupId\":\"fixture-backup\",\"lastUploadedSnapshotSha256\":\"fixture-snapshot\"}"
+      }
+    },
+    {
+      "name": "reject envelope broken backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} backup-storage",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "RN esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+      }
+    },
+    {
+      "name": "unknown tokens esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+      }
+    },
+    {
+      "name": "reject version -0 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+      }
+    },
+    {
+      "name": "spaced zero esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+      }
+    },
+    {
+      "name": "version one esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":\"https://fixture.invalid/api\"},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"endpointOverride\":\"https://fixture.invalid/api\"}"
+      }
+    },
+    {
+      "name": "reject envelope broken esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} esplora-storage",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "RN privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+      }
+    },
+    {
+      "name": "unknown tokens privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"isHomeBalanceHidden\":true},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+      }
+    },
+    {
+      "name": "reject version -0 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+      }
+    },
+    {
+      "name": "spaced zero privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+      }
+    },
+    {
+      "name": "version one privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":true},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"isHomeBalanceHidden\":true}"
+      }
+    },
+    {
+      "name": "reject envelope broken privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} privacy-storage",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "RN profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+      }
+    },
+    {
+      "name": "unknown tokens profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+      }
+    },
+    {
+      "name": "reject version -0 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+      }
+    },
+    {
+      "name": "spaced zero profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+      }
+    },
+    {
+      "name": "version one profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"displayName\":\"Upgrade fixture\",\"preferredCurrency\":\"EUR\",\"bitcoinAmountUnit\":\"sats\"}"
+      }
+    },
+    {
+      "name": "reject envelope broken profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} profile-storage",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "RN recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+      }
+    },
+    {
+      "name": "unknown tokens recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"schedules\":{},\"serverSyncPending\":false},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+      }
+    },
+    {
+      "name": "reject version -0 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+      }
+    },
+    {
+      "name": "spaced zero recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+      }
+    },
+    {
+      "name": "version one recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":{\"schedules\":{},\"serverSyncPending\":false},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"schedules\":{},\"serverSyncPending\":false}"
+      }
+    },
+    {
+      "name": "reject envelope broken recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} recurring-payment-storage",
+      "input": {
+        "key": "recurring-payment-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "RN server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+      }
+    },
+    {
+      "name": "unknown tokens server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+      }
+    },
+    {
+      "name": "reject version -0 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+      }
+    },
+    {
+      "name": "spaced zero server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+      }
+    },
+    {
+      "name": "version one server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"isRegisteredWithServer\":false,\"lightningAddress\":null,\"nostrPubkey\":null,\"isBackupEnabled\":false,\"emailAddress\":\"fixture@example.com\",\"isEmailVerified\":false,\"isEmailPromptDismissed\":false,\"mailboxAuthorizationExpiry\":null,\"isMailboxAuthorizationEnabled\":false,\"lastReportedDeviceFingerprint\":null,\"lastDeviceReportAt\":null}"
+      }
+    },
+    {
+      "name": "reject envelope broken server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} server-storage",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "RN transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1}"
+      },
+      "expected": {
+        "available": true,
+        "version": 1,
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+      }
+    },
+    {
+      "name": "unknown tokens transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1}"
+      },
+      "expected": {
+        "available": true,
+        "version": 1,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+      }
+    },
+    {
+      "name": "reject version -0 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 1,
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+      }
+    },
+    {
+      "name": "spaced zero transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 1,
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+      }
+    },
+    {
+      "name": "version one transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false},\"version\":1}"
+      },
+      "expected": {
+        "available": true,
+        "version": 1,
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+      }
+    },
+    {
+      "name": "reject envelope broken transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} transaction-storage",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "RN wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+      }
+    },
+    {
+      "name": "unknown tokens wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+      }
+    },
+    {
+      "name": "reject version -0 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":-0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0e5 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":0e5}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e-400 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1e-400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 0.0 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":0.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1.0 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1.0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e0 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1e0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version -1 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":-1}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 99 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":99}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version true wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":true}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version null wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version \"0\" wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":\"0\"}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject version 1e400 wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1e400}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "absent version wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+      }
+    },
+    {
+      "name": "spaced zero wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\": \n0\t}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+      }
+    },
+    {
+      "name": "version one wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"isInitialized\":true,\"isWalletLoaded\":true,\"staticVtxoPubkey\":null,\"isBiometricsEnabled\":false,\"isDebugModeEnabled\":true,\"isWalletSuspended\":false,\"hasSeenBatteryOptimizationPrompt\":false}"
+      }
+    },
+    {
+      "name": "reject envelope broken wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "broken"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope null wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "null"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {} wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":[]} wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":[]}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "reject envelope {\"state\":null} wallet-storage",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":null}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "real RN transaction v0 migration",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"futureRoot\":1e-400,\"state\":{\"futureWide\":9223372036854775809,\"futureUnderflow\":1e-400,\"futureNegativeZero\":-0,\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":true},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 1,
+        "preservedTokens": {
+          "root.futureRoot": "1e-400",
+          "state.futureWide": "9223372036854775809",
+          "state.futureUnderflow": "1e-400",
+          "state.futureNegativeZero": "-0"
+        },
+        "stateRaw": "{\"isAutoBoardingEnabled\":false,\"hasAttemptedAutoBoarding\":false}"
+      }
+    },
+    {
+      "name": "RN profile fallback future strings",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":\"Future preferences\",\"preferredCurrency\":\"future-currency\",\"bitcoinAmountUnit\":\"future-unit\"},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "consumed": {
+          "preferredCurrency": "USD",
+          "bitcoinAmountUnit": "bip177"
+        },
+        "stateRaw": "{\"displayName\":\"Future preferences\",\"preferredCurrency\":\"future-currency\",\"bitcoinAmountUnit\":\"future-unit\"}"
+      }
+    },
+    {
+      "name": "RN profile fallback null",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"displayName\":null,\"preferredCurrency\":null,\"bitcoinAmountUnit\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "consumed": {
+          "preferredCurrency": "USD",
+          "bitcoinAmountUnit": "bip177"
+        },
+        "stateRaw": "{\"displayName\":null,\"preferredCurrency\":null,\"bitcoinAmountUnit\":null}"
+      }
+    },
+    {
+      "name": "nullability wallet-storage.staticVtxoPubkey",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"staticVtxoPubkey\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"staticVtxoPubkey\":null}"
+      }
+    },
+    {
+      "name": "nullability wallet-storage.isInitialized",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"isInitialized\":null}"
+      }
+    },
+    {
+      "name": "nullability privacy-storage.isHomeBalanceHidden",
+      "input": {
+        "key": "privacy-storage",
+        "raw": "{\"state\":{\"isHomeBalanceHidden\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"isHomeBalanceHidden\":null}"
+      }
+    },
+    {
+      "name": "nullability transaction-storage.isAutoBoardingEnabled",
+      "input": {
+        "key": "transaction-storage",
+        "raw": "{\"state\":{\"isAutoBoardingEnabled\":null},\"version\":1}"
+      },
+      "expected": {
+        "available": false,
+        "version": 1,
+        "stateRaw": "{\"isAutoBoardingEnabled\":null}"
+      }
+    },
+    {
+      "name": "nullability server-storage.emailAddress",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"emailAddress\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"emailAddress\":null}"
+      }
+    },
+    {
+      "name": "nullability server-storage.mailboxAuthorizationExpiry",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"mailboxAuthorizationExpiry\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"mailboxAuthorizationExpiry\":null}"
+      }
+    },
+    {
+      "name": "nullability server-storage.isMailboxAuthorizationEnabled",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"isMailboxAuthorizationEnabled\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"isMailboxAuthorizationEnabled\":null}"
+      }
+    },
+    {
+      "name": "nullability backup-storage.lastBackupAt",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"lastBackupAt\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"lastBackupAt\":null}"
+      }
+    },
+    {
+      "name": "nullability backup-storage.lastBackupError",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"lastBackupError\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"lastBackupError\":null}"
+      }
+    },
+    {
+      "name": "nullability backup-storage.lastBackupStatus",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"lastBackupStatus\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"lastBackupStatus\":null}"
+      }
+    },
+    {
+      "name": "nullability backup-storage.backupPending",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"backupPending\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": false,
+        "version": 0,
+        "stateRaw": "{\"backupPending\":null}"
+      }
+    },
+    {
+      "name": "nullability esplora-storage.endpointOverride",
+      "input": {
+        "key": "esplora-storage",
+        "raw": "{\"state\":{\"endpointOverride\":null},\"version\":0}"
+      },
+      "expected": {
+        "available": true,
+        "version": 0,
+        "stateRaw": "{\"endpointOverride\":null}"
+      }
+    },
+    {
+      "name": "wrong type profile-storage.preferredCurrency",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"preferredCurrency\":[]},\"version\":0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "wrong type profile-storage.bitcoinAmountUnit",
+      "input": {
+        "key": "profile-storage",
+        "raw": "{\"state\":{\"bitcoinAmountUnit\":[]},\"version\":0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "wrong type wallet-storage.isInitialized",
+      "input": {
+        "key": "wallet-storage",
+        "raw": "{\"state\":{\"isInitialized\":[]},\"version\":0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "wrong type backup-storage.lastBackupAt",
+      "input": {
+        "key": "backup-storage",
+        "raw": "{\"state\":{\"lastBackupAt\":[]},\"version\":0}"
+      },
+      "expected": {
+        "available": false
+      }
+    },
+    {
+      "name": "wrong type server-storage.emailAddress",
+      "input": {
+        "key": "server-storage",
+        "raw": "{\"state\":{\"emailAddress\":[]},\"version\":0}"
+      },
+      "expected": {
+        "available": false
+      }
+    }
+  ]
+}

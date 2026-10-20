@@ -1,13 +1,649 @@
 {
-  "description": "Invalid and ambiguous stored seeds always block, without seed/DB writes. Fingerprint mismatch and multiple stores map to conflict after read-only inspection.",
+  "description": "Raw source reads, source availability and SDK database fingerprint relation. All words are public BIP39 test vectors. Originals must remain unchanged for every blocking decision.",
   "cases": [
-    {"name":"empty item with DB", "input":{"seed":"invalid","walletDatabaseExists":true},"expected":"invalidSeed"},
-    {"name":"empty item without DB", "input":{"seed":"invalid","walletDatabaseExists":false},"expected":"invalidSeed"},
-    {"name":"invalid word/checksum with DB", "input":{"seed":"invalid","walletDatabaseExists":true},"expected":"invalidSeed"},
-    {"name":"invalid word/checksum without DB", "input":{"seed":"invalid","walletDatabaseExists":false},"expected":"invalidSeed"},
-    {"name":"seed and DB fingerprint differ", "input":{"seed":"conflict","walletDatabaseExists":true},"expected":"seedConflict"},
-    {"name":"multiple candidate seed stores without DB", "input":{"seed":"conflict","walletDatabaseExists":false},"expected":"seedConflict"},
-    {"name":"RN and native candidates differ", "input":{"seed":"conflict","walletDatabaseExists":true},"expected":"seedConflict"},
-    {"name":"two database candidates", "input":{"seed":"conflict","walletDatabaseExists":true},"expected":"seedConflict"}
+    {
+      "name": "empty False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": ""
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "invalid word list False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "unknown unknown unknown unknown unknown unknown unknown unknown unknown unknown unknown unknown "
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "invalid checksum False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "unsupported word count False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "rnDataStore and rnPreferences disagree False",
+      "input": {
+        "sources": [
+          {
+            "name": "rnDataStore",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "rnPreferences",
+            "read": "found",
+            "raw": "legal winner thank year wave sausage worth useful legal winner thank yellow"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "rn and native disagree False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "legal winner thank year wave sausage worth useful legal winner thank yellow"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "rn and fallback disagree False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "fallback",
+            "read": "found",
+            "raw": "legal winner thank year wave sausage worth useful legal winner thank yellow"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "invalid secondary source False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "corrupt"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "unreadable secondary source False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "unavailable"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "secureStorageUnavailable",
+        "reason": "sourceUnavailable"
+      }
+    },
+    {
+      "name": "identical independent sources False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedWithoutWalletData",
+        "reason": "none"
+      }
+    },
+    {
+      "name": "formatting differences between sources False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABOUT"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "NFKD-equivalent whitespace is not the same backup password False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002about"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "duplicate or foreign keychain candidates False",
+      "input": {
+        "sources": [
+          {
+            "name": "keychain",
+            "read": "conflict"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "invalid credential encoding False",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "invalidEncoding"
+          }
+        ],
+        "walletDatabaseExists": false,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "empty True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": ""
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "invalid word list True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "unknown unknown unknown unknown unknown unknown unknown unknown unknown unknown unknown unknown "
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "invalid checksum True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "unsupported word count True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "rnDataStore and rnPreferences disagree True",
+      "input": {
+        "sources": [
+          {
+            "name": "rnDataStore",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "rnPreferences",
+            "read": "found",
+            "raw": "legal winner thank year wave sausage worth useful legal winner thank yellow"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "rn and native disagree True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "legal winner thank year wave sausage worth useful legal winner thank yellow"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "rn and fallback disagree True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "fallback",
+            "read": "found",
+            "raw": "legal winner thank year wave sausage worth useful legal winner thank yellow"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "invalid secondary source True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "corrupt"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "unreadable secondary source True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "unavailable"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "secureStorageUnavailable",
+        "reason": "sourceUnavailable"
+      }
+    },
+    {
+      "name": "identical independent sources True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "matchesSeed",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "existingWallet",
+        "reason": "none"
+      }
+    },
+    {
+      "name": "formatting differences between sources True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABOUT"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "NFKD-equivalent whitespace is not the same backup password True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000about"
+          },
+          {
+            "name": "native",
+            "read": "found",
+            "raw": "abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002about"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "duplicate or foreign keychain candidates True",
+      "input": {
+        "sources": [
+          {
+            "name": "keychain",
+            "read": "conflict"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "sourceConflict"
+      }
+    },
+    {
+      "name": "invalid credential encoding True",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "invalidEncoding"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "invalidSeed",
+        "reason": "invalidMnemonic"
+      }
+    },
+    {
+      "name": "seed disagrees with database fingerprint",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "mismatch",
+        "multipleDatabases": false
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "walletFingerprintMismatch"
+      }
+    },
+    {
+      "name": "two database candidates",
+      "input": {
+        "sources": [
+          {
+            "name": "rn",
+            "read": "found",
+            "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+          }
+        ],
+        "walletDatabaseExists": true,
+        "databaseFingerprint": "notChecked",
+        "multipleDatabases": true
+      },
+      "expected": {
+        "outcome": "seedConflict",
+        "reason": "multipleDatabases"
+      }
+    }
   ]
 }

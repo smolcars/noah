@@ -49,7 +49,7 @@ after recording the non-secret evidence here.
 ## Seed and conflict gates
 
 `StoredSeed` accepts 12/24-word BIP39 English phrases with valid word list and
-checksum, normalizing NFKD/case/whitespace only for the wallet parser. RN saves
+checksum, normalizing NFKD/case/Unicode White_Space for every wallet/auth SDK input. RN saves
 the raw phrase (`crypto.ts:setMnemonic`), trims it at its restore UI, and defers
 wallet-load validation to Nitro/Bark. The native app retains the stored bytes
 for backup decryption and never repairs or writes them during validation.
@@ -117,7 +117,7 @@ future versions and preserves unknown state/root fields (including exact wide
 numeric tokens) on saves. Malformed consumed settings block startup and headless
 wallet work before defaults can overwrite them. The existing recurring codec
 continues its stricter financial-policy/range handling. See
-`../NoahTests/RNStoreTests.swift` and `../../fixtures/tools/generate-rn-stores.ts`.
+`../NoahTests/RNStoreTests.swift` and `../../fixtures/tools/generate-rn-store-compatibility.ts`.
 
 ## Expo physical-device gate
 
@@ -244,3 +244,27 @@ owned orphan Maestro test-output directories, UDID-specific temporary runner
 files, task-owned Maestro home/debug artifacts and transient scripts/logs. The
 cached `/private/tmp/noah-rn-build` was preserved. Only the non-secret JSON
 checkpoint and the two evidence images named above remain.
+
+## Migration safety review round 1
+
+Both apps consume the same 196 raw RN store cases, 36 source-level launch cases
+and 37 mnemonic-normalization vectors; the exact outcome/diagnostic table and RN
+normalization/backup rules are in `../../fixtures/README.md`. Generic store
+versions use exact raw tokens, including rejecting numeric underflow and alternate
+spellings of zero. Unknown values stay preserved; profile consumers use RN's
+USD/bip177 fallback. Wallet open, login derivation and signing share `StoredSeed`;
+backup passwords and Keychain values retain the original string.
+
+Transient secure-storage unavailability retries in process on protected-data
+availability, foreground, and the blocking screen's Retry action. A retry reruns
+the seed read/recovery decision, serializes concurrent attempts, and never maps
+unavailable storage to an absent seed. Invalid/conflicting states stay blocked.
+
+Round 1 verification (2026-10-20): targeted parity/retry/seed suites **19 passed**;
+full `NoahTests` ran once: **520 total / 498 passed / 22 opt-in skipped /
+0 failed, 110 suites**. XcodeGen, arm64/active-architecture-only simulator build,
+code signing enabled. Real offline SDK open/auth and fingerprint/no-write checks
+passed. The owned `Noah Migration Safety f0e0adc0` simulator was confirmed shut
+down, deleted and verified absent; its DerivedData and all `.xcresult`
+bundles were removed. No protected/shared device or Docker was touched. The
+funded RN-to-native device procedure was not repeated in this seed/storage pass.
