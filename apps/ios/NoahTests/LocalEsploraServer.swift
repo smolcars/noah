@@ -8,17 +8,16 @@ final class LocalEsploraServer: @unchecked Sendable {
     private let queue = DispatchQueue(label: "test.esplora-server")
     private let lock = NSLock()
     private var connections: [NWConnection] = []
-    let port: UInt16
+    private(set) var port: UInt16 = 0
 
     init(_ reply: Reply) throws {
-        listener = try NWListener(using: .tcp, on: .any)
+        let parameters = NWParameters.tcp
+        parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
+        listener = try NWListener(using: parameters)
         let ready = DispatchSemaphore(value: 0)
         listener.stateUpdateHandler = { state in
             switch state { case .ready, .failed: ready.signal(); default: break }
         }
-        listener.start(queue: queue)
-        precondition(ready.wait(timeout: .now() + 5) == .success)
-        port = listener.port!.rawValue
         listener.newConnectionHandler = { [weak self] connection in
             guard let self else { connection.cancel(); return }
             lock.withLock { connections.append(connection) }
@@ -35,6 +34,10 @@ final class LocalEsploraServer: @unchecked Sendable {
                 }
             }
         }
+        listener.start(queue: queue)
+        guard ready.wait(timeout: .now() + 5) == .success,
+              let boundPort = listener.port, boundPort.rawValue != 0 else { throw URLError(.cannotConnectToHost) }
+        port = boundPort.rawValue
     }
     private func drip(_ connection: NWConnection, remaining: Int) {
         guard remaining > 0 else { return }
