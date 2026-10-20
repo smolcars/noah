@@ -56,14 +56,8 @@ enum SendReconciliation {
             else { return false }
             return true
         }
-        if hash != nil {
-            guard candidates.count == 1, let movement = candidates.first else { return .uncertain }
-            if movement.status == "successful" {
-                return .paid(
-                    SendReceipt(amount: payment.amount, paymentHash: hash, movementID: movement.id))
-            }
-            if ["failed", "canceled"].contains(movement.status) { return .failed }
-            return .uncertain
+        if let hash {
+            return lightning(candidates, hash: hash, amount: payment.amount, snapshot: attempt.snapshot)
         }
         return .candidates(
             candidates.map {
@@ -73,6 +67,29 @@ enum SendReconciliation {
                         ? $0.sentToAddresses.reduce(0) { $0 + $1.amountSats } : payment.amount,
                     createdAt: $0.createdAt)
             })
+    }
+
+    static func lightning(_ candidates: [Movement], hash: String, amount: UInt64, snapshot: SendSnapshot)
+        -> SendPaymentController.Resolution
+    {
+        guard candidates.count == 1, let movement = candidates.first else { return .uncertain }
+        var actual: UInt64 = 0
+        for destination in movement.sentToAddresses {
+            let (sum, overflow) = actual.addingReportingOverflow(destination.amountSats)
+            guard !overflow else { return .uncertain }
+            actual = sum
+        }
+        if movement.status == "successful", actual > 0 {
+            let receipt = SendReceipt(amount: actual, paymentHash: hash, movementID: movement.id,
+                                      fee: movement.offchainFeeSats)
+            if snapshot.movementIDs.contains(movement.id) { return .alreadyPaid(receipt) }
+            guard actual == amount else { return .uncertain }
+            return .paid(receipt)
+        }
+        // A hash alone cannot identify the reviewed amount of an amountless invoice.
+        guard actual == amount else { return .uncertain }
+        if ["failed", "canceled"].contains(movement.status) { return .failed }
+        return .uncertain
     }
 
     static func onchain(_ attempt: SendPaymentController.Attempt, transactions: [WalletTransaction])

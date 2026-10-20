@@ -35,6 +35,7 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var movementID: UInt32?
     var amountIsEstimated: Bool?
     var status: Status?
+    var fee: UInt64?
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated }
     var isSubmitted: Bool { txid != nil && status != .confirmed }
 }
@@ -62,12 +63,14 @@ enum SendFailure: LocalizedError {
 
 /// Explicit proof that submission stopped before the SDK could record or broadcast a payment.
 struct SendNotSubmitted: Error { let reason: SendFailure }
+struct SendAlreadyPaid: Error { let receipt: SendReceipt }
 
 /// Stored before funds can move. Weak history matches never authorize another attempt.
 @MainActor @Observable final class SendPaymentController {
     enum State: Equatable {
         case ready, submitting, uncertain
         case succeeded(SendReceipt)
+        case alreadyPaid(SendReceipt)
         case failed, storageBlocked
     }
     struct Attempt: Codable, Sendable {
@@ -75,6 +78,7 @@ struct SendNotSubmitted: Error { let reason: SendFailure }
         var payment: SendPayment
         var snapshot: SendSnapshot
         var receipt: SendReceipt?
+        var alreadyPaid: SendReceipt?
         var failed = false
         var startedAt: Date? = Date()
         var paymentHash: String?
@@ -92,6 +96,7 @@ struct SendNotSubmitted: Error { let reason: SendFailure }
     enum Resolution: Sendable, Equatable {
         case uncertain
         case paid(SendReceipt)
+        case alreadyPaid(SendReceipt)
         case candidates([SendCandidate])
         case failed
     }
@@ -115,12 +120,14 @@ struct SendNotSubmitted: Error { let reason: SendFailure }
                     saved.failed = false
                     if saved.receipt?.txid == nil { saved.receipt = nil }
                 }
-                // Round 1 could unlock an absent BDK transaction.
+                // Round 1 could unlock an absent BDK tx or fabricate an invoice receipt amount.
                 if saved.safetyVersion != 2 {
                     if saved.payment.source == .onchain { saved.failed = false }
+                    if saved.payment.method == "lightning" { saved.receipt = nil; saved.failed = false }
                 }
                 attempt = saved
-                state = saved.receipt.map { $0.status == .unlocated ? .uncertain : .succeeded($0) }
+                state = saved.alreadyPaid.map(State.alreadyPaid)
+                    ?? saved.receipt.map { $0.status == .unlocated ? .uncertain : .succeeded($0) }
                     ?? (saved.failed ? .failed : .uncertain)
                 message = saved.failureMessage
             }
@@ -147,7 +154,8 @@ struct SendNotSubmitted: Error { let reason: SendFailure }
             do {
                 let receipt = try await dependencies.pay(payment, quote, attempt!.snapshot)
                 finish(.paid(receipt))
-
+            } catch let error as SendAlreadyPaid {
+                finish(.alreadyPaid(error.receipt))
             } catch let error as SendNotSubmitted {
                 attempt?.failureMessage = error.reason.errorDescription
                 message = error.reason.errorDescription
@@ -182,6 +190,9 @@ struct SendNotSubmitted: Error { let reason: SendFailure }
         case .paid(let receipt):
             attempt.receipt = receipt
             state = receipt.status == .unlocated ? .uncertain : .succeeded(receipt)
+        case .alreadyPaid(let receipt):
+            attempt.alreadyPaid = receipt
+            state = .alreadyPaid(receipt)
         case .failed:
             guard attempt.receipt == nil else { return }
             attempt.failed = true
@@ -202,7 +213,7 @@ struct SendNotSubmitted: Error { let reason: SendFailure }
     }
     func acknowledge() {
         switch state {
-        case .succeeded, .failed: break
+        case .succeeded, .alreadyPaid, .failed: break
         default: return
         }
         clearAttempt()

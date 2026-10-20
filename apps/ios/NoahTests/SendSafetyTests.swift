@@ -226,7 +226,7 @@ import Testing
         let saved = try roundTrip(attempt("lightning"))
         let unrelated = movement("lightning", status: status, hash: "other-hash")
         #expect(SendReconciliation.ark(saved, movements: [unrelated]) == .uncertain)
-        // Same hash is authoritative even for a pre-existing pending movement.
+        // A pre-existing successful hash is already paid, not a new success.
         var matchingMovement = movement("lightning", status: status, id: 1, hash: "invoice-hash")
         if ["failed", "canceled"].contains(status) {
             matchingMovement.intendedBalanceSats = 0
@@ -243,13 +243,48 @@ import Testing
         if status == "successful" {
             #expect(
                 subject.state
-                    == .succeeded(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 1))
+                    == .alreadyPaid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 0))
             )
         } else if status == "pending" {
             #expect(subject.state == .uncertain)
         } else {
             #expect(subject.state == .failed)
         }
+    }
+
+    @Test func reusedAmountlessInvoiceShowsActualAmountAndFeeAcrossRestart() async throws {
+        var saved = attempt("lightning")
+        saved.payment.amount = 2000
+        var old = movement("lightning", id: 1, amount: 1000, hash: "invoice-hash")
+        old.offchainFeeSats = 83
+        let matched = old
+        let storage = SendPaymentTests.Storage()
+        storage.attempt = saved
+        let subject = controller(storage) { SendReconciliation.ark($0, movements: [matched]) }
+        await subject.checkStatus()
+        let receipt = SendReceipt(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 83)
+        #expect(subject.state == .alreadyPaid(receipt))
+        #expect(subject.attempt?.receipt == nil)
+        storage.attempt = try roundTrip(#require(storage.attempt))
+        #expect(controller(storage) { _ in .uncertain }.state == .alreadyPaid(receipt))
+    }
+
+    @Test(arguments: ["pending", "failed", "canceled", "successful"])
+    func invoiceAmountMismatchNeverResumesOrProvesNewPayment(status: String) {
+        let saved = attempt("lightning")
+        let wrong = movement("lightning", status: status, amount: 2000, hash: "invoice-hash")
+        #expect(SendReconciliation.ark(saved, movements: [wrong]) == .uncertain)
+        var pending = wrong
+        pending.id = 1
+        pending.status = "pending"
+        #expect(SendReconciliation.ark(saved, movements: [pending]) == .uncertain)
+    }
+
+    @Test func newInvoiceSuccessUsesMovementAmountAndFee() {
+        var paid = movement("lightning", hash: "invoice-hash")
+        paid.offchainFeeSats = 83
+        #expect(SendReconciliation.ark(attempt("lightning"), movements: [paid])
+                == .paid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 2, fee: 83)))
     }
 
     @Test func confirmedReceiptRevalidatesThroughReorgAndMissingHistory() async throws {
@@ -278,11 +313,12 @@ import Testing
         #expect(restarted.state == .succeeded(saved.receipt!))
     }
 
-    @Test func roundOneMissingHistoryFailureReopensUncertain() throws {
-        for method in ["onchain"] {
+    @Test func roundOneMissingHistoryFailureAndInvoiceReceiptReopenUncertain() throws {
+        for method in ["onchain", "lightning"] {
             var saved = attempt(method, source: method == "onchain" ? .onchain : nil)
             saved.safetyVersion = 1
             saved.failed = true
+            if method == "lightning" { saved.receipt = .init(amount: 2000, paymentHash: "invoice-hash", movementID: 1) }
             let storage = SendPaymentTests.Storage()
             storage.attempt = try roundTrip(saved)
             let subject = controller(storage) { _ in .uncertain }

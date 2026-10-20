@@ -347,7 +347,17 @@ struct SendOutcomeView: View {
                     }
                     Text("\(receipt.amountIsEstimated == true ? "About " : "")\(receipt.amount) sats").font(
                         NoahFont.largeTitle)
+                    if let fee = receipt.fee { Text("Fee: \(fee) sats") }
                     transactionDetails(receipt)
+                    NoahButton(title: "Done") {
+                        controller.acknowledge()
+                        if !controller.locked { done() }
+                    }
+                case .alreadyPaid(let receipt):
+                    Text("Invoice already paid").font(NoahFont.title)
+                    Text("This invoice was already paid: \(receipt.amount.formatted()) sats")
+                    if let fee = receipt.fee { Text("Fee: \(fee) sats") }
+                    Text("No new payment was made for the amount you reviewed.")
                     NoahButton(title: "Done") {
                         controller.acknowledge()
                         if !controller.locked { done() }

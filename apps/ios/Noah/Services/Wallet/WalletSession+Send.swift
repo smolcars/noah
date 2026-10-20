@@ -127,7 +127,14 @@ extension WalletSession {
                 guard case .paid(let hash, let preimage) = lightning, !preimage.isEmpty else {
                     throw SendFailure.unresolved
                 }
-                receipt.paymentHash = hash
+                let movements = try await handles.wallet.history().filter {
+                    $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash
+                }
+                switch SendReconciliation.lightning(movements, hash: hash, amount: payment.amount, snapshot: snapshot) {
+                case .paid(let actual): receipt = actual
+                case .alreadyPaid(let actual): throw SendAlreadyPaid(receipt: actual)
+                default: throw SendFailure.unresolved
+                }
             }
             // Metadata failure is never a payment failure and must never enable resubmission.
             if let patch = payment.repeatMetadata, let history = try? await handles.wallet.history(),

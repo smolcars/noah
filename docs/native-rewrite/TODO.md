@@ -171,7 +171,7 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Live Ark, BOLT11, Ark-to-onchain, historical onchain MAX (now disabled), forced FFI failure/relaunch verification — iOS; evidence and limits in `apps/ios/SendTests/README.md`
 - [x] Send safety: recipient-bound routes, reviewed MAX funds/VTXOs, rail-specific durable reconciliation, explicit uncertain override, submitted/confirmed status — iOS; regression and live evidence in `apps/ios/SendTests/README.md`
 - [x] Disable onchain-wallet MAX at UI/review/submission boundaries; explain entering an amount; offchain MAX retains reviewed VTXO IDs — iOS
-- [x] Round-2 Send safety: missing BDK history stays locked, exact-amount tx matching, pre-recording error allowlist, receipt revalidation after reorgs, honest offboard tracking copy — iOS
+- [x] Round-2 Send safety: missing BDK history stays locked, exact-amount tx matching, pre-recording error allowlist, real BOLT11 amounts/fees and already-paid state, receipt revalidation after reorgs, honest offboard tracking copy — iOS
 - [ ] Restore onchain MAX only with prepared sends / coin control (FFI 14); expose broadcast/chain status for offboards (FFI 15); replace weak history correlation with durable operation IDs (FFI 16)
 - [ ] External LNURL/BOLT12 provider acceptance and camera hardware verification — iOS
 
