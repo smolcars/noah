@@ -8,6 +8,10 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -140,10 +144,14 @@ fun ExportScreen(model: AppModel) {
 @Composable
 fun LogScreen(model: AppModel) {
     val context = LocalContext.current
-    var lines by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(Unit) { lines = withContext(Dispatchers.IO) { LogFile.shared(context).lines() } }
-    SettingsColumn {
-        NoahButton("Refresh app logs", !model.busy, secondary = true) { model.action("Couldn't read logs.") { lines = withContext(Dispatchers.IO) { LogFile.shared(context).lines() } } }
+    val snapshot = remember { LogSnapshot() }
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    suspend fun load() { snapshot.load(read = { withContext(Dispatchers.IO) { LogFile.shared(context).lines() } }) }
+    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(snapshot.updatedAt) { if (snapshot.lines.isNotEmpty()) listState.scrollToItem(snapshot.lines.lastIndex) }
+    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        NoahButton("Refresh app logs", !snapshot.loading, secondary = true) { scope.launch { load() } }
         ShareFileButton(model, "Share app logs", "text/plain") {
             val scratch = model.services.scratch
             val folder = scratch.makeFolder("share")
@@ -152,9 +160,16 @@ fun LogScreen(model: AppModel) {
                 SharedFile(file) { scratch.discard(folder) }
             } catch (failure: Exception) { scratch.discard(folder); throw failure }
         }
-        if (lines.isEmpty()) Text(tr("No logs found."))
-        androidx.compose.foundation.text.selection.SelectionContainer {
-            Text(tr(lines.joinToString("\n")), style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+        if (snapshot.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        snapshot.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+        snapshot.updatedAt?.let { Text(tr("Updated at {time}", "time" to DateFormat.getTimeInstance().format(Date(it)))) }
+        if (!snapshot.loading && snapshot.error == null && snapshot.lines.isEmpty()) Text(tr("No logs found."))
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState) {
+            items(snapshot.lines) { line ->
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(line, style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+                }
+            }
         }
     }
 }
