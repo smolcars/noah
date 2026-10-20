@@ -140,20 +140,33 @@ struct RestoreTransaction: Sendable {
     }
 
     /// The seed is saved: retain settings completion, then drop the journal last.
-    func finish() throws {
+    func finish(sync: @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) throws {
         try Data().write(to: settingsCompletion)
-        try Self.fullSync(settingsCompletion)
-        try Self.fullSync(directory)
-        try RecurringAutomationAuthority(directory: datadir).stop()
+        try sync(settingsCompletion)
+        try sync(directory)
+        try establishStoppedAutomation(sync: sync)
         let marker = datadir.appending(path: Self.markerName)
         if exists(marker) {
             try FileManager.default.removeItem(at: marker)
-            try Self.fullSync(datadir)
+            try sync(datadir)
         }
         try removeIfPresent(previous)
         try removeScratch()
-        try Self.fullSync(directory)
-        try removeJournal()
+        try sync(directory)
+        try removeJournal(sync: sync)
+    }
+
+    /// Only committed restore settlement may repair authority, always stopped, state before marker.
+    private func establishStoppedAutomation(sync: @Sendable (URL) throws -> Void) throws {
+        let authority = RecurringAutomationAuthority(directory: datadir)
+        let identity: [String: Any] = ["version": 1, "instance": UUID().uuidString]
+        var state = identity
+        state["generation"] = UUID().uuidString
+        state["suspended"] = false
+        state["stopped"] = true
+        try RecurringStore.durableWrite(JSONSerialization.data(withJSONObject: state), to: authority.file, sync: sync)
+        try RecurringStore.durableWrite(JSONSerialization.data(withJSONObject: identity), to: authority.marker, sync: sync)
+        RecurringAutomationAuthority.deleted(directory: datadir)
     }
 
     /// Puts the previous datadir back (or removes the restored one when there
@@ -256,9 +269,9 @@ struct RestoreTransaction: Sendable {
 
     /// Settled: the journal's removal is on disk before anyone else may touch
     /// the datadir, so it can't reappear after a power loss.
-    private func removeJournal() throws {
+    private func removeJournal(sync: @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) throws {
         try removeIfPresent(journalURL)
-        try Self.fullSync(directory)
+        try sync(directory)
     }
 
     /// A rename between the workspace and the datadir's parent changes both.

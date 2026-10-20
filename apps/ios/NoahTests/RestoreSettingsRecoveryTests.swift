@@ -3,6 +3,9 @@ import Foundation
 import Testing
 @testable import Noah
 
+private let restoreSettingsCheckpoints = ["journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags", "markerOnly", "stateOnly", "corrupt"]
+    + (1...6).map { "initializing\($0)" } + (1...9).map { "settling\($0)" }
+
 struct RestoreSettingsRecoveryTests {
     @MainActor @Test func transactionSettlesBeforeFailedPreferenceCompletion() async throws {
         let fm = FileManager.default
@@ -27,7 +30,7 @@ struct RestoreSettingsRecoveryTests {
         #expect(try String(contentsOf: location.database, encoding: .utf8) == "committed")
     }
 
-    @Test(arguments: ["journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags"])
+    @Test(arguments: restoreSettingsCheckpoints)
     func interruptedRestoreSettlesWithFailedSettings(step: String) async throws {
         try await exercise(step: step, root: FileManager.default.temporaryDirectory.appending(path: "restore-settings-\(UUID())"))
     }
@@ -48,7 +51,7 @@ struct RestoreSettingsRecoveryTests {
         let file = URL(fileURLWithPath: settingsRoot.path + ".native-settings.json")
         let tx = RestoreTransaction(location: location)
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-        let committed = ["seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags"].contains(step)
+        let committed = !["journal", "previousMoved", "installed", "committing"].contains(step)
         if mode != "recover" {
             try fm.createDirectory(at: preferences, withIntermediateDirectories: true)
             try SettingsStorage(rootPath: settingsRoot.path).beginOnboarding()
@@ -71,6 +74,32 @@ struct RestoreSettingsRecoveryTests {
             // A readable unfinished flag must also be overridden when its completion write fails.
             if step != "flags" { try Data("damaged".utf8).write(to: file); #expect(chmod(file.path, 0) == 0) }
             #expect(chmod(preferences.path, 0o500) == 0)
+            if ["markerOnly", "stateOnly", "corrupt"].contains(step) {
+                let authority = RecurringAutomationAuthority(directory: location.directory)
+                try authority.stop()
+                switch step {
+                case "markerOnly": try fm.removeItem(at: authority.file)
+                case "stateOnly": try fm.removeItem(at: authority.marker)
+                default: try Data("{".utf8).write(to: authority.file)
+                }
+            }
+            if step.hasPrefix("initializing") || step.hasPrefix("settling") {
+                let initializing = step.hasPrefix("initializing")
+                let boundary = try #require(Int(step.dropFirst(initializing ? 12 : 8)))
+                let count = RecurringExecutorTests.Locked(0)
+                let sync: @Sendable (URL) throws -> Void = { target in
+                    try RestoreTransaction.fullSync(target)
+                    guard count.withLock({ $0 += 1; return $0 }) == boundary else { return }
+                    if mode == "stage" {
+                        try Data(step.utf8).write(to: root.appending(path: "ready"))
+                        while true { Thread.sleep(forTimeInterval: 1) } // Host kills at the actual durable-write boundary.
+                    }
+                    throw CocoaError(.fileWriteUnknown)
+                }
+                if initializing { _ = try? RecurringAutomationAuthority(directory: location.directory, sync: sync).stop() }
+                else { try? tx.finish(sync: sync) }
+                #expect(count.withLock { $0 } == boundary)
+            }
         }
         if mode == "stage" {
             try Data(step.utf8).write(to: root.appending(path: "ready"))
@@ -85,14 +114,17 @@ struct RestoreSettingsRecoveryTests {
         let session = WalletSession(variant: .regtest, location: location)
         let result = try await WalletRestorer.recoverInterruptedRestore(session: session, location: location,
             seed: FakeSeed(committed ? phrase : "old seed"))
-        #expect(result == (step == "journalRemoved" || step == "flags" ? .nothingPending : committed ? .completed : .rolledBack))
+        #expect(result == (["journalRemoved", "flags", "settling9"].contains(step) ? .nothingPending : committed ? .completed : .rolledBack))
         tx.completeSettings(settings)
         #expect(!location.restorePending)
         #expect(try String(contentsOf: location.database, encoding: .utf8) == (committed ? "committed" : "old"))
         if committed {
             #expect(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
             #expect(tx.settingsPending)
-            #expect(!RecurringAutomationAuthority(directory: location.directory).allowed())
+            let authority = RecurringAutomationAuthority(directory: location.directory)
+            #expect(!authority.allowed())
+            try authority.suspension(false) // Valid STOPPED state, rather than a corrupt file rejecting execution.
+            #expect(!authority.allowed())
             #expect(throws: (any Error).self) { try settings.requireHealthy() }
             #expect(throws: (any Error).self) {
                 _ = try HeadlessWalletGate.mnemonic(location: location, settings: settings, readSeed: { .found(phrase) })
@@ -103,6 +135,7 @@ struct RestoreSettingsRecoveryTests {
             let reopened = try SettingsStorage(rootPath: settingsRoot.path)
             tx.completeSettings(reopened)
             #expect(!tx.settingsPending)
+            #expect(!RecurringAutomationAuthority(directory: location.directory).allowed())
             try reopened.requireHealthy()
             #expect(reopened.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
         }

@@ -83,6 +83,49 @@ struct RestoreTransactionTests {
         }
     }
 
+    @Test(arguments: ["markerOnly", "stateOnly", "corrupt", "mismatched", "stopped"])
+    func committedRestoreRepairsPartialAuthorityAsStopped(damage: String) throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let tx = try begun()
+        try tx.markCommitting()
+        let authority = RecurringAutomationAuthority(directory: location.directory)
+        try authority.stop()
+        switch damage {
+        case "markerOnly": try FileManager.default.removeItem(at: authority.file)
+        case "stateOnly": try FileManager.default.removeItem(at: authority.marker)
+        case "corrupt": try Data("{".utf8).write(to: authority.file)
+        case "mismatched":
+            try Data("{\"version\":1,\"instance\":\"\(UUID())\"}".utf8).write(to: authority.marker)
+        default: break
+        }
+        // An earlier failed reader must not permanently latch out committed restore recovery.
+        #expect(!authority.allowed())
+        #expect(try tx.recover(seed: FakeSeed(newSeed)) == .completed)
+        try expectSettled(tx)
+        #expect(read(location.directory) == "new")
+        #expect(tx.settingsPending)
+        #expect(!authority.allowed())
+        try authority.suspension(false)
+        #expect(!authority.allowed())
+    }
+
+    @Test func authorityInitializationPersistsStateBeforeMarker() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try write("wallet", to: location.directory)
+        let directory = location.directory
+        let stateFile = directory.appending(path: ".noah-recurring-automation.json")
+        let markerFile = stateFile.appendingPathExtension("initialized")
+        let authority = RecurringAutomationAuthority(directory: directory, sync: { target in
+            try RestoreTransaction.fullSync(target)
+            if FileManager.default.fileExists(atPath: markerFile.path) {
+                #expect(FileManager.default.fileExists(atPath: stateFile.path))
+                let raw = try Data(contentsOf: stateFile)
+                #expect((try JSONSerialization.jsonObject(with: raw) as? [String: Any])?["generation"] != nil)
+            }
+        })
+        _ = try authority.generation()
+    }
+
     @Test func swapMovesTheOldWalletAsideAndRecordsNoSeed() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let transaction = try begun()

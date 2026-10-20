@@ -27,7 +27,7 @@ run_test() {
         -destination "id=$udid" -parallel-testing-enabled NO -collect-test-diagnostics never \
         -only-testing:'NoahTests/RestoreSettingsRecoveryTests/processDeathRestoreWithFailedSettings()'
 }
-for step in journal previousMoved installed committing seed markerRemoved previousRemoved journalRemoved flags; do
+for step in journal previousMoved installed committing seed markerRemoved previousRemoved journalRemoved flags markerOnly stateOnly corrupt initializing{1..6} settling{1..9}; do
     container=$(xcrun simctl get_app_container "$udid" com.noahwallet.regtest data)
     control="$container/Documents/restore-settings-control"
     printf '%s stage' "$step" > "$control"

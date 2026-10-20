@@ -33,8 +33,8 @@ final class RecurringAutomationAuthority: @unchecked Sendable {
         do {
             if !FileManager.default.fileExists(atPath: file.path), !FileManager.default.fileExists(atPath: marker.path) {
                 let instance = UUID()
-                try write(Marker(instance: instance), to: marker)
                 try write(State(instance: instance), to: file)
+                try write(Marker(instance: instance), to: marker)
             }
             let marker = try JSONDecoder().decode(Marker.self, from: Data(contentsOf: marker))
             let state = try JSONDecoder().decode(State.self, from: Data(contentsOf: file))
