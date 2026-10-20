@@ -67,7 +67,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         },
         complete = { outcome ->
             restoreCompletion {
-                withContext(Dispatchers.IO) { services.ensureWalletOpen(walletMutationHeld = true) }
+                withContext(Dispatchers.IO) { services.openWalletInForeground(walletMutationHeld = true) }
                 open = true; onboarded = true; launchState = LaunchState.existingWallet
                 refresh(); services.startServerServices()
             }.finish(outcome)
@@ -141,7 +141,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun resumeWallet() {
         services.lifecycle.resume()
-        try { withContext(Dispatchers.IO) { services.ensureWalletOpen() } }
+        try { withContext(Dispatchers.IO) { services.openWalletInForeground() } }
         catch (failure: Exception) { services.lifecycle.suspend(); throw failure }
         open = true; isWalletSuspended = false
         refresh(); services.startServerServices()
@@ -154,7 +154,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
             open = session.isOpen
             if (!open) {
                 summary = null; history.clear()
-                if (!isWalletSuspended) runCatching { withContext(Dispatchers.IO) { services.ensureWalletOpen() }; open = true; refresh() }
+                if (!isWalletSuspended) runCatching { withContext(Dispatchers.IO) { services.openWalletInForeground() }; open = true; refresh() }
             }
             throw failure
         }
@@ -204,7 +204,7 @@ class AppModel(application: Application) : AndroidViewModel(application) {
                     if (launchState == LaunchState.existingWallet) {
                         onboarded = services.isOnboarded()
                         if (isWalletSuspended) return@withWalletMutation
-                        withContext(Dispatchers.IO) { services.ensureWalletOpen(walletMutationHeld = true) }
+                        withContext(Dispatchers.IO) { services.openWalletInForeground(walletMutationHeld = true) }
                         open = true
                         onboarded = services.isOnboarded()
                         if (!onboarded) step = "mnemonic"

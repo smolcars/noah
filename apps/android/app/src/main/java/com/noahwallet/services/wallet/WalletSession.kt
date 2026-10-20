@@ -27,7 +27,7 @@ class WalletSession internal constructor(
     private val sendWarn: (String) -> Unit = {},
     private val opener: suspend (String, String, Boolean, String, Boolean) -> Handles = sdkOpener(variant, sendWarn),
 ) {
-    enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended }
+    enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended, seedConflict }
     class OpenError(val reason: OpenFailure, val found: String? = null) : Exception(reason.name)
     class SessionError : Exception("Wallet not open")
 
@@ -187,6 +187,9 @@ class WalletSession internal constructor(
     // A UI caller's cancellation must not abandon a native open and leak its datadir lock.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var state: State = State.Closed
+    // Bind a reused session to the exact credential that passed SDK fingerprint verification.
+    private var openingSeedDigest: ByteArray? = null
+    private fun seedDigest(value: String) = java.security.MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
     val isOpen: Boolean get() = synchronized(lock) { state is State.Open }
 
     suspend fun openExisting(mnemonic: String, runDaemon: Boolean, appVersion: String) {
@@ -241,6 +244,7 @@ class WalletSession internal constructor(
                 check(location.directory.isDirectory || location.directory.mkdirs()) { "Cannot create wallet directory" }
             }
             val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, true)
+            synchronized(lock) { openingSeedDigest = seedDigest(mnemonic) }
             try { handles.initializeAddress() }
             catch (failure: Throwable) {
                 try { handles.stopDaemonWait(); handles.close() }
@@ -259,8 +263,14 @@ class WalletSession internal constructor(
         synchronized(lock) {
             if (isSuspended()) throw OpenError(OpenFailure.suspended)
             when (val current = state) {
-                is State.Open -> if (join) return@synchronized null else throw OpenError(OpenFailure.busy)
-                is State.Opening -> if (join) return@synchronized current.attempt else throw OpenError(OpenFailure.busy)
+                is State.Open -> if (join) {
+                    if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
+                    return@synchronized null
+                } else throw OpenError(OpenFailure.busy)
+                is State.Opening -> if (join) {
+                    if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
+                    return@synchronized current.attempt
+                } else throw OpenError(OpenFailure.busy)
                 State.Closed -> Unit
                 else -> throw OpenError(OpenFailure.busy)
             }
@@ -275,6 +285,7 @@ class WalletSession internal constructor(
                     throw failure
                 }
             }
+            openingSeedDigest = seedDigest(mnemonic)
             state = State.Opening(attempt)
             attempt.start()
             attempt

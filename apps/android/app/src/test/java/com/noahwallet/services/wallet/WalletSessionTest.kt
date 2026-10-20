@@ -11,6 +11,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WalletSessionTest {
+    @Test fun aReusedSessionCannotAuthorizeMigrationOfAnotherCredential() = runBlocking {
+        withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("first-public-test-input", false, "test")
+            session.ensureOpen("first-public-test-input", false, "test")
+            assertFailure(WalletSession.OpenFailure.seedConflict,
+                runCatching { session.ensureOpen("different-public-test-input", false, "test") })
+            session.close()
+        }
+    }
+
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
         override val send = com.noahwallet.send.FakeSendWallet()

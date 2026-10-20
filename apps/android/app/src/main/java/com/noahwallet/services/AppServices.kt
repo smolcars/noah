@@ -163,17 +163,20 @@ class AppServices private constructor(private val context: Context) {
      * it too instead of failing until the app is opened. Recovery runs even without a journal (it
      * removes plaintext a restore left before writing one) and even while suspended (no opening).
      */
-    suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) {
-        if (!walletMutationHeld) { lifecycle.withWalletMutation { ensureWalletOpen(walletMutationHeld = true) }; return }
+    private val walletOpener = StoredWalletOpener(seed) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
+
+    suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
+
+    suspend fun openWalletInForeground(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = true)
+
+    private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean) {
+        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground) }; return }
         if (recoverRestore(walletMutationHeld) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
         if (settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
             throw WalletSuspended()
         }
         settings.validateStores()
-        val mnemonic = seed.read()
-        check(mnemonic is SecretResult.Found && mnemonic.value.isNotEmpty()) { "Wallet seed unavailable" }
-        session.ensureOpen(mnemonic.value, true, BuildConfig.VERSION_NAME)
-        seed.save(mnemonic.value)
+        if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
     }
 
     fun startServerServices() {
