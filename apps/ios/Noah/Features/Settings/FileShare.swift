@@ -56,23 +56,35 @@ struct ExportDatabaseView: View {
 }
 
 struct LogView: View {
-    @State private var lines: [String] = []
+    @Environment(\.locale) private var locale
+    @State private var snapshot = LogSnapshot()
     @State private var file: SharedFile?
     @State private var sharing = false
     @State private var error: String?
     var body: some View {
-        ScrollView {
+        ScrollViewReader { reader in
+          ScrollView {
             LazyVStack(alignment: .leading, spacing: 8) {
-                if lines.isEmpty { Text("No logs found.") }
+                if snapshot.loading { ProgressView() }
+                if let updated = snapshot.updatedAt {
+                    Text(L10n.text("Updated at {time}", updated.formatted(.dateTime.hour().minute().second().locale(locale)), locale: locale.identifier))
+                }
+                if let failure = snapshot.error { Text(LocalizedStringKey(failure)).foregroundStyle(NoahColor.destructive) }
+                if !snapshot.loading && snapshot.error == nil && snapshot.lines.isEmpty { Text("No logs found.") }
                 if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
-                ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                ForEach(Array(snapshot.lines.enumerated()), id: \.offset) { _, line in
                     Text(verbatim: line).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                 }
+                Color.clear.frame(height: 1).id("latest")
             }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+          }
+          .onChange(of: snapshot.updatedAt) { _, _ in
+              Task { await Task.yield(); reader.scrollTo("latest", anchor: .bottom) }
+          }
         }
         .settingsStyle("Logs")
-        .task { lines = await LogFile.shared.linesForExport() }
-        .refreshable { lines = await LogFile.shared.linesForExport() }
+        .task { await snapshot.load { try await LogFile.shared.checkedLinesForExport() } }
+        .refreshable { await snapshot.load { try await LogFile.shared.checkedLinesForExport() } }
         .toolbar { Button("Share app logs", systemImage: "square.and.arrow.up", action: share) }
         .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil }) {
             if let file { FileShareSheet(file: file) }
@@ -86,7 +98,7 @@ struct LogView: View {
                     do {
                         let url = folder.appending(path: "noah.log")
                         // Snapshot the redacted rotating files, so sharing cannot race rotation.
-                        try await LogFile.shared.linesForExport().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+                        try await LogFile.shared.checkedLinesForExport().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
                         return SharedFile(url: url, folder: folder)
                     } catch { ScratchSpace.shared.discard(folder); throw error }
                 }

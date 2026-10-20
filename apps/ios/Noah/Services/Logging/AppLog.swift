@@ -120,18 +120,19 @@ final class LogFile: @unchecked Sendable {
     /// The newest `maxLines` lines across all files, oldest first.
     func lines() -> [String] {
         flush()
-        return queue.sync { readLines() }
+        return queue.sync { (try? readLines()) ?? [] }
     }
 
-    private func readLines() -> [String] {
-        let files = (try? FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)) ?? []
+    private func readLines() throws -> [String] {
+        guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
+        let files = try FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
         let ordered = files
             .filter { $0.lastPathComponent.hasPrefix(Self.fileName) }
             .sorted { Self.age(of: $0) > Self.age(of: $1) }
         var lines: [String] = []
         for url in ordered {
-            guard let contents = try? String(contentsOf: url, encoding: .utf8) else { continue }
+            let contents = try String(contentsOf: url, encoding: .utf8)
             lines.append(contentsOf: EndpointLogPrivacy.redactLogLines(contents.split(whereSeparator: \.isNewline).map(String.init)))
         }
         return Array(lines.suffix(Self.maxLines))
@@ -186,7 +187,15 @@ final class LogFile: @unchecked Sendable {
     func linesForExport() async -> [String] {
         await flushAsync()
         return await withCheckedContinuation { continuation in
-            queue.async { continuation.resume(returning: self.readLines()) }
+            queue.async { continuation.resume(returning: (try? self.readLines()) ?? []) }
+        }
+    }
+
+    /// UI reads distinguish an empty rotation from a file that cannot be read.
+    func checkedLinesForExport() async throws -> [String] {
+        await flushAsync()
+        return try await withCheckedThrowingContinuation { continuation in
+            queue.async { continuation.resume(with: Result { try self.readLines() }) }
         }
     }
 
