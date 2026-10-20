@@ -1,12 +1,20 @@
 package com.noahwallet.services.wallet
 
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 object WalletBackgroundActivity {
-    private val count = AtomicInteger()
-    val isRunning get() = count.get() > 0
+    data class Status(val count: Int = 0, val completions: Long = 0) {
+        val isRunning get() = count > 0
+    }
+    private val lock = Any()
+    private val status = MutableStateFlow(Status())
+    val changes = status.asStateFlow()
+    val isRunning get() = status.value.isRunning
     suspend fun <T> during(block: suspend () -> T): T {
-        count.incrementAndGet()
-        try { return block() } finally { count.decrementAndGet() }
+        synchronized(lock) { status.value = status.value.copy(count = status.value.count + 1) }
+        try { return block() } finally {
+            synchronized(lock) { status.value = Status(status.value.count - 1, status.value.completions + 1) }
+        }
     }
 }

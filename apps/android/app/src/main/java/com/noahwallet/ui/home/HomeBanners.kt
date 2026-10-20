@@ -44,25 +44,16 @@ fun HomeBanners(app: AppModel, refresh: Int) {
             }
         }
     }
-    LaunchedEffect(app, refresh, lifecycle, rounds.any { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            // RN polls at 30 s only while an active round exists; refresh and wallet changes re-query.
-            do {
-                try { rounds = app.session.pendingRounds() }
-                catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { }
-                if (rounds.none { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }) break
-                delay(30_000)
-            } while (isActive)
-        }
-    }
     LaunchedEffect(app.session, refresh, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            app.session.walletChanges.collect {
-                try { rounds = app.session.pendingRounds() }
-                catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { }
-            }
+            observeHomeRounds(
+                activity = com.noahwallet.services.wallet.WalletBackgroundActivity.changes,
+                walletChanges = app.session.walletChanges,
+                query = { app.session.pendingRounds() },
+                active = { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) },
+                publish = { rounds = it },
+                initiallyActive = rounds.any { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) },
+            )
         }
     }
     LaunchedEffect(backup.lastBackupAt, backup.lastBackupStatus, boarding) {
