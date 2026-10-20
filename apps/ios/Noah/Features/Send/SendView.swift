@@ -309,6 +309,10 @@ struct SendOutcomeView: View {
                     Text(
                         "Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."
                     )
+                    if let receipt = controller.attempt?.receipt {
+                        Text("Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.")
+                        transactionDetails(receipt)
+                    }
                     NoahButton(title: "Check payment status", isLoading: controller.checking) {
                         Task { await controller.checkStatus() }
                     }
@@ -332,14 +336,18 @@ struct SendOutcomeView: View {
                     Text(receipt.isSubmitted ? "Submitted" : receipt.status == .confirmed ? "Payment confirmed" : "Payment sent")
                         .font(NoahFont.title).accessibilityIdentifier("send-success")
                     if receipt.isSubmitted {
-                        Text("It may take a moment to reach the network. Do not send this payment again.")
+                        Text(controller.attempt?.payment.source == .offchain
+                             ? "Noah can’t track this transaction’s confirmation in-app; check a block explorer. Do not send this payment again."
+                             : "Noah has not confirmed this transaction. If it was replaced, confirmation may not be trackable in-app; check a block explorer. Do not send this payment again.")
+                    }
+                    if receipt.txid != nil {
                         NoahButton(title: "Refresh payment status", isLoading: controller.checking) {
                             Task { await controller.checkStatus() }
                         }
                     }
                     Text("\(receipt.amountIsEstimated == true ? "About " : "")\(receipt.amount) sats").font(
                         NoahFont.largeTitle)
-                    if let txid = receipt.txid { Text(txid).font(.caption).textSelection(.enabled) }
+                    transactionDetails(receipt)
                     NoahButton(title: "Done") {
                         controller.acknowledge()
                         if !controller.locked { done() }
@@ -347,7 +355,7 @@ struct SendOutcomeView: View {
                 case .failed:
                     Text("Payment did not complete").font(NoahFont.title)
                     Text(controller.attempt?.failureMessage ?? (controller.attempt?.payment.source == .onchain
-                         ? "No outgoing transaction was recorded. The payment could not be constructed. Review the amount and fee before trying again."
+                         ? "Submission stopped before a transaction could be recorded. Review the amount and fee before trying again."
                          : "Wallet history confirms this payment failed or was canceled."))
                     NoahButton(title: "Start a new payment") {
                         controller.acknowledge()
@@ -373,4 +381,18 @@ struct SendOutcomeView: View {
             Text("This payment may still complete. Check your full wallet history and confirm with the recipient first. Starting another payment can send the money twice and cannot undo the first payment.")
         }
     }
+    @ViewBuilder private func transactionDetails(_ receipt: SendReceipt) -> some View {
+        if let txid = receipt.txid {
+            Text(txid).font(.caption).textSelection(.enabled)
+            // Regtest has no public explorer. Use the same network explorers as History.
+            if AppVariant.current != .regtest,
+               let base = URL(string: AppVariant.current == .mainnet
+                              ? "https://mempool.space/tx/" : "https://mempool.space/signet/tx/") {
+                Link(destination: base.appendingPathComponent(txid)) {
+                    Label("View in block explorer", systemImage: "arrow.up.right.square")
+                }
+            }
+        }
+    }
+
 }

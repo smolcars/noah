@@ -100,8 +100,15 @@ extension WalletSession {
             case "onchain":
                 if payment.source == .onchain {
                     receipt.status = .submitted
-                    receipt.txid = try await handles.onchain.send(
-                        address: payment.destination, amountSats: payment.amount, feeRateSatPerVb: quote.feeRate!)
+                    do {
+                        receipt.txid = try await handles.onchain.send(
+                            address: payment.destination, amountSats: payment.amount, feeRateSatPerVb: quote.feeRate!)
+                    } catch {
+                        if let reason = SendOnchainSubmission.notSubmitted(error) {
+                            throw SendNotSubmitted(reason: reason)
+                        }
+                        throw error
+                    }
                 } else {
                     receipt.status = .submitted
                     if payment.max {
@@ -170,5 +177,28 @@ enum SendMaxValidation {
         guard let reviewedIDs, !reviewedIDs.isEmpty, Set(currentIDs) == Set(reviewedIDs) else {
             throw SendFailure.fundsChanged
         }
+    }
+}
+
+/// Only use for an error thrown directly by OnchainWallet.send in bark-bolt-ffi 0.3.0.
+enum SendOnchainSubmission {
+    static func notSubmitted(_ error: Error) -> SendFailure? {
+        // The Swift BarkError is a message-only struct, not a typed error enum:
+        // https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/error.rs
+        // Exact outer contexts identify the pre-recording stages (never search nested messages).
+        // Address/network and fee validation precede the call into Bark:
+        // https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/core/mod.rs
+        // https://github.com/smolcars/bark-bolt-ffi/blob/v0.3.0/src/core/onchain.rs
+        guard let message = (error as? BarkError)?.message else { return nil }
+        if message.hasPrefix("invalid bitcoin address: ")
+            || ["bitcoin", "testnet", "testnet4", "signet", "regtest"].contains(where: {
+                message.hasPrefix("bitcoin address is not valid on \($0): ")
+            }) { return .invalid }
+        if message == "Invalid fee rate" { return .feeChanged }
+        // prepare_tx's b.finish() (including coin-selection insufficient funds) is before
+        // sign_psbt, record_broadcast_tx and broadcast. Persist/broadcast/unknown errors remain uncertain.
+        // https://gitlab.com/ark-bitcoin/bark/-/blob/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c/bark/src/onchain/bdk.rs
+        if message.hasPrefix("Send failed: error building tx: ") { return .constructionFailed }
+        return nil
     }
 }

@@ -41,13 +41,14 @@ import Testing
     }
     func transaction(
         id: String = "new", outgoing: Bool = true, confirmed: Bool = false,
-        destination: String? = nil, witness: Bool = false
+        destination: String? = nil, witness: Bool = false, amount: UInt64 = 1000
     ) throws -> WalletTransaction {
         let script = try #require(PaymentEncoding.bitcoinScript(destination ?? address))
         let scriptHex = script.map { String(format: "%02x", $0) }.joined()
+        let amountHex = (0..<8).map { String(format: "%02x", (amount >> ($0 * 8)) & 255) }.joined()
         let hex =
             "02000000" + (witness ? "0001" : "") + "01" + String(repeating: "00", count: 32)
-            + "0000000000ffffffff01e803000000000000" + String(format: "%02x", script.count)
+            + "0000000000ffffffff01" + amountHex + String(format: "%02x", script.count)
             + scriptHex
             + (witness ? "010100" : "") + "00000000"
         return WalletTransaction(
@@ -76,6 +77,16 @@ import Testing
                 reconcile: reconcile, read: { storage.attempt }, write: { try storage.write($0) }))
     }
 
+    @Test func absentBdkHistoryIsNeverProofOfFailure() throws {
+        #expect(try SendReconciliation.onchain(attempt("onchain", source: .onchain), transactions: []) == .uncertain)
+    }
+
+    @Test func bdkRecoveryRequiresOneExactAmount() throws {
+        let saved = attempt("onchain", source: .onchain)
+        #expect(try SendReconciliation.onchain(saved, transactions: [transaction(amount: 999)]) == .uncertain)
+        #expect(try SendReconciliation.onchain(saved, transactions: [transaction(), transaction(id: "second")]) == .uncertain)
+    }
+
     @Test func onchainMaxCannotReachWalletOrDrain() async throws {
         let payment = attempt("onchain", source: .onchain, max: true).payment
         #expect(throws: SendFailure.onchainMaxUnavailable) { try SendMaxValidation.available(payment) }
@@ -88,6 +99,28 @@ import Testing
             #expect(error.reason == .onchainMaxUnavailable)
         }
         try SendMaxValidation.available(attempt("onchain", source: .offchain, max: true).payment)
+    }
+
+    @Test func onlyPinnedPreRecordingErrorContextsUnlockOnchainSend() {
+        for message in [
+            "invalid bitcoin address: base58 error",
+            "bitcoin address is not valid on regtest: validation error",
+            "Invalid fee rate",
+            "Send failed: error building tx: Insufficient funds: 100 available of 1000 needed",
+        ] {
+            #expect(SendOnchainSubmission.notSubmitted(BarkError(message: message)) != nil)
+        }
+        for message in [
+            "Send failed: failed to persist wallet: database locked",
+            "Send failed: broadcast failed: insufficient funds",
+            "Send failed: backend: invalid bitcoin address: bad address",
+            "Send failed: unknown error", "drain failed: error building tx: insufficient funds",
+            "Insufficient funds", "Invalid fee rate: nested backend error",
+        ] {
+            #expect(SendOnchainSubmission.notSubmitted(BarkError(message: message)) == nil)
+        }
+        #expect(SendOnchainSubmission.notSubmitted(URLError(.timedOut)) == nil)
+        #expect(SendOnchainSubmission.notSubmitted(CancellationError()) == nil)
     }
 
     @Test func offchainMaxRequiresExactReviewedVtxos() throws {
@@ -124,7 +157,7 @@ import Testing
         #expect(restarted.state == .ready)
     }
 
-    @Test func bdkConstructionFailureIgnoresArkHistoryAndUnlocksAfterRelaunch() async throws {
+    @Test func missingBdkHistoryIgnoresArkHistoryAndStaysLockedAfterRelaunch() async throws {
         let saved = try roundTrip(attempt("onchain", source: .onchain))
         #expect(
             SendReconciliation.ark(saved, movements: [movement("onchain", status: "failed")])
@@ -137,9 +170,16 @@ import Testing
             try SendReconciliation.onchain($0, transactions: [old, received])
         }
         await subject.checkStatus()
-        #expect(subject.state == .failed)
+        #expect(subject.state == .uncertain && subject.canOverride)
         subject.acknowledge()
-        #expect(subject.state == .ready)
+        #expect(subject.state == .uncertain)
+        storage.attempt = try roundTrip(#require(storage.attempt))
+        let restarted = controller(storage) { _ in .uncertain }
+        #expect(restarted.state == .uncertain)
+        restarted.startNewPaymentAfterHistoryCheck(confirmed: false)
+        #expect(restarted.locked)
+        restarted.startNewPaymentAfterHistoryCheck(confirmed: true)
+        #expect(restarted.state == .ready)
     }
 
     @Test func bdkRecordedTxAfterThrowRemainsSubmittedAcrossRelaunch() async throws {
@@ -167,7 +207,7 @@ import Testing
         #expect(
             try SendReconciliation.onchain(
                 attempt("onchain", source: .onchain), transactions: [other])
-                == .failed)
+                == .uncertain)
     }
 
     @Test func malformedBdkEvidenceNeverUnlocksAndLegacySnapshotFailsClosed() throws {
@@ -209,6 +249,44 @@ import Testing
             #expect(subject.state == .uncertain)
         } else {
             #expect(subject.state == .failed)
+        }
+    }
+
+    @Test func confirmedReceiptRevalidatesThroughReorgAndMissingHistory() async throws {
+        var saved = attempt("onchain", source: .onchain)
+        saved.receipt = .init(amount: 1000, txid: "new", status: .confirmed)
+        let storage = SendPaymentTests.Storage()
+        storage.attempt = try roundTrip(saved)
+        let pending = try transaction()
+        let subject = controller(storage) { try SendReconciliation.onchain($0, transactions: [pending]) }
+        await subject.checkStatus()
+        #expect(subject.state == .succeeded(.init(amount: 1000, txid: "new", status: .submitted)))
+        storage.attempt = try roundTrip(#require(storage.attempt))
+        let missing = controller(storage) { try SendReconciliation.onchain($0, transactions: []) }
+        await missing.checkStatus()
+        #expect(missing.state == .uncertain && !missing.canOverride)
+        #expect(missing.attempt?.receipt?.txid == "new")
+        #expect(missing.attempt?.receipt?.status == .unlocated)
+        missing.acknowledge()
+        missing.startNewPaymentAfterHistoryCheck(confirmed: true)
+        #expect(missing.locked && storage.attempt?.receipt?.txid == "new")
+        storage.attempt = try roundTrip(#require(storage.attempt))
+        let confirmed = try transaction(confirmed: true)
+        let restarted = controller(storage) { try SendReconciliation.onchain($0, transactions: [confirmed]) }
+        #expect(restarted.state == .uncertain)
+        await restarted.checkStatus()
+        #expect(restarted.state == .succeeded(saved.receipt!))
+    }
+
+    @Test func roundOneMissingHistoryFailureReopensUncertain() throws {
+        for method in ["onchain"] {
+            var saved = attempt(method, source: method == "onchain" ? .onchain : nil)
+            saved.safetyVersion = 1
+            saved.failed = true
+            let storage = SendPaymentTests.Storage()
+            storage.attempt = try roundTrip(saved)
+            let subject = controller(storage) { _ in .uncertain }
+            #expect(subject.state == .uncertain && subject.attempt?.failed == false)
         }
     }
 

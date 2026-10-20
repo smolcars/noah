@@ -79,25 +79,24 @@ enum SendReconciliation {
         throws
         -> SendPaymentController.Resolution
     {
-        if let receipt = attempt.receipt, let txid = receipt.txid {
-            guard let tx = transactions.first(where: { $0.txid == txid }), tx.confirmation != nil
-            else {
-                return .paid(receipt)
+        if var receipt = attempt.receipt, let txid = receipt.txid {
+            if let tx = transactions.first(where: { $0.txid == txid }) {
+                receipt.status = tx.confirmation == nil ? .submitted : .confirmed
+            } else {
+                // External offboards aren't in BDK's wallet history (FFI handoff item 15).
+                receipt.status = attempt.payment.source == .offchain ? .submitted : .unlocated
             }
-            var confirmed = receipt
-            confirmed.status = .confirmed
-            return .paid(confirmed)
+            return .paid(receipt)
         }
-        guard attempt.payment.method == "onchain", attempt.payment.source == .onchain,
+        guard attempt.payment.method == "onchain", attempt.payment.source == .onchain, !attempt.payment.max,
             let previous = attempt.snapshot.bdkTxids
         else { return .uncertain }
         var candidates: [(WalletTransaction, UInt64)] = []
         for tx in transactions where !previous.contains(tx.txid) && tx.balanceChangeSats < 0 {
             let amount = try SendTransaction.amount(to: attempt.payment.destination, hex: tx.txHex)
-            if amount > 0 { candidates.append((tx, amount)) }
+            if amount > 0, amount == attempt.payment.amount { candidates.append((tx, amount)) }
         }
-        // Bark records before broadcasting. A thrown construction error with no new tx is safe to retry.
-        guard !candidates.isEmpty else { return .failed }
+        // Canonical BDK history can evict a broadcast transaction. Absence never proves non-submission.
         guard candidates.count == 1, let (tx, amount) = candidates.first else { return .uncertain }
         return .paid(
             SendReceipt(
