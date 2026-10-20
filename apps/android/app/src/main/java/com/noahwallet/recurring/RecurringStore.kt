@@ -54,30 +54,38 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     internal fun settlementState(): State = synchronized(lock) { recoverSettlements(); read().let { protected(decode(envelope(it), it), automationOverlay = false) } }
     private fun recoverSettlements() {
         val ledger = policyLedger ?: return
-        if (!ledger.hasPending) return
-        val original = read(); val envelope = envelope(original); val before = decode(envelope, original)
-        val owner = policyBinding!!()
-        check(before.binding == null || before.binding == owner) { RecurringPolicyLedger.message }
-        val pending = ledger.pending(before.binding ?: owner, before.schedules)
-        if (pending.isEmpty()) return
-        val state = envelope.getValue("state").jsonObject.toMutableMap()
-        val rows = state.getValue("schedules").jsonObject.toMutableMap()
-        pending.forEach { row -> rows[row.id] = JsonObject(rows.getValue(row.id).jsonObject + json.encodeToJsonElement(row).jsonObject) }
-        state["schedules"] = JsonObject(rows); state["serverSyncPending"] = JsonPrimitive(true)
-        val updated = JsonObject(envelope + ("state" to JsonObject(state)))
-        val raw = if (original == null) updated.toString() else preserveRows(original, envelope, updated)
-        try { write(raw) } catch (failure: Exception) { writeFailed = true; throw failure }
-        ledger.finish(before.binding ?: owner, decode(updated, raw).schedules)
+        fun replay() {
+            if (!ledger.hasPending) return
+            val original = read(); val envelope = envelope(original); val before = decode(envelope, original, migrateIssue = false)
+            val owner = policyBinding!!()
+            check(before.binding == null || before.binding == owner) { RecurringPolicyLedger.message }
+            val pending = ledger.pending(before.binding ?: owner, before.schedules)
+            if (pending.isEmpty()) return
+            val state = envelope.getValue("state").jsonObject.toMutableMap()
+            val rows = state.getValue("schedules").jsonObject.toMutableMap()
+            pending.forEach { row -> rows[row.id] = JsonObject(rows.getValue(row.id).jsonObject + json.encodeToJsonElement(row).jsonObject) }
+            state["schedules"] = JsonObject(rows); state["serverSyncPending"] = JsonPrimitive(true)
+            val updated = JsonObject(envelope + ("state" to JsonObject(state)))
+            val raw = if (original == null) updated.toString() else preserveRows(original, envelope, updated)
+            try { write(raw) } catch (failure: Exception) { writeFailed = true; throw failure }
+            ledger.finish(before.binding ?: owner, decode(updated, raw, migrateIssue = false).schedules)
+        }
+        replay()
+        // Reason conversion must not change an unfinished record's original digest.
+        val original = read(); val before = decode(envelope(original), original, migrateIssue = false)
+        val owner = runCatching { policyBinding!!() }.getOrNull() ?: return
+        if (before.binding != null && before.binding != owner) return
+        if (ledger.migrate(before.binding ?: owner, before.schedules)) replay()
     }
     internal fun settlementApplied(id: String, token: String): Boolean = synchronized(lock) {
         recoverSettlements()
         val raw = read(); val state = decode(envelope(raw), raw)
         policyLedger?.applied(state.binding ?: policyBinding!!(), state.schedules, id, token) == true
     }
-    private fun decode(envelope: JsonObject, original: String? = null): State {
+    private fun decode(envelope: JsonObject, original: String? = null, migrateIssue: Boolean = true): State {
         val rows = original?.let { recurringRawFields(recurringRawFields(recurringRawFields(it).getValue("state")).getValue("schedules")) }
         val state = envelope.getValue("state").jsonObject
-        val schedules = state.getValue("schedules").jsonObject.mapValues { (id, raw) -> payment(id, raw, rows?.get(id)) }
+        val schedules = state.getValue("schedules").jsonObject.mapValues { (id, raw) -> payment(id, raw, rows?.get(id), migrateIssue) }
         val binding = state["nativeWalletBinding"]?.takeUnless { it == JsonNull }?.let { json.decodeFromJsonElement<Binding>(it) }
         binding?.let { require(it.wallet.fingerprint.isNotBlank() && it.wallet.network.isNotBlank()); UUID.fromString(it.instance) }
         // RN may store amounts above native approval limits; retain each row and its original bytes.
@@ -99,7 +107,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         if (settlementKey != null) policyLedger?.finish(before.binding ?: policyBinding!!(), after.schedules)
     }
     fun bind(binding: Binding) = change { state, _ -> state["nativeWalletBinding"] = json.encodeToJsonElement(binding); state["serverSyncPending"] = JsonPrimitive(true) }
-    private fun payment(id: String, raw: JsonElement, original: String? = null): RecurringPayment {
+    private fun payment(id: String, raw: JsonElement, original: String? = null, migrateIssue: Boolean = true): RecurringPayment {
         val decoded = runCatching {
             requireUniqueRecurringProperties(original ?: raw.toString())
             // RN writes nullable keys too; absence cannot grant execution defaults.
@@ -107,7 +115,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
             requireNumericTokens(raw.jsonObject)
             json.decodeFromJsonElement<RecurringPayment>(raw)
         }.getOrNull()
-        return if (decoded != null && decoded.id == id && decoded.validPolicy) decoded.decodeLegacyIssue()
+        return if (decoded != null && decoded.id == id && decoded.validPolicy) (if (migrateIssue) decoded.decodeLegacyIssue() else decoded)
         else {
             val fields = raw as? JsonObject
             // The original JSON remains authoritative for rows native code cannot represent.
