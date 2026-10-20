@@ -11,7 +11,7 @@ object StoredMnemonic {
             .bufferedReader().use { it.readLines().filter(String::isNotEmpty) }.also { check(it.size == 2048) }
     }
     fun words(text: String): List<String> = Normalizer.normalize(text, Normalizer.Form.NFKD)
-        .lowercase(Locale.ROOT).split(Regex("[\\s\\p{Z}]+")).filter(String::isNotEmpty)
+        .lowercase(Locale.ROOT).split(Regex("[\\x{0009}-\\x{000D}\\x{0020}\\x{0085}\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}]+")).filter(String::isNotEmpty)
 
     fun normalize(value: String): String? {
         val words = words(value)

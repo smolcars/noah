@@ -1,0 +1,375 @@
+{
+  "description": "Public BIP39 entropy-zero vector only. NFKD, lowercase, Unicode White_Space splitting for SDK input; raw credential remains unchanged for secure storage and backup.",
+  "cases": [
+    {
+      "name": "public entropy-zero vector",
+      "input": {
+        "raw": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "uppercase",
+      "input": {
+        "raw": "ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABOUT",
+        "exerciseCrypto": true
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "extra whitespace",
+      "input": {
+        "raw": " \nabandon\t  abandon\t  abandon\t  abandon\t  abandon\t  abandon\t  abandon\t  abandon\t  abandon\t  abandon\t  abandon\t  about\r\n",
+        "exerciseCrypto": true
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "NFKD fullwidth letters",
+      "input": {
+        "raw": "\uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff41\uff4e\uff44\uff4f\uff4e \uff41\uff42\uff4f\uff55\uff54",
+        "exerciseCrypto": true
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+0009",
+      "input": {
+        "raw": "\tabandon\tabandon\tabandon\tabandon\tabandon\tabandon\tabandon\tabandon\tabandon\tabandon\tabandon\tabout\t",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+000A",
+      "input": {
+        "raw": "\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabandon\nabout\n",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+000B",
+      "input": {
+        "raw": "\u000babandon\u000babandon\u000babandon\u000babandon\u000babandon\u000babandon\u000babandon\u000babandon\u000babandon\u000babandon\u000babandon\u000babout\u000b",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+000C",
+      "input": {
+        "raw": "\fabandon\fabandon\fabandon\fabandon\fabandon\fabandon\fabandon\fabandon\fabandon\fabandon\fabandon\fabout\f",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+000D",
+      "input": {
+        "raw": "\rabandon\rabandon\rabandon\rabandon\rabandon\rabandon\rabandon\rabandon\rabandon\rabandon\rabandon\rabout\r",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+0020",
+      "input": {
+        "raw": " abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about ",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+0085",
+      "input": {
+        "raw": "\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085abandon\u0085about\u0085",
+        "exerciseCrypto": true
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+00A0",
+      "input": {
+        "raw": "\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0abandon\u00a0about\u00a0",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+1680",
+      "input": {
+        "raw": "\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680abandon\u1680about\u1680",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2000",
+      "input": {
+        "raw": "\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000abandon\u2000about\u2000",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2001",
+      "input": {
+        "raw": "\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001abandon\u2001about\u2001",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2002",
+      "input": {
+        "raw": "\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002abandon\u2002about\u2002",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2003",
+      "input": {
+        "raw": "\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003abandon\u2003about\u2003",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2004",
+      "input": {
+        "raw": "\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004abandon\u2004about\u2004",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2005",
+      "input": {
+        "raw": "\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005abandon\u2005about\u2005",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2006",
+      "input": {
+        "raw": "\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006abandon\u2006about\u2006",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2007",
+      "input": {
+        "raw": "\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007abandon\u2007about\u2007",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2008",
+      "input": {
+        "raw": "\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008abandon\u2008about\u2008",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2009",
+      "input": {
+        "raw": "\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009abandon\u2009about\u2009",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+200A",
+      "input": {
+        "raw": "\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabandon\u200aabout\u200a",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2028",
+      "input": {
+        "raw": "\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028abandon\u2028about\u2028",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+2029",
+      "input": {
+        "raw": "\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029abandon\u2029about\u2029",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+202F",
+      "input": {
+        "raw": "\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabandon\u202fabout\u202f",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+205F",
+      "input": {
+        "raw": "\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabandon\u205fabout\u205f",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "Unicode White_Space U+3000",
+      "input": {
+        "raw": "\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000abandon\u3000about\u3000",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+      }
+    },
+    {
+      "name": "not Unicode White_Space U+001C",
+      "input": {
+        "raw": "abandon\u001cabandon\u001cabandon\u001cabandon\u001cabandon\u001cabandon\u001cabandon\u001cabandon\u001cabandon\u001cabandon\u001cabandon\u001cabout",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    },
+    {
+      "name": "not Unicode White_Space U+001D",
+      "input": {
+        "raw": "abandon\u001dabandon\u001dabandon\u001dabandon\u001dabandon\u001dabandon\u001dabandon\u001dabandon\u001dabandon\u001dabandon\u001dabandon\u001dabout",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    },
+    {
+      "name": "not Unicode White_Space U+001E",
+      "input": {
+        "raw": "abandon\u001eabandon\u001eabandon\u001eabandon\u001eabandon\u001eabandon\u001eabandon\u001eabandon\u001eabandon\u001eabandon\u001eabandon\u001eabout",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    },
+    {
+      "name": "not Unicode White_Space U+001F",
+      "input": {
+        "raw": "abandon\u001fabandon\u001fabandon\u001fabandon\u001fabandon\u001fabandon\u001fabandon\u001fabandon\u001fabandon\u001fabandon\u001fabandon\u001fabout",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    },
+    {
+      "name": "not Unicode White_Space U+180E",
+      "input": {
+        "raw": "abandon\u180eabandon\u180eabandon\u180eabandon\u180eabandon\u180eabandon\u180eabandon\u180eabandon\u180eabandon\u180eabandon\u180eabandon\u180eabout",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    },
+    {
+      "name": "not Unicode White_Space U+200B",
+      "input": {
+        "raw": "abandon\u200babandon\u200babandon\u200babandon\u200babandon\u200babandon\u200babandon\u200babandon\u200babandon\u200babandon\u200babandon\u200babout",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    },
+    {
+      "name": "not Unicode White_Space U+FEFF",
+      "input": {
+        "raw": "abandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabandon\ufeffabout",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    },
+    {
+      "name": "empty credential",
+      "input": {
+        "raw": "",
+        "exerciseCrypto": false
+      },
+      "expected": {
+        "normalized": null
+      }
+    }
+  ]
+}

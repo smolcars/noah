@@ -2,6 +2,8 @@ package com.noahwallet.services
 
 import com.noahwallet.services.storage.*
 import kotlinx.coroutines.runBlocking
+import com.noahwallet.fixtures.SharedFixtures
+import kotlinx.serialization.json.*
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import org.junit.Assert.*
@@ -10,6 +12,17 @@ import org.junit.Test
 class StoredMnemonicTest {
     private fun vector(count: Int) = List(count - 1) { StoredMnemonic.wordList[0] }
         .plus(StoredMnemonic.wordList[if (count == 12) 3 else 102]).joinToString(" ")
+
+    @Test fun sharedUnicodeNormalizationVectorsKeepOriginalCredentials() {
+        for (case in SharedFixtures.load("stored-mnemonic")) {
+            val raw = case.input.jsonObject.getValue("raw").jsonPrimitive.content
+            val expected = case.expected.jsonObject["normalized"]?.jsonPrimitive?.contentOrNull
+            assertTrue(case.name, StoredMnemonic.normalize(raw) == expected)
+            val result = StoredMnemonic.validate(SecretResult.Found(raw))
+            assertTrue(case.name, if (expected == null) result is SecretResult.Unavailable
+                else result is SecretResult.Found && result.value == raw)
+        }
+    }
 
     @Test fun bip39ChecksWordsChecksumCountAndNormalization() {
         for (count in listOf(12, 24)) {
