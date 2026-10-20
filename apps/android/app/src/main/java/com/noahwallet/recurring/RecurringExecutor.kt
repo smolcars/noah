@@ -50,7 +50,7 @@ class RecurringExecutor(private val d: Dependencies,
         for (schedule in state.schedules.values) {
             val planning = if (schedule.status == "needs_approval") schedule.copy(status = "active") else schedule
             val plan = planning.plan(d.now(), d.zone(), true)
-            val consumed = plan.scheduledFor?.let { d.journal.consumed(state.binding!!, schedule.id, it) } ?: false
+            val consumed = plan.scheduledFor?.let { d.journal.consumed(state.binding!!, schedule.id, it, schedule.nativeRevision, plan.occurrenceIndex) } ?: false
             if (schedule.status != "needs_attention" && (schedule.inFlight != null || entries[schedule.id]?.let { !it.resolved && it.binding == state.binding } == true || consumed)) {
                 val stopped = schedule.copy(status = "needs_attention", lastError = "Noah was interrupted while sending this payment. Check your transaction history before resuming.")
                 if (d.store.updateIf(schedule, stopped)) d.notify(emptyList(), stopped)
@@ -67,7 +67,8 @@ class RecurringExecutor(private val d: Dependencies,
                 if (approval != null && approval.schedule.id != id) continue
                 if (!budget.available) break
                 val schedule = boundState().schedules[id] ?: continue
-                val planning = if (approval != null && schedule == approval.schedule && schedule.status == "needs_approval") schedule.copy(status = "active") else schedule
+                if (approval != null && (schedule != approval.schedule || schedule.status != "needs_approval")) continue
+                val planning = if (approval != null) schedule.copy(status = "active") else schedule
                 val plan = planning.plan(d.now(), d.zone(), manual)
                 if (plan.kind == "too_many_missed") {
                     d.store.updateIf(schedule, schedule.copy(status = "needs_attention", lastError = "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment.")); continue
@@ -89,7 +90,7 @@ class RecurringExecutor(private val d: Dependencies,
                         }
                     }
                     check(quote.checkpoint == null) { "Another Lightning payment is still in progress. Try again once it completes." }
-                    check(!d.journal.consumed(state.binding, id, plan.scheduledFor!!))
+                    check(!d.journal.consumed(state.binding, id, plan.scheduledFor!!, schedule.nativeRevision, plan.occurrenceIndex))
                     val entry = RecurringJournal.Entry(state.binding, id, plan, d.now(), schedule.nativeRevision)
                     d.journal.save(entry)
                     val marked = schedule.copy(inFlight = RecurringPayment.InFlight(plan.occurrenceIndex!!, d.now()), updatedAt = d.now())
@@ -101,7 +102,7 @@ class RecurringExecutor(private val d: Dependencies,
                             val currentPlan = marked.copy(inFlight = null, status = "active").plan(d.now(), d.zone(), manual)
                             check(budget.available && currentPlan == entry.plan && generation == d.automationGeneration())
                             check(current.binding == d.binding() && current.binding == entry.binding && current.schedules[id] == marked)
-                            check(!d.journal.consumed(entry.binding, id, entry.plan.scheduledFor!!))
+                            check(!d.journal.consumed(entry.binding, id, entry.plan.scheduledFor!!, entry.policyRevision, entry.plan.occurrenceIndex))
                             check(approval != null || RecurringFeePolicy.evaluate(payment.amount, payment.method, quote.fee, quote.lightningFeeSchedule).autoPay)
                         } catch (_: Exception) { throw SendNotSubmitted(SendFailure.Reason.recurringStopped) }
                     }

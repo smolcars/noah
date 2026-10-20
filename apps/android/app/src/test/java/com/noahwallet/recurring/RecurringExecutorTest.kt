@@ -84,6 +84,15 @@ class RecurringExecutorTest {
         w.executor.execute(); assertEquals(2, w.wallet.calls)
         w.raw = rollback; w.executor.execute(); assertEquals(2, w.wallet.calls); assertEquals("needs_attention", w.schedule!!.status)
     }
+    @Test fun consumedIndexCannotReplayAfterTimeZoneShiftAndMMKVRollback() = runBlocking {
+        val w = RecurringWorld(this)
+        w.zone = TimeZone.getTimeZone("America/New_York"); w.now = 1775088000000
+        val s = w.add(1772337600000).copy(interval = RecurringInterval("month", 1), nextOccurrenceIndex = 1, nextRunAt = 1774753200000)
+        w.store.upsert(s); val rollback = w.raw
+        w.executor.execute(); assertEquals(1, w.wallet.calls)
+        w.raw = rollback; w.zone = TimeZone.getTimeZone("UTC")
+        w.executor.execute(); assertEquals(1, w.wallet.calls); assertEquals("needs_attention", w.schedule!!.status)
+    }
     @Test fun legacyConsumptionMigratesBeforeLaterAttemptReplacesIt() {
         var raw: String? = null
         val binding = RecurringStore.Binding(SendIdentity("wallet", "regtest"), UUID.randomUUID().toString())
@@ -145,6 +154,24 @@ class RecurringExecutorTest {
         val w = RecurringWorld(this); w.add(); w.fee = 1; w.executor.execute()
         val review = w.executor.review("rent"); w.executor.pause("rent"); w.executor.execute(true, review)
         assertEquals(0, w.wallet.calls)
+    }
+    @Test fun manualReviewCannotApproveAnEditedOrResumedPolicy() = runBlocking {
+        val w = RecurringWorld(this); val original = w.add(); w.fee = 1; w.executor.execute()
+        val review = w.executor.review("rent")
+        w.store.upsert(original.copy(destination = "different-recipient", nativeRevision = "new"))
+        w.executor.execute(true, review); assertEquals(0, w.wallet.calls)
+    }
+    @Test fun pauseOrCancelDuringSubmittedPaymentWinsOverSettlement() = runBlocking {
+        for (cancel in listOf(false, true)) {
+            val w = RecurringWorld(this); w.add()
+            w.wallet.payBlock = {
+                if (cancel) w.executor.cancel("rent") else w.executor.pause("rent")
+                SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess)
+            }
+            w.executor.execute(); assertEquals(1, w.wallet.calls)
+            if (cancel) assertNull(w.schedule) else { assertEquals("paused", w.schedule!!.status); assertEquals(1, w.schedule!!.occurrencesPaid) }
+            assertTrue(w.journal.consumed(w.binding, "rent", 1000)); w.executor.execute(); assertEquals(1, w.wallet.calls)
+        }
     }
     @Test fun finalGuardRejectsClockAndBackoffJumpsWithoutConsumptionOrUncertainty() = runBlocking {
         for (jump in listOf(-1L, 86_400_000L, -600L)) {
