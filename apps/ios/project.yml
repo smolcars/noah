@@ -42,7 +42,7 @@ packages:
     exactVersion: 6.31.0
   BarkBoltFFI:
     url: https://github.com/smolcars/bark-bolt-ffi
-    exactVersion: 0.3.0
+    exactVersion: 0.3.1
   # Same MMKV core line (2.4.x) as react-native-mmkv 4.3.2, so the native app
   # opens the RN app's `noah-wallet-storage` file as-is.
   MMKV:

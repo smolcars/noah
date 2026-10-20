@@ -117,6 +117,12 @@ delivery, or a changed widget cache.
   `libdatastore_shared_counter.so` with “Unknown error”. Dismissing OK allowed
   launch. Investigate the SDK AAR/packaging before release; this 4 KB-page phone
   run does not validate operation on a 16 KB-page device.
+- 2026-10-19 follow-up, bark-bolt-ffi 0.3.1 (FFI item 13): the published AAR's
+  `libbark_bolt_ffi.so` (arm64-v8a, armeabi-v7a, x86_64) has every LOAD segment at
+  `Align 0x4000`; the built regtest APK passes `zipalign -c -P 16` with all ten
+  native libraries at `0x4000`. Reinstalled over the existing regtest app
+  (`install -r`, data kept); Android reports `pageSizeCompat=0`. The phone was on
+  its lock screen, so the dialog itself wasn't observed.
 - Play Protect offered to upload the native test APK for a security check;
   declined the upload without changing a global setting.
 - Phone was USB-powered, screen on, device-idle state ACTIVE, app standby bucket
