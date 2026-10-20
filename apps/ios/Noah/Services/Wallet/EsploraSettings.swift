@@ -44,7 +44,7 @@ struct EsploraSettings: Sendable {
     }
     func resolve(for variant: AppVariant, fetch: EsploraEndpoint.Fetch = EsploraEndpoint.fetch) async throws -> String? {
         if let record = try record() {
-            if record.pending != nil { try save(Record(active: record.active)) }
+            if record.pending != nil { try? save(Record(active: record.active)) }
             return record.active.variant == variant.rawValue && variant != .regtest
                 ? record.active.endpoint.flatMap { try? EsploraEndpoint.normalize($0) } : nil
         }
@@ -54,19 +54,24 @@ struct EsploraSettings: Sendable {
             do { selection.endpoint = try await EsploraEndpoint.validate(input, variant: variant, fetch: fetch) }
             catch { selection.attention = "This imported endpoint needs attention. Test and save it before use." }
         }
-        try save(Record(active: selection))
+        do { try save(Record(active: selection)) } catch { return nil }
         return selection.endpoint
     }
+    /// Write ahead before closing any handles. A failed write leaves the live wallet alone.
+    func prepare(_ candidate: Selection) throws -> Record {
+        let record = Record(active: selection(for: AppVariant(rawValue: candidate.variant)!), pending: candidate)
+        try save(record)
+        return record
+    }
     /// Called under the lifecycle gate and a closed-session reservation.
-    func change(to candidate: Selection,
+    func change(to candidate: Selection, prepared: Record? = nil,
                 reopen: @Sendable (Selection, @escaping @Sendable () throws -> Void) async throws -> Void) async throws {
-        let previous = selection(for: AppVariant(rawValue: candidate.variant)!)
+        let previous = try (prepared ?? prepare(candidate)).active
         do {
-            try save(Record(active: previous, pending: candidate))
             try await reopen(candidate) { try save(Record(active: candidate)) }
         } catch {
             // Keep pending if rollback storage fails: cold launch still selects active.
-            try save(Record(active: previous))
+            try? save(Record(active: previous))
             do { try await reopen(previous, {}) }
             catch { throw EsploraEndpoint.Failure(message: "Endpoint not changed. Restart Noah to reopen the previous endpoint.") }
             throw EsploraEndpoint.Failure(message: "Endpoint not changed. The wallet is using the previous endpoint.")

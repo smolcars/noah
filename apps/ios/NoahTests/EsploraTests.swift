@@ -130,9 +130,31 @@ struct EsploraTests {
                     try commit()
                 }
             }
-            #expect(await calls.values.last == Self.previous.endpoint)
+            #expect(await calls.values == (phase == "pending" ? [] : [Self.candidate.endpoint!, Self.previous.endpoint!]))
             #expect(try memory.store.record() == .init(active: Self.previous))
         }
+    }
+
+    @Test func persistentStorageFailureStillReopensPreviousAndResolvesPending() async throws {
+        let memory = Memory(); try memory.store.save(.init(active: Self.previous))
+        let lock = NSLock()
+        nonisolated(unsafe) var writes = 0
+        let faulty = EsploraSettings(read: memory.store.read, write: { key, value in
+            try lock.withLock {
+                writes += 1
+                if writes > 1 { throw EsploraEndpoint.Failure(message: "disk full") }
+                try memory.store.write(key, value)
+            }
+        })
+        let calls = Calls()
+        await #expect(throws: EsploraEndpoint.Failure.self) {
+            try await faulty.change(to: Self.candidate) { selection, commit in
+                await calls.add(selection.endpoint!)
+                try commit()
+            }
+        }
+        #expect(await calls.values == [Self.candidate.endpoint!, Self.previous.endpoint!])
+        #expect(try await faulty.resolve(for: .signet) == Self.previous.endpoint)
     }
 
     @Test func interruptedCommitRetainsPreviousSelection() async throws {
