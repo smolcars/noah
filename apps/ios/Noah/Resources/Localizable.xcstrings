@@ -3049,6 +3049,18 @@
         }
       }
     },
+    "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark's published Lightning fees for this amount can reach %1$@ sats, above your automatic limit of %2$@ sats. Review it to pay manually."
+          }
+        }
+      }
+    },
     "Ark's published Lightning fees for this amount can reach {nativeValue1} sats, above your automatic limit of {nativeValue2} sats. Review it to pay manually.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -42577,6 +42589,18 @@
         }
       }
     },
+    "The fee for this payment ({fee} sats) is above your automatic limit of {cap} sats. Review it to pay manually.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The fee for this payment (%1$@ sats) is above your automatic limit of %2$@ sats. Review it to pay manually."
+          }
+        }
+      }
+    },
     "The fee for this payment ({nativeValue1} sats) is above your automatic limit of {nativeValue2} sats. Review it to pay manually.": {
       "comment": "Native-only copy; no RN translation. Intentionally English.",
       "extractionState": "manual",
@@ -43929,6 +43953,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "This operation overlaps an unresolved attempt. Check its status before repeating it."
+          }
+        }
+      }
+    },
+    "This payment could not be prepared. No payment was submitted.": {
+      "comment": "Native-only copy; no RN translation. Intentionally English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This payment could not be prepared. No payment was submitted."
           }
         }
       }

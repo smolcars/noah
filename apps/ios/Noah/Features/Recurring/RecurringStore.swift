@@ -50,6 +50,7 @@ final class RecurringStore: @unchecked Sendable {
         for id in state.schedules.keys where (stopped.contains(id) || automationStopped) && visible.schedules[id]?.unsupportedStorage == false {
             visible.schedules[id]?.status = "needs_attention"
             visible.schedules[id]?.lastError = stopped.contains(id) ? RecurringPolicyLedger.message : RecurringAutomationAuthority.message
+            visible.schedules[id]?.issue = .init(code: stopped.contains(id) ? .policyEvidence : .automationStopped)
             visible.schedules[id]?.stopReason = stopped.contains(id) ? .policyEvidence : .automationStopped
         }
         return visible
@@ -92,6 +93,7 @@ final class RecurringStore: @unchecked Sendable {
         if let decoded, let fields = try? RawObject(raw), requiredRNFields.allSatisfy({ fields.fields[$0] != nil }),
            decoded.id == id, decoded.validPolicy {
             schedule = decoded
+            schedule.decodeLegacyIssue()
         } else {
             let fields = (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [String: Any]
             // Display only: the original row remains authoritative and is never encoded from this placeholder.
@@ -104,10 +106,12 @@ final class RecurringStore: @unchecked Sendable {
             schedule.unsupportedStorage = true
             schedule.status = "needs_attention"
             schedule.lastError = RecurringPayment.unsupportedMessage
+            schedule.issue = .init(code: .unsupported)
         }
         if !schedule.unsupportedStorage, schedule.amountSat > RecurringPayment.maximumAmount {
             schedule.status = "needs_attention"
             schedule.lastError = RecurringPayment.amountLimitMessage
+            schedule.issue = .init(code: .amountLimit)
         }
         return schedule
     }
@@ -175,7 +179,7 @@ final class RecurringStore: @unchecked Sendable {
         for row in pending {
             var value = try RawObject(rows.fields[row.id]!)
             let encoded = try RawObject(String(decoding: JSONEncoder().encode(row), as: UTF8.self))
-            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
+            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
             value.fields.merge(encoded.fields) { _, new in new }
             rows.fields[row.id] = try value.json()
         }
@@ -225,7 +229,7 @@ final class RecurringStore: @unchecked Sendable {
             // Merge known fields, retaining unknown RN/native fields and their original JSON tokens.
             var value = try RawObject(previous ?? "{}")
             let fields = try RawObject(String(decoding: JSONEncoder().encode(schedule), as: UTF8.self))
-            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
+            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
             value.fields.merge(fields.fields) { _, new in new }
             schedules.fields[schedule.id] = try value.json()
             state["schedules"] = try schedules.json()

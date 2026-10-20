@@ -43,6 +43,8 @@ import Testing
         stopped.lastError = "Translated or revised display copy"
         #expect(stopped.requiresPolicyApproval)
         stopped.stopReason = nil
+        #expect(stopped.requiresPolicyApproval)
+        stopped.issue = nil
         #expect(!stopped.requiresPolicyApproval)
         #expect(try Data(contentsOf: w.file) == bytes)
     }

@@ -49,6 +49,7 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: h.directory.appending(path: "noah-recurring-overrides.json").path))
         try await h.executor.cancel(schedule.id)
         schedule.id = UUID().uuidString; schedule.status = "active"
+        schedule.lastError = nil; schedule.issue = nil // A newly approved policy has no prior runtime error.
         schedule.startAt = h.now; schedule.nextRunAt = h.now
         try await h.executor.save(schedule, editing: false)
         await h.executor.execute()

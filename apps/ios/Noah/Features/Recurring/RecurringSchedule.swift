@@ -38,6 +38,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     var occurrencesPaid = 0
     var consecutiveFailures = 0
     var lastError: String?
+    var issue: RecurringIssue?
     var retryNotBefore: Double?
     var inFlight: InFlight?
     var runs: [Run] = []
@@ -47,13 +48,23 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     // Derived from the policy authority on load, never persisted with the RN schedule.
     enum StopReason: Sendable { case policyEvidence, automationStopped }
     var stopReason: StopReason?
-    var requiresPolicyApproval: Bool { stopReason == .policyEvidence }
+    var requiresPolicyApproval: Bool { stopReason == .policyEvidence || issue?.code == .policyEvidence }
 
     enum CodingKeys: String, CodingKey {
         case id, label, destination, destinationType, amountSat, comment, interval, startAt, endAt, maxOccurrences, nativeRevision
+        case issue
         case status, nextOccurrenceIndex, nextRunAt, occurrencesPaid, consecutiveFailures, lastError, retryNotBefore, inFlight, runs, createdAt, updatedAt
     }
 
+    mutating func decodeLegacyIssue() {
+        if issue == nil, let lastError { issue = .legacy(lastError) }
+        if issue?.valid == false { issue = .init(code: .unknown) }
+        if let code = issue?.code, ![.quoteExceedsCap, .scheduleExceedsCap, .arkFee, .retryableFailure].contains(code) {
+            if status == "active" || status == "needs_approval" { status = "needs_attention"; retryNotBefore = nil }
+        } else if issue != nil, issue?.code != .retryableFailure, status == "active" {
+            status = "needs_approval"; retryNotBefore = nil
+        }
+    }
     static let unsupportedMessage = "Noah can't safely read this schedule. Cancel it and explicitly approve a new recurring payment."
     static let maximumAmount: UInt64 = 2_100_000_000_000_000
     static let amountLimitMessage = "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
@@ -136,17 +147,17 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     mutating func resume(now: Double, zone: TimeZone = .current) {
         status = "active"; inFlight = nil; retryNotBefore = nil
         if let index = plan(now: now, zone: zone, ignoreBackoff: true).occurrenceIndex { advance(index + 1, zone: zone) }
-        lastError = nil; consecutiveFailures = 0; updatedAt = now
+        lastError = nil; issue = nil; consecutiveFailures = 0; updatedAt = now
     }
     mutating func success(_ plan: Plan, now: Double, zone: TimeZone = .current) {
         let additions = (plan.skippedIndices ?? []).map { Run(occurrenceIndex: $0, scheduledFor: occurrence($0, zone: zone), attemptedAt: now, status: "skipped", amountSat: amountSat) }
             + [Run(occurrenceIndex: plan.occurrenceIndex!, scheduledFor: plan.scheduledFor!, attemptedAt: now, status: "success", amountSat: amountSat)]
         runs = Array((additions.reversed() + runs).prefix(24))
-        occurrencesPaid += 1; consecutiveFailures = 0; lastError = nil; retryNotBefore = nil; inFlight = nil; updatedAt = now
+        occurrencesPaid += 1; consecutiveFailures = 0; lastError = nil; issue = nil; retryNotBefore = nil; inFlight = nil; updatedAt = now
         advance(plan.occurrenceIndex! + 1, zone: zone)
     }
-    mutating func failure(_ plan: Plan, message: String, retryable: Bool, now: Double) {
-        inFlight = nil; consecutiveFailures += 1; lastError = message; updatedAt = now
+    mutating func failure(_ plan: Plan, message: String, retryable: Bool, now: Double, issue: RecurringIssue? = nil) {
+        inFlight = nil; consecutiveFailures += 1; lastError = message; self.issue = issue ?? .init(code: retryable ? .retryableFailure : .uncertain); updatedAt = now
         if !retryable { status = "needs_attention" }
         retryNotBefore = retryable ? now + min(900_000 * pow(2, Double(max(0, min(consecutiveFailures, 16) - 1))), 21_600_000) : nil
         runs = Array(([Run(occurrenceIndex: plan.occurrenceIndex!, scheduledFor: plan.scheduledFor!, attemptedAt: now, status: "failed", amountSat: amountSat, error: message)] + runs).prefix(24))

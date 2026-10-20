@@ -106,14 +106,15 @@ import Observation
             do { entries = try d.journal.load() }
             catch {
                 // A corrupt journal cannot identify which policies are safe in this wallet.
-                for var schedule in state.schedules.values where schedule.lastError != RecurringPolicyLedger.message {
+                for var schedule in state.schedules.values where !schedule.requiresPolicyApproval {
                     schedule.status = "needs_attention"
                     schedule.lastError = error.localizedDescription
+                    schedule.issue = .init(code: .invalidJournal)
                     try d.store.upsert(schedule)
                 }
                 throw error
             }
-            for var schedule in state.schedules.values where !schedule.unsupportedStorage && schedule.lastError != RecurringPolicyLedger.message {
+            for var schedule in state.schedules.values where !schedule.unsupportedStorage && !schedule.requiresPolicyApproval {
                 let current = try boundStateNow()
                 guard current.binding == state.binding, current.schedules[schedule.id] == schedule else { continue }
                 let entry = entries[schedule.id]
@@ -127,8 +128,9 @@ import Observation
                                            policyRevision: schedule.nativeRevision, occurrenceIndex: plan.occurrenceIndex!)
                 } ?? false
                 if ((legacyUncertain || schedule.inFlight != nil || pendingMarker || consumed) && schedule.status != "needs_attention")
-                    || (legacyUncertain && schedule.lastError != RecurringJournal.legacyMessage) {
+                    || (legacyUncertain && schedule.issue != RecurringJournal.legacyReason) {
                     schedule.status = "needs_attention"
+                    schedule.issue = legacyUncertain ? RecurringJournal.legacyReason : .init(code: .interrupted)
                     schedule.lastError = legacyUncertain ? RecurringJournal.legacyMessage : "Noah was interrupted while sending this payment. Check your transaction history before resuming."
                     // Retain the marker; ordinary pause/resume/edit cannot erase uncertainty.
                     try d.store.upsert(schedule)
@@ -183,6 +185,7 @@ import Observation
                 let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual)
                 if plan.kind == "too_many_missed" {
                     schedule.status = "needs_attention"
+                    schedule.issue = .init(code: .tooManyMissed)
                     schedule.lastError = "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment."
                     try await storage { [self, schedule] in
                         if try d.store.load().schedules[id] == original { try d.store.upsert(schedule) }
@@ -209,9 +212,10 @@ import Observation
                     guard let latest = state.schedules[id], latest == schedule,
                           planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
                           quote.walletIdentity == state.binding?.wallet else { continue }
-                    if approval == nil, let reason = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).approvalMessage(quoteFee: quote.fee) {
+                    if approval == nil, let reason = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).approvalIssue(quoteFee: quote.fee) {
                         schedule.status = "needs_approval"
-                        schedule.lastError = reason
+                        schedule.issue = reason
+                        schedule.lastError = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).approvalMessage(quoteFee: quote.fee)
                         schedule.retryNotBefore = nil
                         schedule.updatedAt = d.now()
                         let updated = try await storage { [self, schedule] in
@@ -296,6 +300,8 @@ import Observation
             guard try d.binding() == entry.binding, state.binding == entry.binding,
                   var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision else { return nil }
             latest.status = "needs_attention"
+            latest.issue = .init(code: .uncertain)
+            latest.retryNotBefore = nil
             latest.lastError = message ?? "This payment may have been sent. Check its status before making another payment."
             try d.store.upsert(latest)
             return latest
@@ -333,10 +339,10 @@ import Observation
                         latest.success(entry.plan, now: evidence.recordedAt, zone: d.zone())
                         if stopped.status != "active", stopped.status != "needs_approval", latest.status == "active" {
                             latest.status = stopped.status; latest.consecutiveFailures = stopped.consecutiveFailures
-                            latest.lastError = stopped.lastError; latest.retryNotBefore = stopped.retryNotBefore
+                            latest.lastError = stopped.lastError; latest.issue = stopped.issue; latest.retryNotBefore = stopped.retryNotBefore
                         }
                     } else {
-                        latest.failure(entry.plan, message: evidence.paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : evidence.message ?? "No payment was submitted.", retryable: !evidence.paid, now: evidence.recordedAt)
+                        latest.failure(entry.plan, message: evidence.paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : evidence.message ?? "No payment was submitted.", retryable: !evidence.paid, now: evidence.recordedAt, issue: .init(code: evidence.paid ? .alreadyPaid : .retryableFailure))
                     }
                     try d.store.upsert(latest, settlementKey: evidence.settlementID.uuidString)
                     notification = latest
@@ -381,7 +387,7 @@ import Observation
         try await storage { [self] in
             var schedule = input
             let state = try boundStateNow()
-            let reapproval = editing && state.schedules[schedule.id]?.lastError == RecurringPolicyLedger.message
+            let reapproval = editing && state.schedules[schedule.id]?.requiresPolicyApproval == true
             if reapproval { try requireReapprovalSafe(schedule.id) }
             if editing {
                 try rejectLegacyUncertainty(schedule.id)
@@ -413,7 +419,7 @@ import Observation
             guard var schedule = try d.store.load().schedules[id], schedule.status != "completed" else { return }
             guard !schedule.unsupportedStorage else { throw RecurringError.message(RecurringPayment.unsupportedMessage) }
             guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
-            let reapproval = schedule.lastError == RecurringPolicyLedger.message
+            let reapproval = schedule.requiresPolicyApproval
             if reapproval { try requireReapprovalSafe(id) }
             guard reapproval || schedule.inFlight == nil && schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
             schedule.resume(now: d.now(), zone: d.zone())
@@ -476,7 +482,7 @@ import Observation
     }
     private func refreshDates() async throws {
         try await storage { [self] in
-            for var schedule in try boundStateNow().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" && schedule.lastError != RecurringPolicyLedger.message {
+            for var schedule in try boundStateNow().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" && !schedule.requiresPolicyApproval {
                 let next = schedule.next(schedule.nextOccurrenceIndex, zone: d.zone())
                 if next != schedule.nextRunAt {
                     schedule.nextRunAt = next

@@ -43,7 +43,7 @@ struct RecurringPaymentsView: View {
                             Text(L10n.text("Last attempt: {_gt_value_2} ({_gt_value_3})", Date(timeIntervalSince1970: run.attemptedAt / 1000).formatted(), run.status == "success" ? "Successful" : run.status == "skipped" ? "Skipped" : "Failed", locale: locale.identifier))
                                 .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                         }
-                        if let error = schedule.lastError { Text(LocalizedStringKey(error)).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive) }
+                        if let error = schedule.lastError { Text(schedule.issue?.message(locale: locale.identifier) ?? L10n.text(error)).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive) }
                     }.accessibilityIdentifier("recurring-payment-\(schedule.id)")
                     if schedule.status == "needs_approval" {
                         Button("Review and pay manually") { run { review = try await executor.review(schedule.id) } }

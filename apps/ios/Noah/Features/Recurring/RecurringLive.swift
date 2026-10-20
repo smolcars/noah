@@ -111,7 +111,7 @@ enum RecurringNotifications {
                 content.body = L10n.text("A payment to {recipient} was interrupted. Check your history, then resume it.", result.label, locale: locale)
             } else if result.runs.first?.status == "failed" {
                 content.title = L10n.text("Recurring payment will retry", locale: locale)
-                content.body = L10n.text("{amount} to {recipient} could not be sent yet: {error}", amount, result.label, L10n.text(result.lastError ?? "unknown error", locale: locale), locale: locale)
+                content.body = L10n.text("{amount} to {recipient} could not be sent yet: {error}", amount, result.label, result.issue?.message(locale: locale) ?? L10n.text(result.lastError ?? "unknown error", locale: locale), locale: locale)
             } else {
                 content.title = L10n.text("Recurring payment sent", locale: locale)
                 content.body = L10n.text("{amount} sent to {recipient}.", amount, result.label, locale: locale)
@@ -175,6 +175,14 @@ enum RecurringFeePolicy {
         let cap: UInt64?
         let reason: Reason
         var autoPay: Bool { reason == .withinCap }
+        func approvalIssue(quoteFee: UInt64) -> RecurringIssue? {
+            switch reason {
+            case .withinCap: nil
+            case .quoteExceedsCap: .init(code: .quoteExceedsCap, arguments: [String(quoteFee), String(cap!)])
+            case .scheduleExceedsCap: .init(code: .scheduleExceedsCap, arguments: [String(worstCaseFee!), String(cap!)])
+            case .arkFee: .init(code: .arkFee)
+            }
+        }
         func approvalMessage(quoteFee: UInt64) -> String? {
             switch reason {
             case .withinCap: nil

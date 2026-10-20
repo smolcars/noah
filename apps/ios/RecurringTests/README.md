@@ -1623,3 +1623,42 @@ after exporting available summary JSONs. The final build succeeded. Retained
 logs/summary JSONs and non-secret live evidence under the same `/private/tmp`
 prefix. Protected simulators, other agents' devices, Android emulators, the
 physical Pixel 6 and running Docker services were untouched.
+
+## Stable recurring reasons (2026-10-20)
+
+Base `0b3b545d`. Recurring decisions use persisted `RecurringIssue` codes and
+fee arguments, `requiresPolicyApproval` and the journal-owned `legacyReason`;
+`lastError` and terminal messages retain evidence only. Display resolves the code
+through localization. The 13 fixed English messages and two anchored fee templates
+migrate while decoding. Unknown text/codes/arguments stop execution; existing
+paused/completed rows retain their stop state and failure metadata. Old policy
+digests may require explicit revision reapproval. Journal v3 outcomes, settlement
+IDs, consumption, history/release flags and raw evidence are preserved.
+
+The localization regressions cover both recovery loops, date refresh, explicit
+resume/edit, legacy-history notification latching, all fee approvals, retry gates,
+ambiguity, unknown journal outcomes, storage-write latches and legacy decoding in
+all five languages. No upstream protocol-text classifier was changed.
+
+Final focused verification: **12 definitions / 67 expanded passes / 3 suites**,
+zero failures/skips. `RecurringLocalizationTests` contributes **8 definitions /
+60 expanded passes**, including **80 legacy decode cases** inside the five decode
+scenarios. An earlier full invocation was interrupted after a legacy fixture's
+new-policy copy retained an unrecognized old error; the fixture now explicitly
+clears old runtime error/reason when approving its new schedule. All original
+legacy-uncertainty assertions and the corrected new-policy check pass.
+
+The final full **NoahTests** run completed once after the last source/test change,
+with no exclusions: **746 definitions / 149 suites; 722 passed / 24 skipped /
+zero failed; 1,535 expanded passes / 24 skips**, 326.245 seconds. All runs used
+Nix, XcodeGen, normal signing, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two jobs,
+disabled parallel testing and task-owned `/private/tmp` DerivedData. Translation
+generation/check and all seven translation-tool tests passed.
+
+Owned iPhone 17 / iOS 27.0 **Noah Recurring Reasons Sol d931**,
+`D620D2EE-5AE0-45D7-ABE5-E6846156D1CC`: confirmed exact identity/runtime and
+**Shutdown** before deletion, then verified absence. Exported all result summaries
+and test trees; removed owned DerivedData and all **seven** result bundles.
+Logs/JSON and cleanup receipt remain under `/private/tmp/noah-reasons-*`.
+No funded payment, protected/shared device, physical phone or Docker was used.
+Server, RN source and Esplora files were untouched.

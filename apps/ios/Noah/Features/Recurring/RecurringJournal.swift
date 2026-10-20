@@ -71,8 +71,9 @@ struct RecurringJournal {
             }
         }
     }
+    static let legacyReason = RecurringIssue(code: .legacyHistory)
     static let legacyMessage = "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment."
-    private static let invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
+    static let invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
     var quarantineFile: URL { file.appendingPathExtension("quarantine") }
 
     private func validate(_ state: State, complete: Bool = true) throws {
