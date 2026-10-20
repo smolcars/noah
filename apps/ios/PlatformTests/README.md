@@ -1,8 +1,10 @@
 # iOS platform services
 
-Bark 0.5.0's generated `BarkLogger.log(level:target:message:)` is called synchronously by Rust's `log` bridge on arbitrary worker threads (`src/ffi/logger.rs`). `BarkLog` serializes callbacks and never calls Bark from the callback. The SDK retains the registered sink. Like nitro-ark 0.0.144's `bark-cpp/src/lib.rs::init_logger`, all variants use Debug (Trace maps to verbose but is filtered out). RN forwards these to OSLog under `com.nitro.ark` and collects them during log export; native writes them directly through AppLog.
+Bark 0.5.0's generated `BarkLogger.log(level:target:message:)` is called synchronously by Rust's `log` bridge on arbitrary worker threads (`src/ffi/logger.rs`). `BarkLog` never calls Bark from a callback. File admission orders concurrent callbacks under a short lock; callbacks never wait for the filesystem queue. The bundled BIP39 dictionary is loaded before registering the sink. The SDK retains the registered sink. Like nitro-ark 0.0.144's `bark-cpp/src/lib.rs::init_logger`, all variants use Debug (Trace maps to verbose but is filtered out). RN forwards these to OSLog under `com.nitro.ark` and collects them during log export; native writes them directly through AppLog.
 
-AppLog redacts before OSLog and again at the file boundary. It hides mnemonic-shaped text, labelled secrets (including multiline values), long hex material, WIF/extended private keys, and URLs containing queries. Oversized messages are omitted before regex processing. Writes apply backpressure, with no growing asynchronous log queue. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines. Redaction deliberately also hides long hashes and ordinary URL queries.
+AppLog redacts before OSLog and at file admission. The shared detector covers case-insensitive BIP39 word runs across punctuation/JSON/newlines, credential labels with prefixes/suffixes, Bearer credentials/JWTs, Expo tokens, extended/WIF private keys, labelled hex keys/signatures, presigned URL parameters and email/Lightning addresses. Oversized messages are omitted before regex processing. Unlabelled txids/hashes, ordinary prose, amounts and Ark addresses remain available for diagnostics; URL queries remain conservatively omitted.
+
+The iOS writer admits at most 256 pending records, writes in admission order on a serial queue, and emits `[dropped N log records]` on overflow. Disk work holds no admission lock. Export awaits `flushAsync()` and reads through `linesForExport()`. Files remain `Caches/noah_logs/noah.log` plus `.1`–`.4`, each at most 512 KiB; export keeps the newest 4,000 lines.
 
 ## RN Sentry parity
 
@@ -12,7 +14,7 @@ Native preserves error sampling 1, tracing disabled, production environment and 
 
 ## Local and CI configuration
 
-- Provide `NOAH_SENTRY_DSN` with the same project DSN currently used by RN. The committed `Config/Sentry.xcconfig` defaults to empty, which disables telemetry. Supply it as an `xcodebuild` setting (for example from CI's `SENTRY_DSN`), or in ignored `Config/Sentry.local.xcconfig`. In xcconfig URL values use `https:/$()/…` to prevent `//` becoming a comment. No credential is committed here.
+- `Config/Sentry.xcconfig` contains the production project's public DSN. Debug and regtest still disable telemetry; a blank `NOAH_SENTRY_DSN` also disables it. CI may override the setting, or use ignored `Config/Sentry.local.xcconfig`. In xcconfig URL values use `https:/$()/…` to prevent `//` becoming a comment. Upload credentials remain outside the repository.
 - For **device Release-Mainnet and Release-Signet archives**, install `sentry-cli` on PATH (or set `SENTRY_CLI_EXECUTABLE`) and provide `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` for RN's Sentry project. Keep the token in CI secrets/the process environment, never xcconfig or the app plist.
 - The generated app target has one archive-only symbol phase shared by all three schemes, matching RN's archive/debug/simulator gates and also skipping regtest. It waits for the generated app dSYM and uploads the build's dSYM directory (including extension symbols), without source bundles or wallet/log data. Eligible archives fail on missing credentials/CLI or upload failure. Script environment logging is disabled. App archives do not require a JavaScript/source-map upload.
 - See [Sentry's symbol-upload documentation](https://docs.sentry.io/platforms/apple/guides/ios/dsym/). A CI archive and a real Sentry ingestion/symbolication check still require the team's credentials and distribution signing.
@@ -185,3 +187,52 @@ The owned DerivedData and all **five** owned `.xcresult` bundles were removed.
 Logs, available summary JSONs, debugger transcripts and cleanup evidence remain
 under the `/private/tmp/noah-platform-37ab-` prefix. No protected simulator,
 Android emulator, physical device or Docker container was touched.
+
+
+### Privacy and expiry review fixes (base 1d9aff5d, 2026-10-20)
+
+`apps/fixtures/log-redaction.json` has **67** synthetic/public-vector cases. Both
+platforms test exact output and persisted output, including negative examples.
+iOS also checks idempotence, recursive telemetry arrays/dictionaries, exception
+messages, breadcrumbs, user identity fields and rejection of unhandled serialized
+fields. Android changes are confined to the logger and its tests; Sentry is not
+implemented there.
+
+Push and BGTask stages check task cancellation, the monotonic deadline and the
+synchronously revoked inherited budget. `withOpenWallet` checks before admission
+and again after discard cleanup. Already-admitted native work still settles.
+The reviewer's `open → maintenance → expire → report → widget` probe now ends
+after expiry/maintenance settlement. Regression tests exercise the production
+push dispatcher, shielded BG work before Swift cancellation arrives, rejected new
+wallet calls, and existing close-after-settlement behavior.
+
+Verification:
+
+- Baseline standalone redaction probes reproduced 24 fixture failures; the push
+  probe reproduced the exact five-stage sequence. Both probes pass after the fix.
+- Focused iOS: **54 passed / 0 failed**, seven suites. The first expanded build
+  caught a Swift 6 test-only isolation error; a lock-protected recorder fixed it.
+- Final full `NoahTests`, run **once**: **593 total / 571 passed / 22 existing
+  opt-in skips / 0 failed**, 120 suites, 45.000 seconds. Normal simulator signing,
+  `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, `-jobs 2`, no parallel testing, XcodeGen and
+  `-packageAuthorizationProvider netrc` were used through Nix. Swift Testing
+  function selectors require the trailing `()`; these runs selected whole suites.
+- Sentry symbol-script/project checks: **5 passed / 0 failed**.
+- Android's requested full `:app:testRegtestDebugUnitTest
+  :app:assembleRegtestDebug` command ran once through Nix with `--max-workers=2`
+  and passed. Final focused logger tests: **7 passed / 0 failed**, all 67 vectors.
+  A later focused run replaced the full JUnit XML, so **2,894 tests / 84 suites**
+  were counted with Gradle's `--test-dry-run` discovery (no second full execution).
+  The final credential-label expansion also passed focused tests and APK assembly.
+- No release archive, live Sentry ingestion, real silent push or physical BGTask
+  scheduling was attempted. These checks used injected expiry and offline SDK
+  handles. Existing integration skips require separately provisioned environments.
+
+Owned simulator: **Noah Privacy t3-0c29**, iPhone 17 / iOS 27.0,
+`1276729F-75DA-4C05-9289-E153B4343542`. The Device panel twice could not find this
+new CLI-created device; verification used Xcode CLI. Cleanup identified the exact
+name/UDID, shut it down, verified `Shutdown`, deleted it and verified absence.
+Owned `/private/tmp/noah-privacy-0c29/dd` and all four owned `.xcresult` bundles
+were removed after summary export. Text logs and summary JSON remain under that
+prefix. Protected/shared devices, Android emulators, physical devices and Docker
+were untouched.
