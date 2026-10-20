@@ -20,23 +20,28 @@ class SendController(private val dependencies: Dependencies,
     private var unreadableJournal = false
     val locked get() = state != State.ready
     val canOverride get() = !checking && (unboundJournal != null || unreadableJournal ||
-        attempt != null && (state == State.uncertain || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
+        attempt != null && (state in listOf(State.uncertain, State.storageBlocked) || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
 
     fun invalidateForWalletChange() {
         generation++; checking = false; attempt = null; message = null; unboundJournal = null; unreadableJournal = false; state = State.storageBlocked
     }
     suspend fun reloadForWalletChange() {
-        generation++; checking = false; attempt = null; state = State.storageBlocked; message = null; unboundJournal = null; unreadableJournal = false
+        loadAttempt(null)
+    }
+    private suspend fun loadAttempt(retained: SendAttempt?) {
+        generation++; checking = true; attempt = retained; state = State.storageBlocked; message = null; unboundJournal = null; unreadableJournal = false
         try {
             dependencies.reservation { wallet ->
-                var saved = try { dependencies.read() } catch (failure: Exception) { unreadableJournal = true; throw failure }
+                var saved = retained ?: try { dependencies.read() } catch (failure: Exception) { unreadableJournal = true; throw failure }
                     ?: run { state = State.ready; return@reservation }
                 if (saved.walletIdentity == null) {
                     unboundJournal = saved; state = State.uncertain
                     message = "This legacy payment has no wallet identity. Check your history and recipient before discarding it."
                     return@reservation
                 }
-                if (saved.walletIdentity != wallet.identity()) { dependencies.write(null); state = State.ready; return@reservation }
+                if (saved.walletIdentity != wallet.identity()) { dependencies.write(null); attempt = null; state = State.ready; return@reservation }
+                // Retain the original read-only evidence until migration is durable.
+                attempt = saved
                 if (saved.safetyVersion !in 1..journalVersion || saved.receipt?.isProven(saved.payment, saved.paymentHash) == false || saved.alreadyPaid?.isProven(saved.payment, saved.paymentHash, true) == false) {
                     saved = saved.copy(safetyVersion = journalVersion, receipt = null, alreadyPaid = null, failed = false,
                         possibleTxids = (saved.possibleTxids + listOfNotNull(saved.receipt?.txid, saved.alreadyPaid?.txid)).distinct(),
@@ -57,6 +62,7 @@ class SendController(private val dependencies: Dependencies,
                 message = saved.failureMessage
             }
         } catch (_: Exception) { message = "Unable to load saved payment status. Check your history and recipient before forgetting this attempt."; state = State.storageBlocked }
+        finally { checking = false }
     }
     /** Must be invoked on Main: take the lock before launching any coroutine. */
     fun submit(payment: SendPayment, quote: SendQuote) {
@@ -102,7 +108,9 @@ class SendController(private val dependencies: Dependencies,
         }
     }
     suspend fun checkStatus() {
-        if (checking || attempt == null || (state != State.uncertain && attempt?.receipt?.txid == null)) return
+        if (checking) return
+        if (state == State.storageBlocked) { loadAttempt(attempt); return }
+        if (attempt == null || (state != State.uncertain && attempt?.receipt?.txid == null)) return
         val current = generation
         checking = true
         try { dependencies.reservation { wallet -> if (current == generation) reconcile(wallet) } }

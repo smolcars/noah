@@ -73,4 +73,56 @@ class SendConflictTest {
             }
         }
     }
+    @Test fun failedMigrationRetainsOriginalEvidenceAndRetryPersistsWithoutPaying() = runBlocking {
+        for (version in listOf(0, 1)) {
+            val wallet = FakeSendWallet(); val journal = TestJournal()
+            val original = SendAttempt(walletIdentity = wallet.owner, safetyVersion = version, payment = chainPayment, quote = chainQuote,
+                receipt = SendReceipt(1000, txid = "exact", proof = SendReceipt.Proof.preparedTxid, broadcastRetryPending = true))
+            journal.attempt = original; journal.fail = true
+            var reads = 0
+            val subject = SendController(SendController.Dependencies(read = { check(++reads == 1); journal.attempt }, write = journal::write) { it(wallet) }, this)
+            subject.reloadForWalletChange()
+            assertEquals(SendController.State.storageBlocked, subject.state)
+            assertEquals(original, subject.attempt); assertEquals(original, journal.attempt); assertTrue(subject.canOverride)
+            subject.acknowledge(); subject.submit(chainPayment, chainQuote)
+            if (version == 0) subject.checkStatus()
+            assertEquals(SendController.State.storageBlocked, subject.state); assertEquals(original, subject.attempt)
+            journal.fail = false; subject.checkStatus()
+            assertEquals(if (version == 0) SendController.State.uncertain else SendController.State.succeeded, subject.state); assertTrue(subject.locked)
+            assertEquals(2, journal.attempt!!.safetyVersion); assertEquals(subject.attempt, journal.attempt)
+            if (version == 0) assertEquals(listOf("exact"), subject.attempt!!.possibleTxids)
+            else assertEquals(original.receipt, subject.attempt!!.receipt)
+            assertEquals(0, wallet.prepareCalls); assertEquals(0, wallet.calls)
+            assertEquals(1, reads)
+        }
+    }
+    @Test fun blockedMigrationOverrideRequiresConfirmationAuditAndSuccessfulRemoval() = runBlocking {
+        for (failure in listOf("audit", "remove", "none")) {
+            val wallet = FakeSendWallet(); val journal = TestJournal()
+            val original = SendAttempt(walletIdentity = wallet.owner, safetyVersion = 1, payment = chainPayment, quote = chainQuote,
+                receipt = SendReceipt(1000, txid = "exact", proof = SendReceipt.Proof.preparedTxid, broadcastRetryPending = true))
+            journal.attempt = original
+            val subject = SendController(SendController.Dependencies(read = { journal.attempt }, write = {
+                if (it != null || failure == "remove") error("disk")
+                assertEquals(original, journal.audits.single().originalEvidence)
+                journal.write(it)
+            }, auditOverride = {
+                if (failure == "audit") error("audit")
+                journal.audits.add(it)
+            }) { it(wallet) }, this)
+            subject.reloadForWalletChange(); assertTrue(subject.canOverride)
+            subject.startNewPaymentAfterHistoryCheck(false); assertTrue(journal.audits.isEmpty()); assertEquals(original, subject.attempt)
+            assertTrue(subject.overrideWarning.contains("spend twice")); assertTrue(subject.overrideWarning.contains("future broadcast retries"))
+            subject.startNewPaymentAfterHistoryCheck(true)
+            assertEquals(failure != "none", subject.locked)
+            if (failure != "none") { assertEquals(original, subject.attempt); assertEquals(original, journal.attempt) }
+            else {
+                assertNull(journal.attempt)
+                val audit = journal.audits.single()
+                assertEquals("exact", audit.txid); assertEquals(SendOverrideAudit.warningText, audit.warning)
+                assertEquals("storageBlocked", audit.status); assertEquals(SendOverrideAudit.confirmationText, audit.confirmation)
+            }
+            assertEquals(0, wallet.prepareCalls); assertEquals(0, wallet.calls)
+        }
+    }
 }

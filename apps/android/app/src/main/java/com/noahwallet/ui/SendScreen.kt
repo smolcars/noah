@@ -232,7 +232,7 @@ internal fun keypadInput(amount: String, key: String, decimal: Boolean): String 
         controller.attempt?.existingLightning?.let { Text(it.message); ReviewRow("Existing fee", "${it.fee} sats") }
         controller.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (controller.state == SendController.State.uncertain) Text("Check your history and the recipient before making another payment. Possible matches do not prove this payment succeeded.")
-        if (controller.state == SendController.State.uncertain || receipt?.txid != null) NoahButton(if (controller.checking) "Checking…" else "Check status", !controller.checking) { scope.launch { controller.checkStatus() } }
+        if (controller.state in listOf(SendController.State.uncertain, SendController.State.storageBlocked) || receipt?.txid != null) NoahButton(if (controller.checking) "Checking…" else if (controller.state == SendController.State.storageBlocked) "Retry" else "Check status", !controller.checking) { scope.launch { controller.checkStatus() } }
         if (controller.state in listOf(SendController.State.succeeded, SendController.State.alreadyPaid, SendController.State.failed)) NoahButton("Done", receipt?.broadcastRetryPending != true, onClick = onDone)
         if (controller.canOverride) TextButton(onClick = { overrideStep = 1 }) { Text("Start a new payment after checking history", color = MaterialTheme.colorScheme.error) }
     }

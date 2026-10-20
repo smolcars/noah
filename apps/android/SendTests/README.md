@@ -1,5 +1,22 @@
 # Android native Send (M3) verification
 
+## Review follow-up: blocked migration recovery (2026-10-20)
+
+Base: `feat/native-rewrite` HEAD `99a9177c09ee7da2d7ef3df716f6aff6edc731ff`.
+Identity-checked journals remain the active, read-only attempt when migration
+persistence fails. **Retry** reuses that retained evidence and re-attempts the
+migration without rereading the file, paying, or releasing the Send lock. This
+also covers unsafe-outcome normalization; proven v1 receipts retain their proof.
+The blocked screen now offers the existing two-step destructive history-check
+override, with the full stored-transaction/retry/double-spend warning. Audit must
+succeed before removal; either failure retains the original evidence and lock.
+
+`SendConflictTest` adds recovery and blocked-override regressions, including a
+single failed v1 write followed by successful Retry, repeated unsafe migration
+failure, unavailable rereads, unconfirmed receipt locks, canceled confirmation,
+audit/removal failures and original journal contents in the audit. All **7 cases**
+pass in the targeted Send run. Round-1 fixes remain intact.
+
 ## Round-1 review fixes (2026-10-19)
 
 Base: `feat/native-rewrite` HEAD `c1a1c8aca99f1136864e78d17ca9c0f780f62d6f`.
