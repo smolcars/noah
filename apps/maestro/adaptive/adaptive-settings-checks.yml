@@ -2,18 +2,30 @@ appId: com.noahwallet.regtest
 ---
 - tapOn:
     id: "home-settings-button"
+- runFlow:
+    file: ../subflows/scroll-primary-to-id.yml
+    env:
+      TARGET_ID: "settings-currency"
 - tapOn:
     id: "settings-currency"
-- scrollUntilVisible:
-    element:
-      id: "preference-EUR"
-    direction: DOWN
+- runFlow:
+    file: ../subflows/scroll-primary-to-id.yml
+    env:
+      TARGET_ID: "preference-EUR"
 - tapOn:
     id: "preference-EUR"
+- runFlow:
+    file: ../subflows/scroll-primary-to-id.yml
+    env:
+      TARGET_ID: "settings-bitcoinUnit"
 - tapOn:
     id: "settings-bitcoinUnit"
 - tapOn:
     id: "preference-sats"
+- runFlow:
+    file: ../subflows/scroll-primary-up-to-id.yml
+    env:
+      TARGET_ID: "settings-profile"
 - tapOn:
     id: "settings-profile"
 - tapOn:
@@ -25,10 +37,10 @@ appId: com.noahwallet.regtest
 - takeScreenshot: adaptive-profile-draft
 - runFlow: ../subflows/hide-keyboard.yml
 - runFlow: ../subflows/back.yml
-- scrollUntilVisible:
-    element:
-      id: "settings-backup"
-    direction: DOWN
+- runFlow:
+    file: ../subflows/scroll-primary-to-id.yml
+    env:
+      TARGET_ID: "settings-backup"
 - tapOn:
     id: "settings-backup"
 - scrollUntilVisible:
@@ -36,24 +48,28 @@ appId: com.noahwallet.regtest
     direction: DOWN
 - takeScreenshot: adaptive-backup
 - runFlow: ../subflows/back.yml
-- scrollUntilVisible:
-    element:
-      id: "settings-emergencyExit"
-    direction: UP
+- runFlow:
+    file: ../subflows/scroll-primary-up-to-id.yml
+    env:
+      TARGET_ID: "settings-emergencyExit"
 - tapOn:
     id: "settings-emergencyExit"
 - assertVisible: "Reading this screen and estimating fees never broadcasts an exit."
 - takeScreenshot: adaptive-exit
 - runFlow: ../subflows/back.yml
+- runFlow:
+    file: ../subflows/scroll-primary-up-to-id.yml
+    env:
+      TARGET_ID: "settings-vtxos"
 - tapOn:
     id: "settings-vtxos"
 - assertVisible: "VTXOs"
 - takeScreenshot: adaptive-vtxos
 - runFlow: ../subflows/back.yml
-- scrollUntilVisible:
-    element:
-      id: "settings-board-ark"
-    direction: DOWN
+- runFlow:
+    file: ../subflows/scroll-primary-to-id.yml
+    env:
+      TARGET_ID: "settings-board-ark"
 - tapOn:
     id: "settings-board-ark"
 - tapOn:
@@ -65,10 +81,10 @@ appId: com.noahwallet.regtest
 - runFlow: ../subflows/hide-keyboard.yml
 - takeScreenshot: adaptive-board-draft
 - runFlow: ../subflows/back.yml
-- scrollUntilVisible:
-    element:
-      id: "settings-recurring-payments"
-    direction: UP
+- runFlow:
+    file: ../subflows/scroll-primary-up-to-id.yml
+    env:
+      TARGET_ID: "settings-recurring-payments"
 - tapOn:
     id: "settings-recurring-payments"
 - tapOn:
@@ -77,10 +93,10 @@ appId: com.noahwallet.regtest
     id: "recurring-label-input"
 - inputText: "Layout schedule"
 - runFlow: ../subflows/hide-keyboard.yml
-- scrollUntilVisible:
-    element:
-      id: "recurring-save-button"
-    direction: DOWN
+- runFlow:
+    file: ../subflows/scroll-primary-to-id.yml
+    env:
+      TARGET_ID: "recurring-save-button"
 - takeScreenshot: adaptive-schedule-draft
 - runFlow: ../subflows/back.yml
 - runFlow: ../subflows/back.yml

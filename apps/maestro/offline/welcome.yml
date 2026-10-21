@@ -20,5 +20,15 @@ name: Offline welcome and beta navigation
 - assertVisible: "Welcome to Noah"
 - tapOn: "Restore Wallet"
 - assertVisible: "Restore Wallet"
-- assertVisible:
-    id: "restore-word-1"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      # The embedded password EditText exposes its accessibility hint.
+      - assertVisible: "Word 1"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible:
+          id: "restore-word-1"

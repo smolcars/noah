@@ -5,17 +5,24 @@ appId: com.noahwallet.regtest
 - repeat:
     times: 3
     commands:
+      - runFlow:
+          file: ../subflows/scroll-primary-up-to-id.yml
+          env:
+            TARGET_ID: "settings-profile"
       - tapOn:
           id: "settings-profile"
       - tapOn:
           id: "profile-name-input"
       - eraseText: 80
       - inputText: "Rotation draft"
+      - runFlow: ../subflows/hide-keyboard.yml
       - setOrientation: LANDSCAPE_LEFT
       - assertVisible:
           id: "profile-name-input"
           text: "Rotation draft"
       - setOrientation: PORTRAIT
-      - runFlow: ../subflows/hide-keyboard.yml
+      - assertVisible:
+          id: "profile-name-input"
+          text: "Rotation draft"
       - runFlow: ../subflows/back.yml
 - runFlow: ../subflows/back.yml

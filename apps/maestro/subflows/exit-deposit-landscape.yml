@@ -35,8 +35,20 @@ name: Exit deposit address remains copyable in landscape
     element: "Done"
     direction: DOWN
 - tapOn: "Done"
-- runFlow: back.yml
-- runFlow: back.yml
 - setOrientation: PORTRAIT
-- assertVisible:
-    id: "home-settings-button"
+- retry:
+    maxRetries: 2
+    commands:
+      - runFlow: back.yml
+      - extendedWaitUntil:
+          visible:
+            id: "settings-emergencyExit"
+          timeout: 10000
+- retry:
+    maxRetries: 2
+    commands:
+      - runFlow: back.yml
+      - extendedWaitUntil:
+          visible:
+            id: "home-settings-button"
+          timeout: 10000

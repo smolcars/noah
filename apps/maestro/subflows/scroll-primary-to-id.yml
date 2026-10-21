@@ -1,0 +1,17 @@
+appId: com.noahwallet.regtest
+---
+# Adaptive forms have independently scrolling columns. Target the primary column.
+- repeat:
+    times: 12
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "${TARGET_ID}"
+          commands:
+            - swipe:
+                start: "35%, 75%"
+                end: "35%, 25%"
+                duration: 500
+- assertVisible:
+    id: "${TARGET_ID}"
