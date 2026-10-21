@@ -36,6 +36,43 @@ struct EndpointPrivacyTests {
         #expect(!file.lines().joined().contains("[0:0::1]"))
     }
 
+    @Test func secretTokensUseSharedFixturesAtEveryBoundary() throws {
+        struct Case: Decodable { let endpoint: String; let input: String; let expected: String }
+        let cases = try Fixtures.decode("esplora-log-tokens", as: [Case].self)
+        cases.forEach { EndpointLogPrivacy.register($0.endpoint) }
+        let directory = FileManager.default.temporaryDirectory.appending(path: "tokens-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = LogFile(directory: directory)
+        for test in cases {
+            #expect(LogFile.redact(test.input) == test.expected, "\(test.input)")
+            #expect(SafeErrorDescription.of(BarkError(message: test.input)) == test.expected)
+            let event = Event(level: .error); event.message = SentryMessage(formatted: test.input)
+            event.exceptions = [Exception(value: test.input, type: "FakeEndpointError")]
+            let clean = try #require(AppTelemetry.scrub(event))
+            #expect(clean.message?.formatted == test.expected)
+            #expect(clean.exceptions?.first?.value == test.expected)
+            let crumb = Breadcrumb(level: .info, category: "esplora"); crumb.message = test.input
+            #expect(try #require(AppTelemetry.scrub(crumb)).message == test.expected)
+            AppLog("tokens", file: file).e(test.input)
+        }
+        #expect(file.lines().count == cases.count)
+        for (line, test) in zip(file.lines(), cases) { #expect(line.hasSuffix(test.expected)) }
+        for test in cases {
+            try test.input.write(to: directory.appending(path: "noah.log.1"), atomically: true, encoding: .utf8)
+            #expect(file.lines().first?.hasSuffix(test.expected) == true)
+        }
+    }
+
+    @Test func tokenAutomatonFollowsFailureLinksAndProtectsProviderSummaries() {
+        let matcher = EndpointLogPrivacy.SecretMatcher(["he", "sheq", "hers", "his", "fake😀Secret"])
+        for input in ["she", "ushers", "hish", "FAKE😀SECRET"] { #expect(matcher.contains(input)) }
+        #expect(!matcher.contains("ordinary diagnostic"))
+        let provider = EndpointLogPrivacy.SecretMatcher(["HttpResponse"])
+        for input in ["HttpResponse { status: 503 }", "HttpResponse unknown", #"HttpResponse \uD800"#] {
+            #expect(EndpointLogPrivacy.sanitize(input, registered: ["https://fake-provider.example"], matcher: provider) == "[custom-esplora]")
+        }
+    }
+
     @Test func hostCredentialsAndEncodedIdentitiesNeverReachSinks() throws {
         let origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register(origin + "/api")

@@ -6,7 +6,8 @@ enum EndpointLogPrivacy {
     nonisolated(unsafe) private static var unavailable = false
     static func failClosed() { lock.withLock { unavailable = true } }
     nonisolated(unsafe) private static var origins = Set<String>()
-    nonisolated(unsafe) private static var paths = Set<String>()
+    nonisolated(unsafe) private static var tokens = Set<String>()
+    nonisolated(unsafe) private static var matcher: SecretMatcher?
     nonisolated(unsafe) private static var hosts = Set<String>()
     private static let urls = try! NSRegularExpression(pattern: #"(?i)(?<![a-z0-9+.-])[0-9+.-]*+[a-z][a-z0-9+.-]*+://[^\s<>"']*"#)
     // Admit only the SDK error type/status, never provider-controlled response text.
@@ -29,15 +30,97 @@ enum EndpointLogPrivacy {
 
     static func register(_ endpoint: String?) {
         guard let endpoint else { return }
-        guard let url = URLComponents(string: endpoint), let origin = origin(endpoint), let host = host(endpoint) else {
-            failClosed(); return
-        }
+        guard var url = URLComponents(string: endpoint) else { failClosed(); return }
+        let credentials = [url.percentEncodedUser, url.percentEncodedPassword].compactMap { $0 }
+        let query = url.percentEncodedQuery
+        // Selection validation rejects credentials/query; protect them in legacy registrations too.
+        url.user = nil; url.password = nil; url.query = nil; url.fragment = nil
+        guard let base = url.string, let origin = origin(base), let host = host(base) else { failClosed(); return }
         var sensitive = Set<String>()
-        for path in LogFile.decodedViews(url.percentEncodedPath, percentEncoded: true) ?? [url.percentEncodedPath] {
-            let trimmed = path.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
-            if !trimmed.isEmpty { sensitive.insert(trimmed) }
+        func add(_ value: String, opaque: Bool = false) {
+            for view in LogFile.decodedViews(value, percentEncoded: true, compatibility: true) ?? [value] {
+                let token = SecretMatcher.normalize(view)
+                if !token.isEmpty && (!opaque || token.utf16.count >= 6 && !commonWords.contains(token.lowercased())) { sensitive.insert(token) }
+            }
         }
-        lock.withLock { paths.formUnion(sensitive); origins.insert(origin); hosts.insert(host) }
+        add(host)
+        // Foundation exposes the Unicode IDNA spelling through URLComponents.host.
+        let unicodeHost = URLComponents(string: "https://" + host)?.host ?? host
+        add(unicodeHost)
+        for name in [host, unicodeHost] where !name.contains(":") {
+            for label in name.split(separator: ".").dropLast() where label.utf16.count >= 6 && !publicNames.contains(String(label)) {
+                add(String(label))
+            }
+        }
+        if let port = url.port { add(host + ":" + String(port)) }
+        for value in credentials where value.utf16.count >= 6 { add(value) }
+        if credentials.count == 2, credentials.joined(separator: ":").utf16.count >= 6 { add(credentials.joined(separator: ":")) }
+        for view in LogFile.decodedViews(url.percentEncodedPath, percentEncoded: true, compatibility: true) ?? [url.percentEncodedPath] {
+            for segment in view.split(separator: "/") { add(String(segment), opaque: true) }
+        }
+        for field in query?.split(separator: "&") ?? [] {
+            if let equal = field.firstIndex(of: "=") { add(String(field[field.index(after: equal)...]), opaque: true) }
+        }
+        lock.withLock {
+            if !sensitive.isSubset(of: tokens) { tokens.formUnion(sensitive); matcher = nil }
+            origins.insert(origin); hosts.insert(host)
+        }
+    }
+
+    private static let commonWords: Set<String> = ["api", "block", "blocks", "tip", "height", "hash", "tx", "txs", "transaction", "transactions", "address", "scripthash", "mempool", "v0", "v1", "v2", "testnet", "signet", "mainnet", "regtest", "esplora", "fee-estimates", "outspend", "outspends", "status", "hex", "raw", "merkle-proof", "merkleblock-proof", "utxo", "broadcast"]
+    private static let publicNames: Set<String> = {
+        var names: Set<String> = ["example", "localhost", "com", "org", "net", "edu", "gov", "co", "ac"]
+        for origin in publicOrigins {
+            if let host = authority(origin) { names.formUnion(host.split(separator: ".").map(String.init)) }
+        }
+        return names
+    }()
+
+    /// Aho–Corasick over one stable UTF-16 view; terminal failure links need only a hit bit.
+    struct SecretMatcher: Sendable {
+        private struct Node: Sendable {
+            var edges: [UInt16: Int] = [:]
+            var failure = 0
+            var terminal = false
+        }
+        private var nodes = [Node()]
+        init(_ tokens: Set<String>) {
+            for token in tokens {
+                var state = 0
+                for unit in Self.normalize(token).utf16 {
+                    if let next = nodes[state].edges[unit] { state = next }
+                    else {
+                        let next = nodes.count
+                        nodes.append(Node()); nodes[state].edges[unit] = next; state = next
+                    }
+                }
+                if state != 0 { nodes[state].terminal = true }
+            }
+            var queue = Array(nodes[0].edges.values), head = 0
+            while head < queue.count {
+                let state = queue[head]; head += 1
+                for (unit, next) in nodes[state].edges {
+                    var fallback = nodes[state].failure
+                    while fallback != 0 && nodes[fallback].edges[unit] == nil { fallback = nodes[fallback].failure }
+                    nodes[next].failure = nodes[fallback].edges[unit] ?? 0
+                    nodes[next].terminal = nodes[next].terminal || nodes[nodes[next].failure].terminal
+                    queue.append(next)
+                }
+            }
+        }
+        static func normalize(_ text: String) -> String {
+            text.precomposedStringWithCompatibilityMapping.uppercased(with: Locale(identifier: "en_US_POSIX"))
+        }
+        func contains(_ text: String) -> Bool {
+            guard nodes.count > 1 else { return false }
+            var state = 0
+            for unit in Self.normalize(text).utf16 {
+                while state != 0 && nodes[state].edges[unit] == nil { state = nodes[state].failure }
+                state = nodes[state].edges[unit] ?? 0
+                if nodes[state].terminal { return true }
+            }
+            return false
+        }
     }
 
     private static func authority(_ value: String) -> String? {
@@ -71,19 +154,19 @@ enum EndpointLogPrivacy {
     private static let hostTokens = try! NSRegularExpression(
         pattern: #"\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+"#)
     private static func redactHosts(_ text: String, registered: Set<String>) -> String {
-        var result = text
+        let source = text as NSString
+        var replacements: [NSRange] = []
         let urlRanges = urls.matches(in: text, range: NSRange(text.startIndex..., in: text)).map(\.range)
         var urlIndex = urlRanges.count - 1
         for match in hostTokens.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             while urlIndex >= 0 && urlRanges[urlIndex].location >= match.range.upperBound { urlIndex -= 1 }
             if urlIndex >= 0 && NSIntersectionRange(urlRanges[urlIndex], match.range).length > 0 { continue }
-            guard let range = Range(match.range, in: result) else { continue }
-            let token = String(result[range])
+            let token = source.substring(with: match.range)
             guard token.contains(where: { $0.isLetter || $0.isNumber || !$0.isASCII }) else { continue }
             let address = token.prefix { $0 != "%" }
             if (address.contains("::") || address.filter({ $0 == ":" }).count == 7),
                address.allSatisfy({ "0123456789abcdefABCDEF:.".contains($0) }) {
-                result.replaceSubrange(range, with: "[custom-esplora]"); continue
+                replacements.append(match.range); continue
             }
             let authority = String(token.split(separator: "@", omittingEmptySubsequences: false).last!)
             let rawHost = authority.hasPrefix("[") ? String(authority.prefix { $0 != "]" }) + "]" : String(authority.prefix { $0 != ":" })
@@ -93,9 +176,15 @@ enum EndpointLogPrivacy {
                 || rawHost.allSatisfy({ $0.isASCII && $0.isNumber }) || rawHost.lowercased().hasPrefix("0x")
                 || token.contains(where: { !$0.isASCII }) else { continue }
             let canonical = host("https://" + rawHost)
-            if canonical.map(registered.contains) ?? true { result.replaceSubrange(range, with: "[custom-esplora]") }
+            if canonical.map(registered.contains) ?? true { replacements.append(match.range) }
         }
-        return result
+        var parts: [String] = [], offset = 0
+        for range in replacements.reversed() {
+            parts.append(source.substring(with: NSRange(location: offset, length: range.location - offset)))
+            parts.append("[custom-esplora]"); offset = range.upperBound
+        }
+        parts.append(source.substring(from: offset))
+        return parts.joined()
     }
     static func redact(_ text: String) -> String { sanitize(text) ?? "[redacted]" }
 
@@ -118,49 +207,56 @@ enum EndpointLogPrivacy {
     }
 
     static func sanitize(_ text: String) -> String? {
-        let (registered, sensitive, hosts, unavailable) = lock.withLock { (origins, paths, hosts, unavailable) }
+        let (registered, matcher, hosts, unavailable) = lock.withLock {
+            if matcher == nil { matcher = SecretMatcher(tokens) }
+            return (origins, matcher!, hosts, unavailable)
+        }
         if unavailable { return "[custom-esplora]" }
-        return sanitize(text, registered: registered, sensitive: sensitive, hosts: hosts)
+        return sanitize(text, registered: registered, matcher: matcher, hosts: hosts)
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
-    static func sanitize(_ text: String, registered: Set<String>, sensitive: Set<String> = [], hosts: Set<String> = []) -> String? {
+    static func sanitize(_ text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher([]), hosts: Set<String> = []) -> String? {
         // Exported lines include a bounded tag and timestamp as well as the message.
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128 else { return "[oversized log message omitted]" }
+        func summary(_ value: String) -> String { matcher.contains(value) ? "[custom-esplora]" : value }
         if let match = responseStatus.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
-            return "HttpResponse { status: " + (text as NSString).substring(with: match.range(at: 1)) + " }"
+            return summary("HttpResponse { status: " + (text as NSString).substring(with: match.range(at: 1)) + " }")
         }
-        guard let views = LogFile.decodedViews(text, percentEncoded: true) else { return text.contains("HttpResponse") ? "HttpResponse" : nil }
+        guard let views = LogFile.decodedViews(text, percentEncoded: true, compatibility: !registered.isEmpty) else { return text.contains("HttpResponse") ? summary("HttpResponse") : nil }
         for view in views {
             if let match = responseStatus.firstMatch(in: view, range: NSRange(view.startIndex..., in: view)) {
-                return "HttpResponse { status: " + (view as NSString).substring(with: match.range(at: 1)) + " }"
+                return summary("HttpResponse { status: " + (view as NSString).substring(with: match.range(at: 1)) + " }")
             }
         }
-        if views.contains(where: { $0.contains("HttpResponse") }) { return "HttpResponse" }
+        if views.contains(where: { $0.contains("HttpResponse") }) { return summary("HttpResponse") }
         guard !registered.isEmpty else { return text }
         var result = text
         for (index, view) in views.enumerated() {
-            let endpointOnly = redactEndpoints(view, registered: registered, sensitive: sensitive, hosts: hosts)
+            let endpointOnly = redactEndpoints(view, registered: registered, matcher: matcher, hosts: hosts)
             if endpointOnly == "[custom-esplora]" || (index > 0 && endpointOnly != view) { return "[custom-esplora]" }
             // Host replacement must not hide credential labels or break mnemonic runs.
             let plain = LogFile.redactPlain(view)
             if index > 0 && plain != view { return "[redacted]" }
             if index == 0 {
-                result = plain == view ? endpointOnly : redactEndpoints(plain, registered: registered, sensitive: sensitive, hosts: hosts)
+                result = plain == view ? endpointOnly : redactEndpoints(plain, registered: registered, matcher: matcher, hosts: hosts)
             }
         }
         return result
     }
 
-    private static func redactEndpoints(_ text: String, registered: Set<String>, sensitive: Set<String>, hosts: Set<String>) -> String {
-        var clean = text
-        for match in urls.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
-            guard let range = Range(match.range, in: clean), !allowed(String(clean[range]), registered: registered, hosts: hosts) else { continue }
-            clean.replaceSubrange(range, with: "[custom-esplora]")
+    private static func redactEndpoints(_ text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>) -> String {
+        let source = text as NSString
+        var parts: [String] = [], offset = 0
+        for match in urls.matches(in: text, range: NSRange(location: 0, length: source.length)) {
+            parts.append(source.substring(with: NSRange(location: offset, length: match.range.location - offset)))
+            let value = source.substring(with: match.range)
+            parts.append(allowed(value, registered: registered, hosts: hosts) ? value : "[custom-esplora]")
+            offset = match.range.upperBound
         }
-        // Inspect relative references separately: another origin never inherits our paths.
-        let relative = urls.stringByReplacingMatches(in: clean, range: NSRange(clean.startIndex..., in: clean), withTemplate: "")
-        if sensitive.contains(where: { relative.contains($0) }) { return "[custom-esplora]" }
-        return redactHosts(clean, registered: hosts)
+        parts.append(source.substring(from: offset))
+        var clean = parts.joined()
+        clean = redactHosts(clean, registered: hosts)
+        return matcher.contains(clean) ? "[custom-esplora]" : clean
     }
 }

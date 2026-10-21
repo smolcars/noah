@@ -252,11 +252,12 @@ final class LogFile: @unchecked Sendable {
     }
 
     // Decoding loses source offsets, so a hit in any decoded view omits the entire message.
-    static func decodedViews(_ message: String, percentEncoded: Bool = false) -> [String]? {
+    static func decodedViews(_ message: String, percentEncoded: Bool = false, compatibility: Bool = false) -> [String]? {
         let escapes = percentEncoded ? encodedEscapes : jsonEscapes
         var views = [message]
         for _ in 0..<4 {
-            let source = views.last!
+            let source = compatibility ? views.last!.precomposedStringWithCompatibilityMapping : views.last!
+            if source != views.last! { views.append(source) }
             let matches = escapes.matches(in: source, range: NSRange(source.startIndex..., in: source))
             if matches.isEmpty { return views }
             let original = source as NSString
@@ -274,7 +275,8 @@ final class LogFile: @unchecked Sendable {
             parts.append(original.substring(from: offset))
             views.append(parts.joined())
         }
-        let last = views.last!
+        let last = compatibility ? views.last!.precomposedStringWithCompatibilityMapping : views.last!
+        if last != views.last! { views.append(last) }
         guard escapes.firstMatch(in: last, range: NSRange(last.startIndex..., in: last)) == nil else { return nil }
         return views
     }

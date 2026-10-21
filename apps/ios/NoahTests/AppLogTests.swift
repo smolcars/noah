@@ -22,10 +22,17 @@ struct AppLogTests {
                            ("registered authorities", "https://scaling-privacy-999.example/other "),
                            ("allowed authorities", "https://noahwallet.io/v0/health "),
                            ("malformed authorities", "https://fake-review-r5.example:invalid "),
-                           ("scheme-less hosts", "scaling-privacy-999.example:invalid ")]
+                           ("scheme-less hosts", "scaling-privacy-999.example:invalid "),
+                           ("path history without slash", "zzzz ordinary diagnostic "),
+                           ("path history with slash", "/zzzz/ordinary/diagnostic "),
+                           ("path history hit", "xxfakeScale999yy ")]
         for (name, unit) in Self.performanceInputs + authorities {
             assertRedactionScales(name, unit, redact: LogFile.redact)
             assertRedactionScales("boundary " + name, unit, redact: EndpointLogPrivacy.redact)
+        }
+        let shortHostMatcher = EndpointLogPrivacy.SecretMatcher(["a"])
+        assertRedactionScales("fullwidth bare host", "ａ ") {
+            EndpointLogPrivacy.sanitize($0, registered: ["https://a"], matcher: shortHostMatcher, hosts: ["a"]) ?? "[redacted]"
         }
     }
 
