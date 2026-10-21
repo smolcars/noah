@@ -1,0 +1,4 @@
+appId: com.noahwallet.regtest
+---
+- tapOn: "Close payment details"
+- tapOn: "Home"

@@ -1,0 +1,9 @@
+appId: com.noahwallet.regtest
+---
+- swipe:
+    start: "50%,30%"
+    end: "50%,85%"
+    duration: 800
+- extendedWaitUntil:
+    visible: ".*30,000.*"
+    timeout: 60000

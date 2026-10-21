@@ -1,0 +1,10 @@
+appId: com.noahwallet.regtest
+---
+# RN groups the entire restore form into one accessibility node on iOS.
+# These coordinates target the fixed iPhone 17 portrait layout; no screenshot
+# or text-entry command is used while the public vector is visible.
+- longPressOn:
+    point: "30%,32%"
+- tapOn: "Paste"
+- tapOn:
+    point: "50%,43%"

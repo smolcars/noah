@@ -1,0 +1,18 @@
+appId: com.noahwallet.regtest
+---
+- tapOn:
+    id: "home-settings-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-backup"
+    direction: DOWN
+- tapOn:
+    id: "settings-backup"
+- tapOn: "Backup Now"
+- extendedWaitUntil:
+    visible: "Your wallet has been backed up successfully."
+    timeout: 120000
+- tapOn: "List Backups"
+- extendedWaitUntil:
+    visible: "Encrypted wallet snapshot"
+    timeout: 30000

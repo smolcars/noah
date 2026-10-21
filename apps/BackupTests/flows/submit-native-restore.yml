@@ -1,0 +1,7 @@
+appId: com.noahwallet.regtest
+---
+- longPressOn:
+    id: "restore-word-1"
+- tapOn: "Paste"
+- tapOn:
+    id: "restore-wallet-submit"

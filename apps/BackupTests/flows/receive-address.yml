@@ -1,0 +1,11 @@
+appId: com.noahwallet.regtest
+---
+- tapOn: "Receive"
+- extendedWaitUntil:
+    visible:
+      id: "receive-qr-button"
+    timeout: 30000
+- tapOn:
+    id: "receive-copy-button"
+- tapOn:
+    id: "receive-copy-ark"

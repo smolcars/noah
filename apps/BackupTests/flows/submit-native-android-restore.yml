@@ -1,0 +1,13 @@
+appId: com.noahwallet.regtest
+---
+- longPressOn:
+    text: "Word 1"
+- tapOn: "(?i)paste"
+- scrollUntilVisible:
+    element:
+      text: "Restore Wallet"
+      below: "12 of 12 words"
+    direction: DOWN
+- tapOn:
+    text: "Restore Wallet"
+    below: "12 of 12 words"

@@ -1,0 +1,13 @@
+appId: com.noahwallet.regtest
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          permissions:
+            all: allow
+- extendedWaitUntil:
+    visible: "Restore Wallet"
+    timeout: 30000
+- tapOn: "Restore Wallet"

@@ -1,0 +1,17 @@
+appId: com.noahwallet.regtest
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - runFlow:
+          when:
+            visible: "Disable battery optimization"
+          commands:
+            - scrollUntilVisible:
+                element: "Skip"
+                direction: DOWN
+            - tapOn: "Skip"
+- extendedWaitUntil:
+    visible: "History"
+    timeout: 120000

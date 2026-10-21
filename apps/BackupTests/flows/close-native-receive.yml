@@ -1,0 +1,13 @@
+appId: com.noahwallet.regtest
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: "Done"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - pressKey: BACK
+- tapOn: "Home"

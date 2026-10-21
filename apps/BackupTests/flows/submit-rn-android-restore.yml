@@ -1,0 +1,8 @@
+appId: com.noahwallet.regtest
+---
+# Owned Pixel 7 AVD, portrait. The RN form groups its accessibility children.
+- longPressOn:
+    point: "30%,27%"
+- tapOn: "(?i)paste"
+- tapOn:
+    point: "50%,37%"
