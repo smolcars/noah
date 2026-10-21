@@ -1,5 +1,13 @@
 # Native iOS M6 verification
 
+## Wallet audit D3/D4 follow-up (2026-10-21)
+
+Approved follow-up adds explicit, separately confirmed unknown-fee start/claim reviews
+and releases only a failed Auto-Board confirmation's newly claimed deposits after
+proof of no submission/journal attempt. Dismissal/expiry alone remain handled.
+[Decisions, implementation and final verification](../../../docs/native-rewrite/parity-audit-wallet-2026-10-21.md#approved-decisions-and-resolved-gaps).
+The historical runs below predate this follow-up.
+
 ## bark-bolt-ffi 0.5.0 review round 2 fixes (2026-10-20)
 
 Based on `51c24bc0`. Board crash recovery now reconciles exact local txid evidence
@@ -146,7 +154,8 @@ cancellation-shielded `WalletSession.withOpenWallet` boundary.
 
 Emergency exits follow RN's runtime semantics. RN's bark-cpp also runs Bark's
 exit daemon, and RN maintenance includes onchain sync and exit progression.
-Starting requires a review of the selected VTXOs and fee estimate, with explicit
+Starting requires a review of the selected VTXOs and fee estimate (or explicit
+unknown-fee consent after estimation fails), with explicit
 consent to subsequent automatic background broadcasts/fee bumps paid from the
 onchain balance. Manual **Progress Exits** requires its own broadcast/fee-bump
 confirmation. Cancel remains available only before the final exit transaction is

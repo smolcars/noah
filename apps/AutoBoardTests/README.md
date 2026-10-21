@@ -1,5 +1,16 @@
 # Native repeat Auto-Board verification — 2026-10-21
 
+## Failed-confirm release follow-up (2026-10-21)
+
+D4 now distinguishes a failed confirm proven unsubmitted from accepted, uncertain,
+dismissed or expired reviews. Only newly claimed wallet-bound deposit outpoints
+are released after successfully retiring the exact unclaimed preparation and
+checking that no journal attempt exists for its review/preparation/txid. Changed
+deposits require a fresh review; check errors use a 30-second backoff. Process death
+or missing proof keeps funding handled. Exact reservations and txid-before-submit
+are unchanged. [Approved audit follow-up and verification](../../docs/native-rewrite/parity-audit-wallet-2026-10-21.md#approved-decisions-and-resolved-gaps).
+The runs below are historical evidence of the original once-presented policy.
+
 Native-only fix, based on `300b3193` (`feat/native-rewrite` at task start).
 Android `3bf66526`, iOS `57902c6b`; foreground admission follow-up `c3da2ac8`. Final verification is recorded below. No `client/` or `server/` source changes.
 

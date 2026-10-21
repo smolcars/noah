@@ -2,7 +2,7 @@
 
 Native starting point: `2b65e49652fd3d44f997a78107fca498e47f7af3`, on the isolated `t3/wallet-behavior-parity-audit` worktree. Shipping RN reference: **`origin/master` at `a280fdd277ecd350aa759f0861013791a0d9d9b0`**, fetched for this audit. RN source was read with `git show` into a private temporary reference directory; the worktree's `client/` was not the reference. Comparing the two revisions confirms that the in-scope RN screen files themselves are unchanged; the newer preimage mapping and Auto-Board implementation are in their hooks/services.
 
-This is a source-by-source behaviour audit, supplemented by owned-device checks of the fixes. It is not a new funded acceptance run of every payment/recovery path. The existing M1–M8, Send success (`db692822`), repeat Auto-Board and recovery evidence remains relevant. No send, board, exit, claim, journal, reconciliation, lock, settings authority or recovery execution logic was changed. No `client/` or `server/` file was modified.
+This is a source-by-source behaviour audit, supplemented by owned-device checks of the fixes. It is not a new funded acceptance run of every payment/recovery path. The existing M1–M8, Send success (`db692822`), repeat Auto-Board and recovery evidence remains relevant. The original sweep changed no send, board, exit, claim, journal, reconciliation, lock, settings authority or recovery execution logic. The approved D3/D4 implementation follow-up below changes emergency review and Auto-Board retry behavior. No `client/` or `server/` file was modified.
 
 Paths in the tables are relative to **RN `client/src/`**, **iOS `apps/ios/Noah/`**, and **Android `apps/android/app/src/main/java/com/noahwallet/`**, respectively. Every reference includes its source line. “Match” means equivalent user behaviour, not identical implementation. “Intentional” identifies the preserved platform/safety difference. Visual hierarchy, layout and wording are reserved for the design/copy pass.
 
@@ -33,7 +33,7 @@ Fixed in **`3113de0d`**: six screens, on both platforms. `06228133` follows with
 |---|---|---|---|
 | All / Active / Expiring / Expired / Locked, counts on status filters, SDK order without pagination. `screens/VTXOsScreen.tsx:75`; `screens/VTXOsScreen.tsx:142` | Same predicates; filter counts restored. `Features/Onchain/VtxosView.swift:74` | Same predicates; filter counts restored. `onchain/VtxosScreen.kt:34` | fixed `3113de0d` |
 | Select mode, selected count/value, Select visible, Select expiring (including expired), Clear; locked rows cannot be selected. `screens/VTXOsScreen.tsx:106` | Count/value restored before review and tied to current rows; existing selection actions preserved. `Features/Onchain/VtxosView.swift:86` | Count/value restored before review and tied to current rows; checkbox semantics retained. `onchain/VtxosScreen.kt:38` | fixed `3113de0d`, `06228133` |
-| Refresh estimates selected IDs, confirms fee, syncs, then delegates refresh; detail/back navigation. `screens/VTXOsScreen.tsx:218` | Review revalidates exact selection/cost and journals delegated refresh; no explicit RN pre-sync. `Services/Wallet/WalletSession+Onchain.swift:315` | Same guarded review and delegated refresh, without the explicit pre-sync. `onchain/OnchainOperations.kt:146` | needs-decision D2 and D5 — execution unchanged |
+| Refresh estimates selected IDs, confirms fee, syncs, then delegates refresh; detail/back navigation. `screens/VTXOsScreen.tsx:218` | Review revalidates exact selection/cost and journals delegated refresh; no explicit RN pre-sync. `Services/Wallet/WalletSession+Onchain.swift:315` | Same guarded review and delegated refresh, without the explicit pre-sync. `onchain/OnchainOperations.kt:146` | decided D2/D5 — keep native revalidation and fail-closed review again |
 | Loading and filter-specific empty views; queries gated when suspended/backgrounded. `screens/VTXOsScreen.tsx:89` | Loading/empty/error and readiness gates, read-only refresh/polling. `Features/Onchain/OnchainViews.swift:196` | Loading/empty/error, pull-to-refresh and readiness gates. `onchain/OnchainScreen.kt:65` | intentional — native exposes recoverable read errors rather than RN’s empty-looking failed queries |
 
 
@@ -43,7 +43,7 @@ Fixed in **`3113de0d`**: six screens, on both platforms. `06228133` follows with
 |---|---|---|---|
 | Amount, raw State and derived Status, current tip, expiry, remaining blocks or Expired, exit delta. `screens/VTXODetailScreen.tsx:257` | State/Status separated; current tip restored; expired countdown no longer negative. `Features/Onchain/VtxosView.swift:155` | State/Status separated; current tip and blocks remaining restored. `onchain/VtxosScreen.kt:68` | fixed `3113de0d` |
 | Copy full ID, anchor and server public key; anchor explorer strips output index. `screens/VTXODetailScreen.tsx:296` | Explicit copy buttons restored using shared detail row; anchor link added. `Features/Onchain/VtxosView.swift:164` | Explicit copy buttons and anchor link restored. `onchain/VtxosScreen.kt:75` | fixed `3113de0d`; intentional no M6 regtest link to the public signet explorer |
-| Expiring/expired warning; fresh unlocked VTXO can enter reviewed refresh. `screens/VTXODetailScreen.tsx:138` | Warning and existing refresh review; removed VTXO cannot submit. `Features/Onchain/VtxosView.swift:174` | Warning restored; existing refresh review and vanished-row state retained. `onchain/VtxosScreen.kt:79` | fixed `3113de0d` (Android warning); needs-decision D2 for pre-sync |
+| Expiring/expired warning; fresh unlocked VTXO can enter reviewed refresh. `screens/VTXODetailScreen.tsx:138` | Warning and existing refresh review; removed VTXO cannot submit. `Features/Onchain/VtxosView.swift:174` | Warning restored; existing refresh review and vanished-row state retained. `onchain/VtxosScreen.kt:79` | fixed `3113de0d` (Android warning); decided D2 — keep native revalidation |
 | Live wallet row supersedes navigation snapshot; unavailable queries cannot perform a refresh. `screens/VTXODetailScreen.tsx:125` | Live overview; unavailable wallet clears data; additional SDK kind/depth/weight/registration fields. `Features/Onchain/VtxosView.swift:152` | Live overview and same readiness boundary/additional SDK fields. `onchain/VtxosScreen.kt:65` | intentional — native does not keep a removed VTXO’s route snapshot as current data |
 
 
@@ -53,7 +53,7 @@ Fixed in **`3113de0d`**: six screens, on both platforms. `06228133` follows with
 |---|---|---|---|
 | Tracked, Pending, Claimable, Claiming, Claimed, available eligible count/value; chain/exit tips and stale-exit warning; below-dust count/value excluded from selection. `screens/UnilateralExitScreen.tsx:1290`; `screens/UnilateralExitScreen.tsx:758` | Restored in read-only summary. `Features/Onchain/UnilateralExitView.swift:123` | Restored in read-only summary. `onchain/UnilateralExitScreen.kt:92` | fixed `3113de0d` |
 | All eligible/selected exit, estimates, explicit start/progress/cancel/claim confirmations and external destination; deposit-address QR/copy. `screens/UnilateralExitScreen.tsx:1133` | Existing exact-ID reviews, deposit QR/copy/share, external-destination warning; cancel is on detail. `Features/Onchain/UnilateralExitView.swift:31` | Equivalent existing reviews/deposit controls and external-destination warning; cancel on detail. `onchain/UnilateralExitScreen.kt:62` | intentional — extra native review/journal protections and detail navigation; no execution change |
-| Estimate failure permits explicit Continue without estimate / Start tracking anyway. `screens/UnilateralExitScreen.tsx:876` | Refuses to produce a review on estimator failure. `Features/Onchain/OnchainModel.swift:160` | Same refusal. `onchain/OnchainModel.kt:93` | needs-decision D3 — existing recovery-policy difference |
+| Estimate failure permits explicit Continue without estimate / Start tracking anyway. `screens/UnilateralExitScreen.tsx:876` | Explicit unknown-fee review after estimator failure; exact selection/destination rechecked. `Features/Onchain/OnchainModel.swift` | Same scoped, expiring consent and separate confirmation. `onchain/OnchainModel.kt` | resolved D3 — see implementation follow-up |
 | Read/status states, manual Progress, focused polling and suspended/background gating. `hooks/useUnilateralExit.ts:81` | Loading/error/empty, read-only pull/poll (60s), fresh fee review before manual progression; persisted terminal exits. `Features/Onchain/OnchainViews.swift:196` | Same loading/error/empty/read-only refresh and SDK terminal exit history. `onchain/OnchainScreen.kt:65` | intentional — RN’s refresh calls syncExits; native separates status refresh from fee-paying progression |
 
 
@@ -70,7 +70,7 @@ Fixed in **`3113de0d`**: six screens, on both platforms. `06228133` follows with
 
 | RN behaviour | iOS | Android | Status |
 |---|---|---|---|
-| Total/fiat, nonzero pending, expanded buckets and privacy masking; recent three transactions/detail/repeat. `screens/HomeScreen.tsx:156` | Existing accounting, masking and recent/detail/repeat handoff. `Features/Home/HomeView.swift:248` | Existing accounting, masking and recent/detail/repeat handoff. `ui/HomeScreen.kt:28` | needs-decision D1 — exact trusted/untrusted pending split unavailable in FFI |
+| Total/fiat, nonzero pending, expanded buckets and privacy masking; recent three transactions/detail/repeat. `screens/HomeScreen.tsx:156` | Existing accounting, masking and recent/detail/repeat handoff. `Features/Home/HomeView.swift:248` | Existing accounting, masking and recent/detail/repeat handoff. `ui/HomeScreen.kt:28` | decided D1 — intentional newer Bark confirmed/pending/total structure |
 | Pull sync, loading/empty/error, suspended card with Settings, banners (backup, round, auto-board, email/update), shortcuts/facts. `screens/HomeScreen.tsx:173` | Existing Home model, banners, shortcuts and suspended Settings route. `Features/Home/HomeView.swift:187` | Existing Home state/banners and suspended Settings route. `ui/HomeScreen.kt:42` | match — native additional upgrade notices are intentional; no new Home source change |
 
 
@@ -126,7 +126,7 @@ Fixed in **`3113de0d`**: six screens, on both platforms. `06228133` follows with
 | RN behaviour | iOS | Android | Status |
 |---|---|---|---|
 | Enabled + foreground + confirmed deposit; repeated deposit prompts, threshold/reserve, explicit Yes / No turn off; pending-board block; preparation retry backoff. `components/AutoBoardingService.tsx:86` | Existing funding-outpoint ledger, SDK pending-board + journal gate, visible review consent and 30s preparation backoff. `Features/Onchain/AutoBoardFunding.swift:43` | Existing equivalent funding ledger/review/backoff. `onchain/AutoBoardFunding.kt:37` | match on normal repeated-deposit behaviour; intentional SDK checkpoint knowledge versus RN pending-movement fallback |
-| Failed pre-submit status/plan recheck releases newly claimed funding for later review; final live rechecks can replace changed plan. `components/AutoBoardingService.tsx:215` | Funding consumed at review presentation; expiry/background/pre-submit rejection does not release it. `Features/Onchain/AutoBoardFunding.swift:58` | Same presentation-time consumption. `onchain/AutoBoardFunding.kt:49` | needs-decision D4 — stricter native policy, unchanged |
+| Failed pre-submit status/plan recheck releases newly claimed funding for later review; final live rechecks can replace changed plan. `components/AutoBoardingService.tsx:215` | Releases only newly claimed outpoints after proof of no submission and no journal attempt. `Features/Onchain/AutoBoardFunding.swift` | Same proof under lifecycle/onchain/preparation locks. `onchain/AutoBoardFunding.kt` | resolved D4 — see implementation follow-up |
 
 
 ## BtcMapScreen
@@ -161,17 +161,19 @@ Fixed in **`3113de0d`**: six screens, on both platforms. `06228133` follows with
 | Onboarding Skip/Continue; no wallet money operation. `screens/LightningAddressScreen.tsx:77` | Existing Skip also dismisses Settings without mutation, equivalent to cancel/back. `Features/Onboarding/LightningAddressView.swift:123` | Existing onboarding/settings completion routing. `ui/Onboarding.kt:216` | intentional — extra iOS Settings dismissal action; wording belongs to copy/design pass |
 
 
-## Decisions required — no money/recovery change made
+## Approved decisions and resolved gaps
 
-**D1 — Home onchain pending sub-buckets (existing FFI gap).** RN shows Trusted Pending and Untrusted Pending separately (`screens/HomeScreen.tsx:392`, `lib/balanceUtils.ts:10`). SDK 0.5.0 gives native only confirmed/pending/total; native combines pending and derives immature. Native references: `Services/Wallet/WalletBalance.swift:96`, Android `services/wallet/WalletBalance.kt:38`. Proposed fix: extend FFI with the trusted/untrusted buckets, add shared accounting fixtures, then add the two Home rows. Do not infer a split from totals. This remains the existing open Cutover item.
+**D1 — Decided: intentional newer Bark balance structure.** Native follows the newer Bark FFI confirmed/pending/total structure. Shipping RN uses Bark 0.7.1's older Trusted Pending / Untrusted Pending split. Keep native's combined Pending row; no FFI extension or inferred split is required. The Home sub-bucket TODO is closed as intentional.
 
-**D2 — Explicit sync immediately before delegated VTXO refresh.** RN `screens/VTXOsScreen.tsx:218` and `screens/VTXODetailScreen.tsx:184` call walletSync before refresh. iOS `Services/Wallet/WalletSession+Onchain.swift:303` re-quotes/revalidates then invokes `refreshVtxosDelegated` at line 316; Android `onchain/OnchainOperations.kt:118` revalidates then calls `wallet.refresh` at line 146. Neither explicitly runs RN’s pre-sync at that boundary. Proposed fix, if required: add the sync inside the existing serialized authorized refresh path, then rebuild/reconfirm any changed quote/selection; add failure and stale-fee/selection regressions. Sync can progress/rebroadcast wallet state, so this audit did not insert it.
+**D2 — Decided: keep native revalidation.** Keep exact input/cost revalidation immediately before delegated refresh. Do not add RN's explicit pre-sync, which can progress/rebroadcast wallet state.
 
-**D3 — Emergency estimate-unavailable fallback (previously documented safety difference).** RN `screens/UnilateralExitScreen.tsx:876`, `:1492`, `:1550`, `:1595` permits an explicitly confirmed start/claim without an estimate and start tracking with insufficient broadcast funding. Native iOS `Features/Onchain/OnchainModel.swift:160` and Android `onchain/OnchainModel.kt:93` require a successful quote before showing a review. Native’s insufficient-funding review already explains that more confirmed funds are required; the estimator-failure path has no override. Proposed decision: retain the documented refusal, or separately design and review a recovery fallback with explicit unknown-fee consent, durable scoping and zero automatic resubmission. Do not reuse a stale or fabricated zero-fee quote.
+**D3 — Resolved: emergency exit without a fee estimate.** Only an error from the start/claim estimator produces an eligible fallback. Selection, dust, wallet, journal-overlap and destination/ownership failures do not. The user presses RN's “Continue without estimate”, reads a separate review saying fees and amount to receive are unknown, then explicitly starts or broadcasts. Unknown fee, broadcast fee and rate are absent, never zero or a previous estimate. The journal persists the review UUID consent with its wallet, sorted exact VTXO IDs, action, amount and claim destination/ownership. Consent uses that same review's original 30-second deadline and existing navigation/background/input invalidation; confirmation rechecks exact inputs and the deadline without calling the estimator again. No automatic retry/resubmission was added. Known estimates still use the normal re-quote/match path. Claim construction retains destination checks, and only explicitly consented unknown-fee claims bypass comparison to a nonexistent estimate. Cancellation and journal admission are unchanged.
 
-**D4 — Auto-Board failed-confirmation retry and funding consumption.** Shipping RN `components/AutoBoardingService.tsx:215` releases newly handled funding after failed pre-submit status/plan checks, applies 30s backoff and can offer a new review. Native iOS `Features/Onchain/AutoBoardFunding.swift:58` and Android `onchain/AutoBoardFunding.kt:48` persist handled funding when a visible review is installed, with no release on expiry, background invalidation or later pre-submit rejection. New deposits still prompt normally; manual Board remains available. Proposed decision: retain once-presented suppression, or release only provably unsubmitted, wallet-bound funding under the existing authority/locks and test interruption/retry cases. Unknown/accepted outcomes must remain handled. No funding-ledger or submit behaviour was changed here.
+Native already allowed a reviewed start when confirmed broadcast funding was insufficient. That path remains enabled and now uses RN's explicit “You are starting tracking anyway; fund the wallet before progressing” wording. It still explains the native background daemon's automatic broadcasts/fee bumps; manual progression keeps its separate review.
 
-**D5 — Concurrent VTXO removal and refresh review inputs.** RN derives `selectedVtxoIdList` from current wallet rows (`screens/VTXOsScreen.tsx:106`). Native UI keeps its selected-ID set across overview updates and passes that original set to review (`Features/Onchain/VtxosView.swift:96`; Android `onchain/VtxosScreen.kt:43`). The new display correction counts/sums only current rows and disables refresh when none remain. For a partially disappeared selection, native fee review rejects the stale ID instead of silently shrinking it (`Services/Wallet/WalletSession+Onchain.swift:242`; Android `onchain/OnchainOperations.kt:87`). Proposed decision: retain this fail-closed “review again” result, or prune unavailable IDs before producing a **new** fee review, then require explicit confirmation of the resulting selection. Never alter an already reviewed/journaled input set. No execution-ID pruning was added here.
+**D4 — Resolved: release provably unsubmitted Auto-Board funding.** Each visible review records both the full deposit snapshot and only the outpoints it newly claimed, scoped by wallet and review UUID. Confirmation rechecks the deposit snapshot under the existing wallet/session authority before claiming the signed preparation. Changed deposits reject the old plan and permit a fresh review; read/check errors apply the existing 30-second backoff. After a failed confirm, release requires the exact unclaimed preparation to be retired successfully (or matching process-local evidence that it was discarded unclaimed), plus no journal attempt for the review/preparation/exact txid. Missing preparation alone, failed cleanup, claimed/submitted/accepted/uncertain attempts, unreadable journal and loss of process-local proof cannot release funding. Android keeps the lifecycle mutation, onchain mutation and preparation locks; iOS uses the existing session and journal actors with MainActor ledger ownership. Retirement prevents submission across the asynchronous journal read. Only the review's newly claimed outpoints are subtracted; prior handled funding remains. Dismissal, “No, turn off”, background invalidation and expiry alone never invoke release. Interruption releases only if the same proof completes; process death keeps handled funding. Exact input reservations, single-use preparation, journal admission and exact txid-before-submit are retained.
+
+**D5 — Decided: keep fail-closed “review again”.** Keep the original selected-ID set. If an ID disappears, reject the stale selection and require another review. Do not prune or shrink reviewed/journaled inputs.
 
 Known upstream limitations remain tracked in TODO: prepared-board parent reorg validation, the upstream movement/checkpoint crash window, pending-board exposure for RN, prepared offboards and durable pre-ID operation keys. This sweep does not claim to resolve them.
 
@@ -223,4 +225,85 @@ Both owned devices were identified by exact name and UDID/AVD before shutdown an
 
 Removed the task's private iOS DerivedData, all five task xcresult bundles, the temporary shipping-RN reference, and this worktree's Android `app/build`, `build`, `.gradle` and `.kotlin` directories. Final result summaries were exported before removal; screenshots, logs and sanitized evidence remain. Build cleanup manifests: `/private/tmp/noah-parity-wallet-evidence/{ios,android}-build-cleanup.json`. Shared Docker services, global caches and other devices/builds were left running.
 
-Remaining acceptance limits: no new live money/recovery lifecycle, real-camera scan, external browser/share-target acceptance, fault-induced network outage, physical hardware, or dark/landscape design pass was run. Existing lifecycle and presentation tests remain in the full suites. The five decision items above remain open, and the overall Cutover behaviour-audit parent is therefore left unchecked; the completed wallet/money sweep is linked beneath it.
+Remaining acceptance limits: no new live money/recovery lifecycle, real-camera scan, external browser/share-target acceptance, fault-induced network outage, physical hardware, or dark/landscape design pass was run. Existing lifecycle and presentation tests remain in the full suites. D1, D2 and D5 are now decided, and D3/D4 are resolved by the approved follow-up. The overall Cutover behaviour-audit parent stays unchecked for the other recorded system acceptance/decision items.
+
+
+## D3/D4 implementation file map
+
+Paths below are relative to the repository root. Approved implementation started
+at `385c7545`; RN `origin/master` was fetched again and remains `a280fdd2`.
+
+- iOS `apps/ios/Noah/Features/Onchain/OnchainModels.swift:84` represents unknown fees as absent values and persists review-ID consent; `OnchainModel.swift:185` installs the separate exact-input review. `OnchainViews.swift:148` renders the RN uncertainty warning without fee/net rows.
+- iOS `apps/ios/Noah/Services/Wallet/WalletSession+Onchain.swift:188`, `:213`, `:301` isolate claim/start estimator failures and revalidate unknown-fee confirmations without estimating again.
+- Android `apps/android/app/src/main/java/com/noahwallet/onchain/OnchainModels.kt:15`, `OnchainModel.kt:104`, `OnchainScreen.kt:198` provide the equivalent absent fees, consent and review. `OnchainOperations.kt:115` isolates estimator failures; `:126` revalidates before journal admission.
+- iOS `apps/ios/Noah/Features/Onchain/AutoBoardFunding.swift:33`, `:58`, `:63` implement exact new-outpoint claims, full funding snapshots and failed-confirm backoff/release. `BoardArkView.swift:92` connects confirmation; `Services/Wallet/WalletSession+PreparedBoard.swift:78` proves retirement/no attempt, and `:93` checks deposits before claiming.
+- Android `apps/android/app/src/main/java/com/noahwallet/onchain/AutoBoardFunding.kt:26`, `:47`, `:52`, `AutoBoardPrompt.kt:96`, `OnchainOperations.kt:182`, `BoardPreparations.kt:79` implement the same ledger, confirmation and locked proof. `services/wallet/WalletSession.kt` retains onchain mutation serialization.
+- Regression coverage: iOS `NoahTests/ExitClaimDestinationTests.swift`, `OnchainSafetyTests.swift`, `BoardPreparedTests.swift`; Android `onchain/OnchainOperationsTest.kt`, `OnchainModelTest.kt`, `BoardPreparationsTest.kt`. Read-only device fixtures are in each platform's `WalletParityDeviceTests` / `WalletParityDeviceTest`.
+
+
+## D3/D4 final verification and cleanup
+
+Implementation commits: **`5eebdbf7`** (explicit unknown-fee exit reviews, RN
+translations and fixtures) and **`c7b5dc88`** (provably unsubmitted Auto-Board
+release). Each full platform suite ran once after that platform's final source
+and test changes. No `client/` or `server/` source was changed; no push.
+
+- **Android:** requested full command passed: **3,701 JVM tests / 160 suites,
+  zero failures, errors or skips**; regtest APK assembly and instrumentation
+  Kotlin compilation passed. A private `GRADLE_USER_HOME=/private/tmp/noah-d3d4-gradle`
+  avoided another worktree's shared-cache lock; the command itself was unchanged.
+  Log: `/private/tmp/noah-d3d4-android-final.log`; exported counts:
+  `/private/tmp/noah-d3d4-evidence/android-final.json`.
+- **iOS:** XcodeGen preceded the full ad hoc signed arm64 `Noah-Regtest` test run,
+  two jobs and serial testing, private DerivedData `/private/tmp/noah-d3d4-dd`:
+  **888 total / 857 passed / 31 opt-in skipped / zero failed**, across **177
+  suites**, with **1,713 expanded passes**. Log:
+  `/private/tmp/noah-d3d4-ios-final.log`; exported result summary:
+  `/private/tmp/noah-d3d4-evidence/ios-final.json`.
+- **Focused:** Android onchain regressions **279 tests / 8 suites, zero failures**;
+  iOS board/claim/fallback regressions **36 tests / 54 expanded executions in 3
+  suites, zero failures/skips**. Full runs also include the existing journal,
+  cancellation, lifecycle, destination and normal-estimate regressions.
+- **Translations:** offline `seed`, ordinary generation and `--check` passed;
+  **8 RN keys seeded per locale**, **zero missing translations** in es/ja/ko/sv
+  on either platform. All **16 translation-tool tests** pass. The paid `translate`
+  command was never run.
+- **Hooks:** Husky shims were initially absent; they were restored and the first
+  implementation commit was amended through normal hooks. Final commits run
+  client ESLint, React Compiler audit, **148 RN unit tests**, TypeScript and
+  `cargo fmt --check`; no bypass. `git diff --check` passes.
+
+Read-only production-component screenshots are retained under
+**`/private/tmp/noah-exit-fallback-shots/`**:
+`ios-startExit.png`, `ios-claim.png`, `android-startExit.png`, and
+`android-claim.png`. Both platform reviews show the unknown-fee warning and
+explicit confirmation, with no fee/net amount row. Claim captures also retain
+the destination and external-wallet warning. No wallet creation, funded
+operation, recovery phrase or mutation capability was used by these fixtures.
+The iOS public-fixture suite passed **3 tests**; Android fallback instrumentation
+passed **1 test**, covering both start and claim. File sizes/hashes:
+`/private/tmp/noah-d3d4-evidence/screenshots.json`.
+
+Exploratory compilation caught old boarding harness arithmetic that needed to
+unwrap known fees after fees became optional; those sites were corrected. The
+initial iOS method-only screenshot selector selected zero tests; the suite-level
+selector ran the actual three tests. Android's first screenshot assertion ran
+before the sheet's accessibility content was ready; a bounded content wait fixed
+it and the instrumentation passed. A shared Gradle cache-lock timeout was isolated
+without stopping the other worktree's daemon. These were pre-final build/harness
+issues; neither full final platform run failed or was repeated.
+
+Owned devices: **Noah Exit Fallback d3d4 02b8**, iPhone 17 / iOS 27.0,
+`209D50CC-DEEF-4868-9310-D2536DE2E518`; **NoahExitFallbackD3D402b8**, Android 15,
+console **5712** / `emulator-5712`. Exact identities were checked immediately
+before shutdown; iOS was rechecked Shutdown before deletion. Both were deleted
+and verified absent, including the Android AVD directory/ini. Cleanup records:
+`/private/tmp/noah-d3d4-evidence/{ios,android}-cleanup.json`. Task-owned DerivedData,
+xcresult bundles and the private Gradle cache were removed after exporting
+summaries; logs, screenshots and sanitized evidence remain. Other devices,
+worktrees, shared caches and Docker were not operated on.
+
+Acceptance limits: estimator/network failures and interrupted confirmations were
+exercised deterministically at production seams. The screenshots prove
+presentation; this follow-up did not repeat a funded emergency exit/claim or
+induce a live network outage. Existing live evidence remains historical.
