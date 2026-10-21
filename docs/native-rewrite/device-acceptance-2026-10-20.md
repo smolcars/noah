@@ -274,3 +274,63 @@ Summaries, test trees, logs, Android XML/count evidence and `cleanup.json` remai
 under `$(git rev-parse --absolute-git-dir)/noah-wake-r2-evidence`.
 These deterministic regressions do not establish live OS push delivery or funded
 payments; hardware reacceptance remains follow-up.
+
+### Round-3 Android cleanup and independent wake failure handoff
+
+Implementation base: `02f589a9`, checkout `t3/android-recurring-wake-cleanup`.
+The supplied `/private/tmp/noah-wake-review-r2-WakeRoundTwoReviewProbeTest.kt`
+is now permanent coverage in `RecurringWakeCleanupTest.kt`, without its source-line
+stack-trace dependency. The test revokes foreground admission during cleanup's
+final asynchronous policy read, after one payment has settled, and adds a second
+due schedule while an independent push is already joining that worker.
+
+Previously `RecurringExecutor.kt:231` threw from cleanup's final `requireStage`;
+the join at line 81 propagated that exception before checking the push's budget.
+The permanent regression reproduced **one payment, second paid count zero**, and
+`IllegalStateException: Recurring background work stopped.` before the fix.
+`RecurringExecutor.kt:232` now checks admission without throwing before notifying.
+Cleanup bookkeeping and already-submitted settlement can finish after revocation.
+The join at `RecurringExecutor.kt:81` captures the predecessor result and checks
+the waiting coroutine's own cancellation. Distinct budgets then recheck admission
+and durable due work even after predecessor failure or cancellation; same-budget
+callers retain the predecessor result. Each caller still performs at most one own
+execution pass; no payment retry or re-evaluation loop was added.
+
+The five-test suite also injects failed and cancelled predecessors, cancels a
+waiting caller with a live budget, and holds a submitted payment while three
+pushes join before/after foreground revocation. Before the fix: **5 tests, 3
+failed, 2 passed**. Successful handoffs must consume and release both occurrences
+with one paid count/history row each, and a subsequent wake must submit nothing.
+Existing ambiguous-outcome, durable settlement and consumed checks are unchanged,
+as is lock order: background access → lifecycle gate → RestoreRecovery → session
+reservation. No gate is reentrant.
+
+iOS has no equivalent exception path: `RecurringExecutor.swift:33` stores a
+`Task<Void, Never>`, `:81` awaits its nonthrowing value, and `:306-307` performs
+cleanup reload/notification without a throwing admission check. No iOS source or
+test change was needed, so its full suite was not rerun.
+
+Full Android ran once after the last source/test change: **3,615 JVM tests / 151
+suites, zero failures/errors/skips**, including all **five** new regressions.
+Regtest debug APK assembly and instrumentation Kotlin compilation passed in the
+same **3m 22s** Gradle invocation:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Baseline/final logs, final JUnit XML and count summary are retained under
+`$(git rev-parse --absolute-git-dir)/noah-wake-r3-evidence`.
+Removed this worktree's Android `app/build`, `build`, `.gradle` and `.kotlin`
+directories after exporting results; `cleanup.json` records their absence.
+No simulator/emulator was created or used, and no owned native build remains.
+No RN, server, log-privacy, iOS layout, physical-device or Docker changes.
+The tests use deterministic transport/stage substitutes; live OS push delivery
+and funded hardware reacceptance remain unverified.
+
+Fix commit: `cd744107`. Both final commits use the requested Claude co-author
+trailer and normal pre-commit hook (RN lint/compiler checks, **148 unit tests**,
+TypeScript and Rust formatting). This fresh worktree initially lacked Husky's
+generated launcher; it was installed and the fix commit amended through the hook.
+One hook attempt failed on a missing local `noah-tools` dependency link; restoring
+that workspace link fixed the environment without changing RN sources.
