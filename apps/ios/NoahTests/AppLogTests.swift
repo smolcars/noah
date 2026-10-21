@@ -50,20 +50,19 @@ struct AppLogTests {
         let inputs = [1024, 16384].map { size in
             String(String(repeating: unit, count: (size + unit.count - 1) / unit.count).prefix(size))
         }
-        for input in inputs { _ = redact(input) }
-        var samples = [[Duration](), [Duration]()]
+        for _ in 0..<5 { for input in inputs { _ = redact(input) } } // Warm both sizes before sampling.
+        var samples = [[UInt64](), [UInt64]()]
         for _ in 0..<5 {
             for (index, input) in inputs.enumerated() {
-                let started = ContinuousClock.now
-                _ = redact(input)
-                samples[index].append(ContinuousClock.now - started)
+                let started = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
+                for _ in 0..<4 { _ = redact(input) }
+                samples[index].append(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - started)
             }
         }
         let small = samples[0].sorted()[2], large = samples[1].sorted()[2]
-        print("REDACTION \(name) 1 KiB \(small); 16 KiB \(large)")
-        // Linear work grows 16x; quadratic suffix rescans grow 256x. Allow scheduler noise.
-        #expect(large < small * 64 + .milliseconds(20), "\(name): \(small) -> \(large)")
-        #expect(large < .seconds(2), "\(name) 16 KiB exceeds 2 s ceiling")
+        print("REDACTION \(name) CPU 1 KiB \(small) ns; 16 KiB \(large) ns (four calls)")
+        // 16x input permits 64x CPU work, rejecting quadratic (256x) rescans without counting descheduling.
+        #expect(small > 0 && large < small * 64, "\(name) CPU scaling: \(small) -> \(large) ns")
     }
 
     @Test @MainActor func mainActorAndSDKCallbacksOnlyEnqueueRawText() async {
