@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.noahwallet.ui.*
@@ -41,7 +42,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
     if (editor) { RecurringPaymentEditorScreen(executor, editing) { editor = false }; return }
     SettingsColumn {
         Text(tr("Automatic payments from your Ark balance. Lightning fees must fit both the quoted fee and the server's worst-case fee limit. Ark payments must have no fee. Other payments need manual approval. Keep notifications enabled."), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        NoahButton("New recurring payment", !app.isWalletSuspended) { editingID = null; editor = true }
+        NoahButton("New recurring payment", !app.isWalletSuspended, modifier = Modifier.testTag("recurring-new-button")) { editingID = null; editor = true }
         if (executor.schedules.isEmpty()) Text(tr("No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an Ark address, Lightning address or BOLT12 offer."))
         executor.schedules.forEach { s ->
             HorizontalDivider(Modifier.padding(top = 12.dp))

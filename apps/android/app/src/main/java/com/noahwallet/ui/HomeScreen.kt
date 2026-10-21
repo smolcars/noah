@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.noahwallet.history.RepeatPayment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.BitcoinAmount
@@ -70,7 +71,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                     Text(tr("Noah"), Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(settings) { Text(tr("Settings")) }
+                    TextButton(settings, modifier = Modifier.testTag("home-settings-button")) { Text(tr("Settings")) }
                     TextButton({ map = true }) { Text(tr("Bitcoin Map")) }
                     if (!model.isWalletSuspended) TextButton(onQR) { Text(tr("QR Code")) }
                 }

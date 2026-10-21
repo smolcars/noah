@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
@@ -189,7 +190,7 @@ fun EmergencyEmailScreen(model: AppModel, fromOnboarding: Boolean = false, onCon
             Text(tr("We sent a 6-digit verification code to $email"))
             OutlinedTextField(code, { code = it.filter { c -> c in '0'..'9' }.take(6) },
                 label = { Text(tr("6-digit code")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true)
+                modifier = Modifier.fillMaxWidth().testTag("verification-code-input"), enabled = !model.busy, singleLine = true)
             NoahButton("Verify Email", code.length == 6 && !model.busy) {
                 focus.clearFocus()
                 model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
@@ -202,7 +203,7 @@ fun EmergencyEmailScreen(model: AppModel, fromOnboarding: Boolean = false, onCon
         } else {
             Text(presentation.explanation(context))
             OutlinedTextField(email, { email = it }, label = { Text(tr("Email Address")) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth().testTag("email-address-input"),
                 enabled = !model.busy, singleLine = true)
             if (!registered) NoahButton("Retry registration", !model.busy, secondary = true) { register() }
             NoahButton(if (model.busy) "Please wait…" else "Send Verification Code", registered && email.isNotBlank() && !model.busy) { send() }
@@ -222,7 +223,7 @@ fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
     NoahForm("Choose your Lightning Address") {
         Text(tr("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier."))
         OutlinedTextField(username, { username = LightningIdentity.normalizeUsername(it) }, label = { Text(tr("Username")) },
-            modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag("lightning-username-input"), enabled = !model.busy, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
         Text(tr("$username@$domain"))
         OutlinedTextField(npub, { npub = it }, label = { Text(tr("Nostr public key (optional)")) },

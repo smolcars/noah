@@ -19,6 +19,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
@@ -124,7 +125,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     }
     Column(Modifier.fillMaxSize().readableWidth().imePadding().verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = { focus.clearFocus(); model.reset() }, enabled = !model.busy) { Text(tr("Start over")) }
+            TextButton(onClick = { focus.clearFocus(); model.reset() }, enabled = !model.busy, modifier = Modifier.testTag("send-start-over")) { Text(tr("Start over")) }
             TextButton(onClick = { focus.clearFocus(); scanner = true }, enabled = !model.busy) { Text(tr("Scan QR")) }
         }
         Column(Modifier.padding(horizontal = 24.dp),
@@ -132,8 +133,8 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
             when (model.stage) {
                 SendStage.amount -> {
                     Text(tr("How much?"), style = MaterialTheme.typography.headlineLarge)
-                    Text(tr(model.amount.ifEmpty { "0" }), style = MaterialTheme.typography.displaySmall, modifier = Modifier.semantics { contentDescription = "Amount ${model.amount.ifEmpty { "0" }}" })
-                    TextButton(onClick = model::toggleCurrency, enabled = model.btcPrice != null && !model.busy && model.parsed.isAmountEditable) { Text(tr(if (model.useFiat) model.fiatCurrency else "sats")) }
+                    Text(tr(model.amount.ifEmpty { "0" }), style = MaterialTheme.typography.displaySmall, modifier = Modifier.testTag("send-amount").semantics { contentDescription = "Amount ${model.amount.ifEmpty { "0" }}" })
+                    TextButton(onClick = model::toggleCurrency, enabled = model.btcPrice != null && !model.busy && model.parsed.isAmountEditable, modifier = Modifier.testTag("send-currency-toggle")) { Text(tr(if (model.useFiat) model.fiatCurrency else "sats")) }
                     Text(tr("${model.arkBalance} sats available in Ark"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     app.summary?.balance?.let { balance ->
                         balance.pendingRoundMessage("${balance.ark.pendingInRound} sats")?.let {
@@ -143,7 +144,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                     if (!model.parsed.isAmountEditable) Text(tr("Amount set by payment request"))
                     AmountKeypad(model.amount, model.useFiat, !model.busy && model.parsed.isAmountEditable) { model.amount = it }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = model::maxSend, enabled = !model.busy && model.parsed.isAmountEditable && (model.arkBalance > 0 || model.onchainBalance > 0)) { Text(tr("MAX")) }
+                        TextButton(onClick = model::maxSend, enabled = !model.busy && model.parsed.isAmountEditable && (model.arkBalance > 0 || model.onchainBalance > 0), modifier = Modifier.testTag("send-max")) { Text(tr("MAX")) }
                         TextButton(onClick = model::recipientFirst, enabled = !model.busy) { Text(tr("Choose recipient first")) }
                     }
                     PasteRecipient { value -> scope.launch { model.importRecipient(value) } }
@@ -151,7 +152,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                 SendStage.recipient -> {
                     Text(tr("Who are you paying?"), style = MaterialTheme.typography.headlineMedium)
                     OutlinedTextField(model.destination, model::setRecipient, label = { Text(tr("Address, invoice, or payment request")) },
-                        enabled = !model.busy, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
+                        enabled = !model.busy, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth().testTag("send-recipient"))
                     PasteRecipient { value -> focus.clearFocus(); scope.launch { model.importRecipient(value) } }
                     model.matchingRoute?.let { route ->
                         Text(tr("Recipient verified"), color = MaterialTheme.colorScheme.primary)
@@ -181,7 +182,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
             controller.message?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
             Spacer(Modifier.height(8.dp))
         }
-        Box(Modifier.padding(16.dp)) { NoahButton(if (model.busy || model.resolvingRecipient) "Preparing…" else "Continue", !model.busy && !model.resolvingRecipient) { focus.clearFocus(); scope.launch { model.continueStage() } } }
+        Box(Modifier.padding(16.dp)) { NoahButton(if (model.busy || model.resolvingRecipient) "Preparing…" else "Continue", !model.busy && !model.resolvingRecipient, modifier = Modifier.testTag("send-continue")) { focus.clearFocus(); scope.launch { model.continueStage() } } }
     }
     val quote = model.quote; val payment = model.payment
     if (model.showReview && quote != null && payment != null) {
@@ -213,14 +214,14 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
                 if (payment.comment.isNotEmpty()) ReviewRow("Note", payment.comment)
                 quote.checkpoint?.let { Text(tr("An existing Lightning payment will be checked. No new payment will be created.")) }
                 if (quote.approximate) Text(tr("The fee is an estimate. The final fee may change before submission."), style = MaterialTheme.typography.bodySmall)
-                NoahButton("Confirm", !controller.locked, onClick = confirm)
-                NoahButton("Back", !controller.locked, secondary = true, onClick = cancel)
+                NoahButton("Confirm", !controller.locked, modifier = Modifier.testTag("send-confirm"), onClick = confirm)
+                NoahButton("Back", !controller.locked, secondary = true, modifier = Modifier.testTag("send-review-back"), onClick = cancel)
             }
 }
 
 @Composable private fun PasteRecipient(onPaste: (String) -> Unit) {
     val context = LocalContext.current
-    TextButton(onClick = {
+    TextButton(modifier = Modifier.testTag("send-paste"), onClick = {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString()?.let(onPaste)
     }) { Text(tr("Paste")) }
@@ -235,7 +236,7 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
         listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(if (decimal) "." else "", "0", null)).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { key ->
-                    TextButton(onClick = { onChange(keypadInput(amount, key, decimal)) }, enabled = enabled && key != "", modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                    TextButton(onClick = { onChange(keypadInput(amount, key, decimal)) }, enabled = enabled && key != "", modifier = Modifier.weight(1f).heightIn(min = 56.dp).testTag("send-key-${key ?: "⌫"}")) {
                         Text(if (key == null) tr("Delete") else tr(key), style = if (key == null) MaterialTheme.typography.labelMedium else MaterialTheme.typography.headlineMedium)
                     }
                 }

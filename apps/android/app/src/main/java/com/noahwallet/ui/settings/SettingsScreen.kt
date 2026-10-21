@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
@@ -77,9 +78,9 @@ fun SettingsColumn(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun SettingRow(title: String, detail: String = "", enabled: Boolean = true, onClick: (() -> Unit)? = null) {
+fun SettingRow(title: String, detail: String = "", enabled: Boolean = true, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     ListItem(headlineContent = { Text(tr(title)) }, supportingContent = if (detail.isEmpty()) null else ({ Text(tr(detail)) }),
-        modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier),
+        modifier = modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier),
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background,
             headlineColor = if (enabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant))
 }
@@ -119,10 +120,10 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
     SettingsColumn {
         SettingRow("Noah's Ark Story", "Listen to the story behind Noah") { navigate(SettingsDestination.Story) }
         SectionTitle("Account")
-        SettingRow("Profile", "Name, Lightning address, emergency email, and public key") { navigate(SettingsDestination.Profile) }
+        SettingRow("Profile", "Name, Lightning address, emergency email, and public key", modifier = Modifier.testTag("settings-profile")) { navigate(SettingsDestination.Profile) }
         SettingRow("Language", preferenceSummary(SettingsDestination.Language, model.localeIdentifier, java.util.Locale.forLanguageTag(model.localeIdentifier))) { navigate(SettingsDestination.Language) }
-        SettingRow("Currency", preferenceSummary(SettingsDestination.Currency, model.preferredCurrency, java.util.Locale.forLanguageTag(model.localeIdentifier))) { navigate(SettingsDestination.Currency) }
-        SettingRow("Bitcoin Unit", preferenceSummary(SettingsDestination.Unit, model.amountUnit.name, java.util.Locale.forLanguageTag(model.localeIdentifier))) { navigate(SettingsDestination.Unit) }
+        SettingRow("Currency", preferenceSummary(SettingsDestination.Currency, model.preferredCurrency, java.util.Locale.forLanguageTag(model.localeIdentifier)), modifier = Modifier.testTag("settings-currency")) { navigate(SettingsDestination.Currency) }
+        SettingRow("Bitcoin Unit", preferenceSummary(SettingsDestination.Unit, model.amountUnit.name, java.util.Locale.forLanguageTag(model.localeIdentifier)), modifier = Modifier.testTag("settings-bitcoinUnit")) { navigate(SettingsDestination.Unit) }
         SectionTitle("Info")
         SettingRow("Ark Info", "Ark server, wallet, and explorer configuration") { navigate(SettingsDestination.Ark) }
         SectionTitle("Wallet")
@@ -130,12 +131,12 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
             WalletLock.available(activity) || model.walletLock.enabled).forEach { row ->
             when (row) {
                 WalletSettingsRow.Seed -> SettingRow("Show Seed Phrase", "Keep your recovery phrase safe. Never share it.") { navigate(SettingsDestination.Seed) }
-                WalletSettingsRow.Vtxos -> SettingRow("Show VTXOs", "Inspect and refresh your Ark funds") { navigate(SettingsDestination.Vtxos) }
-                WalletSettingsRow.Exits -> SettingRow("Emergency Exit", "Recover Ark funds onchain") { navigate(SettingsDestination.Exits) }
-                WalletSettingsRow.Recurring -> SettingRow("Recurring Payments", "Automatic payments from your Ark balance") { navigate(SettingsDestination.Recurring) }
-                WalletSettingsRow.Backup -> SettingRow("Backup & Restore", "Automatic and manual encrypted backups") { navigate(SettingsDestination.Backup) }
+                WalletSettingsRow.Vtxos -> SettingRow("Show VTXOs", "Inspect and refresh your Ark funds", modifier = Modifier.testTag("settings-vtxos")) { navigate(SettingsDestination.Vtxos) }
+                WalletSettingsRow.Exits -> SettingRow("Emergency Exit", "Recover Ark funds onchain", modifier = Modifier.testTag("settings-emergencyExit")) { navigate(SettingsDestination.Exits) }
+                WalletSettingsRow.Recurring -> SettingRow("Recurring Payments", "Automatic payments from your Ark balance", modifier = Modifier.testTag("settings-recurring-payments")) { navigate(SettingsDestination.Recurring) }
+                WalletSettingsRow.Backup -> SettingRow("Backup & Restore", "Automatic and manual encrypted backups", modifier = Modifier.testTag("settings-backup")) { navigate(SettingsDestination.Backup) }
                 WalletSettingsRow.UnifiedPush -> SettingRow("UnifiedPush", "Configure push notifications") { navigate(SettingsDestination.UnifiedPush) }
-                WalletSettingsRow.Board -> SettingRow("Board to Ark", "Move onchain bitcoin into Ark") { navigate(SettingsDestination.Board) }
+                WalletSettingsRow.Board -> SettingRow("Board to Ark", "Move onchain bitcoin into Ark", modifier = Modifier.testTag("settings-board-ark")) { navigate(SettingsDestination.Board) }
                 WalletSettingsRow.AutoBoard -> SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
                     autoBoard, !model.busy) { value ->
                     model.action("Couldn't save auto-board preference.") {
@@ -193,7 +194,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(tr(if (action == "delete") "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."
                     else "Clear local server registration and register again? Your wallet will be kept."))
-                if (action == "delete") OutlinedTextField(deleteText, { deleteText = it }, label = { Text(tr("delete")) }, enabled = !model.busy, singleLine = true)
+                if (action == "delete") OutlinedTextField(deleteText, { deleteText = it }, label = { Text(tr("delete")) }, modifier = Modifier.testTag("delete-wallet-input"), enabled = !model.busy, singleLine = true)
             } },
             dismissButton = { TextButton({ confirmation = null }, enabled = !model.busy) { Text(tr("Cancel")) } },
             confirmButton = { TextButton({
@@ -201,7 +202,7 @@ private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> U
                     if (action == "delete") model.deleteWallet() else { model.reRegisterWithServer(); message = "Registered with the server again"; server = model.server.state }
                     confirmation = null
                 }
-            }, enabled = !model.busy && (action != "delete" || deleteText.trim().equals("delete", true))) {
+            }, modifier = Modifier.testTag("delete-wallet-confirm"), enabled = !model.busy && (action != "delete" || deleteText.trim().equals("delete", true))) {
                 Text(tr(if (model.busy) "Please wait…" else if (action == "delete") "Delete Wallet" else "Reset"), color = MaterialTheme.colorScheme.error)
             } })
     }

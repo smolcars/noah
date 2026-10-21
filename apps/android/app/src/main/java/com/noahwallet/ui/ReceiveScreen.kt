@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -147,7 +148,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
                 Text(tr("Scan to receive bitcoin with Noah"))
                 if (current.amountSat == null) Text(tr("Add an amount to receive over Lightning"), style = MaterialTheme.typography.bodySmall)
                 if (current.description.isNotEmpty()) Text(tr(current.description))
-                NoahButton(if (current.amountSat == null) "Add amount" else "Edit amount", !saving) { sheet = "amount" }
+                NoahButton(if (current.amountSat == null) "Add amount" else "Edit amount", !saving, modifier = Modifier.testTag("receive-amount-button")) { sheet = "amount" }
                 NoahButton("Payment details", secondary = true) { sheet = "copy" }
                 NoahButton("Share", secondary = true) {
                     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
@@ -201,7 +202,7 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
             }.asImageBitmap()
         }.getOrNull()
     }
-    Box(Modifier.sizeIn(maxWidth = maximumSide).aspectRatio(1f).onSizeChanged { qrPixels = it.width.coerceAtLeast(1) }.clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
+    Box(Modifier.testTag("receive-qr-button").sizeIn(maxWidth = maximumSide).aspectRatio(1f).onSizeChanged { qrPixels = it.width.coerceAtLeast(1) }.clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
         contentDescription = localizedActionLabel
         role = Role.Button
         this.onClick(label = localizedActionLabel) { onClick(); true }
@@ -224,7 +225,7 @@ private fun ReceiveCopySheet(request: ReceiveRequest) {
         items.forEach { (label, value) ->
             Text(tr(label), style = MaterialTheme.typography.titleLarge)
             Text(tr(value), style = MaterialTheme.typography.bodySmall)
-            NoahButton(if (copied == label) "Copied $label" else "Copy $label", secondary = true) {
+            NoahButton(if (copied == label) "Copied $label" else "Copy $label", secondary = true, modifier = Modifier.testTag("receive-copy-${when (label) { "Ark address" -> "ark"; "On-chain address" -> "onchain"; "Lightning invoice" -> "lightning"; else -> "request" }}")) {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value))
                 copied = label
             }
@@ -247,7 +248,7 @@ internal fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit
         Text(tr(if (request.amountSat == null) "Add amount" else "Edit amount"), style = MaterialTheme.typography.headlineMedium)
         OutlinedTextField(amount, { amount = it }, label = { Text(tr(if (fiat) "Amount ($currency)" else "Amount (sats)")) },
             keyboardOptions = KeyboardOptions(keyboardType = if (fiat) KeyboardType.Decimal else KeyboardType.Number),
-            singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth())
+            singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("receive-amount-input"))
         TextButton(onClick = {
             amount = if (fiat) sats.toString() else FiatCurrency.satsToFiat(sats, price!!, currency)
             fiat = !fiat
@@ -256,9 +257,9 @@ internal fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit
                 else "Switch to $currency · ${FiatCurrency.display(sats, price, currency, locale)}"))
         }
         OutlinedTextField(note, { note = it }, label = { Text(tr("Description")) }, minLines = 2,
-            enabled = !saving, modifier = Modifier.fillMaxWidth())
+            enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("receive-description-input"))
         if (note.trim().length > 639) Text(tr("Note must be 639 characters or fewer."), color = MaterialTheme.colorScheme.error)
-        NoahButton(if (saving) "Creating invoice…" else "Save request", valid && !saving) { focus.clearFocus(); onSave(sats, note) }
-        if (request.amountSat != null) NoahButton("Remove amount", !saving, secondary = true) { focus.clearFocus(); onRemove() }
+        NoahButton(if (saving) "Creating invoice…" else "Save request", valid && !saving, modifier = Modifier.testTag("receive-amount-submit")) { focus.clearFocus(); onSave(sats, note) }
+        if (request.amountSat != null) NoahButton("Remove amount", !saving, secondary = true, modifier = Modifier.testTag("receive-amount-remove")) { focus.clearFocus(); onRemove() }
     }
 }

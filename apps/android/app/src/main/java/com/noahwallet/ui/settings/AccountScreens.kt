@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.FiatCurrency
@@ -49,7 +50,7 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
     }
     SettingsColumn {
         SectionTitle("Name")
-        OutlinedTextField(name, { name = limitedProfileName(it) }, label = { Text(tr("Name")) }, modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !model.busy)
+        OutlinedTextField(name, { name = limitedProfileName(it) }, label = { Text(tr("Name")) }, modifier = Modifier.fillMaxWidth().testTag("profile-name-input"), singleLine = true, enabled = !model.busy)
         NoahButton("Save", !model.busy) {
             model.action("Couldn't save your name.") { model.server.saveDisplayName(name); name = name.trim(); message = "Saved" }
         }
@@ -102,7 +103,7 @@ fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () 
     SettingsColumn {
         options.forEach { code ->
             val label = preferenceName(kind, code, locale)
-            SettingRow(label, preferenceDetail(kind, code, locale) + if (selected == code) " · ${tr("Selected")}" else "") {
+            SettingRow(label, preferenceDetail(kind, code, locale) + if (selected == code) " · ${tr("Selected")}" else "", modifier = Modifier.testTag("preference-$code")) {
                 model.action("Couldn't save your preference.") {
                     when (kind) {
                         SettingsDestination.Language -> model.setLanguage(code)

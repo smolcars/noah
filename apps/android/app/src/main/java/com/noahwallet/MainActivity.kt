@@ -14,6 +14,11 @@ import com.noahwallet.ui.loadAppModel
 import com.noahwallet.ui.AppModel
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.activity.enableEdgeToEdge
 import com.noahwallet.ui.LaunchGateView
 import com.noahwallet.ui.NoahTheme
@@ -87,6 +92,7 @@ class MainActivity : FragmentActivity() {
         } }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         if (BuildConfig.DEBUG) android.os.StrictMode.setThreadPolicy(android.os.StrictMode.ThreadPolicy.Builder()
             .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
@@ -105,7 +111,7 @@ class MainActivity : FragmentActivity() {
             val recurring = withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity) }
             lifecycle.addObserver(recurring.syncForegroundAdmission)
             lifecycle.addObserver(recurring.foregroundRunner)
-            setContent { com.noahwallet.localization.LocalizedContent(current.localeIdentifier) { NoahTheme { LaunchGateView(current) } } }
+            setContent { com.noahwallet.localization.LocalizedContent(current.localeIdentifier) { NoahTheme { Box(Modifier.semantics { testTagsAsResourceId = true }) { LaunchGateView(current) } } } }
         }
     }
 }

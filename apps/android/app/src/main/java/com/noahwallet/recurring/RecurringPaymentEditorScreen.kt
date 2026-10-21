@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,10 +62,10 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         Text(tr(if (original == null) "New recurring payment" else "Edit recurring payment"), style = MaterialTheme.typography.headlineMedium)
         Text(tr("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."))
         if (original != null) Text(tr("Saving starts a new schedule at the first payment date. Previous attempts remain visible."))
-        OutlinedTextField(label, { label = it }, label = { Text(tr("Name")) }, placeholder = { Text(tr("e.g. Rent, Donation, VPN")) }, enabled = !saving, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(recipient, { recipient = it }, label = { Text(tr("Recipient")) }, placeholder = { Text(tr("name@domain.com, ark1… or lno1…")) }, enabled = !saving, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(autoCorrectEnabled = false))
+        OutlinedTextField(label, { label = it }, label = { Text(tr("Name")) }, placeholder = { Text(tr("e.g. Rent, Donation, VPN")) }, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("recurring-label-input"))
+        OutlinedTextField(recipient, { recipient = it }, label = { Text(tr("Recipient")) }, placeholder = { Text(tr("name@domain.com, ark1… or lno1…")) }, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("recurring-recipient-input"), keyboardOptions = KeyboardOptions(autoCorrectEnabled = false))
         Text(tr(destination?.second?.let { when (it) { "ark" -> "Ark address"; "lnurl" -> "Lightning address"; else -> "BOLT12 offer" } } ?: "Ark address, Lightning address or BOLT12 offer"), style = MaterialTheme.typography.bodySmall)
-        OutlinedTextField(amount, { amount = it }, label = { Text(tr("Amount (sats)")) }, enabled = !saving, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(amount, { amount = it }, label = { Text(tr("Amount (sats)")) }, enabled = !saving, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().testTag("recurring-amount-input"))
         Text(tr("${amount.ifEmpty { "0" }} sats per payment, plus network fees"), style = MaterialTheme.typography.bodySmall)
         if (destination?.second == "lnurl") OutlinedTextField(comment, { comment = it }, label = { Text(tr("Note (optional)")) }, supportingText = { Text(tr("Shared with the recipient")) }, enabled = !saving, modifier = Modifier.fillMaxWidth())
         Text(tr("Repeat"), style = MaterialTheme.typography.titleMedium)
@@ -86,7 +87,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
             Text(tr("You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice."), style = MaterialTheme.typography.bodySmall)
         }
         error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-        NoahButton(if (saving) "Saving…" else if (original == null) "Schedule payment" else "Save payment", !saving) {
+        NoahButton(if (saving) "Saving…" else if (original == null) "Schedule payment" else "Save payment", !saving, modifier = Modifier.testTag("recurring-save-button")) {
             focus.clearFocus(); error = null; saving = true
             scope.launch {
                 try { RecurringRecipient.resolve(recipient); executor.save(draft(), original != null); done() }
