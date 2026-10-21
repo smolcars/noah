@@ -213,11 +213,26 @@ enum EndpointLogPrivacy {
         return result
     }
 
-    static func sanitize(_ text: String) -> String? {
-        let (registered, matcher, hosts, unavailable) = lock.withLock {
+    private static func snapshot() -> (Set<String>, SecretMatcher, Set<String>, Bool) {
+        lock.withLock {
             if matcher == nil { matcher = SecretMatcher(tokens) }
             return (origins, matcher!, hosts, unavailable)
         }
+    }
+
+    /// Formatting can join individually safe fields into a registered secret.
+    /// Only the token guard runs here: preserve timestamps and provider summaries.
+    static func redactRecord(_ text: String) -> String {
+        let (registered, matcher, _, unavailable) = snapshot()
+        if unavailable { return "[custom-esplora]" }
+        guard !registered.isEmpty else { return text }
+        guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128,
+              let views = LogFile.decodedViews(text, percentEncoded: true, compatibility: true) else { return "[redacted]" }
+        return views.contains(where: matcher.contains) ? "[custom-esplora]" : text
+    }
+
+    static func sanitize(_ text: String) -> String? {
+        let (registered, matcher, hosts, unavailable) = snapshot()
         if unavailable { return "[custom-esplora]" }
         return sanitize(text, registered: registered, matcher: matcher, hosts: hosts)
     }

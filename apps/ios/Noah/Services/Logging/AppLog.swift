@@ -55,6 +55,7 @@ final class LogFile: @unchecked Sendable {
     private let queue: DispatchQueue
     private let lock = NSLock()
     private let capacity: Int
+    private let systemSink: @Sendable (AppLog.Level, String, String) -> Void
     private var pending = 0
     private var dropped = 0
     static let maxPendingRecords = 256
@@ -66,11 +67,13 @@ final class LogFile: @unchecked Sendable {
     }()
 
     init(directory: URL, capacity: Int = LogFile.maxPendingRecords,
-         queue: DispatchQueue = DispatchQueue(label: "com.noahwallet.log-file")) {
+         queue: DispatchQueue = DispatchQueue(label: "com.noahwallet.log-file"),
+         systemSink: @escaping @Sendable (AppLog.Level, String, String) -> Void = { LogFile.emitSystemLog($0, $1, $2) }) {
         precondition(capacity > 0)
         self.directory = directory
         self.capacity = capacity
         self.queue = queue
+        self.systemSink = systemSink
     }
 
     func append(level: AppLog.Level, tag: String, message: String, date: Date = Date(),
@@ -84,13 +87,11 @@ final class LogFile: @unchecked Sendable {
                 let cleaned = Self.redact(message)
                 let safeTag = Self.redact(tag)
                 if systemLog {
-                    let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.noahwallet", category: safeTag)
-                    switch level {
-                    case .verbose, .debug: logger.debug("\(cleaned, privacy: .public)")
-                    case .info: logger.info("\(cleaned, privacy: .public)")
-                    case .warn: logger.warning("\(cleaned, privacy: .public)")
-                    case .error: logger.error("\(cleaned, privacy: .public)")
-                    }
+                    let formatted = "[\(safeTag)] \(cleaned)"
+                    let record = EndpointLogPrivacy.redactRecord(formatted)
+                    let systemMessage = record == formatted ? cleaned : record
+                    let systemTag = record == formatted ? safeTag : ""
+                    systemSink(level, systemTag, systemMessage)
                 }
                 persist(level: level, tag: safeTag, message: cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
                     .replacingOccurrences(of: "\n", with: "\n  "), date: date)
@@ -99,6 +100,16 @@ final class LogFile: @unchecked Sendable {
                     if pending == 0 { enqueueDroppedMarker() }
                 }
             }
+        }
+    }
+
+    static func emitSystemLog(_ level: AppLog.Level, _ tag: String, _ message: String) {
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.noahwallet", category: tag)
+        switch level {
+        case .verbose, .debug: logger.debug("\(message, privacy: .public)")
+        case .info: logger.info("\(message, privacy: .public)")
+        case .warn: logger.warning("\(message, privacy: .public)")
+        case .error: logger.error("\(message, privacy: .public)")
         }
     }
 
@@ -113,7 +124,9 @@ final class LogFile: @unchecked Sendable {
     }
 
     private func persist(level: AppLog.Level, tag: String, message: String, date: Date) {
-        let line = "\(formatter.string(from: date)) \(level.symbol) [\(tag)] \(message)\n"
+        let formatted = "\(formatter.string(from: date)) \(level.symbol) [\(tag)] \(message)"
+        let record = EndpointLogPrivacy.redactRecord(formatted + "\n")
+        let line = record.hasSuffix("\n") ? record : record + "\n"
         try? write(Data(line.utf8))
     }
 
