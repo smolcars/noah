@@ -804,6 +804,7 @@
   <string name="gt_b896460456edd89b">"Confirmación de anulación"</string>
   <string name="gt_33a067f2594b14e7">"¿Anular la protección contra repeticiones?"</string>
   <string name="gt_51a87000f35dc875">"Omitir la protección contra pagos repetidos…"</string>
+  <string name="gt_aa7a72fd611ec542">"Pagado mediante"</string>
   <string name="gt_f3380f7b44bd70af">"Pegar"</string>
   <string name="gt_975d8cc0968b77da">"Pega exactamente 12 palabras. No se ha sustituido el texto que has introducido."</string>
   <string name="gt_f012547b9f87dbeb">"Pegar solicitud de pago"</string>
@@ -817,6 +818,7 @@
   <string name="gt_21e360b26e1793bf">"Pago en curso"</string>
   <string name="gt_9b618cb731269ec8">"Es posible que el pago se haya enviado"</string>
   <string name="gt_9244b7af07845b9d">"Pago no enviado"</string>
+  <string name="gt_5f984c8b843f3399">"Preimagen del pago"</string>
   <string name="gt_0cd5e62f85e54229">"Solicitud de pago"</string>
   <string name="gt_2bc4ef41a5775e8d">"Pago enviado"</string>
   <string name="gt_f643e0c5a72874d3">"No se pudo guardar el estado del pago. Vuelve a consultarlo después de reiniciar Noah."</string>
@@ -1212,6 +1214,7 @@
   <string name="gt_d9302348c16e07a5">"Esta transacción no puede confirmarse en la cadena actual: otra transacción confirmada (%1$s) gasta una de sus entradas."</string>
   <string name="gt_124b7359d4adc8aa">"Esta transacción podría corresponder a tu pago: %1$s"</string>
   <string name="gt_15c46d9c1a887828">"Tic tac, llega el próximo bloque."</string>
+  <string name="gt_f4b06ef6d3c81436">"Para"</string>
   <string name="gt_2b3513d82736a1e3">"Para confirmar, escribe \"delete\" en el campo de abajo."</string>
   <string name="gt_8e4e1f6b349304a4">"Mostrar u ocultar los detalles del saldo"</string>
   <string name="gt_d5cdfcf7ff75338f">"Arriba"</string>

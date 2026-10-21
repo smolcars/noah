@@ -131,23 +131,24 @@ internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat:
 }
 
 @Composable
-private fun CopyButton(label: String, value: String) {
+private fun CopyButton(label: String, value: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var copied by remember(value) { mutableStateOf(false) }
     val copyLabel = tr("Copy {label}", tr(label))
     TextButton({
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value))
         copied = true
-    }, Modifier.semantics { contentDescription = copyLabel }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (copied) tr("Copied") else copyLabel) }
+    }, modifier.semantics { contentDescription = copyLabel }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (copied) tr("Copied") else copyLabel) }
 }
 @Composable
-private fun DetailValue(label: String, value: String, copyable: Boolean = false, modifier: Modifier = Modifier) {
+internal fun DetailValue(label: String, value: String, copyable: Boolean = false, modifier: Modifier = Modifier,
+    displayedValue: String = value, copyModifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(tr(label), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (copyable) CopyButton(label, value)
+            if (copyable) CopyButton(label, value, copyModifier)
         }
-        SelectionContainer { Text(tr(value)) }
+        SelectionContainer { Text(tr(displayedValue)) }
         HorizontalDivider(Modifier.padding(top = 8.dp))
     }
 }

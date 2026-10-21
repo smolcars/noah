@@ -804,6 +804,7 @@
   <string name="gt_b896460456edd89b">"Bekräftelse av åsidosättande"</string>
   <string name="gt_33a067f2594b14e7">"Åsidosätta skyddet mot upprepning?"</string>
   <string name="gt_51a87000f35dc875">"Åsidosätt skyddet mot upprepade betalningar…"</string>
+  <string name="gt_aa7a72fd611ec542">"Betald via"</string>
   <string name="gt_f3380f7b44bd70af">"Klistra in"</string>
   <string name="gt_975d8cc0968b77da">"Klistra in exakt 12 ord. Det du har angett har inte ersatts."</string>
   <string name="gt_f012547b9f87dbeb">"Klistra in betalningsbegäran"</string>
@@ -817,6 +818,7 @@
   <string name="gt_21e360b26e1793bf">"Betalning pågår"</string>
   <string name="gt_9b618cb731269ec8">"Betalningen kan ha skickats"</string>
   <string name="gt_9244b7af07845b9d">"Betalningen skickades inte"</string>
+  <string name="gt_5f984c8b843f3399">"Betalningens förbild"</string>
   <string name="gt_0cd5e62f85e54229">"Betalningsbegäran"</string>
   <string name="gt_2bc4ef41a5775e8d">"Betalningen har skickats"</string>
   <string name="gt_f643e0c5a72874d3">"Betalningsstatusen kunde inte sparas. Kontrollera statusen igen när du har startat om Noah."</string>
@@ -1212,6 +1214,7 @@
   <string name="gt_d9302348c16e07a5">"Den här transaktionen kan inte bekräftas på den aktuella kedjan: en annan bekräftad transaktion (%1$s) förbrukar en av dess indata."</string>
   <string name="gt_124b7359d4adc8aa">"Den här transaktionen kan vara din betalning: %1$s"</string>
   <string name="gt_15c46d9c1a887828">"Tick tack, nästa block."</string>
+  <string name="gt_f4b06ef6d3c81436">"Till"</string>
   <string name="gt_2b3513d82736a1e3">"Bekräfta genom att skriva ”delete” i rutan nedan."</string>
   <string name="gt_8e4e1f6b349304a4">"Visa eller dölj saldouppgifter"</string>
   <string name="gt_d5cdfcf7ff75338f">"Överst"</string>

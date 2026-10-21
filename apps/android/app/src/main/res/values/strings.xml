@@ -804,6 +804,7 @@
   <string name="gt_b896460456edd89b">"Override confirmation"</string>
   <string name="gt_33a067f2594b14e7">"Override repeat protection?"</string>
   <string name="gt_51a87000f35dc875">"Override repeat protection…"</string>
+  <string name="gt_aa7a72fd611ec542">"Paid via"</string>
   <string name="gt_f3380f7b44bd70af">"Paste"</string>
   <string name="gt_975d8cc0968b77da">"Paste exactly 12 words. Your entries haven\'t been replaced."</string>
   <string name="gt_f012547b9f87dbeb">"Paste payment request"</string>
@@ -817,6 +818,7 @@
   <string name="gt_21e360b26e1793bf">"Payment in progress"</string>
   <string name="gt_9b618cb731269ec8">"Payment may have been sent"</string>
   <string name="gt_9244b7af07845b9d">"Payment not sent"</string>
+  <string name="gt_5f984c8b843f3399">"Payment preimage"</string>
   <string name="gt_0cd5e62f85e54229">"Payment request"</string>
   <string name="gt_2bc4ef41a5775e8d">"Payment sent"</string>
   <string name="gt_f643e0c5a72874d3">"Payment status could not be saved. Check status again after restarting Noah."</string>
@@ -1212,6 +1214,7 @@
   <string name="gt_d9302348c16e07a5">"This transaction cannot confirm on the current chain: a confirmed different transaction (%1$s) spends one of its inputs."</string>
   <string name="gt_124b7359d4adc8aa">"This transaction may be your payment: %1$s"</string>
   <string name="gt_15c46d9c1a887828">"Tick tock next block."</string>
+  <string name="gt_f4b06ef6d3c81436">"To"</string>
   <string name="gt_2b3513d82736a1e3">"To confirm, please type \"delete\" in the box below."</string>
   <string name="gt_8e4e1f6b349304a4">"Toggle balance details"</string>
   <string name="gt_d5cdfcf7ff75338f">"Top"</string>

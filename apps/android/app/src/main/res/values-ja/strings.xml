@@ -804,6 +804,7 @@
   <string name="gt_b896460456edd89b">"制限解除の確認"</string>
   <string name="gt_33a067f2594b14e7">"重複送金防止を解除しますか？"</string>
   <string name="gt_51a87000f35dc875">"重複支払い防止を解除…"</string>
+  <string name="gt_aa7a72fd611ec542">"支払い方法"</string>
   <string name="gt_f3380f7b44bd70af">"貼り付け"</string>
   <string name="gt_975d8cc0968b77da">"12語ちょうどを貼り付けてください。入力内容は変更されていません。"</string>
   <string name="gt_f012547b9f87dbeb">"支払いリクエストを貼り付け"</string>
@@ -817,6 +818,7 @@
   <string name="gt_21e360b26e1793bf">"支払い処理中"</string>
   <string name="gt_9b618cb731269ec8">"支払いが送信された可能性があります"</string>
   <string name="gt_9244b7af07845b9d">"支払いは送信されていません"</string>
+  <string name="gt_5f984c8b843f3399">"支払いのプリイメージ"</string>
   <string name="gt_0cd5e62f85e54229">"支払いリクエスト"</string>
   <string name="gt_2bc4ef41a5775e8d">"送金しました"</string>
   <string name="gt_f643e0c5a72874d3">"支払い状況を保存できませんでした。Noahを再起動してから、状況を再確認してください。"</string>
@@ -1212,6 +1214,7 @@
   <string name="gt_d9302348c16e07a5">"このトランザクションは現在のチェーンでは確認済みになりません。入力の1つが、確認済みの別のトランザクション（%1$s）ですでに使用されています。"</string>
   <string name="gt_124b7359d4adc8aa">"この取引は、ご自身の支払いに該当する可能性があります：%1$s"</string>
   <string name="gt_15c46d9c1a887828">"時を刻み、次のブロックへ。"</string>
+  <string name="gt_f4b06ef6d3c81436">"送信先"</string>
   <string name="gt_2b3513d82736a1e3">"確認のため、下の欄に「delete」と入力してください。"</string>
   <string name="gt_8e4e1f6b349304a4">"残高の詳細表示を切り替える"</string>
   <string name="gt_d5cdfcf7ff75338f">"先頭"</string>

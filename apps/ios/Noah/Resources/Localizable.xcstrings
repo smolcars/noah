@@ -28909,6 +28909,42 @@
         }
       }
     },
+    "Paid via": {
+      "comment": "GT gt_aa7a72fd611ec542; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paid via"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagado mediante"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支払い方法"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제 방식"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betald via"
+          }
+        }
+      }
+    },
     "Paste": {
       "comment": "GT gt_f3380f7b44bd70af; arguments: none",
       "extractionState": "manual",
@@ -29373,6 +29409,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Betalningen skickades inte"
+          }
+        }
+      }
+    },
+    "Payment preimage": {
+      "comment": "GT gt_5f984c8b843f3399; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment preimage"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preimagen del pago"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支払いのプリイメージ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제 프리이미지"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betalningens förbild"
           }
         }
       }
@@ -43593,6 +43665,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tick tack, nästa block."
+          }
+        }
+      }
+    },
+    "To": {
+      "comment": "GT gt_f4b06ef6d3c81436; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信先"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받는 사람"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Till"
           }
         }
       }

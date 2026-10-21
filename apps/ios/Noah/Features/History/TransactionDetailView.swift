@@ -112,19 +112,7 @@ struct TransactionDetailView: View {
     }
 
     private func detail(_ label: String, _ value: String, copyable: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(LocalizedStringKey(label)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                Spacer()
-                if copyable {
-                    Button { copy(value) } label: { Image(systemName: "doc.on.doc").frame(minWidth: 44, minHeight: 44) }
-                        .accessibilityLabel(Text(L10n.text("Copy {label}", L10n.text(label))))
-                }
-            }
-            Text(value).font(NoahFont.callout).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-            Divider().padding(.top, 8)
-        }
-        .padding(.vertical, 8)
+        NoahDetailRow(label: label, value: value, copyable: copyable)
     }
 
     @ViewBuilder private func amountDetail(_ label: String, _ amount: Int64?) -> some View {

@@ -22,7 +22,7 @@ struct SendView: View {
     var body: some View {
         Group {
             if model.controller.locked && !model.showReview {
-                SendOutcomeView(controller: model.controller) {
+                SendOutcomeView(controller: model.controller, btcPrice: model.btcPrice, fiatCurrency: model.fiatCurrency) {
                     model.reset()
                     Task {
                         await app.refresh()
@@ -67,6 +67,7 @@ struct SendView: View {
         }) {
             if let payment = model.payment, let quote = model.quote {
                 SendConfirmation(
+                    btcPrice: model.btcPrice, fiatCurrency: model.fiatCurrency,
                     payment: payment, quote: quote, controller: model.controller,
                     cancel: {
                         model.showReview = false
@@ -321,6 +322,8 @@ struct AmountKeypad: View {
 
 struct SendConfirmation: View {
     var confirm: (() -> Void)? = nil
+    var btcPrice: Double? = nil
+    var fiatCurrency = "USD"
     let payment: SendPayment
     let quote: SendQuote
     @Bindable var controller: SendPaymentController
@@ -330,7 +333,7 @@ struct SendConfirmation: View {
         NavigationStack {
             Group {
                 if controller.locked {
-                    SendOutcomeView(controller: controller, done: done)
+                    SendOutcomeView(controller: controller, btcPrice: btcPrice, fiatCurrency: fiatCurrency, done: done)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 24) {
@@ -387,7 +390,11 @@ struct SendConfirmation: View {
 struct SendOutcomeView: View {
     @Environment(\.locale) private var locale
     @Bindable var controller: SendPaymentController
+    var btcPrice: Double? = nil
+    var fiatCurrency = "USD"
     let done: () -> Void
+    @State private var history: [HistoryTransaction] = []
+    @State private var completedAt = Date()
     @State private var confirmOverride = false
     var body: some View {
         ScrollView {
@@ -450,6 +457,10 @@ struct SendOutcomeView: View {
                     }
                     Text(receipt.amountDescription).font(
                         NoahFont.largeTitle)
+                    if receipt.amountIsPending != true, let btcPrice, btcPrice.isFinite, btcPrice > 0 {
+                        Text("≈ " + FiatCurrency.display(sats: Int64(receipt.amount), btcPrice: btcPrice, currency: fiatCurrency, locale: locale))
+                            .font(NoahFont.callout).foregroundStyle(NoahColor.mutedForeground)
+                    }
                     if let fee = receipt.fee {
                         Text(controller.attempt?.payment.method == "onchain" ? "Actual fee: \(fee) sats" : "Fee: \(fee) sats")
                     } else if receipt.amountIsPending == true {
@@ -460,12 +471,13 @@ struct SendOutcomeView: View {
                         Text("The actual fee is not yet available. \(SendQuote.feeEstimateExplanation)")
                             .font(NoahFont.callout)
                     }
+                    successDetails(receipt)
                     transactionDetails(receipt)
                     if receipt.broadcastRetryPending != true {
                         NoahButton(title: "Done") {
                             controller.acknowledge()
                             if !controller.locked { done() }
-                        }
+                        }.accessibilityIdentifier("send-success-done")
                     }
                 case .alreadyPaid(let receipt):
                     Text("Invoice already paid").font(NoahFont.title)
@@ -500,6 +512,11 @@ struct SendOutcomeView: View {
                 if let message = controller.message { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
             }.padding(24).multilineTextAlignment(.center).readableWidth()
         }
+        .task(id: controller.state) {
+            guard case .succeeded = controller.state else { return }
+            let rows = (try? await WalletSession.shared.transactionHistory()) ?? []
+            if !Task.isCancelled { history = rows }
+        }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
             Button("Keep waiting", role: .cancel) {}
             Button(LocalizedStringKey(SendOverrideAudit.confirmationText), role: .destructive) {
@@ -508,6 +525,24 @@ struct SendOutcomeView: View {
             }
         } message: {
             Text(LocalizedStringKey(controller.overrideWarning))
+        }
+    }
+    @ViewBuilder private func successDetails(_ receipt: SendReceipt) -> some View {
+        if let attempt = controller.attempt {
+            let details = SendSuccessDetails(receipt: receipt, payment: attempt.payment, history: history,
+                                             completedAt: attempt.startedAt ?? completedAt)
+            VStack(spacing: 0) {
+                NoahDetailRow(label: "Paid via", value: L10n.text(details.paidVia, locale: locale.identifier))
+                NoahDetailRow(label: "To", value: details.destination, copyable: true,
+                              displayedValue: SendSuccessDetails.truncate(details.destination),
+                              copyIdentifier: "send-success-copy-destination")
+                if let proof = details.proof {
+                    NoahDetailRow(label: proof.label, value: proof.value, copyable: true,
+                                  displayedValue: SendSuccessDetails.truncate(proof.value),
+                                  copyIdentifier: "send-success-copy-proof")
+                }
+                NoahDetailRow(label: "Completed", value: details.formattedCompletedAt(locale: locale))
+            }.multilineTextAlignment(.leading)
         }
     }
     @ViewBuilder private func transactionDetails(_ receipt: SendReceipt) -> some View {
