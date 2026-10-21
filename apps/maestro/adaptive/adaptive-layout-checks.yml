@@ -27,9 +27,20 @@ appId: com.noahwallet.regtest
 - tapOn:
     id: "receive-amount-input"
 - inputText: "500"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      # iPadOS 27's numeric popover intercepts taps on the sheet beneath it.
+      - tapOn:
+          text: "dismiss popup"
+          optional: true
 - tapOn:
     id: "receive-description-input"
 - inputText: "Layout note"
+- assertVisible:
+    id: "receive-description-input"
+    text: "Layout note"
 - setOrientation: LANDSCAPE_RIGHT
 - assertVisible:
     id: "receive-description-input"
@@ -39,11 +50,11 @@ appId: com.noahwallet.regtest
 - assertVisible:
     id: "receive-amount-input"
     text: "500"
-- runFlow: ../subflows/hide-keyboard.yml
 - runFlow:
     when:
       platform: Android
     commands:
+      - hideKeyboard
       - pressKey: BACK
 - runFlow:
     when:
