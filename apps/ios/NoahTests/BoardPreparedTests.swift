@@ -46,13 +46,31 @@ struct BoardPreparedTests {
             try await review.failedConfirm(quote, changed: changed) { true }
             #expect(try store.hasUnhandled(funding))
             #expect(try !store.hasUnhandled(.init(walletID: "wallet", outpoints: ["old:0"])))
+            var reopened = AutoBoardFunding()
+            reopened.read = { disk }; reopened.write = { disk = $0 }
+            let recreated = AutoBoardReview(store: reopened, now: { now })
+            #expect(try reopened.retryDeadline(walletID: "wallet") == now.addingTimeInterval(changed ? 0 : 30))
+            #expect(try reopened.retryDeadline(walletID: "other-wallet") == .distantPast)
             if !changed {
                 now = now.addingTimeInterval(29)
-                #expect(try await review.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) == nil)
+                #expect(try await recreated.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) == nil)
                 now = now.addingTimeInterval(1)
             }
-            #expect(try await review.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) != nil)
+            #expect(try await recreated.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) != nil)
         }
+    }
+    @Test func failedRetryWriteKeepsFundingHandledAndOtherWalletIndependent() throws {
+        var disk: String?
+        var store = AutoBoardFunding()
+        store.read = { disk }; store.write = { disk = $0 }
+        let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["deposit:0"])
+        try store.markHandled(funding)
+        let before = disk
+        store.write = { _ in throw OnchainFailure.unavailable }
+        #expect(throws: OnchainFailure.self) { try store.release(funding, retryAfter: Date().addingTimeInterval(30)) }
+        #expect(disk == before)
+        #expect(try !store.hasUnhandled(funding))
+        #expect(try store.hasUnhandled(.init(walletID: "other", outpoints: funding.outpoints)))
     }
     @MainActor @Test func uncertainSubmittedInterruptedAndDismissedConfirmationsKeepFundingHandled() async throws {
         for ending in ["uncertain", "submitted", "interrupted", "dismissed"] {

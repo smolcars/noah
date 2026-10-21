@@ -22,26 +22,42 @@ struct AutoBoardFunding {
         read = { storage.string(forKey: Self.key) }
         write = { try storage.setDurably($0, forKey: Self.key) }
     }
-    private func load() throws -> [String: Set<String>] {
-        guard let raw = read() else { return [:] }
-        return try JSONDecoder().decode([String: Set<String>].self, from: Data(raw.utf8))
+    private struct State: Codable {
+        var handled: [String: Set<String>] = [:]
+        var retryAfter: [String: Double] = [:]
+    }
+    private func load() throws -> State {
+        guard let raw = read() else { return .init() }
+        let data = Data(raw.utf8)
+        // Keep the original outpoint-only ledger readable.
+        if let legacy = try? JSONDecoder().decode([String: Set<String>].self, from: data) {
+            return .init(handled: legacy)
+        }
+        return try JSONDecoder().decode(State.self, from: data)
+    }
+    private func save(_ state: State) throws {
+        try write(String(decoding: JSONEncoder().encode(state), as: UTF8.self))
+    }
+    func retryDeadline(walletID: String) throws -> Date {
+        try load().retryAfter[walletID].map { Date(timeIntervalSince1970: $0 / 1000) } ?? .distantPast
     }
     func hasUnhandled(_ funding: Snapshot) throws -> Bool {
-        try !funding.outpoints.subtracting(load()[funding.walletID] ?? []).isEmpty
+        try !funding.outpoints.subtracting(load().handled[funding.walletID] ?? []).isEmpty
     }
     @discardableResult func markHandled(_ funding: Snapshot) throws -> Bool { try claim(funding) != nil }
-    func release(_ funding: Snapshot) throws {
+    func release(_ funding: Snapshot, retryAfter: Date) throws {
         var saved = try load()
-        saved[funding.walletID] = (saved[funding.walletID] ?? []).subtracting(funding.outpoints)
-        try write(String(decoding: JSONEncoder().encode(saved), as: UTF8.self))
+        saved.handled[funding.walletID] = (saved.handled[funding.walletID] ?? []).subtracting(funding.outpoints)
+        saved.retryAfter[funding.walletID] = retryAfter.timeIntervalSince1970 * 1000
+        try save(saved) // One durable write: a release cannot survive without its retry deadline.
     }
     func claim(_ funding: Snapshot) throws -> Snapshot? {
         var saved = try load()
-        let previous = saved[funding.walletID] ?? []
+        let previous = saved.handled[funding.walletID] ?? []
         let newly = funding.outpoints.subtracting(previous)
         guard !newly.isEmpty else { return nil }
-        saved[funding.walletID] = previous.union(funding.outpoints)
-        try write(String(decoding: JSONEncoder().encode(saved), as: UTF8.self))
+        saved.handled[funding.walletID] = previous.union(funding.outpoints)
+        try save(saved)
         return .init(walletID: funding.walletID, outpoints: newly)
     }
 }
@@ -66,14 +82,16 @@ struct AutoBoardFunding {
         claimed = nil
         guard try await proveUnsubmitted() else { return }
         retryAfter = changed ? now() : now().addingTimeInterval(30)
-        try store.release(funding)
+        try store.release(funding, retryAfter: retryAfter)
     }
     func prepare(allowed: () -> Bool, funding: () async throws -> AutoBoardFunding.Snapshot?,
                  quote: () async throws -> OnchainQuote?, discard: (OnchainQuote) async -> Void,
                  present: (OnchainQuote) -> Void = { _ in }) async throws -> OnchainQuote? {
         guard allowed(), now() >= retryAfter else { return nil }
         do {
-            guard let current = try await funding(), allowed(), try store.hasUnhandled(current) else { return nil }
+            guard let current = try await funding(), allowed() else { return nil }
+            guard now() >= (try store.retryDeadline(walletID: current.walletID)),
+                  try store.hasUnhandled(current) else { return nil }
             guard let prepared = try await quote() else { return nil }
             do {
                 guard allowed(), prepared.walletID == current.walletID, let newly = try store.claim(current) else {

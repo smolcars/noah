@@ -51,10 +51,24 @@ class OnchainModelTest {
             val quote = checkNotNull(review.prepare({ true }, { funding }, { OnchainQuote(OnchainAction.board, "wallet") }, {}))
             review.failedConfirm(quote, changed) { true }
             assertTrue(store.hasUnhandled(funding)); assertFalse(store.hasUnhandled(AutoBoardFunding.Snapshot("wallet", setOf("old:0"))))
-            suspend fun offer() = review.prepare({ true }, { funding }, { quote.copy(id = "fresh") }, {})
+            suspend fun offer() = AutoBoardReview(AutoBoardFunding({ disk }, { disk = it })) { now }
+                .prepare({ true }, { funding }, { quote.copy(id = "fresh") }, {})
+            assertEquals(if (changed) 0L else 30_000L, store.retryDeadline("wallet"))
+            assertEquals(0L, store.retryDeadline("other-wallet"))
             if (!changed) { now = 29_999; assertNull(offer()); now = 30_000 }
             assertEquals("fresh", offer()!!.id)
         }
+    }
+    @Test fun failedRetryWriteKeepsFundingHandledAndOtherWalletIndependent() {
+        var disk: String? = null
+        var writable = true
+        val store = AutoBoardFunding({ disk }, { check(writable); disk = it })
+        val funding = AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))
+        store.markHandled(funding)
+        val before = disk; writable = false
+        assertTrue(runCatching { store.release(funding, 30_000) }.isFailure)
+        assertEquals(before, disk); assertFalse(store.hasUnhandled(funding))
+        assertTrue(store.hasUnhandled(funding.copy(walletID = "other")))
     }
     @Test fun uncertainSubmittedInterruptedAndDismissedReviewsKeepFundingHandled() = runBlocking {
         for (outcome in listOf("uncertain", "submitted", "interrupted", "dismissed")) {
