@@ -30529,6 +30529,42 @@
         }
       }
     },
+    "Preimage": {
+      "comment": "GT gt_2f2428e63d61518a; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preimage"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preimagen"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プリイメージ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프리이미지"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förbild"
+          }
+        }
+      }
+    },
     "Prepared board cleanup failed; retaining its handle for retry": {
       "comment": "GT gt_b3c84728c472190c; arguments: none",
       "extractionState": "manual",

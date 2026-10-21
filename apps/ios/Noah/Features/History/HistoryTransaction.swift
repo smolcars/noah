@@ -36,6 +36,7 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var confirmationHeight: UInt32?
     var confirmationHash: String?
     var repeatPayment: RepeatPayment?
+    var preimage: String?
 
     struct Destination: Codable, Equatable, Sendable {
         var destination: String
@@ -122,6 +123,7 @@ struct HistoryMetadata: Codable, Equatable, Sendable {
     var offboardTxid: String?
     var onchainFeeSat: Int64?
     var chainAnchor: String?
+    var paymentPreimage: String?
     var repeatPayment: RepeatPayment?
 
     static func parse(_ json: String) -> Self {
@@ -132,6 +134,7 @@ struct HistoryMetadata: Codable, Equatable, Sendable {
             offboardTxid: object["offboard_txid"] as? String,
             onchainFeeSat: fee.flatMap { CFGetTypeID($0) != CFBooleanGetTypeID() ? Int64(exactly: $0.doubleValue) : nil },
             chainAnchor: object["chain_anchor"] as? String,
+            paymentPreimage: object["payment_preimage"] as? String,
             repeatPayment: RepeatPayment.parse((object["noah"] as? [String: Any])?["repeat_payment"]))
     }
 }

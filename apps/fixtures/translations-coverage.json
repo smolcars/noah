@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1413,
-  "sourceKeys": 1414,
+  "catalogEntries": 1414,
+  "sourceKeys": 1415,
   "coverage": {
     "ios": {
       "used": [
@@ -662,6 +662,7 @@
         "Point",
         "Possible related payment in History",
         "Power back to the people.",
+        "Preimage",
         "Prepared send handle could not be discarded; retaining it for retry",
         "Price API",
         "Processing",
@@ -1801,6 +1802,7 @@
         "Point",
         "Point your camera at a payment QR code.",
         "Power back to the people.",
+        "Preimage",
         "Prepared board cleanup failed; retaining its handle for retry",
         "Prepared send handle could not be discarded; retaining it for retry",
         "Preparing…",

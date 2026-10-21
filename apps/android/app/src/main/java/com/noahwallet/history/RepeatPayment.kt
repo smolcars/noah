@@ -60,14 +60,14 @@ data class RepeatPayment(
 @Serializable
 data class HistoryMetadata(
     val offboardTxid: String? = null, val onchainFeeSat: Long? = null,
-    val chainAnchor: String? = null, val repeatPayment: RepeatPayment? = null,
+    val chainAnchor: String? = null, val repeatPayment: RepeatPayment? = null, val paymentPreimage: String? = null,
 ) {
     companion object {
         fun parse(json: String): HistoryMetadata {
             val obj = runCatching { Json.parseToJsonElement(json) as? JsonObject }.getOrNull() ?: return HistoryMetadata()
             val fee = (obj["onchain_fee_sat"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull
             return HistoryMetadata(obj.string("offboard_txid"), fee, obj.string("chain_anchor"),
-                RepeatPayment.parse((obj["noah"] as? JsonObject)?.get("repeat_payment")))
+                RepeatPayment.parse((obj["noah"] as? JsonObject)?.get("repeat_payment")), obj.string("payment_preimage"))
         }
     }
 }

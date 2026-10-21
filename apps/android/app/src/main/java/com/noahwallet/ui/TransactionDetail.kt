@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
@@ -96,6 +97,7 @@ internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat:
         if (technical) {
             DetailValue("Payment ID", row.id, true)
             row.txid?.let { DetailValue("Transaction ID", it, true) }
+            row.preimage?.let { DetailValue("Preimage", it, true, Modifier.testTag("transaction-detail-preimage")) }
             row.explorerURL(BuildConfig.APP_VARIANT)?.let { url ->
                 TextButton({
                     try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
@@ -139,8 +141,8 @@ private fun CopyButton(label: String, value: String) {
     }, Modifier.semantics { contentDescription = copyLabel }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (copied) tr("Copied") else copyLabel) }
 }
 @Composable
-private fun DetailValue(label: String, value: String, copyable: Boolean = false) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun DetailValue(label: String, value: String, copyable: Boolean = false, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(tr(label), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (copyable) CopyButton(label, value)

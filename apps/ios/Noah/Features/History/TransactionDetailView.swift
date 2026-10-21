@@ -60,6 +60,10 @@ struct TransactionDetailView: View {
                     VStack(spacing: 0) {
                         detail("Payment ID", transaction.id, copyable: true)
                         if let txid = transaction.txid { detail("Transaction ID", txid, copyable: true) }
+                        if let preimage = transaction.preimage {
+                            detail("Preimage", preimage, copyable: true)
+                                .accessibilityIdentifier("transaction-detail-preimage")
+                        }
                         if let url = transaction.explorerURL(variant: app.variant) {
                             Link(destination: url) { Label("View in explorer", systemImage: "arrow.up.right.square") }
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)

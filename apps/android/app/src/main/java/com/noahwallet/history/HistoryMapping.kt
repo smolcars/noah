@@ -59,7 +59,8 @@ object HistoryMapping {
             metadataJson = m.metadataJson, intendedBalanceSat = m.intendedBalanceSats, effectiveBalanceSat = m.effectiveBalanceSats,
             offchainFeeSat = m.offchainFeeSats.toLong(), onchainFeeSat = metadata.onchainFeeSat, chainAnchor = metadata.chainAnchor,
             sentTo = m.sentToAddresses.map(::destination), receivedOn = m.receivedOnAddresses.map(::destination),
-            inputVtxos = m.inputVtxoIds, outputVtxos = m.outputVtxoIds, exitedVtxos = m.exitedVtxoIds, repeatPayment = repeat)
+            inputVtxos = m.inputVtxoIds, outputVtxos = m.outputVtxoIds, exitedVtxos = m.exitedVtxoIds, repeatPayment = repeat,
+            preimage = metadata.paymentPreimage?.takeIf { m.status == "successful" && it.isNotEmpty() })
     }
     private fun destination(d: MovementDestination) = HistoryTransaction.Destination(d.paymentMethod.value, d.amountSats.toLong(), d.paymentMethod.methodType)
     fun transaction(chain: WalletTransaction, blockTime: Date? = null) = HistoryTransaction(

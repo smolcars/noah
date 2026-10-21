@@ -86,7 +86,8 @@ enum HistoryMapping {
             onchainFeeSat: metadata.onchainFeeSat, chainAnchor: metadata.chainAnchor,
             sentTo: movement.sentToAddresses.map(destination), receivedOn: movement.receivedOnAddresses.map(destination),
             inputVtxos: movement.inputVtxoIds, outputVtxos: movement.outputVtxoIds, exitedVtxos: movement.exitedVtxoIds,
-            repeatPayment: repeatPayment)
+            repeatPayment: repeatPayment,
+            preimage: movement.status == "successful" ? metadata.paymentPreimage.flatMap { $0.isEmpty ? nil : $0 } : nil)
     }
 
     private static func destination(_ value: MovementDestination) -> HistoryTransaction.Destination {

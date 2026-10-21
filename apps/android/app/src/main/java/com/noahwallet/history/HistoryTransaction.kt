@@ -20,6 +20,7 @@ data class HistoryTransaction(
     val inputVtxos: List<String>? = null, val outputVtxos: List<String>? = null, val exitedVtxos: List<String>? = null,
     val balanceChangeSat: Long? = null, val hasOnchainFee: Boolean? = null, val hasConfirmation: Boolean? = null,
     val confirmationHeight: UInt? = null, val confirmationHash: String? = null, val repeatPayment: RepeatPayment? = null,
+    val preimage: String? = null,
 ) {
     @Serializable data class Destination(val destination: String, val amount_sat: Long, val paymentMethod: String? = null)
     @Serializable data class Accounting(val direction: String, val amount: Long)

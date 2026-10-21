@@ -47,6 +47,7 @@ class HistoryFixtureTest(private val name: String, private val input: JsonObject
                 buildJsonObject { put("label", it.displayLabel); put("canceled", it.isCanceled); put("internalTransfer", it.isInternalTransfer); put("accounting", value(it.accounting)) }
             }
             "merge" -> value(HistoryRules.merge(read("movements"), read("onchain")))
+            "preimage" -> value(HistoryMapping.transaction(movement(read("movement"))).preimage)
             "movement" -> movement(read("movement")).let {
                 buildJsonObject { put("included", HistoryMapping.include(it)); put("transaction", value(HistoryMapping.transaction(it))) }
             }

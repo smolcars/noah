@@ -468,6 +468,378 @@
         "currency": "USD"
       },
       "expected": "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination\n\"normal,\"\"quoted\"\"\ntext\",2026-07-15,Ark,,Outgoing,-2100,,\"normal,\"\"quoted\"\"\ntext\",\"normal,\"\"quoted\"\"\ntext\"\n"
+    },
+    {
+      "name": "successful Lightning send preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    },
+    {
+      "name": "successful outside Lightning address send preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "merchant@example.com",
+              "amount_sat": 1000,
+              "payment_method": "lightning-address"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    },
+    {
+      "name": "successful Ark send preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.arkoor",
+            "kind": "send"
+          },
+          "metadata_json": "{}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "ark"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "successful Noah address Ark send preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.arkoor",
+            "kind": "send"
+          },
+          "metadata_json": "{}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "merchant@example.com",
+              "amount_sat": 1000,
+              "payment_method": "lightning-address"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "pending Lightning send preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "pending",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "failed Lightning send preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "failed",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "canceled Lightning send preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "canceled",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "null Lightning preimage preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":null}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "empty Lightning preimage preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":\"\"}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "successful Lightning receive preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.lightning_receive",
+            "kind": "receive"
+          },
+          "metadata_json": "{\"payment_preimage\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+          "intended_balance_sat": 1000,
+          "effective_balance_sat": 1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [],
+          "received_on": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    },
+    {
+      "name": "pending Lightning receive preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "pending",
+          "subsystem": {
+            "name": "bark.lightning_receive",
+            "kind": "receive"
+          },
+          "metadata_json": "{\"payment_preimage\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+          "intended_balance_sat": 1000,
+          "effective_balance_sat": 1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [],
+          "received_on": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
+    },
+    {
+      "name": "non-string Lightning preimage preimage row",
+      "input": {
+        "operation": "preimage",
+        "movement": {
+          "id": 42,
+          "status": "successful",
+          "subsystem": {
+            "name": "bark.lightning_send",
+            "kind": "send"
+          },
+          "metadata_json": "{\"payment_preimage\":123}",
+          "intended_balance_sat": -1000,
+          "effective_balance_sat": -1000,
+          "offchain_fee_sat": 0,
+          "sent_to": [
+            {
+              "destination": "test-destination",
+              "amount_sat": 1000,
+              "payment_method": "lightning"
+            }
+          ],
+          "received_on": [],
+          "input_vtxos": [],
+          "output_vtxos": [],
+          "exited_vtxos": [],
+          "created_at": "2026-07-15T12:00:00.000Z"
+        }
+      },
+      "expected": null
     }
   ]
 }

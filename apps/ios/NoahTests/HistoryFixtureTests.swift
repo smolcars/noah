@@ -128,6 +128,7 @@ struct HistoryFixtureTests {
                 result = try .object(["label": .value(transaction.displayLabel), "canceled": .value(transaction.isCanceled),
                                       "internalTransfer": .value(transaction.isInternalTransfer), "accounting": .value(transaction.accounting)])
             case "merge": result = try .value(HistoryRules.merge(#require(input.movements), onchain: #require(input.onchain).decode([HistoryTransaction].self)))
+            case "preimage": result = try .value(HistoryMapping.transaction(#require(input.movement).sdk).preimage)
             case "movement":
                 let movement = try #require(input.movement).sdk
                 result = try .object(["included": .value(HistoryMapping.include(movement)), "transaction": .value(HistoryMapping.transaction(movement))])
