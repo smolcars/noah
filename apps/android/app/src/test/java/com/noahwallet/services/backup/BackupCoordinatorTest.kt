@@ -90,8 +90,22 @@ class BackupCoordinatorTest {
         w.coordinator.schedule(BackupCoordinator.Reason.manual, true)
         w.entered.await(); w.eligible = false
         withTimeout(1000) { w.coordinator.settleForDeletion() }
-        assertEquals("failed", w.state.lastBackupStatus)
+        assertEquals("idle", w.state.lastBackupStatus)
+        assertTrue(w.state.backupPending)
+        assertNull(w.state.lastBackupError)
+        assertNull(com.noahwallet.ui.home.HomeRules.backup(w.state, 0, java.util.Locale.US))
+        assertTrue(w.clock.pending().isEmpty())
         assertNull(w.state.lastBackupAt)
+    }
+
+    @Test fun failureUsesRNCopyAndNeverDisplaysPersistedTypeNames() = runBlocking {
+        val w = World(); w.failures = 1
+        assertTrue(runCatching { w.coordinator.flush(BackupCoordinator.Reason.manual) }.isFailure)
+        assertEquals("An unknown error occurred while backing up.", w.state.lastBackupError)
+        val legacy = w.state.copy(lastBackupError = "ClientError")
+        assertEquals("An unknown error occurred while backing up.",
+            com.noahwallet.ui.home.HomeRules.backup(legacy, 0, java.util.Locale.US)?.message)
+        w.coordinator.cancelScheduled()
     }
 
     @Test fun debounceCoalescesRequests() = runBlocking {

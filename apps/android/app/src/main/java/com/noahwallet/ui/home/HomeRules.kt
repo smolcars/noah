@@ -15,7 +15,7 @@ object HomeRules {
     data class Banner(val title: String, val message: String, val failed: Boolean = false, val retry: Boolean = false)
     fun backup(state: PersistedBackupState, now: Long, locale: Locale): Banner? = when {
         state.lastBackupStatus == "in_progress" -> Banner("Backing up wallet", "Running in background")
-        state.lastBackupStatus == "failed" -> Banner("Backup failed", state.lastBackupError ?: "An unknown error occurred while backing up.", failed = true, retry = true)
+        state.lastBackupStatus == "failed" -> Banner("Backup failed", "An unknown error occurred while backing up.", failed = true, retry = true)
         !state.backupPending && state.lastBackupStatus == "success" && state.lastBackupAt != null && now - state.lastBackupAt!! < successMillis ->
             Banner("Backup completed", "Last backup ${DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(Date(state.lastBackupAt!!.toLong()))}")
         else -> null

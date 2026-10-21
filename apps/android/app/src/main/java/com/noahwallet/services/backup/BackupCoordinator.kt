@@ -106,10 +106,15 @@ class BackupCoordinator(private val dependencies: Dependencies) {
             }
             Result.success(Unit)
         } catch (failure: Exception) {
+            val cancelled = failure is CancellationException || !currentCoroutineContext().isActive
             synchronized(lock) {
-                // Exception messages from HTTP/SDK providers can contain secrets or presigned URLs.
-                update { it.markFailed("Backup failed; it will retry") }
                 pendingRequireEnabled = pendingRequireEnabled && requireEnabled
+                if (cancelled) {
+                    update { it.markPending(); it.lastBackupStatus = "idle" }
+                    return Result.failure(failure)
+                }
+                // Exception messages from HTTP/SDK providers can contain secrets or presigned URLs.
+                update { it.markFailed("An unknown error occurred while backing up.") }
                 if (retry == null && debounce == null && dependencies.canBackup(pendingRequireEnabled)) {
                     val delay = retryDelay(retryAttempt, dependencies.jitter()); retryAttempt = minOf(retryAttempt + 1, 10)
                     retry = timer(delay, false)
