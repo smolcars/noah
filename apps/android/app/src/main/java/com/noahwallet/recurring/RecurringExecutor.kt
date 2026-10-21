@@ -36,6 +36,7 @@ class RecurringExecutor(private val d: Dependencies,
     var syncPending by mutableStateOf(false); private set
     val controller get() = d.controller
     private var task: Deferred<Unit>? = null
+    private var taskBudget: RecurringBudget? = null
     private var syncTask: Deferred<Unit>? = null
     private var executionBinding: RecurringStore.Binding? = null
     private suspend fun <T> walletMutation(block: suspend () -> T): T {
@@ -72,12 +73,20 @@ class RecurringExecutor(private val d: Dependencies,
         }
     } catch (_: NoWallet) { null }
     suspend fun execute(manual: Boolean = false, approval: Review? = null, budget: RecurringBudget = RecurringBudget()) {
-        task?.takeIf { !it.isCompleted }?.let { it.await(); return }
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            if (!budget.available) return
+            val pending = task?.takeIf { !it.isCompleted } ?: break
+            val sameBudget = taskBudget === budget
+            pending.await()
+            if (sameBudget) return
+            // Another admission may have been revoked; reread durable due work with our budget.
+        }
         task = null
         val caller = currentCoroutineContext()[Job]
         val work = scope.async(start = CoroutineStart.LAZY) { run(manual, approval, budget, caller) }
-        task = work; work.start()
-        try { work.await() } finally { if (work.isCompleted && task === work) task = null }
+        task = work; taskBudget = budget; work.start()
+        try { work.await() } finally { if (work.isCompleted && task === work) { task = null; taskBudget = null } }
     }
     private suspend fun boundState(): RecurringStore.State = storage { boundStateNow() }
     private fun boundStateNow(): RecurringStore.State {
