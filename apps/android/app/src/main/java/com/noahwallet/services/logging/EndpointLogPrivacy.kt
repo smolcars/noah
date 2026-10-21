@@ -198,7 +198,7 @@ internal object EndpointLogPrivacy {
     }
 
     private val hostTokens = Regex("""\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
-    private fun redactHosts(text: String, registered: Set<String>): String {
+    private fun redactHosts(text: String, registered: Set<String>, failClosed: Boolean = true): String {
         val urlRanges = urls.findAll(text).map { it.range }.toList()
         var urlIndex = 0
         return hostTokens.replace(text) { match ->
@@ -217,7 +217,7 @@ internal object EndpointLogPrivacy {
                 !rawHost.all { it in '0'..'9' } && !rawHost.startsWith("0x", ignoreCase = true) &&
                 token.none { it.code > 127 }) return@replace token
             val canonical = host("https://$rawHost")
-            if (canonical == null || canonical in registered) "[custom-esplora]" else token
+            if (canonical == null && failClosed || canonical != null && canonical in registered) "[custom-esplora]" else token
         }
     }
     fun redact(text: String): String = sanitize(text) ?: "[redacted]"
@@ -225,12 +225,18 @@ internal object EndpointLogPrivacy {
     private val recordHeader = Regex("""^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} [VDIWE] """)
     private val recordStart = Regex(recordHeader.pattern + """\[""")
     /** Keep continuation lines with their endpoint/error context, including historical files. */
-    fun redactLogLines(lines: List<String>): List<String> {
+    fun redactLogLines(lines: List<String>): List<String> = redactLogLines(lines, ::sanitizeLogRecord)
+
+    // Explicit snapshots isolate read-back regressions without resetting durable global history.
+    internal fun redactLogLines(lines: List<String>, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>): List<String> =
+        redactLogLines(lines) { sanitize(it, registered, matcher, hosts, recordReadBack = recordHeader.containsMatchIn(it)) }
+
+    private fun redactLogLines(lines: List<String>, sanitizeRecord: (String) -> String?): List<String> {
         val result = mutableListOf<String>()
         val record = mutableListOf<String>()
         fun flush() {
             if (record.isEmpty()) return
-            result += (sanitizeLogRecord(record.joinToString("\n")) ?: "[redacted]").lines()
+            result += (sanitizeRecord(record.joinToString("\n")) ?: "[redacted]").lines()
             record.clear()
         }
         for (line in lines) {
@@ -247,7 +253,7 @@ internal object EndpointLogPrivacy {
         return sanitize(text, snapshot.first, snapshot.second, snapshot.third)
     }
 
-    /** Only stored records may exclude formatter fields from authority inspection. */
+    /** Only stored headers tolerate authority canonicalization failures (08/09 hours). */
     private fun sanitizeLogRecord(text: String): String? {
         if (unavailable) return "[custom-esplora]"
         val (registered, matcher, hosts) = snapshot()
@@ -312,7 +318,7 @@ internal object EndpointLogPrivacy {
         val prefix = if (recordReadBack) recordHeader.find(text)?.value.orEmpty() else ""
         val body = text.drop(prefix.length)
         val clean = urls.replace(body) { match -> if (!allowed(match.value, registered, hosts)) "[custom-esplora]" else match.value }
-        val safe = prefix + redactHosts(clean, hosts)
+        val safe = redactHosts(prefix, hosts, failClosed = false) + redactHosts(clean, hosts)
         return if (matcher.contains(safe)) "[custom-esplora]" else safe
     }
 }

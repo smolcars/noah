@@ -1,6 +1,8 @@
 package com.noahwallet.services
 
 import com.noahwallet.services.logging.*
+import com.noahwallet.services.wallet.EsploraEndpoint
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import io.github.niteshbalusu11.bark.LogLevel
 import io.sentry.Breadcrumb
 import io.sentry.SentryEvent
@@ -26,6 +28,47 @@ class EndpointRecordPrivacyTest {
         .map { it.jsonObject }.filter { it.getValue("kind").jsonPrimitive.content == kind }
 
     private fun headerCases() = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-headers.json")!!.readText()).jsonArray.map { it.jsonObject }
+
+    @Test fun sharedHeaderVectorsUseIsolatedSnapshots() {
+        for (test in headerCases()) {
+            val url = EsploraEndpoint.normalize(test.getValue("endpoint").jsonPrimitive.content).toHttpUrl()
+            val registered = setOf(url.newBuilder().encodedPath("/").build().toString().removeSuffix("/"))
+            val hosts = setOf(url.host)
+            val hostTokens = setOf(url.host, "${url.host}:${url.port}")
+            val tokens = test.getValue("tokens").jsonArray.map { it.jsonPrimitive.content }.toSet()
+            val matcher = EndpointLogPrivacy.SecretMatcher(hostTokens + tokens)
+            val input = test.getValue("input").jsonPrimitive.content
+            assertEquals(test.toString(), test.getValue("expected").jsonPrimitive.content.lines(),
+                EndpointLogPrivacy.redactLogLines(input.lines(), registered, matcher, hosts))
+            val general = EndpointLogPrivacy.sanitize(input, registered, matcher, hosts) ?: "[redacted]"
+            assertEquals(test.toString(), test.getValue("generalExpected").jsonPrimitive.content, general)
+            if ("recordExpected" in test) {
+                // The date/boundary token itself must cause the whole-record replacement.
+                assertNotEquals(test.toString(), listOf("[custom-esplora]"), EndpointLogPrivacy.redactLogLines(
+                    input.lines(), registered, EndpointLogPrivacy.SecretMatcher(hostTokens), hosts))
+            }
+        }
+    }
+
+    @Test fun numericHeaderAliasesUseCanonicalHostsWithoutFailingClosed() {
+        for (endpoints in listOf(listOf("https://12:21"), listOf("https://12:21", "https://8:443", "https://0x9:80"))) {
+            val urls = endpoints.map { EsploraEndpoint.normalize(it).toHttpUrl() }
+            val registered = urls.map { it.toString().removeSuffix("/") }.toSet()
+            val hosts = urls.map { it.host }.toSet()
+            assertEquals(if (urls.size == 1) setOf("0.0.0.12") else setOf("0.0.0.12", "0.0.0.8", "0.0.0.9"), hosts)
+            val matcher = EndpointLogPrivacy.SecretMatcher(hosts + urls.map { "${it.host}:${it.port}" })
+            for (hour in 0..23) {
+                val time = "%02d:21:42.292".format(java.util.Locale.US, hour)
+                for (body in listOf("[sdk] ordinary", "[sdk] email=person@example.com")) {
+                    val input = "2037-11-29 $time D $body"
+                    val plain = LogFile.redactPlain(input)
+                    if (body.contains("email=")) assertNotEquals(input, plain)
+                    val expected = if (hour == 12) plain.replace(time, "[custom-esplora]") else plain
+                    assertEquals("$endpoints: $input", listOf(expected), EndpointLogPrivacy.redactLogLines(input.lines(), registered, matcher, hosts))
+                }
+            }
+        }
+    }
 
     @Test fun sharedHeadersPreserveOnlyTheAnchoredFormatterPrefix() {
         for (test in headerCases()) {
