@@ -133,7 +133,9 @@ internal object EndpointLogPrivacy {
             return false
         }
         companion object {
-            fun normalize(text: String): String = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC).uppercase(java.util.Locale.ROOT)
+            fun normalize(text: String): String = java.text.Normalizer.normalize(
+                java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC).lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT),
+                java.text.Normalizer.Form.NFKC)
         }
     }
     private val hostTokens = Regex("""\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
