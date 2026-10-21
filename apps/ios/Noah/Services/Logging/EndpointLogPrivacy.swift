@@ -5,6 +5,7 @@ enum EndpointLogPrivacy {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var unavailable = false
     static func failClosed() { lock.withLock { unavailable = true } }
+    static var requiresSerializedGuard: Bool { lock.withLock { unavailable || !origins.isEmpty } }
     nonisolated(unsafe) private static var origins = Set<String>()
     nonisolated(unsafe) private static var tokens = Set<String>()
     nonisolated(unsafe) private static var matcher: SecretMatcher?
