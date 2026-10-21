@@ -247,6 +247,7 @@ object AppTelemetry {
         if (!visit(payload.filterKeys { it != "level" }, 0)) false
         else if (LogFile.containsMnemonicIn(keys) || LogFile.containsMnemonicIn(values) ||
             (level != null && !visit(level, 0))) false
+        else if (!EndpointLogPrivacy.requiresSerializedGuard) true
         else {
             // Inspect the wire form too: numeric fields and joins are not string leaves.
             val json = if (payload is JsonObject) payload.toString()

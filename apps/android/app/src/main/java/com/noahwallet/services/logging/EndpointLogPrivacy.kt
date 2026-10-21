@@ -11,6 +11,7 @@ import com.noahwallet.services.wallet.WalletConfiguration
 internal object EndpointLogPrivacy {
     @Volatile private var unavailable = false
     fun failClosed() { unavailable = true }
+    val requiresSerializedGuard: Boolean get() = unavailable || origins.isNotEmpty()
     private val origins = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val tokens = mutableSetOf<String>()
     private var matcher: SecretMatcher? = null
