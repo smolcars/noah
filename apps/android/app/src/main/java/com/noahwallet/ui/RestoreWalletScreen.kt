@@ -36,7 +36,7 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val focus = LocalFocusManager.current
-    val input = remember { RecoveryPhraseInput() }
+    val input = androidx.lifecycle.viewmodel.compose.viewModel<RecoveryPhrasePresentation>().input
     var revision by remember { mutableIntStateOf(0) }
     var clearGeneration by remember { mutableIntStateOf(0) }
     // Only plain remember: Android saved-instance state must never contain recovery words.
@@ -50,10 +50,15 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     DisposableEffect(activity, lifecycle) {
         val alreadySecure = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) clear() }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) {
+            clipboard.clearIfUnchanged()
+            if (!activity.isChangingConfigurations) clear()
+        } }
         lifecycle.addObserver(observer)
         onDispose {
-            lifecycle.removeObserver(observer); clear()
+            lifecycle.removeObserver(observer)
+            clipboard.clearIfUnchanged()
+            if (!activity.isChangingConfigurations) clear()
             if (!alreadySecure) activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
     }
@@ -124,4 +129,10 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
         if (useStoredSeed) DeleteWalletFallback(model)
         if (!useStoredSeed) NoahButton("Back", !blocked, secondary = true, onClick = ::leave)
     }
+}
+
+/** Recovery words survive configuration recreation only in memory, never saved-instance state. */
+internal class RecoveryPhrasePresentation : androidx.lifecycle.ViewModel() {
+    val input = RecoveryPhraseInput()
+    override fun onCleared() { input.clear() }
 }

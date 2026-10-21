@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -26,8 +27,9 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
     val runtime = remember { RecurringRuntime.shared(context) }
     val executor = runtime.executor
     val scope = rememberCoroutineScope()
-    var editor by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<RecurringPayment?>(null) }
+    var editor by rememberSaveable { mutableStateOf(false) }
+    var editingID by rememberSaveable { mutableStateOf<String?>(null) }
+    val editing = executor.schedules.firstOrNull { it.id == editingID }
     var cancelling by remember { mutableStateOf<RecurringPayment?>(null) }
     var overriding by remember { mutableStateOf<RecurringPayment?>(null) }
     var overrideStep by remember { mutableIntStateOf(0) }
@@ -39,7 +41,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
     if (editor) { RecurringPaymentEditorScreen(executor, editing) { editor = false }; return }
     SettingsColumn {
         Text(tr("Automatic payments from your Ark balance. Lightning fees must fit both the quoted fee and the server's worst-case fee limit. Ark payments must have no fee. Other payments need manual approval. Keep notifications enabled."), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        NoahButton("New recurring payment", !app.isWalletSuspended) { editing = null; editor = true }
+        NoahButton("New recurring payment", !app.isWalletSuspended) { editingID = null; editor = true }
         if (executor.schedules.isEmpty()) Text(tr("No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an Ark address, Lightning address or BOLT12 offer."))
         executor.schedules.forEach { s ->
             HorizontalDivider(Modifier.padding(top = 12.dp))
@@ -62,7 +64,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
                 if (!s.requiresPolicyApproval) TextButton({ overriding = s; overrideStep = 1 }, enabled = !executor.running) { Text(tr("Resume after checking history…"), color = MaterialTheme.colorScheme.error) }
             }
             if (s.status != "completed" && (s.status != "needs_attention" || s.requiresPolicyApproval)) {
-                if (s.inFlight == null || s.requiresPolicyApproval) TextButton({ editing = s; editor = true }, enabled = !app.isWalletSuspended) { Text(tr("Edit payment")) }
+                if (s.inFlight == null || s.requiresPolicyApproval) TextButton({ editingID = s.id; editor = true }, enabled = !app.isWalletSuspended) { Text(tr("Edit payment")) }
                 TextButton({ act { if (s.status == "active") executor.pause(s.id) else executor.resume(s.id) } }, enabled = s.status == "active" || (s.inFlight == null || s.requiresPolicyApproval) && !app.isWalletSuspended) { Text(tr(if (s.status == "active") "Pause" else if (s.requiresPolicyApproval) "Approve and resume" else "Resume")) }
             }
             TextButton({ cancelling = s }) { Text(tr(if (s.status == "completed") "Remove" else "Cancel"), color = MaterialTheme.colorScheme.error) }

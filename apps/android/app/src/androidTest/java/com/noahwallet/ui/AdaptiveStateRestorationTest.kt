@@ -1,0 +1,262 @@
+package com.noahwallet.ui
+
+import android.app.Application
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.test.platform.app.InstrumentationRegistry
+import com.noahwallet.formatting.BitcoinAmountUnit
+import com.noahwallet.recurring.*
+import com.noahwallet.send.*
+import com.noahwallet.services.wallet.ReceiveRequest
+import kotlinx.coroutines.*
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import java.util.Locale
+
+class AdaptiveStateRestorationTest {
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Before fun keepRequestedDeviceRotation() {
+        InstrumentationRegistry.getArguments().getString("rotation")?.toInt()?.let {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.setRotation(it)
+            Thread.sleep(500)
+        }
+    }
+
+    @Test fun receiveAmountAndNoteRestoreTogetherWithTheirAction() {
+        val restoration = StateRestorationTester(compose)
+        var saved: Pair<Long, String>? = null
+        restoration.setContent { NoahTheme {
+            ReceiveAmountSheet(ReceiveRequest("ark", "onchain"), BitcoinAmountUnit.sats, null, "USD", Locale.US,
+                saving = false, onRemove = {}, onSave = { amount, note -> saved = amount to note })
+        } }
+        compose.onNodeWithText("Amount (sats)").performTextInput("500")
+        compose.onNodeWithText("Description").performScrollTo().performClick().performTextInput("Rotation draft")
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("Amount (sats)").performScrollTo().assertTextContains("500")
+        compose.onNodeWithText("Description").performScrollTo().assertTextContains("Rotation draft")
+        compose.onNodeWithText("Save request").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(500L to "Rotation draft", saved) }
+    }
+
+    @Test fun recurringEditorRestoresFieldsIntervalAndEndCondition() {
+        val restoration = StateRestorationTester(compose)
+        val executor = RecurringRuntime.shared(InstrumentationRegistry.getInstrumentation().targetContext).executor
+        restoration.setContent { NoahTheme { RecurringPaymentEditorScreen(executor, null) {} } }
+        compose.onNodeWithText("Name").performTextInput("Rotation schedule")
+        compose.onNodeWithText("Recipient").performScrollTo().performTextInput("layout@localhost.com")
+        compose.onNodeWithText("Amount (sats)").performScrollTo().performTextInput("12345")
+        compose.onNodeWithText("Custom").performScrollTo().performClick()
+        compose.onNodeWithText("Every … days").performScrollTo().performTextReplacement("17")
+        compose.onNodeWithText("After count").performScrollTo().performClick()
+        compose.onNodeWithText("Number of payments").performScrollTo().performTextReplacement("8")
+        restoration.emulateSavedInstanceStateRestore()
+        for ((label, value) in listOf("Name" to "Rotation schedule", "Recipient" to "layout@localhost.com",
+            "Amount (sats)" to "12345", "Every … days" to "17", "Number of payments" to "8")) {
+            compose.onNodeWithText(label).performScrollTo().assertTextContains(value)
+        }
+        compose.onNodeWithText("Schedule payment").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun switchingRailAndBarKeepsTheMountedDraft() {
+        var width by mutableStateOf(380.dp)
+        var mounts = 0
+        compose.setContent { NoahTheme { Box(Modifier.width(width).height(600.dp)) {
+            AdaptiveNavigation(Destination.Send, {}) {
+                var draft by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+                DisposableEffect(Unit) { mounts++; onDispose {} }
+                OutlinedTextField(draft, { draft = it }, label = { Text("Draft") })
+            }
+        } } }
+        compose.onNodeWithText("Draft").performTextInput("500")
+        compose.runOnIdle { width = 900.dp }
+        compose.onNodeWithText("Draft").assertTextContains("500")
+        compose.runOnIdle { width = 380.dp }
+        compose.onNodeWithText("Draft").assertTextContains("500")
+        compose.runOnIdle { assertEquals(1, mounts) }
+    }
+
+    @Test fun nativePickersRemainReachableAndReopenAfterStateRestoration() {
+        val restoration = StateRestorationTester(compose)
+        val executor = RecurringRuntime.shared(InstrumentationRegistry.getInstrumentation().targetContext).executor
+        restoration.setContent { NoahTheme { RecurringPaymentEditorScreen(executor, null) {} } }
+        compose.onNode(hasText("First payment:", substring = true)).performScrollTo().performClick()
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        automation.serviceInfo = automation.serviceInfo.apply { flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS }
+        fun button(): android.view.accessibility.AccessibilityNodeInfo? {
+            val root = InstrumentationRegistry.getInstrumentation().uiAutomation.rootInActiveWindow ?: return null
+            return root.findAccessibilityNodeInfosByViewId("android:id/button1").firstOrNull()
+        }
+        compose.waitUntil(5_000) { button() != null }
+        fun day(value: String): android.view.accessibility.AccessibilityNodeInfo? {
+            fun find(node: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+                if (node == null) return null
+                if (node.text?.toString() == value && node.isClickable) return node
+                return (0 until node.childCount).firstNotNullOfOrNull { find(node.getChild(it)) }
+            }
+            return find(automation.rootInActiveWindow)
+        }
+        assertTrue(checkNotNull(day("22")).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
+        assertTrue(checkNotNull(day("23")).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
+        compose.waitForIdle()
+        fun selectedDate() = automation.rootInActiveWindow?.findAccessibilityNodeInfosByViewId("android:id/date_picker_header_date")
+            ?.firstOrNull()?.text?.toString().orEmpty()
+        compose.waitUntil(5_000) { selectedDate().contains("23") }
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitUntil(5_000) { button() != null }
+        assertTrue(selectedDate(), selectedDate().contains("23"))
+        val size = android.graphics.Point()
+        @Suppress("DEPRECATION") compose.activity.windowManager.defaultDisplay.getRealSize(size)
+        fun confirmVisiblePicker() {
+            val action = checkNotNull(button())
+            val bounds = android.graphics.Rect().also(action::getBoundsInScreen)
+            assertTrue(bounds.toString(), bounds.left >= 0 && bounds.top >= 0 && bounds.right <= size.x && bounds.bottom <= size.y)
+            assertTrue(action.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
+        }
+        confirmVisiblePicker()
+        compose.waitUntil(5_000) { button() != null }
+        confirmVisiblePicker()
+    }
+
+    @Test fun recoverySurfaceIsSecureBeforeAndAfterActivityRecreation() {
+        val app = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application)
+        fun mount(activity: ComponentActivity) { activity.setContent { NoahTheme { MnemonicScreen(app) } } }
+        compose.activityRule.scenario.onActivity(::mount)
+        compose.waitForIdle()
+        compose.runOnIdle { assertTrue(compose.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0) }
+        compose.activityRule.scenario.recreate()
+        compose.activityRule.scenario.onActivity(::mount)
+        compose.waitForIdle()
+        compose.runOnIdle { assertTrue(compose.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0) }
+        // No screenshots or semantic dumps: the device may hold its disposable wallet phrase.
+    }
+
+    @Test fun restoreInputSurvivesRecreationButStillClearsOnBackground() {
+        val app = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application)
+        lateinit var presentation: RecoveryPhrasePresentation
+        fun mount(activity: ComponentActivity) {
+            activity.setContent { NoahTheme { RestoreWalletScreen(app) } }
+        }
+        compose.activityRule.scenario.onActivity(::mount)
+        compose.onNodeWithTag("restore-word-1").assertExists()
+        compose.activityRule.scenario.onActivity { activity ->
+            fun word(view: android.view.View): RecoveryWordEditText? = when (view) {
+                is RecoveryWordEditText -> view
+                is android.view.ViewGroup -> (0 until view.childCount).firstNotNullOfOrNull { word(view.getChildAt(it)) }
+                else -> null
+            }
+            checkNotNull(word(activity.window.decorView)).setText("layout")
+        }
+        compose.activityRule.scenario.onActivity { presentation = ViewModelProvider(it)[RecoveryPhrasePresentation::class.java] }
+        compose.activityRule.scenario.recreate()
+        compose.activityRule.scenario.onActivity {
+            assertSame(presentation, ViewModelProvider(it)[RecoveryPhrasePresentation::class.java]); mount(it)
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals("layout", presentation.input.words[0]) }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        assertTrue(presentation.input.words.all { it.isEmpty() })
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        // Only a public synthetic non-phrase input is used; never capture this surface.
+    }
+
+    @Test fun actualSendRetainsReviewSubmissionAndReceiptAcrossActivityRecreation() {
+        val gate = CompletableDeferred<Unit>()
+        val owner = SendIdentity("adaptive-test", "regtest")
+        val quote = SendQuote(500, 0, 500, walletIdentity = owner)
+        var calls = 0
+        val wallet = object : SendWallet {
+            override suspend fun identity() = owner
+            override suspend fun quote(payment: SendPayment) = quote
+            override suspend fun prepare(payment: SendPayment, quote: SendQuote) = SendSnapshot(walletIdentity = owner)
+            override suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt {
+                calls++; gate.await()
+                return SendReceipt(500, proof = SendReceipt.Proof.submitReturnedArkSuccess)
+            }
+            override suspend fun reconcile(attempt: SendAttempt) = SendResolution.Uncertain
+            override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {}
+            override suspend fun discardAll() {}
+        }
+        val controller = SendController(SendController.Dependencies(read = { null }, write = {}, reservation = { it(wallet) }))
+        val draft = SendModel(controller, "regtest", { error("Not used") }, { quote }, {})
+        lateinit var presentation: SendPresentation
+        val app = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application)
+        compose.activityRule.scenario.onActivity { activity ->
+            presentation = ViewModelProvider(activity, object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    @Suppress("UNCHECKED_CAST") return SendPresentation(draft) as T
+                }
+            })["send-presentation", SendPresentation::class.java]
+            activity.setContent { NoahTheme { SendScreen(app) {} } }
+        }
+        compose.runOnIdle {
+            draft.setRecipient("layout-ark-recipient"); draft.amount = "500"; draft.comment = "Retained note"
+            draft.parsed = SendDestination("ark"); draft.progress = SendProgress(selectedRail = SendRail.ark)
+        }
+        runBlocking(Dispatchers.Main) { draft.review() }
+        compose.onNodeWithText("Confirm payment").assertIsDisplayed()
+        fun recreate(rotate: Boolean = false) {
+            if (rotate) {
+                val previous = compose.activity
+                compose.activityRule.scenario.onActivity { activity ->
+                    activity.requestedOrientation = if (activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+                        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                }
+                compose.waitUntil(5_000) { compose.activity !== previous }
+            } else compose.activityRule.scenario.recreate()
+            compose.activityRule.scenario.onActivity { activity ->
+                assertSame(presentation, ViewModelProvider(activity)["send-presentation", SendPresentation::class.java])
+                activity.setContent { NoahTheme { SendScreen(app) {} } }
+            }
+            compose.waitForIdle()
+        }
+        if (InstrumentationRegistry.getArguments().getString("fold") == "true") {
+            for (posture in listOf(0, 2)) {
+                val previous = compose.activity
+                val instrumentation = InstrumentationRegistry.getInstrumentation()
+                instrumentation.uiAutomation.executeShellCommand("cmd device_state state $posture").use { descriptor ->
+                    android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
+                }
+                compose.waitUntil(10_000) { compose.activity !== previous }
+                compose.activityRule.scenario.onActivity { activity -> activity.setContent { NoahTheme { SendScreen(app) {} } } }
+                compose.onNodeWithText("Confirm payment").assertIsDisplayed()
+            }
+        }
+        recreate(rotate = true)
+        compose.onNodeWithText("Confirm payment").assertIsDisplayed()
+        captureSendFixture("send-review")
+        compose.runOnIdle { assertEquals("500", draft.amount); assertEquals("Retained note", draft.comment) }
+        compose.onNodeWithText("Confirm", useUnmergedTree = true).performScrollTo().performClick()
+        compose.waitUntil { calls == 1 }
+        recreate(rotate = true)
+        compose.runOnIdle { assertTrue(controller.locked); assertEquals(1, calls) }
+        gate.complete(Unit)
+        compose.waitUntil { controller.state == SendController.State.succeeded }
+        recreate()
+        compose.onNodeWithText("Payment sent").assertIsDisplayed()
+        captureSendFixture("send-receipt")
+        compose.runOnIdle { assertEquals(1, calls); assertEquals(500L, controller.attempt?.receipt?.amount) }
+    }
+
+    private fun captureSendFixture(name: String) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val args = InstrumentationRegistry.getArguments()
+        if (args.getString("noahAdaptive") != "owned-disposable-avd") return
+        val directory = java.io.File(instrumentation.targetContext.filesDir, "adaptive-shots/${args.getString("label", "state")}").apply { mkdirs() }
+        val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
+        java.io.File(directory, "$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
+    }
+}

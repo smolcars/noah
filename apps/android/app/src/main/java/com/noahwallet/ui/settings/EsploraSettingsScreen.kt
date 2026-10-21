@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
@@ -21,7 +22,7 @@ fun EsploraSettingsScreen(model: AppModel) {
     var selection by remember { mutableStateOf(store.selection(BuildConfig.APP_VARIANT)) }
     val defaultEndpoint = WalletConfiguration.base(BuildConfig.APP_VARIANT).esplora.orEmpty()
     val effectiveEndpoint = WalletConfiguration.effective(BuildConfig.APP_VARIANT, selection.endpoint).esplora.orEmpty()
-    var input by remember { mutableStateOf(selection.input ?: effectiveEndpoint) }
+    var input by rememberSaveable { mutableStateOf(selection.input ?: effectiveEndpoint) }
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val editable = !model.busy && BuildConfig.APP_VARIANT != "regtest"

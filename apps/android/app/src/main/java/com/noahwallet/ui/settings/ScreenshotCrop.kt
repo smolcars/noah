@@ -8,6 +8,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -58,7 +60,10 @@ internal fun cropScreenshot(image: Bitmap, crop: ScreenshotCrop): ByteArray {
 
 @Composable
 internal fun ScreenshotCropDialog(image: Bitmap, onCancel: () -> Unit, onCrop: (ScreenshotCrop) -> Unit) {
-    var crop by remember(image) { mutableStateOf(ScreenshotCrop()) }
+    var crop by rememberSaveable(image, stateSaver = listSaver(
+        save = { listOf(it.left, it.top, it.right, it.bottom) },
+        restore = { ScreenshotCrop(it[0], it[1], it[2], it[3]) },
+    )) { mutableStateOf(ScreenshotCrop()) }
     val bitmap = remember(image) { image.asImageBitmap() }
     val left = tr("Left"); val right = tr("Right"); val top = tr("Top"); val bottom = tr("Bottom")
     WalletAlertDialog(onDismissRequest = onCancel, title = { Text(tr("Crop Screenshot")) }, text = {

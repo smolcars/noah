@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -28,17 +29,17 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
 
 @Composable fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, done: () -> Unit) {
     val scope = rememberCoroutineScope(); val focus = LocalFocusManager.current
-    var label by remember { mutableStateOf(original?.label ?: "") }
-    var recipient by remember { mutableStateOf(original?.destination ?: "") }
-    var amount by remember { mutableStateOf(original?.amountSat?.toString() ?: "") }
-    var comment by remember { mutableStateOf(original?.comment ?: "") }
-    var unit by remember { mutableStateOf(original?.interval?.unit ?: "month") }
-    var every by remember { mutableStateOf(original?.interval?.every?.toString() ?: recurringDefaultEvery(unit)) }
-    val tomorrow = remember { Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY, 9); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis }
-    var start by remember { mutableLongStateOf(original?.startAt ?: tomorrow) }
-    var endMode by remember { mutableStateOf(if (original?.endAt != null) "date" else if (original?.maxOccurrences != null) "count" else "never") }
-    var end by remember { mutableLongStateOf(original?.endAt ?: tomorrow) }
-    var count by remember { mutableStateOf(original?.maxOccurrences?.toString() ?: "12") }
+    var label by rememberSaveable(original?.id) { mutableStateOf(original?.label ?: "") }
+    var recipient by rememberSaveable(original?.id) { mutableStateOf(original?.destination ?: "") }
+    var amount by rememberSaveable(original?.id) { mutableStateOf(original?.amountSat?.toString() ?: "") }
+    var comment by rememberSaveable(original?.id) { mutableStateOf(original?.comment ?: "") }
+    var unit by rememberSaveable(original?.id) { mutableStateOf(original?.interval?.unit ?: "month") }
+    var every by rememberSaveable(original?.id) { mutableStateOf(original?.interval?.every?.toString() ?: recurringDefaultEvery(unit)) }
+    val tomorrow = rememberSaveable(original?.id) { Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY, 9); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis }
+    var start by rememberSaveable(original?.id) { mutableLongStateOf(original?.startAt ?: tomorrow) }
+    var endMode by rememberSaveable(original?.id) { mutableStateOf(if (original?.endAt != null) "date" else if (original?.maxOccurrences != null) "count" else "never") }
+    var end by rememberSaveable(original?.id) { mutableLongStateOf(original?.endAt ?: tomorrow) }
+    var count by rememberSaveable(original?.id) { mutableStateOf(original?.maxOccurrences?.toString() ?: "12") }
     var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     val destination = runCatching { RecurringRecipient.resolve(recipient) }.getOrNull()
@@ -63,13 +64,13 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         Text(tr("${amount.ifEmpty { "0" }} sats per payment, plus network fees"), style = MaterialTheme.typography.bodySmall)
         if (destination?.second == "lnurl") OutlinedTextField(comment, { comment = it }, label = { Text(tr("Note (optional)")) }, supportingText = { Text(tr("Shared with the recipient")) }, enabled = !saving, modifier = Modifier.fillMaxWidth())
         Text(tr("Repeat"), style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("week" to "Weekly", "month" to "Monthly", "day" to "Custom").forEach { (value, title) -> FilterChip(unit == value, { unit = value; every = recurringDefaultEvery(value) }, label = { Text(tr(title)) }, enabled = !saving) }
         }
         OutlinedTextField(every, { every = it }, label = { Text(tr("Every … ${unit}s")) }, enabled = !saving, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
         RecurringDatePicker("First payment", start, true, !saving) { start = it }
         Text(tr("Ends"), style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("never" to "Never", "date" to "On date", "count" to "After count").forEach { (value, title) -> FilterChip(endMode == value, { endMode = value }, label = { Text(tr(title)) }, enabled = !saving) }
         }
         if (endMode == "date") RecurringDatePicker("End date", end, false, !saving) { end = it }
@@ -101,19 +102,46 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         if (covered) picker?.hide() else picker?.show()
         onDispose { }
     }
-    DisposableEffect(Unit) { onDispose { picker?.dismiss() } }
-    OutlinedButton({
-        val calendar = Calendar.getInstance().apply { timeInMillis = value }
-        picker = DatePickerDialog(context, { _, year, month, day ->
-            calendar.set(year, month, day)
-            if (time) { picker = TimePickerDialog(context, { _, hour, minute -> calendar.set(Calendar.HOUR_OF_DAY, hour); calendar.set(Calendar.MINUTE, minute); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0); change(calendar.timeInMillis) }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(context)).also { dialog ->
-                dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                dialog.setOnDismissListener { if (picker === dialog) picker = null }; if (!privacy.covered) dialog.show()
-            } }
-            else change(calendar.timeInMillis)
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).also { dialog ->
-                dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                dialog.setOnDismissListener { if (picker === dialog) picker = null }; if (!privacy.covered) dialog.show()
+    var step by rememberSaveable { mutableStateOf<String?>(null) }
+    var candidate by rememberSaveable { mutableLongStateOf(value) }
+    DisposableEffect(step, context) {
+        val shownStep = step
+        var disposing = false
+        if (shownStep != null) {
+            val calendar = Calendar.getInstance().apply { timeInMillis = candidate }
+            fun updateDate(year: Int, month: Int, day: Int) {
+                calendar.set(year, month, day); candidate = calendar.timeInMillis
             }
-    }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(tr("$label: ${if (time) recurringDate(value) else recurringDay(value)}")) }
+            fun updateTime(hour: Int, minute: Int) {
+                calendar.set(Calendar.HOUR_OF_DAY, hour); calendar.set(Calendar.MINUTE, minute)
+                calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                candidate = calendar.timeInMillis
+            }
+            val dialog = if (shownStep == "date") DatePickerDialog(context, { _, year, month, day ->
+                updateDate(year, month, day)
+                if (time) step = "time" else { change(candidate); step = null }
+            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
+            else TimePickerDialog(context, { _, hour, minute ->
+                updateTime(hour, minute); change(candidate); step = null
+            }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(context))
+            dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.setOnDismissListener { if (!disposing && step == shownStep) step = null }
+            picker = dialog
+            if (!privacy.covered) dialog.show()
+            if (dialog is DatePickerDialog) dialog.datePicker.init(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)) { _, year, month, day ->
+                updateDate(year, month, day)
+            }
+            if (dialog is TimePickerDialog) {
+                val id = context.resources.getIdentifier("timePicker", "id", "android")
+                dialog.findViewById<android.widget.TimePicker>(id)?.setOnTimeChangedListener { _, hour, minute ->
+                    updateTime(hour, minute)
+                }
+            }
+        }
+        onDispose { disposing = true; picker?.dismiss(); picker = null }
+    }
+    OutlinedButton({ candidate = value; step = "date" }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        Text(tr("$label: ${if (time) recurringDate(value) else recurringDay(value)}"))
+    }
 }

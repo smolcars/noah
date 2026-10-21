@@ -13,6 +13,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,13 +42,15 @@ import kotlinx.serialization.json.JsonObject
 @Composable
 fun SendScreen(app: AppModel, onDone: () -> Unit) {
     val context = LocalContext.current
-    val controller = remember { SendRuntime.shared(context).controller }
-    val model = remember { SendModel(controller, BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend) }
-    val scope = rememberCoroutineScope()
+    val presentation = viewModel<SendPresentation>(key = "send-presentation") { SendPresentation(SendModel(SendRuntime.shared(context).controller, BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend)) }
+    val model = presentation.model
+    val controller = model.controller
+    val scope = presentation.viewModelScope
+    val activity = context as android.app.Activity
     val focus = LocalFocusManager.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    var scanner by remember { mutableStateOf(false) }
-    var outcomeSheet by remember { mutableStateOf(true) }
+    var scanner by rememberSaveable { mutableStateOf(false) }
+    var outcomeSheet by rememberSaveable { mutableStateOf(true) }
     fun leaveReview() { model.discardReview(); model.stage = if (model.isMax) SendStage.source else SendStage.recipient }
     fun done() { scope.launch { controller.acknowledge(); if (!controller.locked) { model.reset(); app.refresh(); onDone() } } }
     LaunchedEffect(Unit) {
@@ -86,14 +92,22 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
             }
         }
     }
-    LaunchedEffect(model.stage, controller.state) { focus.clearFocus() }
+    var previousStage by rememberSaveable { mutableStateOf(model.stage.name) }
+    var previousOutcome by rememberSaveable { mutableStateOf(controller.state.name) }
+    LaunchedEffect(model.stage, controller.state) {
+        if (previousStage != model.stage.name || previousOutcome != controller.state.name) focus.clearFocus()
+        previousStage = model.stage.name; previousOutcome = controller.state.name
+    }
     DisposableEffect(model, lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE && !controller.locked) model.discardReview()
-            if (event == Lifecycle.Event.ON_STOP) scanner = false
+            if (event == Lifecycle.Event.ON_PAUSE && !activity.isChangingConfigurations && !controller.locked) model.discardReview()
+            if (event == Lifecycle.Event.ON_STOP && !activity.isChangingConfigurations) scanner = false
         }
         lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer); if (!controller.locked) model.discardReview() }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            if (!activity.isChangingConfigurations) presentation.leave()
+        }
     }
     BackHandler(model.showReview && !controller.locked) { leaveReview() }
     if (scanner) {
@@ -108,12 +122,12 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
         } else SendOutcome(controller, ::done)
         return
     }
-    Column(Modifier.fillMaxSize().imePadding()) {
+    Column(Modifier.fillMaxSize().readableWidth().imePadding().verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = { focus.clearFocus(); model.reset() }, enabled = !model.busy) { Text(tr("Start over")) }
             TextButton(onClick = { focus.clearFocus(); scanner = true }, enabled = !model.busy) { Text(tr("Scan QR")) }
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+        Column(Modifier.padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             when (model.stage) {
                 SendStage.amount -> {
@@ -272,4 +286,10 @@ internal fun keypadInput(amount: String, key: String?, decimal: Boolean): String
         text = { Text(tr(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else controller.overrideWarning)) },
         confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { scope.launch { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0 } } }) { Text(tr(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText)) } },
         dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text(tr("Keep checking")) } })
+}
+
+/** Configuration recreation retains only presentation; SendRuntime still owns every submission. */
+internal class SendPresentation(val model: SendModel) : ViewModel() {
+    fun leave() { if (!model.controller.locked) model.reset() }
+    override fun onCleared() { if (!model.controller.locked) model.discardReview() }
 }

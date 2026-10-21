@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -25,12 +26,17 @@ import kotlinx.coroutines.*
 
 @Composable
 fun FeedbackScreen(model: AppModel) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var subject by remember { mutableStateOf("") }
-    var body by remember { mutableStateOf("") }
-    var screenshot by remember { mutableStateOf<ByteArray?>(null) }
-    var cropImage by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var subject by rememberSaveable { mutableStateOf("") }
+    var body by rememberSaveable { mutableStateOf("") }
+    val attachments = androidx.lifecycle.viewmodel.compose.viewModel<FeedbackAttachments>()
+    var screenshot by attachments::screenshot
+    var cropImage by attachments::cropImage
+    val activity = LocalContext.current as android.app.Activity
+    DisposableEffect(activity) { onDispose {
+        if (!activity.isChangingConfigurations) { attachments.screenshot = null; attachments.cropImage = null }
+    } }
     var success by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -128,13 +134,13 @@ fun StoryScreen() {
 
 @Composable
 fun DebugScreen(model: AppModel) {
-    var action by remember { mutableStateOf(DebugAction.ark) }
+    var action by rememberSaveable { mutableStateOf(DebugAction.ark) }
     var push by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    var input by remember { mutableStateOf("") }
+    var input by rememberSaveable { mutableStateOf("") }
     var result by remember { mutableStateOf<String?>(null) }
     var confirming by remember { mutableStateOf(false) }
-    var confirmation by remember { mutableStateOf("") }
+    var confirmation by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
     fun execute() { model.action("Action failed. Check your input and connection before trying again.") {
       result = null
@@ -170,4 +176,10 @@ fun DebugScreen(model: AppModel) {
             OutlinedTextField(confirmation, { confirmation = it }, label = { Text(tr("delete")) })
         } }, dismissButton = { TextButton({ confirming = false }) { Text(tr("Cancel")) } },
         confirmButton = { TextButton({ confirming = false; execute() }, enabled = confirmation.equals("delete", true)) { Text(tr("Confirm")) } })
+}
+
+/** Large image drafts stay in memory rather than Android's saved-instance Bundle. */
+internal class FeedbackAttachments : androidx.lifecycle.ViewModel() {
+    var screenshot by mutableStateOf<ByteArray?>(null)
+    var cropImage by mutableStateOf<android.graphics.Bitmap?>(null)
 }
