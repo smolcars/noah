@@ -69,7 +69,7 @@ struct RecurringPaymentsView: View {
             }
             if executor.schedules.contains(where: { $0.status == "active" }) {
                 Section {
-                    Button { Task { await executor.execute(manual: true) } } label: {
+                    Button { Task { await ForegroundExecution.run { await executor.execute(manual: true) } } } label: {
                         HStack { Text("Run due payments now"); if executor.running { Spacer(); ProgressView() } }
                     }.disabled(executor.running).accessibilityIdentifier("recurring-run-now-button")
                 }
@@ -79,11 +79,11 @@ struct RecurringPaymentsView: View {
         }
         .settingsStyle("Recurring payments")
         .sheet(item: $review) { item in
-            SendConfirmation(confirm: { Task { await executor.execute(manual: true, approval: item) } },
+            SendConfirmation(confirm: { Task { await ForegroundExecution.run { await executor.execute(manual: true, approval: item) } } },
                              payment: item.payment, quote: item.quote, controller: executor.controller,
                              cancel: { review = nil }, done: { review = nil; Task { await executor.reload() } })
         }
-        .task { await executor.reload(); await executor.execute() }
+        .task { await executor.reload(); await ForegroundExecution.run { await executor.execute() } }
         .alert("Cancel recurring payment?", isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } })) {
             Button("Keep payment", role: .cancel) { cancelling = nil }
             Button("Cancel payment", role: .destructive) {

@@ -75,6 +75,7 @@ import Observation
     }
     /// Join triggers. Settlement outlives the caller; new submissions respect its deadline.
     func execute(manual: Bool = false, approval: Review? = nil) async {
+        do { try ForegroundExecution.checkActiveNow() } catch { return }
         if let task { await task.value; return }
         let work = Task { await run(manual: manual, approval: approval) }
         task = work
@@ -86,6 +87,7 @@ import Observation
         try await storage { [self] in try boundStateNow() }
     }
     private func boundStateNow() throws -> RecurringStore.State {
+        try ForegroundExecution.checkActiveNow()
         try d.allowed()
         let owner = try d.binding()
         guard executionBinding == nil || executionBinding == owner else { throw NoWallet() }
@@ -151,6 +153,7 @@ import Observation
         defer { executionBinding = nil; running = false }
         do {
             let (automationGeneration, durableGeneration) = try await d.mutation.withLock { @MainActor [self] in
+                try ForegroundExecution.checkActiveNow()
                 try d.allowed()
                 let owner = try d.binding()
                 let generation = d.automationGeneration()
@@ -159,6 +162,7 @@ import Observation
                 guard try d.binding() == owner else { throw NoWallet() }
                 let durableGeneration = try d.store.automationGeneration()
                 try await d.ensureOpen()
+                try ForegroundExecution.checkActiveNow()
                 try d.allowed()
                 guard try d.binding() == owner else { throw NoWallet() }
                 executionBinding = owner
@@ -173,7 +177,8 @@ import Observation
             try await recoverMarkers(initial)
             for id in initial.schedules.keys.sorted() {
                 if let approval, approval.schedule.id != id { continue }
-                guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
+                guard (try? ForegroundExecution.checkActiveNow()) != nil,
+                      RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
                 guard var schedule = try await boundState().schedules[id], !schedule.unsupportedStorage else { continue }
                 let original = schedule
                 guard schedule.validPolicy else { throw SendFailure.invalid }
@@ -207,7 +212,8 @@ import Observation
                         guard plan == approval.plan else { continue }
                         (payment, quote, fees) = (approval.payment, approval.quote, nil)
                     } else { (payment, quote, fees) = try await d.quote(schedule) }
-                    guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
+                    guard (try? ForegroundExecution.checkActiveNow()) != nil,
+                          RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
                     let state = try await boundState()
                     guard let latest = state.schedules[id], latest == schedule,
                           planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
@@ -265,7 +271,8 @@ import Observation
                         }
                     }
                     try await settle(entry, retainReceipt: approval != nil, notifyOriginal: true)
-                } catch is NoWallet { throw NoWallet() }
+                } catch is CancellationError { break }
+                catch is NoWallet { throw NoWallet() }
                 catch {
                     // Only a failure before the independent marker exists is automatically retryable.
                     let entry = try await storage { [self] in try d.journal.load()[id] }
@@ -287,6 +294,7 @@ import Observation
             await syncServer()
             await d.refresh()
         } catch is NoWallet { return }
+        catch is CancellationError { return }
         catch { self.error = error.localizedDescription }
         await reload()
         await d.notifications(schedules, nil)

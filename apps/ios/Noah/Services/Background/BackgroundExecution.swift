@@ -17,10 +17,12 @@ import Foundation
         let budget = budget
         Self.active[id] = self
         work = Task {
-            let success = await RecurringExecutionBudget.$deadline.withValue(deadline) {
-                await RecurringSubmissionBudget.$current.withValue(budget) {
-                    do { try Self.checkActive(); try await operation(); try Self.checkActive(); return true }
-                    catch { return false }
+            let success = await ForegroundExecution.$admission.withValue(nil) {
+                await RecurringExecutionBudget.$deadline.withValue(deadline) {
+                    await RecurringSubmissionBudget.$current.withValue(budget) {
+                        do { try Self.checkActive(); try await operation(); try Self.checkActive(); return true }
+                        catch { return false }
+                    }
                 }
             }
             // Expiry still completes immediately while a bounded drain is pending.

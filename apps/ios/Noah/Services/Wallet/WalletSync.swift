@@ -31,6 +31,7 @@ actor WalletSync {
     static func attemptAll(_ stages: [@Sendable () async throws -> Void]) async throws {
         var failure: Error?
         for stage in stages {
+            try await ForegroundExecution.checkActive()
             try BackgroundExecution.checkActive()
             do { try await stage() }
             catch { if failure == nil { failure = error } }

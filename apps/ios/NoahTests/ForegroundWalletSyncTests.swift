@@ -3,6 +3,29 @@ import Testing
 @testable import Noah
 
 struct ForegroundWalletSyncTests {
+    @Test @MainActor func foregroundReentryQueuedBehindWalletAccessRechecksSceneState() async throws {
+        let configuration = WalletMutationGate(), mutation = WalletMutationGate()
+        let foreground = ForegroundWalletSync(configuration: configuration, mutation: mutation)
+        let held = RecurringReservationTests.Gate()
+        let active = RecurringExecutorTests.Locked(true)
+        let stages = RecurringExecutorTests.Locked(0)
+        let holder = Task { await configuration.withLock { await held.wait() } }
+        while !(await held.entered) { await Task.yield() }
+        let work = Task {
+            await ForegroundExecution.run(isActive: { active.withLock { $0 } }) {
+                try? await foreground.run {
+                    try await WalletSync().run([{ stages.withLock { $0 += 1 } }])
+                }
+            }
+        }
+        let deadline = ContinuousClock.now + .seconds(5)
+        while await configuration.waitingCount == 0, ContinuousClock.now < deadline { await Task.yield() }
+        #expect(await configuration.waitingCount == 1)
+        active.withLock { $0 = false }
+        await held.release(); await holder.value; await work.value
+        #expect(stages.withLock { $0 } == 0)
+    }
+
     @Test func foregroundReentryDropsBeforeWaitingOnEitherOuterGate() async throws {
         for backgroundGate in [false, true] {
             let configuration = WalletMutationGate(), mutation = WalletMutationGate()

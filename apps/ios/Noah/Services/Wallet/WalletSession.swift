@@ -637,6 +637,7 @@ actor WalletSession {
     }
 
     private func runSyncStage(_ stage: @escaping @Sendable (Handles) async throws -> Void, handles: Handles) async throws {
+        try await ForegroundExecution.checkActive()
         try BackgroundExecution.checkActive()
         guard settlingCloses == 0, isOpen else { throw CancellationError() }
         // The outer counted pass retains these handles through admitted native settlement.

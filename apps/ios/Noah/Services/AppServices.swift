@@ -95,6 +95,7 @@ final class AppServices: Sendable {
     func syncInForeground() async {
         do {
             try await foregroundSync.run { [self] in
+                try await ForegroundExecution.checkActive()
                 try BackgroundExecution.checkActive()
                 let location = WalletDataLocation(variant: variant)
                 let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)

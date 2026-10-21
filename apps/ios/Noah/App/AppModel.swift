@@ -106,6 +106,7 @@ final class AppModel {
             await AppServices.shared.syncInForeground()
             guard !Task.isCancelled, phase == .wallet, !isWalletSuspended, await session.isOpen else { return }
             await refresh()
+            guard (try? await ForegroundExecution.checkActive()) != nil else { return }
             await RecurringExecutor.shared.execute()
         }
     }
@@ -444,7 +445,10 @@ final class AppModel {
         await start()
     }
 
-    func appBecameInactive() { foregroundActivation?.revoke() }
+    func appBecameInactive() {
+        foregroundActivation?.revoke()
+        recurringForeground?.stop()
+    }
 
     func appBecameActive() async {
         guard UIApplication.shared.applicationState == .active else { return }
@@ -455,7 +459,7 @@ final class AppModel {
             budget.revoke()
             if foregroundActivation === budget { foregroundActivation = nil }
         }
-        await RecurringSubmissionBudget.$current.withValue(budget) { await refreshOnForeground() }
+        await ForegroundExecution.run(budget: budget) { await refreshOnForeground() }
     }
 
     private func refreshOnForeground() async {
@@ -505,7 +509,7 @@ final class AppModel {
         await registerPush()
         guard !pushPermission.blocksWallet(initialized: phase == .wallet) else { return }
         startBackupTriggers()
-        await RecurringExecutor.shared.execute()
+        await ForegroundExecution.run { await RecurringExecutor.shared.execute() }
     }
 
     /// Like RN's `usePushNotifications`: only once onboarding is finished and
