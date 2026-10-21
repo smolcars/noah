@@ -42,6 +42,20 @@ class OnchainModelTest {
             model.continueWithoutEstimate(); assertTrue(model.quote!!.hasUnknownFeeConsent)
         }
     }
+    @Test fun retryDeadlineSavedUnderAFastClockIsCappedToOneBackoff() = runBlocking {
+        var disk: String? = null; var now = 1_000_000_000L
+        val store = AutoBoardFunding({ disk }, { disk = it })
+        val funding = AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))
+        store.release(funding, now + 365L * 24 * 3600 * 1000) // Saved while the clock ran a year ahead.
+        assertEquals(now + 30_000, store.retryDeadline("wallet", now))
+        // The cap is durable, so later reads keep it instead of opening a fresh window.
+        assertEquals(now + 30_000, AutoBoardFunding({ disk }, { disk = it }).retryDeadline("wallet", now + 10_000))
+        suspend fun offer() = AutoBoardReview(AutoBoardFunding({ disk }, { disk = it })) { now }
+            .prepare({ true }, { funding }, { OnchainQuote(OnchainAction.board, "wallet") }, {})
+        now += 29_999; assertNull(offer())
+        now += 1; assertNotNull(offer())
+    }
+
     @Test fun unsubmittedConfirmReleasesOnlyNewFundingAndAppliesBackoff() = runBlocking {
         for (changed in listOf(false, true)) {
             var disk: String? = null; var now = 0L

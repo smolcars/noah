@@ -32,6 +32,23 @@ struct BoardPreparedTests {
             #expect(try await journal.loadAll().isEmpty == (state != "same"))
         }
     }
+    @MainActor @Test func retryDeadlineSavedUnderAFastClockIsCappedToOneBackoff() async throws {
+        var disk: String?
+        var now = Date(timeIntervalSince1970: 1_000_000)
+        var store = AutoBoardFunding()
+        store.read = { disk }; store.write = { disk = $0 }
+        let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["deposit:0"])
+        try store.release(funding, retryAfter: now.addingTimeInterval(365 * 24 * 3600)) // Clock ran a year ahead.
+        #expect(try store.retryDeadline(walletID: "wallet", now: now) == now.addingTimeInterval(30))
+        // The cap is durable, so later reads keep it instead of opening a fresh window.
+        #expect(try store.retryDeadline(walletID: "wallet", now: now.addingTimeInterval(10)) == now.addingTimeInterval(30))
+        let review = AutoBoardReview(store: store, now: { now })
+        now = now.addingTimeInterval(29)
+        #expect(try await review.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) == nil)
+        now = now.addingTimeInterval(1)
+        #expect(try await review.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) != nil)
+    }
+
     @MainActor @Test func failedConfirmReleasesOnlyNewFundingAndBacksOffUnlessFundsChanged() async throws {
         for changed in [false, true] {
             var disk: String?

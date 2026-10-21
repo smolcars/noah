@@ -8,6 +8,7 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
     data class Snapshot(val walletID: String, val outpoints: Set<String>)
     companion object {
         const val key = "native-auto-board-funding-v1"
+        const val RETRY_BACKOFF_MS = 30_000L
         fun confirmed(walletID: String, utxos: List<OnchainUtxo>, transactions: List<WalletTransaction>): Snapshot {
             // A board/send's change is not a new deposit. Unknown transactions are not eligible.
             val incoming = transactions.filter { it.balanceChangeSats > 0 }.map { it.txid }.toSet()
@@ -24,7 +25,15 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
             value.jsonArray.map { require(it.jsonPrimitive.isString); it.jsonPrimitive.content }.toSet()
         }, root["retryAfter"]?.jsonObject?.mapValues { it.value.jsonPrimitive.long }.orEmpty())
     }
-    fun retryDeadline(walletID: String): Long = load().retryAfter[walletID] ?: 0
+    /** A deadline beyond one backoff window means the clock moved back since saving; cap it durably once. */
+    fun retryDeadline(walletID: String, now: Long = System.currentTimeMillis()): Long {
+        val saved = load()
+        val stored = saved.retryAfter[walletID] ?: return 0
+        val latest = now + RETRY_BACKOFF_MS
+        if (stored <= latest) return stored
+        save(saved.copy(retryAfter = saved.retryAfter + (walletID to latest)))
+        return latest
+    }
     fun hasUnhandled(funding: Snapshot): Boolean = (funding.outpoints - load().handled[funding.walletID].orEmpty()).isNotEmpty()
     fun markHandled(funding: Snapshot): Boolean = claim(funding) != null
     fun release(funding: Snapshot, retryAfter: Long) {
@@ -62,7 +71,7 @@ class AutoBoardReview(private val store: AutoBoardFunding, private val now: () -
         if (id != quote.id) return
         claimed = null
         if (!proveUnsubmitted()) return
-        retryAfter = if (changed) now() else now() + 30_000
+        retryAfter = if (changed) now() else now() + AutoBoardFunding.RETRY_BACKOFF_MS
         store.release(funding, retryAfter)
     }
     suspend fun prepare(allowed: () -> Boolean, funding: suspend () -> AutoBoardFunding.Snapshot?,
@@ -71,7 +80,7 @@ class AutoBoardReview(private val store: AutoBoardFunding, private val now: () -
         if (!allowed() || now() < retryAfter) return null
         try {
             val current = funding() ?: return null
-            if (!allowed() || now() < store.retryDeadline(current.walletID) || !store.hasUnhandled(current)) return null
+            if (!allowed() || now() < store.retryDeadline(current.walletID, now()) || !store.hasUnhandled(current)) return null
             val prepared = quote() ?: return null
             var presented = false
             try {

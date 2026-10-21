@@ -38,8 +38,18 @@ struct AutoBoardFunding {
     private func save(_ state: State) throws {
         try write(String(decoding: JSONEncoder().encode(state), as: UTF8.self))
     }
-    func retryDeadline(walletID: String) throws -> Date {
-        try load().retryAfter[walletID].map { Date(timeIntervalSince1970: $0 / 1000) } ?? .distantPast
+    static let retryBackoff: TimeInterval = 30
+    /// A deadline beyond one backoff window means the clock moved back since saving; cap it durably once.
+    func retryDeadline(walletID: String, now: Date = Date()) throws -> Date {
+        var saved = try load()
+        guard let stored = saved.retryAfter[walletID].map({ Date(timeIntervalSince1970: $0 / 1000) }) else {
+            return .distantPast
+        }
+        let latest = now.addingTimeInterval(Self.retryBackoff)
+        guard stored > latest else { return stored }
+        saved.retryAfter[walletID] = latest.timeIntervalSince1970 * 1000
+        try save(saved)
+        return latest
     }
     func hasUnhandled(_ funding: Snapshot) throws -> Bool {
         try !funding.outpoints.subtracting(load().handled[funding.walletID] ?? []).isEmpty
@@ -81,7 +91,7 @@ struct AutoBoardFunding {
         guard let (id, funding, _) = claimed, id == quote.id else { return }
         claimed = nil
         guard try await proveUnsubmitted() else { return }
-        retryAfter = changed ? now() : now().addingTimeInterval(30)
+        retryAfter = changed ? now() : now().addingTimeInterval(AutoBoardFunding.retryBackoff)
         try store.release(funding, retryAfter: retryAfter)
     }
     func prepare(allowed: () -> Bool, funding: () async throws -> AutoBoardFunding.Snapshot?,
@@ -90,7 +100,7 @@ struct AutoBoardFunding {
         guard allowed(), now() >= retryAfter else { return nil }
         do {
             guard let current = try await funding(), allowed() else { return nil }
-            guard now() >= (try store.retryDeadline(walletID: current.walletID)),
+            guard now() >= (try store.retryDeadline(walletID: current.walletID, now: now())),
                   try store.hasUnhandled(current) else { return nil }
             guard let prepared = try await quote() else { return nil }
             do {
