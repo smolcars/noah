@@ -6,6 +6,7 @@ struct TransactionsView: View {
     @State private var filter = HistoryFilter.all
     @State private var selectedID: String?
     @State private var showSheet = false
+    @State private var wideLayout = false
     @ScaledMetric(relativeTo: .body) private var minimumPaneWidth: CGFloat = 260
     let onRepeatPayment: (RepeatPayment) -> Void
 
@@ -69,8 +70,9 @@ struct TransactionsView: View {
                 }
             }
             .readableWidth(AdaptiveLayout.pairedWidth)
+            .onChange(of: expanded, initial: true) { _, value in wideLayout = value }
             // Selection survives the system dismissing the phone sheet during rotation.
-            .sheet(isPresented: Binding(get: { !expanded && showSheet && selected != nil }, set: { if !expanded { showSheet = $0 } })) {
+            .sheet(isPresented: Binding(get: { !wideLayout && showSheet && selected != nil }, set: { if !wideLayout { showSheet = $0 } })) {
                 if let selected {
                     NavigationStack {
                         TransactionDetailView(transaction: selected, onRepeatPayment: repeatPayment, onClose: { selectedID = nil })

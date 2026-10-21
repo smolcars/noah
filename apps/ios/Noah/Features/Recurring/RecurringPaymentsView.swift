@@ -10,7 +10,7 @@ struct RecurringPaymentsView: View {
     @State private var review: RecurringExecutor.Review?
     @State private var actionError: String?
     @ScaledMetric(relativeTo: .body) private var minimumPaneWidth: CGFloat = 260
-    private enum Route: Hashable { case edit(String) }
+    @State private var editingID: String?
     var body: some View {
         GeometryReader { geometry in
             let expanded = !executor.schedules.isEmpty && AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth)
@@ -51,8 +51,8 @@ struct RecurringPaymentsView: View {
             }
         }
         .settingsStyle("Recurring payments", maximumWidth: AdaptiveLayout.pairedWidth)
-        .navigationDestination(for: Route.self) { route in
-            if case .edit(let id) = route, let schedule = executor.schedules.first(where: { $0.id == id }) {
+        .navigationDestination(item: $editingID) { id in
+            if let schedule = executor.schedules.first(where: { $0.id == id }) {
                 RecurringPaymentEditorView(executor: executor, schedule: schedule)
             }
         }
@@ -113,7 +113,13 @@ struct RecurringPaymentsView: View {
                 }
             }
             if !schedule.unsupportedStorage && schedule.status != "completed" && (schedule.status != "needs_attention" || schedule.requiresPolicyApproval) {
-                NavigationLink("Edit payment", value: Route.edit(schedule.id))
+                Button { editingID = schedule.id } label: {
+                    HStack {
+                        Text("Edit payment")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    }
+                }.buttonStyle(.plain)
                     .accessibilityIdentifier("recurring-edit-\(schedule.id)")
                 Button(schedule.status == "active" ? "Pause" : schedule.requiresPolicyApproval ? "Approve and resume" : "Resume") {
                     run { schedule.status == "active" ? try await executor.pause(schedule.id) : try await executor.resume(schedule.id) }

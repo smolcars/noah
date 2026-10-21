@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var resetDone = false
     @State private var showingDelete = false
     private enum Route: Hashable { case logs, feedback, debug, export }
+    @State private var destination: Route?
 
     var body: some View {
         AdaptiveForm {
@@ -104,7 +105,7 @@ struct SettingsView: View {
             if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
         }
         .settingsStyle("Settings", maximumWidth: AdaptiveLayout.pairedWidth)
-        .navigationDestination(for: Route.self) { route in
+        .navigationDestination(item: $destination) { route in
             switch route {
             case .logs: LogView()
             case .feedback: FeedbackView()
@@ -139,7 +140,13 @@ struct SettingsView: View {
         NavigationLink(destination: destination) { SettingsLabel(title: title, detail: detail, value: value) }
     }
     private func route(_ title: String, _ detail: String, to route: Route) -> some View {
-        NavigationLink(value: route) { SettingsLabel(title: title, detail: detail) }
+        Button { destination = route } label: {
+            HStack {
+                SettingsLabel(title: title, detail: detail)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+        }.buttonStyle(.plain)
     }
     private func setAutoBoard(_ enabled: Bool) {
         transaction.setAutoBoarding(enabled)
