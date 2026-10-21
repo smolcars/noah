@@ -171,3 +171,106 @@ processes and devices were left alone.
 No physical push, funded payment, protected simulator, shared emulator or Docker
 was used. Deterministic stage and transport substitutes establish admission and
 settlement behavior, not live OS delivery. Hardware reacceptance remains follow-up.
+
+### Round-2 wake handoff and automatic backup lifetime
+
+Implementation base: `249cb85f`, checkout `t3/native-wake-backup-races`.
+The review probes in `/private/tmp/noah-wake-review-r1-evidence` are now permanent
+regressions. No RN, server, log-privacy, layout, physical-device or Docker changes.
+
+Both executors previously returned after joining a foreground execution, even
+when scene deactivation/pause revoked that execution during its quote and no
+payment was submitted. The joining push therefore lost its independent admission;
+iOS could still return `.newData` with zero payments.
+`RecurringExecutor.swift:77` and `RecurringExecutor.kt:75` now serialize distinct
+budgets, recheck the waiting caller's admission, and reread due work under that
+caller's context. Same-budget callers still coalesce; legacy unbudgeted iOS joins
+only drain settlement without extending an expired worker's admission. The iOS
+worker clears its slot before resuming waiters so an earlier caller cannot clear
+a newer flight.
+Consumed/settlement evidence, ambiguous-outcome stops, policy/fee checks and lock
+order (background access → lifecycle gate → RestoreRecovery → session reservation)
+are unchanged; no gate is reentrant.
+
+iOS `AppModel.swift:413` creates the wallet-change backup observer with a detached,
+MainActor-isolated, Sendable task. `BackupCoordinator.swift:72,231,250` likewise
+detaches immediate, debounced and retry tasks. These automatic lifetimes no longer
+inherit the activation token revoked when foreground reentry finishes. Explicit
+`flush` passes still inherit push/BGTask submission budgets and deadlines;
+eligibility, cancellation, single-flight ownership and settlement are retained.
+Android has no analogous inherited-token problem: `AppServices.kt:40,62` launches
+the observer from its own supervisor scope, and `BackupCoordinator.kt:24,86,127`
+creates passes and timers from an independent IO supervisor scope. No Android
+backup production change was needed.
+
+`RecurringWakeHandoffTests` / `RecurringWakeHandoffTest` hold the production
+executor's quote or submitted payment, join two wakes, then revoke foreground
+admission. Four cases per platform cover revoked foreground quotes, expired wakes,
+successful settlement and ambiguous outcomes. Admitted wakes pay/consume once;
+expired wakes pay zero (iOS returns `.failed`); uncertainty stays locked and later
+wakes cannot replay either consumed or ambiguous occurrences.
+`BackupCoordinatorTests` adds immediate/debounced passes after reentry, a later
+request from an observer retaining an expired activation, an automatic retry after
+foreground flush, and explicit revoked-background-flush admission.
+
+Before production fixes: Android **4 cases, 1 failed**, with zero payments in the
+join-then-revoke case; iOS **23 definitions / 2 suites, 4 failed definitions / 12
+assertion issues**, reproducing both findings. After fixes: focused Android **64
+tests / 6 suites**, final focused iOS **90 definitions / 7 suites**, all passed with zero
+failures or skips. An initial focused iOS build caught a Swift 6 sending-closure
+diagnostic; explicitly marking the MainActor observer closure Sendable corrected
+it before the passing focused run. The first full iOS attempt was interrupted when
+an existing unbudgeted settlement-drain caller started another quote. A new bounded
+regression failed with **three assertion issues** before the correction. Handoff
+now requires an explicit independent budget, and the older expired-push fixture
+fails promptly if a second quote is attempted. The final focused run includes the
+entire recurring executor suite; full verification follows the last correction.
+
+Full Android ran once after the final Android source/test changes: **3,608 JVM tests / 150
+suites, zero failures/errors/skips**, regtest debug APK assembly and instrumentation
+Kotlin compilation passed in the same **2m 38s** invocation:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Implementation commits: `85c77497` (iOS handoff), `da08d0a1` (Android handoff),
+`7f403ab5` (iOS automatic backups), `10681151` (iOS unbudgeted-drain compatibility).
+
+The completed full iOS run followed the last source/test correction: **817
+definitions / 165 suites; 791 passed / 26 opt-in skipped / zero failed; 1,630
+expanded passes / 26 skips**, **438.441 seconds** of Swift Testing execution.
+The export counts a passing test with a runtime-warning child as a pass; counting
+only childless test nodes would omit it. The one runtime warning is AVAudioSession
+synchronous activation in unchanged `StoryPlaybackTests.swift:17`.
+XcodeGen generated the project first; Xcode used normal signing, arm64,
+ONLY_ACTIVE_ARCH, two jobs, no parallel tests and the requested DerivedData path:
+
+```sh
+/opt/homebrew/bin/xcodegen generate --spec apps/ios/project.yml
+task_evidence="$(git rev-parse --absolute-git-dir)/noah-wake-r2-evidence"
+nix develop --command xcodebuild -project apps/ios/Noah.xcodeproj -scheme Noah-Regtest \
+  -destination 'platform=iOS Simulator,id=58755C07-3BA6-423D-ACDB-CA837571EC59' \
+  -derivedDataPath /private/tmp/noah-wake-r2-dd \
+  -resultBundlePath "$task_evidence/ios-full-final.xcresult" \
+  -disableAutomaticPackageResolution -skipPackageUpdates -collect-test-diagnostics never \
+  -jobs 2 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -parallel-testing-enabled NO \
+  -only-testing:NoahTests test
+```
+
+Owned native builds ran sequentially. Translation `--check` is clean and all
+**seven translation-tool tests** passed. Each commit ran the normal hook (including
+RN's 148 unit tests, TypeScript and Rust formatting), with the requested Claude
+co-author trailer; hooks were not bypassed.
+
+Owned simulator **Noah Wake R2 1020**, iPhone 17 / iOS 27.0,
+`58755C07-3BA6-423D-ACDB-CA837571EC59`, was rejected twice by the Device panel as
+unknown, so Xcode/simctl targeted only that UDID. Cleanup completed: exact UDID,
+name, device type and **Shutdown** state were confirmed before deletion, then
+absence verified. Removed `/private/tmp/noah-wake-r2-dd` and all **seven** owned
+result bundles, with absence checked. No owned build process remains. Protected
+devices, physical devices, shared emulators and Docker were not used.
+Summaries, test trees, logs, Android XML/count evidence and `cleanup.json` remain
+under `$(git rev-parse --absolute-git-dir)/noah-wake-r2-evidence`.
+These deterministic regressions do not establish live OS push delivery or funded
+payments; hardware reacceptance remains follow-up.
