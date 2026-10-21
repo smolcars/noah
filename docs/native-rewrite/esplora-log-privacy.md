@@ -1098,7 +1098,7 @@ private date, and historical records or new-record-shaped continuations received
 the same exemption. The final Sentry JSON guard caught these disclosures, but
 UI error text and the iOS server-bound push-job string had no later guard.
 
-### Round-2 design
+### Round-2 design (superseded by round 3 below)
 
 Round 2 starts at `86f710b3` and first fast-forwards to `96ab298a`.
 General `sanitize`, `redact`, `LogFile.redact`, `redactForTelemetry`,
@@ -1288,7 +1288,170 @@ bundles were removed. Logs, result summaries and cleanup evidence remain under
 remains. No physical/shared simulator or emulator, Docker or regtest stack was
 used; no push ran. No tracked `client/` or `server/` file changed.
 
-There are no unresolved round-2 findings. Android device instrumentation was
+The round-2 implementation was subsequently reviewed; the findings and their
+round-3 resolution follow below. Android device instrumentation was
 compiled rather than run. Existing short-token, unregistered-secret,
 Apple-owned logging and fixed-text-collision policy limits remain as documented;
 this change adds no exception for endpoint-derived data in a formatter header.
+
+
+### Round-2 review findings (P1 privacy, P2 test isolation)
+
+The review confirmed restored base behavior for arbitrary text, UI/server errors,
+telemetry and write guards, all round-1 reproductions, all 24 ordinary headers,
+anchoring and Swift UTF-16 slicing. It found that excluding all header authority
+inspection still admitted a numeric host alias: registering `https://12:21`
+protects canonical `0.0.0.12`, but the matcher does not contain alias `12`.
+Read-back returned `2037-11-29 12:21:42.292 D [sdk] ordinary` unchanged, including
+plain-redactor re-entry and iOS `LogFile.lines()`. Base/general sanitization
+replaces the time token with `[custom-esplora]`.
+
+The shared fixture loop also accumulated registrations. Its `/2037-11-29`
+registration made later `/292%20D%20abc` assertions pass for the wrong reason;
+the `%61bc` spelling reused that token too. Those accumulated sink assertions
+alone did not establish the boundary-token regressions.
+
+### Round-3 design and isolation
+
+Read-back now runs the existing `redactHosts` tokenizer and canonicalizer over
+both the anchored formatter prefix and the body. Only the prefix call disables
+fail-closed behavior on canonicalization failure. Thus `12` canonicalizes to
+registered `0.0.0.12` and replaces the complete time token, producing
+`2037-11-29 [custom-esplora] D [sdk] ordinary`. `08` and `09` are invalid octal
+host spellings, so parse failure alone preserves these formatter tokens, even
+with `0.0.0.8` and `0.0.0.9` registered. A header cannot contain URL, encoded,
+Unicode/IDNA, hex or bracketed/unbracketed IPv6 authority spellings; it has the
+same anchored ASCII shape as round 2. Date/level tokens receive the same host
+check where applicable. No matcher exemption exists for header text.
+
+Complete raw/decoded/normalized views still reach the matcher before authority
+replacement and the rejoined result reaches it again. This protects registered
+dates, opaque tokens crossing the header/body boundary and supported encoded
+spellings before replacement can hide them. Canonical host lookup covers the
+numeric aliases absent from the literal matcher. The body and allowed public URL
+tails retain full authority inspection with fail-closed enabled. Plain-redactor
+re-entry applies the same header check. Whole-record omission, unavailable
+history, provider suppression, decoding/run/size bounds, continuation grouping
+and the final write guard retain round-2 behavior. General sanitization still
+uses fail-closed authority inspection over its complete input; no arbitrary-text
+caller can select the header mode. Together these layers preserve the closed
+round-10 data-flow guarantee, including numeric aliases in stored headers, with
+the already documented policy limits.
+
+Every one of the 48 shared header vectors now additionally runs through explicit
+immutable snapshots for both general sanitization and grouped read-back.
+`tokens` in the fixture explicitly identifies that vector's opaque token;
+the snapshot adds only its own normalized host/port. These probes never register
+or clear global history and cannot see earlier vectors or concurrent suites.
+The four date/boundary vectors also run a negative control with only their
+opaque token removed: the identical input must then avoid whole-record endpoint
+replacement. This separately proves the date, decoded boundary, encoded-letter
+registration and encoded-body cases. Existing real file/system/error/Sentry
+checks still exercise the production global policy, supplemented by these
+independent boundary proofs.
+
+The numeric matrix creates two isolated policies using real endpoint
+normalization: `https://12:21` alone, then that endpoint plus `https://8:443`
+and `https://0x9:80`. It asserts the exact canonical registered hosts. Each policy
+checks every hour 00–23 twice: ordinary body text and an email that demonstrably
+changes under `redactPlain`, forcing re-entry. Only hour 12 canonicalizes to a
+registered host in these sets and must redact; all other time tokens must be
+preserved, explicitly including 08/09. This is 96 exact read-back checks per
+platform, independent of process-global registrations. Registration derivation
+and the general sink matrix continue to use the unchanged production paths.
+
+### Round-3 file map and caller-audit amendments
+
+The complete round-2 production caller audit above still applies; no sink or
+external caller changed. Updated locations relative to each app:
+
+- Android `app/src/main/java/com/noahwallet/services/logging/EndpointLogPrivacy.kt:201`:
+  existing host canonicalizer gains a default-on fail-closed argument; `:220`
+  keeps an unparseable header token only for the explicitly disabled call.
+  `:228` is the unchanged production read-back entry, `:234` groups records,
+  `:257` selects stored-header mode, and `:315`/`:321` guard the complete view,
+  inspect prefix/body separately and guard their rejoined result. The snapshot
+  overload at `:231` is called only by `EndpointRecordPrivacyTest`; it shares
+  grouping and the private engine without reading/mutating global state.
+- Android `app/src/test/java/com/noahwallet/services/EndpointRecordPrivacyTest.kt:32`:
+  48 isolated vectors and four negative controls; `:53` numeric host/hour and
+  plain-redactor re-entry matrix. Production file/export coverage remains at
+  `:95`. `services/logging/AppLog.kt:115` still feeds files to production
+  `redactLogLines`; `:176`/`:182` retain general UI/error/telemetry behavior.
+- iOS `Noah/Services/Logging/EndpointLogPrivacy.swift:201`/`:224`:
+  identical canonicalization and default-on failure policy. `:240` is production
+  read-back, `:252` grouping, `:268` stored-header selection and `:335`/`:351`
+  complete-view matching and prefix/body inspection/rejoining. The snapshot
+  overload at `:245` is called only by `EndpointRecordPrivacyTests`, sharing
+  grouping/private engine and avoiding global state. Exact UTF-16 slicing stays.
+- iOS `NoahTests/EndpointRecordPrivacyTests.swift:18`: isolated vectors and
+  negative controls; `:36` numeric/hour and re-entry matrix; `:79` retains real
+  `lines`, `linesForExport`, and `checkedLinesForExport` coverage.
+  `Noah/Services/Logging/AppLog.swift:151` still feeds those methods to production
+  read-back; `:250`/`:256` retain general error/telemetry behavior, including
+  `SafeErrorDescription.of` and the server-bound push-job error string.
+- Shared `apps/fixtures/esplora-log-headers.json`: all 48 existing inputs and
+  expected outputs are retained, with explicit per-vector snapshot tokens.
+
+### Round-3 verification, commits and cleanup
+
+Implementation commits (normal hooks passed, each with the requested Claude
+Opus 5.5 co-author trailer):
+
+- `9c7369d1` fix(android): inspect registered numeric hosts in stored log headers
+- `a0d9aa05` fix(ios): redact canonical host aliases in stored log headers
+
+The six requested side-branch commits were cherry-picked cleanly, with no TODO
+conflict: `05113ed0` → `a57816ef`, `19ba2ebf` → `3035c4fa`, `96ab298a` →
+`9584f08c`, `18a2aefe` → `b9a7d608`, `d06375d9` → `491c8afd`, and
+`954cef96` → `d999fd9f`. The final documentation commit records this result.
+
+Before the header fix, the targeted Android run executed **11 tests: 10 passed,
+one failed**. The new numeric-alias test failed on the exact reviewed
+`2037-11-29 12:21:42.292 D [sdk] ordinary` disclosure. Final focused Android:
+**38 tests / four suites**, zero failures/errors/skips. Final focused iOS:
+**33 tests / three suites**, all passed, plus the existing lost-history test
+alone: **one test / one suite, passed with zero skips**. That first opt-in
+attempt skipped because the generated scheme inherited its launch environment;
+setting `shouldUseLaunchSchemeArgsEnv=NO` admitted the test-specific opt-in.
+The scheme was restored byte-for-byte before the full run. No source/test
+correction or full-suite retry was needed after the final header fix.
+
+The required full commands each ran **once after the final source/test changes**,
+with our Android and iOS native builds sequential. Android: **3,644 JVM
+tests / 157 suites**, zero failures/errors/skips, plus regtest APK assembly
+and instrumentation Kotlin compilation; `BUILD SUCCESSFUL` in **1m 39s**:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Signed arm64 iOS: **847 tests / 172 suites — 820 passed,
+27 opt-in skipped, zero failed**, `TEST SUCCEEDED`; Swift Testing took
+**254.322 seconds**. Generation used `cd apps/ios && /opt/homebrew/bin/xcodegen
+generate`. The full run used:
+
+```sh
+nix develop --command sh -c 'cd apps/ios && xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest -destination id=048C9171-4F8B-4C8E-B920-79B2F87F6F22 -derivedDataPath /private/tmp/noah-log-header-r3-86346969-dd -resultBundlePath /private/tmp/noah-log-header-r3-86346969-full.xcresult -disableAutomaticPackageResolution -skipPackageUpdates -parallel-testing-enabled NO -collect-test-diagnostics never -jobs 2 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- test'
+```
+
+Packages came from a private copy of the existing local package cache; ad hoc
+simulator signing and entitlements remained enabled. The Device panel twice
+returned `No device 048C9171-4F8B-4C8E-B920-79B2F87F6F22 on host local`;
+Xcode used that exact owned simulator UDID. No other device was driven.
+All existing authority/token/normalization/scaling assertions pass. Native output
+and translation `--check` pass. Normal commit hooks run lint, React Compiler,
+**148 JavaScript tests**, TypeScript and Rust formatting without bypasses.
+Temporary root dependency links and generated Husky shims are removed after the
+final documentation hook; no tracked `client/` or `server/` file changed.
+
+The owned `Noah Log Headers R3 86346969` simulator
+(`048C9171-4F8B-4C8E-B920-79B2F87F6F22`, iPhone 17, iOS 27.0) was confirmed
+`Shutdown` before deletion. It, private DerivedData and all four owned result
+bundles were removed. Logs/count summaries and cleanup evidence remain under
+`/private/tmp/noah-log-header-r3-86346969`. No owned native build/test process
+remains. No physical/shared simulator or emulator, Docker or regtest stack was
+used; no push ran. Android instrumentation was compiled rather than run.
+The review-2 privacy and isolation findings are addressed; the documented
+short-token, unregistered-secret, Apple-owned logging and fixed-text-collision
+policy limits remain unchanged.
