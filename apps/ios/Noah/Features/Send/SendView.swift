@@ -138,7 +138,7 @@ struct SendView: View {
                         Button("Start over") {
                             focus = nil
                             model.reset()
-                        }.disabled(model.busy)
+                        }.disabled(model.busy).accessibilityIdentifier("send-start-over")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -198,7 +198,7 @@ struct SendView: View {
                 .font(NoahFont.inter(52, .bold, relativeTo: .largeTitle)).lineLimit(1).minimumScaleFactor(0.35)
                 .accessibilityIdentifier("send-amount")
             Button(model.useFiat ? app.preferredCurrency : "sats") { model.toggleCurrency() }
-                .disabled(model.btcPrice == nil).accessibilityLabel("Switch amount currency")
+                .disabled(model.btcPrice == nil).accessibilityLabel("Switch amount currency").accessibilityIdentifier("send-currency-toggle")
             Text("\(model.arkBalance) sats available in Ark").foregroundStyle(NoahColor.mutedForeground)
             if let balance = app.summary?.balance,
                let message = balance.pendingRoundMessage(amount: "\(balance.ark.pendingInRound) sats") {
@@ -213,13 +213,13 @@ struct SendView: View {
                     !model.parsed.isAmountEditable
                         || (!model.destination.isEmpty
                             && !SendFlow.canMax(type: model.parsed.destinationType, request: model.parsed.bip321))
-                        || (model.arkBalance == 0 && model.onchainTotal == 0))
+                        || (model.arkBalance == 0 && model.onchainTotal == 0)).accessibilityIdentifier("send-max")
                 Spacer()
                 Button("Choose recipient first") { model.recipientFirst() }
             }
             PasteButton(payloadType: String.self) { values in
                 if let value = values.first { Task { await model.importRecipient(value) } }
-            }
+            }.accessibilityIdentifier("send-paste")
         }
     }
     private var recipientComposer: some View {
@@ -242,6 +242,7 @@ struct SendView: View {
                         Task { await model.importRecipient(value) }
                     }
                 }
+                .accessibilityIdentifier("send-paste")
                 Button("Scan QR") {
                     focus = nil
                     scanner = true
@@ -369,7 +370,7 @@ struct SendConfirmation: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Back", action: cancel).disabled(controller.locked)
+                    Button("Back", action: cancel).disabled(controller.locked).accessibilityIdentifier("send-review-back")
                 }
             }
         }

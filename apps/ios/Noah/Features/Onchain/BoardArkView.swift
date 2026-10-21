@@ -28,6 +28,7 @@ struct BoardArkView: View {
                     Task { await model.review(.board, amount: UInt64(amount) ?? 0) }
                 }
                 .disabled(model.locked || (amount != "MAX" && (UInt64(amount) ?? 0) == 0))
+                .accessibilityIdentifier("board-review")
             }
             OnchainStatusSection(model: model)
         }
