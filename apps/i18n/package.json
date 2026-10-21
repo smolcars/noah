@@ -1,0 +1,5 @@
+{
+  "name": "noah-native-i18n",
+  "private": true,
+  "dependencies": { "i18next": "*" }
+}

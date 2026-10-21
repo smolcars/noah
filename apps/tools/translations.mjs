@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// RN catalogs are read-only. GT extracts its own source offline into a temporary directory.
+// Native English is extracted offline. Only translate contacts GT; seed optionally reads RN.
 import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, readdir, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -38,7 +38,7 @@ export function format(text, names, platform, quantity) {
     return `%${index + 1}$${platform === 'ios' ? (name === quantity ? 'lld' : '@') : 's'}`;
   });
 }
-export async function extract() {
+export async function extractRN() {
   const temporary = await mkdtemp(resolve(tmpdir(), 'noah-native-translations-'));
   try {
     const config = JSON.parse(await readFile(resolve(root, 'client/gt.config.json'), 'utf8'));
@@ -137,27 +137,32 @@ export function nativeLiterals(code, swift) {
   }
   return output;
 }
-// Inventory literal UI copy and exact RN matches in native logic. Dynamic copy is explicitly
+// Inventory UI literals, display labels in native models, and user-facing errors. Dynamic copy is explicitly
 // localized at call sites; identifiers, URLs, SF Symbols and persistence keys are not copy.
-export async function inventory(all) {
-  const sources = new Set(all.map(entry => entry.source));
+export async function inventory(base = root) {
   const result = { ios: new Map(), android: new Map() };
   for (const [platform, directory, ext] of [['ios', 'apps/ios/Noah', '.swift'], ['android', 'apps/android/app/src/main/java/com/noahwallet', '.kt']]) {
-    for (const file of await filesBelow(resolve(root, directory), ext)) {
+    for (const file of await filesBelow(resolve(base, directory), ext)) {
       if (file.includes('/API/') || file.includes('/api/')) continue;
       const code = await readFile(file, 'utf8');
       let literals;
       try { literals = nativeLiterals(code, platform === 'ios'); } catch (error) { throw new Error(`${file}: ${error.message}`); }
       for (const { text, index } of literals) {
-        const uiFile = /\/(Features|DesignSystem|ui|btcmap|onchain|recurring|send|history)\//.test(file) || /Screen\.kt$/.test(file);
-        const context = code.slice(Math.max(0, index - 60), index);
-        const uiLiteral = uiFile && /(?:Text|Button|Label|Section|TextField|navigationTitle|accessibilityLabel|row|SettingRow|SettingToggle|SectionTitle|NoahForm|NoahButton|settingsStyle|title:|detail:)\s*\(?\s*(?:(?:tr|LocalizedStringKey)\(\s*)?$/.test(context);
-        const localized = /L10n\.text\((?:context,\s*)?$/.test(context);
-        const visible = text.replace(/\{nativeValue\d+\}/g, '');
-        const sentence = uiFile && /^[A-Z][A-Za-z'’]*\s/.test(text) && !text.includes('://');
-        if (!text || (!sources.has(text) && !(localized || ((sentence || uiLiteral) && /[A-Za-z]/.test(visible) && !text.includes('://') && !/^[a-z]+[._-]/.test(text))))) continue;
+        const uiFile = /Service[s]?\/(?:Wallet\/(?:WalletBalance|WalletSession|WalletBackgroundActivity)|Server\/ServerRegistration)|services\/wallet\/(?:WalletBalance|WalletSession|WalletBackgroundActivity)/.test(file) || /\/(Features|DesignSystem|ui|btcmap|onchain|recurring|send|history)\//.test(file) || /Screen\.kt$/.test(file);
+        const context = code.slice(Math.max(0, index - 200), index);
+        const uiLiteral = uiFile && /(?:Text|Button|Label|Link|Tab|LabeledContent|Section|TextField|navigationTitle|accessibilityLabel|row|detail|\w*Row|DetailValue|SettingToggle|SectionTitle|NoahForm|NoahButton|settingsStyle|title:|detail:)\s*\(?\s*(?:(?:tr|LocalizedStringKey)\(\s*)?$/.test(context);
+        const localized = /(?:L10n\.(?:text|plural)\((?:context,\s*)?(?:[^(),\n]*(?:\?\?|\?:)\s*)?|\btr(?:Plural)?\(\s*)$/.test(context);
+        const notification = /\/NotificationCopy\.(swift|kt)$/.test(file) && /^[A-Z]/.test(text);
+        const visible = text.replace(/\{[\w]+\}/g, '');
+        const human = /^(?:["©]\s*)?(?:[A-Z][a-z]*(?:$|[\s'’….,!?:/(-])|[A-Z][A-Za-z0-9]+\s|[A-Z0-9]{2,}$)/.test(text);
+        const errorCopy = /(?:Error|Failure|Exception|error)\(\s*(?:message:\s*)?$/.test(context) || /require\([^\n]+\)\s*\{\s*$/.test(context);
+        const fontName = /^Inter-(Regular|Medium|SemiBold|Bold)$/.test(text);
+        const identifier = /(?:accessibilityIdentifier|testTag|systemName|Image|icon|forKey|URL|Regex|font|Font|setValue)\s*[:(]\s*$/.test(context);
+        if (!text || identifier || fontName || (!(localized || notification) && (!(uiLiteral || (uiFile && human) || (errorCopy && human)) || !/[A-Za-z]/.test(visible) || text.includes('://') || (/^[a-z]+[._-]/.test(text) && !text.startsWith('e.g.'))))) continue;
         if (!result[platform].has(text)) result[platform].set(text, new Set());
-        result[platform].get(text).add(file.slice(root.length + 1));
+        const occurrences = result[platform].get(text);
+        occurrences.add(file.slice(base.length + 1));
+        if (/(?:L10n\.plural\((?:context,\s*)?|\btrPlural\(\s*)$/.test(context)) occurrences.plural = true;
       }
     }
   }
@@ -165,7 +170,7 @@ export async function inventory(all) {
 }
 const xml = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\\', '\\\\').replaceAll("'", "\\'").replaceAll('"', '\\"').replaceAll('\n', '\\n').replaceAll('\t', '\\t');
 const unit = value => ({ stringUnit: { state: 'translated', value } });
-export function iosCatalog(all, nativeOnly) {
+export function iosCatalog(all) {
   const strings = {};
   for (const entry of all) {
     strings[entry.source] = {
@@ -176,10 +181,9 @@ export function iosCatalog(all, nativeOnly) {
       } : unit(format(entry.translations[locale].other, entry.names, 'ios'))])),
     };
   }
-  for (const text of nativeOnly) strings[text] = { comment: 'Native-only copy; no RN translation. Intentionally English.', extractionState: 'manual', localizations: { en: unit(format(text, variables(text), 'ios')) } };
   return json({ sourceLanguage: 'en', strings: Object.fromEntries(Object.entries(strings).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)), version: '1.0' });
 }
-export function androidCatalog(all, locale, nativeOnly = []) {
+export function androidCatalog(all, locale) {
   const lines = ['<?xml version="1.0" encoding="utf-8"?>', '<!-- Generated by apps/tools/translations.mjs. Do not edit. -->', '<resources>'];
   for (const entry of all) {
     const name = resourceName(entry.source);
@@ -189,7 +193,6 @@ export function androidCatalog(all, locale, nativeOnly = []) {
       lines.push('  </plurals>');
     } else lines.push(`  <string name="${name}">"${xml(format(entry.translations[locale].other, entry.names, 'android'))}"</string>`);
   }
-  if (locale === 'en') for (const source of nativeOnly) lines.push(`  <string name="${resourceName(source)}">"${xml(format(source, variables(source), 'android'))}"</string>`);
   // Existing static resource callers (tabs/launch gate) retain their IDs.
   if (locale !== 'en') for (const [name, source] of Object.entries({ home: 'Home', receive: 'Receive', send: 'Send', history: 'History', launch_welcome: 'Welcome to Noah' })) {
     const entry = all.find(entry => entry.source === source);
@@ -197,28 +200,187 @@ export function androidCatalog(all, locale, nativeOnly = []) {
   }
   return lines.concat('</resources>', '').join('\n');
 }
-export async function generate(check = false) {
-  const all = entries(await extract());
-  const used = await inventory(all);
-  const known = new Set(all.map(entry => entry.source));
-  const nativeOnly = platform => [...used[platform].keys()].filter(source => !known.has(source)).sort();
-  const outputs = new Map();
-  outputs.set('apps/ios/Noah/Resources/Localizable.xcstrings', iosCatalog(all, nativeOnly('ios')));
-  for (const locale of locales) outputs.set(`apps/android/app/src/main/res/values${locale === 'en' ? '' : '-' + locale}/strings.xml`, androidCatalog(all, locale, nativeOnly('android')));
-  const coverage = Object.fromEntries(['ios', 'android'].map(platform => [platform, {
-    rnTranslated: [...used[platform].keys()].filter(source => known.has(source)).length,
-    nativeOnlyEnglish: nativeOnly(platform).length,
-    nativeOnly: nativeOnly(platform),
-    used: [...used[platform].keys()].filter(source => known.has(source)).sort(),
-  }]));
-  outputs.set('apps/fixtures/translations-coverage.json', json({ locales, catalogEntries: all.length, coverage }));
+
+export const toI18next = text => text.replace(variablePattern, (_, name) => `{{${name}}}`);
+export function fromI18next(text) {
+  if (typeof text !== 'string') throw new Error('Translation must be a string');
+  const native = text.replace(/\{\{(\w+)\}\}/g, '{$1}');
+  if (/\{\{|\}\}/.test(native)) throw new Error(`Unsupported i18next placeholder: ${text}`);
+  return native;
+}
+const sorted = object => Object.fromEntries(Object.entries(object).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+const categories = ['zero', 'one', 'two', 'few', 'many', 'other'];
+const hasTranslation = (catalog, key) => typeof catalog?.[key] === 'string' && catalog[key].length > 0;
+const translationKey = (entry, category) => entry.id + (entry.quantity ? `_${category}` : '');
+
+export function sourceEntries(used, plurals = {}) {
+  const sources = [...new Set(Object.values(used).flatMap(platform => [...platform.keys()]))].sort();
+  return sources.map(source => {
+    if (Object.values(used).some(platform => platform.get(source)?.plural) && !plurals[source]) throw new Error(`Missing plural forms in apps/i18n/plurals.json: ${source}`);
+    const forms = plurals[source] ?? { other: source };
+    if (forms.other !== source || Object.keys(forms).some(category => !categories.includes(category))) throw new Error(`Invalid plural source: ${source}`);
+    const names = variables(source);
+    for (const text of Object.values(forms)) if (variables(text).some(name => !names.includes(name))) throw new Error(`Placeholder drift in source: ${source}`);
+    const quantity = plurals[source] ? names[0] : undefined;
+    if (plurals[source] && !quantity) throw new Error(`Plural without count: ${source}`);
+    return { id: resourceName(source), source, names, quantity, translations: { en: forms } };
+  });
+}
+export function translationJSON(all, locale = 'en') {
+  return sorted(Object.fromEntries(all.flatMap(entry => Object.entries(entry.translations[locale]).map(([category, text]) => [translationKey(entry, category), toI18next(text)]))));
+}
+export function readTranslations(all, catalogs) {
+  return all.map(entry => {
+    const translations = { en: entry.translations.en };
+    for (const locale of locales.slice(1)) {
+      const forms = entry.quantity ? categories.filter(category => category in entry.translations.en || `${entry.id}_${category}` in (catalogs[locale] ?? {})) : ['other'];
+      translations[locale] = Object.fromEntries(forms.map(category => {
+        const key = translationKey(entry, category);
+        const text = fromI18next(catalogs[locale]?.[key] || toI18next(entry.translations.en[category] ?? entry.source));
+        const names = variables(text);
+        const required = variables(entry.translations.en[category] ?? entry.source);
+        if (names.some(name => !entry.names.includes(name)) || required.some(name => !names.includes(name))) throw new Error(`Placeholder drift: ${locale}/${key}`);
+        return [category, text];
+      }));
+    }
+    return { ...entry, translations };
+  });
+}
+export async function extract(base = root) {
+  const used = await inventory(base);
+  const plurals = JSON.parse(await readFile(resolve(base, 'apps/i18n/plurals.json'), 'utf8'));
+  const all = sourceEntries(used, plurals);
+  return { used, all, english: translationJSON(all) };
+}
+async function outputFiles(outputs, check, base) {
   const stale = [];
   for (const [file, content] of outputs) {
-    const path = resolve(root, file);
+    const path = resolve(base, file);
     if (check) { if (await readFile(path, 'utf8').catch(() => null) !== content) stale.push(file); }
     else { await mkdir(dirname(path), { recursive: true }); await writeFile(path, content); }
   }
-  if (stale.length) throw new Error(`Stale native translations. Run bun apps/tools/translations.mjs:\n${stale.join('\n')}`);
-  console.log(JSON.stringify({ catalogEntries: all.length, coverage: Object.fromEntries(Object.entries(coverage).map(([platform, value]) => [platform, { translated: value.rnTranslated, nativeOnlyEnglish: value.nativeOnlyEnglish }])) }));
+  if (stale.length) throw new Error(`Stale native translations. Run bun apps/tools/translations.mjs translate:\n${stale.join('\n')}`);
 }
-if (import.meta.main) await generate(Bun.argv.includes('--check'));
+export async function extractFile(base = root) {
+  const extracted = await extract(base);
+  await outputFiles(new Map([['apps/i18n/en/native.json', json(extracted.english)]]), false, base);
+  return extracted;
+}
+async function localeFiles(base) {
+  return Object.fromEntries(await Promise.all(locales.slice(1).map(async locale => [locale,
+    JSON.parse(await readFile(resolve(base, `apps/i18n/${locale}/native.json`), 'utf8').catch(error => { if (error.code === 'ENOENT') return '{}'; throw error; })),
+  ])));
+}
+export function seedTranslations(all, rn, existing, force = false) {
+  const seeded = {}, counts = {};
+  const bySource = new Map(rn.map(entry => [entry.source, entry]));
+  for (const locale of locales.slice(1)) {
+    const catalog = { ...existing[locale] };
+    let count = 0;
+    for (const entry of all) {
+      const match = bySource.get(entry.source);
+      if (!match || Boolean(match.quantity) !== Boolean(entry.quantity)) continue;
+      for (const [category, text] of Object.entries(match.translations[locale])) {
+        const key = translationKey(entry, category);
+        if (!force && Object.hasOwn(catalog, key)) continue;
+        catalog[key] = toI18next(text); count++;
+      }
+    }
+    seeded[locale] = sorted(catalog); counts[locale] = count;
+  }
+  return { catalogs: seeded, counts };
+}
+export async function seed(force = false) {
+  const { all } = await extractFile();
+  const { catalogs, counts } = seedTranslations(all, entries(await extractRN()), await localeFiles(root), force);
+  await outputFiles(new Map(locales.slice(1).map(locale => [`apps/i18n/${locale}/native.json`, json(catalogs[locale])])), false, root);
+  console.log(JSON.stringify({ seededKeys: counts }));
+  return counts;
+}
+export async function generate(check = false, base = root) {
+  const { all: sources, used, english } = await extract(base);
+  const catalogs = await localeFiles(base);
+  const all = readTranslations(sources, catalogs);
+  const outputs = new Map([['apps/i18n/en/native.json', json(english)]]);
+  outputs.set('apps/ios/Noah/Resources/Localizable.xcstrings', iosCatalog(all));
+  for (const locale of locales) outputs.set(`apps/android/app/src/main/res/values${locale === 'en' ? '' : '-' + locale}/strings.xml`, androidCatalog(all, locale));
+  const coverage = Object.fromEntries(['ios', 'android'].map(platform => {
+    const platformEntries = sources.filter(entry => used[platform].has(entry.source));
+    return [platform, {
+      used: [...used[platform].keys()].sort(),
+      untranslated: Object.fromEntries(locales.slice(1).map(locale => [locale, platformEntries.flatMap(entry =>
+        Object.keys(entry.translations.en).map(category => translationKey(entry, category)).filter(key => !hasTranslation(catalogs[locale], key)),
+      ).sort()])),
+    }];
+  }));
+  outputs.set('apps/fixtures/translations-coverage.json', json({ locales, catalogEntries: all.length, sourceKeys: Object.keys(english).length, coverage }));
+  await outputFiles(outputs, check, base);
+  return { catalogEntries: all.length, sourceKeys: Object.keys(english).length, untranslated: Object.fromEntries(Object.entries(coverage).map(([platform, value]) => [platform, Object.fromEntries(Object.entries(value.untranslated).map(([locale, keys]) => [locale, keys.length]))])) };
+}
+async function runGT(command, directory, base) {
+  const process = Bun.spawn([resolve(base, 'node_modules/.bin/gt'), command], { cwd: directory, stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' });
+  if (await process.exited) throw new Error(`gt ${command} failed`);
+}
+export function missingGroups(english, catalogs) {
+  const groups = new Map();
+  for (const locale of locales.slice(1)) {
+    const keys = Object.keys(english).filter(key => !hasTranslation(catalogs[locale], key));
+    if (!keys.length) continue;
+    const signature = JSON.stringify(keys);
+    if (!groups.has(signature)) groups.set(signature, { locales: [], source: Object.fromEntries(keys.map(key => [key, english[key]])) });
+    groups.get(signature).locales.push(locale);
+  }
+  // Bound response size, especially for Korean; keep sibling plural forms together.
+  return [...groups.values()].flatMap(group => {
+    const keys = Object.keys(group.source), batches = [];
+    for (let start = 0; start < keys.length;) {
+      let end = Math.min(start + 100, keys.length);
+      const stem = key => key.replace(/_(zero|one|two|few|many|other)$/, '');
+      while (end < keys.length && stem(keys[end]) === stem(keys[end - 1])) end++;
+      batches.push({ locales: group.locales, source: Object.fromEntries(keys.slice(start, end).map(key => [key, group.source[key]])) });
+      start = end;
+    }
+    return batches;
+  });
+}
+export async function translate(base = root) {
+  const { all, english } = await extractFile(base);
+  const catalogs = await localeFiles(base);
+  readTranslations(all, catalogs);
+  const groups = missingGroups(english, catalogs);
+  const temporary = await mkdtemp(resolve(tmpdir(), 'noah-gt-missing-'));
+  try {
+    const config = JSON.parse(await readFile(resolve(base, 'apps/i18n/gt.config.json'), 'utf8'));
+    await writeFile(resolve(temporary, 'package.json'), await readFile(resolve(base, 'apps/i18n/package.json')));
+    for (const group of groups) {
+      // GT treats a partial upload as a complete file. Submit only missing keys,
+      // using the same relative filename/project; keep native files untouched until success.
+      await outputFiles(new Map([
+        ['gt.config.json', json({ ...config, locales: group.locales })],
+        ['en/native.json', json(group.source)],
+      ]), false, temporary);
+      await runGT('translate', temporary, base);
+      for (const locale of group.locales) {
+        const translated = JSON.parse(await readFile(resolve(temporary, `${locale}/native.json`), 'utf8').catch(error => { throw new Error(`GT did not return ${locale}/native.json; rerun translate to retry`, { cause: error }); }));
+        for (const key of Object.keys(group.source)) {
+          if (typeof translated[key] !== 'string' || !translated[key]) throw new Error(`GT did not translate ${locale}/${key}`);
+          catalogs[locale][key] = translated[key];
+        }
+      }
+    }
+    readTranslations(all, catalogs);
+    await outputFiles(new Map(locales.slice(1).map(locale => [`apps/i18n/${locale}/native.json`, json(sorted(catalogs[locale]))])), false, base);
+  } finally { await rm(temporary, { recursive: true, force: true }); }
+  // The dashboard and committed lock describe the complete catalogs, including seeds.
+  await runGT('upload', resolve(base, 'apps/i18n'), base);
+  return generate(false, base);
+}
+if (import.meta.main) {
+  const command = Bun.argv[2] ?? 'generate';
+  if (command === '--check') console.log(JSON.stringify(await generate(true)));
+  else if (command === 'extract') await extractFile();
+  else if (command === 'seed') await seed(Bun.argv.includes('--force'));
+  else if (command === 'translate') console.log(JSON.stringify(await translate()));
+  else if (command === 'generate') console.log(JSON.stringify(await generate()));
+  else throw new Error(`Unknown command: ${command}`);
+}

@@ -4,7 +4,7 @@ import { getMessagesInternal } from 'gt-i18n/internal';
 import { msg } from 'gt-i18n';
 import config from '../../client/gt.config.json';
 import { loadTranslations } from '../../client/loadTranslations';
-import { entries, extract } from './translations.mjs';
+import { entries, extractRN } from './translations.mjs';
 
 internalInitializeGTSRA({ ...config, loadTranslations });
 const cases = [];
@@ -21,6 +21,6 @@ for (const locale of ['en', ...config.locales]) {
   }
 }
 // Plural/rich nodes are covered from the GT tree; the generator tests independently assert flattening.
-const all = entries(await extract());
+const all = entries(await extractRN());
 const plurals = all.filter(entry => entry.quantity).map(entry => ({ source: entry.source, translations: entry.translations }));
 await Bun.write(new URL('../fixtures/translations.json', import.meta.url), JSON.stringify({ cases, plurals }, null, 2) + '\n');

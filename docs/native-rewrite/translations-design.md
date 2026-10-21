@@ -1,40 +1,25 @@
-# Translations going forward (design, 2026-10-20)
+# Native translations (final decisions, 2026-10-21)
 
-## Today
+Native English in Swift/Kotlin is the source of truth. Both apps keep source-text keys in code and ship only native localization resources: iOS `.xcstrings`, Android `strings.xml`. General Translation (GT) runs at development time in JSON file mode; no GT runtime or SDK is added to either app.
 
-- **Source:** the native catalogs are generated from RN. `apps/tools/translations.mjs` runs GT's offline `generate` over `client/src` and converts `client/src/_gt/{es,ja,ko,sv}.json` into `Localizable.xcstrings` (iOS) and `res/values*/strings.xml` (Android).
-- **Keys:** source text. Android IDs are `gt_` plus a SHA-256 prefix of the English text.
-- **Coverage:** iOS 610 translated / 413 English-only; Android 528 / 505. English-only strings are copy that exists only in the native apps (`apps/fixtures/translations-coverage.json`).
-- **Problems:**
-  - Every native-only or reworded string stays English.
-  - The native apps depend on `client/src` for their copy. That works while `client/` is kept, but the two drift as soon as native copy changes.
+The existing GT project is `prj_rqmymh8xftristtvxx5exf7h`. Its native config and syntax hint live in `apps/i18n/gt.config.json` and `package.json` (`i18next`). The tool extracts strings actually used by either platform into `apps/i18n/en/native.json`, using stable IDs derived from the English source, then reads `{es,ja,ko,sv}/native.json` to generate native catalogs. RN retains its independent pipeline while `client/` remains.
 
-GT's CLI translates JSON, YAML, PO/POT and Markdown files. It has no `.xcstrings` or Android `strings.xml` format and no Swift or Kotlin SDK.
+Decisions agreed with the user:
 
-## Options
+- Stay with GT's CLI JSON file mode; keep native runtime localization.
+- Keep English source-text keys in Swift and Kotlin. Hash IDs are an interchange/resource detail; developers do not write semantic translation IDs.
+- Machine translation only, with no human review/approval step.
+- Run locally with one command: `bun apps/tools/translations.mjs translate`. Commit JSON, GT lock, catalogs, and coverage together.
+- Defer a CI bot until merge to master. It will need `GT_API_KEY` and `GT_PROJECT_ID` secrets. Current CI regeneration/stale checks are fully offline.
 
-1. **Native-owned English source, translated by the GT CLI in JSON file mode (recommended).**
-   - `apps/i18n/en.json` is generated from the strings both native apps actually use: the RN-shared ones plus native-only ones, keyed by source text as today.
-   - `gt translate` (the CLI with `files.json`, using the existing GT project and API key) fills `apps/i18n/{locale}.json`. It translates missing keys only.
-   - The existing tool converts those JSON files into `.xcstrings` and `strings.xml`, as it does today from RN's GT output.
-   - Migration loses nothing: seed `apps/i18n/{locale}.json` from the current RN translations first, so GT only translates the roughly 400–500 native-only strings.
-   - RN keeps its own GT pipeline for as long as `client/` exists. Native stops reading `client/src`.
-2. **A mobile-native localisation vendor** (for example Localazy, Lingo.dev, Lokalise or Crowdin) that translates `.xcstrings` and `strings.xml` directly.
-   - Good native tooling and a translator UI.
-   - But it's a second vendor beside GT, and two catalogs need keeping in step.
-3. **Status quo.** Keep native copy identical to RN and accept English for native-only text. Not viable once native copy evolves, or if `client/` is ever removed.
+The validated `/private/tmp/noah-dev/gt-spike` trial confirmed `{{var}}` placeholders, i18next `_one`/`_other` suffixes, multiline copy and product names across es/ja/ko/sv with CLI 2.25.2. Native plurals keep their English category definitions in `apps/i18n/plurals.json`; platform formatting and count-first argument order remain unchanged.
 
-## Recommendation: option 1
+The migration optionally seeds existing translations verbatim from RN, without overwriting native translations unless explicitly forced. Only this optional seed step depends on `client/`. Normal extraction, generation, checks, and translation continue without it.
 
-Open questions to settle in a short spike before switching:
-- **Plurals and placeholders.** The GT JSON file mode must round-trip our placeholder (`{name}`) and plural forms. If plain JSON can't carry plural categories, use ICU strings, or YAML/PO if GT handles plurals better there.
-- **Where translation runs.** Either a CI job on `master` that runs `gt translate` and opens a PR with the updated catalogs (needs a `GT_API_KEY` secret), or developers running it locally before release.
+The live migration also established that GT considers an uploaded partial locale file complete. To translate only gaps, the command stages missing English keys in a temporary JSON workspace (grouping locales with identical gaps and batching about 100 keys at a time, keeping plural siblings together), runs GT, and merges only returned missing keys into native JSON. It validates placeholders, uploads the complete catalogs to the same project, and generates platform resources. Existing seeds remain unchanged. This avoids asking GT to retranslate existing RN copy or relying on an unsupported partial-file completion assumption.
 
-## Decisions for the user
+The native inventory reports missing keys per locale. English fallback remains available while copy is being added, and `--check` detects stale English JSON, resources, and coverage without contacting GT. The independent frozen RN resolver fixture verifies retained shared wording; native tests also exercise newly translated native-only templates.
 
-1. **Vendor:** stay with GT using JSON file mode (recommended), or move native to a mobile-native vendor.
-2. **Who runs it:** a CI bot PR (recommended) or developers locally.
-3. **Keys:** keep source-text keys (recommended: zero migration, the same model as RN), or move to semantic IDs. Semantic IDs keep translations when English copy is reworded, but every string needs an ID.
-4. **Review:** decided 2026-10-20. Machine translation only; no per-language human review before merging.
+Only static UI copy is submitted. Recovery phrases, addresses, and runtime/user data never enter the extraction process. The CLI exposes no safe file deletion operation, so the trial's `i18n/en/native-spike.json` remains in the GT dashboard for manual cleanup.
 
-Decisions 1–2 are to be talked through with the user before any implementation.
+Developer workflow and command details: [Native translations](../../apps/tools/TRANSLATIONS.md).

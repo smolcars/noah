@@ -1,27 +1,48 @@
 # Native translations
 
-RN is the source of truth. Install the locked workspace dependencies (`bun install --frozen-lockfile`), then run from the repository root:
+English in Swift/Kotlin is the native source of truth. Keep writing source-text keys in SwiftUI or the existing `L10n` / Compose `tr` helpers. GT is a build-time CLI only: iOS ships `.xcstrings` and Android ships `strings.xml`; neither app includes a GT SDK or runtime.
+
+Install workspace dependencies (`bun install --frozen-lockfile`), sign in once per developer, then translate from the repository root:
 
 ```sh
-bun apps/tools/translations.mjs
-bun apps/tools/translations.mjs --check
+(cd apps/i18n && ../../node_modules/.bin/gt login)
+bun apps/tools/translations.mjs translate
+```
+
+Commit `apps/i18n/`, generated native resources, and `apps/fixtures/translations-coverage.json` together. Translation is machine-only, with no human approval step. Only static UI copy is extracted; recovery phrases, addresses, and runtime user content must never be submitted.
+
+The command extracts the union of strings used by both native platforms into `apps/i18n/en/native.json`, translates missing keys to es/ja/ko/sv with the workspace GT CLI, then generates both native catalogs. IDs are `gt_` plus the first 16 hex digits of SHA-256 of the English source. Editing English produces a new ID. Contextual duplicates share one translation.
+
+GT's `upload` treats each uploaded locale file as complete, even when keys are missing. The tool therefore groups locales with identical gaps, batches about 100 keys at a time (keeping plural siblings together), and writes just those English keys into an isolated temporary JSON workspace with the same config/project and relative filename, runs `gt translate`, and merges the returned keys. Existing native translations are never replaced. After validation it uploads the complete catalogs from `apps/i18n/` and keeps GT's `gt-lock.json`. Do not run bare `gt translate` over partially seeded catalogs; use the command above. Temporary files are removed on completion or failure; seeded files survive failed GT runs.
+
+Offline commands (no GT calls, credentials, RN source, or RN catalogs needed):
+
+```sh
+bun apps/tools/translations.mjs extract   # Write English JSON only
+bun apps/tools/translations.mjs           # Regenerate catalogs and coverage
+bun apps/tools/translations.mjs --check   # Compare English JSON, catalogs and coverage byte for byte
 bun test apps/tools/translations.test.mjs
 ```
 
-The tool runs GT's offline `generate --omit-config-ids` in `client/`, with a temporary config/output directory. It reads `client/src/_gt/{es,ja,ko,sv}.json`; it never updates RN files or contacts the GT service. No new dependency is needed. Commit regenerated resources and the coverage inventory together. Check mode compares exact bytes and fails for stale resources or inventory.
+`--check` fails if English is stale against native code, or catalogs/coverage differ from the JSON. Coverage lists all used source strings per platform and missing JSON keys per locale. Missing translations fall back to English and remain visible in that inventory. An unchanged English product name counts as translated when its locale key exists.
 
-* iOS: `Noah/Resources/Localizable.xcstrings`, included by XcodeGen's Noah source tree. Source text is the lookup key. Static SwiftUI literals localize normally; dynamic strings use `L10n`. Its explicit English-bundle fallback also formats native-only templates when a target locale has no translation.
-* Android: `res/values{,-es,-ja,-ko,-sv}/strings.xml`. Resource IDs are `gt_` plus the first 16 hex digits of SHA-256 of the UTF-8 source key. `native.xml` keeps existing non-generated IDs. `tr` uses Compose `stringResource`; background callers use `L10n.text` with a context configured from the persisted language.
-* Variables use first appearance in the source as argument order: `%1$@` on iOS, `%1$s` on Android. A plural's count is first (`%1$lld` on iOS; `%1$s` on Android). Android uses the numeric count to select a plural category and passes a separately localized display count, preserving grouping. Translations may reorder the indices. Literal percent signs are escaped. XML quotes, apostrophes, newlines, whitespace and ampersands survive Android resource compilation.
-* GT rich text is flattened by recursively concatenating text children in reading order, removing presentation/component wrappers. `Var` nodes become `{name}` (GT's `_gt_value_N` names are preserved). No spaces are invented. Plural nodes retain their categories and surrounding text. Unknown structures or variables fail generation.
-* Contextual duplicates collapse to one source key; the lowest sorted GT hash wins deterministically. This is a source-keyed native catalog limitation. Native-only copy (including interpolated sentences inventoried as `{nativeValueN}` templates) remains English and is listed per platform in `apps/fixtures/translations-coverage.json`; both platforms include it as English-only catalog entries. Static literal percent signs are kept verbatim; format-string percent signs are escaped.
-
-Language preference uses RN's `generaltranslation.locale`: iOS UserDefaults.standard, Android `gt_store` SharedPreferences. Without a supported preference, device locale candidates are checked in RN order, then English. Picking a language updates the UI and the same persisted key immediately. Notification code resolves that key when creating text, without a UI or in-memory model.
-
-The shared notification/template oracle is generated independently through RN’s actual GT resolver:
+Optional migration only, while RN is available:
 
 ```sh
-bun apps/tools/generate-translations-fixture.ts
+bun apps/tools/translations.mjs seed           # Fill missing keys from RN; never overwrite native text
+bun apps/tools/translations.mjs seed --force   # Explicitly replace matching keys with RN translations
 ```
 
-Native `TranslationsTests` / `TranslationsTest` check compiled resources for every used RN key in all five locales, 25 RN resolver cases, 45 iOS and 75 Android plural cases (including zero and grouped millions on Android), live preference re-resolution, and headless notification text. Tool tests also enforce deterministic generation, stale-file detection, flattening, placeholder order and native-only fallback.
+Only `seed` runs GT's offline RN extractor and reads `client/src/_gt/{locale}.json`. RN files stay read-only. Rich text is flattened in reading order, variables become i18next `{{name}}`, and the lowest sorted RN GT hash wins contextual duplicates deterministically. Seeding preserves the existing translated text, including whitespace and punctuation, apart from the placeholder representation.
+
+* iOS: `Noah/Resources/Localizable.xcstrings`, included by XcodeGen. Source text remains the lookup key. Static SwiftUI literals localize normally; dynamic strings use `L10n`.
+* Android: `res/values{,-es,-ja,-ko,-sv}/strings.xml`. Hashed resource IDs remain unchanged. `native.xml` retains existing non-generated IDs; generated localized aliases cover tabs and the launch gate.
+* Variables retain their names (`{name}`, `{nativeValueN}`, `{_gt_value_N}`) and become `{{name}}` in JSON. Native formatting uses source argument order, `%1$@` on iOS and `%1$s` on Android. Translations may reorder indices. Unknown/missing arguments fail generation. Literal percent signs and XML/newline escaping remain native-safe.
+* Plural callers use the English `other` text as their key. Define its English categories in `apps/i18n/plurals.json`; the first source variable is the count. The extractor rejects plural calls without definitions. JSON uses `_one`, `_other`, and any additional source CLDR categories; generation retains locale categories as `.xcstrings` variations / Android `<plurals>`. The count stays first (`%1$lld` on iOS; a numeric selector plus separately localized `%1$s` display count on Android). The currently used plural is BTC Map's place count; the RN fixture also retains two historical plurals no longer used natively.
+* Discovery scans native UI literals, display labels, explicit localization calls, and user-facing error messages. Native interpolation expressions are inventoried as `{nativeValueN}` without evaluating them. Comments, raw regexes, API-generated code, identifiers, and URL-only literals are excluded. Dynamic strings still need the existing localization helpers at their call sites.
+
+Language preference stays `generaltranslation.locale`: iOS UserDefaults.standard and Android `gt_store` SharedPreferences. Without a supported preference, native device-locale fallback follows RN order, then English. UI selection and headless notifications reread that preference.
+
+`TranslationsTests` / `TranslationsTest` check compiled resources for every used native key in all five locales, the 25-case RN resolver oracle, active plural forms (including zero and grouped millions on Android), live preference re-resolution, and translated native-only notification templates. The frozen RN oracle in `apps/fixtures/translations.json` remains independent of native generation. Its optional RN-only regeneration command is `bun apps/tools/generate-translations-fixture.ts`.
+
+A CI translation bot is deferred until merge to master. CI checks stay offline. The future bot needs `GT_API_KEY` and `GT_PROJECT_ID` secrets as described in the root README. CLI 2.25.2 exposes no safe file-delete operation; the trial's `i18n/en/native-spike.json` remains in the GT dashboard for manual cleanup.

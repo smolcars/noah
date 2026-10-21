@@ -1,0 +1,6 @@
+{
+  "{_gt_value_4} places{_gt_value_3}": {
+    "one": "One place{_gt_value_3}",
+    "other": "{_gt_value_4} places{_gt_value_3}"
+  }
+}
