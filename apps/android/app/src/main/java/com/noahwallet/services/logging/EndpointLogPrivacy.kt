@@ -67,7 +67,7 @@ internal object EndpointLogPrivacy {
         fun add(value: String, opaque: Boolean = false) {
             for (view in LogFile.decodedViews(value, percentEncoded = true, compatibility = true) ?: listOf(value)) {
                 val token = SecretMatcher.normalize(view)
-                if (token.isNotEmpty() && (!opaque || token.length >= 6 && token.lowercase(java.util.Locale.ROOT) !in commonWords)) sensitive += token
+                if (token.isNotEmpty() && (!opaque || token.length >= 6 && token.lowercase(java.util.Locale.ROOT) !in commonWords)) sensitive += view
             }
         }
         add(host)
@@ -94,7 +94,7 @@ internal object EndpointLogPrivacy {
             publicOrigins.flatMap { authority(it).orEmpty().split('.') }
     }
 
-    /** Aho–Corasick over one stable UTF-16 view; terminal failure links need only a hit bit. */
+    /** Aho–Corasick over boundary-preserving and normalized UTF-16 views; terminal failure links need only a hit bit. */
     internal class SecretMatcher(tokens: Set<String>) {
         private class Node {
             val edges = mutableMapOf<Char, Int>()
@@ -103,9 +103,9 @@ internal object EndpointLogPrivacy {
         }
         private val nodes = mutableListOf(Node())
         init {
-            for (token in tokens) {
+            for (token in tokens.flatMap { listOf(it, fold(it), normalize(it)) }.toSet()) {
                 var state = 0
-                for (unit in normalize(token)) {
+                for (unit in token) {
                     state = nodes[state].edges.getOrPut(unit) { nodes.add(Node()); nodes.lastIndex }
                 }
                 if (state != 0) nodes[state].terminal = true
@@ -124,8 +124,12 @@ internal object EndpointLogPrivacy {
         }
         fun contains(text: String): Boolean {
             if (nodes.size == 1) return false
+            // Normalizing a whole record can compose a token's final scalar with its suffix.
+            return containsView(text) || containsView(fold(text)) || containsView(normalize(text))
+        }
+        private fun containsView(text: String): Boolean {
             var state = 0
-            for (unit in normalize(text)) {
+            for (unit in text) {
                 while (state != 0 && unit !in nodes[state].edges) state = nodes[state].failure
                 state = nodes[state].edges[unit] ?: 0
                 if (nodes[state].terminal) return true
@@ -133,6 +137,7 @@ internal object EndpointLogPrivacy {
             return false
         }
         companion object {
+            private fun fold(text: String) = text.lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT)
             fun normalize(text: String): String = java.text.Normalizer.normalize(
                 java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC).lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT),
                 java.text.Normalizer.Form.NFKC)
