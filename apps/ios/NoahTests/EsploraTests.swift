@@ -114,6 +114,7 @@ struct EsploraTests {
     // failClosed is installation-lifetime global state; run this integration probe alone.
     @Test(.enabled(if: ProcessInfo.processInfo.environment["NOAH_TEST_LOST_HISTORY"] == "1"))
     func unknownHistoryStartupProtectsHistoricalExport() throws {
+        EndpointLogPrivacy.register("https://review.example/2037-11-29")
         let root = FileManager.default.temporaryDirectory.appending(path: "unknown-export-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -125,6 +126,13 @@ struct EsploraTests {
             let storage = try SettingsStorage(rootPath: path)
             do { try EsploraSettings(storage: storage).restoreLogPrivacy() }
             catch { EndpointLogPrivacy.failClosed() }
+            let input = "2037-11-29 12:21:42.292 D [sdk] ordinary"
+            #expect(EndpointLogPrivacy.redact(input) == "[custom-esplora]")
+            #expect(LogFile.redact(input) == "[custom-esplora]")
+            #expect(LogFile.redactForTelemetry(input) == "[custom-esplora]")
+            #expect(SafeErrorDescription.of(BarkError(message: input)) == "[custom-esplora]")
+            #expect(EndpointLogPrivacy.redactRecord(input) == "[custom-esplora]")
+            #expect(EndpointLogPrivacy.redactLogLines([input]) == ["[custom-esplora]"])
             #expect(!LogFile(directory: root).lines().joined().contains("fakeR4LostHistory"))
             try storage.setDurably("fallback", forKey: "fake-test-setting")
         }

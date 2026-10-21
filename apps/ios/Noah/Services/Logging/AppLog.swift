@@ -84,8 +84,8 @@ final class LogFile: @unchecked Sendable {
             enqueueDroppedMarker()
             pending += 1
             queue.async { [self] in
-                let cleaned = Self.redactMessage(message)
-                let safeTag = Self.redactMessage(tag)
+                let cleaned = Self.redact(message)
+                let safeTag = Self.redact(tag)
                 if systemLog {
                     let formatted = "[\(safeTag)] \(cleaned)"
                     let record = EndpointLogPrivacy.redactRecord(formatted)
@@ -250,11 +250,6 @@ final class LogFile: @unchecked Sendable {
     static func redact(_ message: String) -> String {
         guard message.utf8.count <= maxMessageBytes else { return "[oversized log message omitted]" }
         return redactForTelemetry(message) ?? "[redacted]"
-    }
-
-    private static func redactMessage(_ message: String) -> String {
-        guard message.utf8.count <= maxMessageBytes else { return "[oversized log message omitted]" }
-        return redactForTelemetry(message, endpointPrivacy: EndpointLogPrivacy.sanitizeMessage) ?? "[redacted]"
     }
 
     /// Nil means inspection was uncertain; telemetry must omit the message.

@@ -233,20 +233,15 @@ enum EndpointLogPrivacy {
     }
     static func redact(_ text: String) -> String { sanitize(text) ?? "[redacted]" }
 
-    // Only formatter-owned ASCII fields are exempt; tags and all message text remain inspected.
     private static let recordHeader = try! NSRegularExpression(pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} [VDIWE] "#)
     private static let recordStart = try! NSRegularExpression(pattern: recordHeader.pattern + #"\["#)
-    private static func header(_ text: String) -> String {
-        guard let match = recordHeader.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return "" }
-        return (text as NSString).substring(with: match.range)
-    }
 
     /// Keep continuation lines with their endpoint/error context, including historical files.
     static func redactLogLines(_ lines: [String]) -> [String] {
         var result: [String] = [], record: [String] = []
         func flush() {
             guard !record.isEmpty else { return }
-            result.append(contentsOf: redact(record.joined(separator: "\n")).split(separator: "\n").map(String.init))
+            result.append(contentsOf: (sanitizeLogRecord(record.joined(separator: "\n")) ?? "[redacted]").split(separator: "\n").map(String.init))
             record.removeAll(keepingCapacity: true)
         }
         for line in lines {
@@ -257,11 +252,12 @@ enum EndpointLogPrivacy {
         return result
     }
 
-    /// Raw tags/callbacks have no formatter-owned prefix, even when they imitate one.
-    static func sanitizeMessage(_ text: String) -> String? {
+    /// Only stored records may exclude formatter fields from authority inspection.
+    private static func sanitizeLogRecord(_ text: String) -> String? {
         let (registered, matcher, hosts, unavailable) = snapshot()
         if unavailable { return "[custom-esplora]" }
-        return sanitizeBody(text, registered: registered, matcher: matcher, hosts: hosts)
+        let hasHeader = recordHeader.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+        return sanitize(text, registered: registered, matcher: matcher, hosts: hosts, recordReadBack: hasHeader)
     }
 
     private static func snapshot() -> (Set<String>, SecretMatcher, Set<String>, Bool) {
@@ -274,11 +270,6 @@ enum EndpointLogPrivacy {
     /// Formatting can join individually safe fields into a registered secret.
     /// Only the token guard runs here: preserve timestamps and provider summaries.
     static func redactRecord(_ text: String) -> String {
-        let prefix = header(text)
-        return prefix + guardRecordBody((text as NSString).substring(from: prefix.utf16.count))
-    }
-
-    private static func guardRecordBody(_ text: String) -> String {
         let (registered, matcher, _, unavailable) = snapshot()
         if unavailable { return "[custom-esplora]" }
         guard !registered.isEmpty else { return text }
@@ -290,17 +281,16 @@ enum EndpointLogPrivacy {
 
     static func sanitize(_ text: String) -> String? {
         let (registered, matcher, hosts, unavailable) = snapshot()
-        if unavailable { return header(text) + "[custom-esplora]" }
+        if unavailable { return "[custom-esplora]" }
         return sanitize(text, registered: registered, matcher: matcher, hosts: hosts)
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
     static func sanitize(_ text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher([]), hosts: Set<String> = []) -> String? {
-        let prefix = header(text)
-        return sanitizeBody((text as NSString).substring(from: prefix.utf16.count), registered: registered, matcher: matcher, hosts: hosts).map { prefix + $0 }
+        sanitize(text, registered: registered, matcher: matcher, hosts: hosts, recordReadBack: false)
     }
 
-    private static func sanitizeBody(_ text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>) -> String? {
+    private static func sanitize(_ text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Bool) -> String? {
         if !registered.isEmpty && hasExcessiveCombiningRun(text) { return "[custom-esplora]" }
         // Exported lines include a bounded tag and timestamp as well as the message.
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128 else { return "[oversized log message omitted]" }
@@ -318,22 +308,27 @@ enum EndpointLogPrivacy {
         guard !registered.isEmpty else { return text }
         var result = text
         for (index, view) in views.enumerated() {
-            let endpointOnly = redactEndpoints(view, registered: registered, matcher: matcher, hosts: hosts)
+            let endpointOnly = redactEndpoints(view, registered: registered, matcher: matcher, hosts: hosts, recordReadBack: recordReadBack)
             if endpointOnly == "[custom-esplora]" || (index > 0 && endpointOnly != view) { return "[custom-esplora]" }
             // Host replacement must not hide credential labels or break mnemonic runs.
             let plain = LogFile.redactPlain(view)
             if index > 0 && plain != view { return "[redacted]" }
             if index == 0 {
-                result = plain == view ? endpointOnly : redactEndpoints(plain, registered: registered, matcher: matcher, hosts: hosts)
+                result = plain == view ? endpointOnly : redactEndpoints(plain, registered: registered, matcher: matcher, hosts: hosts, recordReadBack: recordReadBack)
             }
         }
         return result
     }
 
-    private static func redactEndpoints(_ text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>) -> String {
-        let source = text as NSString
+    private static func redactEndpoints(_ text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Bool) -> String {
+        // Match complete raw/decoded views before authority replacement can hide a boundary token.
+        if recordReadBack && matcher.contains(text) { return "[custom-esplora]" }
+        let headerLength = recordReadBack ? (recordHeader.firstMatch(in: text, range: NSRange(text.startIndex..., in: text))?.range.length ?? 0) : 0
+        let prefix = (text as NSString).substring(to: headerLength)
+        let body = (text as NSString).substring(from: headerLength)
+        let source = body as NSString
         var parts: [String] = [], offset = 0
-        for match in urls.matches(in: text, range: NSRange(location: 0, length: source.length)) {
+        for match in urls.matches(in: body, range: NSRange(location: 0, length: source.length)) {
             parts.append(source.substring(with: NSRange(location: offset, length: match.range.location - offset)))
             let value = source.substring(with: match.range)
             parts.append(allowed(value, registered: registered, hosts: hosts) ? value : "[custom-esplora]")
@@ -341,7 +336,7 @@ enum EndpointLogPrivacy {
         }
         parts.append(source.substring(from: offset))
         var clean = parts.joined()
-        clean = redactHosts(clean, registered: hosts)
+        clean = prefix + redactHosts(clean, registered: hosts)
         return matcher.contains(clean) ? "[custom-esplora]" : clean
     }
 }

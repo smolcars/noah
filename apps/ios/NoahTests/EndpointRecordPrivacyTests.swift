@@ -12,22 +12,27 @@ struct EndpointRecordPrivacyTests {
     }
 
     private struct HeaderCase: Decodable {
-        let name: String; let endpoint: String; let input: String; let expected: String
+        let name: String; let endpoint: String; let input: String; let expected: String; let generalExpected: String; let recordExpected: String?
     }
 
     @Test func sharedHeadersPreserveOnlyTheAnchoredFormatterPrefix() throws {
         for test in try Fixtures.decode("esplora-log-headers", as: [HeaderCase].self) {
             EndpointLogPrivacy.register(test.endpoint)
-            #expect(EndpointLogPrivacy.redact(test.input) == test.expected, "\(test.name)")
-            #expect(LogFile.redact(test.input) == test.expected, "\(test.name)")
-            #expect(LogFile.redactForTelemetry(test.input) == test.expected, "\(test.name)")
+            let expected = test.generalExpected
+            let telemetry = expected == "[redacted]" ? nil : expected
+            #expect(EndpointLogPrivacy.redact(test.input) == expected, "\(test.name)")
+            #expect(LogFile.redact(test.input) == expected, "\(test.name)")
+            #expect(LogFile.redactForTelemetry(test.input) == telemetry, "\(test.name)")
+            #expect(SafeErrorDescription.of(BarkError(message: test.input)) == expected, "\(test.name)")
+            #expect(EndpointLogPrivacy.redactLogLines(test.input.components(separatedBy: "\n")) == test.expected.components(separatedBy: "\n"), "\(test.name)")
+            if let recordExpected = test.recordExpected { #expect(EndpointLogPrivacy.redactRecord(test.input) == recordExpected, "\(test.name)") }
             let event = Event(level: .error); event.message = SentryMessage(formatted: test.input)
             event.exceptions = [Exception(value: test.input, type: "FakeEndpointError")]
             let clean = try #require(AppTelemetry.scrub(event))
-            #expect(clean.message?.formatted == test.expected)
-            #expect(clean.exceptions?.first?.value == test.expected)
+            #expect(clean.message?.formatted == telemetry)
+            #expect(clean.exceptions?.first?.value == telemetry)
             let crumb = Breadcrumb(level: .info, category: "esplora"); crumb.message = test.input
-            #expect(try #require(AppTelemetry.scrub(crumb)).message == test.expected)
+            #expect(AppTelemetry.scrub(crumb)?.message == telemetry)
         }
     }
 
@@ -53,20 +58,21 @@ struct EndpointRecordPrivacyTests {
         #expect(try await file.checkedLinesForExport() == expected)
         try FileManager.default.removeItem(at: active)
         for test in tests {
+            EndpointLogPrivacy.register(test.endpoint)
             try test.input.write(to: directory.appending(path: "noah.log.1"), atomically: true, encoding: .utf8)
-            #expect(file.lines() == [test.expected], "\(test.name)")
-            #expect(await file.linesForExport() == [test.expected], "\(test.name)")
-            #expect(try await file.checkedLinesForExport() == [test.expected], "\(test.name)")
+            #expect(file.lines() == test.expected.components(separatedBy: "\n"), "\(test.name)")
+            #expect(await file.linesForExport() == test.expected.components(separatedBy: "\n"), "\(test.name)")
+            #expect(try await file.checkedLinesForExport() == test.expected.components(separatedBy: "\n"), "\(test.name)")
         }
     }
 
-    @Test func finalWriteGuardKeepsHeaderWhenTheBodyMatchesASecret() {
+    @Test func finalWriteGuardInspectsTheWholeRecord() {
         EndpointLogPrivacy.register("https://review-number.example/835917264")
         let header = "2026-10-21 08:21:42.292 D "
-        #expect(EndpointLogPrivacy.redactRecord(header + "[sdk] 835917264") == header + "[custom-esplora]")
-        // A registered token equal to formatter-owned digits cannot erase the header.
+        #expect(EndpointLogPrivacy.redactRecord(header + "[sdk] 835917264") == "[custom-esplora]")
+        // The complete formatter prefix remains subject to the token guard.
         let matcher = EndpointLogPrivacy.SecretMatcher(["2026-10-21"])
-        #expect(EndpointLogPrivacy.sanitize(header + "[sdk] ordinary", registered: ["https://review-number.example"], matcher: matcher) == header + "[sdk] ordinary")
+        #expect(EndpointLogPrivacy.sanitize(header + "[sdk] ordinary", registered: ["https://review-number.example"], matcher: matcher) == "[custom-esplora]")
     }
 
     @Test func callbackTextAndTagsCannotClaimARecordHeader() throws {
