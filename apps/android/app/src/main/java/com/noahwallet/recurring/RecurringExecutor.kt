@@ -78,8 +78,9 @@ class RecurringExecutor(private val d: Dependencies,
             if (!budget.available) return
             val pending = task?.takeIf { !it.isCompleted } ?: break
             val sameBudget = taskBudget === budget
-            pending.await()
-            if (sameBudget) return
+            val result = runCatching { pending.await() }
+            currentCoroutineContext().ensureActive()
+            if (sameBudget) { result.getOrThrow(); return }
             // Another admission may have been revoked; reread durable due work with our budget.
         }
         task = null
@@ -228,8 +229,7 @@ class RecurringExecutor(private val d: Dependencies,
             if (!noWallet) reload()
             if (!noWallet && budget.available && caller?.isActive != false && currentCoroutineContext().isActive) {
                 val visible = runCatching { storage { d.store.load().schedules.values.toList() } }.getOrDefault(emptyList())
-                requireStage(budget, caller)
-                d.notify(visible, null)
+                if (budget.available && caller?.isActive != false && currentCoroutineContext().isActive) d.notify(visible, null)
             }
         } finally { executionBinding = null; running = false } }
     }
