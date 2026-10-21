@@ -1,0 +1,43 @@
+appId: com.noahwallet.regtest
+name: Receive details, amount and note
+---
+- runFlow: subflows/fresh-wallet.yml
+- tapOn: "Receive"
+- extendedWaitUntil:
+    visible:
+      id: "receive-qr-button"
+    timeout: 30000
+- tapOn:
+    id: "receive-qr-button"
+- assertVisible:
+    id: "receive-copy-ark"
+- assertVisible:
+    id: "receive-copy-onchain"
+- assertNotVisible:
+    id: "receive-copy-lightning"
+- runFlow: subflows/close-payment-details.yml
+- tapOn:
+    id: "receive-amount-button"
+- tapOn:
+    id: "receive-amount-input"
+- inputText: "500"
+- tapOn:
+    id: "receive-description-input"
+- inputText: "Test payment"
+- runFlow: subflows/hide-keyboard.yml
+- tapOn:
+    id: "receive-amount-submit"
+- extendedWaitUntil:
+    visible: "Edit amount"
+    timeout: 30000
+- assertVisible: "Test payment"
+- tapOn:
+    id: "receive-qr-button"
+- assertVisible:
+    id: "receive-copy-lightning"
+- runFlow: subflows/close-payment-details.yml
+- tapOn:
+    id: "receive-amount-button"
+- tapOn:
+    id: "receive-amount-remove"
+- assertVisible: "Add amount"

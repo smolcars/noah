@@ -1045,7 +1045,7 @@
       ]
     },
     "android": {
-      "rnTranslated": 528,
+      "rnTranslated": 529,
       "nativeOnlyEnglish": 505,
       "nativeOnly": [
         "6-digit code",
@@ -2075,6 +2075,7 @@
         "onchain",
         "sats",
         "unknown error",
+        "verification-code-input",
         "{_gt_value_4} places{_gt_value_3}",
         "{amount} sent to {recipient}.",
         "{amount} to {recipient} could not be sent yet: {error}",

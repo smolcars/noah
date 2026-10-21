@@ -1,0 +1,51 @@
+appId: com.noahwallet.regtest
+name: Verify emergency email and save Lightning identity
+---
+- runScript: scripts/lightning-address.js
+# Retry only launch/clearing on a disposable wallet when ADB briefly reconnects.
+- retry:
+    maxRetries: 2
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
+          permissions:
+            all: allow
+- runFlow: subflows/start-wallet-onboarding.yml
+- tapOn:
+    id: "email-address-input"
+- inputText: "maestro@example.com"
+- runFlow: subflows/hide-keyboard.yml
+- tapOn: "Send Verification Code"
+- extendedWaitUntil:
+    visible:
+      id: "verification-code-input"
+    timeout: 30000
+- tapOn:
+    id: "verification-code-input"
+- inputText: "000000"
+- runFlow: subflows/hide-keyboard.yml
+- tapOn: "Verify Email"
+- runFlow: subflows/finish-platform-onboarding.yml
+- tapOn:
+    id: "lightning-username-input"
+- eraseText: 80
+- inputText: ${output.lightningUsername}
+- runFlow: subflows/hide-keyboard.yml
+- scrollUntilVisible:
+    element: "Save"
+    direction: DOWN
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible:
+      id: "home-settings-button"
+    timeout: 30000
+- tapOn:
+    id: "home-settings-button"
+- tapOn:
+    id: "settings-profile"
+- assertVisible: ".*${output.lightningUsername}@localhost[.]com.*"
+- scrollUntilVisible:
+    element: ".*maestro@example[.]com.*"
+    direction: DOWN
+- assertVisible: "Verified"

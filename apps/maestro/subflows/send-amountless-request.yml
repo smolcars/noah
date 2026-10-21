@@ -1,0 +1,16 @@
+appId: com.noahwallet.regtest
+name: Amountless request stays on amount entry
+---
+- runFlow: reset-send.yml
+- runFlow: paste-recipient.yml
+- assertVisible: "How much?"
+- assertVisible:
+    id: "send-key-5"
+- assertNotVisible:
+    id: "send-recipient"
+- tapOn: "Choose recipient first"
+- tapOn:
+    id: "send-start-over"
+- assertVisible:
+    id: "send-amount"
+    text: "0"

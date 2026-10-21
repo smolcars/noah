@@ -1,0 +1,13 @@
+appId: com.noahwallet.regtest
+---
+# Retry only launch/clearing on a disposable wallet when ADB briefly reconnects.
+- retry:
+    maxRetries: 2
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
+          permissions:
+            all: allow
+- runFlow: start-wallet-onboarding.yml
+- runFlow: complete-wallet-onboarding-without-email.yml

@@ -1,0 +1,11 @@
+appId: com.noahwallet.regtest
+---
+- tapOn: "Send"
+- runFlow:
+    when:
+      visible: "Choose recipient first"
+    commands:
+      - tapOn: "Choose recipient first"
+- tapOn:
+    id: "send-start-over"
+- assertVisible: "How much?"

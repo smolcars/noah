@@ -1,0 +1,24 @@
+appId: com.noahwallet.regtest
+name: Settings and manual boarding draft
+---
+- runFlow: subflows/fresh-wallet.yml
+- tapOn:
+    id: "home-settings-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-board-ark"
+    direction: DOWN
+- tapOn:
+    id: "settings-board-ark"
+- extendedWaitUntil:
+    visible: "Confirmed onchain balance"
+    timeout: 30000
+- tapOn:
+    id: "board-amount"
+- inputText: "12345"
+- assertVisible:
+    id: "board-amount"
+    text: "12345"
+- runFlow: subflows/hide-keyboard.yml
+- assertVisible:
+    id: "board-review"

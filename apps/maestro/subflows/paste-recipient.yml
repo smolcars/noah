@@ -1,0 +1,7 @@
+appId: com.noahwallet.regtest
+---
+- tapOn:
+    id: "send-paste"
+- tapOn:
+    text: "Allow Paste"
+    optional: true

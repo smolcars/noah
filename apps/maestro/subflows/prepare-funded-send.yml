@@ -1,0 +1,14 @@
+appId: com.noahwallet.regtest
+---
+- runFlow: fresh-wallet.yml
+- tapOn: "Receive"
+- extendedWaitUntil:
+    visible:
+      id: "receive-qr-button"
+    timeout: 30000
+- tapOn:
+    id: "receive-qr-button"
+- tapOn:
+    id: "receive-copy-ark"
+- runFlow: close-payment-details.yml
+- tapOn: "Home"

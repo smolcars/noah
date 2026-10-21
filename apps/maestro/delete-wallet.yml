@@ -1,0 +1,19 @@
+appId: com.noahwallet.regtest
+name: Delete requires typed confirmation
+---
+- runFlow: subflows/fresh-wallet.yml
+- tapOn:
+    id: "home-settings-button"
+- scrollUntilVisible:
+    element: "Delete Wallet"
+    direction: DOWN
+- tapOn: "Delete Wallet"
+- tapOn:
+    id: "delete-wallet-input"
+- inputText: "delete"
+- runFlow: subflows/hide-keyboard.yml
+- tapOn:
+    id: "delete-wallet-confirm"
+- extendedWaitUntil:
+    visible: "Welcome to Noah"
+    timeout: 60000

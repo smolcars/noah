@@ -1,0 +1,18 @@
+appId: com.noahwallet.regtest
+---
+- extendedWaitUntil:
+    visible: "Create Wallet"
+    timeout: 30000
+- tapOn: "Create Wallet"
+- assertVisible: "Noah is in beta"
+- tapOn: "I accept"
+- extendedWaitUntil:
+    visible: "Your Recovery Phrase"
+    timeout: 120000
+- scrollUntilVisible:
+    element: "I Have Saved It, Continue"
+    direction: DOWN
+- tapOn: "I Have Saved It, Continue"
+- extendedWaitUntil:
+    visible: "Emergency Email"
+    timeout: 30000

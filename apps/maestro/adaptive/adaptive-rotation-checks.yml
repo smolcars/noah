@@ -1,0 +1,21 @@
+appId: com.noahwallet.regtest
+---
+- tapOn:
+    id: "home-settings-button"
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "settings-profile"
+      - tapOn:
+          id: "profile-name-input"
+      - eraseText: 80
+      - inputText: "Rotation draft"
+      - setOrientation: LANDSCAPE_LEFT
+      - assertVisible:
+          id: "profile-name-input"
+          text: "Rotation draft"
+      - setOrientation: PORTRAIT
+      - runFlow: ../subflows/hide-keyboard.yml
+      - runFlow: ../subflows/back.yml
+- runFlow: ../subflows/back.yml

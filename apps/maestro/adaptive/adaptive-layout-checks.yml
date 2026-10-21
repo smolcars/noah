@@ -1,0 +1,59 @@
+appId: com.noahwallet.regtest
+---
+- setOrientation: PORTRAIT
+- tapOn: "Send"
+- tapOn:
+    id: "send-key-5"
+- tapOn:
+    id: "send-key-0"
+- tapOn:
+    id: "send-key-0"
+- setOrientation: LANDSCAPE_LEFT
+- assertVisible:
+    id: "send-amount"
+    text: "500"
+- takeScreenshot: adaptive-send
+- setOrientation: PORTRAIT
+- assertVisible:
+    id: "send-amount"
+    text: "500"
+- tapOn: "Receive"
+- extendedWaitUntil:
+    visible:
+      id: "receive-qr-button"
+    timeout: 30000
+- tapOn:
+    id: "receive-amount-button"
+- tapOn:
+    id: "receive-amount-input"
+- inputText: "500"
+- tapOn:
+    id: "receive-description-input"
+- inputText: "Layout note"
+- setOrientation: LANDSCAPE_RIGHT
+- assertVisible:
+    id: "receive-description-input"
+    text: "Layout note"
+- takeScreenshot: adaptive-receive-draft
+- setOrientation: PORTRAIT
+- assertVisible:
+    id: "receive-amount-input"
+    text: "500"
+- runFlow: ../subflows/hide-keyboard.yml
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - pressKey: BACK
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: "Cancel"
+- tapOn: "History"
+- assertVisible: "All"
+- setOrientation: LANDSCAPE_LEFT
+- assertVisible: "All"
+- takeScreenshot: adaptive-history
+- setOrientation: PORTRAIT
+- tapOn: "Home"

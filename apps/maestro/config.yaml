@@ -1,0 +1,3 @@
+# Only independent PR flows are discovered here. Helpers and adaptive flows run explicitly.
+flows:
+  - "*.yml"
