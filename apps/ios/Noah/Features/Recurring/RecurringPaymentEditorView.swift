@@ -6,6 +6,8 @@ struct RecurringPaymentEditorView: View {
     @Environment(\.dismiss) private var dismiss
     private enum Field: Hashable { case label, recipient, amount, comment, days, count }
     @FocusState private var focus: Field?
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var compactKeyboard: Bool { verticalSizeClass == .compact && focus != nil }
     @State private var label: String
     @State private var recipient: String
     @State private var amount: String
@@ -38,62 +40,76 @@ struct RecurringPaymentEditorView: View {
     private var interval: RecurringInterval { .init(unit: frequency, every: frequency == "day" ? (Int(customDays) ?? 0) : periodEvery) }
     private var destination: (destination: String, type: String)? { try? RecurringRecipient.resolve(recipient) }
     var body: some View {
-        AdaptiveForm {
-            Section {
-                Text("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.")
-                    .foregroundStyle(NoahColor.mutedForeground)
-                if original != nil { Text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.").font(NoahFont.footnote) }
-            }
-            Section("Name") { TextField("e.g. Rent, Donation, VPN", text: $label).focused($focus, equals: .label).accessibilityIdentifier("recurring-label-input") }
-            Section("Recipient") {
-                TextField("name@domain.com, ark1… or lno1…", text: $recipient)
-                    .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .recipient)
-                    .accessibilityIdentifier("recurring-recipient-input")
-                Text(LocalizedStringKey(destination.map { $0.type == "ark" ? "Ark address" : $0.type == "lnurl" ? "Lightning address" : "BOLT12 offer" } ?? "Ark address, Lightning address or BOLT12 offer"))
-                    .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-            }
-            Section("Amount (sats)") {
-                TextField("Amount in sats", text: $amount).keyboardType(.numberPad).focused($focus, equals: .amount)
-                    .accessibilityIdentifier("recurring-amount-input")
-                Text("\(amount.isEmpty ? "0" : amount) sats per payment, plus network fees").font(NoahFont.footnote)
-            }
-            if destination?.type == "lnurl" {
-                Section("Note (optional)") {
-                    TextField("Shared with the recipient", text: $comment).focused($focus, equals: .comment)
+        ScrollViewReader { scroll in
+            AdaptiveForm {
+                Section {
+                    Text("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.")
+                        .foregroundStyle(NoahColor.mutedForeground)
+                    if original != nil { Text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.").font(NoahFont.footnote) }
                 }
-            }
-        } secondary: {
-            Section("Repeat") {
-                Picker("Repeat", selection: $frequency) { Text("Weekly").tag("week"); Text("Monthly").tag("month"); Text("Custom").tag("day") }.pickerStyle(.segmented)
-                if frequency == "day" { TextField("Every … days", text: $customDays).keyboardType(.numberPad).focused($focus, equals: .days) }
-                else {
-                    Picker(frequency == "week" ? "Every … weeks" : "Every … months", selection: $periodEvery) {
-                        ForEach(1...12, id: \.self) { Text("\($0)").tag($0) }
-                    }
-                }
-            }
-            Section("First payment") { DatePicker("First payment", selection: $start) }
-            Section("Ends") {
-                Picker("Ends", selection: $endMode) { Text("Never").tag("never"); Text("On date").tag("date"); Text("After").tag("count") }.pickerStyle(.segmented)
-                if endMode == "date" { DatePicker("End date", selection: $endDate, displayedComponents: .date) }
-                if endMode == "count" { TextField("Number of payments", text: $count).keyboardType(.numberPad).focused($focus, equals: .count) }
-            }
-            if interval.valid {
-                Section(interval.description) {
-                    ForEach(preview, id: \.self) { Text(Date(timeIntervalSince1970: $0 / 1000).formatted()) }
-                    Text("You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice.")
+                Section("Name") { TextField("e.g. Rent, Donation, VPN", text: $label).focused($focus, equals: .label).id(Field.label).accessibilityIdentifier("recurring-label-input") }
+                Section("Recipient") {
+                    TextField("name@domain.com, ark1… or lno1…", text: $recipient)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .recipient).id(Field.recipient)
+                        .accessibilityIdentifier("recurring-recipient-input")
+                    Text(LocalizedStringKey(destination.map { $0.type == "ark" ? "Ark address" : $0.type == "lnurl" ? "Lightning address" : "BOLT12 offer" } ?? "Ark address, Lightning address or BOLT12 offer"))
                         .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
                 }
+                Section("Amount (sats)") {
+                    TextField("Amount in sats", text: $amount).keyboardType(.numberPad).focused($focus, equals: .amount).id(Field.amount)
+                        .accessibilityIdentifier("recurring-amount-input")
+                    Text("\(amount.isEmpty ? "0" : amount) sats per payment, plus network fees").font(NoahFont.footnote)
+                }
+                if destination?.type == "lnurl" {
+                    Section("Note (optional)") {
+                        TextField("Shared with the recipient", text: $comment).focused($focus, equals: .comment).id(Field.comment)
+                    }
+                }
+            } secondary: {
+                Section("Repeat") {
+                    Picker("Repeat", selection: $frequency) { Text("Weekly").tag("week"); Text("Monthly").tag("month"); Text("Custom").tag("day") }.pickerStyle(.segmented)
+                    if frequency == "day" { TextField("Every … days", text: $customDays).keyboardType(.numberPad).focused($focus, equals: .days).id(Field.days) }
+                    else {
+                        Picker(frequency == "week" ? "Every … weeks" : "Every … months", selection: $periodEvery) {
+                            ForEach(1...12, id: \.self) { Text("\($0)").tag($0) }
+                        }
+                    }
+                }
+                Section("First payment") { DatePicker("First payment", selection: $start) }
+                Section("Ends") {
+                    Picker("Ends", selection: $endMode) { Text("Never").tag("never"); Text("On date").tag("date"); Text("After").tag("count") }.pickerStyle(.segmented)
+                    if endMode == "date" { DatePicker("End date", selection: $endDate, displayedComponents: .date) }
+                    if endMode == "count" { TextField("Number of payments", text: $count).keyboardType(.numberPad).focused($focus, equals: .count).id(Field.count) }
+                }
+                if interval.valid {
+                    Section(interval.description) {
+                        ForEach(preview, id: \.self) { Text(Date(timeIntervalSince1970: $0 / 1000).formatted()) }
+                        Text("You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice.")
+                            .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                    }
+                }
+                if let error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
             }
-            if let error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
+            .scrollFocusedField(focus, using: scroll)
         }
         .settingsStyle(original == nil ? "New recurring payment" : "Edit recurring payment", maximumWidth: AdaptiveLayout.pairedWidth)
         .scrollDismissesKeyboard(.interactively)
-        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                if compactKeyboard {
+                    Button(original == nil ? "Schedule payment" : "Save payment") { focus = nil; save() }
+                        .disabled(saving).accessibilityIdentifier("recurring-save-button")
+                }
+                Spacer()
+                Button("Done") { focus = nil }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
-            NoahButton(title: original == nil ? "Schedule payment" : "Save payment", isLoading: saving) { focus = nil; save() }
-                .padding(.horizontal).padding(.vertical, 4).readableWidth()
-                .accessibilityIdentifier("recurring-save-button")
+            if !compactKeyboard {
+                NoahButton(title: original == nil ? "Schedule payment" : "Save payment", isLoading: saving) { focus = nil; save() }
+                    .padding(.horizontal).padding(.vertical, 4).readableWidth()
+                    .accessibilityIdentifier("recurring-save-button")
+            }
         }
     }
     private var preview: [Double] {
