@@ -245,7 +245,13 @@ object AppTelemetry {
         // Severity is typed metadata; exclude it only from aggregate mnemonic detection.
         val level = payload["level"]
         if (!visit(payload.filterKeys { it != "level" }, 0)) false
-        else !LogFile.containsMnemonicIn(keys) && !LogFile.containsMnemonicIn(values) &&
-            (level == null || visit(level, 0))
+        else if (LogFile.containsMnemonicIn(keys) || LogFile.containsMnemonicIn(values) ||
+            (level != null && !visit(level, 0))) false
+        else {
+            // Inspect the wire form too: numeric fields and joins are not string leaves.
+            val json = if (payload is JsonObject) payload.toString()
+                else StringWriter().also { serializer.serialize(payload, it) }.toString()
+            EndpointLogPrivacy.redactRecord(json) == json
+        }
     } catch (_: Throwable) { false }
 }
