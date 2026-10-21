@@ -151,7 +151,11 @@ enum AppTelemetry {
         // Aggregate keys too, separately from values: fixed schema names must not
         // complete an otherwise harmless 11-word excerpt. The severity is typed metadata.
         guard let content = stringLeaves(payload.filter { $0.key != "level" }) else { return false }
-        return !LogFile.containsMnemonic(in: content.keys) && !LogFile.containsMnemonic(in: content.values)
+        guard !LogFile.containsMnemonic(in: content.keys), !LogFile.containsMnemonic(in: content.values),
+              let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys, .withoutEscapingSlashes]) else { return false }
+        // Inspect the wire form too: numeric fields and joins are not string leaves.
+        let json = String(decoding: data, as: UTF8.self)
+        return EndpointLogPrivacy.redactRecord(json) == json
     }
 
     private static func stringLeaves(_ value: Any, depth: Int = 0) -> (keys: [String], values: [String])? {
