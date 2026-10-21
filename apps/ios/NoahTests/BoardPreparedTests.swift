@@ -19,7 +19,7 @@ struct BoardPreparedTests {
         }
     }
     @Test func threeDepositsPromptOnceAcrossAllReviewEndingsAndRestart() throws {
-        for ending in ["confirm", "dismiss", "expiry", "background", "navigation", "stale", "failure"] {
+        for ending in ["confirm", "dismiss", "expiry", "background-after-presentation", "navigation-after-presentation", "submit-failure"] {
             let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
             defer { try? FileManager.default.removeItem(at: root) }
             let path = root.appending(path: "mmkv").path
@@ -46,6 +46,75 @@ struct BoardPreparedTests {
             .init(txid: "change", txHex: "", onchainFeeSats: 155, balanceChangeSats: -140_000, confirmation: nil, isCpfp: false)
         ])
         #expect(funding.outpoints == ["deposit:1"])
+    }
+    @MainActor @Test func preparationFailureLeavesFundingUnhandledAndRetriesAfterBackoff() async throws {
+        var disk: String?
+        var now = Date(timeIntervalSince1970: 100)
+        var store = AutoBoardFunding()
+        store.read = { disk }; store.write = { disk = $0 }
+        let review = AutoBoardReview(store: store, now: { now })
+        let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["deposit:0"])
+        var preparations = 0
+        var rejected = true
+        func check() async throws -> OnchainQuote? {
+            try await review.prepare(allowed: { true }, funding: { funding }, quote: {
+                preparations += 1
+                if rejected { throw OnchainFailure.belowMinimum }
+                return Self.quote
+            }, discard: { _ in })
+        }
+        await #expect(throws: OnchainFailure.belowMinimum) { try await check() }
+        #expect(try store.hasUnhandled(funding)); #expect(disk == nil)
+        now = now.addingTimeInterval(29)
+        #expect(try await check() == nil); #expect(preparations == 1)
+        now = now.addingTimeInterval(1); rejected = false
+        #expect(try await check() != nil); #expect(preparations == 2)
+        #expect(try !store.hasUnhandled(funding))
+    }
+    @MainActor @Test func backgroundDisabledAndInvalidatedReadsNeverEvaluateOrClaimFunding() async throws {
+        for stopAt in ["before", "funding", "quote"] {
+            for _ in ["background", "disabled", "navigation"] {
+                var allowed = stopAt != "before"
+                var reads = 0, preparations = 0, discards = 0
+                var store = AutoBoardFunding()
+                store.read = {
+                    if stopAt != "quote" { Issue.record("Funding must not be evaluated after admission ends") }
+                    return nil
+                }
+                store.write = { _ in Issue.record("Funding must not be consumed") }
+                let review = AutoBoardReview(store: store)
+                let quote = try await review.prepare(allowed: { allowed }, funding: {
+                    reads += 1
+                    if stopAt == "funding" { allowed = false }
+                    return .init(walletID: "wallet", outpoints: ["deposit:0"])
+                }, quote: {
+                    preparations += 1; allowed = false
+                    return Self.quote
+                }, discard: { _ in discards += 1 })
+                #expect(quote == nil)
+                #expect(reads == (stopAt == "before" ? 0 : 1))
+                #expect(preparations == (stopAt == "quote" ? 1 : 0))
+                #expect(discards == (stopAt == "quote" ? 1 : 0))
+            }
+        }
+    }
+    @MainActor @Test func summaryRefreshKeepsVisibleReviewWithoutReadingOrConsumingFunding() async throws {
+        var disk: String?
+        var store = AutoBoardFunding()
+        store.read = { disk }; store.write = { disk = $0 }
+        let review = AutoBoardReview(store: store)
+        var plan: OnchainQuote?
+        let held = try #require(try await review.prepare(allowed: { plan == nil }, funding: {
+            .init(walletID: "wallet", outpoints: ["deposit:0"])
+        }, quote: { Self.quote }, discard: { _ in }, present: { plan = $0 }))
+        #expect(plan == held)
+        let saved = disk
+        for _ in 0..<3 {
+            let result = try await review.prepare(allowed: { plan == nil }, funding: {
+                Issue.record("Open review must survive refresh"); return nil
+            }, quote: { Issue.record("Must not reprepare"); return nil }, discard: { _ in Issue.record("Must not discard") }, present: { plan = $0 })
+            #expect(result == nil); #expect(plan == held); #expect(held.isCurrent); #expect(disk == saved)
+        }
     }
     @Test func unreadableFundingOrFailedPersistenceCannotAdmitAReview() throws {
         let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["a:0"])
@@ -122,6 +191,30 @@ struct BoardPreparedTests {
         _ = try await session.submitBoard(fresh, walletID: "wallet", journal: journal, confirmed: { fresh.confirmed })
         #expect(await calls.submitted == 2)
         #expect(try await journal.loadAll().count == 2)
+    }
+    @Test(arguments: [false, true])
+    func rejectedBoardAllowsLaterManualOrAutomaticBoard(automatic: Bool) async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let first = Self.quote
+        await session.retainBoardReview(first, discard: {}, submit: {
+            .init(txid: "exact", broadcast: .notAttempted(reason: "server rejected cosign"), vtxoIds: [])
+        })
+        await #expect(throws: OnchainFailure.boardNotAttempted) {
+            try await session.submitBoard(first, walletID: "wallet", journal: journal, confirmed: { first.confirmed })
+        }
+        #expect(try await journal.loadAll().isEmpty)
+        #expect(await session.boardPreparations.isEmpty)
+        var next = automatic ? Self.automaticQuote : Self.quote
+        next.prepared?.id = "new-review"
+        let fresh = next
+        await session.retainBoardReview(fresh, discard: {}, submit: {
+            .init(txid: "exact", broadcast: .accepted, vtxoIds: [])
+        })
+        _ = try await session.submitBoard(fresh, walletID: "wallet", journal: journal, confirmed: { fresh.confirmed })
+        #expect(try await journal.loadAll().count == 1)
+        #expect(try await journal.load()?.receipt != nil)
     }
     @Test(arguments: [UInt64(0), 31_542, 32_543, 36_542, 36_543, 37_543])
     func automaticConfirmationRevalidatesTheExactReviewedReserve(confirmed: UInt64) async throws {

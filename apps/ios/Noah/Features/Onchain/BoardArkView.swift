@@ -51,6 +51,7 @@ struct AutoBoardingService: View {
     @State private var plan: OnchainQuote?
     @State private var generation = UUID()
     @State private var message: String?
+    @State private var review = AutoBoardReview()
     @State private var checking = false
     @State private var busy = false
     var body: some View {
@@ -117,31 +118,22 @@ struct AutoBoardingService: View {
         checking = true
         let token = generation
         defer { checking = false }
-        var funding: AutoBoardFunding.Snapshot?
-        let fundingStore = AutoBoardFunding()
         do {
-            guard !(await WalletBackgroundActivity.shared.isRunning),
-                  let current = try await app.session.autoBoardFunding(),
-                  try fundingStore.hasUnhandled(current) else { return }
-            funding = current
-            let quote = try await app.session.autoBoardQuote()
-            guard let quote else { return }
-            let claimed: Bool
-            do { claimed = try fundingStore.markHandled(current) }
-            catch { await app.session.discardBoard(quote); throw error }
-            let latest = PersistedTransactionState.load(from: .shared)
-            guard claimed, quote.walletID == current.walletID, token == generation, !Task.isCancelled, phase == .active, !app.isWalletSuspended,
-                latest.isAutoBoardingEnabled
-            else {
-                await app.session.discardBoard(quote)
-                return
-            }
-            plan = quote
+            _ = try await review.prepare(allowed: {
+                token == generation && !Task.isCancelled && !busy && plan == nil &&
+                    !app.isWalletSuspended && phase == .active &&
+                    PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled &&
+                    (app.summary?.balance.onchain.confirmed ?? 0) >= 20_000
+            }, funding: {
+                guard !(await WalletBackgroundActivity.shared.isRunning) else { return nil }
+                return try await app.session.autoBoardFunding()
+            }, quote: { try await app.session.autoBoardQuote() }, discard: { await app.session.discardBoard($0) },
+                present: { plan = $0 })
         } catch {
-            do { if let funding { try fundingStore.markHandled(funding) } }
-            catch { message = "Couldn't save auto-board state."; return }
-            message = (error as? OnchainFailure)?.errorDescription
-                ?? "Unable to prepare boarding. Use Settings → Board to Ark to try again."
+            if token == generation, !Task.isCancelled {
+                message = (error as? OnchainFailure)?.errorDescription
+                    ?? "Unable to prepare boarding. Use Settings → Board to Ark to try again."
+            }
         }
     }
     private func invalidate() {

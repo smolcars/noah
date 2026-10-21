@@ -3,7 +3,7 @@ package com.noahwallet.onchain
 import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.json.*
 
-/** Persist before presenting a review: dismissal, expiry and process death consume the same funding. */
+/** Only a foreground review that reaches presentation consumes its confirmed funding. */
 class AutoBoardFunding(private val read: () -> String?, private val write: (String) -> Unit) {
     data class Snapshot(val walletID: String, val outpoints: Set<String>)
     companion object {
@@ -30,5 +30,28 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
             JsonArray(ids.sorted().map(::JsonPrimitive))
         }).toString())
         return true
+    }
+}
+
+/** Async reads may finish after pause/navigation; only a still-active caller may evaluate or claim funding. */
+class AutoBoardReview(private val store: AutoBoardFunding, private val now: () -> Long = System::currentTimeMillis) {
+    var retryAfter = 0L; private set
+    suspend fun prepare(allowed: () -> Boolean, funding: suspend () -> AutoBoardFunding.Snapshot?,
+        quote: suspend () -> OnchainQuote?, discard: suspend (OnchainQuote) -> Unit,
+        present: (OnchainQuote) -> Unit = {}): OnchainQuote? {
+        if (!allowed() || now() < retryAfter) return null
+        try {
+            val current = funding() ?: return null
+            if (!allowed() || !store.hasUnhandled(current)) return null
+            val prepared = quote() ?: return null
+            var presented = false
+            try {
+                if (!allowed() || prepared.walletID != current.walletID || !store.markHandled(current)) return null
+                present(prepared)
+                presented = true
+                return prepared
+            } finally { if (!presented) discard(prepared) }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (failure: Exception) { retryAfter = now() + 30_000; throw failure }
     }
 }

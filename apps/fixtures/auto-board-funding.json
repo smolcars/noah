@@ -59,7 +59,7 @@
       "expected": true
     },
     {
-      "name": "dismissed expired backgrounded or failed funding",
+      "name": "previously presented funding after dismissal expiry background or submission failure",
       "input": {
         "walletID": "wallet",
         "handled": {

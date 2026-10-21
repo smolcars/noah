@@ -453,6 +453,20 @@ class OnchainOperationsTest {
         ops.execute(second)
         assertNotNull(journal.loadAll().single().receipt)
     } }
+    @Test fun rejectedBoardReleasesJournalForLaterManualAndAutomaticBoards() = runBlocking {
+        for (automatic in listOf(false, true)) fixture { wallet, ops, journal, _ ->
+            val first = ops.quote(OnchainAction.board, amount = 30_000)
+            wallet.submitOutcome = BroadcastOutcome.NotAttempted("server rejected cosign")
+            assertTrue(runCatching { ops.execute(first) }.isFailure)
+            assertTrue(journal.loadAll().isEmpty())
+            assertTrue(wallet.bound.isEmpty())
+            wallet.submitOutcome = BroadcastOutcome.Accepted
+            val next = if (automatic) checkNotNull(ops.autoBoardQuote()) else ops.quote(OnchainAction.board, amount = 30_000)
+            ops.execute(next)
+            assertEquals(1, journal.loadAll().size)
+            assertNotNull(journal.loadAll().single().receipt)
+        }
+    }
     @Test fun typedPreparationCopyAndTwoMinuteExpiry() {
         val expected = mapOf(BarkErrorCode.BELOW_MINIMUM_BOARD_AMOUNT to OnchainFailure.belowMinimum,
             BarkErrorCode.TOO_MANY_INPUTS to OnchainFailure.tooManyInputs,

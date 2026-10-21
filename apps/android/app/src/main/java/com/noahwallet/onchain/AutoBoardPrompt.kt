@@ -39,6 +39,7 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
     val fundingStore = remember(app.settings) { AutoBoardFunding(
         { app.settings.string(AutoBoardFunding.key) },
         { app.settings.set(it, AutoBoardFunding.key); app.settings.sync() }) }
+    val review = remember(fundingStore) { AutoBoardReview(fundingStore) }
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) { releasePlan() }
@@ -58,29 +59,20 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
         if (checking || busy || plan != null || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
         val token = generation
         checking = true
-        var funding: AutoBoardFunding.Snapshot? = null
+        val caller = currentCoroutineContext()
         try {
-            if (!AutoBoardRules.shouldPrompt(enabled(), true, onchainReady(app), app.summary?.balance?.onchain?.confirmed?.toLong() ?: 0, false)) return@LaunchedEffect
-            funding = withContext(Dispatchers.IO) { app.session.autoBoardFunding() } ?: return@LaunchedEffect
-            if (!fundingStore.hasUnhandled(funding)) return@LaunchedEffect
-            val caller = currentCoroutineContext()
             withContext(NonCancellable) {
-                val quote = app.session.autoBoardQuote()
-                if (quote != null) {
-                    try {
-                        val claimed = fundingStore.markHandled(funding)
-                        if (claimed && quote.walletID == funding.walletID && caller.isActive && token == generation && enabled() && onchainReady(app) && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) plan = quote
-                        else app.session.discardBoardReview(quote)
-                    } catch (failure: Exception) {
-                        app.session.discardBoardReview(quote)
-                        throw failure
-                    }
-                }
+                review.prepare(allowed = {
+                    caller.isActive && token == generation &&
+                        lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && plan == null &&
+                        AutoBoardRules.shouldPrompt(enabled(), true, onchainReady(app),
+                            app.summary?.balance?.onchain?.confirmed?.toLong() ?: 0, false)
+                }, funding = { withContext(Dispatchers.IO) { app.session.autoBoardFunding() } },
+                    quote = { app.session.autoBoardQuote() }, discard = { app.session.discardBoardReview(it) },
+                    present = { plan = it })
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) {
-            try { funding?.let { fundingStore.markHandled(it) } }
-            catch (_: Exception) { message = "Couldn't save auto-board state." }
             if (token == generation) message = (failure as? OnchainException)?.message ?: "Unable to prepare boarding. Use Settings → Board to Ark to try again."
         } finally { checking = false }
     }

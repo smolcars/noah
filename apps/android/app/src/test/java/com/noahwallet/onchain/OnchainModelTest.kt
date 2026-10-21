@@ -95,16 +95,71 @@ class OnchainModelTest {
         }
     }
     @Test fun threeDepositsPromptOnceAcrossEveryReviewEndingAndRelaunch() {
-        for (ending in listOf("confirm", "dismiss", "expire", "background", "navigation", "stale", "failure")) {
+        for (ending in listOf("confirm", "dismiss", "expire", "background-after-presentation", "navigation-after-presentation", "submit-failure")) {
             var disk: String? = null
             fun reopened() = AutoBoardFunding({ disk }, { disk = it })
             repeat(3) { deposit ->
                 val funding = AutoBoardFunding.Snapshot("wallet", (0..deposit).map { "deposit-$it:0" }.toSet())
                 assertTrue(ending, reopened().hasUnhandled(funding))
-                // Production persists before presentation, so all endings share this durable decision.
+                // Production claims only when the active review is presented; every later ending consumes it.
                 assertTrue(reopened().markHandled(funding))
                 repeat(3) { assertFalse(ending, reopened().hasUnhandled(funding)); assertFalse(reopened().markHandled(funding)) }
             }
+        }
+    }
+    @Test fun failedPreparationLeavesFundingUnhandledAndRetriesAfterBackoff() = runBlocking {
+        var disk: String? = null
+        var now = 0L
+        val store = AutoBoardFunding({ disk }, { disk = it })
+        val review = AutoBoardReview(store) { now }
+        val funding = AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))
+        var preparations = 0
+        var rejected = true
+        suspend fun check() = review.prepare({ true }, { funding }, {
+            preparations++
+            if (rejected) fail(OnchainFailure.belowMinimum)
+            OnchainQuote(OnchainAction.board, "wallet")
+        }, {})
+        assertTrue(runCatching { check() }.isFailure)
+        assertTrue(store.hasUnhandled(funding)); assertNull(disk)
+        now = 29_999; assertNull(check()); assertEquals(1, preparations)
+        rejected = false; now = 30_000
+        assertNotNull(check()); assertEquals(2, preparations)
+        assertFalse(store.hasUnhandled(funding))
+    }
+    @Test fun backgroundDisabledAndInvalidatedPreparationNeverEvaluateOrClaimFunding() = runBlocking {
+        for (stopAt in listOf("before", "funding", "quote")) for (reason in listOf("background", "disabled", "navigation")) {
+            var allowed = stopAt != "before"
+            var reads = 0; var preparations = 0; var discards = 0
+            val funding = AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))
+            val store = AutoBoardFunding({ error("Must not evaluate funding after admission ends") }, { error("Must not consume") })
+            val normalStore = AutoBoardFunding({ null }, { error("Must not consume") })
+            val review = AutoBoardReview(if (stopAt == "quote") normalStore else store)
+            val quote = review.prepare({ allowed }, {
+                reads++; if (stopAt == "funding") allowed = false; funding
+            }, {
+                preparations++; allowed = false; OnchainQuote(OnchainAction.board, "wallet")
+            }, { discards++ })
+            assertNull(reason, quote)
+            assertEquals(if (stopAt == "before") 0 else 1, reads)
+            assertEquals(if (stopAt == "quote") 1 else 0, preparations)
+            assertEquals(if (stopAt == "quote") 1 else 0, discards)
+        }
+    }
+    @Test fun summaryRefreshPreservesAnOpenReviewWithoutReadingOrConsumingFunding() = runBlocking {
+        var disk: String? = null
+        val store = AutoBoardFunding({ disk }, { disk = it })
+        val review = AutoBoardReview(store)
+        val funding = AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))
+        var plan: OnchainQuote? = null
+        val held = checkNotNull(review.prepare({ plan == null }, { funding }, { OnchainQuote(OnchainAction.board, "wallet") }, {},
+            present = { assertFalse(store.hasUnhandled(funding)); plan = it }))
+        assertEquals(held, plan)
+        val saved = disk
+        repeat(3) {
+            // The production caller keeps the existing plan and refuses a new check on summary refresh.
+            assertNull(review.prepare({ plan == null }, { error("Open review must survive") }, { error("Must not reprepare") }, {}, present = { plan = it }))
+            assertEquals(held, plan); assertTrue(held.current()); assertEquals(saved, disk)
         }
     }
     @Test fun fundingWriteFailureAndUnreadableStateCannotAdmitAReview() {
