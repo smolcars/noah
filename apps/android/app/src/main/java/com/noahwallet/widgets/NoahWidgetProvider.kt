@@ -8,6 +8,8 @@ import android.content.Intent
 import android.widget.RemoteViews
 import com.noahwallet.MainActivity
 import com.noahwallet.R
+import com.noahwallet.services.logging.AppLog
+import com.noahwallet.services.logging.SafeErrorDescription
 import java.text.NumberFormat
 import java.util.Locale
 import kotlinx.coroutines.*
@@ -128,7 +130,7 @@ open class NoahWidgetProvider : AppWidgetProvider() {
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
-            android.util.Log.e("NoahWidget", "Error updating widget: ${e.message}", e)
+            AppLog(context.applicationContext, "NoahWidget").e("Error updating widget: ${SafeErrorDescription.of(e)}")
         }
     }
 
