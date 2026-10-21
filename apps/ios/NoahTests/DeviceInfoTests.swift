@@ -12,7 +12,8 @@ struct DeviceInfoTests {
     @MainActor @Test func collectsAppOSAndHardware() {
         let current = DeviceInfo.current()
         #expect(current.deviceManufacturer == "Apple")
-        #expect(current.osName == "iOS")
+        // UIDevice (like RN expo-device) reports "iPadOS" on iPads.
+        #expect(["iOS", "iPadOS"].contains(current.osName))
         #expect(current.osVersion?.isEmpty == false)
         #expect(current.appVersion == Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
         #expect(current.appBuild == Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)
