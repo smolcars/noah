@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UserNotifications
 
 @testable import Noah
 
@@ -65,6 +66,27 @@ struct PushJobsTests {
         let recorder = Recorder()
         try await jobs(recorder).handle(decode(#"{"notification_type":"recurring_payment_due","due_count":4294967295}"#))
         #expect(recorder.all == ["open", "recurring", "widget"])
+    }
+
+    /// Disposable simulator presentation fixture: no seed, native wallet, claim or payment.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["NOAH_SYSTEM_PRESENTATION"] == "1"))
+    func systemPresentationFixtures() async throws {
+        let center = UNUserNotificationCenter.current()
+        #expect(try await center.requestAuthorization(options: [.alert, .badge, .sound]))
+        let recorder = Recorder()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.refreshWidget = {
+            let balance = WalletBalance(ark: .init(spendable: 1234, needsRefresh: 0, pendingLightningSend: 0,
+                claimableLightningReceive: 0, pendingInRound: 0, pendingExit: 0, pendingBoard: 0,
+                pendingArkoorSend: 0, pendingOffboard: 0), onchain: .init(confirmed: 0, pending: 0, total: 0))
+            WidgetDataWriter.write(balance: balance, closestExpiryBlocks: 123, variant: .regtest)
+            recorder.add("widget")
+        }
+        try await PushJobs(dependencies: dependencies).handle(decode(#"{"notification_type":"recurring_payment_due","due_count":1}"#))
+        #expect(recorder.all == ["open", "recurring", "widget"])
+        try await center.add(UNNotificationRequest(identifier: "system-lightning",
+            content: PushJobs.receivedContent(sats: 1234, usd: "1.23", unit: .sats),
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 20, repeats: false)))
     }
 
     @Test func maintenanceReportsAndRefreshesTheWidget() async throws {

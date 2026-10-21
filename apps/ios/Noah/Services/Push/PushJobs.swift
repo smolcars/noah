@@ -99,6 +99,16 @@ struct PushJobs: Sendable {
         }
     }
 
+    static func receivedContent(sats: Int64, usd: String?, unit: BitcoinAmountUnit, defaults: UserDefaults = .standard) -> UNMutableNotificationContent {
+        let copy = NotificationCopy.received(sats: sats, usd: usd, unit: unit, defaults: defaults)
+        let content = UNMutableNotificationContent()
+        content.title = copy.title
+        content.body = copy.body
+        content.sound = .default
+        content.userInfo = ["notification_type": "lightning_payment_received"]
+        return content
+    }
+
     private func outcome(_ work: () async throws -> Void) async -> Error? {
         do {
             try await work()
@@ -136,11 +146,8 @@ extension PushJobs.Dependencies {
                 _ = try await client.heartbeatResponse(body: .json(.init(notificationId: id))).ok
             },
             announceReceived: { sats, usd in
-                let content = UNMutableNotificationContent()
                 let unit = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit ?? .bip177
-                let copy = NotificationCopy.received(sats: sats, usd: usd, unit: unit)
-                content.title = copy.title
-                content.body = copy.body
+                let content = PushJobs.receivedContent(sats: sats, usd: usd, unit: unit)
                 try? await UNUserNotificationCenter.current().add(
                     UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
             },

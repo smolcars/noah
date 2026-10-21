@@ -78,6 +78,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         await MainActor.run { RecurringNotificationRoute.shared.presented = true }
     }
 
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .list, .sound, .badge]
+    }
+
     func applicationSignificantTimeChange(_ application: UIApplication) {
         Task { await RecurringExecutor.shared.timeChanged() }
     }

@@ -171,4 +171,19 @@ struct TranslationsTests {
             #expect(NotificationCopy.reminder(amount: "1,234 sats", recipient: "Alice", upcoming: false, defaults: defaults).body == L10n.text("Open Noah to send {amount} to {recipient}.", "1,234 sats", "Alice", locale: locale))
         }
     }
+
+    @Test func lightningReceiptKeepsLocalizedCopySoundAndTapMetadata() throws {
+        let name = "receipt-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        for locale in LegacyLocale.supported {
+            defaults.set(locale, forKey: LegacyLocale.key)
+            let content = PushJobs.receivedContent(sats: 1234, usd: "1.23", unit: .sats, defaults: defaults)
+            let expected = NotificationCopy.received(sats: 1234, usd: "1.23", unit: .sats, defaults: defaults)
+            #expect(content.title == expected.title && content.body == expected.body)
+            #expect(content.sound != nil)
+            #expect(content.userInfo["notification_type"] as? String == "lightning_payment_received")
+            #expect(!RecurringNotificationRoute.opensSchedules(content.userInfo))
+        }
+    }
 }

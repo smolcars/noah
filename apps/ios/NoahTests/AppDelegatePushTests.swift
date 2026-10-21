@@ -1,5 +1,6 @@
 import Testing
 import UIKit
+import UserNotifications
 
 @testable import Noah
 
@@ -7,6 +8,9 @@ import UIKit
 /// background handler for `simctl push`; real delivery is checked on devices).
 @MainActor
 struct AppDelegatePushTests {
+    @Test func foregroundNotificationPresentationIsInstalled() {
+        #expect(AppDelegate().responds(to: #selector(UNUserNotificationCenterDelegate.userNotificationCenter(_:willPresent:withCompletionHandler:))))
+    }
     @Test(arguments: ["resign", "background", "scene"])
     func lifecycleDrainMustNotBlockMainThread(callback: String) async {
         let queue = DispatchQueue(label: "regression.blocked-writer")
