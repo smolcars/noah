@@ -1,0 +1,56 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "C3FB94EA-45EF-4FE4-ADBA-3A93B6CD3C9A",
+        "deviceName" : "Noah AutoBoard Sol f1c98",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "24A434",
+        "osVersion" : "27.0",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 0,
+      "passedTests" : 1682,
+      "skippedTests" : 27,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Noah-Regtest · Built with macOS 27.0.1",
+  "expectedFailures" : 0,
+  "failedTests" : 0,
+  "finishTime" : 1792597036.595,
+  "passedTests" : 833,
+  "result" : "Passed",
+  "runtimeWarnings" : [
+    {
+      "issueType" : "Runtime Warning",
+      "message" : "    AVAudioSession_iOS.mm:978   This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.",
+      "sourceURL" : "file:///Users/niteshchowdharybalusu/.t3/worktrees/noah/t3-f1c98dad/apps/ios/NoahTests/StoryPlaybackTests.swift"
+    }
+  ],
+  "skippedTests" : 27,
+  "startTime" : 1792596766.488,
+  "statistics" : [
+    {
+      "subtitle" : "983 test runs",
+      "title" : "134 tests ran with dynamic parameters"
+    }
+  ],
+  "testFailures" : [
+
+  ],
+  "title" : "Test - Noah-Regtest",
+  "topInsights" : [
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "25% of duration",
+      "text" : "11 longest test runs with outlier durations exceeding 2.01s (three standard deviations)"
+    }
+  ],
+  "totalTestCount" : 860
+}

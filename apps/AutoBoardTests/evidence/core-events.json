@@ -1,0 +1,208 @@
+[
+  {
+    "action": "deposit",
+    "platform": "ios",
+    "address": "bcrt1pz50a9ws0l6xtvak02tj3xvyvma6zayeymnyla77lkwm2e7kzxtpqx2w42h",
+    "sats": 150529,
+    "txid": "abab591e0857916fbfeb59ce680aedca22e891a314d7deba6e6420fb67db689e",
+    "time": "2026-10-21T15:09:37.064946+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 1,
+    "address": "bcrt1q964lw42g5p92qhvypeug4t9qg0hr7nc3txdp0x",
+    "blocks": [
+      "7de74da90ed8aeaeb295457a7901caa6a8182b8852e512bc34b3c9bfd386956b"
+    ],
+    "time": "2026-10-21T15:09:59.372506+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "android",
+    "address": "bcrt1p48mzm5njcaderewgfv3mx0tgx6y7gufhk9ww3648r69w6yrh5g9qz9r42k",
+    "sats": 150529,
+    "txid": "4637e5b2c5ffac5305e420b0b95c87be99a9a3f753ec1d83132ffc71671e7933",
+    "time": "2026-10-21T15:10:35.309036+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 1,
+    "address": "bcrt1qzav9m4g0dm0gp9wn2vganq0fllgt5utac5zghj",
+    "blocks": [
+      "6d43725dfb4c995dfa5bfffe92bf06b91553a1d88171c005a921e82b5320492b"
+    ],
+    "time": "2026-10-21T15:10:59.089676+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 3,
+    "address": "bcrt1q4u6d9h5yl9w7vvtkafvm3eww5j4rscl57laafq",
+    "blocks": [
+      "09e3280a3e7cf3b4943556703701e9dabe56987e89503f366d23ddf55f7496ab",
+      "4cbf0fa4901da6174ad284a24cec71d6a37ddd8e26a2eafd3f70e1dab17187e4",
+      "2d56401c420ff941c8fc83c86ba9a3f2037f4831a7bc2755218c3b9e9cff188a"
+    ],
+    "time": "2026-10-21T15:12:13.298121+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "ios",
+    "address": "bcrt1pz50a9ws0l6xtvak02tj3xvyvma6zayeymnyla77lkwm2e7kzxtpqx2w42h",
+    "sats": 150529,
+    "txid": "ebaeb70315e0ba8c1a791bcb71301fc4fa0c31077b97674ff76078d6076431fd",
+    "time": "2026-10-21T15:12:37.098383+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "android",
+    "address": "bcrt1p48mzm5njcaderewgfv3mx0tgx6y7gufhk9ww3648r69w6yrh5g9qz9r42k",
+    "sats": 150529,
+    "txid": "c811999de70f9de9b348cd37b20fab6f40546016463b344574ab97773ed90f7d",
+    "time": "2026-10-21T15:12:37.287501+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 1,
+    "address": "bcrt1q60t5v95c7upv3lq8x80mx96aw7alrncgvl6und",
+    "blocks": [
+      "539c1ca3a592c304bc68bacfc774f91c8f211adbabe6cafb5512114b49698b5b"
+    ],
+    "time": "2026-10-21T15:13:12.270830+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 3,
+    "address": "bcrt1q89rxn7shkujlj6uwcsww74wwwwfnwtndjkf0qm",
+    "blocks": [
+      "5db4ab59c10185fb3a5577cea846288f24828872f599d82829fb272b9328701b",
+      "57ee35e72088034074a962e433966ee669466b80fd6962ef154d190a28956988",
+      "2c610b553343fc13abdd890d49b26dd9d5d96bb64bf2d530b4560fdd53dc275f"
+    ],
+    "time": "2026-10-21T15:14:25.202361+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "ios",
+    "address": "bcrt1pz50a9ws0l6xtvak02tj3xvyvma6zayeymnyla77lkwm2e7kzxtpqx2w42h",
+    "sats": 150529,
+    "txid": "7813ee12c4d309386edb46ca34f232bc84c28d51b86d16d75684d9c1cf7463dc",
+    "time": "2026-10-21T15:14:48.637741+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "android",
+    "address": "bcrt1p48mzm5njcaderewgfv3mx0tgx6y7gufhk9ww3648r69w6yrh5g9qz9r42k",
+    "sats": 150529,
+    "txid": "98f3377e85cb9a4a02d55a50aa0b84f90d7d16a8f48ef3189ccf75d1dae494a0",
+    "time": "2026-10-21T15:14:48.785886+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 1,
+    "address": "bcrt1qz9uma3luark7rrrthl09vw0c4dal7y7j00xvqv",
+    "blocks": [
+      "728fb2bc18f07489e707e790fc7fbf59db6cf9aa83ca39051581fc0fda79d21c"
+    ],
+    "time": "2026-10-21T15:15:06.992337+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 3,
+    "address": "bcrt1qpt88enpz9jzpdp36ud7355n830t37tenufnd9s",
+    "blocks": [
+      "3d4b6175b52dc3f88bb9de1cc4e5e0b11b16fbdba2a44956349a239540393b3c",
+      "2bf289eeb919a2b73ccb46d260afb62b9cc6da41b4878a8075d6f0b4c2df0574",
+      "1786984ccae15d79ba5270bfefe9b18ebc7a38965535066d272af8413c44f00a"
+    ],
+    "time": "2026-10-21T15:16:40.293044+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "ios",
+    "address": "bcrt1pz50a9ws0l6xtvak02tj3xvyvma6zayeymnyla77lkwm2e7kzxtpqx2w42h",
+    "sats": 150529,
+    "txid": "ceec2c1c18c2a5bc169881adda6ccd55bd0f75f7942a645d0887a3ea78ef2730",
+    "time": "2026-10-21T15:17:01.896478+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "android",
+    "address": "bcrt1p48mzm5njcaderewgfv3mx0tgx6y7gufhk9ww3648r69w6yrh5g9qz9r42k",
+    "sats": 150529,
+    "txid": "d3cce96ff2a2b9a35b61463d195b25d7a157f7aba439498e0744be1027232164",
+    "time": "2026-10-21T15:17:02.087807+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 1,
+    "address": "bcrt1qkutfpy3cdhp867qputg0gxqclphvkqu0xh0jjz",
+    "blocks": [
+      "3cc231a515d91aeb2bb6126b3f4b80f5b03f6a7621ae716122d7b1df3da0e82c"
+    ],
+    "time": "2026-10-21T15:17:25.043464+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "ios",
+    "address": "bcrt1pz50a9ws0l6xtvak02tj3xvyvma6zayeymnyla77lkwm2e7kzxtpqx2w42h",
+    "sats": 150529,
+    "txid": "13480cffceacb501864a6a4d869ec3a9906e2044ad9c45f108f2953d55f6f23d",
+    "time": "2026-10-21T15:28:20.988786+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "android",
+    "address": "bcrt1p48mzm5njcaderewgfv3mx0tgx6y7gufhk9ww3648r69w6yrh5g9qz9r42k",
+    "sats": 150529,
+    "txid": "36bd53ba06895679801793e644306f35104df8967c465a127f052aa8be3a5740",
+    "time": "2026-10-21T15:28:21.195964+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 1,
+    "address": "bcrt1q9zw0pgfjwxkmue79mf0jqyznkpp56lsqg3k0sv",
+    "blocks": [
+      "0b0d5939949bab094b9404a5fb7d4229d688a0cb2d76889901cb86882c3c8b2a"
+    ],
+    "time": "2026-10-21T15:29:46.528844+00:00"
+  },
+  {
+    "action": "deposit",
+    "platform": "android",
+    "address": "bcrt1p48mzm5njcaderewgfv3mx0tgx6y7gufhk9ww3648r69w6yrh5g9qz9r42k",
+    "sats": 150529,
+    "txid": "4316885db65d33bf5318531bbf686d8a0862174f2ab84cdbc59e055b642f2ea7",
+    "time": "2026-10-21T15:32:43.986124+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 3,
+    "address": "bcrt1q8czyluefl089ghqxhers9cmphzl0nckrpjwne2",
+    "blocks": [
+      "05633d1c60e349ac2b3e3fdc60fc8ed92d5bbde04753120d0d1c2df530cba396",
+      "3f13039d9c4b85b4bf59f2f6a6afe56f2c430e0df7cc24b7eaed74b66fcbafe8",
+      "52558bcff5fd7f6c296facc10b82136286c1fe8c52a0b25f762d038729cc5243"
+    ],
+    "time": "2026-10-21T15:32:44.055566+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 1,
+    "address": "bcrt1qnl7a9u5wxtkx2gm0m2sstylp28xnkvd3ylh50n",
+    "blocks": [
+      "6f421431c4ac568988543e3390cece8cd97ce54f925b9315ed3a5a32fb5c7bb0"
+    ],
+    "time": "2026-10-21T15:33:18.262311+00:00"
+  },
+  {
+    "action": "mine",
+    "count": 3,
+    "address": "bcrt1qvvs5tlzu8wgcs6m3exud2az6v04hr8hy0yn96n",
+    "blocks": [
+      "7c0d907d9626b0c12da5aff90cc8a4700111e5f7f5096069226c4bcf300f23e9",
+      "1261e95e19926bd34b73146726ce6c9cda219a2499f9cad9d28cfc24b4f02e5a",
+      "65b38a5cb0341065de25ca1b999ae10c4d0df6e64a7130a53f42cc53c9c096f6"
+    ],
+    "time": "2026-10-21T15:33:56.626945+00:00"
+  }
+]
