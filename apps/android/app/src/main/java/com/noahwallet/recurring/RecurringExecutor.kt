@@ -72,21 +72,22 @@ class RecurringExecutor(private val d: Dependencies,
             state.schedules[id]?.takeIf { it.status == "active" && it.inFlight == null && it.nextRunAt == due && state.binding == d.binding() }
         }
     } catch (_: NoWallet) { null }
-    suspend fun execute(manual: Boolean = false, approval: Review? = null, budget: RecurringBudget = RecurringBudget()) {
+    suspend fun execute(manual: Boolean = false, approval: Review? = null, budget: RecurringBudget? = null) {
         while (true) {
             currentCoroutineContext().ensureActive()
-            if (!budget.available) return
+            if (budget?.available == false) return
             val pending = task?.takeIf { !it.isCompleted } ?: break
-            val sameBudget = taskBudget === budget
+            val drainOnly = budget == null || taskBudget === budget
             val result = runCatching { pending.await() }
             currentCoroutineContext().ensureActive()
-            if (sameBudget) { result.getOrThrow(); return }
+            if (drainOnly) { result.getOrThrow(); return }
             // Another admission may have been revoked; reread durable due work with our budget.
         }
         task = null
         val caller = currentCoroutineContext()[Job]
-        val work = scope.async(start = CoroutineStart.LAZY) { run(manual, approval, budget, caller) }
-        task = work; taskBudget = budget; work.start()
+        val executionBudget = budget ?: RecurringBudget()
+        val work = scope.async(start = CoroutineStart.LAZY) { run(manual, approval, executionBudget, caller) }
+        task = work; taskBudget = executionBudget; work.start()
         try { work.await() } finally { if (work.isCompleted && task === work) { task = null; taskBudget = null } }
     }
     private suspend fun boundState(): RecurringStore.State = storage { boundStateNow() }
