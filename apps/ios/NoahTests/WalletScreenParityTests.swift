@@ -3,6 +3,24 @@ import Testing
 @testable import Noah
 
 struct WalletScreenParityTests {
+    struct Selection: Decodable {
+        struct Row: Decodable { var id: String; var amount: UInt64 }
+        var vtxos: [Row]
+        var ids: Set<String>
+    }
+    struct Selected: Decodable { var ids: [String]; var amount: UInt64 }
+    @Test func selectionTracksCurrentWalletRows() throws {
+        for item in try Fixtures.load("wallet-selection", input: Selection.self, expected: Selected.self) {
+            let rows = item.input.vtxos.map { row in
+                VtxoModel(id: row.id, amount: row.amount, expiry: 200, state: "Spendable", kind: "Pubkey", exitDepth: 1,
+                    exitWeight: 400, registered: true, serverPubkey: "public", exitDelta: 144, anchorPoint: "anchor:0", point: "point:0", expiring: false, tip: 100)
+            }
+            let selected = OnchainDisplay.currentSelection(rows, ids: item.input.ids)
+            #expect(selected.map(\.id) == item.expected.ids, "\(item.name)")
+            #expect(selected.reduce(0) { $0 + $1.amount } == item.expected.amount, "\(item.name)")
+        }
+    }
+
     @Test func recurringInputLimitsPreserveUnicodeBoundaries() {
         #expect(RecurringPaymentEditorView.limitedText(String(repeating: "a", count: 65), limit: 64).utf16.count == 64)
         #expect(RecurringPaymentEditorView.limitedText(String(repeating: "a", count: 139) + "🌱", limit: 140).utf16.count == 139)

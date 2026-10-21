@@ -2,6 +2,8 @@ package com.noahwallet.onchain
 
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.recurring.*
+import com.noahwallet.fixtures.SharedFixtures
+import kotlinx.serialization.json.*
 import java.util.Locale
 import org.junit.Assert.*
 import org.junit.Test
@@ -11,6 +13,22 @@ import org.robolectric.RobolectricTestRunner
 @org.robolectric.annotation.Config(sdk = [35])
 @RunWith(RobolectricTestRunner::class)
 class WalletScreenParityTest {
+    @Test fun selectionTracksCurrentWalletRows() {
+        for (item in SharedFixtures.load("wallet-selection")) {
+            val input = item.input.jsonObject
+            val rows = input.getValue("vtxos").jsonArray.map {
+                val row = it.jsonObject
+                VtxoModel(row.getValue("id").jsonPrimitive.content, row.getValue("amount").jsonPrimitive.long, 200,
+                    "Spendable", "Pubkey", 1, 400, true, "public", 144, "anchor:0", "point:0", false, 100)
+            }
+            val ids = input.getValue("ids").jsonArray.map { it.jsonPrimitive.content }.toSet()
+            val selected = OnchainDisplay.currentSelection(rows, ids)
+            val expected = item.expected.jsonObject
+            assertEquals(item.name, expected.getValue("ids").jsonArray.map { it.jsonPrimitive.content }, selected.map { it.id })
+            assertEquals(item.name, expected.getValue("amount").jsonPrimitive.long, selected.sumOf { it.amount })
+        }
+    }
+
     @Test fun recurringInputLimitsPreserveUnicodeBoundaries() {
         assertEquals(64, limitedRecurringText("a".repeat(65), 64).length)
         assertEquals(139, limitedRecurringText("a".repeat(139) + "🌱", 140).length)

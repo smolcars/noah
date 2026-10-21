@@ -27,6 +27,7 @@ fun VtxosScreen(app: AppModel) {
     var selected by remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
     val vtxos = model.overview?.vtxos.orEmpty()
+    val selectedVtxos = OnchainDisplay.currentSelection(vtxos, selected)
     val visible = vtxos.filter { filter == null || it.statusID == filter }
     OnchainScreen(app, model) {
         Text(tr("VTXOs"), style = MaterialTheme.typography.headlineSmall)
@@ -34,12 +35,12 @@ fun VtxosScreen(app: AppModel) {
         AmountRow(app, "Total (${vtxos.size} VTXOs)", vtxos.sumOf { it.amount })
         TextButton({ selecting = !selecting; selected = emptySet(); model.invalidate() }, enabled = !model.busy) { Text(tr(if (selecting) "Done selecting" else "Select VTXOs")) }
         if (selecting) {
-            DetailRow("Selected", selected.size.toString())
-            AmountRow(app, "Amount selected", vtxos.filter { it.id in selected }.sumOf { it.amount })
+            DetailRow("Selected", selectedVtxos.size.toString())
+            AmountRow(app, "Amount selected", selectedVtxos.sumOf { it.amount })
             TextButton({ selected = visible.filter { it.refreshable }.map { it.id }.toSet(); model.invalidate() }) { Text(tr("Select visible")) }
             TextButton({ selected = vtxos.filter { it.refreshable && (it.expiring || it.expired) }.map { it.id }.toSet(); model.invalidate() }) { Text(tr("Select expiring")) }
             TextButton({ selected = emptySet(); model.invalidate() }) { Text(tr("Clear selection")) }
-            Button({ scope.launch { model.review(OnchainAction.refresh, selected.toList()) } }, enabled = selected.isNotEmpty() && !model.busy) { Text(tr("Refresh ${selected.size} VTXOs")) }
+            Button({ scope.launch { model.review(OnchainAction.refresh, selected.toList()) } }, enabled = selectedVtxos.isNotEmpty() && !model.busy) { Text(tr("Refresh ${selectedVtxos.size} VTXOs")) }
         }
         if (visible.isEmpty() && !model.loading) Text(tr("No VTXOs in this view."))
         visible.forEach { vtxo ->

@@ -2,6 +2,10 @@ import Foundation
 
 /// Read-only presentation; never used for exit eligibility or submission.
 enum OnchainDisplay {
+    static func currentSelection(_ vtxos: [VtxoModel], ids: Set<String>) -> [VtxoModel] {
+        vtxos.filter { ids.contains($0.id) }
+    }
+
     static func remaining(current: UInt32?, target: UInt32?, locale: String) -> String {
         guard let current, let target else { return L10n.text("Unknown", locale: locale) }
         guard target > current else { return L10n.text("Now", locale: locale) }

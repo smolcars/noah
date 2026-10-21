@@ -11,6 +11,9 @@ struct VtxosView: View {
     private var visible: [VtxoModel] {
         (model.overview?.vtxos ?? []).filter { filter == nil || $0.statusID == filter }
     }
+    private var selectedVtxos: [VtxoModel] {
+        OnchainDisplay.currentSelection(model.overview?.vtxos ?? [], ids: selected)
+    }
     var body: some View {
         GeometryReader { geometry in
             let expanded = AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth)
@@ -80,8 +83,8 @@ struct VtxosView: View {
             }
             if selecting {
                 Section {
-                    LabeledContent("Selected", value: "\(selected.count)")
-                    OnchainAmountRow(title: "Amount selected", sats: (model.overview?.vtxos ?? []).filter { selected.contains($0.id) }.reduce(0) { $0 + $1.amount })
+                    LabeledContent("Selected", value: "\(selectedVtxos.count)")
+                    OnchainAmountRow(title: "Amount selected", sats: selectedVtxos.reduce(0) { $0 + $1.amount })
                     Button("Select visible") { selected = Set(visible.filter(\.refreshable).map(\.id)) }
                     Button("Select expiring") {
                         selected = Set(
@@ -89,10 +92,10 @@ struct VtxosView: View {
                                 .map(\.id))
                     }
                     Button("Clear selection") { selected = [] }
-                    Button("Refresh \(selected.count) VTXOs") {
+                    Button("Refresh \(selectedVtxos.count) VTXOs") {
                         Task { await model.review(.refresh, ids: Array(selected)) }
                     }
-                    .disabled(selected.isEmpty || model.locked)
+                    .disabled(selectedVtxos.isEmpty || model.locked)
                 }
             }
             Section {

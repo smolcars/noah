@@ -1,0 +1,86 @@
+{
+  "reference": "origin/master a280fdd2 client/src/screens/VTXOsScreen.tsx:106; display only, never submission IDs",
+  "cases": [
+    {
+      "name": "nothing selected",
+      "input": {
+        "vtxos": [
+          {
+            "id": "a",
+            "amount": 1234
+          },
+          {
+            "id": "b",
+            "amount": 456
+          }
+        ],
+        "ids": []
+      },
+      "expected": {
+        "ids": [],
+        "amount": 0
+      }
+    },
+    {
+      "name": "removed and unknown IDs ignored",
+      "input": {
+        "vtxos": [
+          {
+            "id": "a",
+            "amount": 1234
+          }
+        ],
+        "ids": [
+          "a",
+          "b",
+          "missing"
+        ]
+      },
+      "expected": {
+        "ids": [
+          "a"
+        ],
+        "amount": 1234
+      }
+    },
+    {
+      "name": "all selected VTXOs disappeared",
+      "input": {
+        "vtxos": [],
+        "ids": [
+          "a"
+        ]
+      },
+      "expected": {
+        "ids": [],
+        "amount": 0
+      }
+    },
+    {
+      "name": "current SDK order retained",
+      "input": {
+        "vtxos": [
+          {
+            "id": "b",
+            "amount": 456
+          },
+          {
+            "id": "a",
+            "amount": 1234
+          }
+        ],
+        "ids": [
+          "a",
+          "b"
+        ]
+      },
+      "expected": {
+        "ids": [
+          "b",
+          "a"
+        ],
+        "amount": 1690
+      }
+    }
+  ]
+}

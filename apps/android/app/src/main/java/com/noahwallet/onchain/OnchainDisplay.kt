@@ -2,6 +2,8 @@ package com.noahwallet.onchain
 
 /** Read-only presentation; never used for exit eligibility or submission. */
 internal object OnchainDisplay {
+    fun currentSelection(vtxos: List<VtxoModel>, ids: Set<String>) = vtxos.filter { it.id in ids }
+
     fun remaining(current: Long?, target: Long?): String = when {
         current == null || target == null -> "Unknown"
         target <= current -> "Now"
