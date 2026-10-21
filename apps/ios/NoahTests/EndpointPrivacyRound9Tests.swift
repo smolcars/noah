@@ -56,7 +56,13 @@ struct EndpointPrivacyRound9Tests {
             for test in vectors {
                 EndpointLogPrivacy.register(test["endpoint"] as? String)
                 let input = "x" + String(repeating: try #require(test["unit"] as? String), count: try #require(test["count"] as? Int))
-                let redact: (String) -> String = boundary == "endpoint" ? EndpointLogPrivacy.redact : boundary == "file" ? LogFile.redact : EndpointLogPrivacy.redactRecord
+                let redact: (String) -> String = { text in
+                    switch boundary {
+                    case "endpoint": return EndpointLogPrivacy.redact(text)
+                    case "file": return LogFile.redact(text)
+                    default: return EndpointLogPrivacy.redactRecord(text)
+                    }
+                }
                 _ = redact(input)
                 var samples: [Duration] = []
                 for _ in 0..<5 {
