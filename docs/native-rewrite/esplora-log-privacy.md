@@ -13,7 +13,8 @@ A custom endpoint's entire identity is private, including scheme, hostname,
 port, and path. `EndpointLogPrivacy.sanitize` is the shared native boundary.
 AppLog's file and system sinks reach it through `LogFile.redactForTelemetry`;
 Sentry message/exception/breadcrumb scrubbers and final payload guards use that
-same path. Export sends retained records through the boundary too. Endpoint
+same path. Read-back/export uses a private record-only mode of that boundary;
+its token matcher still sees each complete record. Endpoint
 settings error text and iOS `SafeErrorDescription.of` use `LogFile.redact`.
 Raw SDK text from `SafeErrorDescription.forLogging` and Bark callbacks only enters a bounded
 queue; the writer applies the boundary before either sink. Ark Info continues
@@ -1038,19 +1039,18 @@ commit hook completes. No further native build is needed for this workstream.
 
 ## 2026-10-21 follow-up: preserve formatter record headers
 
+### Round 1 (superseded by round 2 below)
+
 After any endpoint registration, the authority scanner interpreted `08:21:42.292`
 and `09:21:42.292` as authorities whose numeric hosts failed canonicalization,
 erasing those timestamp fields during read-back/export.
 
-Both platforms exempt exactly one anchored ASCII formatter prefix,
-`[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} [VDIWE] `,
-then inspect the remainder with the existing policy. Final write guards and
-full-record sanitization retain that prefix even on whole-body replacements.
-Raw writer tags/callbacks use `sanitizeMessage`, with no header exemption; the
-body is never recursively treated as a record. Swift slices at the regex's exact
-UTF-16 boundary, retaining leading body marks. Historical exports and Sentry
-message/exception/breadcrumb scrubbers share the fix. Sentry's serialized JSON
-guard still inspects the whole payload; attachments remain disabled/stripped.
+Round 1 (`05113ed0` Android, `19ba2ebf` iOS, `96ab298a` docs) exempted
+one anchored ASCII formatter prefix in general `sanitize` and the final
+`redactRecord` token guard. It added `sanitizeMessage`/`redactMessage` for raw
+writer tags/callbacks. Historical exports and Sentry text scrubbers consequently
+shared the exemption. This design was unsafe and is replaced below. The dated
+Bark overloads and deterministic-date tests remain useful and are retained.
 
 The 39 shared `esplora-log-headers.json` cases cover all 24 hours, every level,
 adjacent/tag secrets, nested/continuation headers, encoded secrets, malformed or
@@ -1081,3 +1081,214 @@ removed after the final hook. No `client/` or `server/` source changed or push r
 
 Times inside message text, such as `retry at 08:30`, retain the existing
 fail-closed authority behavior and remain out of scope.
+
+
+### Round-1 review finding (P1, both platforms)
+
+General sanitization also handles arbitrary Sentry messages, exception values,
+breadcrumbs, endpoint-settings errors, and `SafeErrorDescription.of`.
+iOS `Services/Push/PushJobs.swift:129` sends that safe description as the server
+job `errorMessage`. Header-shaped input on these paths is untrusted text.
+
+Registering `https://review.example/2037-11-29` left the complete date token in
+`2037-11-29 12:21:42.292 D ordinary`. Registering
+`https://review.example/292%20D%20abc` (also with `%61bc`) left the decoded token
+`292 D abc` spanning the prefix/body boundary. Fail-closed still retained the
+private date, and historical records or new-record-shaped continuations received
+the same exemption. The final Sentry JSON guard caught these disclosures, but
+UI error text and the iOS server-bound push-job string had no later guard.
+
+### Round-2 design
+
+Round 2 starts at `86f710b3` and first fast-forwards to `96ab298a`.
+General `sanitize`, `redact`, `LogFile.redact`, `redactForTelemetry`,
+`SafeErrorDescription`, the unavailable branch, and `redactRecord` again have
+the `86f710b3` behavior. Both `AppLog` files are byte-for-byte equal to that
+base; redundant raw-message APIs are removed. The final token-only write guard
+again inspects the complete formatted record, including its header.
+
+Only `redactLogLines` calls the new private `sanitizeLogRecord`. It recognizes
+an anchored ASCII `yyyy-MM-dd HH:mm:ss.SSS [VDIWE] ` prefix in the original
+record and enables the private read-back mode of the existing sanitizer.
+The raw input, decoded views, normalization, combining-run checks, byte limits,
+plain secret checks and HttpResponse suppression still see the complete record.
+Each inspected view reaches the registered-token matcher **before** URL/host
+replacement, covering tokens in the header and tokens crossing into the body.
+Only URL/authority/host inspection slices off the ASCII prefix. Swift uses the
+exact UTF-16 regex boundary, preserving initial body combining marks. The prefix
+is reattached before the existing final matcher check. No recursive header
+exemption is available to tags, raw messages, or nested text within a record.
+
+Every whole-record replacement has no header: token hits, unavailable history,
+uncertain decoding, oversize input, excessive combining runs, and HttpResponse
+summaries. Partial authority replacement may retain a prefix only after the
+complete raw/decoded token checks. Thus an admitted header contains no registered
+or endpoint-derived data. Continuation lines remain grouped with their original
+context; a header-shaped continuation split into a separate record receives the
+same complete-record token checks. No cross-record matcher state is introduced.
+The closed round-10 data-flow bar, fixed-text collision exclusion, and documented
+short-token/unregistered-secret/Apple-owned logging limitations are unchanged.
+
+The shared fixture grows from 39 to **48 vectors**. `expected` describes stored
+read-back; `generalExpected` describes arbitrary text. Four vectors additionally
+assert `recordExpected` at the final write guard. All 24 hours, levels, fake raw
+headers/tags, immediate body secrets, old header/continuation cases and Unicode
+bounds remain covered. New vectors protect a date token, both decoded boundary
+spellings, an encoded body, historical/new-record/indented continuations,
+uncertain decoding and HttpResponse suppression. The existing isolated lost-history
+tests check whole-record fail-closed output at general, telemetry, error, final
+write and read-back boundaries; the Swift opt-in runs in a separate test process.
+
+### Round-2 file map and complete production caller audit
+
+Android paths below are relative to `apps/android/app/src/main/java/com/noahwallet/`:
+
+- `services/logging/EndpointLogPrivacy.kt:225`: ASCII prefix; `:228` groups
+  stored lines; only its flush calls private `sanitizeLogRecord` (`:251`).
+- `EndpointLogPrivacy.kt:244` general sanitizer: its only external production
+  caller is `LogFile.redactForTelemetry` (`AppLog.kt:183`, method reference).
+  `EndpointLogPrivacy.redact` (`:223`) also calls it, with test callers only.
+  The explicit-snapshot overload (`:276`) is called by the general wrapper and
+  tests. Both it and `sanitizeLogRecord` call the private engine (`:280`);
+  only `sanitizeLogRecord` can select read-back mode.
+- `EndpointLogPrivacy.kt:309` private `redactEndpoints` is called only by that
+  engine (`:299`, `:304`, raw/decoded and plain-scrubbed views). It checks the
+  full view, excludes the prefix for authority inspection, then checks the
+  rejoined result. `redactHosts` is unchanged; callers remain `allowed` (`:56`)
+  on URL tails and `redactEndpoints` (`:315`) on the inspected body.
+- `AppLog.kt:59`/`:60`: queued messages/tags use general `LogFile.redact`
+  (`:176`), which calls general telemetry sanitization (`:182`, `:186`).
+  Other `LogFile.redact` callers are `SafeErrorDescription.kt:7` (Bark message
+  or fallback type) and `ui/settings/EsploraSettingsScreen.kt:46` (UI error).
+- `AppTelemetry.kt:138`, `:158`, `:191`: event messages, exception values,
+  breadcrumbs use general `redactForTelemetry`; `:224` uses it to validate
+  serialized leaves. The overload accepting a sanitizer has no other production
+  caller besides its default wrapper; explicit clean-snapshot uses are tests.
+- `EndpointLogPrivacy.redactRecord` (`:265`) keeps its complete-record token-only
+  policy. Callers: default Logcat sink (`AppLog.kt:42`), file/overflow persist
+  (`:87`), final serialized Sentry leaf JSON guard (`AppTelemetry.kt:255`).
+- `redactLogLines` has exactly one production caller, `LogFile.readLines`
+  (`AppLog.kt:115`), serving the log UI/export read path. All other callers are
+  regression tests. There is no general-text caller of the record-only mode.
+
+Swift paths below are relative to `apps/ios/Noah/Services/Logging/`:
+
+- `EndpointLogPrivacy.swift:236`: ASCII prefix; `:240` groups stored lines;
+  only its flush calls private `sanitizeLogRecord` (`:256`).
+- `EndpointLogPrivacy.swift:282` general sanitizer: its only external production
+  caller is `LogFile.redactForTelemetry` (`AppLog.swift:257`, function reference).
+  `EndpointLogPrivacy.redact` (`:234`) also calls it, with test callers only.
+  The explicit-snapshot overload (`:289`) is called by the general wrapper and
+  tests. Both it and `sanitizeLogRecord` call the private engine (`:293`);
+  only `sanitizeLogRecord` can select read-back mode.
+- `EndpointLogPrivacy.swift:323` private `redactEndpoints` is called only by
+  the engine (`:311`, `:317`, raw/decoded and plain-scrubbed views). Complete-view
+  matching precedes exact UTF-16 prefix slicing and the rejoined-result match.
+  Unchanged `redactHosts` callers are `allowed` (`:196`) on URL tails and
+  `redactEndpoints` (`:339`) on the inspected body.
+- `AppLog.swift:87`/`:88`: queued messages/tags use general `LogFile.redact`
+  (`:250`), which calls general telemetry sanitization (`:256`, `:260`).
+  Other callers: `SafeErrorDescription.swift:9`/`:10` (`of`, including UI/server
+  strings), `:16` (non-Bark fallback in `forLogging`),
+  `Features/Settings/EsploraSettingsScreen.swift:72` (UI error), and
+  `AppTelemetry.swift:150` (serialized keys/values).
+- `AppTelemetry.swift:62`, `:95`, `:117`: event messages, exception values,
+  breadcrumbs use general `redactForTelemetry`. The overload accepting a sanitizer
+  has no other production caller besides its default wrapper; explicit
+  clean-snapshot uses are tests.
+- `EndpointLogPrivacy.redactRecord` (`:272`) keeps the complete-record token-only
+  policy. Callers: os_log delivery (`AppLog.swift:91`), file/overflow persist
+  (`:128`), final serialized Sentry JSON guard (`AppTelemetry.swift:159`).
+- `redactLogLines` has exactly one production caller, `LogFile.readLines`
+  (`AppLog.swift:151`), serving `lines`, `linesForExport` and
+  `checkedLinesForExport`. All other callers are regression tests. There is no
+  general-text caller of the record-only mode.
+
+The dated Bark overloads remain at Android `BarkLog.kt:14` and Swift
+`BarkLog.swift:27`; they still enqueue via the restored general writer path.
+Android regressions are in `services/EndpointRecordPrivacyTest.kt:29` and
+`services/storage/SettingsHistoryPrivacyTest.kt:42`; Swift equivalents are
+`NoahTests/EndpointRecordPrivacyTests.swift:18` and `NoahTests/EsploraTests.swift:129`.
+
+Direct test callers (including function references) are also accounted for:
+Android `AppLogTest`, `AppTelemetryTest`, `BarkLogTest`, `EndpointPrivacyTest`,
+`EndpointPrivacyRound9Test`, `EndpointPrivacyRound10Test`,
+`EndpointRecordPrivacyTest`, and `storage/SettingsHistoryPrivacyTest` use the
+general path. The last four also call the final write guard; only record and
+history tests directly call read-back. Swift `AppLogTests`, `AppTelemetryTests`,
+`BarkLogTests`, `DebugJSONTests`, `EndpointPrivacyTests`,
+`EndpointPrivacyRound9Tests`, `EndpointPrivacyRound10Tests`,
+`EndpointRecordPrivacyTests`, and `EsploraTests` use the general path. Round 9,
+round 10, record and Esplora tests also call the final write guard; only record
+and Esplora tests directly call read-back. File/SDK sink tests reach these same
+paths through `LogFile`/`BarkLog` as in production. The explicit-snapshot
+sanitizer overloads are used only by general wrappers and test probes.
+
+### Round-2 verification, commits and cleanup
+
+Implementation commits:
+
+- `18a2aefe` fix(android): limit log header authority exemption to stored records
+- `d06375d9` fix(ios): inspect complete log records before header authority filtering
+
+Both implementation hooks pass and retain the requested
+`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` trailer. The final
+documentation commit records this report and updates the TODO entry.
+
+Final focused Android verification: **36 tests / four suites**, zero failures,
+errors or skips, including the isolated lost-history regression. Final focused
+iOS verification: **31 tests / three suites**, all passed, plus the existing
+opt-in `EsploraTests.unknownHistoryStartupProtectsHistoricalExport` alone:
+**one test / one suite, passed with zero skips**. The opt-in was set temporarily
+in the generated scheme, which was restored byte-for-byte before the full run.
+
+The initial round-1 Android probe ran **10 tests, five failed**: three direct
+header/final-guard regressions and two further failures after the new permanent
+fail-closed test contaminated its class. Moving those assertions into the
+existing isolated history test fixed test isolation. The next focused run was
+**36 tests, one failed** because historical fixtures did not register each new
+endpoint; fixing test setup produced the final 36/36. No assertion was weakened.
+The iOS standalone runner first stopped before tests on an xctestrun schema
+mismatch; two subsequent xctestrun filters selected zero tests. None count as
+verification. The final scheme-based selection executed the named test and its
+new assertions. There was no iOS source/test correction or full-suite retry.
+
+The required full commands each ran **once after the final source/test change**,
+with our Android and iOS builds sequential. Android: **3,642 JVM tests / 157
+suites**, zero failures/errors/skips; regtest APK assembly and instrumentation
+Kotlin compilation also passed (**2m 45s**):
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Signed arm64 iOS: **845 tests / 172 suites — 818 passed, 27 opt-in skipped,
+zero failed**, `TEST SUCCEEDED`; Swift Testing took **264.610 seconds**.
+Generation used `cd apps/ios && /opt/homebrew/bin/xcodegen generate`. Tests used
+Nix, `Noah-Regtest`, the owned simulator's exact UDID, two build jobs,
+`ARCHS=arm64`, `ONLY_ACTIVE_ARCH=YES`, ad hoc simulator signing with entitlements,
+private DerivedData `/private/tmp/noah-log-header-r2-41dd0f19-dd`, cached package
+sources/artifacts, package updates/resolution disabled, parallel runners disabled,
+and `-collect-test-diagnostics never`. The Device panel twice could not locate
+the new simulator; Xcode used its exact UDID instead. No other device was driven.
+
+All existing authority, redaction, token, record, round-9/10 and scaling assertions
+pass. Native output and translation `--check` pass. The normal commit hooks run
+lint, React Compiler checks, **148 JavaScript tests**, TypeScript and Rust
+formatting. An initial hook preflight could not resolve the local `noah-tools`
+package; a temporary dependency overlay at the repository root resolved it
+without changing `client/` or `server/`. Temporary dependency links and generated
+Husky scripts are removed after the final documentation hook.
+
+The owned `Noah Log Headers R2 41dd0f19` simulator
+(`5D84BFA4-897E-42D1-8EA6-540006D20E2B`, iPhone 17, iOS 27.0) was confirmed
+`Shutdown` before deletion. It, private DerivedData and all six owned result
+bundles were removed. Logs, result summaries and cleanup evidence remain under
+`/private/tmp/noah-log-header-r2-41dd0f19`. No owned build/test/diagnostic process
+remains. No physical/shared simulator or emulator, Docker or regtest stack was
+used; no push ran. No tracked `client/` or `server/` file changed.
+
+There are no unresolved round-2 findings. Android device instrumentation was
+compiled rather than run. Existing short-token, unregistered-secret,
+Apple-owned logging and fixed-text-collision policy limits remain as documented;
+this change adds no exception for endpoint-derived data in a formatter header.
