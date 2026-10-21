@@ -1034,3 +1034,50 @@ server source remain unchanged. The three fixed-text confirmation findings are
 documented only. Device instrumentation was compiled rather than run. Temporary
 dependency links and generated local hook shims are removed after the final
 commit hook completes. No further native build is needed for this workstream.
+
+
+## 2026-10-21 follow-up: preserve formatter record headers
+
+After any endpoint registration, the authority scanner interpreted `08:21:42.292`
+and `09:21:42.292` as authorities whose numeric hosts failed canonicalization,
+erasing those timestamp fields during read-back/export.
+
+Both platforms exempt exactly one anchored ASCII formatter prefix,
+`[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} [VDIWE] `,
+then inspect the remainder with the existing policy. Final write guards and
+full-record sanitization retain that prefix even on whole-body replacements.
+Raw writer tags/callbacks use `sanitizeMessage`, with no header exemption; the
+body is never recursively treated as a record. Swift slices at the regex's exact
+UTF-16 boundary, retaining leading body marks. Historical exports and Sentry
+message/exception/breadcrumb scrubbers share the fix. Sentry's serialized JSON
+guard still inspects the whole payload; attachments remain disabled/stripped.
+
+The 39 shared `esplora-log-headers.json` cases cover all 24 hours, every level,
+adjacent/tag secrets, nested/continuation headers, encoded secrets, malformed or
+Unicode prefixes and combining marks. Tests check raw writes, read-back,
+historical exports, Sentry and callback/tag file/system sinks. The three affected
+tests explicitly register an endpoint and inject local 08:21 or 09:21 dates;
+Bark forwards through a dated overload to the existing append API. Ordering,
+persistence and marker-count assertions are unchanged. Before the fix, all three
+initial Android regressions failed. Focused final verification: **35 Android /
+three suites; 31 iOS / three suites**, all passed.
+
+Each required full run executed once after final source changes, sequentially:
+Android **3,642 JVM tests / 157 suites**, zero failures/errors/skips, plus regtest
+APK assembly and instrumentation Kotlin compilation (1m 43s); signed arm64 iOS
+**845 tests / 172 suites — 818 passed, 27 opt-in skipped, zero failed**
+(265.656 seconds). iOS used `/opt/homebrew/bin/xcodegen generate`, Nix,
+`Noah-Regtest`, two jobs, private DerivedData, cached packages and ad hoc signing;
+parallel test runners and diagnostic collection were disabled.
+
+The owned `Noah Log Headers e94f7b9d` simulator
+(`0A400487-D033-45FF-965C-29CBD8444C82`) was confirmed `Shutdown` before deletion;
+it, `/private/tmp/noah-log-header-e94f7b9d-dd` and both result bundles were removed.
+Logs/count summaries remain in `/private/tmp/noah-log-header-e94f7b9d`. The Device
+panel could not locate it, so Xcode used its exact UDID. No physical/shared device,
+Docker or regtest stack was used. Output/translation checks and normal commit
+hooks pass (including 148 JS tests); temporary dependency links/Husky shims are
+removed after the final hook. No `client/` or `server/` source changed or push ran.
+
+Times inside message text, such as `retry at 08:30`, retain the existing
+fail-closed authority behavior and remain out of scope.
