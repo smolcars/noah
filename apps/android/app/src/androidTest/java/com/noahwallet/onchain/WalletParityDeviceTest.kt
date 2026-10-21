@@ -86,7 +86,14 @@ class WalletParityDeviceTest {
             fun scroll(node: android.view.accessibility.AccessibilityNodeInfo?): Boolean = node != null &&
                 ((node.isScrollable && node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) ||
                     (0 until node.childCount).any { scroll(node.getChild(it)) })
-            assertTrue(scroll(instrumentation.uiAutomation.rootInActiveWindow))
+            fun contains(node: android.view.accessibility.AccessibilityNodeInfo?, text: String): Boolean = node != null &&
+                (node.text?.toString() == text || (0 until node.childCount).any { contains(node.getChild(it), text) })
+            val deadline = System.currentTimeMillis() + 10_000
+            while (!contains(instrumentation.uiAutomation.rootInActiveWindow, "Below dust limit") && System.currentTimeMillis() < deadline) Thread.sleep(100)
+            val root = instrumentation.uiAutomation.rootInActiveWindow
+            assertTrue("Below-dust summary is visible", contains(root, "Below dust limit"))
+            assertTrue("Claimed count is visible", contains(root, "Claimed"))
+            scroll(root)
             Thread.sleep(1000)
             shot("wallet-parity-exit-summary-bottom.png")
         }
