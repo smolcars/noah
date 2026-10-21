@@ -222,17 +222,15 @@ internal object EndpointLogPrivacy {
     }
     fun redact(text: String): String = sanitize(text) ?: "[redacted]"
 
-    // Only formatter-owned ASCII fields are exempt; tags and all message text remain inspected.
     private val recordHeader = Regex("""^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} [VDIWE] """)
     private val recordStart = Regex(recordHeader.pattern + """\[""")
-    private fun header(text: String) = recordHeader.find(text)?.value.orEmpty()
     /** Keep continuation lines with their endpoint/error context, including historical files. */
     fun redactLogLines(lines: List<String>): List<String> {
         val result = mutableListOf<String>()
         val record = mutableListOf<String>()
         fun flush() {
             if (record.isEmpty()) return
-            result += redact(record.joinToString("\n")).lines()
+            result += (sanitizeLogRecord(record.joinToString("\n")) ?: "[redacted]").lines()
             record.clear()
         }
         for (line in lines) {
@@ -244,16 +242,16 @@ internal object EndpointLogPrivacy {
     }
 
     fun sanitize(text: String): String? {
-        if (unavailable) return header(text) + "[custom-esplora]"
+        if (unavailable) return "[custom-esplora]"
         val snapshot = snapshot()
         return sanitize(text, snapshot.first, snapshot.second, snapshot.third)
     }
 
-    /** Raw tags/callbacks have no formatter-owned prefix, even when they imitate one. */
-    fun sanitizeMessage(text: String): String? {
+    /** Only stored records may exclude formatter fields from authority inspection. */
+    private fun sanitizeLogRecord(text: String): String? {
         if (unavailable) return "[custom-esplora]"
-        val snapshot = snapshot()
-        return sanitizeBody(text, snapshot.first, snapshot.second, snapshot.third)
+        val (registered, matcher, hosts) = snapshot()
+        return sanitize(text, registered, matcher, hosts, recordReadBack = recordHeader.containsMatchIn(text))
     }
 
     private fun snapshot(): Triple<Set<String>, SecretMatcher, Set<String>> = synchronized(this) {
@@ -265,11 +263,6 @@ internal object EndpointLogPrivacy {
 
     /** Formatting can join safe fields; only guard tokens, preserving timestamps/provider summaries. */
     fun redactRecord(text: String): String {
-        val prefix = header(text)
-        return prefix + guardRecordBody(text.drop(prefix.length))
-    }
-
-    private fun guardRecordBody(text: String): String {
         if (unavailable) return "[custom-esplora]"
         val snapshot = snapshot()
         if (snapshot.first.isEmpty()) return text
@@ -281,11 +274,10 @@ internal object EndpointLogPrivacy {
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
     internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()), hosts: Set<String> = emptySet()): String? {
-        val prefix = header(text)
-        return sanitizeBody(text.drop(prefix.length), registered, matcher, hosts)?.let { prefix + it }
+        return sanitize(text, registered, matcher, hosts, recordReadBack = false)
     }
 
-    private fun sanitizeBody(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>): String? {
+    private fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Boolean): String? {
         if (registered.isNotEmpty() && hasExcessiveCombiningRun(text)) return "[custom-esplora]"
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
@@ -304,19 +296,23 @@ internal object EndpointLogPrivacy {
         if (registered.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
-            val endpointOnly = redactEndpoints(view, registered, matcher, hosts)
+            val endpointOnly = redactEndpoints(view, registered, matcher, hosts, recordReadBack)
             if (endpointOnly == "[custom-esplora]" || index > 0 && endpointOnly != view) return "[custom-esplora]"
             // Host replacement must not hide credential labels or break mnemonic runs.
             val plain = LogFile.redactPlain(view)
             if (index > 0 && plain != view) return "[redacted]"
-            if (index == 0) result = if (plain == view) endpointOnly else redactEndpoints(plain, registered, matcher, hosts)
+            if (index == 0) result = if (plain == view) endpointOnly else redactEndpoints(plain, registered, matcher, hosts, recordReadBack)
         }
         return result
     }
 
-    private fun redactEndpoints(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>): String {
-        val clean = urls.replace(text) { match -> if (!allowed(match.value, registered, hosts)) "[custom-esplora]" else match.value }
-        val safe = redactHosts(clean, hosts)
+    private fun redactEndpoints(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Boolean): String {
+        // Match complete raw/decoded views before authority replacement can hide a boundary token.
+        if (recordReadBack && matcher.contains(text)) return "[custom-esplora]"
+        val prefix = if (recordReadBack) recordHeader.find(text)?.value.orEmpty() else ""
+        val body = text.drop(prefix.length)
+        val clean = urls.replace(body) { match -> if (!allowed(match.value, registered, hosts)) "[custom-esplora]" else match.value }
+        val safe = prefix + redactHosts(clean, hosts)
         return if (matcher.contains(safe)) "[custom-esplora]" else safe
     }
 }

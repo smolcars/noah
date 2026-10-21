@@ -31,18 +31,21 @@ class EndpointRecordPrivacyTest {
         for (test in headerCases()) {
             EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
             val input = test.getValue("input").jsonPrimitive.content
-            val expected = test.getValue("expected").jsonPrimitive.content
+            val expected = test.getValue("generalExpected").jsonPrimitive.content
             assertEquals(test.toString(), expected, EndpointLogPrivacy.redact(input))
             assertEquals(test.toString(), expected, LogFile.redact(input))
-            assertEquals(test.toString(), expected, LogFile.redactForTelemetry(input))
+            assertEquals(test.toString(), expected.takeUnless { it == "[redacted]" }, LogFile.redactForTelemetry(input))
+            assertEquals(test.toString(), expected, SafeErrorDescription.of(io.github.niteshbalusu11.bark.BarkError(input)))
+            assertEquals(test.toString(), test.getValue("expected").jsonPrimitive.content.lines(), EndpointLogPrivacy.redactLogLines(input.lines()))
+            test["recordExpected"]?.let { assertEquals(test.toString(), it.jsonPrimitive.content, EndpointLogPrivacy.redactRecord(input)) }
             val event = SentryEvent().apply {
                 message = Message().apply { formatted = input }
                 exceptions = listOf(io.sentry.protocol.SentryException().apply { value = input; type = "FakeEndpointError" })
             }
             val clean = requireNotNull(AppTelemetry.scrub(event))
-            assertEquals(expected, clean.message!!.formatted)
-            assertEquals(expected, clean.exceptions!!.single().value)
-            assertEquals(expected, requireNotNull(AppTelemetry.scrub(Breadcrumb().apply { message = input })).message)
+            assertEquals(expected.takeUnless { it == "[redacted]" }, clean.message?.formatted)
+            assertEquals(expected.takeUnless { it == "[redacted]" }, clean.exceptions?.single()?.value)
+            assertEquals(expected.takeUnless { it == "[redacted]" }, AppTelemetry.scrub(Breadcrumb().apply { message = input })?.message)
         }
     }
 
@@ -62,19 +65,20 @@ class EndpointRecordPrivacyTest {
             assertEquals(expected, file.lines())
             directory.resolve("noah.log").delete()
             for (test in headerCases()) {
+                EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
                 directory.resolve("noah.log.1").writeText(test.getValue("input").jsonPrimitive.content)
-                assertEquals(test.toString(), listOf(test.getValue("expected").jsonPrimitive.content), file.lines())
+                assertEquals(test.toString(), test.getValue("expected").jsonPrimitive.content.lines(), file.lines())
             }
         } finally { directory.deleteRecursively() }
     }
 
-    @Test fun finalWriteGuardKeepsHeaderWhenTheBodyMatchesASecret() {
+    @Test fun finalWriteGuardInspectsTheWholeRecord() {
         EndpointLogPrivacy.register("https://review-number.example/835917264")
         val header = "2026-10-21 08:21:42.292 D "
-        assertEquals(header + "[custom-esplora]", EndpointLogPrivacy.redactRecord(header + "[sdk] 835917264"))
-        // A registered token equal to formatter-owned digits cannot erase the header.
+        assertEquals("[custom-esplora]", EndpointLogPrivacy.redactRecord(header + "[sdk] 835917264"))
+        // The complete formatter prefix remains subject to the token guard.
         val matcher = EndpointLogPrivacy.SecretMatcher(setOf("2026-10-21"))
-        assertEquals(header + "[sdk] ordinary", EndpointLogPrivacy.sanitize(header + "[sdk] ordinary", setOf("https://review-number.example"), matcher))
+        assertEquals("[custom-esplora]", EndpointLogPrivacy.sanitize(header + "[sdk] ordinary", setOf("https://review-number.example"), matcher))
     }
 
     @Test fun callbackTextAndTagsCannotClaimARecordHeader() {
