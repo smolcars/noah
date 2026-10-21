@@ -361,12 +361,8 @@ extension WalletSession {
                 transactionIDs: {
                     let cached = try await handles.onchain.transactions().map(\.txid)
                     let pending = try await handles.wallet.pendingBoards().map(\.txid)
-                    let movements = try await handles.wallet.history().compactMap { movement -> String? in
-                        guard movement.subsystemName == "bark.board" else { return nil }
-                        return HistoryMetadata.parse(movement.metadataJson).chainAnchor?
-                            .split(separator: ":").first.map(String.init)
-                    }
-                    return Set(cached + pending + movements)
+                    // A board movement can precede its durable checkpoint; metadata alone is not submission evidence.
+                    return Set(cached + pending)
                 },
                 vtxoState: { id in
                     let vtxo = try await handles.wallet.getVtxoById(vtxoId: id)

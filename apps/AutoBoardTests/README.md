@@ -137,6 +137,29 @@ kill. Real post-dismissal process death/reopen was exercised on both platforms.
 
 ## Source map
 
+Review follow-up (orphan board movement): pinned Bark can save a board movement
+before persisting its checkpoint. iOS previously treated that movement's
+`chain_anchor` as submission evidence, creating a broadcast-retry receipt that
+could never resolve or be explicitly overridden. Reconciliation now accepts only
+an exact checkpoint/local-wallet transaction txid or mempool/chain evidence;
+movement metadata alone leaves the journal uncertain and its existing explicit
+override available. A real offline SDK-wallet regression inserts the orphan
+movement and output ID, confirms there is no checkpoint, local transaction or
+stored VTXO, and checks recovery against a loopback `notFound` response. Separate
+cases preserve checkpoint, BDK, mempool and chain receipts. Android already
+requires a stored output VTXO when resolving movement IDs and never reads
+`chain_anchor`; its production code is unchanged, with an added missing-evidence
+override guard. Exact pre-submit journalling, fail-closed reads, reservations and
+single-use preparations are unchanged. Each requested full suite ran once after
+the final source change: Android **3,677 tests / 158 suites**, zero failures,
+errors or skips, APK assembled and Android-test Kotlin compiled; iOS **867 total /
+840 passed / 27 gated skips / zero failures**, **174 suites / 1,696 expanded
+passed executions**. Focused iOS recovery/safety checks passed **53 tests / 80
+expanded executions**. The dedicated iPhone 17 / iOS 27.0 simulator
+**Noah Orphan Board t3-1d8f55ce** (`997DE09B-F634-4CEB-9611-2E1311FC53DF`)
+was shut down, identity-checked and deleted; deletion was verified. No Docker,
+physical devices or other agents' devices were used for this follow-up.
+
 Android:
 
 - `app/src/main/java/com/noahwallet/onchain/AutoBoardFunding.kt:5` — persisted

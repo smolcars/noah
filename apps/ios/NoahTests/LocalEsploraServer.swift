@@ -3,7 +3,7 @@ import Network
 
 /// Loopback only. Tests own every connection and cancel them before returning.
 final class LocalEsploraServer: @unchecked Sendable {
-    enum Reply { case silent, drip, oversized }
+    enum Reply { case silent, drip, oversized, notFound }
     private let listener: NWListener
     private let queue = DispatchQueue(label: "test.esplora-server")
     private let lock = NSLock()
@@ -22,10 +22,16 @@ final class LocalEsploraServer: @unchecked Sendable {
             guard let self else { connection.cancel(); return }
             lock.withLock { connections.append(connection) }
             connection.start(queue: queue)
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] _, _, _, _ in
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] request, _, _, _ in
                 guard let self else { return }
                 switch reply {
                 case .silent: break
+                case .notFound:
+                    let genesis = "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"
+                    let response = String(decoding: request ?? Data(), as: UTF8.self).contains("GET /block-height/0 ")
+                        ? "HTTP/1.1 200 OK\r\nContent-Length: 64\r\nConnection: close\r\n\r\n\(genesis)"
+                        : "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
                 case .oversized:
                     connection.send(content: Data(("HTTP/1.1 200 OK\r\nContent-Length: 2097152\r\n\r\n" + String(repeating: "x", count: 2097152)).utf8), completion: .contentProcessed { _ in })
                 case .drip:

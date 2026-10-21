@@ -8,6 +8,26 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OnchainOperationsTest {
+    @Test fun orphanBoardWithoutCheckpointLocalTransactionOrNetworkEvidenceAllowsExplicitOverride() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val reviewed = ops.quote(OnchainAction.board, amount = 30_000)
+        runCatching { journal.perform(reviewed) { record -> record("board-tx"); error("process died before checkpoint") } }
+        wallet.fundingTransactions = emptyList()
+        wallet.chainStatus = TransactionStatus.NotFound
+        // An orphan movement has no persisted output VTXO to resolve; Android never reads chain_anchor.
+        assertTrue(wallet.boardTransactionIDs().isEmpty())
+        assertFalse(ops.check(reviewed.id))
+        assertNull(ops.autoBoardFunding())
+        val uncertain = journal.loadAll().single()
+        assertEquals("board-tx", uncertain.txid)
+        assertNull(uncertain.receipt)
+        assertTrue(uncertain.blocks(OnchainAction.board, emptyList()))
+        journal.overrideUncertain(reviewed.id)
+        val overridden = journal.loadAll().single()
+        assertNotNull(overridden.overrideAudit)
+        assertFalse(overridden.blocks(OnchainAction.board, emptyList()))
+        ops.execute(ops.quote(OnchainAction.board, amount = 30_000))
+        assertEquals(1, wallet.calls.count { it.startsWith("submit:") })
+    } }
     @Test fun incompleteProbeCleanupStopsBeforePreparingAgain() = runBlocking { fixture { wallet, ops, journal, _ ->
         wallet.cleanupComplete = false
         val failure = runCatching { ops.autoBoardQuote() }.exceptionOrNull()
