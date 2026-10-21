@@ -9,6 +9,31 @@ import Testing
         try #require(await condition())
     }
 
+    @Test func unbudgetedJoinOnlyDrainsRevokedWork() async throws {
+        let h = try RecurringExecutorTests.Harness(); let schedule = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        let gate = RecurringReservationTests.Gate()
+        let budget = RecurringSubmissionBudget()
+        var quotes = 0
+        h.preflight = {
+            quotes += 1
+            if quotes == 1 { await gate.wait() }
+        }
+        let original = Task {
+            await RecurringSubmissionBudget.$current.withValue(budget) { await h.executor.execute() }
+        }
+        try await waitUntil { await gate.entered }
+        budget.revoke()
+        var joined = false
+        let drain = Task { joined = true; await h.executor.execute() }
+        try await waitUntil { joined }
+        await gate.release()
+        await original.value; await drain.value
+        #expect(quotes == 1)
+        #expect(h.calls.withLock { $0 } == 0)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 0)
+    }
+
     @Test(arguments: ["revoked", "expired", "settled", "ambiguous"])
     func backgroundWakesRecheckDueWorkAfterJoiningForeground(outcome: String) async throws {
         let h = try RecurringExecutorTests.Harness()

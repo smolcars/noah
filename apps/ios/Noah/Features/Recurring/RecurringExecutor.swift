@@ -79,7 +79,7 @@ import Observation
             do { try BackgroundExecution.checkActive(); try ForegroundExecution.checkActiveNow() } catch { return }
             guard let pending = task else { break }
             await pending.work.value
-            if pending.budget === RecurringSubmissionBudget.current { return }
+            if RecurringSubmissionBudget.current == nil || pending.budget === RecurringSubmissionBudget.current { return }
             // Another admission may have been revoked; reread durable due work with our budget.
         }
         let work = Task {

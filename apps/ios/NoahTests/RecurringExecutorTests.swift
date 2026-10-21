@@ -682,7 +682,12 @@ import Testing
     @Test(arguments: [false, true]) func expiredPushBudgetNeverStartsSubmission(duringPreparation: Bool) async throws {
         let h = try Harness(); let schedule = try h.add()
         let gate = RecurringReservationTests.Gate()
-        let hold: @MainActor @Sendable () async throws -> Void = { await gate.wait() }
+        var held = false
+        let hold: @MainActor @Sendable () async throws -> Void = {
+            guard !held else { return }
+            held = true
+            await gate.wait()
+        }
         if duringPreparation { h.beforePay = hold } else { h.preflight = hold }
         let result = await AppDelegate.completeWithin(.seconds(2)) { await h.executor.execute() }
         #expect(result == .failed)
