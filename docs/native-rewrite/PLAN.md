@@ -115,6 +115,16 @@ Order agreed with the user on 2026-10-20:
 
 `client/` stays in the repo after the native apps ship, until we're confident in the rewrite. Deleting it, with the Nitro modules and ts-rs, is a later, separate decision.
 
+### CI testing for the native UI (agreed 2026-10-20)
+We keep Maestro as the cross-platform end-to-end layer and point it at the native apps. It reads the accessibility tree, so SwiftUI and Compose need no other tool.
+- Every PR: native unit suites (`native-android.yml`, `native-ios.yml`), as today.
+- Every PR: Maestro on the native Android regtest APK, on the existing Linux emulator runner with the Docker regtest stack. This replaces the RN APK in `noah-maestro-test-android.yml`. The RN flows in `client/.maestro` get ported to native, using stable test IDs (`accessibilityIdentifier` / `testTag`). There is one flow set per behaviour, with platform branches only where the UI differs.
+- Nightly or on a label: the same flows on an iOS simulator (macOS runner), and the adaptive-layout flows (`client/tests/maestro/adaptive-*.yml`, ported) on a tablet emulator and the iPhone Duo.
+- Small native UI test sets where Maestro can't reach:
+  - XCUITest for system popovers (date/time pickers) and simulated Face ID;
+  - Compose instrumentation for rotation and state restoration. It already compiles in CI; run it on the emulator job.
+- Nightly or manual: the RN→native upgrade tests, which already use Maestro for RN onboarding.
+
 ## Working method
 - RN regtest app running beside the native app for screen-by-screen reference.
 - Small commits; after each meaningful commit a GPT-6.1 Sol (high/xhigh) review agent; fix findings before moving on.
