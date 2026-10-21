@@ -11233,42 +11233,6 @@
         }
       }
     },
-    "Couldn't save auto-board state.": {
-      "comment": "GT gt_bf37d13a4ad376c7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't save auto-board state."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo guardar el estado de la transferencia automática."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto-boardの状態を保存できませんでした。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 입금 상태를 저장하지 못했습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det gick inte att spara status för auto-board."
-          }
-        }
-      }
-    },
     "Couldn't save debug setting.": {
       "comment": "GT gt_e25b19f7d22a2fdf; arguments: none",
       "extractionState": "manual",

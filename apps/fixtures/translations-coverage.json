@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1417,
-  "sourceKeys": 1418,
+  "catalogEntries": 1416,
+  "sourceKeys": 1417,
   "coverage": {
     "ios": {
       "used": [
@@ -237,7 +237,6 @@
         "Couldn't refresh your profile. Please try again.",
         "Couldn't save auto-board preference.",
         "Couldn't save auto-board setting.",
-        "Couldn't save auto-board state.",
         "Couldn't save debug setting.",
         "Couldn't save your name. Please try again.",
         "Couldn't save your preference. Please try again.",
@@ -1371,7 +1370,6 @@
         "Couldn't resume recovery. Restart Noah and try again.",
         "Couldn't save authentication preference.",
         "Couldn't save auto-board preference.",
-        "Couldn't save auto-board state.",
         "Couldn't save this payment. Try again.",
         "Couldn't save your name.",
         "Couldn't save your preference.",
