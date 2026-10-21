@@ -3,6 +3,7 @@
 Round-4 base: `feat/native-rewrite` at `a5866b02`; review: `54b44dc5`.
 Round-5 work starts at the supplied `be132094` HEAD, after the lifecycle merge.
 Round 6 starts at `2fa950f1`, with the reviewed `4565c735` in its ancestry.
+Round 7 starts at `249cb85f`, including the reviewed round-6 `184c39c6` ancestry.
 All test credentials are fake.
 
 A custom endpoint's entire identity is private, including scheme, hostname,
@@ -15,7 +16,86 @@ settings error text and iOS `SafeErrorDescription.of` use `LogFile.redact`.
 queue; the writer applies the boundary before either sink. Ark Info continues
 to show/copy the full endpoint on screen.
 
-## Current policy (round 6)
+## Current policy (round 7)
+
+Round 7 adds registered secret tokens to the round-6 authority allowlist below.
+The acceptance boundary is one record at every Noah-owned sink: a token derived
+from any current or retired registered endpoint must not survive, including
+inside an admitted public URL, arbitrary prefixes, or a later line/record that
+contains a complete token. The durable history and fail-closed marker are
+unchanged. No-registration/no-marker mode retains its previous behavior.
+
+Registrations derive the following tokens locally, without DNS/network access:
+
+- Full canonical hostnames, including canonical IP literals and both ASCII IDNA
+  and Unicode spellings. Each non-public host label of at least six characters
+  is also protected. The final DNS label is excluded from label extraction;
+  fixed common suffix labels (`com`, `org`, `net`, `edu`, `gov`, `co`, `ac`),
+  reserved `example`/`localhost`, and host labels from shipped public origins are
+  excluded too. Full hosts are always protected, even when their labels are
+  public. Thus `fake-r6-private.example` protects the full name and
+  `fake-r6-private`, without making every occurrence of `example` private.
+- Userinfo (including the individual username/password components) of at least
+  six characters. Selection validation still rejects userinfo and query strings;
+  registration nevertheless derives their tokens for legacy/corrupt history.
+- Each opaque path segment and query value of at least six characters, in raw
+  and decoded forms. For example `/api/fakeR6PathSecret913?key=fakeQuerySecret761`
+  protects both fake secrets. A fixed route-word list excludes `api`, `block`,
+  `blocks`, `tip`, `height`, `hash`, `tx`, `txs`, `transaction`, `transactions`,
+  `address`, `scripthash`, `mempool`, `v0`, `v1`, `v2`, network names, `esplora`,
+  `fee-estimates`, `outspend`, `outspends`, `status`, `hex`, `raw`, `merkle-proof`,
+  `merkleblock-proof`, `utxo` and `broadcast`. Route-word exclusions apply to
+  path/query tokens, not private host labels or userinfo.
+- A port only with its host; `18443` alone remains useful diagnostic text.
+
+An immutable Aho–Corasick trie combines all registrations. Breadth-first failure
+links propagate a terminal-hit bit, so suffix and overlapping matches need no
+per-pattern searches or match arrays. Registration invalidates the cached
+matcher only when tokens change; the first subsequent record rebuilds it.
+Android also caches immutable origin/host snapshots instead of copying history
+for every record. Matching uses one stable UTF-16 view after NFKC and
+locale-independent Unicode lower/upper casing followed by a final NFKC pass
+(including `Straße`/`STRAẞE`/`STRASSE`). The final pass makes normalization
+idempotent when casing expands a character into combining marks. Work per view is O(record length), independent of the number
+of registrations; storage is O(total token length). The bounded decoder retains
+four escape layers, normalizing compatibility forms before each layer so that
+fullwidth percent/backslash/entity punctuation cannot hide a supported escape.
+Clean-install decoding keeps its previous defaults.
+
+The existing URL/host layer runs first and retains its exact authority outputs.
+If a secret token remains anywhere, the entire record becomes
+`[custom-esplora]`. Decoded/compatibility-view hits also omit the whole record;
+there are no uncertain source-offset substitutions. Provider type/status
+summaries pass the token matcher too. Swift's URL and bare-host replacements
+now collect stable NSString/UTF-16 ranges and assemble output once per layer,
+without repeated indexing/mutation of a growing String. There is no remaining
+O(registrations × record length) relative-path scan.
+
+### Accepted limitations
+
+- **One token split mid-token across records or lines.** Matching protects a
+  complete token on any later line or in a separate record; it does not join
+  token fragments around a newline or pool fragments from separate records.
+  There is no reliable way to distinguish wrapping from independent text.
+  Guessing joins would erase unrelated diagnostics and cross-record pooling
+  would require additional retained state beyond the bounded record boundary.
+  This is acceptable because the guarantee concerns complete registered tokens
+  within one record, including supported encodings, rather than arbitrary
+  reconstruction of fragments.
+- **Tokens shorter than six characters.** Opaque segment/query/label extraction
+  excludes these because short strings and ordinary route words occur throughout
+  routine diagnostics. Treating them as secrets everywhere would obscure most
+  operational failures. Whole registered hosts and the conservative authority
+  layer still protect short endpoint authorities. This threshold is an explicit
+  tradeoff for useful logs, rather than an assertion that short text is secret.
+- **Secrets absent from the registered URL.** Registration cannot derive
+  provider-generated credentials, unrelated application data, or lost endpoint
+  identities. Existing mnemonic/credential/provider-body guards remain in place;
+  unreadable history still fails closed. This is acceptable because an endpoint
+  policy can prove protection only for known URL-derived identities, and callers
+  must continue to avoid logging other secrets.
+
+## Authority policy (retained from round 6)
 
 The round-5 review at `4565c735` showed why a denylist of equivalent spellings
 cannot be the primary URL boundary. Round 6 inverts admission: once any current
@@ -59,8 +139,8 @@ mentions such as `host:port`, including single-label hosts, IDNA, bracketed or
 unbracketed IPv6, and WHATWG IPv4 forms. Brackets only group IPv6 tokens; other
 bracket/JSON contents still receive ordinary host inspection. Uncertain
 host parsing redacts. Host lookups use a set rather than scanning the registered
-endpoints for each token. Relative references matching registered base paths
-still omit the whole record; allowed public URLs are excluded from those checks.
+endpoints for each token. Round 7 supersedes the relative-base-path scan with the token matcher above;
+public URL tails and complete wrapped path tokens receive the same protection.
 Status/error context outside redacted URL or scheme-less host tokens stays visible;
 provider errors continue to retain only their recognized type and status.
 
@@ -429,3 +509,101 @@ Every commit passed the normal repository pre-commit hook; no tracked RN,
 server, screen, recurring, lifecycle/lock or EsploraOpenWait source changed.
 No owned native build remains active. Temporary dependency links are removed
 after the documentation hook completes.
+
+
+## Round-7 regression evidence
+
+The original 242 authority cases, 147 redaction cases and 53 Esplora cases stay
+unchanged. `apps/fixtures/esplora-log-tokens.json` adds 28 exact shared outputs:
+colon-prefixed bare hosts, complete secrets on wrapped lines and separate
+records, admitted public URL tails, arbitrary prefixes, case, private host labels,
+retired paths, query/userinfo, percent/JSON/HTML escapes, NFKC fullwidth forms,
+IDNA labels and Unicode case expansion. Both native runners cover app/system,
+file/export and Sentry message/exception/breadcrumb boundaries; iOS also covers
+SafeErrorDescription. The fixture includes ordinary route diagnostics and a bare
+port that remain visible. Automaton tests cover inherited suffix terminals,
+Unicode surrogate pairs, negative matches, idempotent Greek combining-mark normalization, capital sharp S
+and provider-summary token collisions.
+
+Before implementation, Android's permanent new sink regression failed on
+`peer:fake-r6-private.example:8443`. A standalone Swift probe compiled the
+unmodified production EndpointLogPrivacy, EsploraEndpoint and decoder (with local
+configuration/general-redactor stand-ins): 12 of the first 15 shared token cases
+failed, including all reviewed leak shapes. The production-function probe passes all 242 authority and all 28 token cases.
+A local JDK self-check also demonstrated that NFKC-plus-uppercase is not
+idempotent for Greek combining-mark expansion; the final normalizer includes a
+second NFKC pass and lower/upper casing, with permanent tests on both platforms. This probe supplements the full
+native suites; it does not substitute for real logger/telemetry verification.
+
+Scaling retains the existing 1/16-KiB, 64x-plus-20-ms and two-second assertions
+with 1,000 registrations. New families cover long records without `/`, with `/`,
+with a token hit, and repeated fullwidth `ａ ` under an isolated short-host
+snapshot. The fullwidth input uses the boundary's larger export-record allowance
+so the 16-KiB UTF-16 input is inspected instead of hitting the ordinary file
+message byte cap. The translation coverage inventory adds the route word
+`blocks` as a scanner false positive; no UI/catalog strings changed.
+
+Round-7 iOS scaling medians (1 KiB → 16 KiB, 1,000 registrations): file boundary
+without slash 2.194 → 34.140 ms, with slash 1.978 → 29.601 ms, token hit
+0.546 → 8.051 ms; endpoint-only boundary without slash 1.343 → 20.393 ms,
+with slash 1.257 → 18.626 ms, token hit 0.541 → 7.953 ms. Fullwidth bare hosts
+under the isolated `a` policy: 9.871 → 157.227 ms (15.9x for 16x input).
+All scaling assertions pass. AppLog's rotation test completes in 6.405 seconds,
+its 4,100-record export test in 1.950 seconds, and the entire AppLogTests suite
+in 18.264 seconds. The shared authority sink test completes in 0.677 seconds,
+the new token sink test in 0.188 seconds.
+
+## Round-7 final verification and cleanup
+
+Final signed arm64 iOS verification: **813 tests / 164 suites**, **787 passed,
+26 opt-in skipped, zero failed**. The complete NoahTests suite ran once after
+the last source/test change, with `xcodegen generate` first, normal signing,
+`ARCHS=arm64`, `ONLY_ACTIVE_ARCH=YES`, Nix, package updates/resolution disabled,
+and DerivedData at `/private/tmp/noah-esplora-r7-dd`. The Swift Testing run took
+278.205 seconds. Two earlier pre-test builds were interrupted while the Unicode
+normalizer was corrected; neither ran the suite or substitutes for this result.
+
+The owned simulator's exact identity and shutdown state were confirmed before
+deletion: `Noah Esplora R7 7e363ae9`
+(`42F71734-2AAD-43B6-AE37-3CB02021556D`, iPhone 17, iOS 27.0, `Shutdown`).
+It, the owned DerivedData and all three owned result bundles were removed before
+the final Android command. No shared/forbidden simulator, emulator, physical
+device or Docker instance was used. Probes and tests use fake secrets and local
+fakes; no public endpoint requests were made.
+
+Final Android verification: **3,606 JVM tests / 149 suites**, zero failures,
+errors or skips; regtest APK assembled and instrumentation Kotlin compiled.
+The required command ran once after the final source/test changes and after
+owned iOS resources were removed; it completed successfully in 2m 9s:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Android final scaling medians (1 KiB → 16 KiB): file boundary without slash
+1.028 → 14.720 ms, with slash 0.735 → 11.320 ms, token hit 0.140 → 1.620 ms;
+endpoint-only boundary without slash 0.402 → 7.024 ms, with slash 0.417 →
+7.658 ms, token hit 0.094 → 1.478 ms. Fullwidth bare hosts: 2.010 → 31.736 ms
+(15.8x for 16x input). All scaling assertions pass. AppLogTest completes in
+9.305 seconds. The earlier focused Android run passed 70 tests in five suites;
+the final full run includes the subsequent compatibility/casing tests.
+
+Both final suites pass all unchanged 242 authority, 147 redaction and 53 Esplora
+cases, plus all 28 shared token cases and the automaton/scaling tests. Native
+translation `--check` is clean. Every commit passes the normal pre-commit hook
+(lint, React Compiler, 148 JavaScript tests, TypeScript and Rust formatting),
+without bypassing hooks. No tracked RN, server, layout, wake, recurring,
+lifecycle/lock, settings or EsploraOpenWait source changed. Android device
+instrumentation was compiled rather than run. No owned native build remains
+active; temporary dependency links are removed after the final hook completes.
+
+## Round-7 implementation commits
+
+- `f27ea17a` test(native): share round-seven Esplora secret-token vectors
+- `04ec75f5` fix(android): scrub registered Esplora tokens with a cached automaton
+- `026b0d76` fix(ios): match Esplora secrets linearly across encoded log records
+- `6fac582d` fix(android): keep Unicode secret normalization idempotent
+- `b01d5e36` fix(ios): canonicalize Unicode after secret-token casing
+
+The final documentation commit records this policy, verification and cleanup.
+All round-7 commits retain the requested Claude Opus 5.5 co-author trailer.
