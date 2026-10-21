@@ -198,7 +198,7 @@ enum EndpointLogPrivacy {
 
     private static let hostTokens = try! NSRegularExpression(
         pattern: #"\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+"#)
-    private static func redactHosts(_ text: String, registered: Set<String>) -> String {
+    private static func redactHosts(_ text: String, registered: Set<String>, failClosed: Bool = true) -> String {
         let source = text as NSString
         var replacements: [NSRange] = []
         let urlRanges = urls.matches(in: text, range: NSRange(text.startIndex..., in: text)).map(\.range)
@@ -221,7 +221,7 @@ enum EndpointLogPrivacy {
                 || rawHost.allSatisfy({ $0.isASCII && $0.isNumber }) || rawHost.lowercased().hasPrefix("0x")
                 || token.contains(where: { !$0.isASCII }) else { continue }
             let canonical = host("https://" + rawHost)
-            if canonical.map(registered.contains) ?? true { replacements.append(match.range) }
+            if canonical.map(registered.contains) ?? failClosed { replacements.append(match.range) }
         }
         var parts: [String] = [], offset = 0
         for range in replacements.reversed() {
@@ -238,10 +238,22 @@ enum EndpointLogPrivacy {
 
     /// Keep continuation lines with their endpoint/error context, including historical files.
     static func redactLogLines(_ lines: [String]) -> [String] {
+        redactLogLines(lines, sanitizeRecord: sanitizeLogRecord)
+    }
+
+    // Explicit snapshots isolate read-back regressions without resetting durable global history.
+    static func redactLogLines(_ lines: [String], registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>) -> [String] {
+        redactLogLines(lines) { text in
+            let hasHeader = recordHeader.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+            return sanitize(text, registered: registered, matcher: matcher, hosts: hosts, recordReadBack: hasHeader)
+        }
+    }
+
+    private static func redactLogLines(_ lines: [String], sanitizeRecord: (String) -> String?) -> [String] {
         var result: [String] = [], record: [String] = []
         func flush() {
             guard !record.isEmpty else { return }
-            result.append(contentsOf: (sanitizeLogRecord(record.joined(separator: "\n")) ?? "[redacted]").split(separator: "\n").map(String.init))
+            result.append(contentsOf: (sanitizeRecord(record.joined(separator: "\n")) ?? "[redacted]").split(separator: "\n").map(String.init))
             record.removeAll(keepingCapacity: true)
         }
         for line in lines {
@@ -252,7 +264,7 @@ enum EndpointLogPrivacy {
         return result
     }
 
-    /// Only stored records may exclude formatter fields from authority inspection.
+    /// Only stored headers tolerate authority canonicalization failures (08/09 hours).
     private static func sanitizeLogRecord(_ text: String) -> String? {
         let (registered, matcher, hosts, unavailable) = snapshot()
         if unavailable { return "[custom-esplora]" }
@@ -336,7 +348,7 @@ enum EndpointLogPrivacy {
         }
         parts.append(source.substring(from: offset))
         var clean = parts.joined()
-        clean = prefix + redactHosts(clean, registered: hosts)
+        clean = redactHosts(prefix, registered: hosts, failClosed: false) + redactHosts(clean, registered: hosts)
         return matcher.contains(clean) ? "[custom-esplora]" : clean
     }
 }

@@ -12,7 +12,47 @@ struct EndpointRecordPrivacyTests {
     }
 
     private struct HeaderCase: Decodable {
-        let name: String; let endpoint: String; let input: String; let expected: String; let generalExpected: String; let recordExpected: String?
+        let name: String; let endpoint: String; let input: String; let expected: String; let generalExpected: String; let recordExpected: String?; let tokens: [String]
+    }
+
+    @Test func sharedHeaderVectorsUseIsolatedSnapshots() throws {
+        for test in try Fixtures.decode("esplora-log-headers", as: [HeaderCase].self) {
+            let normalized = try EsploraEndpoint.normalize(test.endpoint)
+            let url = try #require(URLComponents(string: normalized))
+            let host = try #require(url.host)
+            let registered: Set<String> = ["https://" + host]
+            let hosts: Set<String> = [host]
+            let hostTokens: Set<String> = [host, host + ":" + String(url.port ?? 443)]
+            let matcher = EndpointLogPrivacy.SecretMatcher(hostTokens.union(test.tokens))
+            #expect(EndpointLogPrivacy.redactLogLines(test.input.components(separatedBy: "\n"), registered: registered, matcher: matcher, hosts: hosts) == test.expected.components(separatedBy: "\n"), "\(test.name)")
+            #expect((EndpointLogPrivacy.sanitize(test.input, registered: registered, matcher: matcher, hosts: hosts) ?? "[redacted]") == test.generalExpected, "\(test.name)")
+            if test.recordExpected != nil {
+                // The date/boundary token itself must cause the whole-record replacement.
+                #expect(EndpointLogPrivacy.redactLogLines(test.input.components(separatedBy: "\n"), registered: registered, matcher: EndpointLogPrivacy.SecretMatcher(hostTokens), hosts: hosts) != ["[custom-esplora]"], "\(test.name)")
+            }
+        }
+    }
+
+    @Test func numericHeaderAliasesUseCanonicalHostsWithoutFailingClosed() throws {
+        for endpoints in [["https://12:21"], ["https://12:21", "https://8:443", "https://0x9:80"]] {
+            let normalized = try endpoints.map { try EsploraEndpoint.normalize($0) }
+            let urls = try normalized.map { try #require(URLComponents(string: $0)) }
+            let hosts = Set(try urls.map { try #require($0.host) })
+            #expect(hosts == (urls.count == 1 ? ["0.0.0.12"] : ["0.0.0.12", "0.0.0.8", "0.0.0.9"]))
+            let registered = Set(normalized)
+            let ports = try urls.map { try #require($0.host) + ":" + String($0.port ?? 443) }
+            let matcher = EndpointLogPrivacy.SecretMatcher(hosts.union(ports))
+            for hour in 0...23 {
+                let time = String(format: "%02d:21:42.292", hour)
+                for body in ["[sdk] ordinary", "[sdk] email=person@example.com"] {
+                    let input = "2037-11-29 \(time) D \(body)"
+                    let plain = LogFile.redactPlain(input)
+                    if body.contains("email=") { #expect(plain != input) }
+                    let expected = hour == 12 ? plain.replacingOccurrences(of: time, with: "[custom-esplora]") : plain
+                    #expect(EndpointLogPrivacy.redactLogLines(input.components(separatedBy: "\n"), registered: registered, matcher: matcher, hosts: hosts) == [expected], "\(endpoints): \(input)")
+                }
+            }
+        }
     }
 
     @Test func sharedHeadersPreserveOnlyTheAnchoredFormatterPrefix() throws {
