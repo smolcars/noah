@@ -193,13 +193,25 @@ internal object EndpointLogPrivacy {
 
     fun sanitize(text: String): String? {
         if (unavailable) return "[custom-esplora]"
-        val snapshot = synchronized(this) {
-            policy ?: run {
-                val compiled = matcher ?: SecretMatcher(tokens).also { matcher = it }
-                Triple(origins.toSet(), compiled, hosts.toSet()).also { policy = it }
-            }
-        }
+        val snapshot = snapshot()
         return sanitize(text, snapshot.first, snapshot.second, snapshot.third)
+    }
+
+    private fun snapshot(): Triple<Set<String>, SecretMatcher, Set<String>> = synchronized(this) {
+        policy ?: run {
+            val compiled = matcher ?: SecretMatcher(tokens).also { matcher = it }
+            Triple(origins.toSet(), compiled, hosts.toSet()).also { policy = it }
+        }
+    }
+
+    /** Formatting can join safe fields; only guard tokens, preserving timestamps/provider summaries. */
+    fun redactRecord(text: String): String {
+        if (unavailable) return "[custom-esplora]"
+        val snapshot = snapshot()
+        if (snapshot.first.isEmpty()) return text
+        if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[redacted]"
+        val views = LogFile.decodedViews(text, percentEncoded = true, compatibility = true) ?: return "[redacted]"
+        return if (views.any(snapshot.second::contains)) "[custom-esplora]" else text
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.

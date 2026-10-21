@@ -39,7 +39,7 @@ class LogFile(
     private val capacity: Int = maxPendingRecords,
     private val executor: Executor = writer,
     private val systemSink: (AppLog.Level, String, String) -> Unit = { level, tag, message ->
-        Log.println(level.priority, "com.noah.app", "[$tag] $message")
+        Log.println(level.priority, "com.noah.app", EndpointLogPrivacy.redactRecord("[$tag] $message"))
     },
 ) {
     init { require(capacity > 0) }
@@ -83,7 +83,9 @@ class LogFile(
             check(directory.isDirectory || directory.mkdirs())
             val active = File(directory, fileName)
             val cleaned = message.trim().replace("\n", "\n  ")
-            val line = "${formatter.format(date)} ${level.symbol} [$tag] $cleaned\n"
+            val formatted = "${formatter.format(date)} ${level.symbol} [$tag] $cleaned"
+            val record = EndpointLogPrivacy.redactRecord(formatted + "\n")
+            val line = if (record.endsWith("\n")) record else "$record\n"
             if (active.length() + line.toByteArray(Charsets.UTF_8).size > maxFileSizeBytes) {
                 for (index in maxFiles downTo 1) {
                     val source = File(directory, if (index == 1) fileName else "$fileName.${index - 1}")
