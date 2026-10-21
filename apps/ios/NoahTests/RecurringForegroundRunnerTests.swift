@@ -60,6 +60,22 @@ import UIKit
         runner.stop()
         try await waitUntil { !minutes.waiting }
     }
+    @Test func timerStartedDuringReentryOutlivesTheActivationBudget() async throws {
+        let minutes = Minutes(), activation = RecurringSubmissionBudget()
+        var executions = 0
+        let runner = RecurringForegroundRunner(center: NotificationCenter(), sleep: { try await minutes.sleep($0) },
+                                               isActive: { true }) { executions += 1 }
+        defer { runner.stop() }
+        RecurringSubmissionBudget.$current.withValue(activation) { runner.start() }
+        try await waitUntil { minutes.waiting }
+        activation.revoke()
+        minutes.tick()
+        try await waitUntil { minutes.intervals.count == 2 && minutes.waiting }
+        #expect(executions == 1)
+        runner.stop()
+        try await waitUntil { !minutes.waiting }
+    }
+
     @Test func suspendedMinuteWakesInBackgroundWithoutSyncOrRecurring() async throws {
         let h = try RecurringExecutorTests.Harness(); _ = try h.add()
         defer { try? FileManager.default.removeItem(at: h.directory) }

@@ -27,7 +27,8 @@ import UIKit
     func start() {
         guard task == nil, isActive() else { return }
         let sleep = sleep, execute = execute, isActive = isActive
-        task = Task { [weak self] in
+        // Reentry's budget ends before the timer's first tick; each tick admits fresh scene-bound work.
+        task = RecurringSubmissionBudget.$current.withValue(nil) { Task { [weak self] in
             while !Task.isCancelled {
                 do { try await sleep(.seconds(60)) } catch { return }
                 guard !Task.isCancelled else { return }
@@ -38,7 +39,7 @@ import UIKit
                 tick.revoke()
                 if self?.budget === tick { self?.budget = nil }
             }
-        }
+        } }
     }
     @objc func stop() {
         budget?.revoke()
