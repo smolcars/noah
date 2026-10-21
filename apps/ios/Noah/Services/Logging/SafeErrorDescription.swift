@@ -7,12 +7,12 @@ import Foundation
 enum SafeErrorDescription {
     static func of(_ error: Error) -> String {
         if let bark = error as? BarkError { return LogFile.redact(bark.message) }
-        return String(describing: type(of: error))
+        return LogFile.redact(String(describing: type(of: error)))
     }
 
     /// Raw SDK text is only for AppLog's bounded memory queue, never a server report.
     static func forLogging(_ error: Error) -> String {
         if let bark = error as? BarkError { return bark.message }
-        return String(describing: type(of: error))
+        return LogFile.redact(String(describing: type(of: error)))
     }
 }
