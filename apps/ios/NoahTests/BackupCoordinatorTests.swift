@@ -1,4 +1,5 @@
 import Foundation
+import OpenAPIRuntime
 import Testing
 
 @testable import Noah
@@ -98,6 +99,40 @@ struct BackupCoordinatorTests {
             try? await Task.sleep(for: .milliseconds(2))
         }
         Issue.record("condition never became true")
+    }
+
+    @Test(arguments: ["task", "url", "client"]) func cancellationLeavesBackupPendingWithoutFailure(kind: String) async throws {
+        let world = World(), clock = ManualClock()
+        var dependencies = world.dependencies(clock: clock)
+        dependencies.perform = { _, uploading in
+            uploading()
+            if kind == "url" { throw URLError(.cancelled) }
+            if kind == "client" {
+                throw ClientError(operationID: "backup", operationInput: "test", causeDescription: "cancelled",
+                                  underlyingError: URLError(.cancelled))
+            }
+            throw CancellationError()
+        }
+        let coordinator = BackupCoordinator(dependencies: dependencies)
+        await #expect(throws: (any Error).self) { try await coordinator.flush(.manual) }
+        #expect(world.state.backupPending)
+        #expect(world.state.lastBackupStatus == .idle)
+        #expect(world.state.lastBackupError == nil)
+        #expect(HomeBanner.backup(world.state, now: 0, locale: Locale(identifier: "en")) == nil)
+        #expect(await clock.pending.isEmpty)
+        await coordinator.cancelScheduled()
+    }
+
+    @Test func backupFailureUsesRNCopyInsteadOfAnErrorType() async throws {
+        let world = World(), clock = ManualClock()
+        world.fail(times: 1)
+        let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
+        await #expect(throws: World.Boom.self) { try await coordinator.flush(.manual) }
+        #expect(world.state.lastBackupError == "An unknown error occurred while backing up.")
+        var legacy = world.state
+        legacy.lastBackupError = "ClientError"
+        #expect(HomeBanner.backup(legacy, now: 0, locale: Locale(identifier: "en"))?.message == "An unknown error occurred while backing up.")
+        await coordinator.cancelScheduled()
     }
 
     @Test func deletingLatestUploadSchedulesAnEnabledReplacement() async throws {

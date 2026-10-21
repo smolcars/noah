@@ -1,4 +1,5 @@
 import Foundation
+import OpenAPIRuntime
 import Synchronization
 
 /// Ported from `client/src/lib/backupCoordinator.ts`: one backup at a time;
@@ -202,13 +203,23 @@ actor BackupCoordinator {
             if newer { scheduleTrailingPass() }
             return .success(())
         } catch {
-            let message = SafeErrorDescription.of(error)
+            pendingRequireEnabled = pendingRequireEnabled && requireEnabled
+            if Self.isCancellation(error) || Task.isCancelled ||
+                !RecurringSubmissionBudget.available || !RecurringExecutionBudget.available {
+                update { $0.markPending(); $0.lastBackupStatus = .idle }
+                return .failure(error)
+            }
+            let message = "An unknown error occurred while backing up."
             update { $0.markFailed(message) }
             log.w("Backup failed: \(message)")
-            pendingRequireEnabled = pendingRequireEnabled && requireEnabled
             await scheduleRetry()
             return .failure(error)
         }
+    }
+
+    static func isCancellation(_ error: Error) -> Bool {
+        if let error = error as? ClientError { return isCancellation(error.underlyingError) }
+        return error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
     // MARK: Timers

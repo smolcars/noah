@@ -101,7 +101,12 @@ struct BackupSettingsView: View {
         guard !busy else { return }; busy = true; message = nil
         Task {
             defer { busy = false; reloadState() }
-            do { try await action() } catch { message = "Couldn't complete the backup operation. Please try again." }
+            do { try await action() }
+            catch {
+                if !BackupCoordinator.isCancellation(error), !Task.isCancelled {
+                    message = "Couldn't complete the backup operation. Please try again."
+                }
+            }
         }
     }
 }
