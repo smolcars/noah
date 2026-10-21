@@ -80,6 +80,22 @@ class OnchainOperationsTest {
         ops.execute(quote)
         assertEquals(2, wallet.estimates); assertTrue(wallet.calls.contains("start"))
     } }
+    @Test fun changedFundingRejectsBeforeClaimAndCanReleaseForFreshReview() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val quote = checkNotNull(ops.autoBoardQuote())
+        val reviewedFunding = AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))
+        assertTrue(runCatching { ops.execute(quote, reviewedFunding) }.isFailure)
+        assertTrue(journal.loadAll().isEmpty())
+        assertFalse(wallet.calls.any { it.startsWith("submit:") })
+        assertTrue(ops.abandonUnsubmittedAutoBoard(quote))
+    } }
+    @Test fun autoBoardReleaseRequiresNoJournalAttemptAndMatchingWallet() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val quote = checkNotNull(ops.autoBoardQuote())
+        assertFalse(ops.abandonUnsubmittedAutoBoard(quote.copy(walletID = "other")))
+        assertTrue(ops.abandonUnsubmittedAutoBoard(quote))
+        val next = checkNotNull(ops.autoBoardQuote())
+        runCatching { journal.perform(next) { error("uncertain") } }
+        assertFalse(ops.abandonUnsubmittedAutoBoard(next))
+    } }
     private class Wallet : OnchainWalletAccess {
         override val walletID = "wallet"
         var cleanupComplete = true
@@ -149,6 +165,7 @@ class OnchainOperationsTest {
             estimates++; estimateError?.let { throw it }
             return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u)
         }
+        override suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = bound.remove(quote.preparedBoard?.id) == quote
         override suspend fun vtxos() = items
         override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); return Companion.vtxo(id) }
         override suspend fun exits() = active

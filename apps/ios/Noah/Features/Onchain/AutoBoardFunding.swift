@@ -29,23 +29,44 @@ struct AutoBoardFunding {
     func hasUnhandled(_ funding: Snapshot) throws -> Bool {
         try !funding.outpoints.subtracting(load()[funding.walletID] ?? []).isEmpty
     }
-    @discardableResult func markHandled(_ funding: Snapshot) throws -> Bool {
+    @discardableResult func markHandled(_ funding: Snapshot) throws -> Bool { try claim(funding) != nil }
+    func release(_ funding: Snapshot) throws {
+        var saved = try load()
+        saved[funding.walletID] = (saved[funding.walletID] ?? []).subtracting(funding.outpoints)
+        try write(String(decoding: JSONEncoder().encode(saved), as: UTF8.self))
+    }
+    func claim(_ funding: Snapshot) throws -> Snapshot? {
         var saved = try load()
         let previous = saved[funding.walletID] ?? []
-        guard !funding.outpoints.subtracting(previous).isEmpty else { return false }
+        let newly = funding.outpoints.subtracting(previous)
+        guard !newly.isEmpty else { return nil }
         saved[funding.walletID] = previous.union(funding.outpoints)
         try write(String(decoding: JSONEncoder().encode(saved), as: UTF8.self))
-        return true
+        return .init(walletID: funding.walletID, outpoints: newly)
     }
 }
 
 /// Async reads can outlive the scene; recheck admission before evaluating or claiming their result.
 @MainActor final class AutoBoardReview {
     private let store: AutoBoardFunding
+    private var claimed: (UUID, AutoBoardFunding.Snapshot, AutoBoardFunding.Snapshot)?
     private let now: () -> Date
     private(set) var retryAfter = Date.distantPast
     init(store: AutoBoardFunding = .init(), now: @escaping () -> Date = Date.init) {
         self.store = store; self.now = now
+    }
+    func fundingFor(_ quote: OnchainQuote) throws -> AutoBoardFunding.Snapshot {
+        guard let (id, _, funding) = claimed, id == quote.id else { throw OnchainFailure.changed }
+        return funding
+    }
+    /// Proof also retires the preparation under the session's authority before releasing its deposits.
+    func failedConfirm(_ quote: OnchainQuote, changed: Bool,
+        proveUnsubmitted: () async throws -> Bool) async throws {
+        guard let (id, funding, _) = claimed, id == quote.id else { return }
+        claimed = nil
+        guard try await proveUnsubmitted() else { return }
+        retryAfter = changed ? now() : now().addingTimeInterval(30)
+        try store.release(funding)
     }
     func prepare(allowed: () -> Bool, funding: () async throws -> AutoBoardFunding.Snapshot?,
                  quote: () async throws -> OnchainQuote?, discard: (OnchainQuote) async -> Void,
@@ -55,10 +76,11 @@ struct AutoBoardFunding {
             guard let current = try await funding(), allowed(), try store.hasUnhandled(current) else { return nil }
             guard let prepared = try await quote() else { return nil }
             do {
-                guard allowed(), prepared.walletID == current.walletID, try store.markHandled(current) else {
+                guard allowed(), prepared.walletID == current.walletID, let newly = try store.claim(current) else {
                     await discard(prepared)
                     return nil
                 }
+                claimed = (prepared.id, newly, current)
                 present(prepared)
                 return prepared
             } catch { await discard(prepared); throw error }

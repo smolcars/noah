@@ -7,6 +7,7 @@ internal interface OnchainWalletAccess {
     val walletID: String
     suspend fun utxos(): List<OnchainUtxo> = error("Unsupported")
     suspend fun hasPendingBoards(): Boolean = error("Unsupported")
+    suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = false
     suspend fun confirmed(): Long = error("Unsupported")
     suspend fun tip(): Long = error("Unsupported")
     suspend fun vtxos(): List<Vtxo> = error("Unsupported")
@@ -47,6 +48,7 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override val walletID get() = wallet.fingerprint()
     override suspend fun utxos() = onchain.utxos()
     override suspend fun hasPendingBoards() = wallet.pendingBoards().isNotEmpty()
+    override suspend fun abandonUnsubmittedBoard(quote: OnchainQuote) = preparations.abandonUnsubmitted(quote)
     override suspend fun confirmed() = onchain.balance().confirmedSats.toLong()
     override suspend fun tip() = onchain.tipHeight().toLong()
     override suspend fun vtxos() = wallet.vtxos()

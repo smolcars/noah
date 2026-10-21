@@ -82,17 +82,21 @@ struct AutoBoardingService: View {
                     busy = true
                     plan = nil
                     Task {
-                        defer { busy = false }
+                        defer { busy = false; Task { await check() } }
                         defer { Task { await app.session.discardBoard(quote) } }
                         do {
                             guard !(await WalletBackgroundActivity.shared.isRunning),
                                 !app.isWalletSuspended, phase == .active,
                                 PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
                             else { throw OnchainFailure.unavailable }
-                            message = try await app.session.executeOnchain(quote)
+                            message = try await app.session.executeOnchain(quote, funding: review.fundingFor(quote))
                             // Retain the receipt independently of admission for a later board.
                             await app.refresh()
                         } catch {
+                            let failure = error
+                            try? await review.failedConfirm(quote, changed: (failure as? OnchainFailure) == .changed) {
+                                try await app.session.abandonUnsubmittedAutoBoard(quote)
+                            }
                             message =
                                 (error as? OnchainFailure)?.errorDescription
                                 ?? OnchainFailure.uncertain.errorDescription

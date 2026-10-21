@@ -50,6 +50,7 @@ extension WalletSession {
                     try await held.discard()
                 }
                 held.timeout?.cancel()
+                if !held.claimed && held.quote.automatic { unsubmittedBoardReviews[held.quote.id] = held.quote }
                 boardPreparations.removeValue(forKey: id)
                 return
             } catch {
@@ -73,8 +74,26 @@ extension WalletSession {
         guard boardPreparations.isEmpty else { throw OnchainFailure.uncertain }
     }
 
+    /// A missing preparation alone is never evidence. Retire a known unclaimed one first.
+    func abandonUnsubmittedAutoBoard(_ quote: OnchainQuote,
+        journal: OnchainOperationJournal = .shared) async throws -> Bool {
+        guard quote.automatic, quote.action == .board, let id = quote.prepared?.id else { return false }
+        if let held = boardPreparations[id] {
+            guard held.quote == quote, !held.claimed else { return false }
+            await discardBoard(quote)
+        }
+        guard unsubmittedBoardReviews[quote.id] == quote else { return false }
+        let attempts = try await journal.loadAll()
+        guard !attempts.contains(where: { $0.id == quote.id || $0.quote.prepared?.id == id ||
+            $0.txid == quote.prepared?.txid || $0.quote.prepared?.txid == quote.prepared?.txid }) else { return false }
+        unsubmittedBoardReviews.removeValue(forKey: quote.id)
+        return true
+    }
+
     func submitBoard(_ quote: OnchainQuote, walletID: String, journal: OnchainOperationJournal,
-                     confirmed: @Sendable () async throws -> UInt64) async throws -> String {
+                     confirmed: @Sendable () async throws -> UInt64,
+                     funding: AutoBoardFunding.Snapshot? = nil,
+                     readFunding: @Sendable () async throws -> AutoBoardFunding.Snapshot? = { nil }) async throws -> String {
         guard let id = quote.prepared?.id, var held = boardPreparations[id],
               !held.claimed, !held.discardRequested, held.quote == quote, quote.walletID == walletID,
               quote.isCurrent else { throw OnchainFailure.changed }
@@ -82,6 +101,9 @@ extension WalletSession {
             do {
                 // Unselected reserve coins are not reserved. Fixed costs require at least the
                 // reviewed confirmed balance to preserve the exact reserve shown.
+                if let funding {
+                    guard funding.walletID == walletID, try await readFunding() == funding else { throw OnchainFailure.changed }
+                }
                 let balance = try await confirmed()
                 guard balance >= quote.confirmed, quote.isCurrent,
                       let current = boardPreparations[id], !current.claimed, !current.discardRequested,
@@ -89,7 +111,7 @@ extension WalletSession {
                 held = current
             } catch {
                 await discardBoard(quote)
-                throw OnchainFailure.changed
+                throw (error as? OnchainFailure) ?? OnchainFailure.unavailable
             }
         }
         held.claimed = true

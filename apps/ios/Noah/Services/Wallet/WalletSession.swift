@@ -84,6 +84,7 @@ actor WalletSession {
     private let location: WalletDataLocation
     private let opener: Opener
     var sendPreparations: [String: SendPreparation] = [:]
+    var unsubmittedBoardReviews: [UUID: OnchainQuote] = [:]
     var boardPreparations: [String: BoardPreparation] = [:]
     private var state = State.closed
     @TaskLocal static var backgroundOwner: UUID?

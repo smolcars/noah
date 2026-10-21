@@ -395,8 +395,11 @@ class WalletSession internal constructor(
     }
     suspend fun autoBoardFunding(): AutoBoardFunding.Snapshot? = withM6 { onchainOperations(it).autoBoardFunding() }
     suspend fun autoBoardQuote(): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote() }
-    suspend fun executeOnchain(quote: OnchainQuote): String = withM6 { handles ->
-        onchainMutation.withLock { onchainOperations(handles).execute(quote) }
+    suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null): String = withM6 { handles ->
+        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding) }
+    }
+    suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->
+        onchainMutation.withLock { onchainOperations(handles).abandonUnsubmittedAutoBoard(quote) }
     }
     suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
     suspend fun refreshOnchainReceiptFees() = withM6 { onchainOperations(it).refreshReceiptFees() }

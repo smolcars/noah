@@ -93,13 +93,24 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
                     try {
                         message = app.services.lifecycle.withWalletMutation {
                             if (!enabled() || !onchainReady(app) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) fail(OnchainFailure.unavailable)
-                            app.session.executeOnchain(quote)
+                            app.session.executeOnchain(quote, review.fundingFor(quote))
                         }
                         onBoarded(quote.net)
                         app.refresh()
-                    } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (failure: Exception) { message = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text }
-                    finally { app.session.discardBoardReview(quote); busy = false }
+                    } catch (failure: Exception) {
+                        withContext(NonCancellable) {
+                            runCatching {
+                                app.services.lifecycle.withWalletMutation {
+                                    review.failedConfirm(quote, (failure as? OnchainException)?.reason == OnchainFailure.changed) {
+                                        app.session.abandonUnsubmittedAutoBoard(quote)
+                                    }
+                                }
+                            }
+                        }
+                        if (failure is CancellationException) throw failure
+                        message = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text
+                    }
+                    finally { withContext(NonCancellable) { app.session.discardBoardReview(quote) }; busy = false; generation++ }
                 }
             }
         }) }

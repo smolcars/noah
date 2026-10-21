@@ -15,6 +15,7 @@ internal class BoardPreparations(
         var submitting: Boolean = false, var discardRequested: Boolean = false,
         var timeout: Job? = null, var disposal: Deferred<Unit>? = null)
     private val lock = Any()
+    private val unsubmitted = mutableMapOf<String, OnchainQuote>()
     private val reviews = mutableMapOf<String, Review>()
     fun retain(id: String) = synchronized(lock) {
         check(id !in reviews)
@@ -61,7 +62,12 @@ internal class BoardPreparations(
                         else -> throw error
                     }
                 }
-                synchronized(lock) { reviews.remove(id)?.timeout?.cancel() }
+                synchronized(lock) {
+                    reviews.remove(id)?.let { held ->
+                        if (!held.claimed && !held.submitting) held.quote?.takeIf { it.automatic }?.let { unsubmitted[it.id] = it }
+                        held.timeout?.cancel()
+                    }
+                }
                 return
             } catch (_: Exception) {
                 warn("Prepared board cleanup failed; retaining its handle for retry")
@@ -69,6 +75,19 @@ internal class BoardPreparations(
             }
         }
         synchronized(lock) { reviews[id]?.disposal = null }
+    }
+    suspend fun abandonUnsubmitted(quote: OnchainQuote): Boolean {
+        val id = quote.preparedBoard?.id ?: return false
+        val allowed = synchronized(lock) {
+            val held = reviews[id]
+            if (held != null) {
+                if (held.quote != quote || held.claimed || held.submitting) false
+                else { held.discardRequested = true; true }
+            } else unsubmitted[quote.id] == quote
+        }
+        if (!allowed) return false
+        discard(id)
+        return synchronized(lock) { unsubmitted.remove(quote.id) == quote }
     }
     suspend fun retryDiscards() {
         synchronized(lock) { reviews.filterValues { it.discardRequested }.keys.toList() }.forEach { discard(it, true) }

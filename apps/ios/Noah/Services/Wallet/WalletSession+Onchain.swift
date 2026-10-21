@@ -312,13 +312,19 @@ extension WalletSession {
         catch { throw ExitEstimateUnavailable(review: quote) }
     }
 
-    func executeOnchain(_ quote: OnchainQuote, journal: OnchainOperationJournal = .shared)
+    func executeOnchain(_ quote: OnchainQuote, journal: OnchainOperationJournal = .shared,
+        funding: AutoBoardFunding.Snapshot? = nil)
         async throws -> String
     {
         return try await withOpenWallet { handles in
             if quote.action == .board {
                 return try await self.submitBoard(quote, walletID: handles.wallet.fingerprint(), journal: journal,
-                    confirmed: { try await handles.onchain.balance().confirmedSats })
+                    confirmed: { try await handles.onchain.balance().confirmedSats }, funding: funding,
+                    readFunding: {
+                        guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
+                        return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
+                            utxos: handles.onchain.utxos(), transactions: handles.onchain.transactions())
+                    })
             }
             if quote.action == .claim {
                 return try await Self.executeClaim(quote, journal: journal, access: Self.claimAccess(handles))

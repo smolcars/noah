@@ -123,9 +123,10 @@ internal class OnchainOperations(
             chainFee = if (validated.action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),
             feeRate = if (validated.action == OnchainAction.claim) null else fee.feeRateSatPerVb.toLong())
     }
-    suspend fun execute(reviewed: OnchainQuote): String {
+    suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
+            if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding() != funding)) fail(OnchainFailure.changed)
             if (reviewed.preparedBoard == null) fail(OnchainFailure.changed)
             // Added funds leave at least the reviewed reserve; only a decrease can break it (iOS parity).
             if (reviewed.automatic && (wallet.confirmed() < reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve)) fail(OnchainFailure.changed)
@@ -177,6 +178,13 @@ internal class OnchainOperations(
                 }
             }
         } } finally { reviewed.preparedBoard?.let { wallet.discardBoard(it.id, includingClaimed = true) } }
+    }
+    suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean {
+        if (!quote.automatic || quote.action != OnchainAction.board || quote.walletID != wallet.walletID) return false
+        val prepared = quote.preparedBoard ?: return false
+        if (journal.loadAll().any { it.id == quote.id || it.quote.preparedBoard?.id == prepared.id ||
+                it.txid == prepared.txid || it.quote.preparedBoard?.txid == prepared.txid }) return false
+        return wallet.abandonUnsubmittedBoard(quote)
     }
     suspend fun check(id: String): Boolean = checkOnchainAttempt(id, journal, object : OnchainAttemptReads {
         override val walletID = wallet.walletID

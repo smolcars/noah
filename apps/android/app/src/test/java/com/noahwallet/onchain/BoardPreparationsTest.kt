@@ -8,6 +8,19 @@ import org.junit.Test
 class BoardPreparationsTest {
     private fun quote() = OnchainQuote(OnchainAction.board, "wallet", amount = 30_000, fee = 330, chainFee = 199,
         preparedBoard = BoardPrepared("id", "tx", 199, listOf(BoardInput("input", 0u))))
+    @Test fun unsubmittedProofRetiresReservationButClaimedMissingAndSubmittedCannotRelease() = runBlocking {
+        for (state in listOf("unclaimed", "discarded", "claimed", "submitted", "missing")) {
+            val held = BoardPreparations({}, { error("must not retry") }, {})
+            val quote = quote().copy(automatic = true)
+            if (state != "missing") { held.retain("id"); held.bind(quote) }
+            if (state == "discarded") held.discard("id")
+            if (state in listOf("claimed", "submitted")) held.claim(quote)
+            if (state == "submitted") held.consume(quote)
+            assertEquals(state, state in listOf("unclaimed", "discarded"), held.abandonUnsubmitted(quote))
+            assertFalse(held.abandonUnsubmitted(quote))
+            held.discardAll()
+        }
+    }
     @Test fun exactQuoteCannotBeChangedReusedOrSubmittedAfterDiscard() = runBlocking {
         var discards = 0
         val held = BoardPreparations({ discards++ }, { error("must not submit") }, {})

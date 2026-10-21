@@ -10,6 +10,88 @@ struct BoardPreparedTests {
         var handled: [String: Set<String>]
         var outpoints: Set<String>
     }
+    @Test func changedFundingRejectsBeforeClaimAndCanReleaseForFreshReview() async throws {
+        for state in ["changed", "read-error", "same"] {
+            let session = WalletSession()
+            let quote = Self.automaticQuote
+            let (journal, file) = journal()
+            defer { try? FileManager.default.removeItem(at: file) }
+            let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["deposit:0"])
+            await session.retainBoardReview(quote, discard: {}, submit: {
+                .init(txid: "exact", broadcast: .accepted, vtxoIds: [])
+            })
+            do {
+                _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed },
+                    funding: funding, readFunding: {
+                        if state == "read-error" { throw URLError(.notConnectedToInternet) }
+                        return state == "same" ? funding : .init(walletID: "wallet", outpoints: ["other:0"])
+                    })
+                #expect(state == "same")
+            } catch { #expect(state != "same") }
+            #expect(try await session.abandonUnsubmittedAutoBoard(quote, journal: journal) == (state != "same"))
+            #expect(try await journal.loadAll().isEmpty == (state != "same"))
+        }
+    }
+    @MainActor @Test func failedConfirmReleasesOnlyNewFundingAndBacksOffUnlessFundsChanged() async throws {
+        for changed in [false, true] {
+            var disk: String?
+            var now = Date(timeIntervalSince1970: 1000)
+            var store = AutoBoardFunding()
+            store.read = { disk }; store.write = { disk = $0 }
+            let review = AutoBoardReview(store: store, now: { now })
+            try store.markHandled(.init(walletID: "wallet", outpoints: ["old:0"]))
+            let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["old:0", "new:0"])
+            let quote = try #require(try await review.prepare(allowed: { true }, funding: { funding },
+                quote: { Self.quote }, discard: { _ in }))
+            try await review.failedConfirm(quote, changed: changed) { true }
+            #expect(try store.hasUnhandled(funding))
+            #expect(try !store.hasUnhandled(.init(walletID: "wallet", outpoints: ["old:0"])))
+            if !changed {
+                now = now.addingTimeInterval(29)
+                #expect(try await review.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) == nil)
+                now = now.addingTimeInterval(1)
+            }
+            #expect(try await review.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }) != nil)
+        }
+    }
+    @MainActor @Test func uncertainSubmittedInterruptedAndDismissedConfirmationsKeepFundingHandled() async throws {
+        for ending in ["uncertain", "submitted", "interrupted", "dismissed"] {
+            var disk: String?
+            var store = AutoBoardFunding()
+            store.read = { disk }; store.write = { disk = $0 }
+            let review = AutoBoardReview(store: store)
+            let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["deposit:0"])
+            let quote = try #require(try await review.prepare(allowed: { true }, funding: { funding }, quote: { Self.quote }, discard: { _ in }))
+            if ending != "dismissed" {
+                try? await review.failedConfirm(quote, changed: false) {
+                    if ending == "interrupted" { throw CancellationError() }
+                    return false
+                }
+            }
+            #expect(try !store.hasUnhandled(funding))
+        }
+    }
+    @Test func preparationProofRequiresNoClaimOrJournalAndRejectsMissingEvidence() async throws {
+        for ending in ["unclaimed", "discarded", "claimed", "journal", "missing"] {
+            let session = WalletSession()
+            var quote = Self.quote
+            quote.automatic = true
+            let (journal, file) = journal()
+            defer { try? FileManager.default.removeItem(at: file) }
+            if ending != "missing" {
+                await session.retainBoardReview(quote, discard: {}, submit: { throw OnchainFailure.uncertain })
+            }
+            if ending == "discarded" { await session.discardBoard(quote) }
+            if ending == "claimed" {
+                let balance = quote.confirmed
+                _ = try? await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { balance })
+            }
+            if ending == "journal" { _ = try? await journal.perform(quote) { throw OnchainFailure.uncertain } }
+            #expect(try await session.abandonUnsubmittedAutoBoard(quote, journal: journal) == ["unclaimed", "discarded"].contains(ending))
+            #expect(try await !session.abandonUnsubmittedAutoBoard(quote, journal: journal))
+            try await session.discardBoardReviews()
+        }
+    }
     @Test func fundingDecisionsMatchSharedFixture() throws {
         for test in try Fixtures.load("auto-board-funding", input: FundingInput.self, expected: Bool.self) {
             var ledger = AutoBoardFunding()
@@ -258,7 +340,7 @@ struct BoardPreparedTests {
         await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
             Issue.record("Balance read failure must not submit"); throw OnchainFailure.invalid
         })
-        await #expect(throws: OnchainFailure.changed) {
+        await #expect(throws: OnchainFailure.unavailable) {
             try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: {
                 #expect(await session.boardPreparations["board"]?.claimed == false)
                 throw URLError(.notConnectedToInternet)

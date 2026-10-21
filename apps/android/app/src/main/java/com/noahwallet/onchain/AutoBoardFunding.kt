@@ -22,20 +22,41 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
         }
     }.orEmpty()
     fun hasUnhandled(funding: Snapshot): Boolean = (funding.outpoints - load()[funding.walletID].orEmpty()).isNotEmpty()
-    fun markHandled(funding: Snapshot): Boolean {
+    fun markHandled(funding: Snapshot): Boolean = claim(funding) != null
+    fun release(funding: Snapshot) {
+        val saved = load()
+        save(saved + (funding.walletID to (saved[funding.walletID].orEmpty() - funding.outpoints)))
+    }
+    private fun save(saved: Map<String, Set<String>>) {
+        write(JsonObject(saved.mapValues { (_, ids) -> JsonArray(ids.sorted().map(::JsonPrimitive)) }).toString())
+    }
+    fun claim(funding: Snapshot): Snapshot? {
         val saved = load()
         val previous = saved[funding.walletID].orEmpty()
-        if ((funding.outpoints - previous).isEmpty()) return false
-        write(JsonObject((saved + (funding.walletID to (previous + funding.outpoints))).mapValues { (_, ids) ->
-            JsonArray(ids.sorted().map(::JsonPrimitive))
-        }).toString())
-        return true
+        val newly = funding.outpoints - previous
+        if (newly.isEmpty()) return null
+        save(saved + (funding.walletID to (previous + funding.outpoints)))
+        return Snapshot(funding.walletID, newly)
     }
 }
 
 /** Async reads may finish after pause/navigation; only a still-active caller may evaluate or claim funding. */
 class AutoBoardReview(private val store: AutoBoardFunding, private val now: () -> Long = System::currentTimeMillis) {
+    private var claimed: Triple<String, AutoBoardFunding.Snapshot, AutoBoardFunding.Snapshot>? = null
     var retryAfter = 0L; private set
+    fun fundingFor(quote: OnchainQuote): AutoBoardFunding.Snapshot {
+        val held = claimed ?: fail(OnchainFailure.changed)
+        if (held.first != quote.id) fail(OnchainFailure.changed)
+        return held.third
+    }
+    suspend fun failedConfirm(quote: OnchainQuote, changed: Boolean, proveUnsubmitted: suspend () -> Boolean) {
+        val (id, funding) = claimed ?: return
+        if (id != quote.id) return
+        claimed = null
+        if (!proveUnsubmitted()) return
+        retryAfter = if (changed) now() else now() + 30_000
+        store.release(funding)
+    }
     suspend fun prepare(allowed: () -> Boolean, funding: suspend () -> AutoBoardFunding.Snapshot?,
         quote: suspend () -> OnchainQuote?, discard: suspend (OnchainQuote) -> Unit,
         present: (OnchainQuote) -> Unit = {}): OnchainQuote? {
@@ -46,7 +67,9 @@ class AutoBoardReview(private val store: AutoBoardFunding, private val now: () -
             val prepared = quote() ?: return null
             var presented = false
             try {
-                if (!allowed() || prepared.walletID != current.walletID || !store.markHandled(current)) return null
+                if (!allowed() || prepared.walletID != current.walletID) return null
+                val newly = store.claim(current) ?: return null
+                claimed = Triple(prepared.id, newly, current)
                 present(prepared)
                 presented = true
                 return prepared

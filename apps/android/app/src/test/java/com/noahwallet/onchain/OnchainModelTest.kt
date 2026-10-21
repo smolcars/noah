@@ -30,6 +30,33 @@ class OnchainModelTest {
         fake.failPreparation = false; model.review(OnchainAction.startExit, listOf("a"))
         assertNotNull(model.quote); assertNull(model.estimateFallback); assertFalse(model.quote!!.hasUnknownFeeConsent)
     }
+    @Test fun unsubmittedConfirmReleasesOnlyNewFundingAndAppliesBackoff() = runBlocking {
+        for (changed in listOf(false, true)) {
+            var disk: String? = null; var now = 0L
+            val store = AutoBoardFunding({ disk }, { disk = it }); val review = AutoBoardReview(store) { now }
+            store.markHandled(AutoBoardFunding.Snapshot("wallet", setOf("old:0")))
+            val funding = AutoBoardFunding.Snapshot("wallet", setOf("old:0", "new:0"))
+            val quote = checkNotNull(review.prepare({ true }, { funding }, { OnchainQuote(OnchainAction.board, "wallet") }, {}))
+            review.failedConfirm(quote, changed) { true }
+            assertTrue(store.hasUnhandled(funding)); assertFalse(store.hasUnhandled(AutoBoardFunding.Snapshot("wallet", setOf("old:0"))))
+            suspend fun offer() = review.prepare({ true }, { funding }, { quote.copy(id = "fresh") }, {})
+            if (!changed) { now = 29_999; assertNull(offer()); now = 30_000 }
+            assertEquals("fresh", offer()!!.id)
+        }
+    }
+    @Test fun uncertainSubmittedInterruptedAndDismissedReviewsKeepFundingHandled() = runBlocking {
+        for (outcome in listOf("uncertain", "submitted", "interrupted", "dismissed")) {
+            var disk: String? = null
+            val store = AutoBoardFunding({ disk }, { disk = it }); val review = AutoBoardReview(store)
+            val funding = AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))
+            val quote = checkNotNull(review.prepare({ true }, { funding }, { OnchainQuote(OnchainAction.board, "wallet") }, {}))
+            if (outcome != "dismissed") runCatching { review.failedConfirm(quote, false) {
+                if (outcome == "interrupted") throw CancellationException()
+                false
+            } }
+            assertFalse(outcome, store.hasUnhandled(funding))
+        }
+    }
     private class Fake {
         var ready = true
         var calls = 0
