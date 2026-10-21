@@ -334,3 +334,81 @@ TypeScript and Rust formatting). This fresh worktree initially lacked Husky's
 generated launcher; it was installed and the fix commit amended through the hook.
 One hook attempt failed on a missing local `noah-tools` dependency link; restoring
 that workspace link fixed the environment without changing RN sources.
+
+### Round-4 admission after policy reads and unbudgeted joins
+
+Implementation base: `e6226e49`, checkout `t3/android-recurring-revocation`.
+Android `RecurringExecutor.kt:170` rechecks the budget, caller cancellation and
+worker cancellation after the asynchronous schedule read, immediately before
+quoting. `:175` checks again after the quoted-policy read, before fee review;
+`:190` checks inside marker admission after its current-policy read, before either
+durable marker write. The checks stop preparation without recording a retryable
+failure or leaving a fresh marker when admission was lost during these reads.
+
+iOS had the same read boundaries. `RecurringExecutor.swift:215-216`, `:227-228`
+and `:253-254` now check inherited foreground admission, submission budget,
+deadline and task cancellation before quote, fee review and marker writes.
+Its existing `:82` unbudgeted-join drain and permanent
+`RecurringWakeHandoffTests.unbudgetedJoinOnlyDrainsRevokedWork` already cover the
+second finding; no iOS join change was needed.
+
+The await audit also checked quote completion, marker completion, queued Send
+reservation, payment submission and settlement. Quote-completion checks already
+existed. Android's Send guard runs before preparation and again before payment;
+iOS's native `withOpenWallet` checks the inherited budget before preparation,
+and guarded Send checks again before payment. Submitted-payment settlement,
+recovery, cleanup and round-3's nonthrowing cleanup notification remain unchanged.
+Independent budgets still re-evaluate after predecessor failure/cancellation;
+cancelled waiters stop. Exactly-once consumption/history, ambiguous-outcome stops,
+storage-failure latching and lock order (background access → lifecycle gate →
+RestoreRecovery → session reservation) remain intact; no gate is reentrant.
+
+Android `RecurringExecutor.kt:75-90` now represents an omitted budget as `null`:
+joining callers only drain the existing flight, and a new pass after joining
+requires an explicit independent budget. Standalone omitted-budget calls retain
+their previous behavior. Production callers already supply explicit budgets.
+
+Permanent Android regressions are `RecurringReadAdmissionTest` (three tests:
+revocation and caller cancellation at every prequote policy read, plus all four
+quoted-policy/marker reads) and `RecurringUnbudgetedJoinTest` (one test). All
+**four failed before** the fixes and pass afterward; the omitted-budget probe
+previously submitted one payment. After draining, a later explicitly admitted wake
+still pays and records one occurrence/history row. iOS
+`RecurringReadAdmissionTests` failed **one definition / all three argument cases /
+five assertion issues** before the fix and now passes. Focused verification:
+Android **42 tests / 10 suites**, iOS **16 definitions / four suites**, all passed.
+
+Fix commits: `f320c5ca` (both platforms' policy-read admission), `79adea54`
+(Android unbudgeted drain). Each used the normal pre-commit hook, including RN's
+**148 unit tests**, TypeScript and Rust formatting, and carries the requested
+Claude co-author trailer. This fresh checkout needed dependency links and Husky's
+generated launcher restored; no RN source changed and no hook was bypassed.
+
+Full NoahTests after the last iOS source/test change: **835 definitions / 170
+suites; 808 passed / 27 skipped / zero failed; 1,656 expanded passes / 27 skips**,
+**334.991 seconds** of Swift Testing execution. The unchanged
+`StoryPlaybackTests.swift` synchronous AVAudioSession warning remains. XcodeGen
+ran first; Xcode used normal signing, arm64/ONLY_ACTIVE_ARCH, two jobs, no parallel
+tests and `/private/tmp/noah-wake-r4-dd`, targeting only the owned **Noah Wake R4
+1020**, iPhone 17 / iOS 27.0, `D2CD16AE-5F68-4642-AD10-A29669DCDA09`.
+The first Device-panel open missed the new simulator; after boot, the second open
+succeeded. After full verification, the panel shut it down; exact name, UDID,
+device type and Shutdown state were checked before deletion, then absence verified.
+DerivedData and all **three** exported result bundles were deleted and verified
+absent. Logs, summaries, test trees and `cleanup.json` remain under
+`$(git rev-parse --absolute-git-dir)/noah-wake-r4-evidence`.
+
+Full Android ran once after the last source/test change: **3,625 JVM tests / 154
+suites, zero failures/errors/skips**. Regtest debug APK assembly and instrumentation
+Kotlin compilation passed in the same **2m 10s** invocation:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Both platforms' native builds ran sequentially. Final Android JUnit XML and count
+summaries are retained beside the iOS exports. No owned build process remains;
+unrelated idle daemons were left alone. No Android device, protected simulator,
+physical device or Docker was used. No server, RN source, log-privacy or layout
+file changed. These deterministic regressions establish admission and settlement
+behavior, not live OS push delivery or funded hardware acceptance.
