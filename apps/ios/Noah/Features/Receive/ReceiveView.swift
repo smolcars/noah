@@ -58,65 +58,74 @@ struct ReceiveView: View {
     }
 
     private var content: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                if let request = model.request, let uri = try? request.uri() {
-                    Button { sheet = .copy } label: {
-                        VStack(spacing: 0) {
-                            ReceiveQRCode(uri: uri)
-                                .frame(maxWidth: 270, maxHeight: 270)
-                                .padding(16)
-                            if let sats = request.amountSat {
-                                VStack(spacing: 6) {
-                                    Text(BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale))
-                                        .font(NoahFont.largeTitle).minimumScaleFactor(0.5).lineLimit(1)
-                                    if let btcPrice {
-                                        Text(FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: app.preferredCurrency, locale: locale))
-                                            .font(NoahFont.callout)
+        GeometryReader { geometry in
+            let qrSide = AdaptiveLayout.qrSide(availableHeight: geometry.size.height)
+            ScrollView {
+                Group {
+                    if let request = model.request, let uri = try? request.uri() {
+                        AdaptiveColumns { _ in
+                            VStack(spacing: 28) {
+                                Button { sheet = .copy } label: {
+                                    VStack(spacing: 0) {
+                                        ReceiveQRCode(uri: uri)
+                                            .aspectRatio(1, contentMode: .fit).frame(maxWidth: qrSide, maxHeight: qrSide)
+                                            .padding(16)
+                                        if let sats = request.amountSat {
+                                            VStack(spacing: 6) {
+                                                Text(BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale))
+                                                    .font(NoahFont.largeTitle).minimumScaleFactor(0.5).lineLimit(1)
+                                                if let btcPrice {
+                                                    Text(FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: app.preferredCurrency, locale: locale))
+                                                        .font(NoahFont.callout)
+                                                }
+                                            }
+                                            .frame(maxWidth: .infinity).padding(.vertical, 20)
+                                            .foregroundStyle(Color(hex: 0x1A1A1A)).background(NoahColor.brand)
+                                        }
                                     }
+                                    .frame(maxWidth: 302)
+                                    .background(.white, in: RoundedRectangle(cornerRadius: 28))
+                                    .clipShape(RoundedRectangle(cornerRadius: 28))
                                 }
-                                .frame(maxWidth: .infinity).padding(.vertical, 20)
-                                .foregroundStyle(Color(hex: 0x1A1A1A)).background(NoahColor.brand)
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Show payment details")
+                                .accessibilityHint("Opens options to copy the unified request or an individual payment method")
+                                .accessibilityIdentifier("receive-qr-button")
+                                Text("Scan to receive bitcoin with Noah")
+                                    .font(NoahFont.callout).foregroundStyle(NoahColor.mutedForeground).multilineTextAlignment(.center)
+                                if request.amountSat == nil {
+                                    Label("Add an amount to receive over Lightning", systemImage: "bolt")
+                                        .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                                }
+                                if !request.description.isEmpty {
+                                    Text(request.description).font(NoahFont.body).multilineTextAlignment(.center)
+                                }
                             }
+                            .frame(maxWidth: .infinity)
+                            VStack(spacing: 12) {
+                                NoahButton(title: request.amountSat == nil ? "Add amount" : "Edit amount") { sheet = .amount }
+                                    .disabled(model.isSaving).accessibilityIdentifier("receive-amount-button")
+                                ShareLink(item: uri) {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                        .font(NoahFont.headline).frame(maxWidth: .infinity, minHeight: 44)
+                                }
+                                .buttonStyle(.bordered).buttonBorderShape(.capsule)
+                                .accessibilityIdentifier("receive-share-button")
+                            }
+                            .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: 302)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 28))
-                        .clipShape(RoundedRectangle(cornerRadius: 28))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Show payment details")
-                    .accessibilityHint("Opens options to copy the unified request or an individual payment method")
-                    .accessibilityIdentifier("receive-qr-button")
-                    Text("Scan to receive bitcoin with Noah")
-                        .font(NoahFont.callout).foregroundStyle(NoahColor.mutedForeground).multilineTextAlignment(.center)
-                    if request.amountSat == nil {
-                        Label("Add an amount to receive over Lightning", systemImage: "bolt")
-                            .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                    }
-                    if !request.description.isEmpty {
-                        Text(request.description).font(NoahFont.body).multilineTextAlignment(.center)
-                    }
-                    VStack(spacing: 12) {
-                        NoahButton(title: request.amountSat == nil ? "Add amount" : "Edit amount") { sheet = .amount }
-                            .disabled(model.isSaving).accessibilityIdentifier("receive-amount-button")
-                        ShareLink(item: uri) {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                                .font(NoahFont.headline).frame(maxWidth: .infinity, minHeight: 44)
+                    } else if let error = model.baseError {
+                        ContentUnavailableView {
+                            Label(LocalizedStringKey(model.baseErrorTitle), systemImage: "exclamationmark.circle")
+                        } description: { Text(LocalizedStringKey(error)) } actions: {
+                            NoahButton(title: "Retry") { Task { await model.start() } }
                         }
-                        .buttonStyle(.bordered).buttonBorderShape(.capsule)
-                        .accessibilityIdentifier("receive-share-button")
+                    } else {
+                        ProgressView("Creating your payment request…").padding(60)
                     }
-                } else if let error = model.baseError {
-                    ContentUnavailableView {
-                        Label(LocalizedStringKey(model.baseErrorTitle), systemImage: "exclamationmark.circle")
-                    } description: { Text(LocalizedStringKey(error)) } actions: {
-                        NoahButton(title: "Retry") { Task { await model.start() } }
-                    }
-                } else {
-                    ProgressView("Creating your payment request…").padding(60)
                 }
+                .padding(24).frame(maxWidth: AdaptiveLayout.pairedWidth).frame(maxWidth: .infinity)
             }
-            .padding(24).frame(maxWidth: 560).frame(maxWidth: .infinity)
         }
     }
 

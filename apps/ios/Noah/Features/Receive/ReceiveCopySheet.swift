@@ -17,6 +17,7 @@ struct ReceiveCopySheet: View {
                 if let invoice = request.lightningInvoice { row("Lightning", id: "lightning", value: invoice, icon: "bolt") }
                 row("On-chain", id: "onchain", value: request.onchainAddress, icon: "bitcoinsign.circle")
             }
+            .readableWidth()
             .navigationTitle("Copy payment details").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }

@@ -69,6 +69,70 @@ struct AdaptiveLayoutTests {
         #expect(mounts.disappeared == 0)
     }
 
+    @Test func protectedDraftStaysMountedAcrossWindowChanges() async throws {
+        let mounts = Mounts()
+        let host = UIHostingController(rootView: Draft(mounts: mounts)
+            .modifier(WalletContentProtection(covered: true)))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 402, height: 874))
+        window.rootViewController = host
+        window.isHidden = false
+        defer { window.isHidden = true; window.rootViewController = nil }
+        try await Task.sleep(for: .milliseconds(100))
+        let original = mounts.ids
+        #expect(original.count == 1)
+        for size in [CGSize(width: 874, height: 402), .init(width: 951, height: 669),
+                     .init(width: 466, height: 678), .init(width: 402, height: 874)] {
+            window.frame.size = size
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(mounts.ids == original)
+        #expect(mounts.disappeared == 0)
+    }
+
+    @Observable final class ScrollFrames {
+        var focus: Int? = 1
+        var target = CGRect.zero
+        var viewport = CGRect.zero
+    }
+    struct FocusedViewport: View {
+        let frames: ScrollFrames
+        var body: some View {
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: 400)
+                        Text("Focused field").frame(height: 44)
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frames.target = $0 }
+                            .id(1)
+                        Color.clear.frame(height: 400)
+                    }
+                }
+                .scrollFocusedField(frames.focus, using: scroll)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frames.viewport = $0 }
+            }
+        }
+    }
+
+    @Test func focusedFieldRemainsInsideTheViewportAfterHeightChanges() async throws {
+        let frames = ScrollFrames()
+        let host = UIHostingController(rootView: FocusedViewport(frames: frames))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 402, height: 874))
+        window.rootViewController = host
+        window.isHidden = false
+        defer { window.isHidden = true; window.rootViewController = nil }
+        for size in [CGSize(width: 402, height: 874), .init(width: 874, height: 180),
+                     .init(width: 669, height: 951), .init(width: 951, height: 180)] {
+            window.frame.size = size
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            try await Task.sleep(for: .milliseconds(150))
+            #expect(frames.target.height == 44)
+            #expect(frames.viewport.insetBy(dx: -1, dy: -1).contains(frames.target))
+        }
+    }
+
     final class Responder: UITextField {
         var hasFocus = false
         override var isFirstResponder: Bool { hasFocus }

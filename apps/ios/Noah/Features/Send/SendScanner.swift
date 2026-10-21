@@ -12,7 +12,9 @@ struct SendScanner: View {
                 if authorized {
                     ScannerCamera(scanned: scanned, failed: { message = $0 })
                 } else {
-                    Text(LocalizedStringKey(message ?? "Requesting camera access…")).padding()
+                    ScrollView {
+                        Text(LocalizedStringKey(message ?? "Requesting camera access…")).padding().readableWidth()
+                    }
                 }
             }
             .overlay(alignment: .bottom) {
@@ -36,15 +38,35 @@ private struct ScannerCamera: UIViewRepresentable {
         let view = CameraPreview()
         view.preview.session = context.coordinator.session
         view.preview.videoGravity = .resizeAspectFill
-        context.coordinator.start()
+        context.coordinator.start { [weak view] in view?.setNeedsLayout() }
         return view
     }
     func updateUIView(_ view: CameraPreview, context: Context) {}
     static func dismantleUIView(_ view: CameraPreview, coordinator: CameraDriver) { coordinator.stop() }
 }
+enum ScannerPreviewLayout {
+    static func rotation(for orientation: UIInterfaceOrientation) -> CGFloat {
+        switch orientation {
+        case .landscapeRight: 0
+        case .landscapeLeft: 180
+        case .portraitUpsideDown: 270
+        default: 90
+        }
+    }
+}
+
 private final class CameraPreview: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var preview: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let scene = window?.windowScene, let connection = preview.connection else { return }
+        let orientation: UIInterfaceOrientation
+        if #available(iOS 26, *) { orientation = scene.effectiveGeometry.interfaceOrientation }
+        else { orientation = scene.interfaceOrientation }
+        let angle = ScannerPreviewLayout.rotation(for: orientation)
+        if connection.isVideoRotationAngleSupported(angle) { connection.videoRotationAngle = angle }
+    }
 }
 /// Capture session configuration and start/stop stay on one serial queue.
 private final class CameraDriver: NSObject, AVCaptureMetadataOutputObjectsDelegate, @unchecked Sendable {
@@ -57,7 +79,7 @@ private final class CameraDriver: NSObject, AVCaptureMetadataOutputObjectsDelega
         self.scanned = scanned
         self.failed = failed
     }
-    func start() {
+    func start(configured: @escaping @MainActor @Sendable () -> Void) {
         queue.async { [self] in
             guard let camera = AVCaptureDevice.default(for: .video),
                 let input = try? AVCaptureDeviceInput(device: camera)
@@ -76,6 +98,7 @@ private final class CameraDriver: NSObject, AVCaptureMetadataOutputObjectsDelega
             output.setMetadataObjectsDelegate(self, queue: queue)
             output.metadataObjectTypes = [.qr]
             session.commitConfiguration()
+            Task { @MainActor in configured() }
             session.startRunning()
         }
     }

@@ -9,7 +9,7 @@
   "catalogEntries": 1287,
   "coverage": {
     "ios": {
-      "rnTranslated": 610,
+      "rnTranslated": 614,
       "nativeOnlyEnglish": 413,
       "nativeOnly": [
         "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats",
@@ -521,6 +521,7 @@
         "Chain status",
         "Change email address",
         "Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier.",
+        "Choose a recipient",
         "Choose how bitcoin amounts are displayed.",
         "Choose the fiat currency used for balances and payment amounts.",
         "Choose the language used in Noah.",
@@ -713,6 +714,7 @@
         "Manage your name, Lightning address, emergency email, and public key.",
         "Manually move onchain bitcoin into Ark.",
         "Maximum VTXO amount",
+        "Maximum available",
         "Mempool explorer",
         "Message",
         "Minimum board amount",
@@ -790,6 +792,7 @@
         "Payment details",
         "Payment request",
         "Payment sent",
+        "Payment summary",
         "Pending",
         "Pending Board",
         "Pending Exit",
@@ -849,6 +852,7 @@
         "Retry",
         "Review Claim",
         "Review payment",
+        "Review the recipient, payment method and final amount before confirming.",
         "Round #{_gt_value_2}",
         "Round #{id} {status}",
         "Round in progress",
@@ -872,6 +876,7 @@
         "Search places or cities",
         "Select",
         "Select Action",
+        "Select a VTXO to see its details",
         "Select expiring",
         "Select visible",
         "Selected",
@@ -1013,7 +1018,6 @@
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
         "Your wallet is currently suspended. All wallet operations are disabled.",
-        "blocks",
         "e.g. Rent, Donation, VPN",
         "fiatjaf",
         "https://mempool.space/api",
@@ -1040,7 +1044,7 @@
       ]
     },
     "android": {
-      "rnTranslated": 528,
+      "rnTranslated": 527,
       "nativeOnlyEnglish": 505,
       "nativeOnly": [
         "6-digit code",
@@ -2063,7 +2067,6 @@
         "Your encrypted database backup was exported.",
         "Your feedback was sent to the Noah team.",
         "Your wallet has been backed up successfully.",
-        "blocks",
         "e.g. Rent, Donation, VPN",
         "https://mempool.space/api",
         "name@domain.com, ark1… or lno1…",

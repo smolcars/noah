@@ -24,107 +24,112 @@ struct HomeView: View {
         @Bindable var model = model
         NavigationStack {
             ScrollView {
-                VStack(spacing: 28) {
-                    Color.clear.frame(height: 0).task(id: scenePhase == .active && isActive) {
-                        guard scenePhase == .active, isActive else { return }
-                        if upgradeNotices.isEmpty { upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? [] }
-                    }
-                    ForEach(upgradeNotices, id: \.self) { message in
-                        NoahCard { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
-                    }
-                    if !model.isWalletSuspended { UpdateWarningView() }
-                    if let error = model.walletError {
-                        NoahCard {
-                            Label(LocalizedStringKey(error), systemImage: "exclamationmark.triangle")
-                                .font(NoahFont.callout)
-                                .foregroundStyle(NoahColor.destructive)
+                AdaptiveColumns { _ in
+                    VStack(spacing: 28) {
+                        Color.clear.frame(height: 0).task(id: scenePhase == .active && isActive) {
+                            guard scenePhase == .active, isActive else { return }
+                            if upgradeNotices.isEmpty { upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? [] }
                         }
-                    }
-
-                    if model.isWalletSuspended {
-                        SuspendedWalletCard()
-                            .padding(.top, 24)
-                    } else {
-                        BalanceHeader(
-                            balance: model.summary?.balance,
-                            unit: model.amountUnit,
-                            btcPrice: home.btcPrice, currency: model.preferredCurrency,
-                            isHidden: $model.isBalanceHidden)
-                            .padding(.top, 24)
-                    }
-
-                    if !model.isWalletSuspended {
-                        HomeStatusBanners(home: home)
-                        AutoBoardingService()
-                    }
-
-                    // Like RN, a suspended wallet shows only the suspended card.
-                    if !model.isWalletSuspended && model.server.state.isEmailVerified != true
-                        && model.server.state.isEmailPromptDismissed != true
-                    {
-                        NoahCard {
-                            HStack(alignment: .top, spacing: 12) {
-                                Button { showEmail = true } label: {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Label("Add Emergency Email", systemImage: "envelope")
-                                            .font(NoahFont.headline)
-                                        Text("Optional alerts can help us reach you if your VTXOs need attention before they expire.")
-                                            .font(NoahFont.footnote)
-                                            .foregroundStyle(NoahColor.mutedForeground)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.plain)
-                                Button("Dismiss emergency email prompt", systemImage: "xmark") {
-                                    model.server.dismissEmailPrompt()
-                                }
-                                .labelStyle(.iconOnly)
-                                .frame(minWidth: 44, minHeight: 44)
+                        ForEach(upgradeNotices, id: \.self) { message in
+                            NoahCard { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
+                        }
+                        if !model.isWalletSuspended { UpdateWarningView() }
+                        if let error = model.walletError {
+                            NoahCard {
+                                Label(LocalizedStringKey(error), systemImage: "exclamationmark.triangle")
+                                    .font(NoahFont.callout)
+                                    .foregroundStyle(NoahColor.destructive)
                             }
                         }
-                    }
 
-                    if !model.isWalletSuspended {
-                        NoahCard {
-                            VStack(alignment: .leading, spacing: 16) {
-                                HStack {
-                                    Text("Recent Activity").font(NoahFont.headline)
-                                    Spacer()
-                                    Button("View all", action: onOpenHistory).font(NoahFont.footnote)
-                                }
-                                if history.isLoading {
-                                    ProgressView("Loading transactions")
-                                } else if let error = history.error {
-                                    Text(LocalizedStringKey(error)).font(NoahFont.footnote)
-                                    Button("Retry") { Task { await history.refresh(currency: model.preferredCurrency) } }
-                                } else if history.transactions.isEmpty {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("No activity yet").font(NoahFont.callout)
-                                        Text("Receive or send bitcoin to start your history.")
-                                            .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                                    }
-                                } else {
-                                    ForEach(Array(history.transactions.prefix(3))) { transaction in
-                                        Button { selectedID = transaction.id } label: {
-                                            TransactionRow(transaction: transaction, unit: model.amountUnit, recent: true)
-                                                .padding(.vertical, 8)
+                        if model.isWalletSuspended {
+                            SuspendedWalletCard()
+                                .padding(.top, 24)
+                        } else {
+                            BalanceHeader(
+                                balance: model.summary?.balance,
+                                unit: model.amountUnit,
+                                btcPrice: home.btcPrice, currency: model.preferredCurrency,
+                                isHidden: $model.isBalanceHidden)
+                                .padding(.top, 24)
+                        }
+
+                        if !model.isWalletSuspended {
+                            HomeStatusBanners(home: home)
+                            AutoBoardingService()
+                        }
+
+                        // Like RN, a suspended wallet shows only the suspended card.
+                        if !model.isWalletSuspended && model.server.state.isEmailVerified != true
+                            && model.server.state.isEmailPromptDismissed != true
+                        {
+                            NoahCard {
+                                HStack(alignment: .top, spacing: 12) {
+                                    Button { showEmail = true } label: {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Label("Add Emergency Email", systemImage: "envelope")
+                                                .font(NoahFont.headline)
+                                            Text("Optional alerts can help us reach you if your VTXOs need attention before they expire.")
+                                                .font(NoahFont.footnote)
+                                                .foregroundStyle(NoahColor.mutedForeground)
                                         }
-                                        .buttonStyle(.plain)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
+                                    .buttonStyle(.plain)
+                                    Button("Dismiss emergency email prompt", systemImage: "xmark") {
+                                        model.server.dismissEmailPrompt()
+                                    }
+                                    .labelStyle(.iconOnly)
+                                    .frame(minWidth: 44, minHeight: 44)
                                 }
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity)
+                    VStack(spacing: 28) {
+                        if !model.isWalletSuspended {
+                            NoahCard {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    HStack {
+                                        Text("Recent Activity").font(NoahFont.headline)
+                                        Spacer()
+                                        Button("View all", action: onOpenHistory).font(NoahFont.footnote)
+                                    }
+                                    if history.isLoading {
+                                        ProgressView("Loading transactions")
+                                    } else if let error = history.error {
+                                        Text(LocalizedStringKey(error)).font(NoahFont.footnote)
+                                        Button("Retry") { Task { await history.refresh(currency: model.preferredCurrency) } }
+                                    } else if history.transactions.isEmpty {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("No activity yet").font(NoahFont.callout)
+                                            Text("Receive or send bitcoin to start your history.")
+                                                .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                                        }
+                                    } else {
+                                        ForEach(Array(history.transactions.prefix(3))) { transaction in
+                                            Button { selectedID = transaction.id } label: {
+                                                TransactionRow(transaction: transaction, unit: model.amountUnit, recent: true)
+                                                    .padding(.vertical, 8)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                    if !model.isWalletSuspended {
-                        Text(LocalizedStringKey(home.fact))
-                        .font(NoahFont.footnote)
-                        .foregroundStyle(NoahColor.mutedForeground)
-                        .padding(.top, 24)
+                        if !model.isWalletSuspended {
+                            Text(LocalizedStringKey(home.fact))
+                            .font(NoahFont.footnote)
+                            .foregroundStyle(NoahColor.mutedForeground)
+                            .padding(.top, 24)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 20)
-                .frame(maxWidth: 640)
+                .frame(maxWidth: AdaptiveLayout.pairedWidth)
                 .frame(maxWidth: .infinity)
             }
             .task { await model.versionCheck.checkOnce() }

@@ -51,20 +51,7 @@ struct RestoreWalletScreen: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
-            .onGeometryChange(for: CGSize.self) { $0.size } action: { _ in
-                if let focusedWord {
-                    Task { @MainActor in
-                        await Task.yield()
-                        scroll.scrollTo(focusedWord, anchor: .center)
-                    }
-                }
-            }
-            .onChange(of: focusedWord) { _, index in
-                if let index { withAnimation { scroll.scrollTo(index, anchor: .center) } }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                if let focusedWord { withAnimation { scroll.scrollTo(focusedWord, anchor: .center) } }
-            }
+            .scrollFocusedField(focusedWord, using: scroll)
         }
         .foregroundStyle(NoahColor.foreground)
         .background(NoahColor.background.ignoresSafeArea())

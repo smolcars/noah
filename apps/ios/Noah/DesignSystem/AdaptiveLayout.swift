@@ -60,4 +60,26 @@ extension View {
     func readableWidth(_ maximum: CGFloat = AdaptiveLayout.readableWidth) -> some View {
         frame(maxWidth: maximum).frame(maxWidth: .infinity)
     }
+
+    func scrollFocusedField<Field: Hashable>(_ field: Field?, using scroll: ScrollViewProxy) -> some View {
+        modifier(FocusedFieldScroll(field: field, scroll: scroll))
+    }
+}
+
+private struct FocusedFieldScroll<Field: Hashable>: ViewModifier {
+    let field: Field?
+    let scroll: ScrollViewProxy
+    @State private var size = CGSize.zero
+    private struct Request: Equatable { let field: Field?; let size: CGSize }
+
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+            .task(id: Request(field: field, size: size)) {
+                guard let field else { return }
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                scroll.scrollTo(field, anchor: .center)
+            }
+    }
 }

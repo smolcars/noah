@@ -11,6 +11,8 @@ struct ReceiveAmountSheet: View {
     @State private var description: String
     @State private var useFiat = false
     @FocusState private var focus: Field?
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var compactKeyboard: Bool { verticalSizeClass == .compact && focus != nil }
     private enum Field { case amount, description }
 
     init(request: ReceiveRequest, model: ReceiveModel, btcPrice: Double?) {
@@ -30,80 +32,89 @@ struct ReceiveAmountSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    HStack(alignment: .firstTextBaseline) {
-                        if !useFiat && app.amountUnit == .bip177 { Text("₿").font(NoahFont.largeTitle) }
-                        TextField("Amount", text: $amount)
-                            .keyboardType(useFiat ? .decimalPad : .numberPad)
-                            .font(NoahFont.inter(44, .bold, relativeTo: .largeTitle))
-                            .focused($focus, equals: .amount)
-                            .accessibilityIdentifier("receive-amount-input")
-                        Text(useFiat ? app.preferredCurrency : app.amountUnit == .sats ? "sats" : "")
-                            .font(NoahFont.headline)
-                    }
-                    Button(action: toggleCurrency) {
-                        HStack {
-                            if useFiat {
-                                Text(BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale))
-                            } else if let btcPrice {
-                                Text(FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: app.preferredCurrency, locale: locale))
-                            } else {
-                                Text(L10n.text("{currency} rate unavailable", app.preferredCurrency, locale: locale.identifier))
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(spacing: 24) {
+                        HStack(alignment: .firstTextBaseline) {
+                            if !useFiat && app.amountUnit == .bip177 { Text("₿").font(NoahFont.largeTitle) }
+                            TextField("Amount", text: $amount)
+                                .keyboardType(useFiat ? .decimalPad : .numberPad)
+                                .font(NoahFont.inter(44, .bold, relativeTo: .largeTitle))
+                                .focused($focus, equals: .amount).id(Field.amount)
+                                .accessibilityIdentifier("receive-amount-input")
+                            Text(useFiat ? app.preferredCurrency : app.amountUnit == .sats ? "sats" : "")
+                                .font(NoahFont.headline)
+                        }
+                        Button(action: toggleCurrency) {
+                            HStack {
+                                if useFiat {
+                                    Text(BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale))
+                                } else if let btcPrice {
+                                    Text(FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: app.preferredCurrency, locale: locale))
+                                } else {
+                                    Text(L10n.text("{currency} rate unavailable", app.preferredCurrency, locale: locale.identifier))
+                                }
+                                Image(systemName: "arrow.up.arrow.down")
                             }
-                            Image(systemName: "arrow.up.arrow.down")
                         }
-                    }
-                    .foregroundStyle(btcPrice == nil ? NoahColor.mutedForeground : NoahColor.success)
-                    .disabled(btcPrice == nil || model.isSaving)
-                    .accessibilityLabel(useFiat ? "Switch to sats" : L10n.text("Switch to {value1}", app.preferredCurrency, locale: locale.identifier))
-                    .accessibilityIdentifier("receive-currency-toggle")
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Add a note").font(NoahFont.headline)
-                        TextField("Description", text: $description, axis: .vertical)
-                            .lineLimit(2...5).focused($focus, equals: .description)
-                            .textFieldStyle(.roundedBorder)
-                            .accessibilityIdentifier("receive-description-input")
-                        if description.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count > 639 {
-                            Text("Note must be 639 characters or fewer.").foregroundStyle(NoahColor.destructive)
+                        .foregroundStyle(btcPrice == nil ? NoahColor.mutedForeground : NoahColor.success)
+                        .disabled(btcPrice == nil || model.isSaving)
+                        .accessibilityLabel(useFiat ? "Switch to sats" : L10n.text("Switch to {value1}", app.preferredCurrency, locale: locale.identifier))
+                        .accessibilityIdentifier("receive-currency-toggle")
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Add a note").font(NoahFont.headline)
+                            TextField("Description", text: $description, axis: .vertical)
+                                .lineLimit(2...5).focused($focus, equals: .description).id(Field.description)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityIdentifier("receive-description-input")
+                            if description.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count > 639 {
+                                Text("Note must be 639 characters or fewer.").foregroundStyle(NoahColor.destructive)
+                            }
                         }
+                        if let error = model.invoiceError {
+                            Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("receive-invoice-error")
+                        }
+                        if compactKeyboard { actions }
                     }
-                    if let error = model.invoiceError {
-                        Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("receive-invoice-error")
+                    .padding(24).readableWidth()
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .scrollFocusedField(focus, using: scroll)
+                .safeAreaInset(edge: .bottom) {
+                    if !compactKeyboard { actions }
+                }
+                .navigationTitle(request.amountSat == nil ? "Add amount" : "Edit amount")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }.disabled(model.isSaving)
+                    }
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") { focus = nil }
                     }
                 }
-                .padding(24)
+                .disabled(model.isSaving)
+                .background(NoahColor.background)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
-                    NoahButton(title: request.amountSat == nil ? "Next" : "Update request", isLoading: model.isSaving) {
-                        focus = nil
-                        Task { if await model.save(amountSat: sats, description: description) { dismiss() } }
-                    }
-                    .disabled(!valid).accessibilityIdentifier("receive-amount-submit")
-                    if request.amountSat != nil {
-                        NoahButton(title: "Remove amount", kind: .secondary) { model.removeAmount(); dismiss() }
-                            .disabled(model.isSaving).accessibilityIdentifier("receive-amount-remove")
-                    }
-                }
-                .padding().background(NoahColor.background)
-            }
-            .navigationTitle(request.amountSat == nil ? "Add amount" : "Edit amount")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(model.isSaving)
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") { focus = nil }
-                }
-            }
-            .disabled(model.isSaving)
-            .background(NoahColor.background)
         }
         .interactiveDismissDisabled(model.isSaving)
+    }
+
+    private var actions: some View {
+        VStack(spacing: 8) {
+            NoahButton(title: request.amountSat == nil ? "Next" : "Update request", isLoading: model.isSaving) {
+                focus = nil
+                Task { if await model.save(amountSat: sats, description: description) { dismiss() } }
+            }
+            .disabled(!valid).accessibilityIdentifier("receive-amount-submit")
+            if request.amountSat != nil {
+                NoahButton(title: "Remove amount", kind: .secondary) { model.removeAmount(); dismiss() }
+                    .disabled(model.isSaving).accessibilityIdentifier("receive-amount-remove")
+            }
+        }
+        .padding().background(NoahColor.background)
+        .readableWidth()
     }
 
     private func toggleCurrency() {

@@ -3,6 +3,7 @@ import SwiftUI
 struct SendView: View {
     @Environment(\.locale) private var locale
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(AppModel.self) private var app
     @State private var model: SendModel
 
@@ -17,6 +18,7 @@ struct SendView: View {
     @State private var scanner = false
     @FocusState private var focus: Field?
     private enum Field { case recipient, note }
+    private var compactKeyboard: Bool { verticalSizeClass == .compact && focus != nil }
     var body: some View {
         Group {
             if model.controller.locked && !model.showReview {
@@ -89,65 +91,106 @@ struct SendView: View {
         }
     }
     private var composer: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                if model.stage == .amount { amountComposer }
-                if model.stage == .recipient { recipientComposer }
-                if model.stage == .method {
-                    Text("Choose payment method").font(NoahFont.title)
-                    ForEach(model.rails, id: \.self) { rail in
-                        choice(
-                            rail.label, selected: model.progress.selectedRail == rail,
-                            enabled: model.availability[rail.rawValue] == true
-                        ) {
-                            model.progress.selectedRail = rail
-                            model.progress.railConfirmed = true
+        ScrollViewReader { scroll in
+            ScrollView {
+                AdaptiveColumns { expanded in
+                    VStack(spacing: 24) {
+                        if model.stage == .amount { amountComposer }
+                        if model.stage == .recipient { recipientComposer }
+                        if model.stage == .method {
+                            Text("Choose payment method").font(NoahFont.title)
+                            ForEach(model.rails, id: \.self) { rail in
+                                choice(
+                                    rail.label, selected: model.progress.selectedRail == rail,
+                                    enabled: model.availability[rail.rawValue] == true
+                                ) {
+                                    model.progress.selectedRail = rail
+                                    model.progress.railConfirmed = true
+                                }
+                            }
+                        }
+                        if model.stage == .source {
+                            Text("Choose balance").font(NoahFont.title)
+                            ForEach(SendSource.allCases, id: \.self) { source in
+                                choice(
+                                    "\(source.label) · \(source == .offchain ? model.arkBalance : model.onchainBalance) sats",
+                                    selected: model.source == source, enabled: model.sources.contains(source)
+                                ) { model.source = source }
+                            }
+                        }
+                        if compactKeyboard { continueButton }
+                        if let error = model.error {
+                            Text(model.destinationError?.message(locale: locale.identifier) ?? L10n.text(error, locale: locale.identifier)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
                         }
                     }
-                }
-                if model.stage == .source {
-                    Text("Choose balance").font(NoahFont.title)
-                    ForEach(SendSource.allCases, id: \.self) { source in
-                        choice(
-                            "\(source.label) · \(source == .offchain ? model.arkBalance : model.onchainBalance) sats",
-                            selected: model.source == source, enabled: model.sources.contains(source)
-                        ) { model.source = source }
+                    .frame(maxWidth: .infinity)
+                    if expanded { paymentSummary.frame(maxWidth: .infinity) }
+                }.padding(24).readableWidth(AdaptiveLayout.pairedWidth)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollFocusedField(focus, using: scroll)
+            .safeAreaInset(edge: .bottom) {
+                if !compactKeyboard { continueButton.padding().background(NoahColor.background) }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if model.stage != .amount {
+                        Button("Start over") {
+                            focus = nil
+                            model.reset()
+                        }.disabled(model.busy)
                     }
                 }
-                if let error = model.error {
-                    Text(model.destinationError?.message(locale: locale.identifier) ?? L10n.text(error, locale: locale.identifier)).foregroundStyle(NoahColor.destructive).accessibilityIdentifier("send-error")
-                }
-            }.padding(24)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom) {
-            NoahButton(title: "Continue", isLoading: model.busy || model.resolvingRecipient) {
-                focus = nil
-                Task { await model.continueStage() }
-            }.accessibilityIdentifier("send-continue").padding().background(NoahColor.background)
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                if model.stage != .amount {
-                    Button("Start over") {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Scan", systemImage: "qrcode.viewfinder") {
                         focus = nil
-                        model.reset()
+                        scanner = true
                     }.disabled(model.busy)
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focus = nil }
+                }
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Scan", systemImage: "qrcode.viewfinder") {
-                    focus = nil
-                    scanner = true
-                }.disabled(model.busy)
-            }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { focus = nil }
+            .disabled(model.busy || model.controller.locked)
+        }
+    }
+    private var continueButton: some View {
+        NoahButton(title: "Continue", isLoading: model.busy || model.resolvingRecipient) {
+            focus = nil
+            Task { await model.continueStage() }
+        }.accessibilityIdentifier("send-continue")
+            .readableWidth()
+    }
+
+    private var paymentSummary: some View {
+        NoahCard {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Payment summary").font(NoahFont.title)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Amount").foregroundStyle(NoahColor.mutedForeground)
+                    Text(model.isMax ? L10n.text("Maximum available", locale: locale.identifier)
+                         : BitcoinAmount.format(sats: Int64(clamping: model.sats), unit: app.amountUnit, locale: locale))
+                        .font(NoahFont.title).minimumScaleFactor(0.5).lineLimit(1)
+                        .accessibilityIdentifier("send-summary-amount")
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recipient").foregroundStyle(NoahColor.mutedForeground)
+                    Text(model.destination.isEmpty ? L10n.text("Choose a recipient", locale: locale.identifier) : model.destination)
+                        .textSelection(.enabled)
+                }
+                if !model.comment.isEmpty { Text(model.comment) }
+                if let quote = model.quote {
+                    LabeledContent("Fee", value: "\(quote.fee) sats")
+                    LabeledContent("Total", value: "\(quote.total) sats")
+                }
+                Text("Review the recipient, payment method and final amount before confirming.")
+                    .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
             }
         }
-        .disabled(model.busy || model.controller.locked)
+        .accessibilityIdentifier("send-summary-pane")
     }
+
     private var amountComposer: some View {
         VStack(spacing: 24) {
             Text("How much?").font(NoahFont.title)
@@ -184,7 +227,7 @@ struct SendView: View {
             Text("Who are you paying?").font(NoahFont.title)
             TextField("Address, invoice, or payment request", text: $model.destination, axis: .vertical)
                 .textInputAutocapitalization(.never).autocorrectionDisabled().lineLimit(2...5)
-                .textFieldStyle(.roundedBorder).focused($focus, equals: .recipient).accessibilityIdentifier(
+                .textFieldStyle(.roundedBorder).focused($focus, equals: .recipient).id(Field.recipient).accessibilityIdentifier(
                     "send-recipient"
                 )
                 .task(id: model.destination) {
@@ -208,7 +251,7 @@ struct SendView: View {
                 Text("Recipient verified").foregroundStyle(NoahColor.success)
                 if route.commentAllowed > 0 {
                     TextField("Add a note", text: $model.comment, axis: .vertical)
-                        .textFieldStyle(.roundedBorder).focused($focus, equals: .note)
+                        .textFieldStyle(.roundedBorder).focused($focus, equals: .note).id(Field.note)
                     Text("\(model.comment.utf16.count)/\(route.commentAllowed)").font(.caption)
                     if !model.comment.isEmpty && route.arkAddress != nil {
                         Text("Adding a note will send this payment over Lightning.").font(.caption)
@@ -313,12 +356,12 @@ struct SendConfirmation: View {
                             }
                             if !payment.comment.isEmpty { Text(payment.comment) }
                             if let message = controller.message { Text(LocalizedStringKey(message)).foregroundStyle(NoahColor.destructive) }
-                        }.padding(24)
+                        }.padding(24).readableWidth()
                     }.safeAreaInset(edge: .bottom) {
                         NoahButton(title: "Confirm payment") {
                             if let confirm { confirm() } else { controller.submit(payment, quote: quote) }
                         }
-                            .accessibilityIdentifier("send-confirm").padding()
+                            .accessibilityIdentifier("send-confirm").padding().readableWidth()
                     }
                 }
             }
@@ -454,7 +497,7 @@ struct SendOutcomeView: View {
                         .accessibilityIdentifier("send-override")
                 }
                 if let message = controller.message { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
-            }.padding(24).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            }.padding(24).multilineTextAlignment(.center).readableWidth()
         }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
             Button("Keep waiting", role: .cancel) {}

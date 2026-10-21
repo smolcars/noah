@@ -96,13 +96,8 @@ struct EmergencyEmailView: View {
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
-            .onChange(of: focus) { _, field in
-                if let field { withAnimation { scroll.scrollTo(field, anchor: .center) } }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                if let focus { withAnimation { scroll.scrollTo(focus, anchor: .center) } }
-            }
             .scrollDismissesKeyboard(.interactively)
+            .scrollFocusedField(focus, using: scroll)
             .foregroundStyle(NoahColor.foreground)
             .background(NoahColor.background.ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {

@@ -5,6 +5,8 @@ struct LightningAddressView: View {
     private enum Field: Hashable { case username, npub }
     @Environment(AppModel.self) private var model
     @FocusState private var focus: Field?
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var compactKeyboard: Bool { verticalSizeClass == .compact && focus != nil }
     @State private var username = ""
     @State private var npub = ""
     @State private var busy = false
@@ -81,31 +83,19 @@ struct LightningAddressView: View {
                         .autocorrectionDisabled()
                         .disabled(busy)
                     }
+                    if compactKeyboard { actions }
                 }
                 .font(NoahFont.body)
                 .padding(20)
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
             }
-            .onChange(of: focus) { _, field in
-                if let field { withAnimation { scroll.scrollTo(field, anchor: .center) } }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                if let focus { withAnimation { scroll.scrollTo(focus, anchor: .center) } }
-            }
             .scrollDismissesKeyboard(.interactively)
+            .scrollFocusedField(focus, using: scroll)
             .foregroundStyle(NoahColor.foreground)
             .background(NoahColor.background.ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {
-                HStack(spacing: 16) {
-                    NoahButton(title: "Skip", kind: .secondary) { focus = nil; onContinue() }.disabled(busy)
-                    NoahButton(title: unchanged ? "Continue" : "Save", isLoading: busy, action: save)
-                        .disabled(username.isEmpty)
-                }
-                .padding(20)
-                .frame(maxWidth: 640)
-                .frame(maxWidth: .infinity)
-                .background(NoahColor.background)
+                if !compactKeyboard { actions }
             }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -126,6 +116,18 @@ struct LightningAddressView: View {
                 Button("OK", role: .cancel) {}
             } message: { Text(LocalizedStringKey(errorMessage ?? "")) }
         }
+    }
+
+    private var actions: some View {
+        HStack(spacing: 16) {
+            NoahButton(title: "Skip", kind: .secondary) { focus = nil; onContinue() }.disabled(busy)
+            NoahButton(title: unchanged ? "Continue" : "Save", isLoading: busy, action: save)
+                .disabled(username.isEmpty)
+        }
+        .padding(20)
+        .frame(maxWidth: 640)
+        .frame(maxWidth: .infinity)
+        .background(NoahColor.background)
     }
 
     private func save() {
