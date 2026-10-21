@@ -5,6 +5,7 @@ Round-5 work starts at the supplied `be132094` HEAD, after the lifecycle merge.
 Round 6 starts at `2fa950f1`, with the reviewed `4565c735` in its ancestry.
 Round 7 starts at `249cb85f`, including the reviewed round-6 `184c39c6` ancestry.
 Round 8 starts at the reviewed round-7 `40371bfd`.
+Round 9 starts at `7fa532a0`, with round-8 fixes in its ancestry.
 All test credentials are fake.
 
 A custom endpoint's entire identity is private, including scheme, hostname,
@@ -17,7 +18,7 @@ Raw SDK text from `SafeErrorDescription.forLogging` and Bark callbacks only ente
 queue; the writer applies the boundary before either sink. Ark Info continues
 to show/copy the full endpoint on screen.
 
-## Current policy (round 8)
+## Current policy (round 9)
 
 Round 7 adds registered secret tokens to the round-6 authority allowlist below.
 The acceptance boundary is one record at every Noah-owned sink: a token derived
@@ -54,13 +55,19 @@ links propagate a terminal-hit bit, so suffix and overlapping matches need no
 per-pattern searches or match arrays. Registration invalidates the cached
 matcher only when tokens change; the first subsequent record rebuilds it.
 Android also caches immutable origin/host snapshots instead of copying history
-for every record. Round 8 retains raw token spellings and scans raw and
-locale-independent lower/upper-cased UTF-16 views alongside the NFKC/cased view.
-This preserves a complete raw token when an adjacent combining mark would compose
-with its final scalar. The NFKC view uses a final NFKC pass after casing
-(including `Straße`/`STRAẞE`/`STRASSE`). The final pass makes normalization
-idempotent when casing expands a character into combining marks. Work per view is O(record length), independent of the number
-of registrations; storage is O(total token length). The bounded decoder retains
+for every record. Round 9 retains raw token spellings and scans raw and
+locale-independent lower/upper-cased UTF-16 views alongside an NFKD/cased view.
+Tokens use the same decomposition and casing, including
+`Straße`/`STRAẞE`/`STRASSE`, followed by a final NFKD pass for idempotence.
+Compatibility decomposition keeps a following accent separate from the token's
+last character, including when the token uses fullwidth characters or ligatures.
+Before normalization, consecutive Unicode marks are bounded to 32 (nonspacing,
+spacing and enclosing marks, including supplementary scalars). Registered records
+with longer runs are omitted whole; the decoder also checks every newly decoded
+layer before compatibility normalization. Normal mode retains its previous policy.
+Work per view is O(record length), independent of the number of registrations;
+normalization cannot reorder an unbounded combining sequence. Storage is
+O(total token length). The bounded decoder retains
 four escape layers, normalizing compatibility forms before each layer so that
 fullwidth percent/backslash/entity punctuation cannot hide a supported escape.
 Clean-install decoding keeps its previous defaults.
@@ -86,8 +93,13 @@ formatting, including the trailing LF and generated overflow records, and immedi
 OSLog/Logcat delivery. It inspects raw, decoded and compatibility forms with the
 same matcher and honors the fail-closed marker. It preserves normal-mode output,
 timestamps and already-extracted provider summaries when no token hits. Sentry's
-message/breadcrumb boundary already receives complete formatted text; the shared
-composition regressions cover it too. Fallback error type names pass through
+event and breadcrumb guards additionally serialize the complete
+allowlisted outgoing payload to JSON and run the same token guard over it.
+This covers numeric fields and joins between fields. A collision drops the
+payload because replacing typed numeric fields with strings cannot preserve the
+SDK schema reliably. Message/exception/breadcrumb text is still scrubbed first;
+normal-mode events retain the existing allowlist and values. Fallback error type
+names pass through
 `LogFile.redact`, including iOS's type-only `forLogging` fallback. Ordinary
 noncolliding names are unchanged.
 
@@ -741,3 +753,148 @@ hook completes.
 The final documentation commit records verification and cleanup. Every round-8
 commit passes the normal pre-commit checks and retains the requested
 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` trailer.
+
+
+## Round-9 closers
+
+The round-8 probes in `/private/tmp/noah-esplora-review-r8-probes` became
+permanent shared regressions. The 242 authority, 147 redaction and 53 Esplora
+vectors and all eight record vectors are retained. The token fixture grows
+from 52 to 57 cases: fullwidth acute/ring adjacency, ligatures, and escaped
+accents. Both platforms retain their full sink matrix. The new shared
+`esplora-log-privacy-r9.json` holds numeric device/frame/breadcrumb payloads,
+the reviewer's combining-run family, and the widget error token. Platform tests
+also cover the 32/33-mark boundary across all mark categories, run resets,
+supplementary marks and escaped runs before normalization.
+
+The final JSON guard drops numeric collisions at Sentry's event/breadcrumb
+boundary. Android's envelope header/session checks use the same payload guard.
+The breadcrumb fixture's numeric epoch becomes an ISO date in the SDK; the
+actual outgoing breadcrumb remains admitted when it contains no registered
+token. Original numeric JSON is nevertheless rejected by the common guard.
+
+The production direct-output audit found one bypass:
+`NoahWidgetProvider.updateWidget` used `android.util.Log.e` with both an exception
+message and a raw throwable. It now calls `AppLog` with
+`SafeErrorDescription.of`, with no throwable overload. Its permanent Robolectric
+regression triggers a fake local failure and checks real Logcat and the absence
+of a raw throwable. No other production direct calls were found outside logging.
+The remaining `Logger`/`Log.println` calls are logging-module sinks. Outside
+production, `UpgradeTests/read-rn-qr.swift` and `DeviceDriver/UITests/RegtestDriverTests.swift`
+print machine-readable test/driver output; `AppLogTests` and `BtcMapLimitsTests`
+print measurements. Those harness outputs do not carry app log records and stay
+unchanged. The new regression suite also prints scaling measurements.
+
+Before changes, the permanent Android run failed five tests across the token
+sink matrix, numeric Sentry guard, combining-run guard, and widget Logcat path.
+A standalone probe of the production Swift matcher missed fullwidth-plus-accent
+text and grew from 0.576 ms to 310.155 ms for 512 to 8,192 accent/cedilla pairs,
+exceeding the unchanged 64x-plus-20-ms bound. Extracting the pre-change Swift
+payload guard with inert general-redactor stand-ins confirmed numeric admission.
+NFKD alone fixed the token hit but still exceeded the scaling bound; bounding
+runs fixed both. These local production-function probes supplement the full
+native suites rather than substituting for them.
+
+## Why this is the end state
+
+The token layer runs over raw and NFKD views, with token derivation and record
+matching using the same case policy. Every app-owned sink has a final guard over
+its complete serialized record: formatted file/system text, or outgoing Sentry
+JSON. The logging boundary is the only production log output path, including
+widget errors and Bark callbacks. Combining runs are bounded before each
+compatibility-normalization pass, so normalization cannot defeat linear scaling.
+The authority allowlist and durable fail-closed marker remain intact. What
+remains is the documented limitations above: fragments split within a token
+across records/lines, opaque tokens shorter than six characters, and secrets
+absent from registered endpoint identities. The separately documented
+Apple-owned CFNetwork diagnostics limitation also remains. No further
+alternate-spelling
+special cases or cross-record state are part of this guarantee.
+
+## Round-9 implementation commits
+
+- `1340afb6` test(native): reproduce round-nine endpoint privacy violations
+- `6e9b7ba7` fix(android): decompose compatibility forms for endpoint token matching
+- `7f8f9d21` fix(ios): decompose compatibility forms for endpoint token matching
+- `0d732d52` fix(android): guard complete serialized Sentry payloads for endpoint tokens
+- `f7253be8` fix(ios): guard complete serialized Sentry payloads for endpoint tokens
+- `9ccb4e45` fix(android): route widget failures through the private logging boundary
+- `4f1f139d` fix(android): bound combining runs before private log normalization
+- `3bf50d3f` fix(ios): bound combining runs before private log normalization
+- `21e84502` test(native): refresh logging route-word translation inventory
+- `530facd3` fix(android): preserve normal-mode Sentry payload admission
+- `05b5371f` fix(ios): preserve normal-mode Sentry payload admission
+- `0cd18d3f` test(ios): select scaling boundaries with an explicit switch
+
+The final documentation commit records verification and cleanup. Every commit
+passes the normal repository pre-commit hook and ends with
+`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+
+## Round-9 final verification
+
+Final Android verification: **3,625 JVM tests / 153 suites**, zero failures,
+errors or skips. The regtest APK assembled and instrumentation Kotlin compiled.
+The required command ran once after the final source/test changes, before the
+iOS build started, and passed in 2m 25s:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'
+```
+
+Android long combining-run medians (512 → 8,192 accent/cedilla pairs): endpoint
+0.002125 → 0.002042 ms; file 0.009667 → 0.021042 ms; complete record
+0.000375 → 0.000375 ms. The 8,192-pair file input also exceeds the existing
+16-KiB message byte cap; endpoint/record guards exercise the combining bound
+within their larger record allowance. Original scaling families remain within
+their unchanged 64x-plus-20-ms bound and two-second ceiling, with 1,000
+registrations. Final file-boundary 1/16-KiB medians without slash are
+0.824 → 14.124 ms, with slash 1.614 → 21.523 ms, token hit 0.178 → 3.820 ms.
+Endpoint-only equivalents: 0.515 → 9.501, 0.660 → 13.363 and
+0.173 → 3.077 ms. Combining miss/hit: 4.248 → 56.217 and
+0.916 → 22.156 ms; IDNA2008 miss/hit: 2.148 → 45.768 and
+1.194 → 39.400 ms; fullwidth bare hosts: 7.199 → 84.473 ms.
+
+Final iOS long combining-run medians (512 → 8,192 accent/cedilla pairs):
+endpoint 0.000833 → 0.000875 ms; file 0.024625 → 0.000041 ms;
+complete record 0.000834 → 0.000834 ms. The large file case takes the existing
+oversize path; endpoint/record cases inspect the bounded combining run.
+The unchanged original scaling assertions pass. Final file-boundary 1/16-KiB
+medians without slash are 2.857 → 43.176 ms, with slash 2.204 → 32.826 ms,
+token hit 0.603 → 8.837 ms. Endpoint-only equivalents: 1.637 → 23.327,
+1.471 → 21.491 and 0.577 → 8.751 ms. Combining miss/hit:
+5.222 → 88.890 and 2.893 → 47.873 ms; IDNA2008 miss/hit:
+3.786 → 55.886 and 3.078 → 50.379 ms; fullwidth bare hosts:
+10.538 → 161.706 ms. The complete new round-9 suite passes in 0.062 seconds,
+the existing endpoint suite in 2.503 seconds, record suite in 0.149 seconds,
+and AppLog suite in 24.719 seconds.
+
+Final signed arm64 iOS verification: **837 tests / 170 suites**, **810 passed,
+27 opt-in skipped, zero failed**. The complete NoahTests suite ran once after
+the final test correction, with `xcodegen generate` first, normal signing,
+`ARCHS=arm64`, `ONLY_ACTIVE_ARCH=YES`, Nix, package updates/resolution disabled,
+and DerivedData at `/private/tmp/noah-esplora-r9-dd`. Swift Testing took
+331.970 seconds. An earlier pre-test build stopped on a Swift compiler diagnostic
+for the new test's nested function-reference expression; no tests ran in that
+attempt. An explicit switch fixed the test expression. Another task started an
+independent build on the shared host during our first attempt; the final run
+started after that build ended. Other tasks' processes/devices were untouched.
+Our Android and iOS builds ran sequentially.
+
+The owned simulator's exact identity and shutdown state were confirmed before
+deletion: `Noah Esplora R9 7c3a7c16`
+(`B6CD2FC1-F37F-4A94-BB46-393CFC170D25`, iPhone 17, iOS 27.0, `Shutdown`).
+It, the owned DerivedData and both owned result bundles (pre-test and final)
+were removed. No shared/forbidden simulator, emulator, physical device or Docker
+instance was used. All probes/tests used local fakes and fake tokens; no public
+endpoint requests were made. Package sources/artifacts came from local caches.
+
+Both final suites pass all 242 authority, 147 redaction, 53 Esplora and 57 token
+vectors, the applicable shared record vectors, and the round-9 regressions.
+Native translation `--check` is clean; only the existing route-word coverage
+inventory was refreshed, with no catalog or UI copy changes. Every commit passes
+the repository hook (lint, React Compiler, 148 JavaScript tests, TypeScript and
+Rust formatting) and retains the requested co-author trailer. Android device
+instrumentation was compiled rather than run. No tracked RN, server, layout,
+wallet lifecycle, settings or EsploraOpenWait source changed. No owned native
+build remains active. Temporary dependency links and hook shims are removed
+after the documentation hook completes.
