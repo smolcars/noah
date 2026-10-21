@@ -74,7 +74,7 @@ struct BtcMapDetailView: View {
                         Text(dateLabel(comment.created_at)).font(NoahFont.footnote).foregroundStyle(.secondary)
                     }
                 }
-            }.padding(20)
+            }.padding(20).readableWidth()
         }
         .task(id: place.id) {
             detail = nil; loading = true; failed = false; copied = false

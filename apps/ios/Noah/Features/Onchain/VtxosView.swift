@@ -1,14 +1,69 @@
 import SwiftUI
 
 struct VtxosView: View {
-    @State private var model = OnchainModel()
+    @State private var model: OnchainModel
     @State private var filter: VtxoStatus?
     @State private var selecting = false
+    @State private var viewedID: String?
+    @ScaledMetric(relativeTo: .body) private var minimumPaneWidth: CGFloat = 260
     @State private var selected = Set<String>()
+    init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
     private var visible: [VtxoModel] {
         (model.overview?.vtxos ?? []).filter { filter == nil || $0.statusID == filter }
     }
     var body: some View {
+        GeometryReader { geometry in
+            let expanded = AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth)
+            let compactDetail = !expanded && viewedID != nil
+            HStack(spacing: 0) {
+                vtxoList.settingsStyle("VTXOs").frame(maxWidth: .infinity)
+                if expanded {
+                    Divider()
+                    VStack(spacing: 0) {
+                        if let viewedID {
+                            HStack {
+                                Spacer()
+                                Button("Close", systemImage: "xmark") { self.viewedID = nil }
+                                    .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+                            }.padding(.horizontal)
+                            VtxoDetailView(id: viewedID, model: model)
+                        } else {
+                            ContentUnavailableView("Select a VTXO to see its details", systemImage: "doc.text.magnifyingglass")
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityIdentifier("vtxo-detail-pane")
+                }
+            }
+            .readableWidth(AdaptiveLayout.pairedWidth)
+            .opacity(compactDetail ? 0 : 1)
+            .accessibilityHidden(compactDetail)
+            .allowsHitTesting(!compactDetail)
+            .overlay {
+                if compactDetail, let viewedID {
+                    VtxoDetailView(id: viewedID, model: model)
+                        .background(NoahColor.background)
+                }
+            }
+            .navigationTitle(compactDetail ? "VTXO Details" : "VTXOs")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if compactDetail {
+                    Button("Done") { viewedID = nil }
+                } else {
+                    Button(selecting ? "Done" : "Select") {
+                        selecting.toggle()
+                        selected = []
+                    }.disabled(model.busy)
+                }
+            }
+        }
+        .background(NoahColor.background)
+        .modifier(OnchainScreen(model: model))
+        .onChange(of: selected) { _, _ in model.invalidate() }
+    }
+
+    private var vtxoList: some View {
         List {
             Section {
                 Picker("Filter", selection: $filter) {
@@ -54,9 +109,7 @@ struct VtxosView: View {
                             }
                         }.disabled(!vtxo.refreshable || model.locked)
                     } else {
-                        NavigationLink {
-                            VtxoDetailView(id: vtxo.id)
-                        } label: {
+                        Button { viewedID = vtxo.id } label: {
                             VtxoRow(vtxo: vtxo)
                         }
                     }
@@ -64,15 +117,6 @@ struct VtxosView: View {
             }
             OnchainStatusSection(model: model)
         }
-        .settingsStyle("VTXOs")
-        .toolbar {
-            Button(selecting ? "Done" : "Select") {
-                selecting.toggle()
-                selected = []
-            }.disabled(model.busy)
-        }
-        .modifier(OnchainScreen(model: model))
-        .onChange(of: selected) { _, _ in model.invalidate() }
     }
 }
 
@@ -92,7 +136,7 @@ private struct VtxoRow: View {
 
 struct VtxoDetailView: View {
     let id: String
-    @State private var model = OnchainModel()
+    let model: OnchainModel
     var body: some View {
         List {
             if let vtxo = model.overview?.vtxos.first(where: { $0.id == id }) {
@@ -120,6 +164,5 @@ struct VtxoDetailView: View {
             OnchainStatusSection(model: model)
         }
         .settingsStyle("VTXO Details")
-        .modifier(OnchainScreen(model: model))
     }
 }

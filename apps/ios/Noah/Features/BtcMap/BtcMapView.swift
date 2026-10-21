@@ -10,6 +10,7 @@ struct BtcMapView: View {
     @State private var showPlaces = false
     @State private var placeFromList: BtcMapPlace?
     @State private var locatingTask: Task<Void, Never>?
+    @ScaledMetric(relativeTo: .body) private var minimumPaneWidth: CGFloat = 260
 
     private struct CitySearchRequest: Equatable { let query: String; let center: [Double]; let focused: Bool }
 
@@ -21,8 +22,9 @@ struct BtcMapView: View {
                         .ignoresSafeArea(edges: .bottom)
                     VStack(spacing: 10) {
                         searchControls(maxHeight: geometry.size.height * 0.45)
+                            .readableWidth()
                         Spacer(minLength: 0)
-                        if !searchFocused { bottomControls }
+                        if !searchFocused { bottomControls.readableWidth() }
                     }
                     .padding(12)
                     if model.isLoading {
@@ -47,7 +49,7 @@ struct BtcMapView: View {
                     .accessibilityIdentifier("map-place-pane")
                 }
             }
-            .onChange(of: geometry.size.width, initial: true) { _, width in wideLayout = width >= 700 }
+            .onChange(of: AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth), initial: true) { _, expanded in wideLayout = expanded }
             .sheet(item: Binding(get: { wideLayout ? nil : model.selected }, set: { if !wideLayout { model.selected = $0 } })) { place in
                 BtcMapDetailView(place: place, location: model.userLocation, repository: model.repository) { model.selected = nil }
                     .presentationDetents([.height(390), .large])

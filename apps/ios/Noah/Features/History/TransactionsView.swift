@@ -6,6 +6,7 @@ struct TransactionsView: View {
     @State private var filter = HistoryFilter.all
     @State private var selectedID: String?
     @State private var showSheet = false
+    @ScaledMetric(relativeTo: .body) private var minimumPaneWidth: CGFloat = 260
     let onRepeatPayment: (RepeatPayment) -> Void
 
     private var filtered: [HistoryTransaction] { history.transactions.filter(filter.includes) }
@@ -13,7 +14,7 @@ struct TransactionsView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let expanded = geometry.size.width >= 700
+            let expanded = AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth)
             HStack(spacing: 0) {
                 VStack(spacing: 16) {
                     Picker("Transaction filter", selection: $filter) {
@@ -67,8 +68,9 @@ struct TransactionsView: View {
                     .accessibilityIdentifier("history-detail-pane")
                 }
             }
+            .readableWidth(AdaptiveLayout.pairedWidth)
             // Selection survives the system dismissing the phone sheet during rotation.
-            .sheet(isPresented: Binding(get: { !expanded && showSheet && selected != nil }, set: { showSheet = $0 })) {
+            .sheet(isPresented: Binding(get: { !expanded && showSheet && selected != nil }, set: { if !expanded { showSheet = $0 } })) {
                 if let selected {
                     NavigationStack {
                         TransactionDetailView(transaction: selected, onRepeatPayment: repeatPayment, onClose: { selectedID = nil })

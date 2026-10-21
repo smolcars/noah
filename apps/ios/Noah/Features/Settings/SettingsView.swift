@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var confirmingReset = false
     @State private var resetDone = false
     @State private var showingDelete = false
+    private enum Route: Hashable { case logs, feedback, debug, export }
 
     var body: some View {
         AdaptiveForm {
@@ -58,14 +59,14 @@ struct SettingsView: View {
             }
         } secondary: {
             Section("Debug") {
-                row("Show Logs", "View application logs for debugging purposes") { LogView() }
+                route("Show Logs", "View application logs for debugging purposes", to: .logs)
                 Button { confirmingReset = true } label: {
                     SettingsLabel(title: "Reset Server Registration", detail: "Clear your registration with the server. You will need to register again.")
                 }
                 .disabled(busy || model.isWalletSuspended)
-                row("Send Feedback", "Report bugs or share feedback with the Noah team") { FeedbackView() }
+                route("Send Feedback", "Report bugs or share feedback with the Noah team", to: .feedback)
                 if wallet.isDebugModeEnabled == true {
-                    row("Debug Screen", "Advanced debug actions for developers") { DebugView() }
+                    route("Debug Screen", "Advanced debug actions for developers", to: .debug)
                 }
             }
             Section("Danger Zone") {
@@ -74,7 +75,7 @@ struct SettingsView: View {
                 })) {
                     SettingsLabel(title: "Suspend Wallet", detail: "Disable all wallet operations. The wallet will be closed and won't load until re-enabled.")
                 }.disabled(busy)
-                row("Export Database", "Create an encrypted backup file containing your wallet database.") { ExportDatabaseView() }
+                route("Export Database", "Create an encrypted backup file containing your wallet database.", to: .export)
                 Button(role: .destructive) { showingDelete = true } label: {
                     SettingsLabel(title: "Delete Wallet", detail: "Permanently remove this wallet and its recovery phrase from this device.")
                         .foregroundStyle(NoahColor.destructive)
@@ -103,6 +104,14 @@ struct SettingsView: View {
             if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
         }
         .settingsStyle("Settings", maximumWidth: AdaptiveLayout.pairedWidth)
+        .navigationDestination(for: Route.self) { route in
+            switch route {
+            case .logs: LogView()
+            case .feedback: FeedbackView()
+            case .debug: DebugView()
+            case .export: ExportDatabaseView()
+            }
+        }
         .alert("Reset Server Registration", isPresented: $confirmingReset) {
             Button("Cancel", role: .cancel) {}
             Button("Reset", role: .destructive) {
@@ -128,6 +137,9 @@ struct SettingsView: View {
 
     private func row<Content: View>(_ title: String, _ detail: String, value: String? = nil, @ViewBuilder destination: () -> Content) -> some View {
         NavigationLink(destination: destination) { SettingsLabel(title: title, detail: detail, value: value) }
+    }
+    private func route(_ title: String, _ detail: String, to route: Route) -> some View {
+        NavigationLink(value: route) { SettingsLabel(title: title, detail: detail) }
     }
     private func setAutoBoard(_ enabled: Bool) {
         transaction.setAutoBoarding(enabled)
