@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "branchId": "",
+  "entries": [
+    {
+      "fileId": "fae2231582f991296afb301145218c8e383d824654ccef8d09e78a2219ee6902",
+      "versionId": "53e48df26f39101e55d508a0dc8ff832e138a87e4f76dec143a5f132a25597f3",
+      "translations": {
+        "es": {
+          "updatedAt": "2026-10-21T11:59:24.255Z",
+          "postProcessHash": "d4a83a14676401320699d629e0b70b29da95e947b8550a0c50b9c77d34f7f0b7"
+        },
+        "ja": {
+          "updatedAt": "2026-10-21T11:59:24.255Z",
+          "postProcessHash": "283ab2e5d95824e085f81e4353d3ca257dad7e919ff6ccc471810d3a65d79d12"
+        },
+        "ko": {
+          "updatedAt": "2026-10-21T11:59:24.255Z",
+          "postProcessHash": "c0fd16af19016e1f9d556c35e6fe54821022096e53814dd36e6c581a4702e0be"
+        },
+        "sv": {
+          "updatedAt": "2026-10-21T11:59:24.255Z",
+          "postProcessHash": "29a6d0941de0d5a7bbd63da953efbd7657300ce18286eb35f9891e01dec69ccf"
+        }
+      }
+    }
+  ]
+}

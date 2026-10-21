@@ -86,7 +86,7 @@ struct TranslationsTests {
         #expect(BtcMapDistance.format(12.3, locale: locale) == "12,3 km (7,6 mi)")
     }
 
-    @Test func everyUsedRNKeyResolvesInEveryLocale() throws {
+    @Test func everyUsedNativeKeyResolvesInEveryLocale() throws {
         let fixture = try Fixtures.decode("translations-coverage", as: Coverage.self)
         let sources = try #require(fixture.coverage["ios"]?.used)
         #expect(sources.count > 500)
@@ -116,9 +116,12 @@ struct TranslationsTests {
 
     @Test func pluralCategoriesAndArgumentsSurviveResourceCompilation() throws {
         let fixture = try Fixtures.decode("translations", as: Plurals.self)
-        #expect(fixture.plurals.count == 3)
+        let coverage = try Fixtures.decode("translations-coverage", as: Coverage.self)
+        let used = Set(coverage.coverage["ios"]?.used ?? [])
+        let plurals = fixture.plurals.filter { used.contains($0.source) }
+        #expect(plurals.count == 1)
         for locale in LegacyLocale.supported {
-            for entry in fixture.plurals {
+            for entry in plurals {
                 let forms = try #require(entry.translations[locale])
                 for count in [1, 2, 5] {
                     let category = ["en", "es", "sv"].contains(locale) && count == 1 ? "one" : "other"
@@ -146,7 +149,13 @@ struct TranslationsTests {
         defaults.set("ja", forKey: LegacyLocale.key)
         #expect(L10n.text("Cancel", locale: LegacyLocale.resolved(from: defaults)) == "キャンセル")
         #expect(L10n.text("Native-only 100% copy", locale: "es") == "Native-only 100% copy")
-        #expect(L10n.text("Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.", "Alice", locale: "es") == "Automatic payment to Alice was skipped. Open the schedule to review its fee and pay manually.")
+        let source = "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually."
+        for locale in LegacyLocale.supported where locale != "en" {
+            let translated = L10n.text(source, "Alice", locale: locale)
+            #expect(translated.contains("Alice"))
+            #expect(!translated.contains("{recipient}") && !translated.contains("%1$"))
+            #expect(translated != "Automatic payment to Alice was skipped. Open the schedule to review its fee and pay manually.")
+        }
     }
 
     @Test func backgroundCopyRereadsPersistedLanguageWithoutAnAppModel() throws {

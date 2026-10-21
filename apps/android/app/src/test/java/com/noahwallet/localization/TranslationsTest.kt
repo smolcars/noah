@@ -71,7 +71,7 @@ class TranslationsTest {
         } finally { java.util.Locale.setDefault(previous) }
     }
 
-    @Test fun everyUsedRNKeyResolvesInEveryLocale() {
+    @Test fun everyUsedNativeKeyResolvesInEveryLocale() {
         val document = SharedFixtures.document("translations-coverage").jsonObject
         val sources = document.getValue("coverage").jsonObject.getValue("android").jsonObject.getValue("used").jsonArray
         assertTrue(sources.size > 400)
@@ -98,7 +98,11 @@ class TranslationsTest {
     }
 
     @Test fun pluralCategoriesAndArgumentsSurviveResourceCompilation() {
+        val used = SharedFixtures.document("translations-coverage").jsonObject.getValue("coverage").jsonObject
+            .getValue("android").jsonObject.getValue("used").jsonArray.map { it.jsonPrimitive.content }.toSet()
         val plurals = SharedFixtures.document("translations").jsonObject.getValue("plurals").jsonArray
+            .filter { it.jsonObject.getValue("source").jsonPrimitive.content in used }
+        assertEquals(1, plurals.size)
         for (locale in LegacyLocale.supported) {
             language(locale)
             for (plural in plurals) {
@@ -128,6 +132,14 @@ class TranslationsTest {
         assertEquals("キャンセル", L10n.text(context, "Cancel"))
         assertEquals("ja", LegacyLocale.resolved(context))
         assertEquals("Native-only 100% copy", L10n.text(context, "Native-only 100% copy"))
+        val source = "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually."
+        for (locale in LegacyLocale.supported.filter { it != "en" }) {
+            language(locale)
+            val translated = L10n.text(context, source, "Alice")
+            assertTrue(translated.contains("Alice"))
+            assertFalse(translated.contains("{recipient}") || translated.contains("%1$"))
+            assertNotEquals("Automatic payment to Alice was skipped. Open the schedule to review its fee and pay manually.", translated)
+        }
     }
 
     @Test fun backgroundCopyRereadsPersistedLanguageWithoutAnAppModel() {

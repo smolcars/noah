@@ -303,6 +303,16 @@ Mark new screen copy with `<T>` or `useGT()` and keep dynamic values in `<Var>` 
 
 If CI later generates translations, store `GT_API_KEY` and `GT_PROJECT_ID` in CI secrets and run `bunx gt translate` from `client/` before the existing build. The key needs `project:files:read`, `project:files:write`, and `project:translations:enqueue`; keep it out of app bundles. Local OAuth sign-in does not authenticate CI.
 
+The SwiftUI/Compose apps own their translations separately. Keep writing English in native code, then run from the repository root:
+
+```bash
+(cd apps/i18n && ../../node_modules/.bin/gt login)  # Once per developer; shared GT sign-in
+bun apps/tools/translations.mjs translate
+bun apps/tools/translations.mjs --check            # Offline, also used in CI
+```
+
+Commit `apps/i18n/` (English/locale JSON and GT lock), generated `.xcstrings` / `strings.xml`, and the coverage fixture together. Native translation is machine-only; GT runs locally and no GT runtime ships in the apps. Existing RN translations can be imported once with the optional `seed` command; normal native translation/checks do not depend on `client/`. A CI bot is deferred until merge to master and will need the `GT_API_KEY` / `GT_PROJECT_ID` secrets above. See [native translation workflow](apps/tools/TRANSLATIONS.md).
+
 ## 📡 Running the server
 
 **Important note:** Like written above, `just setup-everything` will setup PostgreSQL and Redis instances for you but it also starts up the server, so if you are working on the server, simply stop the docker container of `noah-server` and run `just server` to start the server manually, this will compile the Rust code and start the server locally instead of using Docker.
