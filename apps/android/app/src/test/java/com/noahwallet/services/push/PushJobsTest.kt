@@ -57,7 +57,7 @@ class PushJobsTest {
     @Test fun backupReportsSuccessAndRecurringOpensThenExecutes() = runBlocking {
         jobs.handle(NotificationDataBackupTrigger("k1"))
         jobs.handle(NotificationDataRecurringPaymentDue(1))
-        assertEquals(listOf("open", "backup", "backup-report:k1:true", "open", "recurring"), events)
+        assertEquals(listOf("open", "backup", "backup-report:k1:true", "open", "recurring", "widget"), events)
     }
     @Test fun backupOpenFailureReportsFailure() = runBlocking {
         openFails = true

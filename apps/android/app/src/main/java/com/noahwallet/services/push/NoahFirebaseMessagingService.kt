@@ -11,6 +11,7 @@ class NoahFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
+        PushNotifications.remote(applicationContext, message)
         val body = message.data["body"] ?: return
         try {
             PushWork.enqueue(applicationContext, PushPayload.decode(body),

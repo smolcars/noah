@@ -92,6 +92,9 @@ class PushJobs(private val dependencies: Dependencies) {
                 caller.checkWalletAdmission()
                 if (!budget.available) throw CancellationException()
                 d.recurring(budget)
+                caller.checkWalletAdmission()
+                if (!budget.available) throw CancellationException()
+                bestEffort("Failed to refresh widget") { d.refreshWidget() }
             }
         }
     }

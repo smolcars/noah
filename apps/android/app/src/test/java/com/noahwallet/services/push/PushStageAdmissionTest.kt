@@ -31,6 +31,7 @@ class PushStageAdmissionTest {
             NotificationDataLightningInvoiceRequest(1000, "tx") to listOf("open", "invoice", "submit"),
             NotificationDataLightningClaimRequest(1, null, "hash") to listOf("open", "claim", "announce", "widget"),
             NotificationDataBackupTrigger("k1") to listOf("open", "backup", "backup-report"),
+            NotificationDataRecurringPaymentDue(1) to listOf("open", "recurring", "widget"),
         )
         for ((notification, stages) in paths) for (stopAt in stages.dropLast(1)) for (cancel in listOf(true, false)) {
             val budget = RecurringBudget()
@@ -69,5 +70,6 @@ class PushStageAdmissionTest {
         announceReceived = { _, _, _ -> runBlocking { stage("announce") } },
         refreshWidget = { stage("widget") }, log = {}, backup = { stage("backup") },
         reportBackup = { _, _ -> stage("backup-report") },
+        recurring = { stage("recurring") },
     )
 }

@@ -50,9 +50,27 @@ object PushNotifications {
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(copy.title)
             .setContentText(copy.body)
+            .setDefaults(android.app.Notification.DEFAULT_SOUND)
             .setContentIntent(intent).setAutoCancel(true).setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_MAX).build()
         context.getSystemService(NotificationManager::class.java).notify("lightning-$paymentHash", 1, notification)
+    }
+
+    /** Expo sends visible receipts as data title/message; FCM also supports a notification envelope. */
+    fun remote(context: Context, message: com.google.firebase.messaging.RemoteMessage) {
+        val title = message.notification?.title ?: message.data["title"]
+        val body = message.notification?.body ?: message.data["message"]
+        if (title.isNullOrEmpty() && body.isNullOrEmpty()) return
+        ensureChannels(context)
+        if (!permissionGranted(context)) return
+        val intent = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val notification = NotificationCompat.Builder(context, NotificationChannels.DEFAULT)
+            .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
+            .setContentIntent(intent).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH)
+        if ((message.notification?.sound ?: message.data["sound"]) in listOf(null, "default"))
+            notification.setDefaults(android.app.Notification.DEFAULT_SOUND)
+        context.getSystemService(NotificationManager::class.java).notify(message.messageId ?: java.util.UUID.randomUUID().toString(), 1, notification.build())
     }
 
     fun foreground(context: Context): ForegroundInfo {
