@@ -32,7 +32,7 @@ import com.noahwallet.services.server.Nostr
 @Composable
 fun Onboarding(model: AppModel) {
     var choosingLanguage by rememberSaveable { mutableStateOf(false) }
-    if (choosingLanguage) ModalBottomSheet(onDismissRequest = { choosingLanguage = false }) {
+    if (choosingLanguage) WalletModalBottomSheet(onDismissRequest = { choosingLanguage = false }) {
         com.noahwallet.ui.settings.PreferenceScreen(model, com.noahwallet.ui.settings.SettingsDestination.Language) { choosingLanguage = false }
     }
     var history by rememberSaveable { mutableStateOf(listOf(model.step)) }

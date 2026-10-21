@@ -8,6 +8,11 @@
       </trusted-artifacts>
    </configuration>
    <components>
+      <component group="org.jetbrains.kotlinx" name="kotlinx-coroutines-test-jvm" version="1.11.0">
+         <artifact name="kotlinx-coroutines-test-jvm-1.11.0.jar">
+            <sha256 value="d4f7ee71da708af4719dceb6d3200c8f9dc5146ea1a812cb628ed53c64196f96" origin="Maven Central artifact, independently downloaded for Compose instrumentation tests"/>
+         </artifact>
+      </component>
       <component group="io.sentry" name="sentry" version="8.57.0">
          <artifact name="sentry-8.57.0.jar">
             <sha256 value="76a05779684ccb01afd75e7d75996371a86828fd790935f5d6201b08991d78c4" origin="Maven Central artifact, independently downloaded"/>

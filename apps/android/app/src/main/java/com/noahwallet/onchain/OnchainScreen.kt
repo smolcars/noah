@@ -26,6 +26,7 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.wallet.WalletBackgroundActivity
+import com.noahwallet.ui.readableWidth
 import com.noahwallet.ui.AppModel
 import kotlinx.coroutines.*
 
@@ -85,7 +86,7 @@ internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composa
         }
     }
     PullToRefreshBox(model.loading, onRefresh = { model.invalidate(); scope.launch { model.load() } }) {
-        Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
+        Column(Modifier.fillMaxSize().readableWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (app.isWalletSuspended) Text(tr("Wallet suspended. Resume your wallet in Settings."))
             else content()

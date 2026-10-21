@@ -12,6 +12,8 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -28,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Composable fun SendScanner(onClose: () -> Unit, onScan: (String) -> Unit) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
+    val view = androidx.compose.ui.platform.LocalView.current
     var permitted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
     var denied by remember { mutableStateOf(false) }
     var cameraError by remember { mutableStateOf<String?>(null) }
@@ -35,9 +38,10 @@ import java.util.concurrent.atomic.AtomicBoolean
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed -> permitted = allowed; denied = !allowed }
     LaunchedEffect(Unit) { if (!permitted) permission.launch(Manifest.permission.CAMERA) }
     BackHandler(onBack = onClose)
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    val scroll = rememberScrollState()
+    Column(Modifier.fillMaxSize().readableWidth().then(if (!permitted) Modifier.verticalScroll(scroll) else Modifier).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(tr("Scan QR code"), style = MaterialTheme.typography.headlineMedium)
+            Text(tr("Scan QR code"), Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
             TextButton(onClick = onClose) { Text(tr("Close")) }
         }
         if (permitted) {
@@ -47,8 +51,22 @@ import java.util.concurrent.atomic.AtomicBoolean
                 val active = AtomicBoolean(true); val scanned = AtomicBoolean(false)
                 val future = ProcessCameraProvider.getInstance(context)
                 val main = ContextCompat.getMainExecutor(context)
-                val analysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
-                val cameraPreview = Preview.Builder().build().also { it.surfaceProvider = preview.surfaceProvider }
+                val rotation = view.display?.rotation ?: android.view.Surface.ROTATION_0
+                val analysis = ImageAnalysis.Builder().setTargetRotation(rotation).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+                val cameraPreview = Preview.Builder().setTargetRotation(rotation).build().also { it.surfaceProvider = preview.surfaceProvider }
+                val displays = context.getSystemService(android.content.Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+                val displayListener = object : android.hardware.display.DisplayManager.DisplayListener {
+                    override fun onDisplayAdded(displayId: Int) {}
+                    override fun onDisplayRemoved(displayId: Int) {}
+                    override fun onDisplayChanged(displayId: Int) {
+                        if (view.display?.displayId == displayId) {
+                            val current = view.display?.rotation ?: android.view.Surface.ROTATION_0
+                            analysis.targetRotation = current
+                            cameraPreview.targetRotation = current
+                        }
+                    }
+                }
+                displays.registerDisplayListener(displayListener, android.os.Handler(android.os.Looper.getMainLooper()))
                 val reader = MultiFormatReader().apply { setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE, BarcodeFormat.EAN_13), DecodeHintType.TRY_HARDER to true)) }
                 analysis.setAnalyzer(executor) { image ->
                     try {
@@ -69,7 +87,7 @@ import java.util.concurrent.atomic.AtomicBoolean
                     } catch (_: Exception) { cameraError = "Camera unavailable. Close the scanner and try again." }
                 }, main)
                 onDispose {
-                    active.set(false); analysis.clearAnalyzer()
+                    active.set(false); analysis.clearAnalyzer(); displays.unregisterDisplayListener(displayListener)
                     if (future.isDone) runCatching { future.get().unbind(cameraPreview, analysis) }
                     executor.shutdown()
                 }

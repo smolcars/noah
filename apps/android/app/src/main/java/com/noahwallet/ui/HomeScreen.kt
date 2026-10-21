@@ -64,12 +64,12 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
         PullToRefreshBox(refreshing, onRefresh = {
             scope.launch { refreshing = true; try { model.refresh(true); model.history.refresh(model.preferredCurrency); fact = com.noahwallet.ui.home.bitcoinFacts.random(); refreshRevision++ } finally { refreshing = false } }
         }) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+            Column(Modifier.fillMaxSize().readableWidth().verticalScroll(rememberScrollState()).padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Text(tr("Noah"), Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(settings) { Text(tr("Settings")) }
                     TextButton({ map = true }) { Text(tr("Bitcoin Map")) }
                     if (!model.isWalletSuspended) TextButton(onQR) { Text(tr("QR Code")) }

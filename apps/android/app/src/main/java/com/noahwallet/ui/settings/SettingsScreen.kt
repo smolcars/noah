@@ -44,33 +44,35 @@ internal fun walletSettingsRows(unifiedPush: Boolean, biometrics: Boolean) = Wal
 
 @Composable
 fun SettingsPage(model: AppModel, destination: SettingsDestination, onBack: () -> Unit, navigate: (SettingsDestination) -> Unit) {
-    when (destination) {
-        SettingsDestination.Settings -> SettingsScreen(model, navigate)
-        SettingsDestination.Profile -> ProfileScreen(model, navigate)
-        SettingsDestination.Language, SettingsDestination.Currency, SettingsDestination.Unit -> PreferenceScreen(model, destination, onBack)
-        SettingsDestination.Backup -> BackupSettingsScreen(model)
-        SettingsDestination.Seed -> MnemonicScreen(model, fromSettings = true)
-        SettingsDestination.Ark -> ArkInfoScreen(model, navigate)
-        SettingsDestination.Esplora -> EsploraSettingsScreen(model)
-        SettingsDestination.Export -> ExportScreen(model)
-        SettingsDestination.Logs -> LogScreen(model)
-        SettingsDestination.Feedback -> FeedbackScreen(model)
-        SettingsDestination.Story -> StoryScreen()
-        SettingsDestination.Debug -> if (model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isDebugModeEnabled == true) DebugScreen(model)
-        SettingsDestination.Email -> EmergencyEmailScreen(model) { navigate(SettingsDestination.Profile) }
-        SettingsDestination.Lightning -> LightningScreen(model) { navigate(SettingsDestination.Profile) }
-        SettingsDestination.Battery -> BatteryScreen()
-        SettingsDestination.UnifiedPush -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = false) { navigate(SettingsDestination.Settings) }
-        SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringPaymentsScreen(model)
-        SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosScreen(model)
-        SettingsDestination.Board -> com.noahwallet.onchain.BoardArkScreen(model)
-        SettingsDestination.Exits -> com.noahwallet.onchain.UnilateralExitScreen(model)
+    Box(Modifier.fillMaxSize().readableWidth()) {
+        when (destination) {
+            SettingsDestination.Settings -> SettingsScreen(model, navigate)
+            SettingsDestination.Profile -> ProfileScreen(model, navigate)
+            SettingsDestination.Language, SettingsDestination.Currency, SettingsDestination.Unit -> PreferenceScreen(model, destination, onBack)
+            SettingsDestination.Backup -> BackupSettingsScreen(model)
+            SettingsDestination.Seed -> MnemonicScreen(model, fromSettings = true)
+            SettingsDestination.Ark -> ArkInfoScreen(model, navigate)
+            SettingsDestination.Esplora -> EsploraSettingsScreen(model)
+            SettingsDestination.Export -> ExportScreen(model)
+            SettingsDestination.Logs -> LogScreen(model)
+            SettingsDestination.Feedback -> FeedbackScreen(model)
+            SettingsDestination.Story -> StoryScreen()
+            SettingsDestination.Debug -> if (model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isDebugModeEnabled == true) DebugScreen(model)
+            SettingsDestination.Email -> EmergencyEmailScreen(model) { navigate(SettingsDestination.Profile) }
+            SettingsDestination.Lightning -> LightningScreen(model) { navigate(SettingsDestination.Profile) }
+            SettingsDestination.Battery -> BatteryScreen()
+            SettingsDestination.UnifiedPush -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = false) { navigate(SettingsDestination.Settings) }
+            SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringPaymentsScreen(model)
+            SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosScreen(model)
+            SettingsDestination.Board -> com.noahwallet.onchain.BoardArkScreen(model)
+            SettingsDestination.Exits -> com.noahwallet.onchain.UnilateralExitScreen(model)
+        }
     }
 }
 
 @Composable
 fun SettingsColumn(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
+    Column(Modifier.fillMaxSize().readableWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
 }
 

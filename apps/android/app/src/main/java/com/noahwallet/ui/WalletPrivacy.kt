@@ -1,6 +1,8 @@
 package com.noahwallet.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,14 +36,15 @@ internal fun WalletAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Com
     modifier: Modifier = Modifier, dismissButton: (@Composable () -> Unit)? = null,
     icon: (@Composable () -> Unit)? = null, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null) {
     val privacy = LocalWalletPrivacy.current
-    AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier,
+    AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier.avoidHinge(),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         confirmButton = { WalletModalContent(cover = {
             privacy.unlock?.let { TextButton(it) { Text(tr("Unlock")) } }
         }, content = confirmButton) },
         dismissButton = dismissButton?.let { { WalletModalContent(cover = {}, content = it) } },
         icon = icon?.let { { WalletModalContent(cover = {}, content = it) } },
         title = title?.let { { WalletModalContent(cover = { Text(tr("Noah is Locked")) }, content = it) } },
-        text = text?.let { { WalletModalContent(cover = { Text(tr("Authenticate to access your wallet")) }, content = it) } })
+        text = text?.let { { WalletModalContent(cover = { Text(tr("Authenticate to access your wallet")) }, content = { Box(Modifier.verticalScroll(rememberScrollState())) { it() } }) } })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,12 +55,13 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
     content: @Composable ColumnScope.() -> Unit) {
     val privacy = LocalWalletPrivacy.current
     ModalBottomSheet(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier,
+        sheetMaxWidth = AdaptiveLayout.readableWidth.dp,
         sheetState = sheetState, sheetGesturesEnabled = !privacy.covered, dragHandle = dragHandle) {
         WalletModalContent(cover = {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(tr("Noah is Locked"))
                 privacy.unlock?.let { NoahButton("Unlock", onClick = it) }
             }
-        }) { Column(content = content) }
+        }) { Box(Modifier.fillMaxWidth().avoidHinge()) { Column(content = content) } }
     }
 }

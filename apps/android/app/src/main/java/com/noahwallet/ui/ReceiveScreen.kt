@@ -65,7 +65,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
     var received by rememberSaveable { mutableStateOf<Long?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
-    var sheet by remember { mutableStateOf<String?>(null) }
+    var sheet by rememberSaveable { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var price by remember { mutableStateOf<Double?>(null) }
     val currency = app.preferredCurrency.takeIf { it in FiatCurrency.supported } ?: "USD"
@@ -130,31 +130,34 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
         }
         return
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(tr("Receive"), style = MaterialTheme.typography.headlineLarge)
-        val current = request
-        if (current != null) {
-            val uri = current.uri()
-            ReceiveQR(uri) { sheet = "copy" }
-            current.amountSat?.let {
-                Text(tr(BitcoinAmount.format(it, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
-                price?.let { rate -> Text(tr(FiatCurrency.display(it, rate, currency, locale))) }
-            }
-            Text(tr("Scan to receive bitcoin with Noah"))
-            if (current.amountSat == null) Text(tr("Add an amount to receive over Lightning"), style = MaterialTheme.typography.bodySmall)
-            if (current.description.isNotEmpty()) Text(tr(current.description))
-            NoahButton(if (current.amountSat == null) "Add amount" else "Edit amount", !saving) { sheet = "amount" }
-            NoahButton("Payment details", secondary = true) { sheet = "copy" }
-            NoahButton("Share", secondary = true) {
-                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"; putExtra(Intent.EXTRA_TEXT, uri)
-                }, "Share payment request"))
-            }
-        } else if (error != null) {
-            Text(tr(error!!), color = MaterialTheme.colorScheme.error)
-            NoahButton("Retry") { retry++ }
-        } else CircularProgressIndicator()
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val qrSide = AdaptiveLayout.qrSide(maxHeight.value).dp
+        Column(Modifier.fillMaxSize().readableWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(tr("Receive"), style = MaterialTheme.typography.headlineLarge)
+            val current = request
+            if (current != null) {
+                val uri = current.uri()
+                ReceiveQR(uri, maximumSide = qrSide) { sheet = "copy" }
+                current.amountSat?.let {
+                    Text(tr(BitcoinAmount.format(it, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
+                    price?.let { rate -> Text(tr(FiatCurrency.display(it, rate, currency, locale))) }
+                }
+                Text(tr("Scan to receive bitcoin with Noah"))
+                if (current.amountSat == null) Text(tr("Add an amount to receive over Lightning"), style = MaterialTheme.typography.bodySmall)
+                if (current.description.isNotEmpty()) Text(tr(current.description))
+                NoahButton(if (current.amountSat == null) "Add amount" else "Edit amount", !saving) { sheet = "amount" }
+                NoahButton("Payment details", secondary = true) { sheet = "copy" }
+                NoahButton("Share", secondary = true) {
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"; putExtra(Intent.EXTRA_TEXT, uri)
+                    }, "Share payment request"))
+                }
+            } else if (error != null) {
+                Text(tr(error!!), color = MaterialTheme.colorScheme.error)
+                NoahButton("Retry") { retry++ }
+            } else CircularProgressIndicator()
+        }
     }
     val current = request
     if (sheet != null && current != null) WalletModalBottomSheet(
@@ -182,7 +185,7 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
 }
 
 @Composable
-internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details", onClick: () -> Unit) {
+internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details", maximumSide: androidx.compose.ui.unit.Dp = 302.dp, onClick: () -> Unit) {
     val localizedActionLabel = tr(actionLabel)
     val bitmap = remember(uri) {
         runCatching {
@@ -196,7 +199,7 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
             }.asImageBitmap()
         }.getOrNull()
     }
-    Box(Modifier.sizeIn(maxWidth = 302.dp).aspectRatio(1f).clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
+    Box(Modifier.sizeIn(maxWidth = maximumSide).aspectRatio(1f).clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
         contentDescription = localizedActionLabel
         role = Role.Button
         this.onClick(label = localizedActionLabel) { onClick(); true }
@@ -228,7 +231,7 @@ private fun ReceiveCopySheet(request: ReceiveRequest) {
 }
 
 @Composable
-private fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit, price: Double?, currency: String, locale: java.util.Locale,
+internal fun ReceiveAmountSheet(request: ReceiveRequest, unit: BitcoinAmountUnit, price: Double?, currency: String, locale: java.util.Locale,
     saving: Boolean, onRemove: () -> Unit, onSave: (Long, String) -> Unit) {
     var amount by rememberSaveable { mutableStateOf(request.amountSat?.toString() ?: "") }
     var note by rememberSaveable { mutableStateOf(request.description) }

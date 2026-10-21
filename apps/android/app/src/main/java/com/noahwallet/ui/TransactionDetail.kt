@@ -32,7 +32,7 @@ fun HistoryDetailsHost(app: AppModel, selectedID: String?, onClose: () -> Unit,
     onRepeatPayment: (RepeatPayment) -> Unit, showEmptyPane: Boolean = false, content: @Composable () -> Unit) {
     val selected = app.history.transactions.firstOrNull { it.id == selectedID }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val expanded = maxWidth >= 700.dp
+        val expanded = AdaptiveLayout.useDetailPane(maxWidth.value, maxHeight.value, androidx.compose.ui.platform.LocalDensity.current.fontScale)
         val repeat: (RepeatPayment) -> Unit = { onClose(); onRepeatPayment(it) }
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) { content() }
@@ -60,7 +60,7 @@ private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: 
     var technical by rememberSaveable(row.id) { mutableStateOf(false) }
     var explorerError by remember(row.id) { mutableStateOf(false) }
     val context = LocalContext.current
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+    Column(Modifier.fillMaxWidth().readableWidth().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             val closeLabel = tr("Close payment details")

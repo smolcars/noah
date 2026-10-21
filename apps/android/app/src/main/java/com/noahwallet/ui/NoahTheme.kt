@@ -43,7 +43,7 @@ fun NoahTheme(content: @Composable () -> Unit) {
         headlineMedium = type(26, FontWeight.Bold), titleLarge = type(18, FontWeight.SemiBold),
         bodyLarge = type(17), bodyMedium = type(16), bodySmall = type(14),
         labelLarge = type(17, FontWeight.SemiBold), labelMedium = type(13, FontWeight.Medium),
-    ), shapes = Shapes(large = RoundedCornerShape(24.dp)), content = content)
+    ), shapes = Shapes(large = RoundedCornerShape(24.dp)), content = { FoldingFeatures(content) })
 }
 
 @Composable
@@ -55,7 +55,7 @@ fun NoahButton(title: String, enabled: Boolean = true, secondary: Boolean = fals
 /** Scrollable forms resize above the IME, including their actions. */
 @Composable
 fun NoahForm(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
+    Column(Modifier.fillMaxSize().readableWidth().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Text(tr(title), style = MaterialTheme.typography.headlineLarge)
         content()

@@ -3,12 +3,6 @@ package com.noahwallet.ui
 import com.noahwallet.localization.tr
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -17,9 +11,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -79,31 +70,12 @@ fun NoahApp(model: AppModel) {
         model.repeatPayment = it
         showSend()
     }
-    Scaffold(
+    AdaptiveNavigation(selectedTab, { selectedTab = it },
         topBar = {
             val destination = if (selectedTab == Destination.Home) backStack.last() as? SettingsDestination else null
             if (destination != null) TopAppBar(title = { Text(tr(destination.title)) }, navigationIcon = {
                 TextButton({ goBack() }) { Text(tr("Back")) }
             })
-        },
-        bottomBar = {
-            NavigationBar {
-                Destination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = selectedTab == destination,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onSurface,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                        onClick = { selectedTab = destination },
-                        icon = { Icon(painterResource(destination.icon), contentDescription = null) },
-                        label = { Text(tr(stringResource(destination.title))) },
-                    )
-                }
-            }
         },
     ) { padding ->
         tabState.SaveableStateProvider(selectedTab) {

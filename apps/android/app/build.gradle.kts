@@ -166,6 +166,11 @@ android {
 }
 
 dependencies {
+    implementation(libs.window)
+    implementation(libs.window.core)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test)
+    debugImplementation(libs.compose.ui.test.manifest)
     implementation(libs.sentry.android.core)
     implementation(libs.sentry.android.ndk)
     implementation(libs.biometric)

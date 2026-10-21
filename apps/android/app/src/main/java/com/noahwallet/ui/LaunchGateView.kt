@@ -1,6 +1,7 @@
 package com.noahwallet.ui
 
 import com.noahwallet.localization.tr
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.LocalFocusManager
@@ -137,7 +138,7 @@ fun LaunchGateView(model: AppModel) {
     androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()
             .walletContentProtection(covered)
-            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)) {
+            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing).avoidHinge()) {
             when {
                 model.customServerUnresponsive -> NoahForm("The custom server isn't responding.") {
                     if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
@@ -158,7 +159,7 @@ fun LaunchGateView(model: AppModel) {
     }
     }
     if (!covered) model.error?.let { message ->
-        androidx.compose.material3.AlertDialog(onDismissRequest = { model.error = null },
+        WalletAlertDialog(onDismissRequest = { model.error = null },
             title = { Text(tr("Please try again")) }, text = { Text(tr(message)) },
             confirmButton = { androidx.compose.material3.TextButton({ model.error = null }) { Text(tr("OK")) } })
     }
@@ -166,7 +167,7 @@ fun LaunchGateView(model: AppModel) {
         dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false,
         securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn, decorFitsSystemWindows = false,
     )) {
-        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing).avoidHinge(), color = MaterialTheme.colorScheme.background) {
             if (checking && !model.walletLock.locked) {
                 LaunchMessage(null, false, model::start, model)
             } else NoahForm("Noah is Locked") {
@@ -198,7 +199,7 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
             R.string.launch_unlock to R.string.launch_unlock_message
     }
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier.fillMaxSize().readableWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

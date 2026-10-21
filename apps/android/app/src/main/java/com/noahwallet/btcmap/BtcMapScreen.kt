@@ -1,5 +1,6 @@
 package com.noahwallet.btcmap
 
+import com.noahwallet.ui.AdaptiveLayout
 import com.noahwallet.ui.WalletAlertDialog
 import com.noahwallet.ui.WalletModalBottomSheet
 
@@ -95,12 +96,14 @@ fun BtcMapScreen(onClose: () -> Unit) {
     // The app's gold accent is too light for small text on the map's light surfaces.
     MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = MaterialTheme.colorScheme.onSurface,
         onPrimary = MaterialTheme.colorScheme.surface)) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val wide = maxWidth >= 700.dp
+        BoxWithConstraints(Modifier.fillMaxSize().imePadding()) {
+            val wide = AdaptiveLayout.useDetailPane(maxWidth.value, maxHeight.value, androidx.compose.ui.platform.LocalDensity.current.fontScale)
+            val short = maxHeight < 480.dp
+            val controlsScroll = rememberScrollState()
             val detailHeight = maxHeight * 0.58f
             val placesHeight = if (wide) maxHeight * 0.2f else 180.dp
             Row(Modifier.fillMaxSize()) {
-                Column(Modifier.weight(1f).fillMaxHeight()) {
+                Column(Modifier.weight(1f).fillMaxHeight().then(if (short) Modifier.verticalScroll(controlsScroll) else Modifier)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClose) { Text(tr("Back")) }
                         Text(tr("Bitcoin Map"), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
@@ -139,7 +142,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
                     if (model.loadError) {
                         Text(tr("The bundled places could not be read. Reopen the map to try again."), Modifier.padding(16.dp))
                     }
-                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                    Box(if (short) Modifier.fillMaxWidth().height(180.dp) else Modifier.fillMaxWidth().weight(1f)) {
                         BtcMapCanvas(model, results.filtered, isSystemInDarkTheme(), if (selected != null && !wide) sheetTop else null, styleRevision, Modifier.fillMaxSize())
                         if (model.loading) CircularProgressIndicator(Modifier.align(Alignment.Center))
                     }
