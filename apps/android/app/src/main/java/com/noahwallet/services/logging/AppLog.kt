@@ -56,8 +56,8 @@ class LogFile(
             pending++
             executor.execute {
                 try {
-                    val cleaned = redact(message)
-                    val safeTag = redact(tag)
+                    val cleaned = redactMessage(message)
+                    val safeTag = redactMessage(tag)
                     if (systemLog) systemSink(level, safeTag, cleaned)
                     persist(level, safeTag, cleaned, date)
                 } finally {
@@ -176,6 +176,11 @@ class LogFile(
         fun redact(message: String): String {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
             return redactForTelemetry(message) ?: "[redacted]"
+        }
+
+        private fun redactMessage(message: String): String {
+            if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return "[oversized log message omitted]"
+            return redactForTelemetry(message, EndpointLogPrivacy::sanitizeMessage) ?: "[redacted]"
         }
 
         /** Uncertain decoding and oversized messages have no telemetry admission path. */

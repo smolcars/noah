@@ -123,6 +123,7 @@ class BarkLogTest {
     }
 
     @Test fun concurrentCallbacksPreserveEachProducersOrderUnderLoad() {
+        com.noahwallet.services.logging.EndpointLogPrivacy.register("https://review-number.example/835917264")
         val directory = Files.createTempDirectory("bark-order").toFile()
         val writer = Executors.newSingleThreadExecutor()
         val callers = Executors.newFixedThreadPool(4)
@@ -130,11 +131,12 @@ class BarkLogTest {
         val file = LogFile(directory, capacity = 3000, executor = writer,
             systemSink = { _, _, message -> received += message })
         val logger = BarkLog(file)
+        val date = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.US).parse("2026-10-21 08:21:42.292")!!
         try {
             val start = CountDownLatch(1)
             val futures = (0 until 4).map { producer -> callers.submit {
                 start.await()
-                repeat(500) { logger.log(LogLevel.DEBUG, "load", "$producer:$it") }
+                repeat(500) { logger.log(LogLevel.DEBUG, "load", "$producer:$it", date) }
             } }
             start.countDown()
             futures.forEach { it.get(10, TimeUnit.SECONDS) }

@@ -25,6 +25,77 @@ class EndpointRecordPrivacyTest {
     private fun cases(kind: String) = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-records.json")!!.readText()).jsonArray
         .map { it.jsonObject }.filter { it.getValue("kind").jsonPrimitive.content == kind }
 
+    private fun headerCases() = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-headers.json")!!.readText()).jsonArray.map { it.jsonObject }
+
+    @Test fun sharedHeadersPreserveOnlyTheAnchoredFormatterPrefix() {
+        for (test in headerCases()) {
+            EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
+            val input = test.getValue("input").jsonPrimitive.content
+            val expected = test.getValue("expected").jsonPrimitive.content
+            assertEquals(test.toString(), expected, EndpointLogPrivacy.redact(input))
+            assertEquals(test.toString(), expected, LogFile.redact(input))
+            assertEquals(test.toString(), expected, LogFile.redactForTelemetry(input))
+            val event = SentryEvent().apply {
+                message = Message().apply { formatted = input }
+                exceptions = listOf(io.sentry.protocol.SentryException().apply { value = input; type = "FakeEndpointError" })
+            }
+            val clean = requireNotNull(AppTelemetry.scrub(event))
+            assertEquals(expected, clean.message!!.formatted)
+            assertEquals(expected, clean.exceptions!!.single().value)
+            assertEquals(expected, requireNotNull(AppTelemetry.scrub(Breadcrumb().apply { message = input })).message)
+        }
+    }
+
+    @Test fun everyHourSurvivesWritingReadingAndHistoricalExport() {
+        val directory = Files.createTempDirectory("header-privacy").toFile()
+        val file = LogFile(directory, executor = Executor { it.run() })
+        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.US)
+        val tests = headerCases().take(24)
+        try {
+            for (test in tests) {
+                EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
+                val input = test.getValue("input").jsonPrimitive.content
+                file.append(AppLog.Level.debug, "bark:load", "2:0", formatter.parse(input.take(23))!!)
+            }
+            val expected = tests.map { it.getValue("expected").jsonPrimitive.content }
+            assertEquals(expected, directory.resolve("noah.log").readLines())
+            assertEquals(expected, file.lines())
+            directory.resolve("noah.log").delete()
+            for (test in headerCases()) {
+                directory.resolve("noah.log.1").writeText(test.getValue("input").jsonPrimitive.content)
+                assertEquals(test.toString(), listOf(test.getValue("expected").jsonPrimitive.content), file.lines())
+            }
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test fun finalWriteGuardKeepsHeaderWhenTheBodyMatchesASecret() {
+        EndpointLogPrivacy.register("https://review-number.example/835917264")
+        val header = "2026-10-21 08:21:42.292 D "
+        assertEquals(header + "[custom-esplora]", EndpointLogPrivacy.redactRecord(header + "[sdk] 835917264"))
+        // A registered token equal to formatter-owned digits cannot erase the header.
+        val matcher = EndpointLogPrivacy.SecretMatcher(setOf("2026-10-21"))
+        assertEquals(header + "[sdk] ordinary", EndpointLogPrivacy.sanitize(header + "[sdk] ordinary", setOf("https://review-number.example"), matcher))
+    }
+
+    @Test fun callbackTextAndTagsCannotClaimARecordHeader() {
+        EndpointLogPrivacy.register("https://review-number.example/835917264")
+        val header = "2026-10-21 08:21:42.292 D "
+        val nested = header + "[sdk] ordinary"
+        val safe = "2026-10-21 [custom-esplora] D [sdk] ordinary"
+        val directory = Files.createTempDirectory("header-callback").toFile()
+        val received = mutableListOf<String>()
+        val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, tag, message -> received += "[$tag] $message" })
+        val date = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.US).parse(header.take(23))!!
+        try {
+            BarkLog(file).log(LogLevel.DEBUG, "sdk", nested, date)
+            file.append(AppLog.Level.debug, nested, "ordinary", date, systemLog = true)
+            val expected = listOf("[bark:sdk] $safe", "[$safe] ordinary")
+            assertEquals(expected, received)
+            assertEquals(expected.map { header + it }, directory.resolve("noah.log").readLines())
+            assertEquals(expected.map { header + it }, file.lines())
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test fun deviceIcuUsesSharedIdna2008Tokens() {
         val tokens = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-tokens.json")!!.readText()).jsonArray.map { it.jsonObject }
         for (test in tokens.filter { it.getValue("name").jsonPrimitive.content.startsWith("IDNA2008") }) {

@@ -222,7 +222,10 @@ internal object EndpointLogPrivacy {
     }
     fun redact(text: String): String = sanitize(text) ?: "[redacted]"
 
-    private val recordStart = Regex("""^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [VDIWE] \[""")
+    // Only formatter-owned ASCII fields are exempt; tags and all message text remain inspected.
+    private val recordHeader = Regex("""^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} [VDIWE] """)
+    private val recordStart = Regex(recordHeader.pattern + """\[""")
+    private fun header(text: String) = recordHeader.find(text)?.value.orEmpty()
     /** Keep continuation lines with their endpoint/error context, including historical files. */
     fun redactLogLines(lines: List<String>): List<String> {
         val result = mutableListOf<String>()
@@ -241,9 +244,16 @@ internal object EndpointLogPrivacy {
     }
 
     fun sanitize(text: String): String? {
-        if (unavailable) return "[custom-esplora]"
+        if (unavailable) return header(text) + "[custom-esplora]"
         val snapshot = snapshot()
         return sanitize(text, snapshot.first, snapshot.second, snapshot.third)
+    }
+
+    /** Raw tags/callbacks have no formatter-owned prefix, even when they imitate one. */
+    fun sanitizeMessage(text: String): String? {
+        if (unavailable) return "[custom-esplora]"
+        val snapshot = snapshot()
+        return sanitizeBody(text, snapshot.first, snapshot.second, snapshot.third)
     }
 
     private fun snapshot(): Triple<Set<String>, SecretMatcher, Set<String>> = synchronized(this) {
@@ -255,6 +265,11 @@ internal object EndpointLogPrivacy {
 
     /** Formatting can join safe fields; only guard tokens, preserving timestamps/provider summaries. */
     fun redactRecord(text: String): String {
+        val prefix = header(text)
+        return prefix + guardRecordBody(text.drop(prefix.length))
+    }
+
+    private fun guardRecordBody(text: String): String {
         if (unavailable) return "[custom-esplora]"
         val snapshot = snapshot()
         if (snapshot.first.isEmpty()) return text
@@ -266,6 +281,11 @@ internal object EndpointLogPrivacy {
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
     internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()), hosts: Set<String> = emptySet()): String? {
+        val prefix = header(text)
+        return sanitizeBody(text.drop(prefix.length), registered, matcher, hosts)?.let { prefix + it }
+    }
+
+    private fun sanitizeBody(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>): String? {
         if (registered.isNotEmpty() && hasExcessiveCombiningRun(text)) return "[custom-esplora]"
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"

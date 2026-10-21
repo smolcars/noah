@@ -1,0 +1,236 @@
+[
+  {
+    "name": "formatter hour 00",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 00:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 00:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 01",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 01:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 01:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 02",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 02:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 02:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 03",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 03:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 03:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 04",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 04:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 04:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 05",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 05:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 05:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 06",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 06:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 06:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 07",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 07:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 07:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 08",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 08:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 09",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 09:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 09:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 10",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 10:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 10:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 11",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 11:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 11:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 12",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 12:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 12:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 13",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 13:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 13:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 14",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 14:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 14:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 15",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 15:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 15:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 16",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 16:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 16:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 17",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 17:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 17:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 18",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 18:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 18:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 19",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 19:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 19:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 20",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 20:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 20:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 21",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 21:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 21:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 22",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 22:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 22:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "formatter hour 23",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 23:21:42.292 D [bark:load] 2:0",
+    "expected": "2026-10-21 23:21:42.292 D [bark:load] 2:0"
+  },
+  {
+    "name": "secret immediately after header",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D 835917264",
+    "expected": "2026-10-21 08:21:42.292 D [custom-esplora]"
+  },
+  {
+    "name": "secret in tag",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D [835917264] ordinary",
+    "expected": "2026-10-21 08:21:42.292 D [custom-esplora]"
+  },
+  {
+    "name": "nested header and secret",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D 2026-10-21 09:21:42.292 D [sdk] 835917264",
+    "expected": "2026-10-21 08:21:42.292 D [custom-esplora]"
+  },
+  {
+    "name": "nested header authority",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D [sdk] nested 2026-10-21 09:21:42.292 D [sdk] ordinary",
+    "expected": "2026-10-21 08:21:42.292 D [sdk] nested 2026-10-21 [custom-esplora] D [sdk] ordinary"
+  },
+  {
+    "name": "continuation header and secret",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D [sdk] ordinary\n  2026-10-21 09:21:42.292 D [sdk] 835917264",
+    "expected": "2026-10-21 08:21:42.292 D [custom-esplora]"
+  },
+  {
+    "name": "encoded secret",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D [sdk] %38%33%35%39%31%37%32%36%34",
+    "expected": "2026-10-21 08:21:42.292 D [custom-esplora]"
+  },
+  {
+    "name": "leading space",
+    "endpoint": "https://review-number.example/835917264",
+    "input": " 2026-10-21 08:21:42.292 D [sdk] 835917264",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "unicode digits",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "２０２６-10-21 08:21:42.292 D [sdk] 835917264",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "wrong level",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 F [sdk] 835917264",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "short milliseconds",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.29 D [sdk] 835917264",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "formatter level V",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 V [sdk] ordinary",
+    "expected": "2026-10-21 08:21:42.292 V [sdk] ordinary"
+  },
+  {
+    "name": "formatter level I",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 I [sdk] ordinary",
+    "expected": "2026-10-21 08:21:42.292 I [sdk] ordinary"
+  },
+  {
+    "name": "formatter level W",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 W [sdk] ordinary",
+    "expected": "2026-10-21 08:21:42.292 W [sdk] ordinary"
+  },
+  {
+    "name": "formatter level E",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 E [sdk] ordinary",
+    "expected": "2026-10-21 08:21:42.292 E [sdk] ordinary"
+  },
+  {
+    "name": "combining marks belong to body",
+    "endpoint": "https://review-number.example/835917264",
+    "input": "2026-10-21 08:21:42.292 D ́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́",
+    "expected": "2026-10-21 08:21:42.292 D [custom-esplora]"
+  }
+]
