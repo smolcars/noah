@@ -1,0 +1,170 @@
+[
+  {
+    "name": "colon prefix",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "peer:fake-r6-private.example:8443",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "wrapped URL",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "https://fake-r6-private.example/api/\nfakeR6PathSecret913/blocks/tip/height",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "separate record",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6PathSecret913/blocks/tip/height",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "public tail",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "https://mempool.space/api/fakeR6PathSecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "arbitrary prefix",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "xxfakeR6PathSecret913yy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "case",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "FAKER6PATHSECRET913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "host label",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "xxfake-r6-privateyy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "percent",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fake%52%36PathSecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "JSON",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6Path\\u0053ecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "HTML",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6Path&#83;ecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "fullwidth",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "ｆａｋｅＲ６ＰａｔｈＳｅｃｒｅｔ９１３",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "nested encoding",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6Path%26%2383%3Becret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "common routes",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "https://mempool.space/api/blocks/tip/height",
+    "expected": "https://mempool.space/api/blocks/tip/height"
+  },
+  {
+    "name": "port alone",
+    "endpoint": "https://fake-r7-port.example:18443/api",
+    "input": "HTTP 503: port 18443 failed",
+    "expected": "HTTP 503: port 18443 failed"
+  },
+  {
+    "name": "retired secret",
+    "endpoint": "https://fake-r7-retired.example/api/fakeR7RetiredSecret41",
+    "input": "fakeR7RetiredSecret41",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "query value",
+    "endpoint": "https://fakeR7Username62:fakeR7Password85@fake-r7-query.example/api?key=fakeR7QuerySecret761",
+    "input": "xxfakeR7QuerySecret761yy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "username",
+    "endpoint": "https://fakeR7Username62:fakeR7Password85@fake-r7-query.example/api?key=fakeR7QuerySecret761",
+    "input": "fakeR7Username62",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "password",
+    "endpoint": "https://fakeR7Username62:fakeR7Password85@fake-r7-query.example/api?key=fakeR7QuerySecret761",
+    "input": "FAKER7PASSWORD85",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "userinfo",
+    "endpoint": "https://fakeR7Username62:fakeR7Password85@fake-r7-query.example/api?key=fakeR7QuerySecret761",
+    "input": "fakeR7Username62:fakeR7Password85",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "decoded query",
+    "endpoint": "https://fakeR7Username62:fakeR7Password85@fake-r7-query.example/api?key=fakeR7QuerySecret761",
+    "input": "fakeR7Query%53ecret761",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "encoded registered segment",
+    "endpoint": "https://fake-r7-encoded.example/api/fakeR7Path%53ecret31",
+    "input": "FAKER7PATHSECRET31",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "compatibility registered segment",
+    "endpoint": "https://fake-r7-unicode.example/api/ｆａｋｅＲ７Ｓｅｃｒｅｔ６７",
+    "input": "fakeR7Secret67",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "unicode IDNA label",
+    "endpoint": "https://xn--bcher-kva.example/api",
+    "input": "xxBÜCHERyy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "compatibility percent escape",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6Path％５３ecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "escaped compatibility percent",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6Path\\uFF0553ecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "compatibility JSON escape",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6Path＼u0053ecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "compatibility entity",
+    "endpoint": "https://fake-r6-private.example/api/fakeR6PathSecret913",
+    "input": "fakeR6Path＆＃８３；ecret913",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "Unicode case expansion",
+    "endpoint": "https://fake-r7-fold.example/api/fakeStraßeSecret72",
+    "input": "FAKESTRASSESECRET72",
+    "expected": "[custom-esplora]"
+  }
+]
