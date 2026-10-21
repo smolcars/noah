@@ -73,6 +73,30 @@ class EndpointRecordPrivacyTest {
         }
     }
 
+    @Test fun widgetErrorsUseTheLoggingBoundaryWithoutRawThrowables() {
+        val vectors = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-privacy-r9.json")!!.readText()).jsonArray.map { it.jsonObject }
+        for (test in vectors.filter { it.getValue("kind").jsonPrimitive.content == "widget" }) {
+            EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
+            val app = org.robolectric.RuntimeEnvironment.getApplication()
+            val context = object : android.content.ContextWrapper(app) {
+                override fun getPackageName(): String = throw IllegalStateException("fake raw throwable detail")
+            }
+            val method = com.noahwallet.widgets.NoahWidgetProvider::class.java.getDeclaredMethod("updateWidget",
+                android.content.Context::class.java, android.appwidget.AppWidgetManager::class.java, Int::class.javaPrimitiveType)
+            method.isAccessible = true
+            ShadowLog.clear()
+            method.invoke(com.noahwallet.widgets.NoahWidgetProvider(), context, android.appwidget.AppWidgetManager.getInstance(app), 1)
+            LogFile.shared(app).flush()
+            val logs = ShadowLog.getLogs().filter { it.type == android.util.Log.ERROR }
+            assertTrue(logs.isNotEmpty())
+            assertTrue(logs.all { it.throwable == null })
+            val text = logs.joinToString { it.msg }
+            assertFalse(text.contains(test.getValue("secret").jsonPrimitive.content))
+            assertFalse(text.contains("fake raw throwable detail"))
+            assertTrue(text.contains("[custom-esplora]"))
+        }
+    }
+
     @Test fun fallbackTypeNamesUseThePrivacyBoundary() {
         val error = SocketTimeoutException("fake unrelated detail")
         assertEquals("SocketTimeoutException", SafeErrorDescription.of(error))

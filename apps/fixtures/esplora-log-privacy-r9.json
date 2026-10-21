@@ -1,0 +1,85 @@
+[
+  {
+    "name": "numeric device memory",
+    "kind": "telemetry",
+    "endpoint": "https://review-number.example/835917264",
+    "payload": {
+      "contexts": {
+        "device": {
+          "free_memory": 835917264
+        }
+      }
+    }
+  },
+  {
+    "name": "numeric frame line",
+    "kind": "telemetry",
+    "endpoint": "https://review-number.example/835917264",
+    "payload": {
+      "exception": {
+        "values": [
+          {
+            "type": "FakeFailure",
+            "stacktrace": {
+              "frames": [
+                {
+                  "lineno": 835917264
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "numeric breadcrumb timestamp",
+    "kind": "breadcrumb",
+    "endpoint": "https://review-number.example/835917264",
+    "payload": {
+      "timestamp": 835917264.0
+    }
+  },
+  {
+    "name": "combining run 32",
+    "kind": "combining",
+    "endpoint": "https://review-speed.example/fakeSpeedSecret",
+    "prefix": "x",
+    "unit": "̧́",
+    "count": 32,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining run 33",
+    "kind": "combining",
+    "endpoint": "https://review-speed.example/fakeSpeedSecret",
+    "prefix": "x",
+    "unit": "̧́",
+    "count": 33,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining run 512",
+    "kind": "combining",
+    "endpoint": "https://review-speed.example/fakeSpeedSecret",
+    "prefix": "x",
+    "unit": "̧́",
+    "count": 512,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining run 8192",
+    "kind": "combining",
+    "endpoint": "https://review-speed.example/fakeSpeedSecret",
+    "prefix": "x",
+    "unit": "̧́",
+    "count": 8192,
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "widget error boundary",
+    "kind": "widget",
+    "endpoint": "https://review-widget.example/Error%20updating%20widget",
+    "secret": "Error updating widget"
+  }
+]

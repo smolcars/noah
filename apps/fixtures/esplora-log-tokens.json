@@ -310,5 +310,35 @@
     "endpoint": "https://xn--fake-87i2qsfy45q.example/api",
     "input": "xxfakeक्‌षyy",
     "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining fullwidth acute",
+    "endpoint": "https://review-probe.example/fakeOpaque",
+    "input": "prefixｆａｋｅＯｐａｑｕｅ́suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining fullwidth ring",
+    "endpoint": "https://review-probe.example/fakeOpaque",
+    "input": "prefixＦＡＫＥＯＰＡＱＵＥ̊suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining compatibility ligature",
+    "endpoint": "https://review-probe.example/ffakeOpaque",
+    "input": "prefixﬀakeOpaquésuffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining fullwidth escaped acute",
+    "endpoint": "https://review-probe.example/fakeOpaque",
+    "input": "prefixｆａｋｅＯｐａｑｕｅ\\u0301suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining fullwidth encoded acute",
+    "endpoint": "https://review-probe.example/fakeOpaque",
+    "input": "prefixｆａｋｅＯｐａｑｕｅ&#769;suffix",
+    "expected": "[custom-esplora]"
   }
 ]
