@@ -409,7 +409,8 @@ final class AppModel {
         let coordinator = AppServices.shared.backupCoordinator
         let session = self.session
         let id = UUID()
-        let task = Task { [weak self] in
+        // This session observer outlives the foreground activation that creates it.
+        let task = Task.detached { @MainActor @Sendable [weak self] in
             defer { if self?.backupTriggers?.id == id { self?.backupTriggers = nil } }
             var resubscribe = true
             while resubscribe, !Task.isCancelled {

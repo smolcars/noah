@@ -101,6 +101,102 @@ struct BackupCoordinatorTests {
         Issue.record("condition never became true")
     }
 
+    @MainActor @Test(arguments: [false, true])
+    func automaticBackupAfterReentryOutlivesActivation(immediate: Bool) async throws {
+        let world = World(), clock = ManualClock()
+        let gate = RecurringReservationTests.Gate()
+        var dependencies = world.dependencies(clock: clock)
+        dependencies.perform = { _, uploading in
+            await gate.wait()
+            // Same admission as WalletSession.createSnapshot after queued wallet access.
+            try BackgroundExecution.checkActive()
+            try await ForegroundExecution.checkActive()
+            uploading()
+            return .init(backupId: "test", snapshotSha256: "test", uploaded: true)
+        }
+        let coordinator = BackupCoordinator(dependencies: dependencies)
+        await ForegroundExecution.run(isActive: { true }) {
+            await coordinator.schedule(.appForeground, immediate: immediate)
+        }
+        if !immediate {
+            await eventually { await clock.pending == [BackupCoordinator.debounce] }
+            await clock.fireNext()
+        }
+        await eventually { await gate.entered }
+        await gate.release()
+        await coordinator.settle()
+        #expect(world.state.lastBackupStatus == .success)
+        #expect(!world.state.backupPending)
+    }
+
+    @MainActor @Test func automaticRequestFromObserverWithExpiredActivationStillBacksUp() async throws {
+        let world = World(), clock = ManualClock()
+        var dependencies = world.dependencies(clock: clock)
+        let perform = dependencies.perform
+        dependencies.perform = { last, uploading in
+            try BackgroundExecution.checkActive()
+            try await ForegroundExecution.checkActive()
+            return try await perform(last, uploading)
+        }
+        let coordinator = BackupCoordinator(dependencies: dependencies)
+        let gate = RecurringReservationTests.Gate()
+        var observer: Task<Void, Never>?
+        await ForegroundExecution.run(isActive: { true }) {
+            observer = Task {
+                await gate.wait()
+                await coordinator.schedule(.databaseChanged)
+            }
+        }
+        await eventually { await gate.entered }
+        await gate.release()
+        await observer?.value
+        await eventually { await clock.pending == [BackupCoordinator.debounce] }
+        await clock.fireNext()
+        await eventually { world.state.lastBackupStatus == .success }
+        await coordinator.settle()
+        #expect(!world.state.backupPending)
+    }
+
+    @MainActor @Test func automaticRetryOutlivesTheForegroundFlushThatScheduledIt() async throws {
+        let world = World(), clock = ManualClock()
+        world.fail(times: 1)
+        var dependencies = world.dependencies(clock: clock)
+        let perform = dependencies.perform
+        dependencies.perform = { last, uploading in
+            try BackgroundExecution.checkActive()
+            try await ForegroundExecution.checkActive()
+            return try await perform(last, uploading)
+        }
+        let coordinator = BackupCoordinator(dependencies: dependencies)
+        await ForegroundExecution.run(isActive: { true }) {
+            await #expect(throws: World.Boom.self) { try await coordinator.flush(.manual) }
+        }
+        await eventually { await clock.pending == [BackupCoordinator.firstRetry] }
+        await clock.fireNext()
+        await eventually { world.state.lastBackupStatus == .success }
+        await coordinator.settle()
+        #expect(world.calls.count == 2)
+        #expect(!world.state.backupPending)
+    }
+
+    @Test func explicitFlushRetainsRevokedBackgroundBudget() async throws {
+        let world = World(), clock = ManualClock()
+        var dependencies = world.dependencies(clock: clock)
+        dependencies.perform = { _, _ in
+            try BackgroundExecution.checkActive()
+            return .init(backupId: "test", snapshotSha256: "test", uploaded: true)
+        }
+        let coordinator = BackupCoordinator(dependencies: dependencies)
+        let budget = RecurringSubmissionBudget()
+        budget.revoke()
+        await RecurringSubmissionBudget.$current.withValue(budget) {
+            await #expect(throws: CancellationError.self) { try await coordinator.flush(.push, requireEnabled: false) }
+        }
+        #expect(world.state.lastBackupStatus == .idle)
+        #expect(world.state.backupPending)
+        #expect(await clock.pending.isEmpty)
+    }
+
     @Test(arguments: ["task", "url", "client"]) func cancellationLeavesBackupPendingWithoutFailure(kind: String) async throws {
         let world = World(), clock = ManualClock()
         var dependencies = world.dependencies(clock: clock)

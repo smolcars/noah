@@ -68,7 +68,8 @@ actor BackupCoordinator {
         cancelRetry()
         if immediate {
             cancelDebounce()
-            Task { _ = await self.runPass() }
+            // Automatic work must not inherit a foreground activation's short admission.
+            Task.detached { _ = await self.runPass() }
         } else {
             scheduleTrailingPass()
         }
@@ -227,7 +228,7 @@ actor BackupCoordinator {
     private func scheduleTrailingPass() {
         guard debounceTask == nil else { return }
         let sleep = dependencies.sleep
-        debounceTask = Task {
+        debounceTask = Task.detached {
             guard (try? await sleep(Self.debounce)) != nil else { return }
             await self.debounceFired()
         }
@@ -246,7 +247,7 @@ actor BackupCoordinator {
         retryAttempt = min(retryAttempt + 1, 10)
         log.d("Backup retry scheduled in \(delay)")
         let sleep = dependencies.sleep
-        retryTask = Task {
+        retryTask = Task.detached {
             guard (try? await sleep(delay)) != nil else { return }
             await self.retryFired()
         }
