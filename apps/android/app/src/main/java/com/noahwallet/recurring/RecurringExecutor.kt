@@ -166,10 +166,12 @@ class RecurringExecutor(private val d: Dependencies,
                 }
                 if (plan.kind == "complete") { storage { d.store.updateIf(schedule, schedule.copy(status = "completed", nextRunAt = null)) }; continue }
                 if (plan.kind != "pay" || controller.locked || approval != null && approval.plan != plan) continue
+                requireStage(budget, caller)
                 try {
                     val (payment, quote) = approval?.let { it.payment to it.quote } ?: d.quote(schedule)
                     if (!budget.available || caller?.isActive == false) break
                     val state = boundState()
+                    if (!budget.available || caller?.isActive == false) break
                     if (state.schedules[id] != schedule || planning.plan(d.now(), d.zone(), manual) != plan || quote.walletIdentity != state.binding!!.wallet) continue
                     require(payment.amount == schedule.amountSat && quote.amount == schedule.amountSat && !payment.max)
                     if (approval == null) {
@@ -184,7 +186,7 @@ class RecurringExecutor(private val d: Dependencies,
                     val entry = RecurringJournal.Entry(state.binding, id, plan, d.now(), schedule.nativeRevision, policy = schedule)
                     val marked = schedule.copy(inFlight = RecurringPayment.InFlight(plan.occurrenceIndex!!, d.now()), updatedAt = d.now())
                     val admitted = storage { synchronized(RecurringStore.lock) { synchronized(d.journal) {
-                        if (boundStateNow().schedules[id] != schedule) false else {
+                        if (boundStateNow().schedules[id] != schedule || !budget.available || caller?.isActive == false) false else {
                             check(!d.journal.consumed(state.binding, id, plan.scheduledFor!!, schedule.nativeRevision, plan.occurrenceIndex))
                             d.journal.save(entry)
                             d.store.upsert(marked)

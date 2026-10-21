@@ -212,6 +212,8 @@ import Observation
                     continue
                 }
                 guard plan.kind == "pay", !d.controller.locked else { continue }
+                try ForegroundExecution.checkActiveNow()
+                try BackgroundExecution.checkActive()
                 do {
                     let payment: SendPayment, quote: SendQuote
                     let fees: LightningSendFees?
@@ -222,6 +224,8 @@ import Observation
                     guard (try? ForegroundExecution.checkActiveNow()) != nil,
                           RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
                     let state = try await boundState()
+                    try ForegroundExecution.checkActiveNow()
+                    try BackgroundExecution.checkActive()
                     guard let latest = state.schedules[id], latest == schedule,
                           planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
                           quote.walletIdentity == state.binding?.wallet else { continue }
@@ -246,6 +250,8 @@ import Observation
                     schedule.updatedAt = d.now()
                     let admitted = try await storage { [self, schedule] in
                         guard try boundStateNow().schedules[id] == original else { return false }
+                        try ForegroundExecution.checkActiveNow()
+                        try BackgroundExecution.checkActive()
                         try d.journal.save(entry)
                         try d.store.upsert(schedule)
                         return true
