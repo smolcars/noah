@@ -132,12 +132,17 @@ struct AppLogTests {
     }
 
     @Test func sharedSecretRedactionVectors() throws {
+        EndpointLogPrivacy.register("https://review-number.example/835917264")
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+        let date = try #require(formatter.date(from: "2026-10-21 09:21:42.292"))
         for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where !fixture.name.hasPrefix("address-") {
             #expect(redactBaseline(fixture.input) == fixture.expected, "\(fixture.name)")
             #expect(redactBaseline(fixture.expected) == fixture.expected, "idempotent \(fixture.name)")
             let file = LogFile(directory: directory, capacity: 5000)
-            file.append(level: .info, tag: "fixture", message: fixture.input)
+            file.append(level: .info, tag: "fixture", message: fixture.input, date: date)
             #expect(file.lines().last?.hasSuffix(LogFile.redact(fixture.input).replacingOccurrences(of: "\n", with: "\n  ")) == true,
                     "persistence \(fixture.name)")
         }

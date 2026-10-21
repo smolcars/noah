@@ -21,7 +21,11 @@ final class BarkLog: BarkLogger, @unchecked Sendable {
     }
 
     func log(level: LogLevel, target: String, message: String) {
-        AppLog("bark:\(target)", file: file).log(Self.appLevel(level), message)
+        log(level: level, target: target, message: message, date: Date())
+    }
+
+    func log(level: LogLevel, target: String, message: String, date: Date) {
+        file.append(level: Self.appLevel(level), tag: "bark:\(target)", message: message, date: date, systemLog: true)
     }
 
     static func appLevel(_ level: LogLevel) -> AppLog.Level {

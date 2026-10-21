@@ -103,6 +103,7 @@ struct BarkLogTests {
     }
 
     @Test func barkMessagesCannotPersistSecrets() throws {
+        EndpointLogPrivacy.register("https://review-number.example/835917264")
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = LogFile(directory: directory)
@@ -120,7 +121,11 @@ struct BarkLogTests {
             "key \("xprv" + String(repeating: "A", count: 100))",
             "key \("K" + String(repeating: "A", count: 51))",
         ]
-        for message in examples { sink.log(level: .info, target: "wallet", message: message) }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+        let date = try #require(formatter.date(from: "2026-10-21 08:21:42.292"))
+        for message in examples { sink.log(level: .info, target: "wallet", message: message, date: date) }
         let text = file.lines().joined(separator: "\n")
         #expect(text.replacingOccurrences(of: "[custom-esplora]", with: "[redacted]").components(separatedBy: "[redacted]").count == examples.count + 1)
         #expect(!text.contains("synthetic"))

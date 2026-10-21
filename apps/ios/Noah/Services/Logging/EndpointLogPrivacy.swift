@@ -233,7 +233,13 @@ enum EndpointLogPrivacy {
     }
     static func redact(_ text: String) -> String { sanitize(text) ?? "[redacted]" }
 
-    private static let recordStart = try! NSRegularExpression(pattern: #"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [VDIWE] \["#)
+    // Only formatter-owned ASCII fields are exempt; tags and all message text remain inspected.
+    private static let recordHeader = try! NSRegularExpression(pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} [VDIWE] "#)
+    private static let recordStart = try! NSRegularExpression(pattern: recordHeader.pattern + #"\["#)
+    private static func header(_ text: String) -> String {
+        guard let match = recordHeader.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return "" }
+        return (text as NSString).substring(with: match.range)
+    }
 
     /// Keep continuation lines with their endpoint/error context, including historical files.
     static func redactLogLines(_ lines: [String]) -> [String] {
@@ -251,6 +257,13 @@ enum EndpointLogPrivacy {
         return result
     }
 
+    /// Raw tags/callbacks have no formatter-owned prefix, even when they imitate one.
+    static func sanitizeMessage(_ text: String) -> String? {
+        let (registered, matcher, hosts, unavailable) = snapshot()
+        if unavailable { return "[custom-esplora]" }
+        return sanitizeBody(text, registered: registered, matcher: matcher, hosts: hosts)
+    }
+
     private static func snapshot() -> (Set<String>, SecretMatcher, Set<String>, Bool) {
         lock.withLock {
             if matcher == nil { matcher = SecretMatcher(tokens) }
@@ -261,6 +274,11 @@ enum EndpointLogPrivacy {
     /// Formatting can join individually safe fields into a registered secret.
     /// Only the token guard runs here: preserve timestamps and provider summaries.
     static func redactRecord(_ text: String) -> String {
+        let prefix = header(text)
+        return prefix + guardRecordBody((text as NSString).substring(from: prefix.utf16.count))
+    }
+
+    private static func guardRecordBody(_ text: String) -> String {
         let (registered, matcher, _, unavailable) = snapshot()
         if unavailable { return "[custom-esplora]" }
         guard !registered.isEmpty else { return text }
@@ -272,12 +290,17 @@ enum EndpointLogPrivacy {
 
     static func sanitize(_ text: String) -> String? {
         let (registered, matcher, hosts, unavailable) = snapshot()
-        if unavailable { return "[custom-esplora]" }
+        if unavailable { return header(text) + "[custom-esplora]" }
         return sanitize(text, registered: registered, matcher: matcher, hosts: hosts)
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
     static func sanitize(_ text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher([]), hosts: Set<String> = []) -> String? {
+        let prefix = header(text)
+        return sanitizeBody((text as NSString).substring(from: prefix.utf16.count), registered: registered, matcher: matcher, hosts: hosts).map { prefix + $0 }
+    }
+
+    private static func sanitizeBody(_ text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>) -> String? {
         if !registered.isEmpty && hasExcessiveCombiningRun(text) { return "[custom-esplora]" }
         // Exported lines include a bounded tag and timestamp as well as the message.
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128 else { return "[oversized log message omitted]" }
