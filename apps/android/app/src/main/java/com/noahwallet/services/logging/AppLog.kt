@@ -197,6 +197,7 @@ class LogFile(
             repeat(4) {
                 if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last())) return null
                 val view = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
+                if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(view)) return null
                 if (view != views.last()) views += view
                 var uncertain = false
                 val decoded = escapes.replace(view) { match ->
@@ -224,6 +225,7 @@ class LogFile(
             }
             if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last())) return null
             val last = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
+            if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(last)) return null
             if (last != views.last()) views += last
             if (escapes.containsMatchIn(last)) return null
             return views

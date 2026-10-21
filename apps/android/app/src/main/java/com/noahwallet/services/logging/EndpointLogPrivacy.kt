@@ -69,7 +69,7 @@ internal object EndpointLogPrivacy {
         val sensitive = mutableSetOf<String>()
         fun add(value: String, opaque: Boolean = false) {
             for (view in LogFile.decodedViews(value, percentEncoded = true, compatibility = true) ?: listOf(value)) {
-                val token = SecretMatcher.normalize(view)
+                val token = SecretMatcher.normalize(view) ?: run { failClosed(); return }
                 if (token.isNotEmpty() && (!opaque || token.length >= 6 && token.lowercase(java.util.Locale.ROOT) !in commonWords)) sensitive += view
             }
         }
@@ -110,7 +110,12 @@ internal object EndpointLogPrivacy {
         }
         private val nodes = mutableListOf(Node())
         init {
-            for (token in tokens.flatMap { listOf(it, fold(it), normalize(it)) }.toSet()) {
+            val views = mutableSetOf<String>()
+            for (token in tokens) {
+                val normalized = normalize(token) ?: continue
+                views += listOf(token, fold(token), normalized, withoutMarks(normalized))
+            }
+            for (token in views) {
                 var state = 0
                 for (unit in token) {
                     state = nodes[state].edges.getOrPut(unit) { nodes.add(Node()); nodes.lastIndex }
@@ -132,8 +137,10 @@ internal object EndpointLogPrivacy {
         fun contains(text: String): Boolean {
             if (hasExcessiveCombiningRun(text)) return true
             if (nodes.size == 1) return false
-            // Decomposition keeps a following mark separate from the token's final scalar.
-            return containsView(text) || containsView(fold(text)) || containsView(normalize(text))
+            if (containsView(text) || containsView(fold(text))) return true
+            val normalized = normalize(text) ?: return true
+            // Reordering can insert a following mark inside an accented token's decomposition.
+            return containsView(normalized) || containsView(withoutMarks(normalized))
         }
         private fun containsView(text: String): Boolean {
             var state = 0
@@ -146,24 +153,45 @@ internal object EndpointLogPrivacy {
         }
         companion object {
             private fun fold(text: String) = text.lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT)
-            fun normalize(text: String): String = java.text.Normalizer.normalize(
-                java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKD).lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT),
-                java.text.Normalizer.Form.NFKD)
+            private fun withoutMarks(text: String) = buildString {
+                var index = 0
+                while (index < text.length) {
+                    val scalar = text.codePointAt(index)
+                    index += Character.charCount(scalar)
+                    if (!isMark(scalar)) appendCodePoint(scalar)
+                }
+            }
+            fun normalize(text: String): String? {
+                if (hasExcessiveCombiningRun(text)) return null
+                val folded = fold(java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKD))
+                if (hasExcessiveCombiningRun(folded)) return null
+                return java.text.Normalizer.normalize(folded, java.text.Normalizer.Form.NFKD)
+            }
         }
     }
-    // Bound canonical reordering before the platform normalizes any registered view.
+    private fun isMark(scalar: Int) = when (Character.getType(scalar)) {
+        Character.NON_SPACING_MARK.toInt(), Character.COMBINING_SPACING_MARK.toInt(), Character.ENCLOSING_MARK.toInt() -> true
+        else -> false
+    }
+
+    // Per-scalar decomposition has bounded size; never reorder an unbounded whole-string run.
     fun hasExcessiveCombiningRun(text: String): Boolean {
         var run = 0
+        var decomposedRun = 0
         var index = 0
         while (index < text.length) {
             val scalar = text.codePointAt(index)
             index += Character.charCount(scalar)
-            when (Character.getType(scalar)) {
-                Character.NON_SPACING_MARK.toInt(), Character.COMBINING_SPACING_MARK.toInt(), Character.ENCLOSING_MARK.toInt() -> {
-                    run++
-                    if (run > 32) return true
-                }
-                else -> run = 0
+            if (scalar < 128) { run = 0; decomposedRun = 0; continue }
+            run = if (isMark(scalar)) run + 1 else 0
+            if (run > 32) return true
+            val decomposed = java.text.Normalizer.normalize(String(Character.toChars(scalar)), java.text.Normalizer.Form.NFKD)
+            var offset = 0
+            while (offset < decomposed.length) {
+                val part = decomposed.codePointAt(offset)
+                offset += Character.charCount(part)
+                decomposedRun = if (isMark(part)) decomposedRun + 1 else 0
+                if (decomposedRun > 32) return true
             }
         }
         return false

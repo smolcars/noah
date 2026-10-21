@@ -87,8 +87,9 @@ class EndpointPrivacyTest {
         assertFalse(matcher.contains("ordinary diagnostic"))
         assertTrue(EndpointLogPrivacy.SecretMatcher(setOf("fakeStraßeSecret")).contains("FAKESTRAẞESECRET"))
         val unicode = "fakeΐSecret761"
-        assertEquals(EndpointLogPrivacy.SecretMatcher.normalize(unicode), EndpointLogPrivacy.SecretMatcher.normalize(EndpointLogPrivacy.SecretMatcher.normalize(unicode)))
-        assertTrue(EndpointLogPrivacy.SecretMatcher(setOf(EndpointLogPrivacy.SecretMatcher.normalize(unicode))).contains(unicode))
+        val normalized = requireNotNull(EndpointLogPrivacy.SecretMatcher.normalize(unicode))
+        assertEquals(normalized, EndpointLogPrivacy.SecretMatcher.normalize(normalized))
+        assertTrue(EndpointLogPrivacy.SecretMatcher(setOf(normalized)).contains(unicode))
         val provider = EndpointLogPrivacy.SecretMatcher(setOf("HttpResponse"))
         for (input in listOf("HttpResponse { status: 503 }", "HttpResponse unknown", """HttpResponse \uD800""")) {
             assertEquals("[custom-esplora]", EndpointLogPrivacy.sanitize(input, setOf("https://fake-provider.example"), provider))
