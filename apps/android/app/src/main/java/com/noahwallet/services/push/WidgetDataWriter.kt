@@ -32,9 +32,12 @@ object WidgetDataWriter {
             ComponentName(context.packageName, "com.noahwallet.widgets.NoahWidget${name}Provider")))
     }
 
-    suspend fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String): Unit = withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String, preserveExpiry: Boolean = false, checkStage: () -> Unit = {}): Unit = withContext(NonCancellable + Dispatchers.IO) {
         val editor = context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit()
-        values(balance, closestExpiryBlocks, variant).forEach { (key, value) -> editor.putLong(key, value) }
+        values(balance, closestExpiryBlocks, variant).forEach { (key, value) ->
+            if (!preserveExpiry || key != "closestExpiryBlocks") editor.putLong(key, value)
+        }
+        checkStage()
         check(editor.commit()) { "Widget preferences could not be saved" }
         broadcast(context, variant)
     }

@@ -15,3 +15,17 @@ class WidgetDataWriterTest {
         assertEquals(12L, WidgetDataWriter.values(balance, 2L, "signet")["expiryThreshold"])
     }
 }
+
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [35], application = android.app.Application::class)
+class RecurringWidgetExpiryTest {
+    @Test fun recurringBalanceRefreshDoesNotBlankKnownExpiry() = kotlinx.coroutines.runBlocking {
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        val balance = WalletBalance(WalletBalance.Ark(1234u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
+        WidgetDataWriter.write(context, balance, 123, "regtest")
+        WidgetDataWriter.write(context, balance, null, "regtest", preserveExpiry = true)
+        val values = context.getSharedPreferences("com.noahwallet.regtest", android.content.Context.MODE_PRIVATE)
+        assertEquals(123L, values.getLong("closestExpiryBlocks", -1))
+        assertEquals(1234L, values.getLong("totalBalance", -1))
+    }
+}

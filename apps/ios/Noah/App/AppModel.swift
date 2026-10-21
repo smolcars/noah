@@ -247,9 +247,25 @@ final class AppModel {
         await reconcileBackupTriggers()
     }
 
+    @ObservationIgnored private var summaryRefresh = UUID()
+
     func refresh() async {
+        let generation = UUID()
+        summaryRefresh = generation
+        let location = WalletDataLocation(variant: variant)
+        func checkStage() throws {
+            try BackgroundExecution.checkActive()
+            try ForegroundExecution.checkActiveNow()
+            guard summaryRefresh == generation, ForegroundExecution.isActive, !isWalletSuspended,
+                  !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
+                  settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended != true
+            else { throw CancellationError() }
+        }
         do {
-            guard let latest = try await session.summary() else {
+            guard let latest = try await ForegroundWidgetRefresh.read(
+                summary: { try await session.summary() }, expiry: { try await session.closestExpiryBlocks() },
+                checkStage: checkStage,
+                publish: { WidgetDataWriter.write(balance: $0, closestExpiryBlocks: $1, variant: variant) }) else {
                 // Not open (e.g. the first open failed): try again rather than
                 // clearing the error with nothing to show.
                 await openExistingWallet()
@@ -258,7 +274,8 @@ final class AppModel {
             summary = latest
             summaryRevision += 1
             walletError = nil
-        } catch {
+        } catch is CancellationError { return }
+        catch {
             log.e("Failed to read wallet summary: \(Self.describe(error))")
             walletError = L10n.text("Couldn't load your balance.")
         }

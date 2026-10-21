@@ -18,6 +18,10 @@ internal class ForegroundSyncAdmission : DefaultLifecycleObserver {
         budgets.forEach { it.revoke() }
     }
 
+    internal fun checkActive() {
+        if (!resumed) throw CancellationException()
+    }
+
     suspend fun run(operation: suspend (RecurringBudget) -> Unit) {
         if (!resumed) return
         val tick = RecurringBudget().apply { admission = { resumed } }

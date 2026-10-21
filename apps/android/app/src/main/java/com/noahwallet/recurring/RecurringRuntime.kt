@@ -37,7 +37,7 @@ class RecurringRuntime private constructor(context: Context) {
                 statusMessage = "Recurring ${schedule.id}, occurrence ${schedule.inFlight?.occurrenceIndex ?: schedule.nextOccurrenceIndex}"))
         }, refresh = {
             runCatching { services.session.summary() }.getOrNull()?.let {
-                com.noahwallet.services.push.WidgetDataWriter.write(context, it.balance, null, BuildConfig.APP_VARIANT)
+                com.noahwallet.services.push.WidgetDataWriter.write(context, it.balance, null, BuildConfig.APP_VARIANT, preserveExpiry = true)
             }
         }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
     internal val syncForegroundAdmission = com.noahwallet.services.wallet.ForegroundSyncAdmission()

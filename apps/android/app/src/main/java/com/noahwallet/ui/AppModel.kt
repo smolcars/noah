@@ -307,17 +307,33 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         restoreCompletion {}.replay(RestoreTransaction.Recovery.nothingPending, restoreLocation.databaseExists)
     }
 
+    private val summaryRefresh = java.util.concurrent.atomic.AtomicLong()
+
     suspend fun refresh(sync: Boolean = false, walletMutationHeld: Boolean = false): Unit = withContext(Dispatchers.IO) {
         if (open && (RestoreTransaction(restoreLocation).settingsPending || restoreCompletionJournal.pending)) {
             if (walletMutationHeld) retryRestoreSettings() else services.lifecycle.withWalletMutation { retryRestoreSettings() }
         }
         if (isWalletSuspended || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withContext
+        val generation = summaryRefresh.incrementAndGet()
+        val caller = currentCoroutineContext()
+        val admission = com.noahwallet.recurring.RecurringRuntime.shared(getApplication()).syncForegroundAdmission
+        fun checkStage() {
+            caller.checkWalletAdmission()
+            admission.checkActive()
+            if (summaryRefresh.get() != generation || isWalletSuspended || restoreLocation.restorePending ||
+                restoreLocation.deletionMarker.exists() ||
+                settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) throw CancellationException()
+        }
         try {
+            checkStage()
             if (sync) session.sync()
-            summary = session.summary()
+            summary = ForegroundWidgetRefresh.read(session::summary, session::closestExpiryBlocks, ::checkStage) { balance, expiry ->
+                com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, expiry, BuildConfig.APP_VARIANT, checkStage = ::checkStage)
+            }
             summaryRevision++
             error = null
-        } catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
+        } catch (cancelled: CancellationException) { caller.ensureActive() }
+        catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
     }
 
     fun toggleBalance() {
