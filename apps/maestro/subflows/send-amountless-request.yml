@@ -8,6 +8,10 @@ name: Amountless request stays on amount entry
     id: "send-key-5"
 - assertNotVisible:
     id: "send-recipient"
+- scrollUntilVisible:
+    element: "Choose recipient first"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Choose recipient first"
 - tapOn:
     id: "send-start-over"

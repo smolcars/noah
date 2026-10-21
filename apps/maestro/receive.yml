@@ -33,6 +33,10 @@ name: Receive details, amount and note
 - assertVisible: "Test payment"
 - tapOn:
     id: "receive-qr-button"
+- scrollUntilVisible:
+    element:
+      id: "receive-copy-lightning"
+    direction: DOWN
 - assertVisible:
     id: "receive-copy-lightning"
 - runFlow: subflows/close-payment-details.yml

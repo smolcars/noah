@@ -1,0 +1,42 @@
+appId: com.noahwallet.regtest
+name: Exit deposit address remains copyable in landscape
+---
+- setOrientation: PORTRAIT
+- launchApp
+- tapOn: "Home"
+- tapOn:
+    id: "home-settings-button"
+- scrollUntilVisible:
+    element:
+      id: "settings-emergencyExit"
+    direction: DOWN
+- tapOn:
+    id: "settings-emergencyExit"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - setOrientation: LANDSCAPE_LEFT
+- scrollUntilVisible:
+    element: "Deposit Onchain Funds"
+    direction: DOWN
+- tapOn: "Deposit Onchain Funds"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setOrientation: LANDSCAPE_LEFT
+- scrollUntilVisible:
+    element: "Copy Bitcoin address"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Copy Bitcoin address"
+- scrollUntilVisible:
+    element: "Done"
+    direction: DOWN
+- tapOn: "Done"
+- runFlow: back.yml
+- runFlow: back.yml
+- setOrientation: PORTRAIT
+- assertVisible:
+    id: "home-settings-button"

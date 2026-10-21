@@ -2,6 +2,11 @@ appId: com.noahwallet.regtest
 name: Cancel MAX before a fixed amount request
 ---
 - runFlow: reset-send.yml
+- scrollUntilVisible:
+    element:
+      id: "send-max"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "send-max"
 - assertVisible: "Choose balance"

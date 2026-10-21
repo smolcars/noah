@@ -7,6 +7,14 @@ appId: com.noahwallet.regtest
     commands:
       - tapOn:
           id: "send-key-0"
+- assertVisible:
+    id: "send-amount"
+    text: "5000"
+- scrollUntilVisible:
+    element:
+      id: "send-continue"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "send-continue"
 - assertVisible:

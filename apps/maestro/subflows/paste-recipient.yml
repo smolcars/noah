@@ -1,5 +1,10 @@
 appId: com.noahwallet.regtest
 ---
+- scrollUntilVisible:
+    element:
+      id: "send-paste"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "send-paste"
 - tapOn:

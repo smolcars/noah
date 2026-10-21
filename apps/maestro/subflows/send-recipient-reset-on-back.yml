@@ -1,6 +1,17 @@
 appId: com.noahwallet.regtest
 name: Abandoned review does not reuse recipient
 ---
+- launchApp
+# Claim the incoming Ark transfer through the normal wallet sync gesture.
+- tapOn: "Home"
+- swipe:
+    start: "50%,25%"
+    end: "50%,80%"
+    duration: 800
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: ".*[1-9][0-9,]* sats available in Ark"
+    timeout: 60000
 - runFlow: reset-send.yml
 - runFlow: enter-send-amount.yml
 - runFlow: paste-recipient.yml
@@ -21,6 +32,11 @@ name: Abandoned review does not reuse recipient
     commands:
       - tapOn:
           id: "send-key-0"
+- scrollUntilVisible:
+    element:
+      id: "send-continue"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "send-continue"
 - assertVisible:

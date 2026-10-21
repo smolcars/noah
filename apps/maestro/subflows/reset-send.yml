@@ -1,10 +1,15 @@
 appId: com.noahwallet.regtest
 ---
+- launchApp
 - tapOn: "Send"
 - runFlow:
     when:
       visible: "Choose recipient first"
     commands:
+      - scrollUntilVisible:
+          element: "Choose recipient first"
+          direction: DOWN
+          centerElement: true
       - tapOn: "Choose recipient first"
 - tapOn:
     id: "send-start-over"
