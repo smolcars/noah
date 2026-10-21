@@ -1125,42 +1125,10 @@
         "© OpenStreetMap"
       ],
       "untranslated": {
-        "es": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ],
-        "ja": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ],
-        "ko": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ],
-        "sv": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     },
     "android": {
@@ -2327,42 +2295,10 @@
         "≈ "
       ],
       "untranslated": {
-        "es": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ],
-        "ja": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ],
-        "ko": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ],
-        "sv": [
-          "gt_2b0c0a6b85adb58c",
-          "gt_40db1d4d49d0c277",
-          "gt_8a6fa5252a4b7e05",
-          "gt_9b69d23b16f9a10b",
-          "gt_c76a6d8b5bc0e37b",
-          "gt_f6ff8ea16534cd0c",
-          "gt_fae43771b7367b9c"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     }
   }

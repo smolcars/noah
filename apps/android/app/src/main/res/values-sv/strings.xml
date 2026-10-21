@@ -4,8 +4,8 @@
   <string name="gt_0645c621fa74eb0d">" (%1$s tryck för att låsa upp felsökning)"</string>
   <string name="gt_050bb5788af8404f">"”Om du inte tror på det eller inte förstår det har jag inte tid att försöka övertyga dig, tyvärr.” – Satoshi Nakamoto"</string>
   <string name="gt_e9a308184ba341f1">"#%1$s · %2$s · %3$s sats"</string>
-  <string name="gt_8a6fa5252a4b7e05">"12 words"</string>
-  <string name="gt_fae43771b7367b9c">"24 words"</string>
+  <string name="gt_8a6fa5252a4b7e05">"12 ord"</string>
+  <string name="gt_fae43771b7367b9c">"24 ord"</string>
   <string name="gt_0d1fa0dfcc9e3821">"6-siffrig kod"</string>
   <string name="gt_3388c7a99e7ead3c">"En ”satoshi” är den minsta enheten i Bitcoin."</string>
   <string name="gt_ca4925ac35b345a4">"En anpassad Esplora-server kan se vilka Bitcoin-adresser och transaktioner plånboken begär information om. Använd bara en server som du litar på."</string>
@@ -205,7 +205,7 @@
   <string name="gt_6f113ce35347ffe6">"Kontrollera resultatet av den här betalningen innan du redigerar den."</string>
   <string name="gt_d7eef838e946e289">"Kontrollera det här ordet"</string>
   <string name="gt_4ac7dc7e4285ca5d">"Kontrollera din historik och stäm av med mottagaren. Den här betalningen kan redan ha skickats."</string>
-  <string name="gt_9b69d23b16f9a10b">"Check your recovery phrase. Enter all 12 or 24 words in the correct order."</string>
+  <string name="gt_9b69d23b16f9a10b">"Kontrollera din återställningsfras. Ange alla 12 eller 24 ord i rätt ordning."</string>
   <string name="gt_a3c8ad0d500b6aae">"Kontrollera din transaktionshistorik och bekräfta sedan det destruktiva åsidosättandet innan du fortsätter."</string>
   <string name="gt_ec963ffc911b8401">"Kontrollerar…"</string>
   <string name="gt_0a84829094f5cfed">"Underordnad transaktion"</string>
@@ -420,7 +420,7 @@
   <string name="gt_09694e31973d26c1">"Ange en slutpunkt för Esploras API."</string>
   <string name="gt_b07b96712b96ce92">"Ange ett belopp som är större än noll."</string>
   <string name="gt_a553c3e6a86cf907">"Ange hur många betalningar som ska göras."</string>
-  <string name="gt_f6ff8ea16534cd0c">"Enter your 12 or 24 words in order, or paste the whole phrase into any word field."</string>
+  <string name="gt_f6ff8ea16534cd0c">"Ange dina 12 eller 24 ord i rätt ordning eller klistra in hela frasen i valfritt ordfält."</string>
   <string name="gt_2c41befe9ea4cd5c">"Angivet som"</string>
   <string name="gt_54a0e8c17ebb21a1">"Fel"</string>
   <string name="gt_a464fa0760351f31">"Fel: %1$s"</string>
@@ -813,7 +813,7 @@
   <string name="gt_51a87000f35dc875">"Åsidosätt skyddet mot upprepade betalningar…"</string>
   <string name="gt_aa7a72fd611ec542">"Betald via"</string>
   <string name="gt_f3380f7b44bd70af">"Klistra in"</string>
-  <string name="gt_2b0c0a6b85adb58c">"Paste exactly 12 or 24 words. Your entries haven\'t been replaced."</string>
+  <string name="gt_2b0c0a6b85adb58c">"Klistra in exakt 12 eller 24 ord. Det du har angett har inte ersatts."</string>
   <string name="gt_f012547b9f87dbeb">"Klistra in betalningsbegäran"</string>
   <string name="gt_858e4ba7a29fd38b">"Pausa"</string>
   <string name="gt_e159b06187d369a0">"Pausad"</string>
@@ -1207,7 +1207,7 @@
   <string name="gt_2580b9f907abe759">"Den här betalningen behöver inte längre göras."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"Den här betalningen kan ha skickats. Kontrollera statusen innan du gör en ny betalning."</string>
   <string name="gt_d31a2f01307db793">"Den här betalningsbegäran saknar en återanvändbar Ark-adress eller ett Lightning-erbjudande"</string>
-  <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
+  <string name="gt_40db1d4d49d0c277">"Det gick inte att låsa upp säkerhetskopian med den här frasen, eller så är säkerhetskopian skadad. Kontrollera alla 12 eller 24 ord och deras ordning."</string>
   <string name="gt_7d13ecdf60d28aa9">"Det här stället kan kräva en annan betalapp"</string>
   <string name="gt_44f3e818daadd169">"Den här platsen angav en ogiltig länk."</string>
   <string name="gt_6d745107d2d026a2">"Den här återkommande betalningen stoppades innan den skickades."</string>
@@ -1420,7 +1420,7 @@
   <string name="gt_4cf1134a8d162908">"%1$s omgångar väntar"</string>
   <string name="gt_d8c81b717fe6d90e">"Växelkurs för %1$s saknas"</string>
   <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
-  <string name="gt_c76a6d8b5bc0e37b">"%1$s of %2$s words"</string>
+  <string name="gt_c76a6d8b5bc0e37b">"%1$s av %2$s ord"</string>
   <string name="gt_d09927bfa36bfdb0">"%1$s sats tillgängliga i Ark"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s betalt"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>

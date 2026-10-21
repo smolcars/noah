@@ -122,25 +122,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "12 words"
+            "value": "12 palabras"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "12 words"
+            "value": "12語"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "12 words"
+            "value": "12개 단어"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "12 words"
+            "value": "12 ord"
           }
         }
       }
@@ -158,25 +158,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "24 words"
+            "value": "24 palabras"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "24 words"
+            "value": "24語"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "24 words"
+            "value": "24개 단어"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "24 words"
+            "value": "24 ord"
           }
         }
       }
@@ -7358,25 +7358,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
+            "value": "Revisa tu frase de recuperación. Introduce las 12 o 24 palabras en el orden correcto."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
+            "value": "復元フレーズを確認してください。12個または24個すべての単語を正しい順序で入力してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
+            "value": "복구 문구를 확인하세요. 12개 또는 24개 단어를 모두 올바른 순서로 입력하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
+            "value": "Kontrollera din återställningsfras. Ange alla 12 eller 24 ord i rätt ordning."
           }
         }
       }
@@ -15098,25 +15098,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
+            "value": "Introduce tus 12 o 24 palabras en orden o pega la frase completa en cualquiera de los campos."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
+            "value": "12個または24個の単語を順番に入力するか、いずれかの単語欄にフレーズ全体を貼り付けてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
+            "value": "12개 또는 24개 단어를 순서대로 입력하거나 원하는 단어 입력란에 전체 문구를 붙여넣으세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
+            "value": "Ange dina 12 eller 24 ord i rätt ordning eller klistra in hela frasen i valfritt ordfält."
           }
         }
       }
@@ -29246,25 +29246,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
+            "value": "Pega exactamente 12 o 24 palabras. No se ha sustituido el texto que has introducido."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
+            "value": "12語または24語ちょうどを貼り付けてください。入力内容は変更されていません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
+            "value": "정확히 12개 또는 24개의 단어를 붙여 넣으세요. 기존 입력 내용은 그대로 유지됩니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
+            "value": "Klistra in exakt 12 eller 24 ord. Det du har angett har inte ersatts."
           }
         }
       }
@@ -43430,25 +43430,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
+            "value": "No se pudo desbloquear la copia de seguridad con esta frase, o la copia está dañada. Comprueba las 12 o 24 palabras y su orden."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
+            "value": "このフレーズではバックアップのロックを解除できないか、バックアップが破損しています。12個または24個すべての単語とその順序を確認してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
+            "value": "이 문구로 백업의 잠금을 해제할 수 없거나 백업이 손상되었습니다. 12개 또는 24개 단어와 순서를 모두 확인하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
+            "value": "Det gick inte att låsa upp säkerhetskopian med den här frasen, eller så är säkerhetskopian skadad. Kontrollera alla 12 eller 24 ord och deras ordning."
           }
         }
       }
@@ -51002,25 +51002,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of %2$@ words"
+            "value": "%1$@ de %2$@ palabras"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of %2$@ words"
+            "value": "%2$@語中%1$@語"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of %2$@ words"
+            "value": "%2$@개 단어 중 %1$@개"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of %2$@ words"
+            "value": "%1$@ av %2$@ ord"
           }
         }
       }
