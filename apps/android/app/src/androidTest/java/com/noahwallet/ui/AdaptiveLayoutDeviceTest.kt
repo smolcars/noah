@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
@@ -48,18 +50,20 @@ class AdaptiveLayoutDeviceTest {
         assertTrue("Gallery requires the disposable wallet to be open", model.open)
         val directory = File(context.filesDir, "adaptive-shots/${args.getString("label", "gallery")}").apply { mkdirs() }
         fun show(name: String, chrome: Boolean = true, capture: Boolean = true, content: @Composable () -> Unit) {
+            val positioned = java.util.concurrent.CountDownLatch(1)
             instrumentation.runOnMainSync {
                 activity.setContent { LocalizedContent(model.localeIdentifier) { NoahTheme {
-                    Surface {
-                        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge()) {
+                    key(name) { Surface {
+                        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge().onGloballyPositioned { positioned.countDown() }) {
                             if (chrome) AdaptiveNavigation(Destination.Home, {}, topBar = {
                                 TopAppBar(title = { Text(name) }, navigationIcon = { TextButton({}) { Text("Back") } })
                             }) { padding -> Box(Modifier.padding(padding)) { content() } }
                             else content()
                         }
-                    }
+                    } }
                 } } }
             }
+            assertTrue("Fixture did not lay out: $name", positioned.await(10, java.util.concurrent.TimeUnit.SECONDS))
             instrumentation.waitForIdleSync()
             Thread.sleep(if (name == "receive") 1500 else 450)
             if (capture) {
@@ -88,6 +92,17 @@ class AdaptiveLayoutDeviceTest {
             } }
             show("history") { TransactionsScreen(model) {} }
             show("btc-map") { com.noahwallet.btcmap.BtcMapScreen {} }
+            show("history-detail") { TransactionDetail(model, com.noahwallet.history.HistoryTransaction(
+                "layout-fixture", "Arkoor", 12345, "2026-10-20T12:30:00Z", "outgoing",
+                destination = "tark1" + "q".repeat(160), movementStatus = "successful", offchainFeeSat = 12,
+                intendedBalanceSat = -12357, effectiveBalanceSat = -12357), {}, {}) }
+            lateinit var mapModel: com.noahwallet.btcmap.BtcMapModel
+            instrumentation.runOnMainSync { mapModel = ViewModelProvider(activity)["btc-map", com.noahwallet.btcmap.BtcMapModel::class.java] }
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) { mapModel.load() }
+            if (mapModel.places.isNotEmpty()) {
+                instrumentation.runOnMainSync { mapModel.select(mapModel.places.first()) }
+                show("btc-map-detail") { com.noahwallet.btcmap.BtcMapScreen {} }
+            }
             for (destination in SettingsDestination.entries.filter { it != SettingsDestination.Seed }) {
                 show("settings-${destination.name}") { SettingsPage(model, destination, {}, {}) }
             }

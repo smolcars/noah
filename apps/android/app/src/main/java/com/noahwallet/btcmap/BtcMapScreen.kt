@@ -100,6 +100,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
             val wide = AdaptiveLayout.useDetailPane(maxWidth.value, maxHeight.value, androidx.compose.ui.platform.LocalDensity.current.fontScale)
             val short = maxHeight < 480.dp
             val controlsScroll = rememberScrollState()
+            val detailWidth = minOf(340.dp, (maxWidth - 24.dp) / 2)
             val detailHeight = maxHeight * 0.58f
             val placesHeight = if (wide) maxHeight * 0.2f else 180.dp
             Row(Modifier.fillMaxSize()) {
@@ -170,7 +171,7 @@ fun BtcMapScreen(onClose: () -> Unit) {
                 }
                 if (wide && selected != null) {
                     VerticalDivider()
-                    BtcMapDetailView(model, selected, Modifier.width(340.dp).fillMaxHeight())
+                    BtcMapDetailView(model, selected, Modifier.width(detailWidth).fillMaxHeight())
                 }
             }
             if (!wide && selected != null) WalletModalBottomSheet(onDismissRequest = model::closeDetail,

@@ -3,8 +3,6 @@ package com.noahwallet.ui.settings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,7 +65,7 @@ internal fun ScreenshotCropDialog(image: Bitmap, onCancel: () -> Unit, onCrop: (
     val bitmap = remember(image) { image.asImageBitmap() }
     val left = tr("Left"); val right = tr("Right"); val top = tr("Top"); val bottom = tr("Bottom")
     WalletAlertDialog(onDismissRequest = onCancel, title = { Text(tr("Crop Screenshot")) }, text = {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column {
             Canvas(Modifier.fillMaxWidth().height(200.dp)) {
                 val scale = minOf(size.width / image.width, size.height / image.height)
                 val width = image.width * scale; val height = image.height * scale

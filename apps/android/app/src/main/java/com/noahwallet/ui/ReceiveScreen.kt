@@ -27,6 +27,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.Saver
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -187,9 +188,10 @@ fun ReceiveScreen(app: AppModel, onDone: () -> Unit) {
 @Composable
 internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details", maximumSide: androidx.compose.ui.unit.Dp = 302.dp, onClick: () -> Unit) {
     val localizedActionLabel = tr(actionLabel)
-    val bitmap = remember(uri) {
+    var qrPixels by remember { mutableIntStateOf(840) }
+    val bitmap = remember(uri, qrPixels) {
         runCatching {
-            val matrix = QRCodeWriter().encode(uri, BarcodeFormat.QR_CODE, 840, 840,
+            val matrix = QRCodeWriter().encode(uri, BarcodeFormat.QR_CODE, qrPixels, qrPixels,
                 mapOf(EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.H, EncodeHintType.MARGIN to 4))
             Bitmap.createBitmap(matrix.width, matrix.height, Bitmap.Config.ARGB_8888).apply {
                 val pixels = IntArray(matrix.width * matrix.height) { index ->
@@ -199,13 +201,13 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
             }.asImageBitmap()
         }.getOrNull()
     }
-    Box(Modifier.sizeIn(maxWidth = maximumSide).aspectRatio(1f).clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
+    Box(Modifier.sizeIn(maxWidth = maximumSide).aspectRatio(1f).onSizeChanged { qrPixels = it.width.coerceAtLeast(1) }.clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
         contentDescription = localizedActionLabel
         role = Role.Button
         this.onClick(label = localizedActionLabel) { onClick(); true }
     }, contentAlignment = Alignment.Center) {
         if (bitmap != null) {
-            Image(bitmap, null, Modifier.fillMaxSize())
+            Image(bitmap, null, Modifier.fillMaxSize(), filterQuality = androidx.compose.ui.graphics.FilterQuality.None)
             Image(painterResource(R.drawable.receive_logo), null, Modifier.size(44.dp).background(Color.White).padding(4.dp))
         } else Text(tr("QR unavailable. Tap to copy payment details."), color = Color.Black)
     }

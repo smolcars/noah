@@ -230,7 +230,7 @@ internal fun DeleteWalletFallback(model: AppModel) {
     var confirmation by rememberSaveable { mutableStateOf("") }
     val enabled = model.canDeleteRecoveryWallet
     androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled) { Text(tr("Delete Wallet")) }
-    if (showingDelete) androidx.compose.material3.AlertDialog(
+    if (showingDelete) WalletAlertDialog(
         onDismissRequest = { if (enabled) showingDelete = false },
         title = { Text(tr("Delete Wallet")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

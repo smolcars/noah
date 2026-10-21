@@ -14,6 +14,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.noahwallet.ui.NoahButton
+import com.noahwallet.ui.LocalFoldingFeatures
+import com.noahwallet.ui.WindowRegion
+import com.noahwallet.ui.usableRegion
+import androidx.core.view.doOnLayout
 import com.noahwallet.ui.settings.SettingsColumn
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -97,6 +101,25 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     val context = LocalContext.current
     val privacy by rememberUpdatedState(com.noahwallet.ui.LocalWalletPrivacy.current)
     val covered = privacy.covered
+    val hinges = LocalFoldingFeatures.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val activity = context as android.app.Activity
+    val bounds = androidx.window.layout.WindowMetricsCalculator.getOrCreate().computeCurrentWindowMetrics(activity).bounds
+    val insets = androidx.core.view.ViewCompat.getRootWindowInsets(activity.window.decorView)
+        ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars() or androidx.core.view.WindowInsetsCompat.Type.displayCutout())
+        ?: androidx.core.graphics.Insets.NONE
+    val region = usableRegion(bounds.width() - insets.left - insets.right, bounds.height() - insets.top - insets.bottom,
+        hinges.map { WindowRegion(it.left - insets.left, it.top - insets.top, it.right - insets.left, it.bottom - insets.top) })
+    val dialogContext = remember(context, hinges, region, configuration) {
+        if (hinges.isEmpty()) context else android.view.ContextThemeWrapper(context, context.theme).apply {
+            applyOverrideConfiguration(android.content.res.Configuration(configuration).apply {
+                screenWidthDp = (region.width / density).toInt(); screenHeightDp = (region.height / density).toInt()
+                orientation = if (region.width > region.height) android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                    else android.content.res.Configuration.ORIENTATION_PORTRAIT
+            })
+        }
+    }
     var picker by remember { mutableStateOf<android.app.Dialog?>(null) }
     DisposableEffect(covered, picker) {
         if (covered) picker?.hide() else picker?.show()
@@ -104,7 +127,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     }
     var step by rememberSaveable { mutableStateOf<String?>(null) }
     var candidate by rememberSaveable { mutableLongStateOf(value) }
-    DisposableEffect(step, context) {
+    DisposableEffect(step, dialogContext) {
         val shownStep = step
         var disposing = false
         if (shownStep != null) {
@@ -117,16 +140,27 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
                 calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 candidate = calendar.timeInMillis
             }
-            val dialog = if (shownStep == "date") DatePickerDialog(context, { _, year, month, day ->
+            val dialog = if (shownStep == "date") DatePickerDialog(dialogContext, { _, year, month, day ->
                 updateDate(year, month, day)
                 if (time) step = "time" else { change(candidate); step = null }
             }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
-            else TimePickerDialog(context, { _, hour, minute ->
+            else TimePickerDialog(dialogContext, { _, hour, minute ->
                 updateTime(hour, minute); change(candidate); step = null
             }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), android.text.format.DateFormat.is24HourFormat(context))
             dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
             dialog.setOnDismissListener { if (!disposing && step == shownStep) step = null }
             picker = dialog
+            if (hinges.isNotEmpty()) dialog.window?.let { window ->
+                val margin = (16 * density).toInt()
+                val width = minOf(region.width - margin * 2, (640 * density).toInt()).coerceAtLeast(1)
+                val height = (region.height - margin * 2).coerceAtLeast(1)
+                window.setGravity(android.view.Gravity.TOP or android.view.Gravity.LEFT)
+                window.attributes = window.attributes.apply { x = region.left + (region.width - width) / 2; y = region.top + margin }
+                window.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+                window.decorView.doOnLayout { view ->
+                    if (dialog.isShowing) window.setLayout(width, minOf(view.height, height))
+                }
+            }
             if (!privacy.covered) dialog.show()
             if (dialog is DatePickerDialog) dialog.datePicker.init(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)) { _, year, month, day ->

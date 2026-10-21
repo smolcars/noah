@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -91,7 +92,12 @@ class AdaptiveStateRestorationTest {
     @Test fun nativePickersRemainReachableAndReopenAfterStateRestoration() {
         val restoration = StateRestorationTester(compose)
         val executor = RecurringRuntime.shared(InstrumentationRegistry.getInstrumentation().targetContext).executor
-        restoration.setContent { NoahTheme { RecurringPaymentEditorScreen(executor, null) {} } }
+        var reportedHinges = emptyList<WindowRegion>()
+        restoration.setContent { NoahTheme {
+            val hinges = LocalFoldingFeatures.current
+            SideEffect { reportedHinges = hinges }
+            RecurringPaymentEditorScreen(executor, null) {}
+        } }
         compose.onNode(hasText("First payment:", substring = true)).performScrollTo().performClick()
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         automation.serviceInfo = automation.serviceInfo.apply { flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS }
@@ -123,6 +129,16 @@ class AdaptiveStateRestorationTest {
             val action = checkNotNull(button())
             val bounds = android.graphics.Rect().also(action::getBoundsInScreen)
             assertTrue(bounds.toString(), bounds.left >= 0 && bounds.top >= 0 && bounds.right <= size.x && bounds.bottom <= size.y)
+            val window = android.graphics.Rect().also { automation.rootInActiveWindow.getBoundsInScreen(it) }
+            for (hinge in reportedHinges) {
+                assertFalse("Picker crosses a vertical hinge", hinge.top <= window.top && hinge.bottom >= window.bottom && window.left < hinge.left && window.right > hinge.right)
+                assertFalse("Picker crosses a horizontal hinge", hinge.left <= window.left && hinge.right >= window.right && window.top < hinge.top && window.bottom > hinge.bottom)
+            }
+            val args = InstrumentationRegistry.getArguments()
+            if (args.getString("noahAdaptive") == "owned-disposable-avd") {
+                val folder = java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "adaptive-shots/${args.getString("label", "state")}").apply { mkdirs() }
+                java.io.File(folder, "picker-geometry.txt").appendText("window=$window action=$bounds hinges=$reportedHinges\n")
+            }
             assertTrue(action.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
         }
         confirmVisiblePicker()
@@ -170,6 +186,33 @@ class AdaptiveStateRestorationTest {
         assertTrue(presentation.input.words.all { it.isEmpty() })
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
         // Only a public synthetic non-phrase input is used; never capture this surface.
+    }
+
+    @Test fun qrDecodesAtItsActualRasterSize() {
+        val payload = "adaptive@localhost.com"
+        compose.setContent { NoahTheme { Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Box(Modifier.size(284.dp)) { ReceiveQR(payload) {} }
+        } } }
+        compose.waitForIdle()
+        val screenshot = compose.onNodeWithContentDescription("Show payment details").captureToImage().asAndroidBitmap()
+        try {
+            assertEquals(screenshot.width, screenshot.height)
+            val pixels = IntArray(screenshot.width * screenshot.height)
+            screenshot.getPixels(pixels, 0, screenshot.width, 0, 0, screenshot.width, screenshot.height)
+            val source = com.google.zxing.RGBLuminanceSource(screenshot.width, screenshot.height, pixels)
+            val result = com.google.zxing.MultiFormatReader().decode(com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source)),
+                mapOf(com.google.zxing.DecodeHintType.TRY_HARDER to true, com.google.zxing.DecodeHintType.PURE_BARCODE to true))
+            assertEquals(payload, result.text)
+        } finally { screenshot.recycle() }
+    }
+
+    @Test fun screenshotCropDialogHasOneReachableScrollSurface() {
+        var accepted = false
+        val image = android.graphics.Bitmap.createBitmap(32, 32, android.graphics.Bitmap.Config.ARGB_8888)
+        compose.setContent { NoahTheme { com.noahwallet.ui.settings.ScreenshotCropDialog(image, {}) { accepted = true } } }
+        compose.onNodeWithText("Bottom").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Done").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertTrue(accepted) }
     }
 
     @Test fun actualSendRetainsReviewSubmissionAndReceiptAcrossActivityRecreation() {

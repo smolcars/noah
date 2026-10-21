@@ -55,7 +55,7 @@ fun HistoryDetailsHost(app: AppModel, selectedID: String?, onClose: () -> Unit,
 }
 
 @Composable
-private fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: (RepeatPayment) -> Unit, onClose: () -> Unit) {
+internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: (RepeatPayment) -> Unit, onClose: () -> Unit) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     var technical by rememberSaveable(row.id) { mutableStateOf(false) }
     var explorerError by remember(row.id) { mutableStateOf(false) }
