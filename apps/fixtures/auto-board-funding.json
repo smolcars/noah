@@ -1,0 +1,135 @@
+{
+  "cases": [
+    {
+      "name": "first deposit",
+      "input": {
+        "walletID": "wallet",
+        "handled": {},
+        "outpoints": [
+          "a:0"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "name": "same deposit after restart",
+      "input": {
+        "walletID": "wallet",
+        "handled": {
+          "wallet": [
+            "a:0"
+          ]
+        },
+        "outpoints": [
+          "a:0"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "second deposit",
+      "input": {
+        "walletID": "wallet",
+        "handled": {
+          "wallet": [
+            "a:0"
+          ]
+        },
+        "outpoints": [
+          "a:0",
+          "b:1"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "name": "third deposit",
+      "input": {
+        "walletID": "wallet",
+        "handled": {
+          "wallet": [
+            "a:0",
+            "b:1"
+          ]
+        },
+        "outpoints": [
+          "c:0"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "name": "dismissed expired backgrounded or failed funding",
+      "input": {
+        "walletID": "wallet",
+        "handled": {
+          "wallet": [
+            "a:0",
+            "b:1",
+            "c:0"
+          ]
+        },
+        "outpoints": [
+          "b:1",
+          "c:0"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "no confirmed funding",
+      "input": {
+        "walletID": "wallet",
+        "handled": {},
+        "outpoints": []
+      },
+      "expected": false
+    },
+    {
+      "name": "different wallet",
+      "input": {
+        "walletID": "wallet",
+        "handled": {
+          "other": [
+            "a:0"
+          ]
+        },
+        "outpoints": [
+          "a:0"
+        ]
+      },
+      "expected": true
+    },
+    {
+      "name": "spent handled funding reappears",
+      "input": {
+        "walletID": "wallet",
+        "handled": {
+          "wallet": [
+            "a:0"
+          ]
+        },
+        "outpoints": [
+          "a:0"
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "one new outpoint of same tx",
+      "input": {
+        "walletID": "wallet",
+        "handled": {
+          "wallet": [
+            "a:0"
+          ]
+        },
+        "outpoints": [
+          "a:0",
+          "a:1"
+        ]
+      },
+      "expected": true
+    }
+  ]
+}

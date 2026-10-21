@@ -26,6 +26,13 @@ internal class OnchainOperations(
         val past = status.history.orEmpty().map(::exitState)
         return ExitModel(status.vtxoId, status.amountSats.toLong(), current.first, current.second, past.map { it.first }, past.map { it.second })
     }
+    suspend fun autoBoardFunding(): AutoBoardFunding.Snapshot? {
+        if (!ready()) fail(OnchainFailure.unavailable)
+        for (attempt in journal.loadAll().filter { it.quote.walletID == wallet.walletID && it.blocks(OnchainAction.board, emptyList()) })
+            check(attempt.id)
+        if (journal.loadAll().any { it.blocks(OnchainAction.board, emptyList()) } || wallet.hasPendingBoards()) return null
+        return AutoBoardFunding.confirmed(wallet.walletID, wallet.utxos(), wallet.transactions())
+    }
     suspend fun autoBoardQuote(): OnchainQuote? {
         if (!ready()) fail(OnchainFailure.unavailable)
         val minimum = wallet.minimum() ?: fail(OnchainFailure.unavailable)

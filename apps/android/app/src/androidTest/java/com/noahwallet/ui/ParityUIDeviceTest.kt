@@ -238,6 +238,17 @@ class ParityUIDeviceTest {
             // No amount is entered and no payment is submitted.
         } finally { instrumentation.runOnMainSync { activity.finish() } }
     }
+    @Test fun enableAutoBoardAndExportPublicAddress() = runBlocking {
+        optIn()
+        assumeTrue(InstrumentationRegistry.getArguments().getString("noahAutoBoardSetup") == "1")
+        val services = AppServices.shared(context)
+        services.ensureWalletOpen()
+        val settings = SettingsStorage(context)
+        settings.set(SettingsPreferences.update(settings.string("transaction-storage"), mapOf(
+            "isAutoBoardingEnabled" to JsonPrimitive(true), "hasAttemptedAutoBoarding" to JsonPrimitive(true)), 1), "transaction-storage")
+        settings.sync()
+        File(context.cacheDir, "auto-board-address.txt").writeText(services.session.exitDepositAddress())
+    }
     @Test fun prepareLiveWalletWithoutDisplayingSeed() = runBlocking {
         optIn()
         assumeTrue(InstrumentationRegistry.getArguments().getString("noahParityCreateWallet") == "1")

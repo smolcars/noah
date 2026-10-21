@@ -29,6 +29,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var switchingToDefaultServer by mutableStateOf(false); private set
     private var customOpenWait: EsploraOpenWait? = null
     var error by mutableStateOf<String?>(null)
+    var summaryRevision by mutableLongStateOf(0L); private set
     var summary by mutableStateOf<WalletSession.Summary?>(null); private set
     var hidden by mutableStateOf((state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false)
         private set
@@ -314,6 +315,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         try {
             if (sync) session.sync()
             summary = session.summary()
+            summaryRevision++
             error = null
         } catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
     }

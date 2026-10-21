@@ -25,6 +25,23 @@ class RecurringForegroundRunnerTest {
         fun wakeIfWaiting() = ticks.trySend(Unit).isSuccess
         fun noTimerWaiting() = !ticks.trySend(Unit).isSuccess
     }
+    @Test fun timerPublishesSummaryAfterSyncSoConfirmedFundingBecomesPromptEligible() = runBlocking {
+        val activity = Activity(); val minutes = Minutes()
+        var sdkConfirmed = 0L
+        var summaryConfirmed = 0L
+        var refreshes = 0
+        activity.lifecycle.addObserver(RecurringForegroundRunner(this, minutes::sleep, refreshSummary = {
+            summaryConfirmed = sdkConfirmed; refreshes++
+        }) { sdkConfirmed = 150_529 })
+        try {
+            activity.start(); minutes.waiting()
+            assertFalse(com.noahwallet.onchain.AutoBoardRules.shouldPrompt(true, true, true, summaryConfirmed, false))
+            minutes.tick(); minutes.waiting()
+            assertEquals(1, refreshes)
+            assertTrue(com.noahwallet.onchain.AutoBoardRules.shouldPrompt(true, true, true, summaryConfirmed, false))
+            activity.stop(); yield(); assertEquals(1, refreshes)
+        } finally { activity.stop() }
+    }
     @Test fun workerWakeWhileActivityIsStartedCannotRunForegroundStages() = runBlocking {
         val activity = Activity(); val minutes = Minutes()
         val w = RecurringWorld(this); w.add()

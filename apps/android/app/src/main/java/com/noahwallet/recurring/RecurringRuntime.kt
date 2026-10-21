@@ -41,7 +41,7 @@ class RecurringRuntime private constructor(context: Context) {
             }
         }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
     internal val syncForegroundAdmission = com.noahwallet.services.wallet.ForegroundSyncAdmission()
-    internal val foregroundRunner = RecurringForegroundRunner(scope, isOnboarded = services::isOnboarded) { budget ->
+    internal fun foregroundRunner(refreshSummary: suspend () -> Unit) = RecurringForegroundRunner(scope, refreshSummary = refreshSummary, isOnboarded = services::isOnboarded) { budget ->
         syncForegroundAdmission.run { admission ->
             services.syncInForeground(admission)
             if (budget.available && admission.available) executor.execute(budget = admission)

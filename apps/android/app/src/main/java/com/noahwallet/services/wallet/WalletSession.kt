@@ -393,6 +393,7 @@ class WalletSession internal constructor(
         destination: String? = null, automatic: Boolean = false): OnchainQuote = withM6 {
         onchainOperations(it).quote(action, ids, amount, destination, automatic)
     }
+    suspend fun autoBoardFunding(): AutoBoardFunding.Snapshot? = withM6 { onchainOperations(it).autoBoardFunding() }
     suspend fun autoBoardQuote(): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote() }
     suspend fun executeOnchain(quote: OnchainQuote): String = withM6 { handles ->
         onchainMutation.withLock { onchainOperations(handles).execute(quote) }

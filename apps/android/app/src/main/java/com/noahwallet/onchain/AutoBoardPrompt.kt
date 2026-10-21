@@ -14,17 +14,18 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 
 object AutoBoardRules {
-    fun shouldPrompt(enabled: Boolean, attempted: Boolean, ready: Boolean, balance: Long, blocking: Boolean) =
-        enabled && !attempted && ready && balance >= 20_000 && !blocking
+    fun shouldPrompt(enabled: Boolean, hasUnhandled: Boolean, ready: Boolean, balance: Long, blocking: Boolean) =
+        enabled && hasUnhandled && ready && balance >= 20_000 && !blocking
 }
 
-/** One-shot prompt only: background checks never submit boarding. */
+/** Foreground confirmation only: background checks never submit boarding. */
 @Composable
 fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     var plan by remember { mutableStateOf<OnchainQuote?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    var checking by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var generation by remember { mutableIntStateOf(0) }
     val disposalScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
@@ -35,11 +36,9 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
     }
     fun prefs() = SettingsPreferences.transaction(app.settings.string("transaction-storage"))
     fun enabled() = prefs()["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false
-    fun attempted() = prefs()["hasAttemptedAutoBoarding"]?.jsonPrimitive?.booleanOrNull == true
-    fun markAttempted(): Boolean = try {
-        app.settings.set(SettingsPreferences.update(app.settings.string("transaction-storage"), mapOf("hasAttemptedAutoBoarding" to JsonPrimitive(true)), 1), "transaction-storage")
-        app.settings.sync(); true
-    } catch (_: Exception) { message = "Couldn't save auto-board state."; false }
+    val fundingStore = remember(app.settings) { AutoBoardFunding(
+        { app.settings.string(AutoBoardFunding.key) },
+        { app.settings.set(it, AutoBoardFunding.key); app.settings.sync() }) }
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) { releasePlan() }
@@ -52,37 +51,51 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
     LaunchedEffect(plan) {
         val held = plan ?: return@LaunchedEffect
         delay((held.createdAt + BoardPrepared.lifetimeMillis - System.currentTimeMillis()).coerceAtLeast(0))
-        if (plan == held) { markAttempted(); releasePlan() }
+        if (plan == held) { releasePlan() }
     }
-    LaunchedEffect(app.summary?.balance?.onchain?.confirmed, app.isWalletSuspended, generation) {
+    LaunchedEffect(app.summaryRevision, app.isWalletSuspended, generation) {
         if (app.isWalletSuspended) { if (plan != null) releasePlan(); return@LaunchedEffect }
-        if (busy || plan != null || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
+        if (checking || busy || plan != null || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
         val token = generation
+        checking = true
+        var funding: AutoBoardFunding.Snapshot? = null
         try {
-            if (!AutoBoardRules.shouldPrompt(enabled(), attempted(), onchainReady(app), app.summary?.balance?.onchain?.confirmed?.toLong() ?: 0, false)) return@LaunchedEffect
-            val blocking = withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll().any { it.blocks(OnchainAction.board, emptyList()) } }
-            if (blocking) return@LaunchedEffect
+            if (!AutoBoardRules.shouldPrompt(enabled(), true, onchainReady(app), app.summary?.balance?.onchain?.confirmed?.toLong() ?: 0, false)) return@LaunchedEffect
+            funding = withContext(Dispatchers.IO) { app.session.autoBoardFunding() } ?: return@LaunchedEffect
+            if (!fundingStore.hasUnhandled(funding)) return@LaunchedEffect
             val caller = currentCoroutineContext()
-            val quote = withContext(NonCancellable) { app.session.autoBoardQuote() }
-            if (quote != null) {
-                if (caller.isActive && token == generation && enabled() && !attempted() && onchainReady(app) && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) plan = quote
-                else app.session.discardBoardReview(quote)
+            withContext(NonCancellable) {
+                val quote = app.session.autoBoardQuote()
+                if (quote != null) {
+                    try {
+                        val claimed = fundingStore.markHandled(funding)
+                        if (claimed && quote.walletID == funding.walletID && caller.isActive && token == generation && enabled() && onchainReady(app) && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) plan = quote
+                        else app.session.discardBoardReview(quote)
+                    } catch (failure: Exception) {
+                        app.session.discardBoardReview(quote)
+                        throw failure
+                    }
+                }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { if (token == generation) message = (failure as? OnchainException)?.message ?: "Unable to prepare boarding. Use Settings → Board to Ark to try again." }
+        catch (failure: Exception) {
+            try { funding?.let { fundingStore.markHandled(it) } }
+            catch (_: Exception) { message = "Couldn't save auto-board state." }
+            if (token == generation) message = (failure as? OnchainException)?.message ?: "Unable to prepare boarding. Use Settings → Board to Ark to try again."
+        } finally { checking = false }
     }
     message?.let { text -> WalletAlertDialog(onDismissRequest = { message = null },
         title = { Text(tr("Board to Ark")) }, text = { Text(tr(text + " Check Settings → Board to Ark for operation status.")) },
         confirmButton = { TextButton({ message = null }) { Text(tr("OK")) } }) }
     plan?.let { quote -> OnchainReview(app, quote,
-        onDismiss = { markAttempted(); releasePlan() }, cancelTitle = "No, turn off",
+        onDismiss = { releasePlan() }, cancelTitle = "No, turn off",
         cancel = {
             try {
                 app.settings.set(SettingsPreferences.autoBoard(app.settings.string("transaction-storage"), false), "transaction-storage")
-                markAttempted(); releasePlan()
+                releasePlan()
             } catch (_: Exception) { message = "Couldn't save auto-board preference." }
         }, confirm = {
-            if (markAttempted() && !busy) {
+            if (!busy) {
                 plan = null; busy = true
                 scope.launch {
                     try {

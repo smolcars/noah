@@ -38,6 +38,32 @@ class OnchainJournalTest {
         assertEquals(OnchainFailure.busy, (result.exceptionOrNull() as OnchainException).reason)
         assertEquals(0, calls)
     } }
+    @Test fun confirmedBoardRetainsReceiptButAllowsAnotherWithoutDone() = runBlocking { fixture { file, journal ->
+        val first = quote()
+        journal.perform(first) { record -> record("tx"); OnchainReceipt("submitted", "tx") }
+        assertTrue(journal.loadAll().single().blocks(OnchainAction.board, emptyList()))
+        journal.refreshStatus(first.id, ChainStatus(ChainStatus.Kind.confirmed, 100))
+        val restarted = journal(file)
+        assertFalse(restarted.loadAll().single().blocks(OnchainAction.board, emptyList()))
+        var calls = 0
+        restarted.perform(quote()) { calls++; OnchainReceipt("second", "tx2") }
+        assertEquals(1, calls); assertEquals(2, restarted.loadAll().size)
+        assertEquals("tx", restarted.loadAll().first().receipt!!.txid)
+    } }
+    @Test fun uncertainRetryUnknownAndMismatchedReceiptsKeepBlocking() {
+        val q = quote()
+        for (receipt in listOf(null, OnchainReceipt("retry", "tx", broadcastRetryPending = true),
+            OnchainReceipt("unknown", "tx"), OnchainReceipt("mempool", "tx", chainStatus = ChainStatus(ChainStatus.Kind.inMempool)),
+            OnchainReceipt("mismatch", "other", chainStatus = ChainStatus(ChainStatus.Kind.confirmed, 100)))) {
+            assertTrue(OnchainOperationJournal.Attempt(q, receipt, txid = "tx").blocks(OnchainAction.board, emptyList()))
+        }
+    }
+    @Test fun unreadableJournalFailsClosedBeforeSubmission() = runBlocking { fixture { file, journal ->
+        file.writeText("unknown journal")
+        var calls = 0
+        assertTrue(runCatching { journal.perform(quote()) { calls++; OnchainReceipt("bad") } }.isFailure)
+        assertEquals(0, calls)
+    } }
     @Test fun persistenceFailurePreventsSubmission() = runBlocking {
         var calls = 0
         val root = Files.createTempDirectory("m6-unwritable").toFile()

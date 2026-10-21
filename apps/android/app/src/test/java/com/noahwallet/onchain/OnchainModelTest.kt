@@ -1,6 +1,7 @@
 package com.noahwallet.onchain
 
 import kotlinx.coroutines.*
+import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -80,9 +81,37 @@ class OnchainModelTest {
     }
     @Test fun automaticPromptHonorsToggleAttemptReadinessAndBlocking() {
         for (enabled in listOf(false, true)) for (attempted in listOf(false, true)) for (ready in listOf(false, true)) for (blocking in listOf(false, true)) {
-            assertEquals(enabled && !attempted && ready && !blocking, AutoBoardRules.shouldPrompt(enabled, attempted, ready, 100_000, blocking))
+            assertEquals(enabled && attempted && ready && !blocking, AutoBoardRules.shouldPrompt(enabled, attempted, ready, 100_000, blocking))
         }
-        assertFalse(AutoBoardRules.shouldPrompt(true, false, true, 19_999, false))
+        assertFalse(AutoBoardRules.shouldPrompt(true, true, true, 19_999, false))
+    }
+    @Test fun fundingDecisionsMatchSharedFixture() {
+        for (test in com.noahwallet.fixtures.SharedFixtures.load("auto-board-funding")) {
+            val input = test.input.jsonObject
+            val store = AutoBoardFunding({ input.getValue("handled").toString() }, {})
+            val snapshot = AutoBoardFunding.Snapshot(input.getValue("walletID").jsonPrimitive.content,
+                input.getValue("outpoints").jsonArray.map { it.jsonPrimitive.content }.toSet())
+            assertEquals(test.name, test.expected.jsonPrimitive.boolean, store.hasUnhandled(snapshot))
+        }
+    }
+    @Test fun threeDepositsPromptOnceAcrossEveryReviewEndingAndRelaunch() {
+        for (ending in listOf("confirm", "dismiss", "expire", "background", "navigation", "stale", "failure")) {
+            var disk: String? = null
+            fun reopened() = AutoBoardFunding({ disk }, { disk = it })
+            repeat(3) { deposit ->
+                val funding = AutoBoardFunding.Snapshot("wallet", (0..deposit).map { "deposit-$it:0" }.toSet())
+                assertTrue(ending, reopened().hasUnhandled(funding))
+                // Production persists before presentation, so all endings share this durable decision.
+                assertTrue(reopened().markHandled(funding))
+                repeat(3) { assertFalse(ending, reopened().hasUnhandled(funding)); assertFalse(reopened().markHandled(funding)) }
+            }
+        }
+    }
+    @Test fun fundingWriteFailureAndUnreadableStateCannotAdmitAReview() {
+        val funding = AutoBoardFunding.Snapshot("wallet", setOf("a:0"))
+        assertTrue(runCatching { AutoBoardFunding({ null }, { error("disk") }).markHandled(funding) }.isFailure)
+        for (raw in listOf("broken", "[]", "{\"wallet\":[1]}", "{\"wallet\":null}"))
+            assertTrue(runCatching { AutoBoardFunding({ raw }, {}).hasUnhandled(funding) }.isFailure)
     }
     @Test fun startAndManualProgressReviewsCarryRNConsentAndEstimatedFees() {
         val start = reviewExplanation(OnchainQuote(OnchainAction.startExit, "wallet"))

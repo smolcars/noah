@@ -94,6 +94,17 @@ class SettingsFeaturesTest {
         assertEquals("JPY", state["preferredCurrency"]!!.jsonPrimitive.content)
         assertTrue(state["future"]!!.jsonPrimitive.boolean)
     }
+    @Test fun oldAttemptedFlagAllowsCurrentDepositOnceAndToggleCannotReplayIt() {
+        var settings = """{"state":{"isAutoBoardingEnabled":true,"hasAttemptedAutoBoarding":true},"version":1}"""
+        var fundingDisk: String? = null
+        fun ledger() = com.noahwallet.onchain.AutoBoardFunding({ fundingDisk }, { fundingDisk = it })
+        val funding = com.noahwallet.onchain.AutoBoardFunding.Snapshot("wallet", setOf("current:0"))
+        assertTrue(SettingsPreferences.transaction(settings)["isAutoBoardingEnabled"]!!.jsonPrimitive.boolean)
+        assertTrue(ledger().hasUnhandled(funding)); assertTrue(ledger().markHandled(funding))
+        settings = SettingsPreferences.autoBoard(SettingsPreferences.autoBoard(settings, false), true)
+        assertTrue(SettingsPreferences.transaction(settings)["isAutoBoardingEnabled"]!!.jsonPrimitive.boolean)
+        assertFalse(ledger().hasUnhandled(funding))
+    }
     @Test fun autoBoardMigratesVersionZeroAndResetsAttemptOnlyWhenEnabled() {
         val old = """{"state":{"isAutoBoardingEnabled":false,"hasAttemptedAutoBoarding":true},"version":0}"""
         assertFalse(SettingsPreferences.state(SettingsPreferences.autoBoard(old, false))["hasAttemptedAutoBoarding"]!!.jsonPrimitive.boolean)

@@ -53,6 +53,10 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         val id get() = quote.id
         fun blocks(action: OnchainAction, ids: List<String>): Boolean {
             if (overrideAudit != null || quote.action != action) return false
+            if (action == OnchainAction.board && receipt?.txid != null &&
+                (txid == null || txid == receipt.txid) &&
+                (quote.preparedBoard == null || quote.preparedBoard.txid == receipt.txid) &&
+                !receipt.broadcastRetryPending && receipt.chainStatus?.kind == ChainStatus.Kind.confirmed) return false
             // Bark skips active starts and already-canceled cancels. Claims/CPFP can spend again.
             if (receipt == null && action in setOf(OnchainAction.startExit, OnchainAction.cancel)) return false
             return action == OnchainAction.board || quote.ids.any { it in ids }

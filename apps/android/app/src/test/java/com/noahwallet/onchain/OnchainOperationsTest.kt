@@ -31,6 +31,12 @@ class OnchainOperationsTest {
             if (ownershipError) error("ownership unavailable")
             return mine
         }
+        var pendingBoard = false
+        var chainStatus: TransactionStatus = TransactionStatus.InMempool
+        var fundingTransactions: List<WalletTransaction>? = null
+        var fundingUtxos = emptyList<OnchainUtxo>()
+        override suspend fun utxos() = fundingUtxos
+        override suspend fun hasPendingBoards() = pendingBoard
         var balance = 100_000L
         var fee = 330L
         var chainRate = 250L
@@ -59,7 +65,7 @@ class OnchainOperationsTest {
         override fun claimBoard(quote: OnchainQuote) { if (bound[quote.preparedBoard!!.id] != quote) fail(OnchainFailure.changed) }
         override suspend fun discardBoard(id: String, includingClaimed: Boolean) { discarded.add(id); bound.remove(id) }
         override suspend fun allExits() = states.keys.mapNotNull { status(it) }
-        override suspend fun transactionStatus(txid: String): TransactionStatus = TransactionStatus.InMempool
+        override suspend fun transactionStatus(txid: String): TransactionStatus = chainStatus
         var items = listOf(Companion.vtxo("a"))
         var active = listOf<ExitVtxo>()
         var states = mutableMapOf<String, ExitState>()
@@ -91,6 +97,7 @@ class OnchainOperationsTest {
         override suspend fun transactions(): List<WalletTransaction> {
             calls.add("transactions")
             if (feesUnavailable) error("lookup unavailable")
+            fundingTransactions?.let { return it }
             return listOf(WalletTransaction("board-tx", "", 1543u, -30_000, null, false))
         }
         override suspend fun start(ids: List<String>) { calls.add("start"); ids.forEach { states[it] = ExitState.Start(100u) } }
@@ -110,6 +117,40 @@ class OnchainOperationsTest {
             withTimeout(10_000) { body(wallet, OnchainOperations(wallet, journal), journal, history) }
         } finally { root.deleteRecursively() }
     }
+    @Test fun confirmedFundingExcludesPendingExitUnknownAndBoardChange() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.fundingTransactions = listOf(
+            WalletTransaction("deposit", "", null, 150_529, null, false),
+            WalletTransaction("board-change", "", 155u, -140_000, null, false))
+        wallet.fundingUtxos = listOf(OnchainUtxo.Local(OutPoint("deposit", 1u), 150_529u, 100u),
+            OnchainUtxo.Local(OutPoint("pending", 0u), 150_529u, null),
+            OnchainUtxo.Local(OutPoint("board-change", 1u), 5_000u, 100u),
+            OnchainUtxo.Local(OutPoint("unknown", 0u), 100_000u, 100u), OnchainUtxo.Exit("exit", 100_000u, 100u))
+        assertEquals(setOf("deposit:1"), ops.autoBoardFunding()!!.outpoints)
+        wallet.pendingBoard = true
+        assertNull(ops.autoBoardFunding())
+    } }
+    @Test fun autoAdmissionReconcilesConfirmedReceiptWithoutDoneButKeepsUncertainty() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val quote = ops.quote(OnchainAction.board, amount = 30_000)
+        ops.execute(quote)
+        assertNull(ops.autoBoardFunding())
+        wallet.chainStatus = TransactionStatus.Confirmed(100u)
+        assertNotNull(ops.autoBoardFunding())
+        assertNotNull(journal.loadAll().single().receipt)
+        val next = ops.quote(OnchainAction.board, amount = 30_000)
+        wallet.submitError = BarkError("uncertain", BarkErrorCode.OTHER)
+        assertTrue(runCatching { ops.execute(next) }.isFailure)
+        wallet.chainStatus = TransactionStatus.NotFound
+        wallet.fundingTransactions = emptyList()
+        assertNull(ops.autoBoardFunding())
+    } }
+    @Test fun overlappingManualAndAutomaticPreparationsOnlySubmitOnce() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val automatic = checkNotNull(ops.autoBoardQuote())
+        val manual = ops.quote(OnchainAction.board, amount = 30_000)
+        ops.execute(manual)
+        assertTrue(runCatching { ops.execute(automatic) }.isFailure)
+        assertEquals(1, wallet.calls.count { it.startsWith("submit:") })
+        assertEquals(1, journal.loadAll().size)
+    } }
     @Test fun maxUsesExactConfirmedDrainAndJournalsTxidBeforeSubmit() = runBlocking { fixture { wallet, ops, journal, _ ->
         val quote = ops.quote(OnchainAction.board)
         assertTrue(quote.boardAll)
