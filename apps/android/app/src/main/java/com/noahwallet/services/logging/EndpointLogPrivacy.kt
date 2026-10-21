@@ -129,7 +129,7 @@ internal object EndpointLogPrivacy {
         }
         fun contains(text: String): Boolean {
             if (nodes.size == 1) return false
-            // Normalizing a whole record can compose a token's final scalar with its suffix.
+            // Decomposition keeps a following mark separate from the token's final scalar.
             return containsView(text) || containsView(fold(text)) || containsView(normalize(text))
         }
         private fun containsView(text: String): Boolean {
@@ -144,8 +144,8 @@ internal object EndpointLogPrivacy {
         companion object {
             private fun fold(text: String) = text.lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT)
             fun normalize(text: String): String = java.text.Normalizer.normalize(
-                java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC).lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT),
-                java.text.Normalizer.Form.NFKC)
+                java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKD).lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT),
+                java.text.Normalizer.Form.NFKD)
         }
     }
     private val hostTokens = Regex("""\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
