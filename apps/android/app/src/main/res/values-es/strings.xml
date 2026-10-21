@@ -33,7 +33,7 @@
   <string name="gt_00df1293cf6d241b">"Introduce un importe para recibir a través de Lightning"</string>
   <string name="gt_bfe6b5725f300b5b">"Añadir correo electrónico"</string>
   <string name="gt_73886d4afd4c8e01">"Si añades una nota, este pago se enviará a través de Lightning."</string>
-  <string name="gt_d23045be77db23b1">"Se necesitarían más fondos confirmados en cadena para avanzar en esta salida."</string>
+  <string name="gt_35cdc9f3eb810897">"Se necesitan más fondos confirmados en la cadena. Vas a iniciar el seguimiento de todos modos; añade fondos a la billetera antes de avanzar."</string>
   <string name="gt_56ef8f20955f2564">"Dirección"</string>
   <string name="gt_a2617581771209f9">"Dirección copiada"</string>
   <string name="gt_abab57a3c4edabb6">"La red de la dirección no coincide con la esperada para el parámetro %1$s"</string>
@@ -169,6 +169,8 @@
   <string name="gt_8fed00ef8e09c48a">"No se envió el depósito. Revísalo de nuevo cuando la billetera esté lista."</string>
   <string name="gt_479ad21ac9096236">"Abajo"</string>
   <string name="gt_df5e7d755dafe5a8">"Las comisiones de difusión se pagan por separado con fondos confirmados en cadena. Deposita Bitcoin y espera la confirmación antes de avanzar en una salida. El importe necesario puede variar."</string>
+  <string name="gt_4f8d20d681709634">"Se desconoce si hay fondos suficientes para la difusión; se necesitan fondos confirmados en la cadena."</string>
+  <string name="gt_a27a4742cc2eca3e">"Difundir sin estimación"</string>
   <string name="gt_b2c48022f83bafa7">"CAD"</string>
   <string name="gt_c46701fbec1318d7">"CC BY 4.0"</string>
   <string name="gt_b1c8e861eaedb266">"CHF"</string>
@@ -260,6 +262,8 @@
   <string name="gt_7a766440fe6254ac">"Sin contacto"</string>
   <string name="gt_31fbef162594de01">"Continuar"</string>
   <string name="gt_3b8c015d66490d97">"Continuar sin correo electrónico"</string>
+  <string name="gt_065277fcb38b2217">"Continuar sin estimación"</string>
+  <string name="gt_aced5f27d837a4e9">"¿Continuar sin estimación?"</string>
   <string name="gt_8d525e5f158b9afe">"Copiado"</string>
   <string name="gt_2041e06ced80c7b9">"Se copió %1$s"</string>
   <string name="gt_e21f935f11d7e966">"Copiar"</string>
@@ -490,6 +494,8 @@
   <string name="gt_5c31f5e6276f5882">"No se pudo actualizar la dirección Lightning. Inténtalo de nuevo."</string>
   <string name="gt_c533cafab69e4033">"Destacados"</string>
   <string name="gt_f842c3e1858df8c8">"Comisión"</string>
+  <string name="gt_90f5c163f7becb8c">"Estimación de comisiones no disponible"</string>
+  <string name="gt_66e1aeba4a28b81e">"No hay una estimación de comisiones disponible. Se desconocen las comisiones y el importe que recibirás. Continúa sin estimación solo si aceptas esta incertidumbre."</string>
   <string name="gt_26290dab5e50b113">"Comisión del pago existente: %1$s sats"</string>
   <string name="gt_6c6cc6eb80efa410">"Tasa de comisión"</string>
   <string name="gt_8b2aa3394e309294">"Comisión: %1$s sats"</string>
@@ -1081,6 +1087,7 @@
   <string name="gt_679652fd13c58c93">"Gastado"</string>
   <string name="gt_e4bb9f1ece9af926">"Iniciar"</string>
   <string name="gt_aa2acac2758fc7b9">"Iniciar salida de emergencia"</string>
+  <string name="gt_f12e78a057cfb199">"Iniciar salida seleccionada"</string>
   <string name="gt_ecd0abf6250c1885">"Iniciar un nuevo pago"</string>
   <string name="gt_d65d3a6d1c27a19c">"Iniciar un nuevo pago tras revisar el historial"</string>
   <string name="gt_8a565d98b83e392b">"Iniciar un nuevo pago de todos modos"</string>

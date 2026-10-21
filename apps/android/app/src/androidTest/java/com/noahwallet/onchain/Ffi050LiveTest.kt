@@ -66,7 +66,7 @@ class Ffi050LiveTest {
                         else session.quoteOnchain(OnchainAction.board, amount = if (stage == "board-max") 0 else 30_000)
                     val prepared = checkNotNull(quote.preparedBoard)
                     check(quote.current() && !reviewExplanation(quote).contains("estimates"))
-                    check(quote.net == quote.amount - quote.fee)
+                    check(quote.net == quote.amount - checkNotNull(quote.fee))
                     val before = session.withOpen { it.transactions().map { tx -> tx.txid } }
                     check(prepared.txid !in before) { "Preparation must not record a transaction" }
                     if (stage == "auto-review") {

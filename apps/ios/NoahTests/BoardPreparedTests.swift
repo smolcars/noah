@@ -157,7 +157,7 @@ struct BoardPreparedTests {
     static var automaticQuote: OnchainQuote {
         var quote = Self.quote
         quote.automatic = true
-        quote.confirmed = quote.amount + quote.chainFee + 5_000
+        quote.confirmed = quote.amount + quote.chainFee! + 5_000
         return quote
     }
     @Test func overlappingManualAndAutomaticReviewsOnlySubmitOnceThenConfirmedReceiptAllowsNewReview() async throws {
@@ -223,7 +223,7 @@ struct BoardPreparedTests {
         let session = WalletSession()
         let calls = Calls()
         let quote = Self.automaticQuote
-        #expect(quote.confirmed - quote.amount - quote.chainFee == 5_000)
+        #expect(quote.confirmed - quote.amount - quote.chainFee! == 5_000)
         await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
             await calls.submit(.init(txid: "exact", broadcast: .accepted, vtxoIds: []))
         })
@@ -321,7 +321,7 @@ struct BoardPreparedTests {
     @Test func exactValuesAndTwoMinuteExpirySurviveJournalRoundTrip() throws {
         var quote = try JSONDecoder().decode(OnchainQuote.self, from: JSONEncoder().encode(Self.quote))
         #expect(quote.amount == 30_000 && quote.net == 29_900 && quote.fee == 100 && quote.chainFee == 1543)
-        #expect(quote.amount + quote.chainFee == 31_543)
+        #expect(quote.amount + quote.chainFee! == 31_543)
         #expect(quote.prepared?.vsize == 1543 && quote.prepared?.inputCount == 1)
         #expect(quote.prepared?.inputs == [.init(txid: "funding", vout: 0)])
         quote.createdAt = Date().addingTimeInterval(-60)
@@ -408,7 +408,7 @@ struct BoardPreparedTests {
             Issue.record("Invalid review submitted"); throw OnchainFailure.invalid
         })
         var edited = quote
-        edited.chainFee += 1
+        edited.chainFee! += 1
         var expired = quote
         expired.prepared?.createdAt = Date().addingTimeInterval(-121)
         for invalid in [edited, expired] {
@@ -480,7 +480,7 @@ struct BoardPreparedTests {
         #expect(await calls.discarded.count == 1)
         #expect(await calls.active == [quote.id])
         #expect(quote.prepared?.inputCount == 20 && quote.chainFee == 12_000)
-        #expect(quote.confirmed - quote.amount - quote.chainFee == 5_000)
+        #expect(quote.confirmed - quote.amount - quote.chainFee! == 5_000)
     }
     @Test(arguments: [UInt64(12_000), 12_001])
     func exactReserveIsCheckedBeforeReview(fee: UInt64) async throws {
@@ -489,7 +489,7 @@ struct BoardPreparedTests {
         #expect((result != nil) == (fee == 12_000))
         #expect(await calls.discarded.count == (result == nil ? 2 : 1))
         #expect(await calls.active.count == (result == nil ? 0 : 1))
-        if let result { #expect(result.confirmed - result.amount - result.chainFee == 5_000) }
+        if let result { #expect(result.confirmed - result.amount - result.chainFee! == 5_000) }
     }
     @Test(arguments: [BarkErrorCode.insufficientFunds, .tooManyInputs, .belowMinimumBoardAmount], [1, 2])
     func probeAndReviewTypedFailuresUseExistingCopy(code: BarkErrorCode, stage: Int) async {

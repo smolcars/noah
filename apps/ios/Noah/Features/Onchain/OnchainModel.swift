@@ -81,6 +81,7 @@ final class OnchainModel {
     private var generation = UUID()
     private var expiry: Task<Void, Never>?
     private(set) var overview: OnchainOverview?
+    private(set) var estimateFallback: OnchainQuote?
     private(set) var quote: OnchainQuote?
     private(set) var busy = false
     private(set) var loading = false
@@ -103,6 +104,7 @@ final class OnchainModel {
             Task { await discard(quote) }
         }
         quote = nil
+        estimateFallback = nil
     }
 
     func load() async {
@@ -169,11 +171,24 @@ final class OnchainModel {
                     self?.invalidate()
                 }
             }
+        } catch let failure as ExitEstimateUnavailable {
+            if await dependencies.ready(), generation == token, !Task.isCancelled {
+                estimateFallback = failure.review
+            }
         } catch {
             self.error =
                 (error as? OnchainFailure)?.errorDescription
                 ?? "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
         }
+    }
+    /// Explicit first consent opens a separate confirmation for this exact, expiring review.
+    func continueWithoutEstimate() async {
+        guard !busy, var fallback = estimateFallback else { return }
+        estimateFallback = nil
+        let token = generation
+        guard await dependencies.ready(), token == generation, fallback.isCurrent else { invalidate(); return }
+        fallback.unknownFeeConsent = fallback.id
+        quote = fallback
     }
     /// Caller must have presented the quote and obtained explicit confirmation.
     func confirm() async {
@@ -189,6 +204,10 @@ final class OnchainModel {
                 throw OnchainFailure.changed
             }
             message = try await dependencies.execute(quote)
+        } catch let failure as ExitEstimateUnavailable {
+            if await dependencies.ready(), generation == token, !Task.isCancelled {
+                estimateFallback = failure.review
+            }
         } catch {
             self.error =
                 (error as? OnchainFailure)?.errorDescription ?? OnchainFailure.uncertain.errorDescription

@@ -26,6 +26,37 @@ import org.junit.runner.RunWith
 /** Only public read-only fixture fields; no seed or wallet operations. */
 @RunWith(AndroidJUnit4::class)
 class WalletParityDeviceTest {
+    @Test fun exitUnknownFeeReviews() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        assumeTrue(InstrumentationRegistry.getArguments().getString("noahWalletParityUI") == "disposable")
+        ActivityScenario.launch(ParityPreviewActivity::class.java).use { scenario ->
+            Thread.sleep(2000)
+            lateinit var host: ParityPreviewActivity
+            scenario.onActivity { host = it }
+            val app = runBlocking { withContext(Dispatchers.Main) { loadAppModel(host) } }
+            for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) {
+                val unknown = OnchainQuote(action, "public-fixture", listOf("public-vtxo:0"),
+                    destination = if (action == OnchainAction.claim) "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn" else null,
+                    destinationIsMine = if (action == OnchainAction.claim) false else null,
+                    amount = 30_000, fee = null, chainFee = null, confirmed = 0)
+                scenario.onActivity { activity -> activity.setContent { NoahTheme {
+                    Surface { OnchainReview(app, unknown.copy(unknownFeeConsent = unknown.id), {}, { fail("Read-only fixture") }) }
+                } } }
+                instrumentation.waitForIdleSync(); Thread.sleep(1500)
+                fun contains(node: android.view.accessibility.AccessibilityNodeInfo?, text: String): Boolean = node != null &&
+                    (node.text?.toString()?.contains(text) == true || (0 until node.childCount).any { contains(node.getChild(it), text) })
+                val deadline = System.currentTimeMillis() + 10_000
+                while (!contains(instrumentation.uiAutomation.rootInActiveWindow, "Fees and amount to receive are unknown") && System.currentTimeMillis() < deadline) Thread.sleep(100)
+                File(instrumentation.targetContext.getExternalFilesDir(null), "exit-fallback-${action.name}.png").outputStream().use {
+                    checkNotNull(instrumentation.uiAutomation.takeScreenshot()).compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+                val root = instrumentation.uiAutomation.rootInActiveWindow
+                assertTrue("Unknown-fee warning is visible for $action", contains(root, "Fees and amount to receive are unknown"))
+                assertFalse(contains(root, "Estimated claim fee"))
+                assertFalse(contains(root, "Amount after fee"))
+            }
+        }
+    }
     @Test fun exitBlockFields() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         assumeTrue(InstrumentationRegistry.getArguments().getString("noahWalletParityUI") == "disposable")

@@ -48,12 +48,12 @@ struct ExitLiveTests {
         if stage == "board" || stage == "board-missing-fee" {
             try await session.sync()
             let quote = try await session.quoteOnchain(.board, amount: 30000)
-            #expect(quote.confirmed >= quote.amount + quote.chainFee)
+            #expect(quote.confirmed >= quote.amount + quote.chainFee!)
             // Explicit opt-in stage authorizes only this reviewed 30,000-sat regtest board.
             let receipt = try await session.executeOnchain(quote)
             try JSONEncoder().encode([
-                "receipt": receipt, "gross": "\(quote.amount)", "arkFee": "\(quote.fee)",
-                "chainFee": "\(quote.chainFee)",
+                "receipt": receipt, "gross": "\(quote.amount)", "arkFee": "\(quote.fee!)",
+                "chainFee": "\(quote.chainFee!)",
             ]).write(to: URL.documentsDirectory.appending(path: "m6-live-board.json"), options: .atomic)
             if stage == "board-missing-fee" {
                 let file = WalletDataLocation(variant: .regtest).directory.appending(path: "noah-onchain-attempt.json")

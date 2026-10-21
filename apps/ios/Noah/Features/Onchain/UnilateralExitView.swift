@@ -115,7 +115,7 @@ struct UnilateralExitView: View {
         .task(id: destination + (model.overview?.walletID ?? "") + String(app.isWalletSuspended)) {
             await model.checkClaimDestination()
         }
-        .onChange(of: model.quote) { _, quote in if let quote { depositFee = quote.chainFee } }
+        .onChange(of: model.quote) { _, quote in depositFee = quote?.chainFee ?? 0 }
         .sheet(isPresented: $showDeposit) { ExitDepositSheet(broadcastFee: depositFee) }
     }
 }

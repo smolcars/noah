@@ -12,23 +12,25 @@ enum class OnchainAction(val title: String) {
 @Serializable
 data class OnchainQuote(
     val action: OnchainAction, val walletID: String, val ids: List<String> = emptyList(),
-    val destination: String? = null, val amount: Long = 0, val fee: Long = 0,
-    val chainFee: Long = 0, val confirmed: Long = 0, val feeRate: Long? = null,
+    val destination: String? = null, val amount: Long = 0, val fee: Long? = 0,
+    val chainFee: Long? = 0, val confirmed: Long = 0, val feeRate: Long? = null,
     val createdAt: Long = System.currentTimeMillis(), val automatic: Boolean = false,
-    val destinationIsMine: Boolean? = null,
+    val destinationIsMine: Boolean? = null, val unknownFeeConsent: String? = null,
     val boardAll: Boolean = false, val preparedBoard: BoardPrepared? = null, val id: String = UUID.randomUUID().toString(),
 ) {
     fun current(now: Long = System.currentTimeMillis()) = now >= createdAt && now - createdAt <
         (if (preparedBoard != null) BoardPrepared.lifetimeMillis else 30_000L)
-    val totalLeaving get() = amount + chainFee
+    val feesUnknown get() = fee == null && chainFee == null && action in setOf(OnchainAction.startExit, OnchainAction.claim)
+    val hasUnknownFeeConsent get() = feesUnknown && unknownFeeConsent == id
+    val totalLeaving get() = amount + checkNotNull(chainFee)
     val reserveLeft get() = confirmed - totalLeaving
     val externalDestinationWarning get() = if (action == OnchainAction.claim && destinationIsMine == false)
         "This address isn't in your Noah wallet. The claimed funds will be sent there." else null
-    val net get() = ExitRules.received(amount, fee)
-    val totalFee get() = fee + chainFee
-    val fundable get() = confirmed >= chainFee
-    fun matches(other: OnchainQuote) = copy(id = "", createdAt = 0, ids = ids.sorted()) ==
-        other.copy(id = "", createdAt = 0, ids = other.ids.sorted())
+    val net get() = ExitRules.received(amount, checkNotNull(fee))
+    val totalFee get() = checkNotNull(fee) + checkNotNull(chainFee)
+    val fundable get() = chainFee?.let { confirmed >= it } ?: false
+    fun matches(other: OnchainQuote) = copy(id = "", createdAt = 0, ids = ids.sorted(), unknownFeeConsent = null) ==
+        other.copy(id = "", createdAt = 0, ids = other.ids.sorted(), unknownFeeConsent = null)
 }
 
 @Serializable
@@ -61,7 +63,7 @@ data class OnchainReceipt(val message: String, val txid: String? = null, val onc
     val broadcastRetryPending: Boolean = false, val chainStatus: com.noahwallet.services.wallet.ChainStatus? = null,
     @kotlinx.serialization.Transient val statusError: String? = null) {
     @Serializable data class BoardAmounts(val arkReceives: Long, val totalLeaving: Long)
-    fun boardAmounts(quote: OnchainQuote) = BoardAmounts(quote.net, quote.amount + (onchainFee ?: quote.chainFee))
+    fun boardAmounts(quote: OnchainQuote) = BoardAmounts(quote.net, quote.amount + (onchainFee ?: checkNotNull(quote.chainFee)))
     companion object {
         const val broadcastFailedMessage = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
         fun boardingMessage(fee: Long?) = "Boarding submitted. Funds become spendable after the board completes." +
@@ -90,3 +92,6 @@ data class ExitModel(val id: String, val amount: Long, val state: String, val de
 }
 data class OnchainOverview(val walletID: String, val vtxos: List<VtxoModel>, val exits: List<ExitModel>,
     val confirmed: Long, val tip: Long, val pendingTotal: Long, val claimableHeight: Long?)
+
+/** Only estimator errors carry a validated, fee-less review. */
+class ExitEstimateUnavailable(val review: OnchainQuote) : Exception()

@@ -1153,38 +1153,38 @@
         }
       }
     },
-    "Additional confirmed onchain funds would be required to progress this exit.": {
-      "comment": "GT gt_d23045be77db23b1; arguments: none",
+    "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing.": {
+      "comment": "GT gt_35cdc9f3eb810897; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Additional confirmed onchain funds would be required to progress this exit."
+            "value": "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se necesitarían más fondos confirmados en cadena para avanzar en esta salida."
+            "value": "Se necesitan más fondos confirmados en la cadena. Vas a iniciar el seguimiento de todos modos; añade fondos a la billetera antes de avanzar."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この退出の出金処理を進めるには、確認済みのオンチェーン資金を追加する必要があります。"
+            "value": "承認済みのオンチェーン資金が追加で必要です。このまま追跡を開始しますが、出金処理を進める前にウォレットへ入金してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 출금을 진행하려면 확정된 온체인 자금이 추가로 필요합니다."
+            "value": "확정된 온체인 자금이 추가로 필요합니다. 우선 추적을 시작하지만, 출금을 진행하기 전에 지갑에 자금을 입금하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Det behövs fler bekräftade medel på blockkedjan för att gå vidare med det här nöduttaget."
+            "value": "Det behövs mer bekräftade medel på kedjan. Du startar bevakningen ändå; sätt in medel i plånboken innan du går vidare."
           }
         }
       }
@@ -6049,6 +6049,78 @@
         }
       }
     },
+    "Broadcast funding status is unknown; confirmed onchain funds are required.": {
+      "comment": "GT gt_4f8d20d681709634; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Broadcast funding status is unknown; confirmed onchain funds are required."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se desconoce si hay fondos suficientes para la difusión; se necesitan fondos confirmados en la cadena."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブロードキャスト用資金の状況は不明です。承認済みのオンチェーン資金が必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전파 비용 충당 여부를 알 수 없습니다. 확정된 온체인 자금이 필요합니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det är okänt om medlen räcker till sändningsavgifterna; bekräftade medel på kedjan krävs."
+          }
+        }
+      }
+    },
+    "Broadcast without estimate": {
+      "comment": "GT gt_a27a4742cc2eca3e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Broadcast without estimate"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Difundir sin estimación"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見積もりなしでブロードキャスト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예상 수수료 없이 전파"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sänd utan beräkning"
+          }
+        }
+      }
+    },
     "CAD": {
       "comment": "GT gt_b2c48022f83bafa7; arguments: none",
       "extractionState": "manual",
@@ -9321,6 +9393,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fortsätt utan e-post"
+          }
+        }
+      }
+    },
+    "Continue without estimate": {
+      "comment": "GT gt_065277fcb38b2217; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue without estimate"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar sin estimación"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見積もりなしで続行"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예상 수수료 없이 계속"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortsätt utan beräkning"
+          }
+        }
+      }
+    },
+    "Continue without estimate?": {
+      "comment": "GT gt_aced5f27d837a4e9; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue without estimate?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Continuar sin estimación?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見積もりなしで続行しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예상 수수료 없이 계속할까요?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortsätt utan beräkning?"
           }
         }
       }
@@ -17601,6 +17745,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avgift"
+          }
+        }
+      }
+    },
+    "Fee estimate unavailable": {
+      "comment": "GT gt_90f5c163f7becb8c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee estimate unavailable"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimación de comisiones no disponible"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手数料を見積もれません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예상 수수료를 확인할 수 없습니다"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avgiftsuppskattning saknas"
+          }
+        }
+      }
+    },
+    "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.": {
+      "comment": "GT gt_66e1aeba4a28b81e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay una estimación de comisiones disponible. Se desconocen las comisiones y el importe que recibirás. Continúa sin estimación solo si aceptas esta incertidumbre."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手数料を見積もれないため、手数料と受取額は不明です。この点を了承する場合のみ、見積もりなしで続行してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예상 수수료를 확인할 수 없어 수수료와 수령액을 알 수 없습니다. 이러한 불확실성을 감수할 수 있는 경우에만 계속하세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avgifterna kan inte beräknas. Avgifterna och beloppet du får är okända. Fortsätt utan beräkning endast om du accepterar denna osäkerhet."
           }
         }
       }
@@ -38877,6 +39093,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Starta nöduttag"
+          }
+        }
+      }
+    },
+    "Start Selected Exit": {
+      "comment": "GT gt_f12e78a057cfb199; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Selected Exit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar salida seleccionada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したVTXOの出金を開始"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 VTXO 출금 시작"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starta nöduttag för valda VTXO:er"
           }
         }
       }

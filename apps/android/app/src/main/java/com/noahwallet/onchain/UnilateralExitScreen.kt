@@ -37,7 +37,7 @@ fun UnilateralExitScreen(app: AppModel) {
     val exits = model.overview?.exits.orEmpty()
     val eligible = model.overview?.vtxos.orEmpty().filter { it.eligible }
     val pending = exits.filter { it.state !in ExitTimeline.terminal }
-    LaunchedEffect(model.quote) { model.quote?.let { depositFee = it.chainFee } }
+    LaunchedEffect(model.quote) { depositFee = model.quote?.chainFee ?: 0 }
     LaunchedEffect(model.overview?.walletID) {
         if (model.overview != null && destination.isEmpty()) model.useWalletClaimAddress()
     }

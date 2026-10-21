@@ -188,15 +188,23 @@ struct ExitClaimExecutionTests {
     static let externalAddress = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"
 
     actor Wallet {
+        var estimateCalls = 0
+        var estimatorFails = false
         var mine = true
         var ownershipError = false
         var ownershipChecks: [String] = []
         var drainDestinations: [String] = []
         var broadcasts: [String] = []
+        func estimate() throws -> EmergencyExitFeeEstimate {
+            estimateCalls += 1
+            if estimatorFails { throw OnchainFailure.unavailable }
+            return .init(exitBroadcastFeeSats: 7630, claimFeeSats: 1295, totalFeeSats: 8925, feeRateSatPerVb: 10, txsToBroadcast: 2)
+        }
         func change(_ change: String) {
             switch change {
             case "own-external", "external-own": mine.toggle()
             case "throws": ownershipError = true
+            case "estimator": estimatorFails = true
             default: break
             }
         }
@@ -220,9 +228,71 @@ struct ExitClaimExecutionTests {
                     state: .claimable(tipHeight: 100, claimableSince: .init(height: 100, hash: "hash"), lastScannedBlock: nil),
                     isClaimable: true)]
             }, isMine: { try await self.isMine($0) }, estimate: { _, _ in
-                .init(exitBroadcastFeeSats: 7630, claimFeeSats: 1295, totalFeeSats: 8925, feeRateSatPerVb: 10, txsToBroadcast: 2)
+                try await self.estimate()
             }, drain: { await self.drain($0, $1) }, transaction: { $0 }, broadcast: { await self.broadcast($0) })
         }
+    }
+
+    @Test func unknownFeeClaimRequiresConsentExpiresAndNeverRetriesEstimation() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        let wallet = Wallet()
+        await wallet.change("estimator")
+        let unknown: OnchainQuote
+        do {
+            _ = try await WalletSession.claimQuote(ids: ["a"], destination: Self.externalAddress, access: wallet.access())
+            Issue.record("Estimator must fail"); return
+        } catch let failure as ExitEstimateUnavailable { unknown = failure.review }
+        #expect(unknown.fee == nil && unknown.chainFee == nil && unknown.feeRate == nil)
+        await #expect(throws: OnchainFailure.self) { try await WalletSession.executeClaim(unknown, journal: journal, access: wallet.access()) }
+        var reviewed = unknown
+        reviewed.unknownFeeConsent = reviewed.id
+        for change in ["expired", "ids", "wallet", "ownership"] {
+            var invalid = reviewed
+            if change == "expired" { invalid.createdAt = .distantPast }
+            if change == "ids" { invalid.ids = ["missing"] }
+            if change == "wallet" { invalid.walletID = "other" }
+            if change == "ownership" { invalid.destinationIsMine = false }
+            await #expect(throws: OnchainFailure.self) { try await WalletSession.executeClaim(invalid, journal: journal, access: wallet.access()) }
+        }
+        #expect(try await journal.loadAll().isEmpty)
+        _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access())
+        #expect(await wallet.estimateCalls == 1)
+        #expect(await wallet.broadcasts == ["claim-psbt"])
+        let saved = try #require(try await OnchainOperationJournal(file: file).load())
+        #expect(saved.quote.hasUnknownFeeConsent && saved.quote.ids == ["a"])
+        #expect(saved.quote.fee == nil && saved.quote.chainFee == nil)
+    }
+
+    @Test func otherClaimErrorsDoNotCarryFallback() async throws {
+        let wallet = Wallet()
+        await wallet.change("estimator")
+        await wallet.change("throws")
+        do {
+            _ = try await WalletSession.claimQuote(ids: ["a"], destination: Self.ownAddress, access: wallet.access())
+            Issue.record("Ownership must fail")
+        } catch { #expect(!(error is ExitEstimateUnavailable)) }
+        #expect(await wallet.estimateCalls == 0)
+    }
+
+    @Test func startEstimatorFailureHasNoFeesAndSuccessKeepsNormalEstimate() async throws {
+        var validated = OnchainJournalTests.quote
+        validated.action = .startExit; validated.ids = ["a"]
+        do {
+            _ = try await WalletSession.exitStartEstimate(validated) { throw OnchainFailure.unavailable }
+            Issue.record("Estimator must fail")
+        } catch let failure as ExitEstimateUnavailable {
+            #expect(failure.review.feesUnknown)
+            #expect(failure.review.fee == nil && failure.review.chainFee == nil && failure.review.feeRate == nil)
+            #expect(failure.review.ids == ["a"] && !failure.review.hasUnknownFeeConsent)
+        }
+        let normal = try await WalletSession.exitStartEstimate(validated) { try await Wallet().estimate() }
+        #expect(normal.fee == 1295 && normal.chainFee == 7630 && !normal.feesUnknown)
+        let skipped = try await WalletSession.exitStartEstimate(validated, estimate: false) {
+            Issue.record("Explicit unknown-fee confirmation must not retry"); throw OnchainFailure.unavailable
+        }
+        #expect(skipped.feesUnknown)
     }
 
     @Test func reviewedDestinationIsDrainedAndJournaledForOwnAndExternalClaims() async throws {

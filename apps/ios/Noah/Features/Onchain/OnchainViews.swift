@@ -86,6 +86,13 @@ struct OnchainStatusSection: View {
                 Text(LocalizedStringKey(OnchainOperationJournal.OverrideAudit.warningText))
             }
         }
+        if model.estimateFallback != nil {
+            Section {
+                Text("Fee estimate unavailable")
+                Button("Continue without estimate") { Task { await model.continueWithoutEstimate() } }
+                    .disabled(model.busy)
+            }
+        }
         if let error = model.error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
         if let message = model.message { Section { Text(LocalizedStringKey(message)) } }
     }
@@ -105,22 +112,22 @@ struct OnchainReviewSheet: View {
                         title: quote.action == .board ? "Amount boarded" : "Amount selected",
                         sats: quote.amount)
                     if !quote.ids.isEmpty { LabeledContent("VTXOs selected", value: "\(quote.ids.count)") }
-                    if quote.action != .cancel {
+                    if quote.action != .cancel, let fee = quote.fee, let chainFee = quote.chainFee {
                         OnchainAmountRow(
                             title: quote.action == .board
                                 ? "Ark fee"
-                                : quote.action == .refresh ? "Refresh fee" : "Estimated claim fee", sats: quote.fee)
+                                : quote.action == .refresh ? "Refresh fee" : "Estimated claim fee", sats: fee)
                         if quote.action == .board || quote.action == .startExit || quote.action == .progress {
                             OnchainAmountRow(
                                 title: quote.action == .board
-                                    ? "Onchain fee" : "Estimated broadcast fees", sats: quote.chainFee)
+                                    ? "Onchain fee" : "Estimated broadcast fees", sats: chainFee)
                         }
                         OnchainAmountRow(
                             title: quote.action == .board ? "Ark receives" : "Amount after fee",
                             sats: quote.net)
                     }
                     if let prepared = quote.prepared {
-                        OnchainAmountRow(title: "Total leaving onchain wallet", sats: quote.amount + quote.chainFee)
+                        OnchainAmountRow(title: "Total leaving onchain wallet", sats: quote.amount + quote.chainFee!)
                         LabeledContent("Signed transaction size", value: "\(prepared.vsize) vB")
                         LabeledContent("Funding inputs", value: "\(prepared.inputCount)")
                     }
@@ -133,21 +140,28 @@ struct OnchainReviewSheet: View {
                     if quote.automatic {
                         OnchainAmountRow(
                             title: "Onchain reserve left",
-                            sats: quote.confirmed - quote.amount - quote.chainFee)
+                            sats: quote.confirmed - quote.amount - quote.chainFee!)
                     }
                 }
                 Section {
+                    if quote.feesUnknown {
+                        Text("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.")
+                            .foregroundStyle(NoahColor.destructive)
+                        if quote.action == .startExit {
+                            Text("Broadcast funding status is unknown; confirmed onchain funds are required.")
+                        }
+                    }
                     Text(LocalizedStringKey(explanation))
                     if quote.action == .startExit || quote.action == .progress || quote.action == .claim {
-                        if let warning = ExitRules.warning(
-                            amount: quote.amount, claimFee: quote.fee, totalFee: quote.totalFee,
+                        if let fee = quote.fee, quote.chainFee != nil, let warning = ExitRules.warning(
+                            amount: quote.amount, claimFee: fee, totalFee: quote.totalFee,
                             claimOnly: quote.action == .claim)
                         {
                             Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
                         }
-                        if !quote.fundable {
+                        if !quote.feesUnknown && !quote.fundable {
                             Text(
-                                "Additional confirmed onchain funds would be required to progress this exit."
+                                "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."
                             )
                         }
                     }
@@ -157,12 +171,12 @@ struct OnchainReviewSheet: View {
                     ) {
                         confirm()
                     } label: {
-                        Text(LocalizedStringKey(quote.action.title))
+                        Text(LocalizedStringKey(quote.feesUnknown ? (quote.action == .claim ? "Broadcast without estimate" : "Start Selected Exit") : quote.action.title))
                     }
                     .accessibilityIdentifier("onchain-confirm")
                 }
             }
-            .settingsStyle(LocalizedStringKey(quote.action.title))
+            .settingsStyle(LocalizedStringKey(quote.feesUnknown ? "Continue without estimate?" : quote.action.title))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(LocalizedStringKey(cancelTitle)) {

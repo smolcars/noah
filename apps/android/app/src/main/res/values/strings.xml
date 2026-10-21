@@ -33,7 +33,7 @@
   <string name="gt_00df1293cf6d241b">"Add an amount to receive over Lightning"</string>
   <string name="gt_bfe6b5725f300b5b">"Add email"</string>
   <string name="gt_73886d4afd4c8e01">"Adding a note will send this payment over Lightning."</string>
-  <string name="gt_d23045be77db23b1">"Additional confirmed onchain funds would be required to progress this exit."</string>
+  <string name="gt_35cdc9f3eb810897">"Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."</string>
   <string name="gt_56ef8f20955f2564">"Address"</string>
   <string name="gt_a2617581771209f9">"Address copied"</string>
   <string name="gt_abab57a3c4edabb6">"Address network mismatch for %1$s parameter"</string>
@@ -169,6 +169,8 @@
   <string name="gt_8fed00ef8e09c48a">"Boarding was not submitted. Review again when the wallet is ready."</string>
   <string name="gt_479ad21ac9096236">"Bottom"</string>
   <string name="gt_df5e7d755dafe5a8">"Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary."</string>
+  <string name="gt_4f8d20d681709634">"Broadcast funding status is unknown; confirmed onchain funds are required."</string>
+  <string name="gt_a27a4742cc2eca3e">"Broadcast without estimate"</string>
   <string name="gt_b2c48022f83bafa7">"CAD"</string>
   <string name="gt_c46701fbec1318d7">"CC BY 4.0"</string>
   <string name="gt_b1c8e861eaedb266">"CHF"</string>
@@ -260,6 +262,8 @@
   <string name="gt_7a766440fe6254ac">"Contactless"</string>
   <string name="gt_31fbef162594de01">"Continue"</string>
   <string name="gt_3b8c015d66490d97">"Continue without email"</string>
+  <string name="gt_065277fcb38b2217">"Continue without estimate"</string>
+  <string name="gt_aced5f27d837a4e9">"Continue without estimate?"</string>
   <string name="gt_8d525e5f158b9afe">"Copied"</string>
   <string name="gt_2041e06ced80c7b9">"Copied %1$s"</string>
   <string name="gt_e21f935f11d7e966">"Copy"</string>
@@ -490,6 +494,8 @@
   <string name="gt_5c31f5e6276f5882">"Failed to update Lightning address. Please try again."</string>
   <string name="gt_c533cafab69e4033">"Featured"</string>
   <string name="gt_f842c3e1858df8c8">"Fee"</string>
+  <string name="gt_90f5c163f7becb8c">"Fee estimate unavailable"</string>
+  <string name="gt_66e1aeba4a28b81e">"Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."</string>
   <string name="gt_26290dab5e50b113">"Fee for the existing payment: %1$s sats"</string>
   <string name="gt_6c6cc6eb80efa410">"Fee rate"</string>
   <string name="gt_8b2aa3394e309294">"Fee: %1$s sats"</string>
@@ -1081,6 +1087,7 @@
   <string name="gt_679652fd13c58c93">"Spent"</string>
   <string name="gt_e4bb9f1ece9af926">"Start"</string>
   <string name="gt_aa2acac2758fc7b9">"Start Emergency Exit"</string>
+  <string name="gt_f12e78a057cfb199">"Start Selected Exit"</string>
   <string name="gt_ecd0abf6250c1885">"Start a new payment"</string>
   <string name="gt_d65d3a6d1c27a19c">"Start a new payment after checking history"</string>
   <string name="gt_8a565d98b83e392b">"Start a new payment anyway"</string>

@@ -58,7 +58,7 @@ internal class OnchainOperations(
         }
     }
     suspend fun quote(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,
-        destination: String? = null, automatic: Boolean = false): OnchainQuote {
+        destination: String? = null, automatic: Boolean = false, estimate: Boolean = true): OnchainQuote {
         if (!ready()) fail(OnchainFailure.unavailable)
         val balance = wallet.confirmed()
         var quote = OnchainQuote(action, wallet.walletID, ids.sorted(), destination, amount, confirmed = balance, automatic = automatic, createdAt = now())
@@ -89,8 +89,7 @@ internal class OnchainOperations(
                 if (action == OnchainAction.refresh) quote = quote.copy(fee = wallet.refreshFee(ids).feeSats.toLong())
                 else {
                     if (selected.any { it.amountSats.toLong() < ExitRules.dust }) fail(OnchainFailure.invalid)
-                    val fee = wallet.exitFee(ids, null)
-                    quote = quote.copy(fee = fee.claimFeeSats.toLong(), chainFee = fee.exitBroadcastFeeSats.toLong(), feeRate = fee.feeRateSatPerVb.toLong())
+                    quote = exitEstimate(quote, estimate)
                 }
             }
             OnchainAction.progress, OnchainAction.claim -> {
@@ -99,10 +98,8 @@ internal class OnchainOperations(
                 if (ids.isEmpty() || selected.size != ids.size || (action == OnchainAction.progress && eligible.map { it.vtxoId }.toSet() != ids.toSet())) fail(OnchainFailure.changed)
                 if (action == OnchainAction.claim && destination.isNullOrBlank()) fail(OnchainFailure.invalid)
                 if (action == OnchainAction.claim) quote = quote.copy(destinationIsMine = wallet.destinationIsMine(checkNotNull(destination)))
-                val fee = wallet.exitFee(ids, destination)
-                quote = quote.copy(amount = selected.sumOf { it.amountSats.toLong() }, fee = fee.claimFeeSats.toLong(),
-                    chainFee = if (action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),
-                    feeRate = if (action == OnchainAction.claim) null else fee.feeRateSatPerVb.toLong())
+                quote = quote.copy(amount = selected.sumOf { it.amountSats.toLong() })
+                quote = exitEstimate(quote, estimate)
             }
             OnchainAction.cancel -> {
                 if (ids.size != 1) fail(OnchainFailure.invalid)
@@ -115,6 +112,17 @@ internal class OnchainOperations(
         }
         return quote
     }
+    private suspend fun exitEstimate(validated: OnchainQuote, estimate: Boolean): OnchainQuote {
+        val unknown = validated.copy(fee = null, chainFee = null, feeRate = null)
+        val fallbackAllowed = validated.action in setOf(OnchainAction.startExit, OnchainAction.claim)
+        if (!estimate && fallbackAllowed) return unknown
+        val fee = try { wallet.exitFee(validated.ids, validated.destination) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { if (fallbackAllowed) throw ExitEstimateUnavailable(unknown) else throw failure }
+        return validated.copy(fee = fee.claimFeeSats.toLong(),
+            chainFee = if (validated.action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),
+            feeRate = if (validated.action == OnchainAction.claim) null else fee.feeRateSatPerVb.toLong())
+    }
     suspend fun execute(reviewed: OnchainQuote): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
@@ -123,7 +131,9 @@ internal class OnchainOperations(
             if (reviewed.automatic && (wallet.confirmed() < reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve)) fail(OnchainFailure.changed)
             wallet.claimBoard(reviewed)
         } else {
-            val fresh = quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic)
+            if (reviewed.feesUnknown && !reviewed.hasUnknownFeeConsent) fail(OnchainFailure.changed)
+            val fresh = quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic,
+                estimate = !reviewed.hasUnknownFeeConsent)
             if (!ready() || !reviewed.matches(fresh) || !reviewed.current(now())) fail(OnchainFailure.changed)
         }
         try { return journal.perform(reviewed) { recordTransaction ->
@@ -155,7 +165,7 @@ internal class OnchainOperations(
                 }
                 OnchainAction.claim -> {
                     val claim = wallet.drain(reviewed.ids, checkNotNull(reviewed.destination))
-                    if (claim.feeSats.toLong() != reviewed.fee) fail(OnchainFailure.claimFeeChanged)
+                    if (!reviewed.hasUnknownFeeConsent && claim.feeSats.toLong() != reviewed.fee) fail(OnchainFailure.claimFeeChanged)
                     // Every error after entering broadcast remains uncertain, including typed BDK errors.
                     val txid = try { wallet.broadcastClaim(claim.psbtBase64) } catch (_: Exception) { fail(OnchainFailure.uncertain) }
                     recordTransaction(txid)

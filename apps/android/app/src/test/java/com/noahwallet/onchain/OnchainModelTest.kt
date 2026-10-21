@@ -6,6 +6,30 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OnchainModelTest {
+    @Test fun fallbackNeedsSeparateReviewAndIsInvalidatedBySelectionOrDestinationChanges() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) {
+            var estimates = 0; var submits = 0
+            val deps = Fake().dependencies()
+            val model = OnchainModel(OnchainModel.Dependencies(deps.ready, deps.overview,
+                { a, ids, _, destination -> estimates++; throw ExitEstimateUnavailable(OnchainQuote(a, "wallet", ids, destination, 30_000, fee = null, chainFee = null)) },
+                { assertTrue(it.hasUnknownFeeConsent); submits++; "submitted" }, deps.attempts, deps.acknowledge, deps.check, deps.override, deps.detail, deps.refreshReceipts))
+            model.review(action, listOf("a"), destination = "address")
+            assertNotNull(model.estimateFallback); assertNull(model.quote)
+            model.confirm(); model.load(); assertEquals(0, submits); assertEquals(1, estimates)
+            model.editClaimDestination("new destination"); model.continueWithoutEstimate(); assertNull(model.quote)
+            model.review(action, listOf("b"), destination = "new destination")
+            model.continueWithoutEstimate()
+            assertEquals(listOf("b"), model.quote!!.ids)
+            model.confirm(); model.confirm(); assertEquals(1, submits); assertEquals(2, estimates)
+        }
+    }
+    @Test fun failedPreparationOffersNoFallbackAndSuccessfulQuoteStaysNormal() = runBlocking {
+        val fake = Fake(); val model = OnchainModel(fake.dependencies())
+        fake.failPreparation = true; model.review(OnchainAction.startExit, listOf("a"))
+        assertNull(model.estimateFallback); model.continueWithoutEstimate(); assertNull(model.quote)
+        fake.failPreparation = false; model.review(OnchainAction.startExit, listOf("a"))
+        assertNotNull(model.quote); assertNull(model.estimateFallback); assertFalse(model.quote!!.hasUnknownFeeConsent)
+    }
     private class Fake {
         var ready = true
         var calls = 0

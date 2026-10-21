@@ -18,6 +18,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
     )
     var overview by mutableStateOf<OnchainOverview?>(null); private set
     var exit by mutableStateOf<ExitModel?>(null); private set
+    var estimateFallback by mutableStateOf<OnchainQuote?>(null); private set
     var quote by mutableStateOf<OnchainQuote?>(null); private set
     var busy by mutableStateOf(false); private set
     var loading by mutableStateOf(false); private set
@@ -55,7 +56,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
     fun invalidate() {
         generation++
         quote?.let { held -> disposalScope.launch { dependencies.discard(held) } }
-        quote = null
+        quote = null; estimateFallback = null
     }
     fun unavailable() { invalidate(); overview = null; exit = null }
     private fun visible(saved: List<OnchainOperationJournal.Attempt>) = saved.filter { it.overrideAudit?.acknowledgedAt == null }
@@ -94,18 +95,32 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             if (caller.isActive && token == generation && dependencies.ready()) quote = fresh
             else withContext(NonCancellable) { dependencies.discard(fresh) }
         } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: ExitEstimateUnavailable) {
+            if (token == generation && dependencies.ready()) estimateFallback = failure.review
+        }
         catch (failure: Exception) { if (token == generation) error = (failure as? OnchainException)?.message ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready." }
         finally { busy = false }
+    }
+    fun continueWithoutEstimate() {
+        if (busy) return
+        val fallback = estimateFallback ?: return
+        estimateFallback = null
+        if (!dependencies.ready() || !fallback.current()) { invalidate(); return }
+        quote = fallback.copy(unknownFeeConsent = fallback.id)
     }
     /** The view must present the quote and obtain explicit consent before calling this. */
     suspend fun confirm() {
         if (busy) return
         val reviewed = quote ?: return
+        val token = generation
         quote = null; busy = true; error = null
         try {
             if (!dependencies.ready() || !reviewed.current()) fail(OnchainFailure.changed)
             message = dependencies.execute(reviewed)
         } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: ExitEstimateUnavailable) {
+            if (token == generation && dependencies.ready()) estimateFallback = failure.review
+        }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text }
         finally { withContext(NonCancellable) { dependencies.discard(reviewed) }; busy = false }
         val submissionError = error

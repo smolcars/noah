@@ -142,7 +142,7 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
         attempt.receipt?.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
         if (attempt.receipt != null && attempt.quote.action == OnchainAction.board) {
             val amounts = attempt.receipt.boardAmounts(attempt.quote)
-            AmountRow(app, "Ark fee", attempt.quote.fee)
+            AmountRow(app, "Ark fee", checkNotNull(attempt.quote.fee))
             AmountRow(app, "Ark receives", amounts.arkReceives)
             AmountRow(app, "Total leaving onchain wallet", amounts.totalLeaving)
         }
@@ -161,6 +161,10 @@ private fun OnchainStatus(app: AppModel, model: OnchainModel) {
         title = { Text(tr(OnchainOperationJournal.overrideTitle)) }, text = { Text(tr(OnchainOperationJournal.overrideWarning)) },
         dismissButton = { TextButton({ overrideID = null }) { Text(tr("Keep attempt")) } },
         confirmButton = { TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(tr(OnchainOperationJournal.overrideConfirmation)) } }) }
+    if (model.estimateFallback != null) {
+        Text(tr("Fee estimate unavailable"))
+        TextButton(model::continueWithoutEstimate, enabled = !model.busy) { Text(tr("Continue without estimate")) }
+    }
     model.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
     model.message?.let { Text(tr(it)) }
 }
@@ -173,10 +177,10 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
     LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote.current() } }
     WalletModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(tr(quote.action.title), style = MaterialTheme.typography.headlineSmall)
+            Text(tr(if (quote.feesUnknown) "Continue without estimate?" else quote.action.title), style = MaterialTheme.typography.headlineSmall)
             AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)
             if (quote.ids.isNotEmpty()) Text(tr("VTXOs selected: ${quote.ids.size}"))
-            if (quote.action != OnchainAction.cancel) {
+            if (quote.action != OnchainAction.cancel && quote.fee != null && quote.chainFee != null) {
                 AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
                 if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
                     AmountRow(app, if (quote.action == OnchainAction.board) "Onchain fee" else "Estimated broadcast fees", quote.chainFee)
@@ -187,16 +191,20 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
                 DetailRow("Signed transaction size", "${prepared.vsize} vB")
                 DetailRow("Inputs", "${prepared.inputs.size}")
             }
-            if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - quote.chainFee)
+            if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - checkNotNull(quote.chainFee))
             quote.destination?.let { DetailRow("Destination", it) }
             quote.externalDestinationWarning?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+            if (quote.feesUnknown) {
+                Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), color = MaterialTheme.colorScheme.error)
+                if (quote.action == OnchainAction.startExit) Text(tr("Broadcast funding status is unknown; confirmed onchain funds are required."))
+            }
             Text(tr(reviewExplanation(quote)))
             if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
-                ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-                if (!quote.fundable) Text(tr("Additional confirmed onchain funds would be required to progress this exit."))
+                if (quote.fee != null && quote.chainFee != null) ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+                if (!quote.feesUnknown && !quote.fundable) Text(tr("Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."))
             }
             if (!current) Text(tr(OnchainFailure.changed.text), color = MaterialTheme.colorScheme.error)
-            Button(confirm, enabled = current && !app.isWalletSuspended) { Text(tr(quote.action.title)) }
+            Button(confirm, enabled = current && !app.isWalletSuspended) { Text(tr(if (quote.feesUnknown) { if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit" } else quote.action.title)) }
             TextButton(cancel) { Text(tr(cancelTitle)) }
         }
     }

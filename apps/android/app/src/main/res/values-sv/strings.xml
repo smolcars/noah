@@ -33,7 +33,7 @@
   <string name="gt_00df1293cf6d241b">"Ange ett belopp att ta emot via Lightning"</string>
   <string name="gt_bfe6b5725f300b5b">"Lägg till e-postadress"</string>
   <string name="gt_73886d4afd4c8e01">"Om du lägger till en anteckning skickas betalningen via Lightning."</string>
-  <string name="gt_d23045be77db23b1">"Det behövs fler bekräftade medel på blockkedjan för att gå vidare med det här nöduttaget."</string>
+  <string name="gt_35cdc9f3eb810897">"Det behövs mer bekräftade medel på kedjan. Du startar bevakningen ändå; sätt in medel i plånboken innan du går vidare."</string>
   <string name="gt_56ef8f20955f2564">"Adress"</string>
   <string name="gt_a2617581771209f9">"Adressen har kopierats"</string>
   <string name="gt_abab57a3c4edabb6">"Adressen för parametern %1$s tillhör fel nätverk"</string>
@@ -169,6 +169,8 @@
   <string name="gt_8fed00ef8e09c48a">"Insättningen skickades inte. Granska igen när plånboken är redo."</string>
   <string name="gt_479ad21ac9096236">"Längst ned"</string>
   <string name="gt_df5e7d755dafe5a8">"Sändningsavgifter betalas separat med bekräftade medel på blockkedjan. Sätt in bitcoin och vänta på bekräftelse innan du går vidare med ett nöduttag. Beloppet som krävs kan variera."</string>
+  <string name="gt_4f8d20d681709634">"Det är okänt om medlen räcker till sändningsavgifterna; bekräftade medel på kedjan krävs."</string>
+  <string name="gt_a27a4742cc2eca3e">"Sänd utan beräkning"</string>
   <string name="gt_b2c48022f83bafa7">"CAD"</string>
   <string name="gt_c46701fbec1318d7">"CC BY 4.0"</string>
   <string name="gt_b1c8e861eaedb266">"CHF"</string>
@@ -260,6 +262,8 @@
   <string name="gt_7a766440fe6254ac">"Kontaktlöst"</string>
   <string name="gt_31fbef162594de01">"Fortsätt"</string>
   <string name="gt_3b8c015d66490d97">"Fortsätt utan e-post"</string>
+  <string name="gt_065277fcb38b2217">"Fortsätt utan beräkning"</string>
+  <string name="gt_aced5f27d837a4e9">"Fortsätt utan beräkning?"</string>
   <string name="gt_8d525e5f158b9afe">"Kopierat"</string>
   <string name="gt_2041e06ced80c7b9">"Kopierade %1$s"</string>
   <string name="gt_e21f935f11d7e966">"Kopiera"</string>
@@ -490,6 +494,8 @@
   <string name="gt_5c31f5e6276f5882">"Kunde inte uppdatera Lightning-adressen. Försök igen."</string>
   <string name="gt_c533cafab69e4033">"Utvalt"</string>
   <string name="gt_f842c3e1858df8c8">"Avgift"</string>
+  <string name="gt_90f5c163f7becb8c">"Avgiftsuppskattning saknas"</string>
+  <string name="gt_66e1aeba4a28b81e">"Avgifterna kan inte beräknas. Avgifterna och beloppet du får är okända. Fortsätt utan beräkning endast om du accepterar denna osäkerhet."</string>
   <string name="gt_26290dab5e50b113">"Avgift för den befintliga betalningen: %1$s sats"</string>
   <string name="gt_6c6cc6eb80efa410">"Avgiftssats"</string>
   <string name="gt_8b2aa3394e309294">"Avgift: %1$s sats"</string>
@@ -1081,6 +1087,7 @@
   <string name="gt_679652fd13c58c93">"Förbrukad"</string>
   <string name="gt_e4bb9f1ece9af926">"Starta"</string>
   <string name="gt_aa2acac2758fc7b9">"Starta nöduttag"</string>
+  <string name="gt_f12e78a057cfb199">"Starta nöduttag för valda VTXO:er"</string>
   <string name="gt_ecd0abf6250c1885">"Starta en ny betalning"</string>
   <string name="gt_d65d3a6d1c27a19c">"Starta en ny betalning efter att ha kontrollerat historiken"</string>
   <string name="gt_8a565d98b83e392b">"Starta en ny betalning ändå"</string>

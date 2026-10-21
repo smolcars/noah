@@ -33,7 +33,7 @@
   <string name="gt_00df1293cf6d241b">"Lightningで受け取る金額を入力"</string>
   <string name="gt_bfe6b5725f300b5b">"メールアドレスを追加"</string>
   <string name="gt_73886d4afd4c8e01">"メモを追加すると、この支払いはLightning経由で行われます。"</string>
-  <string name="gt_d23045be77db23b1">"この退出の出金処理を進めるには、確認済みのオンチェーン資金を追加する必要があります。"</string>
+  <string name="gt_35cdc9f3eb810897">"承認済みのオンチェーン資金が追加で必要です。このまま追跡を開始しますが、出金処理を進める前にウォレットへ入金してください。"</string>
   <string name="gt_56ef8f20955f2564">"アドレス"</string>
   <string name="gt_a2617581771209f9">"アドレスをコピーしました"</string>
   <string name="gt_abab57a3c4edabb6">"%1$s パラメーターで指定されたアドレスのネットワークが一致しません"</string>
@@ -169,6 +169,8 @@
   <string name="gt_8fed00ef8e09c48a">"Arkへの入金は送信されませんでした。ウォレットの準備ができたら再度確認してください。"</string>
   <string name="gt_479ad21ac9096236">"下部"</string>
   <string name="gt_df5e7d755dafe5a8">"ブロードキャスト手数料は、確認済みのオンチェーン資金から別途支払われます。退出の出金処理を進める前に、Bitcoinを入金して、確認済みになるまでお待ちください。必要額は変動する場合があります。"</string>
+  <string name="gt_4f8d20d681709634">"ブロードキャスト用資金の状況は不明です。承認済みのオンチェーン資金が必要です。"</string>
+  <string name="gt_a27a4742cc2eca3e">"見積もりなしでブロードキャスト"</string>
   <string name="gt_b2c48022f83bafa7">"CAD"</string>
   <string name="gt_c46701fbec1318d7">"CC BY 4.0"</string>
   <string name="gt_b1c8e861eaedb266">"CHF"</string>
@@ -260,6 +262,8 @@
   <string name="gt_7a766440fe6254ac">"非接触"</string>
   <string name="gt_31fbef162594de01">"続ける"</string>
   <string name="gt_3b8c015d66490d97">"メールアドレスを登録せずに続ける"</string>
+  <string name="gt_065277fcb38b2217">"見積もりなしで続行"</string>
+  <string name="gt_aced5f27d837a4e9">"見積もりなしで続行しますか？"</string>
   <string name="gt_8d525e5f158b9afe">"コピーしました"</string>
   <string name="gt_2041e06ced80c7b9">"%1$sをコピーしました"</string>
   <string name="gt_e21f935f11d7e966">"コピー"</string>
@@ -490,6 +494,8 @@
   <string name="gt_5c31f5e6276f5882">"ライトニングアドレスを更新できませんでした。もう一度お試しください。"</string>
   <string name="gt_c533cafab69e4033">"おすすめ"</string>
   <string name="gt_f842c3e1858df8c8">"手数料"</string>
+  <string name="gt_90f5c163f7becb8c">"手数料を見積もれません"</string>
+  <string name="gt_66e1aeba4a28b81e">"手数料を見積もれないため、手数料と受取額は不明です。この点を了承する場合のみ、見積もりなしで続行してください。"</string>
   <string name="gt_26290dab5e50b113">"既存の支払いの手数料：%1$s sats"</string>
   <string name="gt_6c6cc6eb80efa410">"手数料率"</string>
   <string name="gt_8b2aa3394e309294">"手数料：%1$s sats"</string>
@@ -1081,6 +1087,7 @@
   <string name="gt_679652fd13c58c93">"使用済み"</string>
   <string name="gt_e4bb9f1ece9af926">"開始"</string>
   <string name="gt_aa2acac2758fc7b9">"緊急出金を開始"</string>
+  <string name="gt_f12e78a057cfb199">"選択したVTXOの出金を開始"</string>
   <string name="gt_ecd0abf6250c1885">"新しい支払いを開始"</string>
   <string name="gt_d65d3a6d1c27a19c">"履歴を確認してから新しい支払いを開始"</string>
   <string name="gt_8a565d98b83e392b">"それでも新しい支払いを開始"</string>

@@ -81,14 +81,15 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var destination: String?
     var destinationIsMine: Bool?
     var amount: UInt64
-    var fee: UInt64
-    var chainFee: UInt64
+    var fee: UInt64?
+    var chainFee: UInt64?
     var confirmed: UInt64
     var feeRate: UInt64?
     var createdAt = Date()
     var automatic = false
     // Optional so journals written before MAX used boardAll remain readable.
     var boardAll: Bool?
+    var unknownFeeConsent: UUID?
     var prepared: SendPreparedTransaction?
     var isCurrent: Bool {
         prepared.map { $0.isCurrent && Date().timeIntervalSince(createdAt) < 120 }
@@ -98,9 +99,11 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
         action == .claim && destinationIsMine == false
             ? "This address isn't in your Noah wallet. The claimed funds will be sent there." : nil
     }
-    var net: UInt64 { ExitRules.received(amount: amount, claimFee: fee) }
-    var totalFee: UInt64 { fee + chainFee }
-    var fundable: Bool { confirmed >= chainFee }
+    var feesUnknown: Bool { fee == nil && chainFee == nil && (action == .startExit || action == .claim) }
+    var hasUnknownFeeConsent: Bool { feesUnknown && unknownFeeConsent == id }
+    var net: UInt64 { ExitRules.received(amount: amount, claimFee: fee!) }
+    var totalFee: UInt64 { fee! + chainFee! }
+    var fundable: Bool { chainFee.map { confirmed >= $0 } ?? false }
     var inputs: ExitReviewInputs {
         .init(
             walletId: walletID, vtxoIds: ids, amountSat: amount, scope: action.rawValue,
@@ -161,7 +164,7 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
         let totalLeaving: UInt64
     }
     func boardAmounts(quote: OnchainQuote) -> BoardAmounts {
-        .init(arkReceives: quote.net, totalLeaving: quote.amount + (onchainFee ?? quote.chainFee))
+        .init(arkReceives: quote.net, totalLeaving: quote.amount + (onchainFee ?? quote.chainFee!))
     }
     static let broadcastFailedMessage = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
     static func boardingMessage(fee: UInt64?) -> String {
@@ -182,4 +185,9 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
             chainStatus = try values.decodeIfPresent(ChainTransactionStatus.self, forKey: .chainStatus)
         }
     }
+}
+
+/// Created only after all input checks succeed and the estimator itself fails.
+struct ExitEstimateUnavailable: Error {
+    var review: OnchainQuote
 }

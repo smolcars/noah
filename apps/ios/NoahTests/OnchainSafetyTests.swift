@@ -119,10 +119,10 @@ struct OnchainJournalTests {
         changed.destination = "new"
         #expect(!original.matches(changed))
         changed = original
-        changed.chainFee += 1
+        changed.chainFee! += 1
         #expect(!original.matches(changed))
         changed = original
-        changed.fee += 1
+        changed.fee! += 1
         #expect(!original.matches(changed))
         changed = original
         changed.confirmed += 1
@@ -296,6 +296,59 @@ struct ExitSDKPolicyTests {
             await #expect(throws: WalletSession.SessionError.notOpen) {
                 _ = try await session.executeOnchain(quote)
             }
+        }
+    }
+}
+
+@MainActor
+struct ExitFallbackModelTests {
+    actor Calls {
+        var estimates = 0
+        var submissions = 0
+        func quote(_ action: OnchainAction, _ ids: [String], _ destination: String?, expired: Bool, fails: Bool) throws -> OnchainQuote {
+            estimates += 1
+            if !fails { throw OnchainFailure.unavailable }
+            throw ExitEstimateUnavailable(review: .init(action: action, walletID: "wallet", ids: ids,
+                destination: destination, amount: 30000, fee: nil, chainFee: nil, confirmed: 0,
+                createdAt: expired ? .distantPast : Date()))
+        }
+        func execute(_ quote: OnchainQuote) -> String {
+            #expect(quote.hasUnknownFeeConsent)
+            submissions += 1; return "submitted"
+        }
+    }
+    func model(_ calls: Calls, expired: Bool = false, fails: Bool = true) -> OnchainModel {
+        .init(dependencies: .init(ready: { true }, overview: { throw OnchainFailure.unavailable },
+            quote: { action, ids, _, destination in try await calls.quote(action, ids, destination, expired: expired, fails: fails) },
+            execute: { await calls.execute($0) }, attempt: { [] }, acknowledge: { _ in }))
+    }
+    @Test func fallbackNeedsSeparateConfirmationAndInvalidatesWithInputs() async {
+        for action in [OnchainAction.startExit, .claim] {
+            let calls = Calls(); let model = model(calls)
+            await model.review(action, ids: ["a"], destination: "address")
+            #expect(model.quote == nil && model.estimateFallback != nil)
+            await model.confirm(); await model.load()
+            #expect(await calls.submissions == 0)
+            #expect(await calls.estimates == 1)
+            model.editClaimDestination("other")
+            await model.continueWithoutEstimate()
+            #expect(model.quote == nil)
+            await model.review(action, ids: ["b"], destination: "other")
+            await model.continueWithoutEstimate()
+            #expect(model.quote?.ids == ["b"] && model.quote?.destination == "other")
+            await model.confirm(); await model.confirm()
+            #expect(await calls.submissions == 1)
+            #expect(await calls.estimates == 2)
+        }
+    }
+    @Test func expiredFallbackOrOtherErrorsNeverOpenReview() async {
+        for (expired, fails) in [(true, true), (false, false)] {
+            let calls = Calls(); let model = model(calls, expired: expired, fails: fails)
+            await model.review(.startExit, ids: ["a"])
+            if !fails { #expect(model.estimateFallback == nil) }
+            await model.continueWithoutEstimate(); await model.confirm()
+            #expect(model.quote == nil)
+            #expect(await calls.submissions == 0)
         }
     }
 }

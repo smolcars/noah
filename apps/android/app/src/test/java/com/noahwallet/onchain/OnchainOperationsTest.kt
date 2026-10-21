@@ -36,6 +36,50 @@ class OnchainOperationsTest {
         assertEquals(listOf("prepared-0"), wallet.discarded)
         assertTrue(journal.loadAll().isEmpty())
     } }
+    @Test fun exitEstimatorFailureRequiresScopedConsentWithoutRetryOrFabricatedFees() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, ops, journal, _ ->
+            wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
+            wallet.estimateError = IllegalStateException("estimator offline")
+            val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null) }.exceptionOrNull() as ExitEstimateUnavailable
+            val unknown = failure.review
+            assertNull(unknown.fee); assertNull(unknown.chainFee); assertNull(unknown.feeRate)
+            assertTrue(runCatching { ops.execute(unknown) }.isFailure)
+            assertTrue(wallet.calls.isEmpty()); assertEquals(1, wallet.estimates)
+            val reviewed = unknown.copy(unknownFeeConsent = unknown.id)
+            for (invalid in listOf(reviewed.copy(createdAt = 0), reviewed.copy(walletID = "other"), reviewed.copy(ids = listOf("missing"))))
+                assertTrue(runCatching { ops.execute(invalid) }.isFailure)
+            if (action == OnchainAction.claim) {
+                wallet.ownershipError = true
+                assertTrue(runCatching { ops.execute(reviewed) }.isFailure)
+                wallet.ownershipError = false
+            }
+            assertTrue(journal.loadAll().isEmpty())
+            ops.execute(reviewed)
+            assertEquals(1, wallet.estimates)
+            val saved = journal.loadAll().single().quote
+            assertEquals(listOf("a"), saved.ids); assertTrue(saved.hasUnknownFeeConsent)
+            assertNull(saved.fee); assertNull(saved.chainFee)
+            assertEquals(1, wallet.calls.count { it == if (action == OnchainAction.claim) "broadcast" else "start" })
+        }
+    }
+    @Test fun inputOwnershipAndProgressFailuresCannotOfferExitFallback() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.estimateError = IllegalStateException("offline")
+        for (ids in listOf(emptyList(), listOf("missing"), listOf("a", "a")))
+            assertFalse(runCatching { ops.quote(OnchainAction.startExit, ids) }.exceptionOrNull() is ExitEstimateUnavailable)
+        wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Start(100u), false))
+        assertFalse(runCatching { ops.quote(OnchainAction.progress, listOf("a")) }.exceptionOrNull() is ExitEstimateUnavailable)
+        wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
+        wallet.ownershipError = true
+        assertFalse(runCatching { ops.quote(OnchainAction.claim, listOf("a"), destination = "address") }.exceptionOrNull() is ExitEstimateUnavailable)
+    } }
+    @Test fun knownEstimateAndInsufficientFundingUseNormalStartReview() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.balance = 0
+        val quote = ops.quote(OnchainAction.startExit, listOf("a"))
+        assertFalse(quote.feesUnknown); assertFalse(quote.fundable)
+        assertEquals(1295L, quote.fee); assertEquals(7630L, quote.chainFee)
+        ops.execute(quote)
+        assertEquals(2, wallet.estimates); assertTrue(wallet.calls.contains("start"))
+    } }
     private class Wallet : OnchainWalletAccess {
         override val walletID = "wallet"
         var cleanupComplete = true
@@ -99,7 +143,12 @@ class OnchainOperationsTest {
         override suspend fun minimum() = 10_000L
         override suspend fun regularSatPerKwu() = chainRate
         override suspend fun refreshFee(ids: List<String>) = FeeEstimate(30_000u, 269u, 29_731u, ids)
-        override suspend fun exitFee(ids: List<String>, destination: String?) = EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u)
+        var estimateError: Exception? = null
+        var estimates = 0
+        override suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate {
+            estimates++; estimateError?.let { throw it }
+            return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u)
+        }
         override suspend fun vtxos() = items
         override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); return Companion.vtxo(id) }
         override suspend fun exits() = active
@@ -299,7 +348,7 @@ class OnchainOperationsTest {
     @Test fun staleChangedFeesBalanceIdentityAndInputsPreventAllMutations() = runBlocking { fixture { wallet, ops, journal, _ ->
         val quote = ops.quote(OnchainAction.board, amount = 30_000)
         val invalid = listOf(quote.copy(createdAt = System.currentTimeMillis() - 120_000), quote.copy(walletID = "other"),
-            quote.copy(fee = quote.fee + 1), quote.copy(chainFee = quote.chainFee + 1), quote.copy(confirmed = quote.confirmed + 1))
+            quote.copy(fee = checkNotNull(quote.fee) + 1), quote.copy(chainFee = checkNotNull(quote.chainFee) + 1), quote.copy(confirmed = quote.confirmed + 1))
         for (q in invalid) assertTrue(runCatching { ops.execute(q) }.isFailure)
         val exit = ops.quote(OnchainAction.startExit, listOf("a"))
         wallet.items = emptyList()
