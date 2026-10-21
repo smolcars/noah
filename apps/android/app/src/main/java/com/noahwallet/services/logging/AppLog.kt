@@ -189,11 +189,12 @@ class LogFile(
             return redactPlain(safe)
         }
 
-        internal fun decodedViews(message: String, percentEncoded: Boolean = false): List<String>? {
+        internal fun decodedViews(message: String, percentEncoded: Boolean = false, compatibility: Boolean = false): List<String>? {
             val escapes = if (percentEncoded) encodedEscapes else jsonEscapes
             val views = mutableListOf(message)
             repeat(4) {
-                val view = views.last()
+                val view = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
+                if (view != views.last()) views += view
                 var uncertain = false
                 val decoded = escapes.replace(view) { match ->
                     try {
@@ -218,7 +219,9 @@ class LogFile(
                 if (decoded == view) return views
                 views += decoded
             }
-            if (escapes.containsMatchIn(views.last())) return null
+            val last = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
+            if (last != views.last()) views += last
+            if (escapes.containsMatchIn(last)) return null
             return views
         }
 

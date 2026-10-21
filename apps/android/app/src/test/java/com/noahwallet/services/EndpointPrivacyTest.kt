@@ -41,6 +41,44 @@ class EndpointPrivacyTest {
         } finally { directory.deleteRecursively() }
     }
 
+    @Test fun secretTokensUseSharedFixturesAtEveryBoundary() {
+        val cases = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-tokens.json")!!.readText()).jsonArray.map { it.jsonObject }
+        cases.forEach { EndpointLogPrivacy.register(it.getValue("endpoint").jsonPrimitive.content) }
+        val directory = Files.createTempDirectory("tokens").toFile()
+        val received = mutableListOf<String>()
+        val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, _, text -> received += text })
+        try {
+            for (test in cases) {
+                val input = test.getValue("input").jsonPrimitive.content
+                val expected = test.getValue("expected").jsonPrimitive.content
+                assertEquals(input, expected, LogFile.redact(input))
+                val event = SentryEvent().apply {
+                    message = Message().apply { formatted = input }
+                    exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
+                }
+                val clean = requireNotNull(AppTelemetry.scrub(event))
+                assertEquals(expected, clean.message?.formatted)
+                assertEquals(expected, clean.exceptions!!.first().value)
+                assertEquals(expected, requireNotNull(AppTelemetry.scrub(Breadcrumb().apply { message = input })).message)
+                AppLog("tokens", file).e(input)
+                assertEquals(expected, received.last())
+                assertTrue(file.lines().last().endsWith(expected))
+                directory.resolve("noah.log.1").writeText(input)
+                assertTrue(file.lines().first().endsWith(expected))
+            }
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test fun tokenAutomatonFollowsFailureLinksAndProtectsProviderSummaries() {
+        val matcher = EndpointLogPrivacy.SecretMatcher(setOf("he", "sheq", "hers", "his", "fake😀Secret"))
+        for (input in listOf("she", "ushers", "hish", "FAKE😀SECRET")) assertTrue(matcher.contains(input))
+        assertFalse(matcher.contains("ordinary diagnostic"))
+        val provider = EndpointLogPrivacy.SecretMatcher(setOf("HttpResponse"))
+        for (input in listOf("HttpResponse { status: 503 }", "HttpResponse unknown", """HttpResponse \uD800""")) {
+            assertEquals("[custom-esplora]", EndpointLogPrivacy.sanitize(input, setOf("https://fake-provider.example"), provider))
+        }
+    }
+
     @Test fun hostCredentialsAndEncodedIdentitiesNeverReachSinks() {
         val origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register("$origin/api")

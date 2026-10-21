@@ -23,10 +23,17 @@ class AppLogTest {
             "registered authorities" to "https://scaling-privacy-999.example/other ",
             "allowed authorities" to "https://noahwallet.io/v0/health ",
             "malformed authorities" to "https://fake-review-r5.example:invalid ",
-            "scheme-less hosts" to "scaling-privacy-999.example:invalid ")
+            "scheme-less hosts" to "scaling-privacy-999.example:invalid ",
+            "path history without slash" to "zzzz ordinary diagnostic ",
+            "path history with slash" to "/zzzz/ordinary/diagnostic ",
+            "path history hit" to "xxfakeScale999yy ")
         for ((name, unit) in performanceInputs + authorities) {
             assertRedactionScales(name, unit, LogFile::redact)
             assertRedactionScales("boundary $name", unit, com.noahwallet.services.logging.EndpointLogPrivacy::redact)
+        }
+        val matcher = com.noahwallet.services.logging.EndpointLogPrivacy.SecretMatcher(setOf("a"))
+        assertRedactionScales("fullwidth bare host", "ａ ") {
+            com.noahwallet.services.logging.EndpointLogPrivacy.sanitize(it, setOf("https://a"), matcher, setOf("a")) ?: "[redacted]"
         }
     }
 

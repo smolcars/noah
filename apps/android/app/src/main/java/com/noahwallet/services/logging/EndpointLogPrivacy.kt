@@ -11,7 +11,9 @@ internal object EndpointLogPrivacy {
     @Volatile private var unavailable = false
     fun failClosed() { unavailable = true }
     private val origins = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-    private val paths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val tokens = mutableSetOf<String>()
+    private var matcher: SecretMatcher? = null
+    private var policy: Triple<Set<String>, SecretMatcher, Set<String>>? = null
     private val hosts = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val urls = Regex("""(?i)(?<![a-z0-9+.-])[0-9+.-]*+[a-z][a-z0-9+.-]*+://[^\s<>"']*""")
     // Admit only the SDK error type/status, never provider-controlled response text.
@@ -52,17 +54,87 @@ internal object EndpointLogPrivacy {
         return rawHost.lowercase().trimEnd('.') == host(value) && redactHosts(tail, hosts) == tail
     }
 
-    fun register(endpoint: String?) {
+    @Synchronized fun register(endpoint: String?) {
         if (endpoint == null) return
         val url = endpoint.toHttpUrlOrNull()
-        val origin = origin(endpoint)
-        val host = host(endpoint)
-        if (url == null || origin == null || host == null) { failClosed(); return }
-        for (path in LogFile.decodedViews(url.encodedPath, percentEncoded = true) ?: listOf(url.encodedPath)) {
-            path.trimEnd('/').takeIf { it.isNotEmpty() }?.let(paths::add)
+        if (url == null) { failClosed(); return }
+        // Selection validation rejects credentials/query; protect them in legacy registrations too.
+        val base = url.newBuilder().username("").password("").query(null).fragment(null).build().toString()
+        val origin = origin(base)
+        val host = host(base)
+        if (origin == null || host == null) { failClosed(); return }
+        val sensitive = mutableSetOf<String>()
+        fun add(value: String, opaque: Boolean = false) {
+            for (view in LogFile.decodedViews(value, percentEncoded = true, compatibility = true) ?: listOf(value)) {
+                val token = SecretMatcher.normalize(view)
+                if (token.isNotEmpty() && (!opaque || token.length >= 6 && token.lowercase(java.util.Locale.ROOT) !in commonWords)) sensitive += token
+            }
         }
+        add(host)
+        val unicodeHost = java.net.IDN.toUnicode(host)
+        add(unicodeHost)
+        for (name in listOf(host, unicodeHost).filter { ':' !in it }) {
+            name.split('.').dropLast(1).filter { it.length >= 6 && it !in publicNames }.forEach { add(it) }
+        }
+        add("$host:${url.port}")
+        listOf(url.encodedUsername, url.encodedPassword).filter { it.length >= 6 }.forEach { add(it) }
+        if (url.encodedUsername.isNotEmpty() && url.encodedPassword.isNotEmpty() && url.encodedUsername.length + url.encodedPassword.length + 1 >= 6) add("${url.encodedUsername}:${url.encodedPassword}")
+        for (view in LogFile.decodedViews(url.encodedPath, percentEncoded = true, compatibility = true) ?: listOf(url.encodedPath)) {
+            view.split('/').forEach { add(it, opaque = true) }
+        }
+        url.encodedQuery?.split('&')?.filter { '=' in it }?.forEach { add(it.substringAfter('='), opaque = true) }
+        if (tokens.addAll(sensitive)) matcher = null
         hosts += host
         origins += origin
+        policy = null
+    }
+    private val commonWords = setOf("api", "block", "blocks", "tip", "height", "hash", "tx", "txs", "transaction", "transactions", "address", "scripthash", "mempool", "v0", "v1", "v2", "testnet", "signet", "mainnet", "regtest", "esplora", "fee-estimates", "outspend", "outspends", "status", "hex", "raw", "merkle-proof", "merkleblock-proof", "utxo", "broadcast")
+    private val publicNames by lazy {
+        setOf("example", "localhost", "com", "org", "net", "edu", "gov", "co", "ac") +
+            publicOrigins.flatMap { authority(it).orEmpty().split('.') }
+    }
+
+    /** Aho–Corasick over one stable UTF-16 view; terminal failure links need only a hit bit. */
+    internal class SecretMatcher(tokens: Set<String>) {
+        private class Node {
+            val edges = mutableMapOf<Char, Int>()
+            var failure = 0
+            var terminal = false
+        }
+        private val nodes = mutableListOf(Node())
+        init {
+            for (token in tokens) {
+                var state = 0
+                for (unit in normalize(token)) {
+                    state = nodes[state].edges.getOrPut(unit) { nodes.add(Node()); nodes.lastIndex }
+                }
+                if (state != 0) nodes[state].terminal = true
+            }
+            val queue = java.util.ArrayDeque(nodes[0].edges.values)
+            while (queue.isNotEmpty()) {
+                val state = queue.removeFirst()
+                for ((unit, next) in nodes[state].edges) {
+                    var fallback = nodes[state].failure
+                    while (fallback != 0 && unit !in nodes[fallback].edges) fallback = nodes[fallback].failure
+                    nodes[next].failure = nodes[fallback].edges[unit] ?: 0
+                    nodes[next].terminal = nodes[next].terminal || nodes[nodes[next].failure].terminal
+                    queue.addLast(next)
+                }
+            }
+        }
+        fun contains(text: String): Boolean {
+            if (nodes.size == 1) return false
+            var state = 0
+            for (unit in normalize(text)) {
+                while (state != 0 && unit !in nodes[state].edges) state = nodes[state].failure
+                state = nodes[state].edges[unit] ?: 0
+                if (nodes[state].terminal) return true
+            }
+            return false
+        }
+        companion object {
+            fun normalize(text: String): String = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC).uppercase(java.util.Locale.ROOT)
+        }
     }
     private val hostTokens = Regex("""\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
     private fun redactHosts(text: String, registered: Set<String>): String {
@@ -109,38 +181,47 @@ internal object EndpointLogPrivacy {
 
     fun sanitize(text: String): String? {
         if (unavailable) return "[custom-esplora]"
-        return sanitize(text, origins, paths, hosts)
+        val snapshot = synchronized(this) {
+            policy ?: run {
+                val compiled = matcher ?: SecretMatcher(tokens).also { matcher = it }
+                Triple(origins.toSet(), compiled, hosts.toSet()).also { policy = it }
+            }
+        }
+        return sanitize(text, snapshot.first, snapshot.second, snapshot.third)
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
-    internal fun sanitize(text: String, registered: Set<String>, sensitive: Set<String> = emptySet(), hosts: Set<String> = emptySet()): String? {
+    internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()), hosts: Set<String> = emptySet()): String? {
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
-        responseStatus.find(text)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
-        val views = LogFile.decodedViews(text, percentEncoded = true)
-            ?: return if (text.contains("HttpResponse")) "HttpResponse" else null
-        for (view in views) {
-            responseStatus.find(view)?.let { return "HttpResponse { status: ${it.groupValues[1]} }" }
+        fun summary(value: String) = if (matcher.contains(value)) "[custom-esplora]" else value
+        responseStatus.find(text)?.let {
+            return summary("HttpResponse { status: ${it.groupValues[1]} }")
         }
-        if (views.any { it.contains("HttpResponse") }) return "HttpResponse"
+        val views = LogFile.decodedViews(text, percentEncoded = true, compatibility = registered.isNotEmpty())
+            ?: return if (text.contains("HttpResponse")) summary("HttpResponse") else null
+        for (view in views) {
+            responseStatus.find(view)?.let {
+                return summary("HttpResponse { status: ${it.groupValues[1]} }")
+            }
+        }
+        if (views.any { it.contains("HttpResponse") }) return summary("HttpResponse")
         if (registered.isEmpty()) return text
         var result = text
         for ((index, view) in views.withIndex()) {
-            val endpointOnly = redactEndpoints(view, registered, sensitive, hosts)
+            val endpointOnly = redactEndpoints(view, registered, matcher, hosts)
             if (endpointOnly == "[custom-esplora]" || index > 0 && endpointOnly != view) return "[custom-esplora]"
             // Host replacement must not hide credential labels or break mnemonic runs.
             val plain = LogFile.redactPlain(view)
             if (index > 0 && plain != view) return "[redacted]"
-            if (index == 0) result = if (plain == view) endpointOnly else redactEndpoints(plain, registered, sensitive, hosts)
+            if (index == 0) result = if (plain == view) endpointOnly else redactEndpoints(plain, registered, matcher, hosts)
         }
         return result
     }
 
-    private fun redactEndpoints(text: String, registered: Set<String>, sensitive: Set<String>, hosts: Set<String>): String {
+    private fun redactEndpoints(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>): String {
         val clean = urls.replace(text) { match -> if (!allowed(match.value, registered, hosts)) "[custom-esplora]" else match.value }
-        // Inspect relative references separately: another origin never inherits our paths.
-        val relative = urls.replace(clean, "")
-        if (sensitive.any { relative.contains(it) }) return "[custom-esplora]"
-        return redactHosts(clean, hosts)
+        val safe = redactHosts(clean, hosts)
+        return if (matcher.contains(safe)) "[custom-esplora]" else safe
     }
 }
