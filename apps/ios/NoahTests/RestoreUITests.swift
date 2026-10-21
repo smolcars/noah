@@ -11,6 +11,38 @@ struct RecoveryPhraseInputTests {
     // Public BIP39 test vector, never a funded wallet.
     private let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 
+    @Test func acceptsTwelveAndTwentyFourWordsByPasteAndIndividualEntry() {
+        for count in [12, 24] {
+            let vector = (Array(repeating: RecoveryPhraseInput.wordList[0], count: count - 1) +
+                          [RecoveryPhraseInput.wordList[count == 12 ? 3 : 102]]).joined(separator: " ")
+            let valid = RecoveryPhraseInput.isValid(vector)
+            #expect(valid)
+            var input = RecoveryPhraseInput()
+            input.update(vector.uppercased(), at: 4)
+            #expect(input.words.count == count)
+            #expect(input.isComplete)
+            let pasteMatches = input.phrase == vector
+            #expect(pasteMatches)
+            input.selectWordCount(count)
+            #expect(input.wordCount == 0)
+            for (index, word) in vector.split(separator: " ").enumerated() { input.update(String(word), at: index) }
+            #expect(input.isComplete)
+            let entryMatches = input.phrase == vector
+            #expect(entryMatches)
+            let badChecksum = RecoveryPhraseInput.isValid(Array(repeating: RecoveryPhraseInput.wordList[0], count: count).joined(separator: " "))
+            #expect(!badChecksum)
+        }
+        for count in [11, 13, 23, 25] {
+            let vector = Array(repeating: RecoveryPhraseInput.wordList[0], count: count).joined(separator: " ")
+            let valid = RecoveryPhraseInput.isValid(vector)
+            #expect(!valid)
+            var input = RecoveryPhraseInput()
+            input.update(vector, at: 0)
+            #expect(input.wrongWordCount)
+            #expect(input.wordCount == 0)
+        }
+    }
+
     @Test func normalizesPastedPhraseInAnyField() {
         var input = RecoveryPhraseInput()
         input.update(" \n" + phrase.uppercased().replacingOccurrences(of: " ", with: "\t\n") + " ", at: 7)
@@ -178,7 +210,7 @@ struct RestoreIssueTests {
 
     @Test func wrongPhraseDamagedBackupAndUnrelatedDiagnosticsKeepTheirCopy() {
         #expect(RestoreIssue.from(BackupCrypto.Failure.authenticationFailed).message ==
-            "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.")
+            "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.")
         #expect(RestoreIssue.from(WalletRestorer.Failure.downloadMismatch).message ==
             "The downloaded backup is incomplete or damaged. Check your connection and try again.")
         for error: any Error in [BackupCrypto.Failure.unexpectedVersion(1), BackupArchive.Failure.invalidManifest,

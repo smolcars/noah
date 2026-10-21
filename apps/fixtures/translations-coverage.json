@@ -6,14 +6,16 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1423,
-  "sourceKeys": 1425,
+  "catalogEntries": 1425,
+  "sourceKeys": 1427,
   "coverage": {
     "ios": {
       "used": [
         " ({count} taps to unlock debug)",
         "\"If you don't believe it or don't get it, I don't have time to try to convince you, sorry.\" - Satoshi Nakamoto",
         "#{nativeValue1} · {nativeValue2} · {nativeValue3} sats",
+        "12 words",
+        "24 words",
         "6-digit code",
         "A 'satoshi' is its smallest unit.",
         "A custom Esplora server can observe the Bitcoin addresses and transactions requested by this wallet. Only use a server you trust.",
@@ -161,7 +163,7 @@
         "Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds.",
         "Check this payment's outcome before approving it again.",
         "Check this payment's outcome before editing it.",
-        "Check your recovery phrase. Enter all 12 words in the correct order.",
+        "Check your recovery phrase. Enter all 12 or 24 words in the correct order.",
         "Check your transaction history, then confirm the destructive override before resuming.",
         "Child transaction",
         "Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier.",
@@ -322,7 +324,7 @@
         "Enter an Esplora API endpoint.",
         "Enter an amount greater than zero.",
         "Enter how many payments should be made.",
-        "Enter your 12 words in order, or paste the whole phrase into any word field.",
+        "Enter your 12 or 24 words in order, or paste the whole phrase into any word field.",
         "Entered as",
         "Error",
         "Esplora API base URL",
@@ -635,7 +637,7 @@
         "Override repeat protection?",
         "Override repeat protection…",
         "Paid via",
-        "Paste exactly 12 words. Your entries haven't been replaced.",
+        "Paste exactly 12 or 24 words. Your entries haven't been replaced.",
         "Paste payment request",
         "Pause",
         "Paused",
@@ -963,7 +965,7 @@
         "This payment is no longer due.",
         "This payment may have been sent. Check its status before making another payment.",
         "This payment request has no reusable Ark address or Lightning offer",
-        "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.",
+        "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.",
         "This place may require another payment app",
         "This refreshes the selected VTXOs in a delegated Ark round.",
         "This saved payment outcome could not be verified. It may have been sent. Check history before sending again.",
@@ -1115,7 +1117,7 @@
         "{count} blocks",
         "{count} rounds pending",
         "{currency} rate unavailable",
-        "{nativeValue1} of 12 words",
+        "{nativeValue1} of {nativeValue2} words",
         "{nativeValue1} sats available in Ark",
         "{nativeValue1} · {nativeValue2} paid",
         "{value1}\nhttps://btcmap.org/merchant/{value2}",
@@ -1123,16 +1125,50 @@
         "© OpenStreetMap"
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ],
+        "ja": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ],
+        "ko": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ],
+        "sv": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ]
       }
     },
     "android": {
       "used": [
         " ({count} taps to unlock debug)",
         "\"If you don't believe it or don't get it, I don't have time to try to convince you, sorry.\" - Satoshi Nakamoto",
+        "12 words",
+        "24 words",
         "6-digit code",
         "A 'satoshi' is its smallest unit.",
         "A custom Esplora server can observe the Bitcoin addresses and transactions requested by this wallet. Only use a server you trust.",
@@ -1302,7 +1338,7 @@
         "Check this payment's outcome before editing it.",
         "Check this word",
         "Check your history and confirm with the recipient. This payment may already have been sent.",
-        "Check your recovery phrase. Enter all 12 words in the correct order.",
+        "Check your recovery phrase. Enter all 12 or 24 words in the correct order.",
         "Check your transaction history, then confirm the destructive override before resuming.",
         "Checking…",
         "Child transaction",
@@ -1471,7 +1507,7 @@
         "Enter an Ark address, Lightning address or BOLT12 offer and a valid interval.",
         "Enter an Esplora API endpoint.",
         "Enter an amount greater than zero.",
-        "Enter your 12 words in order, or paste the whole phrase into any word field.",
+        "Enter your 12 or 24 words in order, or paste the whole phrase into any word field.",
         "Entered as",
         "Error: {nativeValue1}",
         "Esplora API base URL",
@@ -1795,7 +1831,7 @@
         "Override repeat protection…",
         "Paid via",
         "Paste",
-        "Paste exactly 12 words. Your entries haven't been replaced.",
+        "Paste exactly 12 or 24 words. Your entries haven't been replaced.",
         "Pause",
         "Paused",
         "Pay with",
@@ -2117,7 +2153,7 @@
         "This payment is no longer due.",
         "This payment may have been sent. Check its status before making another payment.",
         "This payment request has no reusable Ark address or Lightning offer",
-        "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.",
+        "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.",
         "This place may require another payment app",
         "This place provided an invalid link.",
         "This recurring payment was stopped before submission.",
@@ -2280,7 +2316,7 @@
         "{count} rounds pending",
         "{currency} rate unavailable",
         "{nativeValue1}  {nativeValue2}",
-        "{nativeValue1} of 12 words",
+        "{nativeValue1} of {nativeValue2} words",
         "{nativeValue1} sats available in Ark",
         "{nativeValue1} · {nativeValue2} paid",
         "{nativeValue1} · {nativeValue2} · {nativeValue3}…",
@@ -2291,10 +2327,42 @@
         "≈ "
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ],
+        "ja": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ],
+        "ko": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ],
+        "sv": [
+          "gt_2b0c0a6b85adb58c",
+          "gt_40db1d4d49d0c277",
+          "gt_8a6fa5252a4b7e05",
+          "gt_9b69d23b16f9a10b",
+          "gt_c76a6d8b5bc0e37b",
+          "gt_f6ff8ea16534cd0c",
+          "gt_fae43771b7367b9c"
+        ]
       }
     }
   }

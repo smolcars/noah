@@ -7,7 +7,7 @@ struct RecoveryPhraseInput {
 
     var phrase: String { words.joined(separator: " ") }
     var wordCount: Int { words.filter { !$0.isEmpty }.count }
-    var isComplete: Bool { wordCount == 12 && !wrongWordCount }
+    var isComplete: Bool { wordCount == words.count && !wrongWordCount }
 
     static func normalizedWords(_ text: String) -> [String] {
         text.decomposedStringWithCompatibilityMapping.lowercased().split(whereSeparator: \.isWhitespace).map(String.init)
@@ -18,15 +18,23 @@ struct RecoveryPhraseInput {
     mutating func update(_ text: String, at index: Int) {
         let incoming = Self.normalizedWords(text)
         if incoming.count > 1 {
-            guard incoming.count == 12 else { wrongWordCount = true; return }
+            guard [12, 24].contains(incoming.count) else { wrongWordCount = true; return }
             words = incoming
         } else {
+            guard words.indices.contains(index) else { return }
             words[index] = incoming.first ?? ""
         }
         wrongWordCount = false
     }
 
+    mutating func selectWordCount(_ count: Int) {
+        guard [12, 24].contains(count) else { return }
+        words = Array(repeating: "", count: count)
+        wrongWordCount = false
+    }
+
     func suggestions(at index: Int) -> [String] {
+        guard words.indices.contains(index) else { return [] }
         let prefix = words[index]
         guard !prefix.isEmpty, !Self.wordList.contains(prefix) else { return [] }
         return Array(Self.wordList.lazy.filter { $0.hasPrefix(prefix) }.prefix(5))
@@ -34,7 +42,7 @@ struct RecoveryPhraseInput {
 
     static func isValid(_ phrase: String) -> Bool {
         let words = normalizedWords(phrase)
-        guard words.count == 12 else { return false }
+        guard [12, 24].contains(words.count) else { return false }
         return (try? BarkBoltFFI.validateMnemonic(mnemonic: words.joined(separator: " "))) == true
     }
 

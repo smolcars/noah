@@ -4,6 +4,8 @@
   <string name="gt_0645c621fa74eb0d">" (디버그 잠금 해제까지 %1$s번 탭)"</string>
   <string name="gt_050bb5788af8404f">"\"믿지 못하거나 이해하지 못한다면, 미안하지만 설득할 시간은 없습니다.\" - 나카모토 사토시"</string>
   <string name="gt_e9a308184ba341f1">"#%1$s · %2$s · %3$s sats"</string>
+  <string name="gt_8a6fa5252a4b7e05">"12 words"</string>
+  <string name="gt_fae43771b7367b9c">"24 words"</string>
   <string name="gt_0d1fa0dfcc9e3821">"6자리 코드"</string>
   <string name="gt_3388c7a99e7ead3c">"가장 작은 단위는 \'사토시\'입니다."</string>
   <string name="gt_ca4925ac35b345a4">"사용자 지정 Esplora 서버는 이 지갑이 조회하는 Bitcoin 주소와 거래를 확인할 수 있습니다. 신뢰할 수 있는 서버만 사용하세요."</string>
@@ -203,7 +205,7 @@
   <string name="gt_6f113ce35347ffe6">"수정하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_d7eef838e946e289">"이 단어 확인"</string>
   <string name="gt_4ac7dc7e4285ca5d">"결제 내역을 살펴보고 받는 사람에게도 확인하세요. 이미 전송된 결제일 수 있습니다."</string>
-  <string name="gt_f826a6b1dcb3621f">"복구 문구를 확인하세요. 12개 단어를 모두 올바른 순서로 입력하세요."</string>
+  <string name="gt_9b69d23b16f9a10b">"Check your recovery phrase. Enter all 12 or 24 words in the correct order."</string>
   <string name="gt_a3c8ad0d500b6aae">"거래 내역을 확인하고 위험을 수반하는 강제 적용을 승인한 후 재개하세요."</string>
   <string name="gt_ec963ffc911b8401">"확인 중…"</string>
   <string name="gt_0a84829094f5cfed">"하위 거래"</string>
@@ -418,7 +420,7 @@
   <string name="gt_09694e31973d26c1">"Esplora API 엔드포인트를 입력해 주세요."</string>
   <string name="gt_b07b96712b96ce92">"0보다 큰 금액을 입력해 주세요."</string>
   <string name="gt_a553c3e6a86cf907">"결제 횟수를 입력하세요."</string>
-  <string name="gt_fdcfbcff651b5b35">"12개 단어를 순서대로 입력하거나 원하는 단어 입력란에 전체 문구를 붙여넣으세요."</string>
+  <string name="gt_f6ff8ea16534cd0c">"Enter your 12 or 24 words in order, or paste the whole phrase into any word field."</string>
   <string name="gt_2c41befe9ea4cd5c">"입력 형식"</string>
   <string name="gt_54a0e8c17ebb21a1">"오류"</string>
   <string name="gt_a464fa0760351f31">"오류: %1$s"</string>
@@ -811,7 +813,7 @@
   <string name="gt_51a87000f35dc875">"중복 방지 해제…"</string>
   <string name="gt_aa7a72fd611ec542">"결제 방식"</string>
   <string name="gt_f3380f7b44bd70af">"붙여넣기"</string>
-  <string name="gt_975d8cc0968b77da">"정확히 12개의 단어를 붙여 넣으세요. 기존 입력 내용은 그대로 유지됩니다."</string>
+  <string name="gt_2b0c0a6b85adb58c">"Paste exactly 12 or 24 words. Your entries haven\'t been replaced."</string>
   <string name="gt_f012547b9f87dbeb">"결제 요청 붙여넣기"</string>
   <string name="gt_858e4ba7a29fd38b">"일시 중지"</string>
   <string name="gt_e159b06187d369a0">"일시 중지됨"</string>
@@ -1205,7 +1207,7 @@
   <string name="gt_2580b9f907abe759">"더 이상 이 결제를 진행할 필요가 없습니다."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"이미 전송된 결제일 수 있습니다. 다른 결제를 하기 전에 상태를 확인하세요."</string>
   <string name="gt_d31a2f01307db793">"이 결제 요청에는 재사용 가능한 Ark 주소나 라이트닝 오퍼가 없습니다"</string>
-  <string name="gt_6b5e5b02fc739132">"이 문구로 백업의 잠금을 해제할 수 없거나 백업이 손상되었습니다. 12개 단어와 순서를 모두 확인하세요."</string>
+  <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
   <string name="gt_7d13ecdf60d28aa9">"이곳에서는 다른 결제 앱이 필요할 수 있습니다"</string>
   <string name="gt_44f3e818daadd169">"이 장소에서 제공한 링크가 유효하지 않습니다."</string>
   <string name="gt_6d745107d2d026a2">"이 정기 결제는 제출 전에 중지되었습니다."</string>
@@ -1418,7 +1420,7 @@
   <string name="gt_4cf1134a8d162908">"라운드 %1$s개 대기 중"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s 환율을 확인할 수 없음"</string>
   <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
-  <string name="gt_7b6c3393b2b677b5">"12개 단어 중 %1$s개"</string>
+  <string name="gt_c76a6d8b5bc0e37b">"%1$s of %2$s words"</string>
   <string name="gt_d09927bfa36bfdb0">"Ark에서 %1$s sats 사용 가능"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s 결제됨"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>

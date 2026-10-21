@@ -15,6 +15,28 @@ import org.junit.Test
 
 class RecoveryPhraseInputTest {
     private val phrase = List(11) { "abandon" }.plus("about").joinToString(" ")
+    @Test fun twelveAndTwentyFourWordsPasteAndIndividualEntry() {
+        for (count in listOf(12, 24)) {
+            val vector = (List(count - 1) { RecoveryPhraseInput.wordList[0] } + RecoveryPhraseInput.wordList[if (count == 12) 3 else 102]).joinToString(" ")
+            assertTrue("Public BIP39 vector accepted", RecoveryPhraseInput.isValid(vector))
+            val input = RecoveryPhraseInput()
+            input.update(vector.uppercase(), 4)
+            assertEquals(count, input.words.size); assertTrue(input.isComplete)
+            assertTrue("Paste matches", input.phrase == vector)
+            input.selectWordCount(count)
+            assertEquals(0, input.wordCount)
+            vector.split(" ").forEachIndexed { i, word -> input.update(word, i) }
+            assertTrue(input.isComplete); assertTrue("Entry matches", input.phrase == vector)
+            assertFalse(RecoveryPhraseInput.isValid(List(count) { RecoveryPhraseInput.wordList[0] }.joinToString(" ")))
+        }
+        for (count in listOf(11, 13, 23, 25)) {
+            val invalid = List(count) { RecoveryPhraseInput.wordList[0] }.joinToString(" ")
+            assertFalse(RecoveryPhraseInput.isValid(invalid))
+            val input = RecoveryPhraseInput(); input.update(invalid, 0)
+            assertTrue(input.wrongWordCount); assertEquals(0, input.wordCount)
+        }
+    }
+
     @Test fun normalizesWholePhrasePasteIntoAnyField() {
         repeat(12) { index ->
             val input = RecoveryPhraseInput()
@@ -79,7 +101,7 @@ class RestoreIssueTest {
         assertEquals(RestoreIssue(updateRequired), RestoreIssue.from(error))
     }
     @Test fun wrongPhraseDamagedBackupAndUnrelatedDiagnosticsKeepTheirCopy() {
-        assertEquals("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.",
+        assertEquals("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.",
             RestoreIssue.from(BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed)).message)
         assertEquals("The downloaded backup is incomplete or damaged. Check your connection and try again.",
             RestoreIssue.from(WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)).message)

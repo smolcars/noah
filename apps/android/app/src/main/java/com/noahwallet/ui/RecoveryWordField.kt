@@ -28,7 +28,7 @@ internal class RecoveryWordEditText(context: Context, index: Int) : EditText(con
 
 @Composable
 internal fun RecoveryWordField(word: String, index: Int, onChange: (String) -> Unit,
-                               onFocus: () -> Unit, onNext: () -> Unit, modifier: Modifier) {
+                               onFocus: () -> Unit, onNext: () -> Unit, wordCount: Int = 12, modifier: Modifier) {
     AndroidView(modifier = modifier, factory = { context ->
         RecoveryWordEditText(context, index).apply {
             doAfterTextChanged { onChange(it?.toString().orEmpty()) }
@@ -39,6 +39,8 @@ internal fun RecoveryWordField(word: String, index: Int, onChange: (String) -> U
             }
         }
     }, update = { field ->
+        field.imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
+            if (index == wordCount - 1) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
         field.error = if (word.isNotEmpty() && word !in RecoveryPhraseInput.wordList) "Check this word" else null
         if (field.text.toString() != word) {
             field.setText(word)

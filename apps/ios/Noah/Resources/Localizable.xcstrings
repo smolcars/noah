@@ -109,6 +109,78 @@
         }
       }
     },
+    "12 words": {
+      "comment": "GT gt_8a6fa5252a4b7e05; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words"
+          }
+        }
+      }
+    },
+    "24 words": {
+      "comment": "GT gt_fae43771b7367b9c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "24 words"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "24 words"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "24 words"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "24 words"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "24 words"
+          }
+        }
+      }
+    },
     "6-digit code": {
       "comment": "GT gt_0d1fa0dfcc9e3821; arguments: none",
       "extractionState": "manual",
@@ -7273,38 +7345,38 @@
         }
       }
     },
-    "Check your recovery phrase. Enter all 12 words in the correct order.": {
-      "comment": "GT gt_f826a6b1dcb3621f; arguments: none",
+    "Check your recovery phrase. Enter all 12 or 24 words in the correct order.": {
+      "comment": "GT gt_9b69d23b16f9a10b; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your recovery phrase. Enter all 12 words in the correct order."
+            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Revisa tu frase de recuperación. Introduce las 12 palabras en el orden correcto."
+            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "復元フレーズを確認してください。12個すべての単語を正しい順序で入力してください。"
+            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "복구 문구를 확인하세요. 12개 단어를 모두 올바른 순서로 입력하세요."
+            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kontrollera din återställningsfras. Ange alla 12 ord i rätt ordning."
+            "value": "Check your recovery phrase. Enter all 12 or 24 words in the correct order."
           }
         }
       }
@@ -15013,38 +15085,38 @@
         }
       }
     },
-    "Enter your 12 words in order, or paste the whole phrase into any word field.": {
-      "comment": "GT gt_fdcfbcff651b5b35; arguments: none",
+    "Enter your 12 or 24 words in order, or paste the whole phrase into any word field.": {
+      "comment": "GT gt_f6ff8ea16534cd0c; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your 12 words in order, or paste the whole phrase into any word field."
+            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Introduce tus 12 palabras en orden o pega la frase completa en cualquiera de los campos."
+            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "12個の単語を順番に入力するか、いずれかの単語欄にフレーズ全体を貼り付けてください。"
+            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "12개 단어를 순서대로 입력하거나 원하는 단어 입력란에 전체 문구를 붙여넣으세요."
+            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ange dina 12 ord i rätt ordning eller klistra in hela frasen i valfritt ordfält."
+            "value": "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."
           }
         }
       }
@@ -29161,38 +29233,38 @@
         }
       }
     },
-    "Paste exactly 12 words. Your entries haven't been replaced.": {
-      "comment": "GT gt_975d8cc0968b77da; arguments: none",
+    "Paste exactly 12 or 24 words. Your entries haven't been replaced.": {
+      "comment": "GT gt_2b0c0a6b85adb58c; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste exactly 12 words. Your entries haven't been replaced."
+            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pega exactamente 12 palabras. No se ha sustituido el texto que has introducido."
+            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "12語ちょうどを貼り付けてください。入力内容は変更されていません。"
+            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "정확히 12개의 단어를 붙여 넣으세요. 기존 입력 내용은 그대로 유지됩니다."
+            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klistra in exakt 12 ord. Det du har angett har inte ersatts."
+            "value": "Paste exactly 12 or 24 words. Your entries haven't been replaced."
           }
         }
       }
@@ -43345,38 +43417,38 @@
         }
       }
     },
-    "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.": {
-      "comment": "GT gt_6b5e5b02fc739132; arguments: none",
+    "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.": {
+      "comment": "GT gt_40db1d4d49d0c277; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order."
+            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudo desbloquear la copia de seguridad con esta frase, o la copia está dañada. Comprueba las 12 palabras y su orden."
+            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このフレーズではバックアップのロックを解除できないか、バックアップが破損しています。12個すべての単語とその順序を確認してください。"
+            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 문구로 백업의 잠금을 해제할 수 없거나 백업이 손상되었습니다. 12개 단어와 순서를 모두 확인하세요."
+            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Det gick inte att låsa upp säkerhetskopian med den här frasen, eller så är säkerhetskopian skadad. Kontrollera alla 12 ord och deras ordning."
+            "value": "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."
           }
         }
       }
@@ -50917,38 +50989,38 @@
         }
       }
     },
-    "{nativeValue1} of 12 words": {
-      "comment": "GT gt_7b6c3393b2b677b5; arguments: nativeValue1",
+    "{nativeValue1} of {nativeValue2} words": {
+      "comment": "GT gt_c76a6d8b5bc0e37b; arguments: nativeValue1, nativeValue2",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ of 12 words"
+            "value": "%1$@ of %2$@ words"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ de 12 palabras"
+            "value": "%1$@ of %2$@ words"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "12語中%1$@語"
+            "value": "%1$@ of %2$@ words"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "12개 단어 중 %1$@개"
+            "value": "%1$@ of %2$@ words"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ av 12 ord"
+            "value": "%1$@ of %2$@ words"
           }
         }
       }

@@ -4,6 +4,8 @@
   <string name="gt_0645c621fa74eb0d">" (%1$s taps to unlock debug)"</string>
   <string name="gt_050bb5788af8404f">"\"If you don\'t believe it or don\'t get it, I don\'t have time to try to convince you, sorry.\" - Satoshi Nakamoto"</string>
   <string name="gt_e9a308184ba341f1">"#%1$s · %2$s · %3$s sats"</string>
+  <string name="gt_8a6fa5252a4b7e05">"12 words"</string>
+  <string name="gt_fae43771b7367b9c">"24 words"</string>
   <string name="gt_0d1fa0dfcc9e3821">"6-digit code"</string>
   <string name="gt_3388c7a99e7ead3c">"A \'satoshi\' is its smallest unit."</string>
   <string name="gt_ca4925ac35b345a4">"A custom Esplora server can observe the Bitcoin addresses and transactions requested by this wallet. Only use a server you trust."</string>
@@ -203,7 +205,7 @@
   <string name="gt_6f113ce35347ffe6">"Check this payment\'s outcome before editing it."</string>
   <string name="gt_d7eef838e946e289">"Check this word"</string>
   <string name="gt_4ac7dc7e4285ca5d">"Check your history and confirm with the recipient. This payment may already have been sent."</string>
-  <string name="gt_f826a6b1dcb3621f">"Check your recovery phrase. Enter all 12 words in the correct order."</string>
+  <string name="gt_9b69d23b16f9a10b">"Check your recovery phrase. Enter all 12 or 24 words in the correct order."</string>
   <string name="gt_a3c8ad0d500b6aae">"Check your transaction history, then confirm the destructive override before resuming."</string>
   <string name="gt_ec963ffc911b8401">"Checking…"</string>
   <string name="gt_0a84829094f5cfed">"Child transaction"</string>
@@ -418,7 +420,7 @@
   <string name="gt_09694e31973d26c1">"Enter an Esplora API endpoint."</string>
   <string name="gt_b07b96712b96ce92">"Enter an amount greater than zero."</string>
   <string name="gt_a553c3e6a86cf907">"Enter how many payments should be made."</string>
-  <string name="gt_fdcfbcff651b5b35">"Enter your 12 words in order, or paste the whole phrase into any word field."</string>
+  <string name="gt_f6ff8ea16534cd0c">"Enter your 12 or 24 words in order, or paste the whole phrase into any word field."</string>
   <string name="gt_2c41befe9ea4cd5c">"Entered as"</string>
   <string name="gt_54a0e8c17ebb21a1">"Error"</string>
   <string name="gt_a464fa0760351f31">"Error: %1$s"</string>
@@ -811,7 +813,7 @@
   <string name="gt_51a87000f35dc875">"Override repeat protection…"</string>
   <string name="gt_aa7a72fd611ec542">"Paid via"</string>
   <string name="gt_f3380f7b44bd70af">"Paste"</string>
-  <string name="gt_975d8cc0968b77da">"Paste exactly 12 words. Your entries haven\'t been replaced."</string>
+  <string name="gt_2b0c0a6b85adb58c">"Paste exactly 12 or 24 words. Your entries haven\'t been replaced."</string>
   <string name="gt_f012547b9f87dbeb">"Paste payment request"</string>
   <string name="gt_858e4ba7a29fd38b">"Pause"</string>
   <string name="gt_e159b06187d369a0">"Paused"</string>
@@ -1205,7 +1207,7 @@
   <string name="gt_2580b9f907abe759">"This payment is no longer due."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"This payment may have been sent. Check its status before making another payment."</string>
   <string name="gt_d31a2f01307db793">"This payment request has no reusable Ark address or Lightning offer"</string>
-  <string name="gt_6b5e5b02fc739132">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 words and their order."</string>
+  <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
   <string name="gt_7d13ecdf60d28aa9">"This place may require another payment app"</string>
   <string name="gt_44f3e818daadd169">"This place provided an invalid link."</string>
   <string name="gt_6d745107d2d026a2">"This recurring payment was stopped before submission."</string>
@@ -1418,7 +1420,7 @@
   <string name="gt_4cf1134a8d162908">"%1$s rounds pending"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s rate unavailable"</string>
   <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
-  <string name="gt_7b6c3393b2b677b5">"%1$s of 12 words"</string>
+  <string name="gt_c76a6d8b5bc0e37b">"%1$s of %2$s words"</string>
   <string name="gt_d09927bfa36bfdb0">"%1$s sats available in Ark"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s paid"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>

@@ -21,7 +21,7 @@ struct RestoreWalletScreen: View {
                         .font(NoahFont.title)
                     Text(LocalizedStringKey(useStoredSeed
                          ? "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."
-                         : "Enter your 12 words in order, or paste the whole phrase into any word field."))
+                         : "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."))
                         .foregroundStyle(NoahColor.mutedForeground)
                     if !useStoredSeed {
                         phraseFields
@@ -30,7 +30,7 @@ struct RestoreWalletScreen: View {
                             .disabled(model.isRestoring || model.restoreIssue?.requiresRestart == true)
                     }
                     if input.wrongWordCount || invalidPhrase {
-                        Text(LocalizedStringKey(input.wrongWordCount ? "Paste exactly 12 words. Your entries haven't been replaced." : RestoreIssue.invalidPhrase.message))
+                        Text(LocalizedStringKey(input.wrongWordCount ? "Paste exactly 12 or 24 words. Your entries haven't been replaced." : RestoreIssue.invalidPhrase.message))
                             .foregroundStyle(NoahColor.destructive)
                             .accessibilityIdentifier("restore-phrase-error")
                     }
@@ -84,29 +84,40 @@ struct RestoreWalletScreen: View {
 
     private var phraseFields: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Picker("Your Recovery Phrase", selection: Binding(get: { input.words.count }, set: {
+                focusedWord = nil
+                input.selectWordCount($0)
+                invalidPhrase = false
+                clearGeneration += 1
+            })) {
+                Text("12 words").tag(12)
+                Text("24 words").tag(24)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("restore-word-count")
             NoahCard {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(0..<12) { index in
+                    ForEach(0..<input.words.count, id: \.self) { index in
                         HStack(spacing: 8) {
                             Text("\(index + 1)")
                                 .font(NoahFont.footnote)
                                 .foregroundStyle(NoahColor.mutedForeground)
                                 .frame(minWidth: 20, alignment: .trailing)
                             RecoveryWordField(
-                                text: Binding(get: { input.words[index] }, set: {
+                                text: Binding(get: { input.words.indices.contains(index) ? input.words[index] : "" }, set: {
                                     input.update($0, at: index)
-                                    if !input.wrongWordCount, RecoveryPhraseInput.normalizedWords($0).count == 12 {
+                                    if !input.wrongWordCount, [12, 24].contains(RecoveryPhraseInput.normalizedWords($0).count) {
                                         clipboard.accepted($0)
                                     }
                                     invalidPhrase = false
-                                }), index: index, focusedWord: $focusedWord)
+                                }), index: index, wordCount: input.words.count, focusedWord: $focusedWord)
                                 .frame(height: 44)
                         }
                         .id(index)
                     }
                 }
             }
-            Text("\(input.wordCount) of 12 words")
+            Text("\(input.wordCount) of \(input.words.count) words")
                 .font(NoahFont.footnote)
                 .foregroundStyle(NoahColor.mutedForeground)
         }
@@ -128,7 +139,7 @@ struct RestoreWalletScreen: View {
             ForEach(words, id: \.self) { word in
                 Button(word) {
                     input.update(word, at: index)
-                    focusedWord = index < 11 ? index + 1 : nil
+                    focusedWord = index < input.words.count - 1 ? index + 1 : nil
                 }
                 .accessibilityLabel(Text(word))
                 .frame(minHeight: 44)
@@ -172,6 +183,7 @@ struct RestoreWalletScreen: View {
 struct RecoveryWordField: UIViewRepresentable {
     @Binding var text: String
     let index: Int
+    var wordCount = 12
     @Binding var focusedWord: Int?
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -179,7 +191,7 @@ struct RecoveryWordField: UIViewRepresentable {
     func makeUIView(context: Context) -> RecoveryWordTextField {
         let field = RecoveryWordTextField()
         field.delegate = context.coordinator
-        field.returnKeyType = index == 11 ? .done : .next
+        field.returnKeyType = index == wordCount - 1 ? .done : .next
         field.font = UIFont.preferredFont(forTextStyle: .body)
         field.adjustsFontForContentSizeCategory = true
         field.textColor = UIColor(NoahColor.foreground)
@@ -198,6 +210,7 @@ struct RecoveryWordField: UIViewRepresentable {
     func updateUIView(_ field: RecoveryWordTextField, context: Context) {
         context.coordinator.parent = self
         if field.text != text { field.text = text }
+        field.returnKeyType = index == wordCount - 1 ? .done : .next
         field.isEnabled = context.environment.isEnabled
         context.coordinator.updateFocus(field)
     }
@@ -228,7 +241,7 @@ struct RecoveryWordField: UIViewRepresentable {
             }
         }
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-            parent.focusedWord = parent.index < 11 ? parent.index + 1 : nil
+            parent.focusedWord = parent.index < parent.wordCount - 1 ? parent.index + 1 : nil
             return true
         }
     }

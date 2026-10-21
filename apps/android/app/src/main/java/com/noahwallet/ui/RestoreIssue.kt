@@ -10,7 +10,7 @@ import java.io.IOException
 data class RestoreIssue(val message: String, val requiresRestart: Boolean = false) {
     companion object {
         val newerBackup = RestoreIssue("This backup was created by a newer version of Noah. Update the app, then try restoring again.")
-        val invalidPhrase = RestoreIssue("Check your recovery phrase. Enter all 12 words in the correct order.")
+        val invalidPhrase = RestoreIssue("Check your recovery phrase. Enter all 12 or 24 words in the correct order.")
         val committed = RestoreIssue("Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.", true)
         val recovery = RestoreIssue("An earlier restore needs recovery. Do not retry. Close and restart Noah to continue safely.", true)
         val existingData = RestoreIssue("Wallet data already exists on this device. Noah won't replace it. Return to your wallet or restart Noah to recover safely.", true)
@@ -33,7 +33,7 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
             }
             is BackupCrypto.Failure -> when (error.reason) {
                 BackupCrypto.Reason.newerVersion -> newerBackup
-                BackupCrypto.Reason.authenticationFailed -> RestoreIssue("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 words and their order.")
+                BackupCrypto.Reason.authenticationFailed -> RestoreIssue("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.")
                 else -> generic
             }
             is BackupArchive.Failure -> if (error.reason == BackupArchive.Reason.newerVersion) newerBackup else generic

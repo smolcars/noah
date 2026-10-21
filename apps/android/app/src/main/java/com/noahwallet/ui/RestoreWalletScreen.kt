@@ -41,7 +41,7 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     var clearGeneration by remember { mutableIntStateOf(0) }
     // Only plain remember: Android saved-instance state must never contain recovery words.
     var focused by remember { mutableStateOf<Int?>(null) }
-    val requesters = remember { List(12) { FocusRequester() } }
+    val requesters = remember { List(24) { FocusRequester() } }
     val flow = model.restore
     val blocked = model.busy || !flow.canLeave
     fun clear() { clipboard.clearIfUnchanged(); focus.clearFocus(); input.clear(); focused = null; revision++; clearGeneration++ }
@@ -67,28 +67,37 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     NoahForm(if (useStoredSeed) "Recovery phrase found" else "Restore Wallet") {
         Text(tr(if (useStoredSeed)
             "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."
-        else "Enter your 12 words in order, or paste the whole phrase into any word field."))
+        else "Enter your 12 or 24 words in order, or paste the whole phrase into any word field."))
         if (!useStoredSeed && !blocked) {
-            key(clearGeneration) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf(12, 24).forEach { count ->
+                    FilterChip(selected = words.size == count, onClick = {
+                        focus.clearFocus(); focused = null; input.selectWordCount(count)
+                        revision++; clearGeneration++; flow.clearIssue()
+                    }, label = { Text(if (count == 12) tr("12 words") else tr("24 words")) },
+                        modifier = Modifier.testTag("restore-count-$count"))
+                }
+            }
+            key(clearGeneration, words.size) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    repeat(6) { row ->
+                    repeat(words.size / 2) { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             repeat(2) { column ->
                                 val index = row * 2 + column
                                 RecoveryWordField(words[index], index, {
                                     input.update(it, index)
-                                    if (!input.wrongWordCount && RecoveryPhraseInput.normalizedWords(it).size == 12) clipboard.accepted(it)
+                                    if (!input.wrongWordCount && RecoveryPhraseInput.normalizedWords(it).size in listOf(12, 24)) clipboard.accepted(it)
                                     revision++; flow.clearIssue()
                                 }, onFocus = { focused = index },
-                                    onNext = { if (index < 11) requesters[index + 1].requestFocus() },
-                                    modifier = Modifier.weight(1f).focusRequester(requesters[index])
+                                    onNext = { if (index < words.size - 1) requesters[index + 1].requestFocus() },
+                                    wordCount = words.size, modifier = Modifier.weight(1f).focusRequester(requesters[index])
                                         .testTag("restore-word-${index + 1}"))
                             }
                         }
                     }
                 }
             }
-            Text(tr("${input.wordCount} of 12 words"), style = MaterialTheme.typography.bodySmall)
+            Text(tr("${input.wordCount} of ${words.size} words"), style = MaterialTheme.typography.bodySmall)
             focused?.let { index ->
                 val suggestions = input.suggestions(index)
                 if (suggestions.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
@@ -96,12 +105,12 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
                     .clearAndSetSemantics { }) {
                     suggestions.forEach { word -> TextButton({
                         input.update(word, index); revision++; flow.clearIssue()
-                        if (index < 11) requesters[index + 1].requestFocus() else focus.clearFocus()
+                        if (index < words.size - 1) requesters[index + 1].requestFocus() else focus.clearFocus()
                     }) { Text(tr(word)) } }
                 }
             }
         }
-        if (input.wrongWordCount) Text(tr("Paste exactly 12 words. Your entries haven't been replaced."), color = MaterialTheme.colorScheme.error,
+        if (input.wrongWordCount) Text(tr("Paste exactly 12 or 24 words. Your entries haven't been replaced."), color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         if (model.busy || flow.running) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -117,7 +126,7 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
         }
         if (flow.issue?.requiresRestart != true) NoahButton("Restore Wallet", model.canRestoreWallet && (useStoredSeed || input.isComplete)) {
             focus.clearFocus()
-            if (!useStoredSeed && !RecoveryPhraseInput.isValid(input.phrase)) {
+            if (!useStoredSeed && (!RecoveryPhraseInput.isValid(input.phrase) || !runCatching { io.github.niteshbalusu11.bark.validateMnemonic(input.phrase) }.getOrDefault(false))) {
                 clear()
                 flow.reject(RestoreIssue.invalidPhrase)
             } else {

@@ -55,6 +55,19 @@ struct KeychainPasswordTests {
         #expect(item.read() == .found(mnemonic))
     }
 
+    @Test func twentyFourWordSeedRoundTripsWithoutRewriting() throws {
+        let seedItem = KeychainPassword(service: "com.noah.mnemonic.test-\(UUID().uuidString)", account: "noah")
+        defer { try? seedItem.deleteWalletSeed() }
+        let phrase = (Array(repeating: RecoveryPhraseInput.wordList[0], count: 23) + [RecoveryPhraseInput.wordList[102]]).joined(separator: " ")
+        try seedItem.save(phrase)
+        let matches = seedItem.read() == .found(phrase)
+        #expect(matches)
+        try StoredSeed.requireUsable(seedItem.read())
+        let normalized = try StoredSeed.normalized(phrase)
+        let unchanged = normalized == phrase
+        #expect(unchanged)
+    }
+
     @Test func missingItemIsNotFound() {
         #expect(item.read() == .notFound)
     }

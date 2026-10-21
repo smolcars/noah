@@ -4,6 +4,8 @@
   <string name="gt_0645c621fa74eb0d">" (%1$s toques para desbloquear la depuración)"</string>
   <string name="gt_050bb5788af8404f">"«Si no lo crees o no lo entiendes, no tengo tiempo para intentar convencerte, lo siento.» - Satoshi Nakamoto"</string>
   <string name="gt_e9a308184ba341f1">"#%1$s · %2$s · %3$s sats"</string>
+  <string name="gt_8a6fa5252a4b7e05">"12 words"</string>
+  <string name="gt_fae43771b7367b9c">"24 words"</string>
   <string name="gt_0d1fa0dfcc9e3821">"Código de 6 dígitos"</string>
   <string name="gt_3388c7a99e7ead3c">"Un «satoshi» es su unidad más pequeña."</string>
   <string name="gt_ca4925ac35b345a4">"Un servidor Esplora personalizado puede ver las direcciones y transacciones de Bitcoin que consulta esta billetera. Usa solo un servidor en el que confíes."</string>
@@ -203,7 +205,7 @@
   <string name="gt_6f113ce35347ffe6">"Comprueba el resultado de este pago antes de editarlo."</string>
   <string name="gt_d7eef838e946e289">"Comprueba esta palabra"</string>
   <string name="gt_4ac7dc7e4285ca5d">"Revisa tu historial y confírmalo con el destinatario. Es posible que este pago ya se haya enviado."</string>
-  <string name="gt_f826a6b1dcb3621f">"Revisa tu frase de recuperación. Introduce las 12 palabras en el orden correcto."</string>
+  <string name="gt_9b69d23b16f9a10b">"Check your recovery phrase. Enter all 12 or 24 words in the correct order."</string>
   <string name="gt_a3c8ad0d500b6aae">"Revisa tu historial de transacciones y confirma la anulación destructiva antes de reanudar."</string>
   <string name="gt_ec963ffc911b8401">"Comprobando…"</string>
   <string name="gt_0a84829094f5cfed">"Transacción hija"</string>
@@ -418,7 +420,7 @@
   <string name="gt_09694e31973d26c1">"Introduce un punto de acceso de la API de Esplora."</string>
   <string name="gt_b07b96712b96ce92">"Introduce un importe mayor que cero."</string>
   <string name="gt_a553c3e6a86cf907">"Indica cuántos pagos deben realizarse."</string>
-  <string name="gt_fdcfbcff651b5b35">"Introduce tus 12 palabras en orden o pega la frase completa en cualquiera de los campos."</string>
+  <string name="gt_f6ff8ea16534cd0c">"Enter your 12 or 24 words in order, or paste the whole phrase into any word field."</string>
   <string name="gt_2c41befe9ea4cd5c">"Introducido como"</string>
   <string name="gt_54a0e8c17ebb21a1">"Error"</string>
   <string name="gt_a464fa0760351f31">"Error: %1$s"</string>
@@ -811,7 +813,7 @@
   <string name="gt_51a87000f35dc875">"Omitir la protección contra pagos repetidos…"</string>
   <string name="gt_aa7a72fd611ec542">"Pagado mediante"</string>
   <string name="gt_f3380f7b44bd70af">"Pegar"</string>
-  <string name="gt_975d8cc0968b77da">"Pega exactamente 12 palabras. No se ha sustituido el texto que has introducido."</string>
+  <string name="gt_2b0c0a6b85adb58c">"Paste exactly 12 or 24 words. Your entries haven\'t been replaced."</string>
   <string name="gt_f012547b9f87dbeb">"Pegar solicitud de pago"</string>
   <string name="gt_858e4ba7a29fd38b">"Pausar"</string>
   <string name="gt_e159b06187d369a0">"Pausado"</string>
@@ -1205,7 +1207,7 @@
   <string name="gt_2580b9f907abe759">"Este pago ya no está pendiente."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"Es posible que este pago ya se haya enviado. Consulta su estado antes de realizar otro pago."</string>
   <string name="gt_d31a2f01307db793">"Esta solicitud de pago no tiene una dirección de Ark reutilizable ni una oferta de Lightning"</string>
-  <string name="gt_6b5e5b02fc739132">"No se pudo desbloquear la copia de seguridad con esta frase, o la copia está dañada. Comprueba las 12 palabras y su orden."</string>
+  <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
   <string name="gt_7d13ecdf60d28aa9">"Puede que necesites otra aplicación de pago en este lugar"</string>
   <string name="gt_44f3e818daadd169">"El enlace proporcionado por este lugar no es válido."</string>
   <string name="gt_6d745107d2d026a2">"Este pago recurrente se detuvo antes de enviarse."</string>
@@ -1418,7 +1420,7 @@
   <string name="gt_4cf1134a8d162908">"%1$s rondas pendientes"</string>
   <string name="gt_d8c81b717fe6d90e">"Tipo de cambio de %1$s no disponible"</string>
   <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
-  <string name="gt_7b6c3393b2b677b5">"%1$s de 12 palabras"</string>
+  <string name="gt_c76a6d8b5bc0e37b">"%1$s of %2$s words"</string>
   <string name="gt_d09927bfa36bfdb0">"%1$s sats disponibles en Ark"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s pagados"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
