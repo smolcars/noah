@@ -40,7 +40,7 @@ enum EndpointLogPrivacy {
         func add(_ value: String, opaque: Bool = false) {
             for view in LogFile.decodedViews(value, percentEncoded: true, compatibility: true) ?? [value] {
                 let token = SecretMatcher.normalize(view)
-                if !token.isEmpty && (!opaque || token.utf16.count >= 6 && !commonWords.contains(token.lowercased())) { sensitive.insert(token) }
+                if !token.isEmpty && (!opaque || token.utf16.count >= 6 && !commonWords.contains(token.lowercased())) { sensitive.insert(view) }
             }
         }
         add(host)
@@ -76,7 +76,7 @@ enum EndpointLogPrivacy {
         return names
     }()
 
-    /// Aho–Corasick over one stable UTF-16 view; terminal failure links need only a hit bit.
+    /// Aho–Corasick over boundary-preserving and normalized UTF-16 views; terminal failure links need only a hit bit.
     struct SecretMatcher: Sendable {
         private struct Node: Sendable {
             var edges: [UInt16: Int] = [:]
@@ -85,9 +85,9 @@ enum EndpointLogPrivacy {
         }
         private var nodes = [Node()]
         init(_ tokens: Set<String>) {
-            for token in tokens {
+            for token in Set(tokens.flatMap { [$0, Self.fold($0), Self.normalize($0)] }) {
                 var state = 0
-                for unit in Self.normalize(token).utf16 {
+                for unit in token.utf16 {
                     if let next = nodes[state].edges[unit] { state = next }
                     else {
                         let next = nodes.count
@@ -113,8 +113,15 @@ enum EndpointLogPrivacy {
         }
         func contains(_ text: String) -> Bool {
             guard nodes.count > 1 else { return false }
+            // Normalizing a whole record can compose a token's final scalar with its suffix.
+            return containsView(text) || containsView(Self.fold(text)) || containsView(Self.normalize(text))
+        }
+        private static func fold(_ text: String) -> String {
+            text.lowercased(with: Locale(identifier: "en_US_POSIX")).uppercased(with: Locale(identifier: "en_US_POSIX"))
+        }
+        private func containsView(_ text: String) -> Bool {
             var state = 0
-            for unit in Self.normalize(text).utf16 {
+            for unit in text.utf16 {
                 while state != 0 && nodes[state].edges[unit] == nil { state = nodes[state].failure }
                 state = nodes[state].edges[unit] ?? 0
                 if nodes[state].terminal { return true }
