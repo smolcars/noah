@@ -1,5 +1,6 @@
 package com.noahwallet.services.logging
 
+import android.icu.text.IDNA
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.server.ServerEndpoint
@@ -71,7 +72,11 @@ internal object EndpointLogPrivacy {
             }
         }
         add(host)
-        val unicodeHost = java.net.IDN.toUnicode(host)
+        // OkHttp preserves IDNA2008 deviation characters; JDK IDNA2003 cannot decode them.
+        val info = IDNA.Info()
+        val unicodeHost = if (':' in host) host else IDNA.getUTS46Instance(IDNA.NONTRANSITIONAL_TO_UNICODE)
+            .nameToUnicode(host, StringBuilder(), info).toString()
+        if (info.hasErrors()) { failClosed(); return }
         add(unicodeHost)
         for (name in listOf(host, unicodeHost).filter { ':' !in it }) {
             name.split('.').dropLast(1).filter { it.length >= 6 && it !in publicNames }.forEach { add(it) }

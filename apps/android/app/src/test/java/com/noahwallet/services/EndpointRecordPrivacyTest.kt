@@ -25,6 +25,15 @@ class EndpointRecordPrivacyTest {
     private fun cases(kind: String) = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-records.json")!!.readText()).jsonArray
         .map { it.jsonObject }.filter { it.getValue("kind").jsonPrimitive.content == kind }
 
+    @Test fun deviceIcuUsesSharedIdna2008Tokens() {
+        val tokens = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-tokens.json")!!.readText()).jsonArray.map { it.jsonObject }
+        for (test in tokens.filter { it.getValue("name").jsonPrimitive.content.startsWith("IDNA2008") }) {
+            EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
+            assertEquals(test.getValue("name").jsonPrimitive.content, test.getValue("expected").jsonPrimitive.content,
+                LogFile.redact(test.getValue("input").jsonPrimitive.content))
+        }
+    }
+
     @Test fun formattingCannotRebuildTokensAtFileLogcatAndTelemetrySinks() {
         for (kind in listOf("record", "bark")) for (test in cases(kind)) {
             EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)

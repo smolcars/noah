@@ -208,6 +208,7 @@ dependencies {
     testImplementation(libs.robolectric)
     androidTestImplementation(libs.work.testing)
     testImplementation(libs.junit)
+    testImplementation("com.ibm.icu:icu4j:78.3") // JVM bridge for android.icu.text.IDNA.
     testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
