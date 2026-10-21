@@ -791,6 +791,7 @@
   <string name="gt_af283a1c9bacc979">"On-chain address"</string>
   <string name="gt_1e86a7752acde6de">"On-chain addresses are not supported for recurring payments yet"</string>
   <string name="gt_ba6aa54176784a6b">"On-chain wallet"</string>
+  <string name="gt_0cc23d9ecbb9986c">"Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
   <string name="gt_acc38e1a7250680d">"Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
   <string name="gt_90822ee1d520d059">"Onchain"</string>
   <string name="gt_9ef5c3ab9edb50eb">"Onchain Send"</string>

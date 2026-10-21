@@ -791,6 +791,7 @@
   <string name="gt_af283a1c9bacc979">"Dirección en cadena"</string>
   <string name="gt_1e86a7752acde6de">"Las direcciones en cadena aún no son compatibles con los pagos recurrentes"</string>
   <string name="gt_ba6aa54176784a6b">"Billetera en cadena"</string>
+  <string name="gt_0cc23d9ecbb9986c">"Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."</string>
   <string name="gt_acc38e1a7250680d">"Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Las comisiones mostradas son estimaciones y pueden cambiar. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."</string>
   <string name="gt_90822ee1d520d059">"En la cadena"</string>
   <string name="gt_9ef5c3ab9edb50eb">"Envío en cadena"</string>

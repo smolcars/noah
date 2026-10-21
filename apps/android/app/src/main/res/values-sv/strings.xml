@@ -791,6 +791,7 @@
   <string name="gt_af283a1c9bacc979">"On-chain-adress"</string>
   <string name="gt_1e86a7752acde6de">"On-chain-adresser stöds ännu inte för återkommande betalningar"</string>
   <string name="gt_ba6aa54176784a6b">"Plånbok på blockkedjan"</string>
+  <string name="gt_0cc23d9ecbb9986c">"När nöduttaget har startats fortsätter Noah automatiskt i bakgrunden med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."</string>
   <string name="gt_acc38e1a7250680d">"När nöduttaget har startats fortsätter Noah automatiskt i bakgrunden med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. De avgifter som visas är uppskattningar och kan ändras. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."</string>
   <string name="gt_90822ee1d520d059">"På blockkedjan"</string>
   <string name="gt_9ef5c3ab9edb50eb">"Sändning på kedjan"</string>

@@ -69,6 +69,7 @@
   "gt_0c3587820d4cdb77": "Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy).",
   "gt_0c6da2b7449f5e54": "Wait for the current wallet operation to finish before changing the endpoint.",
   "gt_0cb3378726d1acba": "Exit progression returned {{nativeValue1}} errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.",
+  "gt_0cc23d9ecbb9986c": "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.",
   "gt_0cd5e62f85e54229": "Payment request",
   "gt_0cde499fcb0c92da": "Review Claim",
   "gt_0ce1d833039b6004": "No new payment was made for the amount you reviewed.",

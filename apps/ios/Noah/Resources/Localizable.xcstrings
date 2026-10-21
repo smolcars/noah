@@ -28441,6 +28441,42 @@
         }
       }
     },
+    "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.": {
+      "comment": "GT gt_0cc23d9ecbb9986c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始すると、Noahはバックグラウンドで退出処理を自動的に進めます。退出取引のブロードキャストや手数料の引き上げを行い、オンチェーン残高から手数料を支払います。回収額から差し引かれるのは受け取り手数料のみです。キャンセルできるのは、最後の退出取引がブロードキャストされるまでです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작하면 Noah가 백그라운드에서 자동으로 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "När nöduttaget har startats fortsätter Noah automatiskt i bakgrunden med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."
+          }
+        }
+      }
+    },
     "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.": {
       "comment": "GT gt_acc38e1a7250680d; arguments: none",
       "extractionState": "manual",

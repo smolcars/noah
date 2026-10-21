@@ -54,6 +54,7 @@ class WalletParityDeviceTest {
                 assertTrue("Unknown-fee warning is visible for $action", contains(root, "Fees and amount to receive are unknown"))
                 assertFalse(contains(root, "Estimated claim fee"))
                 assertFalse(contains(root, "Amount after fee"))
+                assertFalse(contains(root, "The fees shown are estimates and may change."))
             }
         }
     }

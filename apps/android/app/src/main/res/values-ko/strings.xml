@@ -791,6 +791,7 @@
   <string name="gt_af283a1c9bacc979">"온체인 주소"</string>
   <string name="gt_1e86a7752acde6de">"정기 결제에서는 아직 온체인 주소를 지원하지 않습니다"</string>
   <string name="gt_ba6aa54176784a6b">"온체인 지갑"</string>
+  <string name="gt_0cc23d9ecbb9986c">"시작하면 Noah가 백그라운드에서 자동으로 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
   <string name="gt_acc38e1a7250680d">"시작하면 Noah가 백그라운드에서 자동으로 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 표시된 수수료는 예상치이며 변경될 수 있습니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
   <string name="gt_90822ee1d520d059">"온체인"</string>
   <string name="gt_9ef5c3ab9edb50eb">"온체인 송금"</string>

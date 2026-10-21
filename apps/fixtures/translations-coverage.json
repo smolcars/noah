@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1432,
-  "sourceKeys": 1434,
+  "catalogEntries": 1433,
+  "sourceKeys": 1435,
   "coverage": {
     "ios": {
       "used": [
@@ -619,6 +619,7 @@
         "On-chain address",
         "On-chain addresses are not supported for recurring payments yet",
         "On-chain wallet",
+        "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.",
         "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.",
         "Onchain",
         "Onchain Send",
@@ -1790,6 +1791,7 @@
         "On-chain address",
         "On-chain addresses are not supported for recurring payments yet",
         "On-chain wallet",
+        "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.",
         "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.",
         "Onchain",
         "Onchain Send",

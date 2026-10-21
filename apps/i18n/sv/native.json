@@ -69,6 +69,7 @@
   "gt_0c3587820d4cdb77": "Google Play Services är inte tillgängligt. Använd en UnifiedPush-distributör (till exempel ntfy) för att få aviseringar.",
   "gt_0c6da2b7449f5e54": "Vänta tills den pågående plånboksåtgärden är klar innan du ändrar slutpunkten.",
   "gt_0cb3378726d1acba": "Den fortsatta hanteringen av nöduttaget gav {{nativeValue1}} fel. Transaktioner kan ha sänts eller fått höjda avgifter. Uppdatera nöduttagets detaljer innan du fortsätter.",
+  "gt_0cc23d9ecbb9986c": "När nöduttaget har startats fortsätter Noah automatiskt i bakgrunden med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts.",
   "gt_0cd5e62f85e54229": "Betalningsbegäran",
   "gt_0cde499fcb0c92da": "Granska inlösen",
   "gt_0ce1d833039b6004": "Ingen ny betalning gjordes för beloppet du granskade.",

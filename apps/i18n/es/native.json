@@ -69,6 +69,7 @@
   "gt_0c3587820d4cdb77": "Google Play Services no está disponible. Para recibir notificaciones, utiliza un distribuidor de UnifiedPush (como ntfy).",
   "gt_0c6da2b7449f5e54": "Espera a que termine la operación actual de la billetera antes de cambiar el punto de acceso.",
   "gt_0cb3378726d1acba": "Se produjeron {{nativeValue1}} errores al avanzar la salida. Es posible que se hayan difundido transacciones o aumentado sus comisiones. Actualiza los detalles de la salida antes de continuar.",
+  "gt_0cc23d9ecbb9986c": "Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida.",
   "gt_0cd5e62f85e54229": "Solicitud de pago",
   "gt_0cde499fcb0c92da": "Revisar reclamación",
   "gt_0ce1d833039b6004": "No se realizó ningún pago nuevo por el importe que revisaste.",
