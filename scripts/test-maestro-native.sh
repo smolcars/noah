@@ -41,13 +41,18 @@ run_flow() {
   shift 2
   "$maestro_command" --platform "$platform" test --udid "$device" --no-reinstall-driver \
     --format JUNIT --output "$output/$name.xml" --debug-output "$output/$name" \
+    --test-output-dir "$output/$name" \
     "$@" "$flow"
 }
 
 clipboard() {
   if [[ "$platform" == ios ]]; then
     if [[ "$1" == read ]]; then xcrun simctl pbpaste "$device" | tr -d '\r\n'
-    else printf '%s' "$2" | xcrun simctl pbcopy "$device"; fi
+    else
+      # Match the RN harness: host pasteboard sync otherwise overwrites simulator requests.
+      printf '%s' "$2" | pbcopy
+      printf '%s' "$2" | xcrun simctl pbcopy "$device"
+    fi
   elif [[ "$1" == read ]]; then
     grpcurl "${grpc_args[@]}" "localhost:$grpc_port" \
       android.emulation.control.EmulatorController/getClipboard | jq -r '.text' | tr -d '\r\n'
@@ -102,4 +107,8 @@ if [[ "$suite" == funded || "$suite" == all ]]; then
   run_flow max-reset apps/maestro/subflows/send-max-back-fixed-request.yml
   clipboard write "bitcoin:$onchain?amount=0"
   run_flow amountless apps/maestro/subflows/send-amountless-request.yml
+  run_flow exit-deposit apps/maestro/subflows/exit-deposit-landscape.yml
+  deposit="$(clipboard read)"
+  [[ "$deposit" == bcrt1* ]] || { echo 'Expected a regtest Bitcoin deposit address.' >&2; exit 1; }
+  just bcli validateaddress "$deposit" | sed -n '/^{/,/^}/p' | jq -e '.isvalid'
 fi
