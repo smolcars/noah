@@ -479,6 +479,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
     - [x] Boarding typed errors: one wording table for insufficient confirmed funds, minimum Ark amount, reserved inputs, unsynced wallet, too many inputs, failed broadcast, and `notAttempted`; shared fixture above
     - [x] Boarding receipts: Android's net Ark amount and total leaving next to fees on both platforms; total uses an actual onchain fee when known, otherwise the reviewed fee
     - [x] Incomplete probe cleanup: iOS's stop-before-reprepare rule on both platforms; Android checks its retained preparation handle after cleanup, independent of SDK rejection
+- [ ] Auto-board stops after the first board (production report, RN Android, 2026-10-21): with Auto-Board on and battery optimization off, a 29 Sep deposit was boarded about an hour later, but weekly ~150k-sat deposits on 6, 13 and 20 Oct were not. Investigating whether it only fires once; fix on both RN (`master`) and native
 - [ ] Native UI tests in CI per PLAN.md "CI testing for the native UI":
     - [x] Shared native Maestro wallet/onboarding, receive, delete, email, boarding and funded send regressions with matching SwiftUI/Compose test IDs (`apps/maestro/README.md`)
     - [x] Reusable Android Maestro workflow called by native PR CI; existing Compose adaptive layout/state-restoration instrumentation runs on its emulator
