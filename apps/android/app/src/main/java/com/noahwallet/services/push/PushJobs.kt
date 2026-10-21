@@ -19,7 +19,8 @@ class PushJobs(private val dependencies: Dependencies) {
         val reportMaintenance: suspend (String, Boolean) -> Unit,
         val heartbeat: suspend (String) -> Unit,
         val announceReceived: (Long, String?, String) -> Unit,
-        val refreshWidget: suspend () -> Unit,
+        /** [admitted] throws once the caller or budget is revoked; check it between reads and before writing. */
+        val refreshWidget: suspend (admitted: () -> Unit) -> Unit,
         val log: (String) -> Unit,
         val backup: suspend () -> Unit,
         val reportBackup: suspend (String, Boolean) -> Unit,
@@ -49,7 +50,7 @@ class PushJobs(private val dependencies: Dependencies) {
                     d.reportMaintenance(notification.notificationK1, failure == null)
                 }
                 if (failure != null) throw failure
-                bestEffort("Failed to refresh widget") { d.refreshWidget() }
+                bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
             }
             is NotificationDataLightningInvoiceRequest -> {
                 require(notification.amount >= 0)
@@ -67,7 +68,7 @@ class PushJobs(private val dependencies: Dependencies) {
                 bestEffort("Failed to announce Lightning receive") {
                     d.announceReceived(notification.amountSat, notification.amountUsd, notification.paymentHash)
                 }
-                bestEffort("Failed to refresh widget") { d.refreshWidget() }
+                bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
             }
             is NotificationDataHeartbeat -> bestEffort("Failed to answer heartbeat") {
                 d.heartbeat(notification.notificationId)
@@ -94,7 +95,12 @@ class PushJobs(private val dependencies: Dependencies) {
                 d.recurring(budget)
                 caller.checkWalletAdmission()
                 if (!budget.available) throw CancellationException()
-                bestEffort("Failed to refresh widget") { d.refreshWidget() }
+                bestEffort("Failed to refresh widget") {
+                    d.refreshWidget {
+                        caller.checkWalletAdmission()
+                        if (!budget.available) throw CancellationException()
+                    }
+                }
             }
         }
     }

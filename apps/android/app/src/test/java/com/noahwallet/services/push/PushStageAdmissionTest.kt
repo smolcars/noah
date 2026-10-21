@@ -49,6 +49,42 @@ class PushStageAdmissionTest {
         }
     }
 
+    @Test fun revocationDuringShieldedWidgetReadPreventsPublication() = runBlocking {
+        val notifications = listOf(
+            NotificationDataMaintenance("k1"),
+            NotificationDataLightningClaimRequest(1, null, "hash"),
+            NotificationDataRecurringPaymentDue(1),
+        )
+        for (notification in notifications) for (cancel in listOf(true, false)) {
+            val budget = RecurringBudget()
+            val events = Collections.synchronizedList(mutableListOf<String>())
+            var caller: Job? = null
+            val base = dependencies { events += it }
+            val jobs = PushJobs(PushJobs.Dependencies(
+                ensureWalletOpen = base.ensureWalletOpen, maintenance = base.maintenance,
+                createInvoice = base.createInvoice, submitInvoice = base.submitInvoice,
+                claimLightning = base.claimLightning, reportMaintenance = base.reportMaintenance,
+                heartbeat = base.heartbeat, announceReceived = base.announceReceived,
+                // Mirrors WalletSession.withOpen: the read keeps running after the caller is revoked.
+                refreshWidget = { admitted ->
+                    withContext(NonCancellable) {
+                        events += "widget-read"
+                        if (cancel) caller!!.cancel() else budget.revoke()
+                        admitted()
+                        events += "widget-write"
+                    }
+                },
+                log = base.log, backup = base.backup, reportBackup = base.reportBackup, recurring = base.recurring,
+            ))
+            launch(WalletExecutionBudget(budget)) {
+                caller = currentCoroutineContext()[Job]
+                runCatching { jobs.handle(notification) }
+            }.join()
+            assertTrue("$notification (cancel=$cancel)", "widget-read" in events)
+            assertFalse("$notification (cancel=$cancel)", "widget-write" in events)
+        }
+    }
+
     @Test fun revokedBudgetRejectsEvenHeartbeat() = runBlocking {
         val budget = RecurringBudget().apply { revoke() }
         val events = mutableListOf<String>()

@@ -64,12 +64,16 @@ class PushRuntime(private val context: Context, private val services: AppService
             log.i("Heartbeat response accepted")
         },
         announceReceived = { sats, usd, hash -> PushNotifications.received(context, sats, usd, hash) },
-        refreshWidget = {
+        refreshWidget = { admitted ->
+            // withOpen shields its block from cancellation, so check the caller's admission explicitly.
             services.session.withOpen { handles ->
+                admitted()
                 val summary = handles.summary()
+                admitted()
                 val expiry = try { handles.closestExpiryBlocks() }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { null }
+                admitted()
                 WidgetDataWriter.write(context, summary.balance, expiry, BuildConfig.APP_VARIANT)
             }
         }, log = log::i,
