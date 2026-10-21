@@ -165,6 +165,16 @@ def app_sdk_state(sim, helper, vector, scratch):
     return sdk_state(helper, vector, container / "Documents/noah-data-regtest/db.sqlite", scratch)
 
 
+def wallet_initialized(raw, kind):
+    if kind == "rn":
+        # Devices are fresh: no earlier successful wallet can leave a true record.
+        return re.search(rb'"isInitialized"\s*:\s*true', raw) is not None
+    envelope = json.loads(raw)
+    assert hashlib.sha256(envelope["payload"].encode()).hexdigest() == envelope["sha256"]
+    values = json.loads(envelope["payload"])["values"]
+    return json.loads(values["wallet-storage"])["state"].get("isInitialized") is True
+
+
 def bitcoin_value(*args):
     output = command("just", "bcli", *args)
     return next(line.strip().strip('"') for line in output.splitlines()
@@ -205,11 +215,16 @@ def restore_ios(sim, kind, vector, scratch, fingerprint):
     while time.monotonic() < deadline:
         try:
             if app_state(sim)["fingerprint"] == fingerprint:
+                container = Path(command("xcrun", "simctl", "get_app_container", sim, BUNDLE, "data").strip())
+                settings = container / ("Documents/mmkv/noah-wallet-storage" if kind == "rn" else "Documents/mmkv.native-settings.json")
+                if not wallet_initialized(settings.read_bytes(), kind):
+                    time.sleep(2)
+                    continue
                 time.sleep(3)
                 if app_state(sim)["fingerprint"] == fingerprint:
                     flow(sim, "finish-restore", scratch)
                     return
-        except (RuntimeError, sqlite3.Error, TypeError):
+        except (RuntimeError, sqlite3.Error, TypeError, OSError, ValueError, KeyError):
             pass
         time.sleep(2)
     command("xcrun", "simctl", "terminate", sim, BUNDLE)
@@ -220,11 +235,11 @@ def fund_ios(sim, kind, scratch):
     flow(sim, "receive-address", scratch)
     address = command("xcrun", "simctl", "pbpaste", sim).strip()
     assert address.startswith("tark1")
-    command("just", "bark", "--quiet", "--no-logfile", "send", "--wait", address, "20000 sats")
     flow(sim, "receive-onchain-address", scratch)
     chain = command("xcrun", "simctl", "pbpaste", sim).strip()
     assert chain.startswith("bcrt1")
     flow(sim, "close-" + kind + "-receive", scratch)
+    command("just", "bark", "--quiet", "--no-logfile", "send", "--wait", address, "20000 sats")
     txid = bitcoin_value("sendtoaddress", chain, "0.00010000")
     bitcoin_value("generatetoaddress", "1", bitcoin_value("getnewaddress"))
     flow(sim, "refresh-funded-" + kind, scratch)
@@ -346,6 +361,12 @@ def flow(sim, name, scratch, variables=None):
 def self_test():
     assert public_vector("A") != public_vector("B")
     assert all(len(public_vector(v).split()) == 12 for v in ("A", "B"))
+    assert not wallet_initialized(b'{"isInitialized":false}', "rn")
+    assert wallet_initialized(b'\x00{"isInitialized":true}', "rn")
+    for initialized in (False, True):
+        payload = json.dumps({"values": {"wallet-storage": json.dumps({"state": {"isInitialized": initialized}})}})
+        envelope = json.dumps({"payload": payload, "sha256": hashlib.sha256(payload.encode()).hexdigest()}).encode()
+        assert wallet_initialized(envelope, "native") == initialized
     with tempfile.TemporaryDirectory() as directory:
         db = Path(directory) / "db.sqlite"
         with sqlite3.connect(db) as connection:

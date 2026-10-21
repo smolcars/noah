@@ -6,6 +6,6 @@ appId: com.noahwallet.regtest
       id: "receive-qr-button"
     timeout: 30000
 - tapOn:
-    id: "receive-copy-button"
+    id: "receive-qr-button"
 - tapOn:
     id: "receive-copy-ark"

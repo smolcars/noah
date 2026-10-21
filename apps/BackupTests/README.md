@@ -148,14 +148,16 @@ target, using `system-images;android-35;google_apis;arm64-v8a`, an explicit even
 port >=5592, token-protected loopback gRPC clipboard, `-no-window -no-snapshot`,
 two cores and 2 GiB RAM. It verifies identity and shutdown before deletion. Root
 is used only on these owned Google APIs emulators to copy the stopped app's
-SQLite/WAL pair; seed, Keystore, auth token and MMKV files are not copied to the
-host. Default public evidence is `/private/tmp/noah-rn-native-android-evidence.json`.
+SQLite/WAL pair; seed, Keystore and auth token files are never copied. The
+initialization flag is inspected in memory, without retaining settings/MMKV
+files. Default public evidence is `/private/tmp/noah-rn-native-android-evidence.json`.
 
 Keep Device-panel streaming closed during phrase input. Clipboard text is pasted
 through the system Paste menu, not an automation text-entry command. RN's iOS
 restore form groups its accessibility children, so its test uses the fixed
-portrait device layout. A failed restore is stopped before subsequent UI
-capture. Do not publish Maestro debug artifacts; the runners remove them.
+portrait device layout. A stable installed wallet and committed initialization
+flag are required before subsequent UI assertions; a failed restore is stopped
+before that capture. Do not publish Maestro debug artifacts; the runners remove them.
 
 Both runners refuse to overwrite existing server backups for their fixed public
 vectors. Reproduction requires an independently reset, initialized test

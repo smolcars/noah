@@ -5,4 +5,4 @@ appId: com.noahwallet.regtest
     point: "30%,27%"
 - tapOn: "(?i)paste"
 - tapOn:
-    point: "50%,37%"
+    point: "50%,40%"

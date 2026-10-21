@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Android companion to rn_native_interop.py; requires prebuilt regtest APKs."""
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
@@ -108,10 +109,15 @@ class Emulator:
         while time.monotonic() < deadline:
             try:
                 self.adb("shell", "test", "-f", f"/data/user/0/{test.BUNDLE}/files/noah-data-regtest/db.sqlite")
+                path = f"/data/user/0/{test.BUNDLE}/" + ("files/mmkv/noah-wallet-storage" if kind == "rn" else "no_backup/settings.native.json")
+                raw = base64.b64decode(self.adb("shell", "base64", path))
+                if not test.wallet_initialized(raw, kind):
+                    time.sleep(2)
+                    continue
                 time.sleep(3)
                 test.flow(self.serial, "finish-restore", self.scratch)
                 return
-            except RuntimeError:
+            except (RuntimeError, ValueError, KeyError, TypeError):
                 time.sleep(2)
         self.adb("shell", "am", "force-stop", test.BUNDLE)
         raise RuntimeError("Android restore did not install a wallet; stopped before UI capture")
@@ -120,11 +126,11 @@ class Emulator:
         test.flow(self.serial, "receive-address", self.scratch)
         ark = self.clipboard().strip()
         assert ark.startswith("tark1")
-        test.command("just", "bark", "--quiet", "--no-logfile", "send", "--wait", ark, "20000 sats")
         test.flow(self.serial, "receive-onchain-address", self.scratch)
         chain = self.clipboard().strip()
         assert chain.startswith("bcrt1")
         test.flow(self.serial, "close-" + kind + "-receive", self.scratch)
+        test.command("just", "bark", "--quiet", "--no-logfile", "send", "--wait", ark, "20000 sats")
         txid = test.bitcoin_value("sendtoaddress", chain, "0.00010000")
         test.bitcoin_value("generatetoaddress", "1", test.bitcoin_value("getnewaddress"))
         test.flow(self.serial, "refresh-funded-" + kind, self.scratch)

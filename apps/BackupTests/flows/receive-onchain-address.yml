@@ -1,20 +1,4 @@
 appId: com.noahwallet.regtest
 ---
-- runFlow:
-    when:
-      visible: "Funds received"
-    commands:
-      - scrollUntilVisible:
-          element: "Done"
-          direction: DOWN
-      - tapOn: "Done"
-- tapOn: "Home"
-- tapOn: "Receive"
-- extendedWaitUntil:
-    visible:
-      id: "receive-copy-button"
-    timeout: 30000
-- tapOn:
-    id: "receive-copy-button"
 - tapOn:
     id: "receive-copy-onchain"
