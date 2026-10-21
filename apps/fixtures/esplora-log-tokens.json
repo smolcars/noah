@@ -166,5 +166,149 @@
     "endpoint": "https://fake-r7-fold.example/api/fakeStraßeSecret72",
     "input": "FAKESTRASSESECRET72",
     "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining acute raw",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaquésuffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining acute case",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixFAKEOPAQUÉsuffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining acute percent",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu%65́suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining acute JSON",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu\\u0065́suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining acute HTML",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu&#101;́suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining ring raw",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaque̊suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining ring case",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixFAKEOPAQUE̊suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining ring percent",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu%65̊suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining ring JSON",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu\\u0065̊suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining ring HTML",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu&#101;̊suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining cedilla raw",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaquȩsuffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining cedilla case",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixFAKEOPAQUȨsuffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining cedilla percent",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu%65̧suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining cedilla JSON",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu\\u0065̧suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining cedilla HTML",
+    "endpoint": "https://fake-r7-normalize.example/fakeOpaque",
+    "input": "prefixfakeOpaqu&#101;̧suffix",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "combining registered raw",
+    "endpoint": "https://fake-r8-decomposed.example/fakeCafe%CC%81",
+    "input": "xxfakeCafȩ́yy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--strae-oqa host",
+    "endpoint": "https://xn--strae-oqa.example/api",
+    "input": "peer:straße.example",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--strae-oqa label",
+    "endpoint": "https://xn--strae-oqa.example/api",
+    "input": "xxstraßeyy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--fake-jodfa host",
+    "endpoint": "https://xn--fake-jodfa.example/api",
+    "input": "peer:fakeσσς.example",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--fake-jodfa label",
+    "endpoint": "https://xn--fake-jodfa.example/api",
+    "input": "xxfakeσσςyy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--fake-87i2qsf645q host",
+    "endpoint": "https://xn--fake-87i2qsf645q.example/api",
+    "input": "peer:fakeक्‍ष.example",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--fake-87i2qsf645q label",
+    "endpoint": "https://xn--fake-87i2qsf645q.example/api",
+    "input": "xxfakeक्‍षyy",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--fake-87i2qsfy45q host",
+    "endpoint": "https://xn--fake-87i2qsfy45q.example/api",
+    "input": "peer:fakeक्‌ष.example",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "IDNA2008 xn--fake-87i2qsfy45q label",
+    "endpoint": "https://xn--fake-87i2qsfy45q.example/api",
+    "input": "xxfakeक्‌षyy",
+    "expected": "[custom-esplora]"
   }
 ]

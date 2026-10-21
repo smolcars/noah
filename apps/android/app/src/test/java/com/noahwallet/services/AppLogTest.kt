@@ -19,6 +19,13 @@ class AppLogTest {
         repeat(1000) { index ->
             com.noahwallet.services.logging.EndpointLogPrivacy.register("https://scaling-privacy-$index.example/api/fakeScale$index")
         }
+        com.noahwallet.services.logging.EndpointLogPrivacy.register("https://fake-r8-scaling.example/fakeOpaque")
+        com.noahwallet.services.logging.EndpointLogPrivacy.register("https://xn--strae-oqa.example/api")
+        val unicode = listOf("combining mark miss" to "zzzz ordinarye\u0301 ",
+            "combining mark hit" to "xxfakeOpaque\u0301yy ",
+            "IDNA2008 miss" to "xxordinaryßς\u200D\u200Cyy ",
+            "IDNA2008 hit" to "xxstraßeyy ")
+        for ((name, unit) in unicode) assertRedactionScales(name, unit, com.noahwallet.services.logging.EndpointLogPrivacy::redact)
         val authorities = listOf("other authorities" to "https://unrelated-scaling.example/other ",
             "registered authorities" to "https://scaling-privacy-999.example/other ",
             "allowed authorities" to "https://noahwallet.io/v0/health ",

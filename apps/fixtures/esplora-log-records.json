@@ -1,0 +1,60 @@
+[
+  {
+    "name": "composed tag and message",
+    "kind": "record",
+    "endpoint": "https://fake-r7-compose.example/FakeR7Tag%5D%20FakeR7Message",
+    "tag": "FakeR7Tag",
+    "message": "FakeR7Message",
+    "secret": "FakeR7Tag] FakeR7Message"
+  },
+  {
+    "name": "composed Bark target and message",
+    "kind": "bark",
+    "endpoint": "https://fake-r8-compose.example/FakeR8Bark%5D%20FakeR8Message",
+    "tag": "FakeR8Bark",
+    "message": "FakeR8Message",
+    "secret": "FakeR8Bark] FakeR8Message"
+  },
+  {
+    "name": "overflow generated message",
+    "kind": "overflow",
+    "endpoint": "https://fake-r8-overflow.example/dropped%2037%20log%20records",
+    "secret": "dropped 37 log records",
+    "count": 37
+  },
+  {
+    "name": "overflow generated tag",
+    "kind": "overflow",
+    "endpoint": "https://fake-r8-overflow.example/logging%5D%20%5Bdropped%2041%20log%20records",
+    "secret": "logging] [dropped 41 log records",
+    "count": 41
+  },
+  {
+    "name": "file indentation composition",
+    "kind": "record",
+    "endpoint": "https://fake-r8-indent.example/FakeR8Line%0A%20%20FakeR8Next",
+    "tag": "indent",
+    "message": "FakeR8Line\nFakeR8Next",
+    "secret": "FakeR8Line\n  FakeR8Next"
+  },
+  {
+    "name": "fallback NSError",
+    "kind": "fallback",
+    "endpoint": "https://fake-r8-errors.example/NSError",
+    "type": "NSError"
+  },
+  {
+    "name": "fallback SocketTimeoutException",
+    "kind": "fallback",
+    "endpoint": "https://fake-r8-errors.example/SocketTimeoutException",
+    "type": "SocketTimeoutException"
+  },
+  {
+    "name": "file terminator composition",
+    "kind": "record",
+    "endpoint": "https://fake-r8-terminator.example/FakeR8Terminator%0A",
+    "tag": "terminator",
+    "message": "FakeR8Terminator",
+    "secret": "FakeR8Terminator\n"
+  }
+]

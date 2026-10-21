@@ -63,6 +63,17 @@ struct EndpointPrivacyTests {
         }
     }
 
+    @Test func combiningMarksCannotHideRawTokens() throws { try round8Tokens("combining") }
+    @Test func idna2008UnicodeFormsAreRegistered() throws { try round8Tokens("IDNA2008") }
+
+    private func round8Tokens(_ family: String) throws {
+        struct Case: Decodable { let name: String; let endpoint: String; let input: String; let expected: String }
+        for test in try Fixtures.decode("esplora-log-tokens", as: [Case].self) where test.name.hasPrefix(family) {
+            EndpointLogPrivacy.register(test.endpoint)
+            #expect(LogFile.redact(test.input) == test.expected, "\(test.name)")
+        }
+    }
+
     @Test func tokenAutomatonFollowsFailureLinksAndProtectsProviderSummaries() {
         let matcher = EndpointLogPrivacy.SecretMatcher(["he", "sheq", "hers", "his", "fake😀Secret"])
         for input in ["she", "ushers", "hish", "FAKE😀SECRET"] { #expect(matcher.contains(input)) }

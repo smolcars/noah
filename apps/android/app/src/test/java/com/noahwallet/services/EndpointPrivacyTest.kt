@@ -69,6 +69,18 @@ class EndpointPrivacyTest {
         } finally { directory.deleteRecursively() }
     }
 
+    @Test fun combiningMarksCannotHideRawTokens() = round8Tokens("combining")
+    @Test fun idna2008UnicodeFormsAreRegistered() = round8Tokens("IDNA2008")
+
+    private fun round8Tokens(family: String) {
+        val cases = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-tokens.json")!!.readText()).jsonArray.map { it.jsonObject }
+        cases.filter { it.getValue("name").jsonPrimitive.content.startsWith(family) }.forEach { test ->
+            EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
+            assertEquals(test.getValue("name").jsonPrimitive.content, test.getValue("expected").jsonPrimitive.content,
+                LogFile.redact(test.getValue("input").jsonPrimitive.content))
+        }
+    }
+
     @Test fun tokenAutomatonFollowsFailureLinksAndProtectsProviderSummaries() {
         val matcher = EndpointLogPrivacy.SecretMatcher(setOf("he", "sheq", "hers", "his", "fake😀Secret"))
         for (input in listOf("she", "ushers", "hish", "FAKE😀SECRET")) assertTrue(matcher.contains(input))

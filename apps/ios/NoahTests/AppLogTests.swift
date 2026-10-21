@@ -18,6 +18,8 @@ struct AppLogTests {
         for index in 0..<1000 {
             EndpointLogPrivacy.register("https://scaling-privacy-\(index).example/api/fakeScale\(index)")
         }
+        EndpointLogPrivacy.register("https://fake-r8-scaling.example/fakeOpaque")
+        EndpointLogPrivacy.register("https://xn--strae-oqa.example/api")
         let authorities = [("other authorities", "https://unrelated-scaling.example/other "),
                            ("registered authorities", "https://scaling-privacy-999.example/other "),
                            ("allowed authorities", "https://noahwallet.io/v0/health "),
@@ -26,6 +28,13 @@ struct AppLogTests {
                            ("path history without slash", "zzzz ordinary diagnostic "),
                            ("path history with slash", "/zzzz/ordinary/diagnostic "),
                            ("path history hit", "xxfakeScale999yy ")]
+        let unicode = [("combining mark miss", "zzzz ordinarye\u{0301} "),
+                       ("combining mark hit", "xxfakeOpaque\u{0301}yy "),
+                       ("IDNA2008 miss", "xxordinaryßς\u{200D}\u{200C}yy "),
+                       ("IDNA2008 hit", "xxstraßeyy ")]
+        for (name, unit) in unicode {
+            assertRedactionScales(name, unit, redact: EndpointLogPrivacy.redact)
+        }
         for (name, unit) in Self.performanceInputs + authorities {
             assertRedactionScales(name, unit, redact: LogFile.redact)
             assertRedactionScales("boundary " + name, unit, redact: EndpointLogPrivacy.redact)

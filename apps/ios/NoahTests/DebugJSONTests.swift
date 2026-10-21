@@ -21,6 +21,6 @@ struct DebugJSONTests {
     }
     @Test func errorsKeepTheExistingSafeDescriptionBoundary() {
         #expect(SafeErrorDescription.of(BarkError(message: "token=fake-test-token")) == "[redacted]")
-        #expect(SafeErrorDescription.of(NSError(domain: "private request", code: 1, userInfo: [NSLocalizedDescriptionKey: "secret input"])) == "NSError")
+        #expect(SafeErrorDescription.of(NSError(domain: "private request", code: 1, userInfo: [NSLocalizedDescriptionKey: "secret input"])) == LogFile.redact("NSError"))
     }
 }
