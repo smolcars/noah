@@ -167,11 +167,11 @@ Fixed in **`3113de0d`**: six screens, on both platforms. `06228133` follows with
 
 **D2 — Decided: keep native revalidation.** Keep exact input/cost revalidation immediately before delegated refresh. Do not add RN's explicit pre-sync, which can progress/rebroadcast wallet state.
 
-**D3 — Resolved: emergency exit without a fee estimate.** Only an error from the start/claim estimator produces an eligible fallback. Selection, dust, wallet, journal-overlap and destination/ownership failures do not. The user presses RN's “Continue without estimate”, reads a separate review saying fees and amount to receive are unknown, then explicitly starts or broadcasts. Unknown fee, broadcast fee and rate are absent, never zero or a previous estimate. The journal persists the review UUID consent with its wallet, sorted exact VTXO IDs, action, amount and claim destination/ownership. Consent uses that same review's original 30-second deadline and existing navigation/background/input invalidation; confirmation rechecks exact inputs and the deadline without calling the estimator again. No automatic retry/resubmission was added. Known estimates still use the normal re-quote/match path. Claim construction retains destination checks, and only explicitly consented unknown-fee claims bypass comparison to a nonexistent estimate. Cancellation and journal admission are unchanged.
+**D3 — Resolved: emergency exit without a fee estimate.** Only an estimator-unavailable error from the start/claim estimator produces an eligible fallback; typed validation failures propagate without one. SDK 0.5.0 `Other` remains eligible because it also collapses transport, fee-rate and some exit-validation reasons (RN parity); the typed-error follow-up is tracked in TODO. Selection, dust, wallet, journal-overlap and destination/ownership failures do not. The user presses RN's “Continue without estimate”, reads a separate review saying fees and amount to receive are unknown, then explicitly starts or broadcasts. Unknown fee, broadcast fee and rate are absent, never zero or a previous estimate. The journal persists the review UUID consent with its wallet, sorted exact VTXO IDs, action, amount and claim destination/ownership. Confirmation-time conversion retains the original UUID, scope and creation time, and refuses conversion at or after its deadline. Consent uses that same review's original 30-second deadline and existing navigation/background/input invalidation; confirmation rechecks exact inputs and the deadline without calling the estimator again. No automatic retry/resubmission was added. Known estimates still use the normal re-quote/match path. Claim construction retains destination checks, and only explicitly consented unknown-fee claims bypass comparison to a nonexistent estimate. Cancellation and journal admission are unchanged.
 
 Native already allowed a reviewed start when confirmed broadcast funding was insufficient. That path remains enabled and now uses RN's explicit “You are starting tracking anyway; fund the wallet before progressing” wording. It still explains the native background daemon's automatic broadcasts/fee bumps; manual progression keeps its separate review.
 
-**D4 — Resolved: release provably unsubmitted Auto-Board funding.** Each visible review records both the full deposit snapshot and only the outpoints it newly claimed, scoped by wallet and review UUID. Confirmation rechecks the deposit snapshot under the existing wallet/session authority before claiming the signed preparation. Changed deposits reject the old plan and permit a fresh review; read/check errors apply the existing 30-second backoff. After a failed confirm, release requires the exact unclaimed preparation to be retired successfully (or matching process-local evidence that it was discarded unclaimed), plus no journal attempt for the review/preparation/exact txid. Missing preparation alone, failed cleanup, claimed/submitted/accepted/uncertain attempts, unreadable journal and loss of process-local proof cannot release funding. Android keeps the lifecycle mutation, onchain mutation and preparation locks; iOS uses the existing session and journal actors with MainActor ledger ownership. Retirement prevents submission across the asynchronous journal read. Only the review's newly claimed outpoints are subtracted; prior handled funding remains. Dismissal, “No, turn off”, background invalidation and expiry alone never invoke release. Interruption releases only if the same proof completes; process death keeps handled funding. Exact input reservations, single-use preparation, journal admission and exact txid-before-submit are retained.
+**D4 — Resolved: release provably unsubmitted Auto-Board funding.** Each visible review records both the full deposit snapshot and only the outpoints it newly claimed, scoped by wallet and review UUID. Confirmation rechecks the deposit snapshot under the existing wallet/session authority before claiming the signed preparation. Changed deposits reject the old plan and permit a fresh review; read/check errors apply the existing 30-second backoff. Round 2 persists a wallet-scoped retry deadline atomically with the funding release in the native funding ledger. A recreated controller reloads that deadline once the funding snapshot identifies the wallet, before preparing a new review. Legacy outpoint-only ledgers remain readable; a failed durable write leaves the deposits handled. After a failed confirm, release requires the exact unclaimed preparation to be retired successfully (or matching process-local evidence that it was discarded unclaimed), plus no journal attempt for the review/preparation/exact txid. Missing preparation alone, failed cleanup, claimed/submitted/accepted/uncertain attempts, unreadable journal and loss of process-local proof cannot release funding. Android keeps the lifecycle mutation, onchain mutation and preparation locks; iOS uses the existing session and journal actors with MainActor ledger ownership. Retirement prevents submission across the asynchronous journal read. Only the review's newly claimed outpoints are subtracted; prior handled funding remains. Dismissal, “No, turn off”, background invalidation and expiry alone never invoke release. Interruption releases only if the same proof completes; process death keeps handled funding. Exact input reservations, single-use preparation, journal admission and exact txid-before-submit are retained.
 
 **D5 — Decided: keep fail-closed “review again”.** Keep the original selected-ID set. If an ID disappears, reject the stale selection and require another review. Do not prune or shrink reviewed/journaled inputs.
 
@@ -307,3 +307,145 @@ Acceptance limits: estimator/network failures and interrupted confirmations were
 exercised deterministically at production seams. The screenshots prove
 presentation; this follow-up did not repeat a funded emergency exit/claim or
 induce a live network outage. Existing live evidence remains historical.
+
+## D3/D4 round-2 review fixes — 2026-10-21
+
+Started at local `feat/native-rewrite` HEAD `bd0deea7`. Cherry-picked round 1:
+`5eebdbf7` → `b775fb6c`, `c7b5dc88` → `bc6efc0a`, `6cb1f3ef` → `01cc3656`.
+Only generated translation coverage conflicted; kept one side and regenerated
+with `bun apps/tools/translations.mjs`. Both widget-expiry and 12/24-word restore
+work remain. No doc/TODO content was discarded.
+
+1. **Estimator error classification:** both start and claim now check the failure
+   category at the estimator call, after existing selection/dust/destination checks.
+   Typed validation and unrelated errors propagate normally. Tests inject every
+   pinned SDK code, plus unavailable errors, at that call. No diagnostic-string
+   matching. TODO records the upstream loss of typed exit-validation reasons.
+2. **Confirmation-time expiry:** the execution boundary and UI retain the original
+   review UUID, creation time and exact scope when switching to unknown fees. A
+   conversion at second 29 expires at second 30, and conversion at/after second 30
+   fails. Changed wallet, IDs, amount, destination, action or confirmed balance also
+   fails. No existing consent carries over; the separate confirmation is required.
+3. **Auto-Board recreation:** handled outpoints and wallet retry deadlines share one
+   atomic settings write. Recreation tests show no offer at 29/29.999 seconds and
+   allow one at 30 seconds. Changed-funding rejection remains immediately eligible.
+   Prior handled outpoints, uncertain/submitted/dismissed reviews and failed writes
+   remain protected.
+4. **Unknown-fee copy:** only the unknown-fee start review omits “The fees shown are
+   estimates and may change.” The normal estimated review retains it. This needs
+   one full-copy key; es/ja/ko/sv reuse their previous translation with precisely
+   that sentence removed, edited directly in `apps/i18n/{locale}/native.json`.
+   No paid translation command was run.
+
+### Error classification at the estimator call
+
+| Error | iOS fallback | Android fallback |
+|---|---|---|
+| SDK `Other` (network/server/timeout/fee-rate unavailability, also unclassifiable exit-validation reasons) | Yes, explicit RN-compatible exception | Yes, same exception |
+| Any other SDK code: invalid address/amount/fee rate, insufficient funds, dust, prepared transaction missing/inputs unavailable, unsupported operation, persistence, below-minimum board, too many inputs, prepared board changed | No | No |
+| Native `OnchainFailure.unavailable` | Yes | Yes (`OnchainException`) |
+| Recognized transport/timeout | `URLError`: timedOut, cannotFindHost, cannotConnectToHost, networkConnectionLost, dnsLookupFailed, notConnectedToInternet, badServerResponse, secureConnectionFailed, resourceUnavailable | `SocketException` (including connect/no-route), `SocketTimeoutException`, `UnknownHostException`, `InterruptedIOException`, coroutine `TimeoutCancellationException` |
+| Cancellation, invalid URL/arguments, other unrecognized exceptions | No | No (ordinary cancellation excluded; explicit timeout above allowed) |
+| Failure before the estimator, or progression estimator failure | No | No |
+
+The SDK `Other` ambiguity is an intentional remaining limit, not a claim that its
+underlying error is always estimator unavailability. No fabricated fee, automatic
+retry, resubmission, journal or consent-scope relaxation was added.
+
+### Round-2 finding file map
+
+Paths are relative to the repo root; numbers refer to the final round-2 sources.
+
+- **Finding 1:** iOS `apps/ios/Noah/Features/Onchain/OnchainModels.swift:195`
+  classifies errors; `Services/Wallet/WalletSession+Onchain.swift:209` and `:319`
+  gate claim/start fallback. Android
+  `apps/android/app/src/main/java/com/noahwallet/onchain/OnchainModels.kt:100`
+  classifies; `OnchainOperations.kt:121` gates both. Tests:
+  `apps/ios/NoahTests/ExitClaimDestinationTests.swift:279` and `:303`,
+  `apps/android/app/src/test/java/com/noahwallet/onchain/OnchainOperationsTest.kt:39`.
+- **Finding 2:** iOS `apps/ios/Noah/Features/Onchain/OnchainModels.swift:207`
+  preserves original scope/deadline; `Services/Wallet/WalletSession+Onchain.swift:225`
+  and `:348` cover claim/start execution; `Features/Onchain/OnchainModel.swift:209`
+  also protects the UI. Android `onchain/OnchainModels.kt:109`,
+  `OnchainOperations.kt:141`, `OnchainModel.kt:123` do the same (same main Kotlin
+  prefix as above). Tests: iOS `NoahTests/ExitClaimDestinationTests.swift:315`,
+  `OnchainSafetyTests.swift:344` and `:375`; Android
+  `OnchainOperationsTest.kt:54` and `OnchainModelTest.kt:33` (same test Kotlin prefix).
+- **Finding 3:** iOS `apps/ios/Noah/Features/Onchain/AutoBoardFunding.swift:25`,
+  `:48`, `:93`; Android
+  `apps/android/app/src/main/java/com/noahwallet/onchain/AutoBoardFunding.kt:19`,
+  `:30`, `:74` define/read the durable state, atomically save release/deadline and
+  enforce the wallet deadline on recreated admission. Tests:
+  `apps/ios/NoahTests/BoardPreparedTests.swift:35` and `:62`,
+  `apps/android/app/src/test/java/com/noahwallet/onchain/OnchainModelTest.kt:45`
+  and `:62` cover recreation and failed writes.
+- **Finding 4:** iOS `apps/ios/Noah/Features/Onchain/OnchainViews.swift:198`;
+  Android `apps/android/app/src/main/java/com/noahwallet/onchain/OnchainScreen.kt:216`.
+  Translation key `gt_0cc23d9ecbb9986c` is generated offline from the shorter copy
+  (the exact extracted key is in the native locale catalogs). Read-only fixtures:
+  `apps/ios/NoahTests/WalletParityDeviceTests.swift:10`,
+  `apps/android/app/src/androidTest/java/com/noahwallet/onchain/WalletParityDeviceTest.kt:28`.
+
+### Round-2 verification
+
+Code commits: `2e395571` (findings 1/2), `ae40ef72` (finding 3), `d0bb2fa0`
+(finding 4). Each new commit ran the restored Husky hook: client lint/compiler
+checks, all 148 RN unit tests, TypeScript and Cargo formatting. No hook bypass,
+`client/` or `server/` edit, push, Docker command, physical device or use of
+another agent's device.
+
+- Android's requested full command ran once after the final source/test changes:
+  **3,711 tests / 162 suites; zero failures, errors or skips**. APK assembly and
+  instrumentation Kotlin compilation passed. Log and exported counts:
+  `/private/tmp/noah-exit-r2-6cab/android-final.log`, `android-final-summary.json`.
+- Focused Android operations/model checks passed **62 tests**. Focused iOS claim,
+  boarding and deadline checks passed **39 tests / 70 expanded executions in
+  3 suites**, with zero failures/skips.
+- Read-only production fixtures passed: iOS **3 tests**, Android **1 test**
+  covering both start and claim. Re-taken screenshots (visually inspected start
+  reviews) are `/private/tmp/noah-exit-fallback-shots/{ios,android}-startExit.png`
+  and `{ios,android}-claim.png`. File hashes/sizes:
+  `/private/tmp/noah-exit-r2-6cab/screenshots.json`.
+- Offline translation generation and `--check` pass with **zero untranslated keys**
+  for es/ja/ko/sv on both platforms; all **16 translation-tool tests pass**.
+
+Exploratory harness fixes, before the final full runs: corrected a test dependency
+constructor and a stale in-flight Android compile; Xcode's generated `.xctestrun`
+used the v1 target layout, so the first fixture call selected no bundles, and the
+next incorrectly broad selection was interrupted. The corrected explicit suite
+selector ran the actual 3 fixture tests. The one completed requested iOS full run
+is reported separately below. These harness issues do not change source behavior.
+
+The requested iOS full `Noah-Regtest` run completed once after the final source
+and test changes, following XcodeGen, with ad hoc signed arm64, two jobs, serial
+testing and private DerivedData `/private/tmp/noah-exit-r2-6cab/dd`:
+**900 total / 867 passed / 32 opt-in skipped / 1 failed in 180 suites**;
+**1,737 expanded passes / 32 skips / 1 failure**. All round-2 regressions passed.
+The sole failure was unchanged `AppLogTests.redactionPerformance()` at line 65,
+with two assertions for path-history-without-slash scaling (16 KiB measured
+258 ms and 175 ms against 173 ms and 121 ms limits). The test and logging sources
+have zero diff from `bd0deea7`. The full run was not repeated or reported as green.
+Log, result and exported counts are under `/private/tmp/noah-exit-r2-6cab/`:
+`ios-final.log`, `ios-final.xcresult`, `ios-final-summary.json`.
+
+The single-test isolated rerun of `AppLogTests/redactionPerformance()` passed
+**1/1**, with zero failures/skips, in 8.532 seconds. This does not erase the full
+run's failure or establish that the full suite is green. Its log/result/summary:
+`/private/tmp/noah-exit-r2-6cab/ios-redaction{.log,.xcresult,-summary.json}`.
+The unrelated performance test and logging code were left unchanged.
+
+Owned devices only: **Noah Exit R2 6cab**, iPhone 17 / iOS 27.0,
+`B2A543B3-55D8-490A-B17A-C4F2F2C761D2`; **NoahExitR26cab**, Android 15,
+console **5730** / `emulator-5730`. T3 initially did not discover the fresh
+simulator; Xcode booted that exact UDID, after which both devices were attached
+to this thread's Device panel. Both exact identities were checked before shutdown.
+iOS name/type/UDID and Shutdown state were rechecked before deletion; Android's
+console reported the owned AVD name before shutdown/deletion. Both devices and
+Android AVD/ini are now confirmed absent. Cleanup records are
+`/private/tmp/noah-exit-r2-6cab/{ios,android}-cleanup.json`.
+
+No funded operation, induced live outage, actual mid-broadcast process kill,
+external hardware or dark/landscape acceptance run was added. SDK `Other`
+classification remains intentionally limited as documented above. The unrelated
+full-suite timing failure remains visible in the evidence despite its isolated
+pass.
