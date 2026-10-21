@@ -109,7 +109,7 @@ enum EndpointLogPrivacy {
             }
         }
         static func normalize(_ text: String) -> String {
-            text.precomposedStringWithCompatibilityMapping.uppercased(with: Locale(identifier: "en_US_POSIX"))
+            text.precomposedStringWithCompatibilityMapping.lowercased(with: Locale(identifier: "en_US_POSIX")).uppercased(with: Locale(identifier: "en_US_POSIX")).precomposedStringWithCompatibilityMapping
         }
         func contains(_ text: String) -> Bool {
             guard nodes.count > 1 else { return false }

@@ -67,6 +67,10 @@ struct EndpointPrivacyTests {
         let matcher = EndpointLogPrivacy.SecretMatcher(["he", "sheq", "hers", "his", "fake😀Secret"])
         for input in ["she", "ushers", "hish", "FAKE😀SECRET"] { #expect(matcher.contains(input)) }
         #expect(!matcher.contains("ordinary diagnostic"))
+        #expect(EndpointLogPrivacy.SecretMatcher(["fakeStraßeSecret"]).contains("FAKESTRAẞESECRET"))
+        let unicode = "fakeΐSecret761"
+        #expect(EndpointLogPrivacy.SecretMatcher.normalize(EndpointLogPrivacy.SecretMatcher.normalize(unicode)) == EndpointLogPrivacy.SecretMatcher.normalize(unicode))
+        #expect(EndpointLogPrivacy.SecretMatcher([EndpointLogPrivacy.SecretMatcher.normalize(unicode)]).contains(unicode))
         let provider = EndpointLogPrivacy.SecretMatcher(["HttpResponse"])
         for input in ["HttpResponse { status: 503 }", "HttpResponse unknown", #"HttpResponse \uD800"#] {
             #expect(EndpointLogPrivacy.sanitize(input, registered: ["https://fake-provider.example"], matcher: provider) == "[custom-esplora]")
