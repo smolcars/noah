@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 
 enum VtxoStatus: String, CaseIterable {
@@ -190,4 +191,27 @@ struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
 /// Created only after all input checks succeed and the estimator itself fails.
 struct ExitEstimateUnavailable: Error {
     var review: OnchainQuote
+
+    static func allowsFallback(_ error: any Error) -> Bool {
+        // SDK 0.5.0 collapses transport, fee-rate and some exit validation failures into Other (RN parity).
+        if let error = error as? BarkError { return error.code == .other }
+        if let error = error as? OnchainFailure { return error == .unavailable }
+        if let error = error as? URLError {
+            return [.timedOut, .cannotFindHost, .cannotConnectToHost, .networkConnectionLost,
+                    .dnsLookupFailed, .notConnectedToInternet, .badServerResponse,
+                    .secureConnectionFailed, .resourceUnavailable].contains(error.code)
+        }
+        return false
+    }
+
+    func preserving(_ original: OnchainQuote, now: Date = Date()) throws -> Self {
+        var scope = original
+        scope.fee = nil; scope.chainFee = nil; scope.feeRate = nil
+        guard ExitRules.current(reviewedAt: original.createdAt, now: now), review.feesUnknown,
+              scope.matches(review) else { throw OnchainFailure.changed }
+        var fallback = review
+        fallback.id = original.id; fallback.createdAt = original.createdAt
+        fallback.unknownFeeConsent = nil
+        return .init(review: fallback)
+    }
 }

@@ -119,7 +119,10 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             message = dependencies.execute(reviewed)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: ExitEstimateUnavailable) {
-            if (token == generation && dependencies.ready()) estimateFallback = failure.review
+            if (token == generation && dependencies.ready()) {
+                try { estimateFallback = failure.preserving(reviewed).review }
+                catch (expired: OnchainException) { error = expired.message }
+            }
         }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text }
         finally { withContext(NonCancellable) { dependencies.discard(reviewed) }; busy = false }

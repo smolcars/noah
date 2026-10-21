@@ -117,8 +117,10 @@ internal class OnchainOperations(
         val fallbackAllowed = validated.action in setOf(OnchainAction.startExit, OnchainAction.claim)
         if (!estimate && fallbackAllowed) return unknown
         val fee = try { wallet.exitFee(validated.ids, validated.destination) }
-        catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { if (fallbackAllowed) throw ExitEstimateUnavailable(unknown) else throw failure }
+        catch (failure: Exception) {
+            if (fallbackAllowed && ExitEstimateUnavailable.allowsFallback(failure)) throw ExitEstimateUnavailable(unknown)
+            throw failure
+        }
         return validated.copy(fee = fee.claimFeeSats.toLong(),
             chainFee = if (validated.action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),
             feeRate = if (validated.action == OnchainAction.claim) null else fee.feeRateSatPerVb.toLong())
@@ -133,8 +135,10 @@ internal class OnchainOperations(
             wallet.claimBoard(reviewed)
         } else {
             if (reviewed.feesUnknown && !reviewed.hasUnknownFeeConsent) fail(OnchainFailure.changed)
-            val fresh = quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic,
-                estimate = !reviewed.hasUnknownFeeConsent)
+            val fresh = try {
+                quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic,
+                    estimate = !reviewed.hasUnknownFeeConsent)
+            } catch (failure: ExitEstimateUnavailable) { throw failure.preserving(reviewed, now()) }
             if (!ready() || !reviewed.matches(fresh) || !reviewed.current(now())) fail(OnchainFailure.changed)
         }
         try { return journal.perform(reviewed) { recordTransaction ->

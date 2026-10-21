@@ -30,6 +30,18 @@ class OnchainModelTest {
         fake.failPreparation = false; model.review(OnchainAction.startExit, listOf("a"))
         assertNotNull(model.quote); assertNull(model.estimateFallback); assertFalse(model.quote!!.hasUnknownFeeConsent)
     }
+    @Test fun confirmationFallbackKeepsOriginalReview() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) {
+            val original = OnchainQuote(action, "wallet", listOf("a"), amount = 30_000, createdAt = System.currentTimeMillis() - 29_000)
+            val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") }, { _, _, _, _ -> original },
+                { throw ExitEstimateUnavailable(original.copy(id = "fresh", createdAt = System.currentTimeMillis(), fee = null, chainFee = null, feeRate = null)) },
+                { emptyList() }, {}, { false }, {}, { null }, {}))
+            model.review(action, original.ids); model.confirm()
+            assertEquals(original.id, model.estimateFallback!!.id)
+            assertEquals(original.createdAt, model.estimateFallback!!.createdAt)
+            model.continueWithoutEstimate(); assertTrue(model.quote!!.hasUnknownFeeConsent)
+        }
+    }
     @Test fun unsubmittedConfirmReleasesOnlyNewFundingAndAppliesBackoff() = runBlocking {
         for (changed in listOf(false, true)) {
             var disk: String? = null; var now = 0L

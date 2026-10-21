@@ -341,6 +341,24 @@ struct ExitFallbackModelTests {
             #expect(await calls.estimates == 2)
         }
     }
+    @Test(arguments: [OnchainAction.startExit, .claim]) func confirmationFallbackKeepsOriginalReview(action: OnchainAction) async {
+        var original = OnchainJournalTests.quote
+        original.action = action; original.createdAt = Date().addingTimeInterval(-29)
+        let reviewed = original
+        let model = OnchainModel(dependencies: .init(ready: { true }, overview: { throw OnchainFailure.unavailable },
+            quote: { _, _, _, _ in reviewed }, execute: { quote in
+                var unknown = quote
+                unknown.id = UUID(); unknown.createdAt = Date()
+                unknown.fee = nil; unknown.chainFee = nil; unknown.feeRate = nil
+                throw ExitEstimateUnavailable(review: unknown)
+            }, attempt: { [] }, acknowledge: { _ in }))
+        await model.review(action, ids: original.ids)
+        await model.confirm()
+        #expect(model.estimateFallback?.id == original.id)
+        #expect(model.estimateFallback?.createdAt == original.createdAt)
+        await model.continueWithoutEstimate()
+        #expect(model.quote?.hasUnknownFeeConsent == true)
+    }
     @Test func expiredFallbackOrOtherErrorsNeverOpenReview() async {
         for (expired, fails) in [(true, true), (false, false)] {
             let calls = Calls(); let model = model(calls, expired: expired, fails: fails)
@@ -349,6 +367,36 @@ struct ExitFallbackModelTests {
             await model.continueWithoutEstimate(); await model.confirm()
             #expect(model.quote == nil)
             #expect(await calls.submissions == 0)
+        }
+    }
+}
+
+struct ExitFallbackDeadlineTests {
+    @Test(arguments: [OnchainAction.startExit, .claim]) func conversionRetainsScopeAndOriginalDeadline(action: OnchainAction) throws {
+        var original = OnchainJournalTests.quote
+        original.action = action
+        original.createdAt = Date(timeIntervalSince1970: 1000)
+        var unknown = original
+        unknown.id = UUID(); unknown.createdAt = original.createdAt.addingTimeInterval(29)
+        unknown.fee = nil; unknown.chainFee = nil; unknown.feeRate = nil
+        let failure = ExitEstimateUnavailable(review: unknown)
+        let converted = try failure.preserving(original, now: original.createdAt.addingTimeInterval(29)).review
+        #expect(converted.id == original.id && converted.createdAt == original.createdAt)
+        #expect(!converted.hasUnknownFeeConsent)
+        #expect(throws: OnchainFailure.self) { try failure.preserving(original, now: original.createdAt.addingTimeInterval(30)) }
+        for change in ["wallet", "ids", "amount", "destination", "action", "confirmed"] {
+            var changed = unknown
+            switch change {
+            case "wallet": changed.walletID = "other"
+            case "ids": changed.ids = ["other"]
+            case "amount": changed.amount += 1
+            case "destination": changed.destination = "other"
+            case "action": changed.action = action == .claim ? .startExit : .claim
+            default: changed.confirmed += 1
+            }
+            #expect(throws: OnchainFailure.self) {
+                try ExitEstimateUnavailable(review: changed).preserving(original, now: original.createdAt.addingTimeInterval(29))
+            }
         }
     }
 }

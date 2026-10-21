@@ -276,6 +276,62 @@ struct ExitClaimExecutionTests {
         #expect(await wallet.estimateCalls == 0)
     }
 
+    @Test(arguments: BarkErrorCode.allCases) func estimatorCallClassifiesTypedErrorsAfterPrechecks(code: BarkErrorCode) async throws {
+        let wallet = Wallet()
+        var access = wallet.access()
+        access.estimate = { _, _ in throw BarkError(message: "untrusted diagnostic", code: code) }
+        var validated = OnchainJournalTests.quote
+        validated.action = .startExit
+        for action in [OnchainAction.startExit, .claim] {
+            do {
+                if action == .claim {
+                    _ = try await WalletSession.claimQuote(ids: ["a"], destination: Self.externalAddress, access: access)
+                } else {
+                    _ = try await WalletSession.exitStartEstimate(validated) { throw BarkError(message: "untrusted diagnostic", code: code) }
+                }
+                Issue.record("Estimator must fail")
+            } catch {
+                #expect((error is ExitEstimateUnavailable) == (code == .other))
+                if code != .other { #expect((error as? BarkError)?.code == code) }
+            }
+        }
+        #expect(await wallet.ownershipChecks == [Self.externalAddress])
+        #expect(await wallet.drainDestinations.isEmpty)
+        #expect(await wallet.broadcasts.isEmpty)
+    }
+
+    @Test func unavailableEstimatorAfterPrechecksOffersFallback() async throws {
+        let wallet = Wallet()
+        var access = wallet.access()
+        access.estimate = { _, _ in throw URLError(.timedOut) }
+        await #expect(throws: ExitEstimateUnavailable.self) {
+            try await WalletSession.claimQuote(ids: ["a"], destination: Self.externalAddress, access: access)
+        }
+        #expect(await wallet.ownershipChecks == [Self.externalAddress])
+        #expect(!ExitEstimateUnavailable.allowsFallback(URLError(.badURL)))
+        #expect(!ExitEstimateUnavailable.allowsFallback(CancellationError()))
+    }
+
+    @Test func confirmationEstimatorFailureKeepsClaimReviewIdentityAndDeadline() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        let wallet = Wallet()
+        var reviewed = try await WalletSession.claimQuote(ids: ["a"], destination: Self.externalAddress, access: wallet.access())
+        reviewed.createdAt = Date().addingTimeInterval(-29)
+        await wallet.change("estimator")
+        do {
+            _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access())
+            Issue.record("Estimator must fail")
+        } catch let failure as ExitEstimateUnavailable {
+            #expect(failure.review.id == reviewed.id && failure.review.createdAt == reviewed.createdAt)
+            #expect(failure.review.inputs.matches(reviewed.inputs))
+            #expect(!ExitRules.current(reviewedAt: failure.review.createdAt, now: reviewed.createdAt.addingTimeInterval(30)))
+        }
+        #expect(try await journal.loadAll().isEmpty)
+        #expect(await wallet.drainDestinations.isEmpty)
+    }
+
     @Test func startEstimatorFailureHasNoFeesAndSuccessKeepsNormalEstimate() async throws {
         var validated = OnchainJournalTests.quote
         validated.action = .startExit; validated.ids = ["a"]

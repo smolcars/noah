@@ -1,6 +1,7 @@
 package com.noahwallet.onchain
 
 import java.util.UUID
+import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -94,4 +95,20 @@ data class OnchainOverview(val walletID: String, val vtxos: List<VtxoModel>, val
     val confirmed: Long, val tip: Long, val pendingTotal: Long, val claimableHeight: Long?)
 
 /** Only estimator errors carry a validated, fee-less review. */
-class ExitEstimateUnavailable(val review: OnchainQuote) : Exception()
+class ExitEstimateUnavailable(val review: OnchainQuote) : Exception() {
+    companion object {
+        fun allowsFallback(error: Exception): Boolean = when (error) {
+            // SDK 0.5.0 collapses transport, fee-rate and some exit validation failures into Other (RN parity).
+            is BarkError -> error.code == BarkErrorCode.OTHER
+            is OnchainException -> error.reason == OnchainFailure.unavailable
+            is java.net.SocketException, is java.net.SocketTimeoutException, is java.net.UnknownHostException,
+            is java.io.InterruptedIOException, is kotlinx.coroutines.TimeoutCancellationException -> true
+            else -> false
+        }
+    }
+    fun preserving(original: OnchainQuote, now: Long = System.currentTimeMillis()): ExitEstimateUnavailable {
+        val scope = original.copy(fee = null, chainFee = null, feeRate = null)
+        if (!original.current(now) || !review.feesUnknown || !scope.matches(review)) fail(OnchainFailure.changed)
+        return ExitEstimateUnavailable(review.copy(id = original.id, createdAt = original.createdAt, unknownFeeConsent = null))
+    }
+}

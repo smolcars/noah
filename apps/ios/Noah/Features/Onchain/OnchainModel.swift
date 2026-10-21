@@ -206,7 +206,8 @@ final class OnchainModel {
             message = try await dependencies.execute(quote)
         } catch let failure as ExitEstimateUnavailable {
             if await dependencies.ready(), generation == token, !Task.isCancelled {
-                estimateFallback = failure.review
+                do { estimateFallback = try failure.preserving(quote).review }
+                catch { self.error = OnchainFailure.changed.errorDescription }
             }
         } catch {
             self.error =

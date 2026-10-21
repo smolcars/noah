@@ -36,10 +36,48 @@ class OnchainOperationsTest {
         assertEquals(listOf("prepared-0"), wallet.discarded)
         assertTrue(journal.loadAll().isEmpty())
     } }
+    @Test fun estimatorCallClassifiesTypedErrorsAfterPrechecks() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) {
+            val errors = BarkErrorCode.entries.map { BarkError("untrusted diagnostic", it) } +
+                listOf(java.net.SocketTimeoutException(), java.net.UnknownHostException(), IllegalArgumentException(), CancellationException())
+            for (error in errors) fixture { wallet, ops, journal, _ ->
+                wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
+                wallet.estimateError = error
+                val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null) }.exceptionOrNull()
+                val allowed = error is BarkError && error.code == BarkErrorCode.OTHER || error is java.net.SocketTimeoutException || error is java.net.UnknownHostException
+                assertEquals("$action / $error", allowed, failure is ExitEstimateUnavailable)
+                if (!allowed) assertSame(error, failure)
+                assertEquals(1, wallet.estimates); assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
+            }
+        }
+    }
+    @Test fun confirmationEstimatorFailureKeepsReviewIdentityScopeAndDeadline() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, _, journal, _ ->
+            var now = 100_000L
+            val ops = OnchainOperations(wallet, journal, now = { now })
+            wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
+            val original = ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null)
+            now += 29_000
+            wallet.estimateError = java.net.SocketTimeoutException()
+            val failure = runCatching { ops.execute(original) }.exceptionOrNull() as ExitEstimateUnavailable
+            assertEquals(original.id, failure.review.id); assertEquals(original.createdAt, failure.review.createdAt)
+            assertFalse(failure.review.current(130_000)); assertFalse(failure.review.hasUnknownFeeConsent)
+            assertTrue(runCatching { failure.preserving(original, 130_000) }.isFailure)
+            assertTrue(runCatching { failure.preserving(original.copy(amount = 1), now) }.isFailure)
+            assertTrue(runCatching { failure.preserving(original.copy(destination = "other"), now) }.isFailure)
+            assertTrue(runCatching { failure.preserving(original.copy(walletID = "other"), now) }.isFailure)
+            assertTrue(runCatching { failure.preserving(original.copy(ids = listOf("other")), now) }.isFailure)
+            now = 130_000
+            val estimates = wallet.estimates
+            assertTrue(runCatching { ops.execute(original) }.exceptionOrNull() is OnchainException)
+            assertEquals(estimates, wallet.estimates)
+            assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
+        }
+    }
     @Test fun exitEstimatorFailureRequiresScopedConsentWithoutRetryOrFabricatedFees() = runBlocking {
         for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, ops, journal, _ ->
             wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
-            wallet.estimateError = IllegalStateException("estimator offline")
+            wallet.estimateError = java.net.SocketTimeoutException("estimator offline")
             val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null) }.exceptionOrNull() as ExitEstimateUnavailable
             val unknown = failure.review
             assertNull(unknown.fee); assertNull(unknown.chainFee); assertNull(unknown.feeRate)
@@ -63,7 +101,7 @@ class OnchainOperationsTest {
         }
     }
     @Test fun inputOwnershipAndProgressFailuresCannotOfferExitFallback() = runBlocking { fixture { wallet, ops, _, _ ->
-        wallet.estimateError = IllegalStateException("offline")
+        wallet.estimateError = java.net.UnknownHostException("offline")
         for (ids in listOf(emptyList(), listOf("missing"), listOf("a", "a")))
             assertFalse(runCatching { ops.quote(OnchainAction.startExit, ids) }.exceptionOrNull() is ExitEstimateUnavailable)
         wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Start(100u), false))
