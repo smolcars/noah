@@ -1,0 +1,171 @@
+name: Native Maestro nightly and iOS
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+
+jobs:
+  ios:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ios-e2e')
+    runs-on: blacksmith-6vcpu-macos-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iPhone-17, iPhone-Duo]
+    env:
+      COMPOSE_PROJECT_NAME: noah-native-ios-${{ github.run_id }}-${{ github.run_attempt }}-${{ strategy.job-index }}
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Install XcodeGen and check Xcode
+        run: |
+          command -v xcodegen || brew install xcodegen
+          xcodebuild -version
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+          echo "NATIVE_IOS_TEMP=$(mktemp -d /private/tmp/noah-maestro-ci.XXXXXX)" >> "$GITHUB_ENV"
+
+      - name: Create dedicated simulator
+        env:
+          DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.${{ matrix.device }}
+        run: |
+          runtime=$(xcrun simctl list runtimes -j | python3 -c '
+          import json, os, sys
+          candidates = [r for r in json.load(sys.stdin)["runtimes"] if r["isAvailable"] and
+                        any(d["identifier"] == os.environ["DEVICE_TYPE"] for d in r.get("supportedDeviceTypes", []))]
+          if not candidates: sys.exit("No installed runtime supports " + os.environ["DEVICE_TYPE"])
+          print(max(candidates, key=lambda r: tuple(map(int, r["version"].split("."))))["identifier"])
+          ')
+          name="Noah Maestro $(basename "$NATIVE_IOS_TEMP")"
+          echo "$name" > "$NATIVE_IOS_TEMP/simulator-name"
+          xcrun simctl create "$name" "$DEVICE_TYPE" "$runtime" > "$NATIVE_IOS_TEMP/simulator-id"
+          simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
+          xcrun simctl boot "$simulator_id"
+          xcrun simctl bootstatus "$simulator_id" -b
+
+      - name: Build native regtest simulator app
+        working-directory: apps/ios
+        run: |
+          xcodegen generate
+          xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" -jobs 2 \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES build
+
+      - name: Detect Docker support
+        id: docker
+        run: |
+          if command -v docker >/dev/null && docker info >/dev/null 2>&1; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'Docker is unavailable on this macOS runner. Only the offline welcome flow runs; wallet, payments and adaptive coverage require the regtest stack.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Start isolated CI regtest stack
+        if: steps.docker.outputs.available == 'true'
+        run: |
+          docker compose -f scripts/docker-compose.yml pull --ignore-buildable
+          nix develop .#android-ci --command just setup-everything
+
+      - name: Run shared native flows
+        env:
+          HAS_DOCKER: ${{ steps.docker.outputs.available }}
+          MAESTRO_DEBUG_OUTPUT: ${{ env.NATIVE_IOS_TEMP }}/maestro
+        run: |
+          simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
+          app="$NATIVE_IOS_TEMP/DerivedData/Build/Products/Debug-Regtest-iphonesimulator/Noah.app"
+          suite=offline
+          if [[ "$HAS_DOCKER" == true ]]; then suite=all; fi
+          nix develop .#android-ci --command scripts/test-maestro-native.sh ios "$app" "$simulator_id" "$suite"
+          if [[ "$HAS_DOCKER" == true ]]; then
+            MAESTRO_DEBUG_OUTPUT="$NATIVE_IOS_TEMP/adaptive" nix develop .#android-ci --command \
+              scripts/test-maestro-native.sh ios "$app" "$simulator_id" adaptive
+          fi
+
+      - name: Upload Maestro diagnostics and reports
+        if: always() && env.NATIVE_IOS_TEMP != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-maestro-ios-${{ matrix.device }}
+          path: |
+            ${{ env.NATIVE_IOS_TEMP }}/maestro
+            ${{ env.NATIVE_IOS_TEMP }}/adaptive
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop isolated CI regtest stack
+        if: always() && steps.docker.outputs.available == 'true'
+        run: docker compose -f scripts/docker-compose.yml down --volumes
+
+      - name: Delete dedicated simulator and build directory
+        if: always() && env.NATIVE_IOS_TEMP != ''
+        run: |
+          if [[ -s "$NATIVE_IOS_TEMP/simulator-id" ]]; then
+            simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
+            xcrun simctl list devices -j > "$NATIVE_IOS_TEMP/devices.json"
+            python3 -c '
+          import json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          device = next(d for group in json.loads((root / "devices.json").read_text())["devices"].values() for d in group
+                        if d["udid"] == (root / "simulator-id").read_text().strip())
+          assert device["name"] == (root / "simulator-name").read_text().strip(), device
+          ' "$NATIVE_IOS_TEMP"
+            xcrun simctl shutdown "$simulator_id" || true
+            xcrun simctl list devices -j > "$NATIVE_IOS_TEMP/devices.json"
+            python3 -c '
+          import json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          device = next(d for group in json.loads((root / "devices.json").read_text())["devices"].values() for d in group
+                        if d["udid"] == (root / "simulator-id").read_text().strip())
+          assert device["state"] == "Shutdown", device
+          ' "$NATIVE_IOS_TEMP"
+            xcrun simctl delete "$simulator_id"
+          fi
+          rm -rf "$NATIVE_IOS_TEMP"
+
+  adaptive-apk:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ios-e2e')
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+      - name: Install Android build SDK
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
+      - name: Build native regtest APK
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --max-workers=2 :app:assembleRegtestDebug'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-adaptive-regtest-apk
+          path: apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+          if-no-files-found: error
+
+  android-adaptive:
+    needs: adaptive-apk
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [pixel_tablet, pixel_fold]
+    uses: ./.github/workflows/native-maestro-android.yml
+    with:
+      apk_artifact_name: native-adaptive-regtest-apk
+      profile: ${{ matrix.profile }}
+      adaptive: true

@@ -8,6 +8,8 @@ on:
       - "flake.nix"
       - "flake.lock"
       - ".github/workflows/native-android.yml"
+      - ".github/workflows/native-maestro-android.yml"
+      - "scripts/test-maestro-native.sh"
   workflow_dispatch:
 
 permissions:
@@ -67,3 +69,17 @@ jobs:
           path: apps/android/app/build/test-results/testRegtestDebugUnitTest/*.xml
           if-no-files-found: error
           retention-days: 7
+
+      - name: Upload native regtest APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-regtest-apk
+          path: apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  maestro:
+    needs: build-and-test
+    uses: ./.github/workflows/native-maestro-android.yml
+    with:
+      apk_artifact_name: native-regtest-apk
