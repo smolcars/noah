@@ -30,7 +30,7 @@ import Observation
     static let overrideWarning = SendOverrideAudit.warningText + "\n\nResuming skips all occurrences that are already due."
     static let overrideConfirmation = "Resume anyway"
     private let d: Dependencies
-    private var task: Task<Void, Never>?
+    private var task: (work: Task<Void, Never>, budget: RecurringSubmissionBudget?)?
     private var syncTask: Task<Void, Never>?
     private(set) var schedules: [RecurringPayment] = []
     private(set) var error: String?
@@ -75,12 +75,19 @@ import Observation
     }
     /// Join triggers. Settlement outlives the caller; new submissions respect its deadline.
     func execute(manual: Bool = false, approval: Review? = nil) async {
-        do { try ForegroundExecution.checkActiveNow() } catch { return }
-        if let task { await task.value; return }
-        let work = Task { await run(manual: manual, approval: approval) }
-        task = work
+        while true {
+            do { try BackgroundExecution.checkActive(); try ForegroundExecution.checkActiveNow() } catch { return }
+            guard let pending = task else { break }
+            await pending.work.value
+            if pending.budget === RecurringSubmissionBudget.current { return }
+            // Another admission may have been revoked; reread durable due work with our budget.
+        }
+        let work = Task {
+            await run(manual: manual, approval: approval)
+            task = nil
+        }
+        task = (work, RecurringSubmissionBudget.current)
         await work.value
-        task = nil
     }
     private var executionBinding: RecurringStore.Binding?
     private func boundState() async throws -> RecurringStore.State {
