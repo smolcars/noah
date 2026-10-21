@@ -1,0 +1,26 @@
+[
+  {
+    "name": "accented token literal",
+    "endpoint": "https://fake-r9-audit.example/fakeR9Secret%C3%A9",
+    "input": "https://mempool.space/ｆａｋｅＲ９Ｓｅｃｒｅｔȩ́",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "accented token JSON escape",
+    "endpoint": "https://fake-r9-audit.example/fakeR9Secret%C3%A9",
+    "input": "https://mempool.space/ｆａｋｅＲ９Ｓｅｃｒｅｔé\\u0327",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "accented token HTML entity",
+    "endpoint": "https://fake-r9-audit.example/fakeR9Secret%C3%A9",
+    "input": "https://mempool.space/ｆａｋｅＲ９Ｓｅｃｒｅｔé&#807;",
+    "expected": "[custom-esplora]"
+  },
+  {
+    "name": "accented token percent encoded",
+    "endpoint": "https://fake-r9-audit.example/fakeR9Secret%C3%A9",
+    "input": "https://mempool.space/ｆａｋｅＲ９Ｓｅｃｒｅｔ%C3%A9%CC%A7",
+    "expected": "[custom-esplora]"
+  }
+]
