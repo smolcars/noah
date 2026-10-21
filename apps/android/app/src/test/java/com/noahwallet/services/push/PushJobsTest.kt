@@ -43,11 +43,11 @@ class PushJobsTest {
         assertEquals(listOf("open", "maintenance", "report:k1:true", "log", "widget"), events)
     }
     @Test fun invoiceTruncatesMillisatsBeforeSubmitting() = runBlocking {
-        jobs.handle(NotificationDataLightningInvoiceRequest(1234999, "tx"))
+        jobs.handle(PushPayload.decode("""{"notification_type":"lightning_invoice_request","amount":1234999,"transaction_id":"tx"}"""))
         assertEquals(listOf("open", "invoice:1234", "submit:tx:bolt11"), events)
     }
     @Test fun claimAnnouncesAfterSuccessAndUpdatesWidget() = runBlocking {
-        jobs.handle(NotificationDataLightningClaimRequest(42, "0.10", "hash"))
+        jobs.handle(PushPayload.decode("""{"notification_type":"lightning_claim_request","amount_sat":42,"amount_usd":"0.10","payment_hash":"hash"}"""))
         assertEquals(listOf("open", "claim", "announce:42:0.10:hash", "widget"), events)
     }
     @Test fun heartbeatSwallowsFailureWithoutOpeningWallet() = runBlocking {
