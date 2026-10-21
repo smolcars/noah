@@ -118,7 +118,7 @@ struct RecurringPaymentsView: View {
                         Text("Edit payment")
                         Spacer()
                         Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                    }
+                    }.contentShape(Rectangle())
                 }.buttonStyle(.plain)
                     .accessibilityIdentifier("recurring-edit-\(schedule.id)")
                 Button(schedule.status == "active" ? "Pause" : schedule.requiresPolicyApproval ? "Approve and resume" : "Resume") {

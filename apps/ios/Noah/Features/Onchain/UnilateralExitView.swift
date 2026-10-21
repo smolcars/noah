@@ -224,23 +224,25 @@ struct ExitDepositSheet: View {
     @State private var error: String?
     var body: some View {
         NavigationStack {
-            List {
-                if broadcastFee > 0 { OnchainAmountRow(title: "Suggested deposit", sats: broadcastFee) }
-                Text(
-                    "Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary."
-                )
-                if let address {
-                    ReceiveQRCode(uri: address).aspectRatio(1, contentMode: .fit).frame(maxWidth: 280)
-                        .padding(16).background(.white, in: RoundedRectangle(cornerRadius: 24))
-                        .frame(maxWidth: .infinity).accessibilityLabel(
-                        "Bitcoin deposit address QR code")
-                    Text(address).textSelection(.enabled)
-                    Button("Copy Bitcoin address") { UIPasteboard.general.string = address }
-                    ShareLink(item: address)
-                } else if let error {
-                    Text(LocalizedStringKey(error))
-                } else {
-                    ProgressView()
+            GeometryReader { geometry in
+                List {
+                    if broadcastFee > 0 { OnchainAmountRow(title: "Suggested deposit", sats: broadcastFee) }
+                    Text(
+                        "Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary."
+                    )
+                    if let address {
+                        ReceiveQRCode(uri: address).aspectRatio(1, contentMode: .fit).frame(maxWidth: AdaptiveLayout.qrSide(availableHeight: geometry.size.height))
+                            .padding(16).background(.white, in: RoundedRectangle(cornerRadius: 24))
+                            .frame(maxWidth: .infinity).accessibilityLabel(
+                            "Bitcoin deposit address QR code")
+                        Text(address).textSelection(.enabled)
+                        Button("Copy Bitcoin address") { UIPasteboard.general.string = address }
+                        ShareLink(item: address)
+                    } else if let error {
+                        Text(LocalizedStringKey(error))
+                    } else {
+                        ProgressView()
+                    }
                 }
             }
             .settingsStyle("Deposit Onchain Funds")

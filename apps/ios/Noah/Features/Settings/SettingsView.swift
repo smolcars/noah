@@ -145,7 +145,7 @@ struct SettingsView: View {
                 SettingsLabel(title: title, detail: detail)
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-            }
+            }.contentShape(Rectangle())
         }.buttonStyle(.plain)
     }
     private func setAutoBoard(_ enabled: Bool) {
