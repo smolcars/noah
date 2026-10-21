@@ -27,7 +27,7 @@ struct PersistedProfileState: Codable, Equatable, Sendable {
     }
 }
 
-/// RN transaction-storage v1. Enabling auto-board resets the one-shot prompt.
+/// RN transaction-storage v1. The legacy attempted flag is retained for upgrade compatibility only.
 struct PersistedTransactionState: Codable, Equatable, Sendable {
     static let key = "transaction-storage"
     static let version = 1

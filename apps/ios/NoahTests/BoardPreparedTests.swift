@@ -5,6 +5,59 @@ import Testing
 @testable import Noah
 
 struct BoardPreparedTests {
+    struct FundingInput: Decodable {
+        var walletID: String
+        var handled: [String: Set<String>]
+        var outpoints: Set<String>
+    }
+    @Test func fundingDecisionsMatchSharedFixture() throws {
+        for test in try Fixtures.load("auto-board-funding", input: FundingInput.self, expected: Bool.self) {
+            var ledger = AutoBoardFunding()
+            ledger.read = { String(decoding: try! JSONEncoder().encode(test.input.handled), as: UTF8.self) }
+            let funding = AutoBoardFunding.Snapshot(walletID: test.input.walletID, outpoints: test.input.outpoints)
+            #expect(try ledger.hasUnhandled(funding) == test.expected, "\(test.name)")
+        }
+    }
+    @Test func threeDepositsPromptOnceAcrossAllReviewEndingsAndRestart() throws {
+        for ending in ["confirm", "dismiss", "expiry", "background", "navigation", "stale", "failure"] {
+            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let path = root.appending(path: "mmkv").path
+            let storage = try SettingsStorage(rootPath: path)
+            for deposit in 0..<3 {
+                let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: Set((0...deposit).map { "deposit-\($0):0" }))
+                #expect(try AutoBoardFunding(storage: storage).hasUnhandled(funding), "\(ending)")
+                #expect(try AutoBoardFunding(storage: storage).markHandled(funding))
+                let reopened = AutoBoardFunding(storage: try SettingsStorage(rootPath: path))
+                #expect(try !reopened.hasUnhandled(funding), "\(ending)")
+                #expect(try !reopened.markHandled(funding))
+            }
+        }
+    }
+    @Test func confirmedFundingExcludesPendingExitUnknownAndBoardChange() {
+        let funding = AutoBoardFunding.confirmed(walletID: "wallet", utxos: [
+            .local(outpoint: .init(txid: "deposit", vout: 1), amountSats: 150_529, confirmationHeight: 100),
+            .local(outpoint: .init(txid: "pending", vout: 0), amountSats: 150_529, confirmationHeight: nil),
+            .local(outpoint: .init(txid: "change", vout: 0), amountSats: 5_000, confirmationHeight: 100),
+            .local(outpoint: .init(txid: "unknown", vout: 0), amountSats: 150_529, confirmationHeight: 100),
+            .exit(vtxoId: "exit", amountSats: 100_000, height: 100)
+        ], transactions: [
+            .init(txid: "deposit", txHex: "", onchainFeeSats: nil, balanceChangeSats: 150_529, confirmation: nil, isCpfp: false),
+            .init(txid: "change", txHex: "", onchainFeeSats: 155, balanceChangeSats: -140_000, confirmation: nil, isCpfp: false)
+        ])
+        #expect(funding.outpoints == ["deposit:1"])
+    }
+    @Test func unreadableFundingOrFailedPersistenceCannotAdmitAReview() throws {
+        let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["a:0"])
+        var ledger = AutoBoardFunding()
+        for raw in ["broken", "[]", #"{"wallet":[1]}"#, #"{"wallet":null}"#] {
+            ledger.read = { raw }
+            #expect(throws: (any Error).self) { try ledger.hasUnhandled(funding) }
+        }
+        ledger.read = { nil }
+        ledger.write = { _ in throw CocoaError(.fileWriteUnknown) }
+        #expect(throws: (any Error).self) { try ledger.markHandled(funding) }
+    }
     static var quote: OnchainQuote {
         .init(action: .board, walletID: "wallet", ids: [], amount: 30_000, fee: 100,
               chainFee: 1543, confirmed: 40_000, feeRate: 1,
@@ -37,6 +90,38 @@ struct BoardPreparedTests {
         quote.automatic = true
         quote.confirmed = quote.amount + quote.chainFee + 5_000
         return quote
+    }
+    @Test func overlappingManualAndAutomaticReviewsOnlySubmitOnceThenConfirmedReceiptAllowsNewReview() async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let manual = Self.quote
+        var automatic = Self.automaticQuote
+        automatic.prepared?.id = "automatic"
+        automatic.prepared?.txid = "auto-exact"
+        for quote in [manual, automatic] {
+            await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+                await calls.submit(.init(txid: quote.prepared!.txid, broadcast: .accepted, vtxoIds: []))
+            })
+        }
+        _ = try await session.submitBoard(manual, walletID: "wallet", journal: journal, confirmed: { manual.confirmed })
+        let reviewed = automatic
+        await #expect(throws: OnchainFailure.busy) {
+            try await session.submitBoard(reviewed, walletID: "wallet", journal: journal, confirmed: { reviewed.confirmed })
+        }
+        #expect(await calls.submitted == 1)
+        try await journal.observe(.confirmed(100), for: manual.id)
+        var next = Self.quote
+        next.prepared?.id = "new-deposit"
+        next.prepared?.txid = "next-exact"
+        let fresh = next
+        await session.retainBoardReview(fresh, discard: { try await calls.discard(fresh) }, submit: {
+            await calls.submit(.init(txid: "next-exact", broadcast: .accepted, vtxoIds: []))
+        })
+        _ = try await session.submitBoard(fresh, walletID: "wallet", journal: journal, confirmed: { fresh.confirmed })
+        #expect(await calls.submitted == 2)
+        #expect(try await journal.loadAll().count == 2)
     }
     @Test(arguments: [UInt64(0), 31_542, 32_543, 36_542, 36_543, 37_543])
     func automaticConfirmationRevalidatesTheExactReviewedReserve(confirmed: UInt64) async throws {

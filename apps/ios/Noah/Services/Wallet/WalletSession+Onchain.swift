@@ -79,6 +79,18 @@ extension WalletSession {
         }
     }
 
+    func autoBoardFunding(journal: OnchainOperationJournal = .shared) async throws -> AutoBoardFunding.Snapshot? {
+        for attempt in try await journal.loadAll() where attempt.blocks(.board, ids: []) {
+            _ = try await checkOnchainAttempt(attempt.id, journal: journal)
+        }
+        guard !(try await journal.loadAll()).contains(where: { $0.blocks(.board, ids: []) }) else { return nil }
+        return try await withOpenWallet { handles in
+            guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
+            return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
+                utxos: handles.onchain.utxos(), transactions: handles.onchain.transactions())
+        }
+    }
+
     /// Preparation is held only for the visible confirmation; never submitted by automation.
     func autoBoardQuote() async throws -> OnchainQuote? {
         try await withOpenWallet { handles in

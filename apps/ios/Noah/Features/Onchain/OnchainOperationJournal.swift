@@ -26,6 +26,10 @@ actor OnchainOperationJournal {
 
         func blocks(_ action: OnchainAction, ids: [String]) -> Bool {
             guard overrideAudit == nil, quote.action == action else { return false }
+            if action == .board, let receipt, let receiptID = receipt.txid,
+               txid == nil || txid == receiptID,
+               quote.prepared == nil || quote.prepared?.txid == receiptID,
+               receipt.broadcastRetryPending != true, case .confirmed = receipt.chainStatus { return false }
             // Pinned Bark start skips active IDs; cancel of an already-canceled ID is a no-op.
             // Claims skip non-claimable IDs, but until chain observation a second PSBT can differ
             // (destination/locktime/fee). Progress can spend more on CPFP; board can spend new coins.
@@ -147,7 +151,7 @@ actor OnchainOperationJournal {
 
     func perform(_ quote: OnchainQuote, action: @Sendable () async throws -> OnchainReceipt) async throws -> String {
         let previous = try loadAll()
-        guard !running, !previous.contains(where: { $0.blocks(quote.action, ids: quote.ids) }) else {
+        guard !running, !previous.contains(where: { $0.id == quote.id }), !previous.contains(where: { $0.blocks(quote.action, ids: quote.ids) }) else {
             throw OnchainFailure.busy
         }
         running = true

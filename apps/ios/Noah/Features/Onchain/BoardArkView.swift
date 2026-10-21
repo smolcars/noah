@@ -44,7 +44,7 @@ struct BoardArkView: View {
     }
 }
 
-/// RN's one-shot opt-in prompt; confirmation is always required and persisted before boarding.
+/// Foreground confirmation once per confirmed deposit; funding is persisted before showing review.
 struct AutoBoardingService: View {
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var phase
@@ -59,7 +59,7 @@ struct AutoBoardingService: View {
                 NoahCard { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
             }
         }
-        .task(id: app.summary?.balance.onchain.confirmed) { await check() }
+        .task(id: app.summaryRevision) { await check() }
         .onChange(of: phase) { _, value in
             if value != .active { invalidate() } else { Task { await check() } }
         }
@@ -74,11 +74,10 @@ struct AutoBoardingService: View {
             do { try await Task.sleep(for: .seconds(120)) } catch { return }
             invalidate()
         }
-        .sheet(item: $plan, onDismiss: { markAttempted() }) { quote in
+        .sheet(item: $plan) { quote in
             OnchainReviewSheet(
                 quote: quote,
                 confirm: {
-                    guard markAttempted() else { return }
                     busy = true
                     plan = nil
                     Task {
@@ -90,7 +89,7 @@ struct AutoBoardingService: View {
                                 PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
                             else { throw OnchainFailure.unavailable }
                             message = try await app.session.executeOnchain(quote)
-                            // Keep the receipt for fee reconciliation and explicit Done in Board to Ark.
+                            // Retain the receipt independently of admission for a later board.
                             await app.refresh()
                         } catch {
                             message =
@@ -112,26 +111,35 @@ struct AutoBoardingService: View {
     private func check() async {
         guard !checking, !busy, plan == nil, !app.isWalletSuspended, phase == .active else { return }
         let state = PersistedTransactionState.load(from: .shared)
-        guard state.isAutoBoardingEnabled, !state.hasAttemptedAutoBoarding,
+        guard state.isAutoBoardingEnabled,
             (app.summary?.balance.onchain.confirmed ?? 0) >= 20_000
         else { return }
         checking = true
         let token = generation
         defer { checking = false }
+        var funding: AutoBoardFunding.Snapshot?
+        let fundingStore = AutoBoardFunding()
         do {
             guard !(await WalletBackgroundActivity.shared.isRunning),
-                !(try await OnchainOperationJournal.shared.loadAll()).contains(where: { $0.blocks(.board, ids: []) })
-            else { return }
+                  let current = try await app.session.autoBoardFunding(),
+                  try fundingStore.hasUnhandled(current) else { return }
+            funding = current
             let quote = try await app.session.autoBoardQuote()
+            guard let quote else { return }
+            let claimed: Bool
+            do { claimed = try fundingStore.markHandled(current) }
+            catch { await app.session.discardBoard(quote); throw error }
             let latest = PersistedTransactionState.load(from: .shared)
-            guard token == generation, !Task.isCancelled, phase == .active, !app.isWalletSuspended,
-                latest.isAutoBoardingEnabled, !latest.hasAttemptedAutoBoarding
+            guard claimed, quote.walletID == current.walletID, token == generation, !Task.isCancelled, phase == .active, !app.isWalletSuspended,
+                latest.isAutoBoardingEnabled
             else {
-                if let quote { await app.session.discardBoard(quote) }
+                await app.session.discardBoard(quote)
                 return
             }
             plan = quote
         } catch {
+            do { if let funding { try fundingStore.markHandled(funding) } }
+            catch { message = "Couldn't save auto-board state."; return }
             message = (error as? OnchainFailure)?.errorDescription
                 ?? "Unable to prepare boarding. Use Settings → Board to Ark to try again."
         }
@@ -140,18 +148,5 @@ struct AutoBoardingService: View {
         generation = UUID()
         if let plan, !busy { Task { await app.session.discardBoard(plan) } }
         plan = nil
-    }
-    @discardableResult
-    private func markAttempted() -> Bool {
-        var state = PersistedTransactionState.load(from: .shared)
-        state.hasAttemptedAutoBoarding = true
-        do {
-            try SettingsStorage.shared.setPersistedState(
-                state, key: PersistedTransactionState.key, version: PersistedTransactionState.version)
-        } catch {
-            message = "Couldn't save auto-board state."
-            return false
-        }
-        return true
     }
 }

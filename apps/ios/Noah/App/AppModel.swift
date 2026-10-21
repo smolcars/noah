@@ -17,6 +17,7 @@ final class AppModel {
     }
 
     private(set) var phase: Phase = .launching
+    private(set) var summaryRevision = 0
     private(set) var summary: WalletSession.Summary?
     private(set) var walletSessionRevision = 0
     private(set) var walletError: String?
@@ -255,6 +256,7 @@ final class AppModel {
                 return
             }
             summary = latest
+            summaryRevision += 1
             walletError = nil
         } catch {
             log.e("Failed to read wallet summary: \(Self.describe(error))")
@@ -307,6 +309,7 @@ final class AppModel {
             customOpenWait = nil
             if let latest = try await session.summary() {
                 summary = latest
+                summaryRevision += 1
                 walletError = nil
             }
             // Identity checks must finish before exposing wallet/settings actions.

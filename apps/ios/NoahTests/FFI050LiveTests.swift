@@ -16,7 +16,7 @@ struct FFI050LiveTests {
         let session = WalletSession.shared
         let documents = URL.documentsDirectory
         let seed = KeychainPassword.mnemonic(for: .regtest)
-        if stage == "create" {
+        if stage == "create" || stage == "auto-setup" {
             try #require(!WalletDataLocation(variant: .regtest).hasAnyData)
             let mnemonic = try generateMnemonic()
             try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi050-live")
@@ -24,7 +24,8 @@ struct FFI050LiveTests {
             try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true),
                 key: PersistedWalletState.key, version: PersistedWalletState.version)
             var transaction = PersistedTransactionState()
-            transaction.setAutoBoarding(false)
+            transaction.setAutoBoarding(stage == "auto-setup")
+            if stage == "auto-setup" { transaction.hasAttemptedAutoBoarding = true }
             try SettingsStorage.shared.setPersistedState(transaction,
                 key: PersistedTransactionState.key, version: PersistedTransactionState.version)
             try await session.exitDepositAddress().write(to: documents.appending(path: "ffi050-funding.txt"), atomically: true, encoding: .utf8)

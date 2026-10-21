@@ -140,6 +140,23 @@ struct SettingsFeatureTests {
         #expect(storage.persistedState(PersistedTransactionState.self, key: PersistedTransactionState.key) == state)
     }
 
+    @Test func legacyAttemptedTrueAllowsCurrentFundingOnceAndToggleCannotReplayIt() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storage = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        try storage.setDurably(#"{"state":{"isAutoBoardingEnabled":true,"hasAttemptedAutoBoarding":true},"version":1}"#,
+            forKey: PersistedTransactionState.key)
+        let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["current:0"])
+        let ledger = AutoBoardFunding(storage: storage)
+        #expect(PersistedTransactionState.load(from: storage).isAutoBoardingEnabled)
+        #expect(try ledger.hasUnhandled(funding))
+        #expect(try ledger.markHandled(funding))
+        var state = PersistedTransactionState.load(from: storage)
+        state.setAutoBoarding(false); state.setAutoBoarding(true)
+        try storage.setPersistedState(state, key: PersistedTransactionState.key, version: 1)
+        #expect(try !AutoBoardFunding(storage: storage).hasUnhandled(funding))
+    }
+
     actor Transport: ClientTransport {
         var fail = false
         var bodies: [String] = []

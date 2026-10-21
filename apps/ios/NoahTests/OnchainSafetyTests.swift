@@ -35,6 +35,46 @@ struct OnchainJournalTests {
         }
         await #expect(throws: OnchainFailure.self) { try await restarted.acknowledge() }
     }
+    @Test func confirmedBoardKeepsReceiptButAllowsNewReviewWithoutDone() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        let first = Self.quote
+        _ = try await journal.perform(first) {
+            try await journal.recordTransaction("tx", for: first.id)
+            return .init(message: "submitted", txid: "tx")
+        }
+        #expect(try await journal.load()!.blocks(.board, ids: []))
+        try await journal.observe(.confirmed(100), for: first.id)
+        let restarted = OnchainOperationJournal(file: file)
+        #expect(try await !restarted.load()!.blocks(.board, ids: []))
+        _ = try await restarted.perform(Self.quote) { .init(message: "second", txid: "tx2") }
+        let attempts = try await restarted.loadAll()
+        #expect(attempts.count == 2)
+        #expect(attempts.first?.receipt?.txid == "tx")
+        #expect(attempts.first?.receipt?.chainStatus == .confirmed(100))
+    }
+    @Test func uncertainRetryUnknownAndMismatchedReceiptStillBlock() {
+        var retry = OnchainReceipt(message: "retry", txid: "tx")
+        retry.broadcastRetryPending = true
+        var mempool = OnchainReceipt(message: "mempool", txid: "tx")
+        mempool.chainStatus = .inMempool
+        var mismatch = OnchainReceipt(message: "mismatch", txid: "other")
+        mismatch.chainStatus = .confirmed(100)
+        for receipt in [nil, retry, .init(message: "unknown", txid: "tx"), mempool, mismatch] as [OnchainReceipt?] {
+            let attempt = OnchainOperationJournal.Attempt(quote: Self.quote, receipt: receipt, txid: "tx")
+            #expect(attempt.blocks(.board, ids: []))
+        }
+    }
+    @Test func unreadableJournalFailsClosedBeforeSubmitting() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        try Data("unknown journal".utf8).write(to: file)
+        let journal = OnchainOperationJournal(file: file)
+        await #expect(throws: (any Error).self) {
+            try await journal.perform(Self.quote) { Issue.record("Must not submit"); return "bad" }
+        }
+    }
     @Test func failedPersistencePreventsNativeCall() async throws {
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString).appending(
             path: "missing/attempt.json")
