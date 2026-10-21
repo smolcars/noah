@@ -8,6 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -204,6 +208,62 @@ class AdaptiveStateRestorationTest {
                 mapOf(com.google.zxing.DecodeHintType.TRY_HARDER to true, com.google.zxing.DecodeHintType.PURE_BARCODE to true))
             assertEquals(payload, result.text)
         } finally { screenshot.recycle() }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test fun sheetFieldsAvoidTheReportedFold() {
+        var hinges = emptyList<WindowRegion>()
+        compose.setContent { NoahTheme {
+            val reported = LocalFoldingFeatures.current
+            SideEffect { hinges = reported }
+            WalletModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+                ReceiveAmountSheet(ReceiveRequest("ark", "onchain"), BitcoinAmountUnit.sats, null, "USD", Locale.US,
+                    false, {}, { _, _ -> })
+            }
+        } }
+        compose.onNodeWithText("Description").performScrollTo().performClick().performTextInput("Fold draft")
+        compose.onNodeWithText("Save request").performScrollTo().assertIsDisplayed()
+        for (label in listOf("Amount (sats)", "Description", "Save request")) {
+            val node = compose.onNodeWithText(label).performScrollTo().fetchSemanticsNode()
+            val bounds = node.boundsInWindow
+            for (hinge in hinges) {
+                assertFalse("$label crosses a vertical fold", hinge.height > hinge.width && bounds.left < hinge.left && bounds.right > hinge.right)
+                assertFalse("$label crosses a horizontal fold", hinge.width > hinge.height && bounds.top < hinge.top && bounds.bottom > hinge.bottom)
+            }
+        }
+    }
+
+    @Test fun alertContentsAvoidTheReportedFold() {
+        var hinges = emptyList<WindowRegion>()
+        val frames = mutableMapOf<String, androidx.compose.ui.geometry.Rect>()
+        fun Modifier.record(name: String) = onGloballyPositioned {
+            frames[name] = it.boundsInWindow().translate(it.positionOnScreen() - it.positionInWindow())
+        }
+        compose.setContent { NoahTheme {
+            val reported = LocalFoldingFeatures.current
+            SideEffect { hinges = reported }
+            WalletAlertDialog({}, { TextButton({}) { Text("Adaptive confirm", Modifier.record("action")) } },
+                title = { Text("Modal layout", Modifier.record("title")) },
+                text = { Text("Layout verification ".repeat(60), Modifier.record("body")) })
+        } }
+        compose.onNodeWithText("Adaptive confirm").assertIsDisplayed()
+        compose.runOnIdle {
+            assertEquals(3, frames.size)
+            for ((name, bounds) in frames) for (hinge in hinges) {
+                assertFalse("$name crosses a vertical fold: $bounds $hinge", hinge.height > hinge.width && bounds.left < hinge.left && bounds.right > hinge.right)
+                assertFalse("$name crosses a horizontal fold: $bounds $hinge", hinge.width > hinge.height && bounds.top < hinge.top && bounds.bottom > hinge.bottom)
+            }
+        }
+    }
+
+    @Test fun compactQrHubShowsTheWholeCodeWithoutScrolling() {
+        compose.setContent { NoahTheme { Box(Modifier.width(550.dp).height(500.dp)) {
+            QRHubScreen("adaptive@localhost.com", "Layout wallet", {}, {}, {})
+        } } }
+        val qr = compose.onNodeWithContentDescription("Copy Lightning address").fetchSemanticsNode().boundsInRoot
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        assertTrue(qr.toString(), qr.top >= root.top && qr.bottom <= root.bottom)
+        assertEquals(qr.width, qr.height, 1f)
     }
 
     @Test fun screenshotCropDialogHasOneReachableScrollSurface() {

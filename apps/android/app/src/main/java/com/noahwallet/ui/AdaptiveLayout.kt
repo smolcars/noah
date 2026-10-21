@@ -10,6 +10,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.computeWindowSizeClass
@@ -69,22 +70,27 @@ internal fun FoldingFeatures(content: @Composable () -> Unit) {
 }
 
 @Composable
-internal fun Modifier.avoidHinge(): Modifier {
-    val hinges = LocalFoldingFeatures.current
+internal fun Modifier.avoidHinge(hinges: List<WindowRegion> = LocalFoldingFeatures.current, reserveWindow: Boolean = false): Modifier {
     var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     return onGloballyPositioned { origin = it.positionInWindow() }.layout { measurable, constraints ->
         val width = constraints.maxWidth
         val height = constraints.maxHeight
         val region = if (constraints.hasBoundedWidth && constraints.hasBoundedHeight) usableRegion(width, height,
-            hinges.map { WindowRegion(it.left - origin.x.roundToInt(), it.top - origin.y.roundToInt(),
-                it.right - origin.x.roundToInt(), it.bottom - origin.y.roundToInt()) }) else null
+            hinges.map {
+                // WindowManager folds span the window; project that span through nested modal bounds.
+                if (it.height > it.width) WindowRegion(it.left - origin.x.roundToInt(), 0,
+                    it.right - origin.x.roundToInt(), height)
+                else WindowRegion(0, it.top - origin.y.roundToInt(), width, it.bottom - origin.y.roundToInt())
+            }) else null
         if (region == null || region == WindowRegion(0, 0, width, height)) {
             val child = measurable.measure(constraints)
             layout(child.width, child.height) { child.place(0, 0) }
         } else {
             val child = measurable.measure(Constraints(maxWidth = region.width, maxHeight = region.height))
-            layout(width, height) { child.place(region.left + (region.width - child.width) / 2,
-                region.top + (region.height - child.height) / 2) }
+            layout(width, if (reserveWindow) height else constraints.constrainHeight(region.top + child.height)) {
+                child.place(region.left + (region.width - child.width) / 2,
+                    region.top + if (reserveWindow) (region.height - child.height) / 2 else 0)
+            }
         }
     }
 }

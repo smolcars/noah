@@ -50,8 +50,8 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
         TextButton({ clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()?.takeIf { it.trim().isNotEmpty() }?.let(::scan) },
             modifier = Modifier.fillMaxWidth()) { Text(tr("Paste")) }
     } else BoxWithConstraints(Modifier.fillMaxSize()) {
-        val qrSide = AdaptiveLayout.qrSide(maxHeight.value).dp
         val wide = AdaptiveLayout.useDetailPane(maxWidth.value, maxHeight.value)
+        val qrSide = AdaptiveLayout.qrSide(maxHeight.value - if (wide) 0f else 160f).dp
         val controls: @Composable () -> Unit = {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 TextButton(onBack) { Text(tr("Back")) }

@@ -36,8 +36,8 @@ internal fun WalletAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Com
     modifier: Modifier = Modifier, dismissButton: (@Composable () -> Unit)? = null,
     icon: (@Composable () -> Unit)? = null, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null) {
     val privacy = LocalWalletPrivacy.current
-    AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier.avoidHinge(),
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier.windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge(reserveWindow = true),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         confirmButton = { WalletModalContent(cover = {
             privacy.unlock?.let { TextButton(it) { Text(tr("Unlock")) } }
         }, content = confirmButton) },
@@ -54,14 +54,27 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
     dragHandle: (@Composable () -> Unit)? = { BottomSheetDefaults.DragHandle() },
     content: @Composable ColumnScope.() -> Unit) {
     val privacy = LocalWalletPrivacy.current
-    ModalBottomSheet(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier,
+    val hinges = LocalFoldingFeatures.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val windowHeight = androidx.window.layout.WindowMetricsCalculator.getOrCreate()
+        .computeCurrentWindowMetrics(androidx.compose.ui.platform.LocalContext.current as android.app.Activity).bounds.height()
+    val horizontalFold = hinges.filter { it.width > it.height }.maxOfOrNull { it.bottom }
+    // Sheets anchor to the bottom window edge; keep their entire height below a horizontal fold.
+    val sheetHeight = with(density) { (windowHeight - (horizontalFold ?: 0)).coerceAtLeast(1).toDp() }
+    val verticalFolds = hinges.filter { it.height > it.width }
+    ModalBottomSheet(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier.heightIn(max = sheetHeight),
         sheetMaxWidth = AdaptiveLayout.readableWidth.dp,
-        sheetState = sheetState, sheetGesturesEnabled = !privacy.covered, dragHandle = dragHandle) {
-        WalletModalContent(cover = {
+        sheetState = sheetState, sheetGesturesEnabled = !privacy.covered, dragHandle = dragHandle?.let { handle -> {
+            Box(Modifier.fillMaxWidth().heightIn(max = sheetHeight).avoidHinge(verticalFolds),
+                contentAlignment = Alignment.Center) { handle() }
+        } }) {
+        Box(Modifier.fillMaxWidth().heightIn(max = (sheetHeight - 56.dp).coerceAtLeast(1.dp)).avoidHinge(verticalFolds)) {
+            WalletModalContent(cover = {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(tr("Noah is Locked"))
                 privacy.unlock?.let { NoahButton("Unlock", onClick = it) }
             }
-        }) { Box(Modifier.fillMaxWidth().avoidHinge()) { Column(content = content) } }
+            }) { Column(content = content) }
+        }
     }
 }
