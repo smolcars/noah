@@ -109,11 +109,11 @@ enum EndpointLogPrivacy {
             }
         }
         static func normalize(_ text: String) -> String {
-            text.precomposedStringWithCompatibilityMapping.lowercased(with: Locale(identifier: "en_US_POSIX")).uppercased(with: Locale(identifier: "en_US_POSIX")).precomposedStringWithCompatibilityMapping
+            text.decomposedStringWithCompatibilityMapping.lowercased(with: Locale(identifier: "en_US_POSIX")).uppercased(with: Locale(identifier: "en_US_POSIX")).decomposedStringWithCompatibilityMapping
         }
         func contains(_ text: String) -> Bool {
             guard nodes.count > 1 else { return false }
-            // Normalizing a whole record can compose a token's final scalar with its suffix.
+            // Decomposition keeps a following mark separate from the token's final scalar.
             return containsView(text) || containsView(Self.fold(text)) || containsView(Self.normalize(text))
         }
         private static func fold(_ text: String) -> String {
