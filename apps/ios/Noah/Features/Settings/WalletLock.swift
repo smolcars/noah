@@ -124,15 +124,20 @@ struct WalletContentProtection: ViewModifier {
 struct WalletLockView: View {
     @Environment(WalletLock.self) private var lock
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "lock.fill").font(.largeTitle)
-            Text("Noah is Locked").font(NoahFont.title)
-            Text("Authenticate to access your wallet").foregroundStyle(NoahColor.mutedForeground)
-            if let error = lock.error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
-            NoahButton(title: "Unlock", isLoading: lock.authenticating) { Task { await lock.unlock() } }
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 24) {
+                    Image(systemName: "lock.fill").font(.largeTitle)
+                    Text("Noah is Locked").font(NoahFont.title)
+                    Text("Authenticate to access your wallet").foregroundStyle(NoahColor.mutedForeground)
+                    if let error = lock.error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
+                    NoahButton(title: "Unlock", isLoading: lock.authenticating) { Task { await lock.unlock() } }
+                }
+                .padding(32)
+                .readableWidth(520)
+                .frame(minHeight: geometry.size.height)
+            }
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(NoahColor.background.ignoresSafeArea())
     }
 }

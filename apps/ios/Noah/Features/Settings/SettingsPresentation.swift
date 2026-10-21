@@ -19,9 +19,10 @@ struct SettingsLabel: View {
 }
 
 extension View {
-    func settingsStyle(_ title: LocalizedStringKey) -> some View {
+    func settingsStyle(_ title: LocalizedStringKey, maximumWidth: CGFloat = AdaptiveLayout.readableWidth) -> some View {
         self.navigationTitle(title).navigationBarTitleDisplayMode(.inline)
             .font(NoahFont.body).foregroundStyle(NoahColor.foreground)
+            .readableWidth(maximumWidth)
             .scrollContentBackground(.hidden).background(NoahColor.background).tint(NoahColor.brand)
     }
 }

@@ -9,6 +9,8 @@ struct EmergencyEmailView: View {
     @Environment(\.locale) private var locale
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focus: Field?
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var compactKeyboard: Bool { verticalSizeClass == .compact && focus != nil }
     @State private var email = ""
     @State private var code = ""
     @State private var codeSent = false
@@ -87,6 +89,7 @@ struct EmergencyEmailView: View {
                             }
                         }
                     }
+                    if compactKeyboard { actions }
                 }
                 .font(NoahFont.body)
                 .padding(20)
@@ -103,22 +106,7 @@ struct EmergencyEmailView: View {
             .foregroundStyle(NoahColor.foreground)
             .background(NoahColor.background.ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
-                    NoahButton(title: codeSent ? "Verify Email" : "Send Verification Code", isLoading: busy) {
-                        codeSent ? verify() : send()
-                    }
-                    .disabled((codeSent ? code.count != 6 : email.isEmpty) || model.server.isRegistering || registrationFailed)
-                    if fromOnboarding && !codeSent {
-                        Button("Continue without email") { focus = nil; onContinue() }
-                            .font(NoahFont.callout)
-                            .frame(minHeight: 44)
-                            .disabled(busy || model.server.isRegistering || registrationFailed)
-                    }
-                }
-                .padding(.horizontal, 20).padding(.vertical, 12)
-                .frame(maxWidth: 640)
-                .frame(maxWidth: .infinity)
-                .background(NoahColor.background)
+                if !compactKeyboard { actions }
             }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -136,6 +124,25 @@ struct EmergencyEmailView: View {
                 }
             } message: { Text(LocalizedStringKey(errorMessage ?? "")) }
         }
+    }
+
+    private var actions: some View {
+        VStack(spacing: 8) {
+            NoahButton(title: codeSent ? "Verify Email" : "Send Verification Code", isLoading: busy) {
+                codeSent ? verify() : send()
+            }
+            .disabled((codeSent ? code.count != 6 : email.isEmpty) || model.server.isRegistering || registrationFailed)
+            if fromOnboarding && !codeSent {
+                Button("Continue without email") { focus = nil; onContinue() }
+                    .font(NoahFont.callout)
+                    .frame(minHeight: 44)
+                    .disabled(busy || model.server.isRegistering || registrationFailed)
+            }
+        }
+        .padding(.horizontal, 20).padding(.vertical, 12)
+        .frame(maxWidth: 640)
+        .frame(maxWidth: .infinity)
+        .background(NoahColor.background)
     }
 
     static func explanation(fromOnboarding: Bool, verified: Bool, email: String?, locale: String) -> String {

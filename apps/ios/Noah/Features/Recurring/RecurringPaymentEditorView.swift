@@ -38,7 +38,7 @@ struct RecurringPaymentEditorView: View {
     private var interval: RecurringInterval { .init(unit: frequency, every: frequency == "day" ? (Int(customDays) ?? 0) : periodEvery) }
     private var destination: (destination: String, type: String)? { try? RecurringRecipient.resolve(recipient) }
     var body: some View {
-        Form {
+        AdaptiveForm {
             Section {
                 Text("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.")
                     .foregroundStyle(NoahColor.mutedForeground)
@@ -62,6 +62,7 @@ struct RecurringPaymentEditorView: View {
                     TextField("Shared with the recipient", text: $comment).focused($focus, equals: .comment)
                 }
             }
+        } secondary: {
             Section("Repeat") {
                 Picker("Repeat", selection: $frequency) { Text("Weekly").tag("week"); Text("Monthly").tag("month"); Text("Custom").tag("day") }.pickerStyle(.segmented)
                 if frequency == "day" { TextField("Every … days", text: $customDays).keyboardType(.numberPad).focused($focus, equals: .days) }
@@ -86,14 +87,13 @@ struct RecurringPaymentEditorView: View {
             }
             if let error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
         }
-        .settingsStyle(original == nil ? "New recurring payment" : "Edit recurring payment")
+        .settingsStyle(original == nil ? "New recurring payment" : "Edit recurring payment", maximumWidth: AdaptiveLayout.pairedWidth)
         .scrollDismissesKeyboard(.interactively)
         .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
         .safeAreaInset(edge: .bottom) {
-            if focus == nil {
-                NoahButton(title: original == nil ? "Schedule payment" : "Save payment", isLoading: saving) { save() }.padding()
-                    .accessibilityIdentifier("recurring-save-button")
-            }
+            NoahButton(title: original == nil ? "Schedule payment" : "Save payment", isLoading: saving) { focus = nil; save() }
+                .padding(.horizontal).padding(.vertical, 4).readableWidth()
+                .accessibilityIdentifier("recurring-save-button")
         }
     }
     private var preview: [Double] {

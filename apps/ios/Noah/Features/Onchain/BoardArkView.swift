@@ -5,8 +5,9 @@ struct BoardArkView: View {
     @State private var model = OnchainModel()
     @State private var amount = ""
     @State private var minimum: UInt64?
+    @FocusState private var amountFocused: Bool
     var body: some View {
-        List {
+        AdaptiveForm {
             Section {
                 Text("Move onchain bitcoin into Ark for fast, low-cost payments.")
                 if let overview = model.overview {
@@ -14,8 +15,10 @@ struct BoardArkView: View {
                 }
                 if let minimum { OnchainAmountRow(title: "Minimum Ark amount", sats: minimum) }
             }
+        } secondary: {
             Section("Amount") {
                 TextField("Amount in sats", text: $amount).keyboardType(.numberPad)
+                    .focused($amountFocused)
                     .accessibilityIdentifier("board-amount")
                     .disabled(model.locked)
                 Button("MAX") {
@@ -28,8 +31,9 @@ struct BoardArkView: View {
             }
             OnchainStatusSection(model: model)
         }
-        .settingsStyle("Board to Ark")
+        .settingsStyle("Board to Ark", maximumWidth: AdaptiveLayout.pairedWidth)
         .scrollDismissesKeyboard(.interactively)
+        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { amountFocused = false } } }
         .modifier(OnchainScreen(model: model))
         .task {
             guard !app.isWalletSuspended else { return }

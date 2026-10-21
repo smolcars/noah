@@ -165,18 +165,23 @@ private struct LaunchMessageView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text(title)
-                .font(NoahFont.title)
-                .foregroundStyle(NoahColor.foreground)
-            Text(message)
-                .font(NoahFont.body)
-                .foregroundStyle(NoahColor.mutedForeground)
-                .multilineTextAlignment(.center)
-                .textSelection(.enabled)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 12) {
+                    Text(title)
+                        .font(NoahFont.title)
+                        .foregroundStyle(NoahColor.foreground)
+                    Text(message)
+                        .font(NoahFont.body)
+                        .foregroundStyle(NoahColor.mutedForeground)
+                        .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
+                }
+                .padding(32)
+                .readableWidth()
+                .frame(minHeight: geometry.size.height)
+            }
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(NoahColor.background.ignoresSafeArea())
     }
 

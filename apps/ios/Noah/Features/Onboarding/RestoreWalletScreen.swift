@@ -10,6 +10,8 @@ struct RestoreWalletScreen: View {
     @State private var clearGeneration = 0
     @State private var clipboard = RestorePasteboard()
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    private var compactKeyboard: Bool { verticalSizeClass == .compact && focusedWord != nil }
 
     var body: some View {
         ScrollViewReader { scroll in
@@ -41,6 +43,7 @@ struct RestoreWalletScreen: View {
                             .foregroundStyle(NoahColor.destructive)
                             .accessibilityIdentifier("restore-error")
                     }
+                    if compactKeyboard && model.restoreIssue?.requiresRestart != true { restoreButton }
                 }
                 .font(NoahFont.body)
                 .padding(24)
@@ -48,6 +51,14 @@ struct RestoreWalletScreen: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { _ in
+                if let focusedWord {
+                    Task { @MainActor in
+                        await Task.yield()
+                        scroll.scrollTo(focusedWord, anchor: .center)
+                    }
+                }
+            }
             .onChange(of: focusedWord) { _, index in
                 if let index { withAnimation { scroll.scrollTo(index, anchor: .center) } }
             }
@@ -63,11 +74,9 @@ struct RestoreWalletScreen: View {
                     if let focusedWord, !model.isRestoring {
                         suggestions(at: focusedWord).secretShield()
                     }
-                    NoahButton(title: "Restore Wallet", isLoading: model.isRestoring, action: restore)
-                        .disabled(!useStoredSeed && !input.isComplete)
-                        .accessibilityIdentifier("restore-wallet-submit")
+                    if !compactKeyboard { restoreButton }
                 }
-                .padding(20)
+                .padding(.horizontal, 20).padding(.vertical, compactKeyboard ? 0 : 20)
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
                 .background(NoahColor.background)
@@ -78,6 +87,12 @@ struct RestoreWalletScreen: View {
         .navigationBarBackButtonHidden(model.isRestoring || model.restoreIssue?.requiresRestart == true)
         .onDisappear(perform: clear)
         .onChange(of: scenePhase) { _, phase in if phase != .active { clear() } }
+    }
+
+    private var restoreButton: some View {
+        NoahButton(title: "Restore Wallet", isLoading: model.isRestoring, action: restore)
+            .disabled(!useStoredSeed && !input.isComplete)
+            .accessibilityIdentifier("restore-wallet-submit")
     }
 
     private var phraseFields: some View {
@@ -197,8 +212,7 @@ struct RecoveryWordField: UIViewRepresentable {
         context.coordinator.parent = self
         if field.text != text { field.text = text }
         field.isEnabled = context.environment.isEnabled
-        if focusedWord == index && !field.isFirstResponder { field.becomeFirstResponder() }
-        if focusedWord != index && field.isFirstResponder { field.resignFirstResponder() }
+        context.coordinator.updateFocus(field)
     }
 
     static func dismantleUIView(_ field: RecoveryWordTextField, coordinator: Coordinator) {
@@ -214,7 +228,18 @@ struct RecoveryWordField: UIViewRepresentable {
             field.text = parent.text
         }
         @objc func done() { parent.focusedWord = nil }
-        func textFieldDidBeginEditing(_ textField: UITextField) { parent.focusedWord = parent.index }
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            if parent.focusedWord != parent.index { parent.focusedWord = parent.index }
+        }
+        func updateFocus(_ field: UITextField) {
+            // Resigning inside a SwiftUI graph update loops on iOS 27.0 after rotation.
+            DispatchQueue.main.async { [weak self, weak field] in
+                guard let self, let field else { return }
+                if parent.focusedWord == parent.index {
+                    if !field.isFirstResponder { field.becomeFirstResponder() }
+                } else if field.isFirstResponder { field.resignFirstResponder() }
+            }
+        }
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             parent.focusedWord = parent.index < 11 ? parent.index + 1 : nil
             return true

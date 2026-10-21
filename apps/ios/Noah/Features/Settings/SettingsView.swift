@@ -17,7 +17,7 @@ struct SettingsView: View {
     @State private var showingDelete = false
 
     var body: some View {
-        List {
+        AdaptiveForm {
             NavigationLink { NoahStoryView() } label: {
                 Image("SplashScreenLogo").resizable().scaledToFit().frame(height: 100).frame(maxWidth: .infinity)
                     .accessibilityLabel("Noah's Ark Story")
@@ -56,6 +56,7 @@ struct SettingsView: View {
                     SettingsLabel(title: "Mailbox Notifications", detail: "Allow Noah to monitor your Ark mailbox so it can wake this app to claim Lightning payments in the background.")
                 }.disabled(busy)
             }
+        } secondary: {
             Section("Debug") {
                 row("Show Logs", "View application logs for debugging purposes") { LogView() }
                 Button { confirmingReset = true } label: {
@@ -101,7 +102,7 @@ struct SettingsView: View {
             }
             if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
         }
-        .settingsStyle("Settings")
+        .settingsStyle("Settings", maximumWidth: AdaptiveLayout.pairedWidth)
         .alert("Reset Server Registration", isPresented: $confirmingReset) {
             Button("Cancel", role: .cancel) {}
             Button("Reset", role: .destructive) {
@@ -158,44 +159,46 @@ struct DeleteWalletSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("This action is irreversible. Your wallet and its recovery phrase will be removed from this device. Make sure you have your recovery phrase or a backup before you continue.")
-                    .font(NoahFont.body)
-                    .foregroundStyle(NoahColor.mutedForeground)
-                Text("To confirm, please type \"delete\" in the box below.")
-                    .font(NoahFont.body)
-                TextField("delete", text: $confirmation)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
-                if let failure {
-                    Text(LocalizedStringKey(failure)).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive)
-                }
-                Button(role: .destructive) {
-                    deleting = true
-                    failure = nil
-                    Task {
-                        do {
-                            try await model.deleteWallet()
-                            dismiss()
-                        } catch {
-                            failure = (error as? WalletLifecycle.Failure)?.errorDescription
-                                ?? "The wallet couldn't be deleted. Restart Noah and try again."
-                            deleting = false
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("This action is irreversible. Your wallet and its recovery phrase will be removed from this device. Make sure you have your recovery phrase or a backup before you continue.")
+                        .font(NoahFont.body)
+                        .foregroundStyle(NoahColor.mutedForeground)
+                    Text("To confirm, please type \"delete\" in the box below.")
+                        .font(NoahFont.body)
+                    TextField("delete", text: $confirmation)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textFieldStyle(.roundedBorder)
+                    if let failure {
+                        Text(LocalizedStringKey(failure)).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive)
+                    }
+                    Button(role: .destructive) {
+                        deleting = true
+                        failure = nil
+                        Task {
+                            do {
+                                try await model.deleteWallet()
+                                dismiss()
+                            } catch {
+                                failure = (error as? WalletLifecycle.Failure)?.errorDescription
+                                    ?? "The wallet couldn't be deleted. Restart Noah and try again."
+                                deleting = false
+                            }
                         }
+                    } label: {
+                        Group {
+                            if deleting { ProgressView() } else { Text("Delete Wallet").font(NoahFont.headline) }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                } label: {
-                    Group {
-                        if deleting { ProgressView() } else { Text("Delete Wallet").font(NoahFont.headline) }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .buttonStyle(.borderedProminent)
+                    .tint(NoahColor.destructive)
+                    .disabled(!confirmed || deleting)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(NoahColor.destructive)
-                .disabled(!confirmed || deleting)
-                Spacer()
+                .padding(24).readableWidth()
             }
-            .padding(24)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Delete Wallet")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(deleting) } }

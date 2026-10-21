@@ -14,7 +14,7 @@ struct UnilateralExitView: View {
         exits.filter { !["Canceled", "Claimed", "VtxoAlreadySpent", "VtxoSwept"].contains($0.state) }
     }
     var body: some View {
-        List {
+        AdaptiveForm {
             Section {
                 Text("Emergency Exit").font(NoahFont.title)
                 Text(
@@ -32,6 +32,7 @@ struct UnilateralExitView: View {
                 }
                 Button("Deposit Onchain Funds") { showDeposit = true }
             }
+        } secondary: {
             Section("Start an exit") {
                 Text("VTXOs below 330 sats cannot exit onchain.").font(NoahFont.footnote)
                 Button("Select all eligible VTXOs") { selected = Set(eligible.map(\.id)) }
@@ -109,7 +110,7 @@ struct UnilateralExitView: View {
             }
             OnchainStatusSection(model: model)
         }
-        .settingsStyle("Emergency Exit")
+        .settingsStyle("Emergency Exit", maximumWidth: AdaptiveLayout.pairedWidth)
         .scrollDismissesKeyboard(.interactively)
         .modifier(OnchainScreen(model: model))
         .onChange(of: selected) { _, _ in model.invalidate() }
@@ -129,9 +130,9 @@ struct ExitVtxoDetailView: View {
 
     let id: String
     @State private var model: OnchainModel
-    init(id: String) {
+    init(id: String, model: OnchainModel? = nil) {
         self.id = id
-        _model = State(initialValue: OnchainModel(detailID: id))
+        _model = State(initialValue: model ?? OnchainModel(detailID: id))
     }
     var body: some View {
         List {
@@ -229,7 +230,9 @@ struct ExitDepositSheet: View {
                     "Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary."
                 )
                 if let address {
-                    ReceiveQRCode(uri: address).frame(maxWidth: .infinity).accessibilityLabel(
+                    ReceiveQRCode(uri: address).aspectRatio(1, contentMode: .fit).frame(maxWidth: 280)
+                        .padding(16).background(.white, in: RoundedRectangle(cornerRadius: 24))
+                        .frame(maxWidth: .infinity).accessibilityLabel(
                         "Bitcoin deposit address QR code")
                     Text(address).textSelection(.enabled)
                     Button("Copy Bitcoin address") { UIPasteboard.general.string = address }

@@ -42,34 +42,38 @@ private struct WelcomeView: View {
     let onRestore: () -> Void
 
     var body: some View {
-        VStack(spacing: 32) {
-            HStack {
-                Spacer()
-                NavigationLink(value: OnboardingFlow.Step.language) {
-                    Label("Language", systemImage: "globe")
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 32) {
+                    HStack {
+                        Spacer()
+                        NavigationLink(value: OnboardingFlow.Step.language) {
+                            Label("Language", systemImage: "globe")
+                        }
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("onboarding-language")
+                    }
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Text("Welcome to Noah")
+                            .font(NoahFont.largeTitle)
+                            .foregroundStyle(NoahColor.foreground)
+                        Text("Create a new wallet or restore an existing one.")
+                            .font(NoahFont.body)
+                            .foregroundStyle(NoahColor.mutedForeground)
+                            .multilineTextAlignment(.center)
+                    }
+                    VStack(spacing: 12) {
+                        NoahButton(title: "Create Wallet", action: onCreate)
+                        NoahButton(title: "Restore Wallet", kind: .secondary, action: onRestore)
+                    }
+                    Spacer()
                 }
-                .frame(minHeight: 44)
-                .accessibilityIdentifier("onboarding-language")
+                .padding(.horizontal, 28)
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }
-            Spacer()
-            VStack(spacing: 12) {
-                Text("Welcome to Noah")
-                    .font(NoahFont.largeTitle)
-                    .foregroundStyle(NoahColor.foreground)
-                Text("Create a new wallet or restore an existing one.")
-                    .font(NoahFont.body)
-                    .foregroundStyle(NoahColor.mutedForeground)
-                    .multilineTextAlignment(.center)
-            }
-            VStack(spacing: 12) {
-                NoahButton(title: "Create Wallet", action: onCreate)
-                NoahButton(title: "Restore Wallet", kind: .secondary, action: onRestore)
-            }
-            Spacer()
         }
-        .padding(.horizontal, 28)
-        .frame(maxWidth: 520)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(NoahColor.background.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -86,38 +90,42 @@ private struct BetaWarningView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(.orange)
-                .frame(width: 80, height: 80)
-                .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            VStack(spacing: 12) {
-                Text("Noah is in beta")
-                    .font(NoahFont.largeTitle)
-                    .foregroundStyle(NoahColor.foreground)
-                Text("Noah is still in beta. There is a possibility you could lose money. Only deposit funds you are willing to lose.")
-                    .font(NoahFont.body)
-                    .foregroundStyle(NoahColor.mutedForeground)
-                    .multilineTextAlignment(.center)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 28) {
+                    Spacer()
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .frame(width: 80, height: 80)
+                        .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    VStack(spacing: 12) {
+                        Text("Noah is in beta")
+                            .font(NoahFont.largeTitle)
+                            .foregroundStyle(NoahColor.foreground)
+                        Text("Noah is still in beta. There is a possibility you could lose money. Only deposit funds you are willing to lose.")
+                            .font(NoahFont.body)
+                            .foregroundStyle(NoahColor.mutedForeground)
+                            .multilineTextAlignment(.center)
+                    }
+                    if let errorMessage {
+                        Text(LocalizedStringKey(errorMessage))
+                            .font(NoahFont.footnote)
+                            .foregroundStyle(NoahColor.destructive)
+                            .multilineTextAlignment(.center)
+                    }
+                    VStack(spacing: 12) {
+                        NoahButton(title: "I accept", isLoading: isCreating, action: accept)
+                        NoahButton(title: "I decline", kind: .secondary, action: onDecline)
+                            .disabled(isCreating)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 28)
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }
-            if let errorMessage {
-                Text(LocalizedStringKey(errorMessage))
-                    .font(NoahFont.footnote)
-                    .foregroundStyle(NoahColor.destructive)
-                    .multilineTextAlignment(.center)
-            }
-            VStack(spacing: 12) {
-                NoahButton(title: "I accept", isLoading: isCreating, action: accept)
-                NoahButton(title: "I decline", kind: .secondary, action: onDecline)
-                    .disabled(isCreating)
-            }
-            Spacer()
         }
-        .padding(.horizontal, 28)
-        .frame(maxWidth: 520)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(NoahColor.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(isCreating)
     }
