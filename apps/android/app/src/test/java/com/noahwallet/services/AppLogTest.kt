@@ -4,6 +4,7 @@ import com.noahwallet.fixtures.SharedFixtures
 import kotlinx.serialization.json.jsonPrimitive
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.logging.LogFile
+import java.lang.management.ManagementFactory
 import java.nio.file.Files
 import java.util.Date
 import org.junit.Assert.*
@@ -46,20 +47,23 @@ class AppLogTest {
 
     private fun assertRedactionScales(name: String, unit: String, redact: (String) -> String = LogFile::redact) {
         val inputs = listOf(1024, 16384).map { size -> unit.repeat((size + unit.length - 1) / unit.length).take(size) }
-        inputs.forEach { redact(it) } // Warm regexes, dictionaries and the JIT before sampling.
+        val clock = ManagementFactory.getThreadMXBean()
+        check(clock.isCurrentThreadCpuTimeSupported)
+        if (!clock.isThreadCpuTimeEnabled) clock.isThreadCpuTimeEnabled = true
+        repeat(5) { inputs.forEach { redact(it) } } // Warm both sizes before sampling.
         val samples = inputs.map { mutableListOf<Long>() }
         repeat(5) {
             inputs.forEachIndexed { index, input ->
-                val start = System.nanoTime()
-                redact(input)
-                samples[index] += System.nanoTime() - start
+                val start = clock.currentThreadCpuTime
+                repeat(4) { redact(input) }
+                samples[index] += clock.currentThreadCpuTime - start
             }
         }
         val (small, large) = samples.map { it.sorted()[2] }
-        println("REDACTION $name 1 KiB ${small / 1e6} ms; 16 KiB ${large / 1e6} ms")
-        // Linear work grows 16x; quadratic suffix rescans grow 256x. Allow scheduler/JIT noise.
-        assertTrue("$name scaling: $small -> $large ns", large < small * 64 + 20_000_000)
-        assertTrue("$name 16 KiB exceeds 2 s ceiling", large < 2_000_000_000)
+        println("REDACTION $name CPU 1 KiB $small ns; 16 KiB $large ns (four calls)")
+        // 16x input permits 64x CPU work, rejecting quadratic (256x) rescans without counting descheduling.
+        assertTrue("$name CPU scaling: $small -> $large ns", small > 0 && large < small * 64)
+
     }
 
     private val performanceInputs = listOf(
