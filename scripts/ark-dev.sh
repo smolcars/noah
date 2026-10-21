@@ -34,6 +34,24 @@ dcr() {
     docker compose -f "$COMPOSE_FILE" "$@"
 }
 
+# Lifecycle commands must run from the checkout that created the running stack.
+# Every checkout shares the compose project name ("scripts"), and captaind/postgres
+# bind-mount files by host path. Running `up` from another worktree recreates those
+# services against that worktree (and moves bitcoind to a new IP), which breaks the
+# stack once the worktree is deleted. Set NOAH_STACK_ANY_CHECKOUT=1 to take it over.
+require_stack_checkout() {
+    local project running
+    project="$(basename "$SCRIPT_DIR")"
+    running=$(docker ps -a --filter "label=com.docker.compose.project=$project" \
+        --format '{{.Label "com.docker.compose.project.working_dir"}}' | sort -u)
+    if [[ -n "$running" && "$running" != "$SCRIPT_DIR" && "${NOAH_STACK_ANY_CHECKOUT:-}" != "1" ]]; then
+        echo "Error: the regtest stack was started from a different checkout:" >&2
+        echo "$running" | sed 's/^/  /' >&2
+        echo "Run this command from that checkout, or set NOAH_STACK_ANY_CHECKOUT=1 to take the stack over." >&2
+        exit 1
+    fi
+}
+
 # --- Functions ---
 
 # Displays how to use the script
@@ -92,7 +110,7 @@ create_bark_wallet() {
     echo "🧹 Cleaning existing bark data if present..."
     dcr run --rm --no-deps --entrypoint sh "$BARK_SERVICE" -c 'rm -rf /root/.bark'
 
-    dcr run --rm "$BARK_SERVICE" bark create \
+    dcr run --rm --no-deps "$BARK_SERVICE" bark create \
         --regtest \
         --ark http://captaind:3535 \
         --bitcoind http://bitcoind:18443 \
@@ -315,7 +333,7 @@ setup_everything() {
     echo ""
     echo "🔍 Getting bark onchain address..."
     local bark_address
-    bark_address=$(dcr run --rm "$BARK_SERVICE" bark onchain address | jq -r '.address')
+    bark_address=$(dcr run --rm --no-deps "$BARK_SERVICE" bark onchain address | jq -r '.address')
     echo "   Bark address: $bark_address"
 
     echo ""
@@ -324,7 +342,7 @@ setup_everything() {
 
     echo ""
     echo "🚢 Boarding onto Ark with 1000000 sats..."
-    dcr run --rm "$BARK_SERVICE" bark board '1000000 sats'
+    dcr run --rm --no-deps "$BARK_SERVICE" bark board '1000000 sats'
 
     echo ""
     echo "⛏️  Generating 6 more blocks to confirm boarding..."
@@ -367,20 +385,24 @@ shift
 
 case "$COMMAND" in
     setup-everything)
+        require_stack_checkout
         setup_everything
         ;;
 
     up)
+        require_stack_checkout
         echo "🚀 Starting all services in the background..."
         dcr up -d "$@"
         ;;
 
     stop)
+        require_stack_checkout
         echo "🛑 Stopping all services..."
         dcr stop "$@"
         ;;
 
     down)
+        require_stack_checkout
         echo "🛑 Stopping and removing all services..."
         dcr down "$@" --volumes
         ;;
