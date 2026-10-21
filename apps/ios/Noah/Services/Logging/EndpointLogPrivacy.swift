@@ -41,7 +41,7 @@ enum EndpointLogPrivacy {
         var sensitive = Set<String>()
         func add(_ value: String, opaque: Bool = false) {
             for view in LogFile.decodedViews(value, percentEncoded: true, compatibility: true) ?? [value] {
-                let token = SecretMatcher.normalize(view)
+                guard let token = SecretMatcher.normalize(view) else { failClosed(); return }
                 if !token.isEmpty && (!opaque || token.utf16.count >= 6 && !commonWords.contains(token.lowercased())) { sensitive.insert(view) }
             }
         }
@@ -87,7 +87,12 @@ enum EndpointLogPrivacy {
         }
         private var nodes = [Node()]
         init(_ tokens: Set<String>) {
-            for token in Set(tokens.flatMap { [$0, Self.fold($0), Self.normalize($0)] }) {
+            var views = Set<String>()
+            for token in tokens {
+                guard let normalized = Self.normalize(token) else { continue }
+                views.formUnion([token, Self.fold(token), normalized, Self.withoutMarks(normalized)])
+            }
+            for token in views {
                 var state = 0
                 for unit in token.utf16 {
                     if let next = nodes[state].edges[unit] { state = next }
@@ -110,14 +115,22 @@ enum EndpointLogPrivacy {
                 }
             }
         }
-        static func normalize(_ text: String) -> String {
-            text.decomposedStringWithCompatibilityMapping.lowercased(with: Locale(identifier: "en_US_POSIX")).uppercased(with: Locale(identifier: "en_US_POSIX")).decomposedStringWithCompatibilityMapping
+        static func normalize(_ text: String) -> String? {
+            guard !EndpointLogPrivacy.hasExcessiveCombiningRun(text) else { return nil }
+            let folded = fold(text.decomposedStringWithCompatibilityMapping)
+            guard !EndpointLogPrivacy.hasExcessiveCombiningRun(folded) else { return nil }
+            return folded.decomposedStringWithCompatibilityMapping
         }
         func contains(_ text: String) -> Bool {
             if EndpointLogPrivacy.hasExcessiveCombiningRun(text) { return true }
             guard nodes.count > 1 else { return false }
-            // Decomposition keeps a following mark separate from the token's final scalar.
-            return containsView(text) || containsView(Self.fold(text)) || containsView(Self.normalize(text))
+            if containsView(text) || containsView(Self.fold(text)) { return true }
+            guard let normalized = Self.normalize(text) else { return true }
+            // Reordering can insert a following mark inside an accented token's decomposition.
+            return containsView(normalized) || containsView(Self.withoutMarks(normalized))
+        }
+        private static func withoutMarks(_ text: String) -> String {
+            String(String.UnicodeScalarView(text.unicodeScalars.filter { !EndpointLogPrivacy.isMark($0) }))
         }
         private static func fold(_ text: String) -> String {
             text.lowercased(with: Locale(identifier: "en_US_POSIX")).uppercased(with: Locale(identifier: "en_US_POSIX"))
@@ -133,15 +146,23 @@ enum EndpointLogPrivacy {
         }
     }
 
-    // Bound canonical reordering before Foundation normalizes any registered view.
+    private static func isMark(_ scalar: UnicodeScalar) -> Bool {
+        switch scalar.properties.generalCategory {
+        case .nonspacingMark, .spacingMark, .enclosingMark: true
+        default: false
+        }
+    }
+
+    // Per-scalar decomposition has bounded size; never reorder an unbounded whole-string run.
     static func hasExcessiveCombiningRun(_ text: String) -> Bool {
-        var run = 0
+        var run = 0, decomposedRun = 0
         for scalar in text.unicodeScalars {
-            switch scalar.properties.generalCategory {
-            case .nonspacingMark, .spacingMark, .enclosingMark:
-                run += 1
-                if run > 32 { return true }
-            default: run = 0
+            if scalar.isASCII { run = 0; decomposedRun = 0; continue }
+            run = isMark(scalar) ? run + 1 : 0
+            if run > 32 { return true }
+            for part in String(scalar).decomposedStringWithCompatibilityMapping.unicodeScalars {
+                decomposedRun = isMark(part) ? decomposedRun + 1 : 0
+                if decomposedRun > 32 { return true }
             }
         }
         return false

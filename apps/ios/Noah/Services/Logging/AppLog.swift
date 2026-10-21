@@ -271,6 +271,7 @@ final class LogFile: @unchecked Sendable {
         for _ in 0..<4 {
             if compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last!) { return nil }
             let source = compatibility ? views.last!.precomposedStringWithCompatibilityMapping : views.last!
+            if compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(source) { return nil }
             if source != views.last! { views.append(source) }
             let matches = escapes.matches(in: source, range: NSRange(source.startIndex..., in: source))
             if matches.isEmpty { return views }
@@ -291,6 +292,7 @@ final class LogFile: @unchecked Sendable {
         }
         if compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last!) { return nil }
         let last = compatibility ? views.last!.precomposedStringWithCompatibilityMapping : views.last!
+        if compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(last) { return nil }
         if last != views.last! { views.append(last) }
         guard escapes.firstMatch(in: last, range: NSRange(last.startIndex..., in: last)) == nil else { return nil }
         return views
