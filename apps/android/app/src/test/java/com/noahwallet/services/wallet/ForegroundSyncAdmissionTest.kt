@@ -15,7 +15,28 @@ class ForegroundSyncAdmissionTest {
         fun event(event: Lifecycle.Event) = lifecycle.handleLifecycleEvent(event)
     }
 
-    @Test fun pauseRevokesLaterStagesAndTicksWhileRecurringKeepsStartedLifetime() = runBlocking {
+    @Test fun pauseRevokesEveryDelayedForegroundCallbackEvenAfterAnotherResume() = runBlocking {
+        val activity = Activity(); val admission = ForegroundSyncAdmission()
+        activity.lifecycle.addObserver(admission)
+        activity.event(Lifecycle.Event.ON_RESUME)
+        val entered = Channel<Unit>(Channel.UNLIMITED); val release = CompletableDeferred<Unit>()
+        var stages = 0
+        val work = List(2) { async {
+            admission.run { budget ->
+                entered.send(Unit); release.await()
+                if (budget.available) stages++
+            }
+        } }
+        try {
+            withTimeout(5000) { repeat(2) { entered.receive() } }
+            activity.event(Lifecycle.Event.ON_PAUSE)
+            activity.event(Lifecycle.Event.ON_RESUME)
+            release.complete(Unit); work.awaitAll()
+            assertEquals(0, stages)
+        } finally { release.complete(Unit); activity.event(Lifecycle.Event.ON_STOP) }
+    }
+
+    @Test fun pauseRevokesSyncAndRecurringUntilResumed() = runBlocking {
         val activity = Activity()
         val admission = ForegroundSyncAdmission()
         val ticks = Channel<Unit>()
@@ -32,7 +53,7 @@ class ForegroundSyncAdmissionTest {
                 withContext(WalletExecutionBudget(budget)) {
                     WalletBackgroundActivity.during {
                         flight.run(
-                            { firstStages++; entered.complete(Unit); release.await(); settled = true },
+                            { firstStages++; entered.complete(Unit); withContext(NonCancellable) { release.await(); settled = true } },
                             { laterStages++ }, { laterStages++ },
                         )
                     }
@@ -48,19 +69,19 @@ class ForegroundSyncAdmissionTest {
             assertTrue(WalletBackgroundActivity.isRunning)
             assertEquals(0, recurring)
             release.complete(Unit)
-            withTimeout(5000) { waiting.receive() }
+            withTimeout(5000) { while (!settled || WalletBackgroundActivity.isRunning) yield() }
+            yield()
             assertTrue(settled)
             assertFalse(WalletBackgroundActivity.isRunning)
             assertEquals(0, laterStages)
-            assertEquals(1, recurring)
-            withTimeout(5000) { ticks.send(Unit); waiting.receive() }
+            assertEquals(0, recurring)
+            assertFalse(ticks.trySend(Unit).isSuccess)
             assertEquals(1, firstStages)
-            assertEquals(2, recurring)
             activity.event(Lifecycle.Event.ON_RESUME)
-            withTimeout(5000) { ticks.send(Unit); waiting.receive() }
+            withTimeout(5000) { waiting.receive(); ticks.send(Unit); waiting.receive() }
             assertEquals(2, firstStages)
             assertEquals(2, laterStages)
-            assertEquals(3, recurring)
+            assertEquals(1, recurring)
         } finally { release.complete(Unit); activity.event(Lifecycle.Event.ON_STOP) }
     }
 }

@@ -7,27 +7,27 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
-/** Sync has stricter foreground admission than recurring payments' STARTED lifetime. */
+/** Every foreground trigger requires RESUMED admission, retained through native settlement. */
 internal class ForegroundSyncAdmission : DefaultLifecycleObserver {
-    private var resumed = false
-    private var budget: RecurringBudget? = null
+    @Volatile private var resumed = false
+    private val budgets = mutableSetOf<RecurringBudget>()
 
     override fun onResume(owner: LifecycleOwner) { resumed = true }
     override fun onPause(owner: LifecycleOwner) {
         resumed = false
-        budget?.revoke()
+        budgets.forEach { it.revoke() }
     }
 
     suspend fun run(operation: suspend (RecurringBudget) -> Unit) {
         if (!resumed) return
-        val tick = RecurringBudget()
-        budget = tick
+        val tick = RecurringBudget().apply { admission = { resumed } }
+        budgets.add(tick)
         try { operation(tick) }
         catch (cancelled: CancellationException) {
-            // Sync revocation must not cancel recurring payments' STARTED timer.
+            // Admission revocation leaves already admitted native settlement owned.
             currentCoroutineContext().ensureActive()
             if (tick.available) throw cancelled
         }
-        finally { tick.revoke(); if (budget === tick) budget = null }
+        finally { tick.revoke(); budgets.remove(tick) }
     }
 }

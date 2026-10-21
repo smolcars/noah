@@ -23,7 +23,8 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun RecurringPaymentsScreen(app: AppModel) {
     val context = LocalContext.current
-    val executor = remember { RecurringRuntime.shared(context).executor }
+    val runtime = remember { RecurringRuntime.shared(context) }
+    val executor = runtime.executor
     val scope = rememberCoroutineScope()
     var editor by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<RecurringPayment?>(null) }
@@ -33,7 +34,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
     var review by remember { mutableStateOf<RecurringExecutor.Review?>(null) }
     var actionError by remember { mutableStateOf<String?>(null) }
     fun act(work: suspend () -> Unit) { actionError = null; scope.launch { try { work() } catch (e: Exception) { actionError = e.message ?: "Couldn't update recurring payments. Try again." } } }
-    LaunchedEffect(Unit) { executor.reload(); executor.execute() }
+    LaunchedEffect(Unit) { executor.reload(); runtime.executeInForeground() }
     BackHandler(editor) { editor = false }
     if (editor) { RecurringPaymentEditorScreen(executor, editing) { editor = false }; return }
     SettingsColumn {
@@ -66,7 +67,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
             }
             TextButton({ cancelling = s }) { Text(tr(if (s.status == "completed") "Remove" else "Cancel"), color = MaterialTheme.colorScheme.error) }
         }
-        if (executor.schedules.any { it.status == "active" }) NoahButton(if (executor.running) "Sending…" else "Run due payments now", !executor.running && !app.isWalletSuspended) { act { executor.execute(manual = true) } }
+        if (executor.schedules.any { it.status == "active" }) NoahButton(if (executor.running) "Sending…" else "Run due payments now", !executor.running && !app.isWalletSuspended) { act { runtime.executeInForeground(manual = true) } }
         if (executor.syncPending) Text(tr("Wake-up schedule hasn't synced yet. Noah will retry when opened."), style = MaterialTheme.typography.bodySmall)
         (actionError ?: executor.error)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
     }
@@ -85,7 +86,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
                 if (!executor.controller.locked) { review = null; executor.reload() }
             } }
             else SendConfirmation(item.payment, item.quote, executor.controller, confirm = { act {
-                executor.execute(manual = true, approval = item)
+                runtime.executeInForeground(manual = true, approval = item)
                 if (!executor.controller.locked) review = null
             } }, cancel = { review = null })
         }

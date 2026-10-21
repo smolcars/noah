@@ -121,7 +121,9 @@ fun LaunchGateView(model: AppModel) {
             model.start()
             if (model.open) {
                 model.services.startServerServices()
-                model.services.syncInForeground(com.noahwallet.recurring.RecurringBudget())
+                com.noahwallet.recurring.RecurringRuntime.shared(context).syncForegroundAdmission.run {
+                    model.services.syncInForeground(it)
+                }
                 model.refresh()
             }
         }

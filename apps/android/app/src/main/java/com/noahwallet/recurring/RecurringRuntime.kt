@@ -42,17 +42,24 @@ class RecurringRuntime private constructor(context: Context) {
         }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
     internal val syncForegroundAdmission = com.noahwallet.services.wallet.ForegroundSyncAdmission()
     internal val foregroundRunner = RecurringForegroundRunner(scope, isOnboarded = services::isOnboarded) { budget ->
-        syncForegroundAdmission.run { services.syncInForeground(it) }
-        if (budget.available) executor.execute(budget = budget)
+        syncForegroundAdmission.run { admission ->
+            services.syncInForeground(admission)
+            if (budget.available && admission.available) executor.execute(budget = admission)
+        }
     }
     /** Protected load overlays policy rollback and durable automation stops; no wallet opening. */
     suspend fun hasDuePayments(now: Long = System.currentTimeMillis()): Boolean = withContext(Dispatchers.IO) {
         executor.hasDuePayments(now)
     }
-    fun foreground() { scope.launch { executor.execute() } }
+    suspend fun executeInForeground(manual: Boolean = false, approval: RecurringExecutor.Review? = null) =
+        withContext(Dispatchers.Main.immediate) {
+            syncForegroundAdmission.run { executor.execute(manual = manual, approval = approval, budget = it) }
+        }
+    fun foreground() { scope.launch { executeInForeground() } }
     fun timeChanged() { scope.launch {
         if (!services.isOnboarded()) return@launch
-        executor.timeChanged(); executor.execute()
+        executor.timeChanged()
+        executeInForeground()
     } }
     suspend fun execute(budget: RecurringBudget = RecurringBudget()) = withContext(Dispatchers.Main) { executor.execute(budget = budget) }
     companion object {

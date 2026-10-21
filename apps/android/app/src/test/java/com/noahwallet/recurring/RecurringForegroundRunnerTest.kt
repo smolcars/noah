@@ -13,7 +13,7 @@ import java.util.UUID
 class RecurringForegroundRunnerTest {
     private class Activity : LifecycleOwner {
         override val lifecycle = LifecycleRegistry.createUnsafe(this)
-        fun start() = lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        fun start() = lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         fun stop() = lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
     }
     private class Minutes {
@@ -22,8 +22,27 @@ class RecurringForegroundRunnerTest {
         suspend fun sleep(milliseconds: Long) { waits.send(milliseconds); ticks.receive() }
         suspend fun waiting() { assertEquals(60_000L, withTimeout(2000) { waits.receive() }) }
         suspend fun tick() { withTimeout(2000) { ticks.send(Unit) } }
+        fun wakeIfWaiting() = ticks.trySend(Unit).isSuccess
         fun noTimerWaiting() = !ticks.trySend(Unit).isSuccess
     }
+    @Test fun workerWakeWhileActivityIsStartedCannotRunForegroundStages() = runBlocking {
+        val activity = Activity(); val minutes = Minutes()
+        val w = RecurringWorld(this); w.add()
+        var syncStages = 0
+        activity.lifecycle.addObserver(RecurringForegroundRunner(this, minutes::sleep) {
+            syncStages += 3
+            w.executor.execute(budget = it)
+        })
+        try {
+            // WorkManager/FCM can wake the process without ON_RESUME, even with a STARTED activity.
+            activity.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            yield()
+            if (minutes.wakeIfWaiting()) { minutes.waiting(); minutes.waiting() }
+            assertEquals(0, syncStages)
+            assertEquals(0, w.wallet.calls)
+        } finally { activity.stop() }
+    }
+
     @Test fun foregroundReadinessLoadsOffMainAndBackgroundRevokesPendingTick() = runBlocking {
         val activity = Activity(); val minutes = Minutes()
         val entered = CompletableDeferred<Thread>()
@@ -45,14 +64,14 @@ class RecurringForegroundRunnerTest {
         } finally { release.countDown(); activity.stop() }
     }
 
-    @Test fun paysWhenDueWhileStartedAndStopsUntilRestarted() = runBlocking {
+    @Test fun paysWhenDueWhileResumedAndStopsUntilResumed() = runBlocking {
         val w = RecurringWorld(this); w.add(61_000)
         val activity = Activity(); val minutes = Minutes()
         val runner = RecurringForegroundRunner(this, minutes::sleep) { w.executor.execute(budget = it) }
         activity.lifecycle.addObserver(runner)
         try {
             w.executor.execute(); assertEquals(0, w.wallet.calls)
-            activity.start(); runner.onStart(activity); minutes.waiting()
+            activity.start(); runner.onResume(activity); minutes.waiting()
             assertEquals(0, w.wallet.calls)
             w.now += 60_000; minutes.tick(); minutes.waiting()
             assertEquals(1, w.wallet.calls); assertEquals(1, w.schedule!!.occurrencesPaid)

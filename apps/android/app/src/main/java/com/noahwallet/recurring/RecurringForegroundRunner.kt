@@ -12,21 +12,23 @@ internal class RecurringForegroundRunner(private val scope: CoroutineScope,
     private var task: Job? = null
     private var budget: RecurringBudget? = null
 
-    override fun onStart(owner: LifecycleOwner) {
+    override fun onResume(owner: LifecycleOwner) {
         if (task != null) return
         task = scope.launch {
             while (isActive) {
                 sleep(60_000)
                 ensureActive()
+                if (!owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) return@launch
                 val tick = RecurringBudget()
                 budget = tick
-                try { if (withContext(Dispatchers.IO) { isOnboarded() } && tick.available) execute(tick) }
+                try { if (withContext(Dispatchers.IO) { isOnboarded() } && tick.available &&
+                    owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) execute(tick) }
                 finally { tick.revoke(); if (budget === tick) budget = null }
             }
         }
     }
 
-    override fun onStop(owner: LifecycleOwner) {
+    override fun onPause(owner: LifecycleOwner) {
         budget?.revoke(); budget = null
         task?.cancel(); task = null
     }

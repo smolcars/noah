@@ -424,8 +424,9 @@ class RecurringExecutor(private val d: Dependencies,
 
 /** Monotonic deadline is independent of settlement; expired pushes cannot start a new payment. */
 class RecurringBudget(private val expiresAt: Long? = null, private val clock: () -> Long = System::nanoTime) {
+    internal var admission: () -> Boolean = { true }
     private val revoked = java.util.concurrent.atomic.AtomicBoolean(false)
     fun revoke() { revoked.set(true) }
-    val available get() = !revoked.get() && (expiresAt == null || clock() < expiresAt)
+    val available get() = !revoked.get() && admission() && (expiresAt == null || clock() < expiresAt)
     companion object { fun push() = RecurringBudget(System.nanoTime() + 25_000_000_000) }
 }
