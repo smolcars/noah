@@ -7,6 +7,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.noahwallet.ui.AppModel
+import com.noahwallet.ui.DetailValue
+import androidx.compose.ui.platform.LocalUriHandler
+import com.noahwallet.BuildConfig
 import kotlinx.coroutines.launch
 
 @Composable
@@ -27,10 +30,12 @@ fun VtxosScreen(app: AppModel) {
     val visible = vtxos.filter { filter == null || it.statusID == filter }
     OnchainScreen(app, model) {
         Text(tr("VTXOs"), style = MaterialTheme.typography.headlineSmall)
-        FilterMenu(filter, listOf(null) + VtxoStatus.entries, { it?.label ?: "All" }) { filter = it }
+        FilterMenu(filter, listOf(null) + VtxoStatus.entries, { status -> status?.let { "${it.label} (${vtxos.count { row -> row.statusID == it }})" } ?: "All" }) { filter = it }
         AmountRow(app, "Total (${vtxos.size} VTXOs)", vtxos.sumOf { it.amount })
         TextButton({ selecting = !selecting; selected = emptySet(); model.invalidate() }, enabled = !model.busy) { Text(tr(if (selecting) "Done selecting" else "Select VTXOs")) }
         if (selecting) {
+            DetailRow("Selected", selected.size.toString())
+            AmountRow(app, "Amount selected", vtxos.filter { it.id in selected }.sumOf { it.amount })
             TextButton({ selected = visible.filter { it.refreshable }.map { it.id }.toSet(); model.invalidate() }) { Text(tr("Select visible")) }
             TextButton({ selected = vtxos.filter { it.refreshable && (it.expiring || it.expired) }.map { it.id }.toSet(); model.invalidate() }) { Text(tr("Select expiring")) }
             TextButton({ selected = emptySet(); model.invalidate() }) { Text(tr("Clear selection")) }
@@ -51,17 +56,26 @@ fun VtxosScreen(app: AppModel) {
 private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
     val model = rememberOnchainModel(app)
     val scope = rememberCoroutineScope()
+    val uri = LocalUriHandler.current
+    val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
     OnchainScreen(app, model) {
         TextButton(back) { Text(tr("Back to VTXOs")) }
         Text(tr("VTXO Details"), style = MaterialTheme.typography.headlineSmall)
         val vtxo = model.overview?.vtxos?.find { it.id == id }
         if (vtxo != null) {
             AmountRow(app, "Amount", vtxo.amount)
-            DetailRow("VTXO ID", id); DetailRow("State", vtxo.status); DetailRow("Kind", vtxo.kind)
-            DetailRow("Expiry Height", vtxo.expiry.toString()); DetailRow("Exit Delta", vtxo.exitDelta.toString())
+            DetailValue("VTXO ID", id, true); DetailRow("State", vtxo.state); DetailRow("Status", vtxo.status); DetailRow("Kind", vtxo.kind)
+            DetailRow("Current Block Height", java.text.NumberFormat.getIntegerInstance(locale).format(vtxo.tip))
+            DetailRow("Expiry Height", java.text.NumberFormat.getIntegerInstance(locale).format(vtxo.expiry))
+            DetailRow("Blocks Until Expiry", if (vtxo.expiry <= vtxo.tip) tr("Expired") else java.text.NumberFormat.getIntegerInstance(locale).format(vtxo.expiry - vtxo.tip))
+            DetailRow("Exit Delta", vtxo.exitDelta.toString())
             DetailRow("Exit depth", vtxo.exitDepth.toString()); DetailRow("Exit weight (WU)", vtxo.exitWeight.toString())
             DetailRow("Registered", if (vtxo.registered) "Yes" else "No")
-            DetailRow("Server Public Key", vtxo.serverPubkey); DetailRow("Anchor Point", vtxo.anchorPoint); DetailRow("Point", vtxo.point)
+            DetailValue("Server Public Key", vtxo.serverPubkey, true); DetailValue("Anchor Point", vtxo.anchorPoint, true); DetailRow("Point", vtxo.point)
+            OnchainDisplay.explorerURL(vtxo.anchorPoint, BuildConfig.APP_VARIANT)?.let { url ->
+                TextButton({ uri.openUri(url) }) { Text(tr("View in explorer")) }
+            }
+            if (vtxo.expired || vtxo.expiring) Text(tr("Refresh this VTXO to keep it available."))
             Button({ scope.launch { model.review(OnchainAction.refresh, listOf(id)) } }, enabled = vtxo.refreshable && !model.busy) { Text(tr("Refresh VTXO")) }
         } else if (!model.loading) Text(tr("VTXO is no longer in this view. Check its operation receipt or refresh."))
     }

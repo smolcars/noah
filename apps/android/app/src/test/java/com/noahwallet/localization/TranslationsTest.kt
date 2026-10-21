@@ -102,7 +102,7 @@ class TranslationsTest {
             .getValue("android").jsonObject.getValue("used").jsonArray.map { it.jsonPrimitive.content }.toSet()
         val plurals = SharedFixtures.document("translations").jsonObject.getValue("plurals").jsonArray
             .filter { it.jsonObject.getValue("source").jsonPrimitive.content in used }
-        assertEquals(1, plurals.size)
+        assertEquals(2, plurals.size)
         for (locale in LegacyLocale.supported) {
             language(locale)
             for (plural in plurals) {

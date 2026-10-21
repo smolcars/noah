@@ -25,6 +25,8 @@ import java.util.Calendar
 import java.util.TimeZone
 import java.util.UUID
 
+internal fun limitedRecurringText(value: String, limit: Int) = value.take(limit).dropLastWhile { it.isHighSurrogate() }
+
 internal fun recurringDefaultEvery(unit: String) = if (unit == "day") "14" else "1"
 
 internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault()): Long = Calendar.getInstance(zone).apply {
@@ -32,7 +34,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
 }.timeInMillis
 
-@Composable fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, done: () -> Unit) {
+@Composable fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, amountUnit: com.noahwallet.formatting.BitcoinAmountUnit = com.noahwallet.formatting.BitcoinAmountUnit.bip177, done: () -> Unit) {
     val scope = rememberCoroutineScope(); val focus = LocalFocusManager.current
     var label by rememberSaveable(original?.id) { mutableStateOf(original?.label ?: "") }
     var recipient by rememberSaveable(original?.id) { mutableStateOf(original?.destination ?: "") }
@@ -62,12 +64,12 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         Text(tr(if (original == null) "New recurring payment" else "Edit recurring payment"), style = MaterialTheme.typography.headlineMedium)
         Text(tr("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."))
         if (original != null) Text(tr("Saving starts a new schedule at the first payment date. Previous attempts remain visible."))
-        OutlinedTextField(label, { label = it }, label = { Text(tr("Name")) }, placeholder = { Text(tr("e.g. Rent, Donation, VPN")) }, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("recurring-label-input"))
+        OutlinedTextField(label, { label = limitedRecurringText(it, 64) }, label = { Text(tr("Name")) }, placeholder = { Text(tr("e.g. Rent, Donation, VPN")) }, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("recurring-label-input"))
         OutlinedTextField(recipient, { recipient = it }, label = { Text(tr("Recipient")) }, placeholder = { Text(tr("name@domain.com, ark1… or lno1…")) }, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("recurring-recipient-input"), keyboardOptions = KeyboardOptions(autoCorrectEnabled = false))
         Text(tr(destination?.second?.let { when (it) { "ark" -> "Ark address"; "lnurl" -> "Lightning address"; else -> "BOLT12 offer" } } ?: "Ark address, Lightning address or BOLT12 offer"), style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(amount, { amount = it }, label = { Text(tr("Amount (sats)")) }, enabled = !saving, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().testTag("recurring-amount-input"))
-        Text(tr("${amount.ifEmpty { "0" }} sats per payment, plus network fees"), style = MaterialTheme.typography.bodySmall)
-        if (destination?.second == "lnurl") OutlinedTextField(comment, { comment = it }, label = { Text(tr("Note (optional)")) }, supportingText = { Text(tr("Shared with the recipient")) }, enabled = !saving, modifier = Modifier.fillMaxWidth())
+        Text(tr("{_gt_value_2} per payment, plus network fees", com.noahwallet.formatting.BitcoinAmount.format(amount.toLongOrNull() ?: 0, amountUnit, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])), style = MaterialTheme.typography.bodySmall)
+        if (destination?.second == "lnurl") OutlinedTextField(comment, { comment = limitedRecurringText(it, 140) }, label = { Text(tr("Note (optional)")) }, supportingText = { Text(tr("Shared with the recipient")) }, enabled = !saving, modifier = Modifier.fillMaxWidth())
         Text(tr("Repeat"), style = MaterialTheme.typography.titleMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("week" to "Weekly", "month" to "Monthly", "day" to "Custom").forEach { (value, title) -> FilterChip(unit == value, { unit = value; every = recurringDefaultEvery(value) }, label = { Text(tr(title)) }, enabled = !saving) }

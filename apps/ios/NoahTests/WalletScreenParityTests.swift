@@ -1,0 +1,49 @@
+import Foundation
+import Testing
+@testable import Noah
+
+struct WalletScreenParityTests {
+    @Test func recurringInputLimitsPreserveUnicodeBoundaries() {
+        #expect(RecurringPaymentEditorView.limitedText(String(repeating: "a", count: 65), limit: 64).utf16.count == 64)
+        #expect(RecurringPaymentEditorView.limitedText(String(repeating: "a", count: 139) + "🌱", limit: 140).utf16.count == 139)
+        #expect(RecurringPaymentEditorView.limitedText(String(repeating: "a", count: 62) + "🌱", limit: 64).utf16.count == 64)
+    }
+
+    @Test func exitRemainingNeverInventsAnUnknownTip() {
+        #expect(OnchainDisplay.remaining(current: nil, target: 101, locale: "en") == "Unknown")
+        #expect(OnchainDisplay.remaining(current: 100, target: nil, locale: "en") == "Unknown")
+        #expect(OnchainDisplay.remaining(current: 100, target: 101, locale: "en") == "1 block")
+        #expect(OnchainDisplay.remaining(current: 100, target: 102, locale: "en") == "2 blocks")
+        #expect(OnchainDisplay.remaining(current: 100, target: 100, locale: "en") == "Now")
+        #expect(OnchainDisplay.remaining(current: 101, target: 100, locale: "en") == "Now")
+    }
+
+    @Test func claimableFallbackAndBlockIdentityAreVisible() {
+        let block = ExitDetails.Block(height: 100, hash: String(repeating: "a", count: 64))
+        var details = ExitDetails(claimable_since: block)
+        #expect(details.displayClaimableHeight == 100)
+        details.claimable_height = 101
+        #expect(details.displayClaimableHeight == 101)
+        #expect(OnchainDisplay.block(block) == "100 (\(block.hash))")
+        #expect(ExitDetails().displayClaimableHeight == nil)
+    }
+
+    @Test func anchorExplorerUsesTransactionPartAndNetwork() {
+        let txid = String(repeating: "a", count: 64)
+        #expect(OnchainDisplay.explorerURL(txid + ":2", variant: .mainnet)?.absoluteString == "https://mempool.space/tx/\(txid)")
+        #expect(OnchainDisplay.explorerURL(txid + ":2", variant: .signet)?.absoluteString == "https://mempool.space/signet/tx/\(txid)")
+        #expect(OnchainDisplay.explorerURL(txid, variant: .regtest) == nil)
+        #expect(OnchainDisplay.explorerURL("", variant: .mainnet) == nil)
+    }
+
+    @Test func recurringAmountUsesPreferenceWithoutNarrowingUnsupportedAmounts() {
+        var payment = RecurringScheduleTests.schedule()
+        payment.amountSat = 1234
+        #expect(payment.formattedAmount(unit: .bip177, locale: Locale(identifier: "en_US")) == "₿\u{00A0}1,234")
+        #expect(payment.formattedAmount(unit: .sats, locale: Locale(identifier: "en_US")) == "1,234 sats")
+        #expect(payment.formattedAmount(unit: .bip177, locale: Locale(identifier: "sv_SE")) == BitcoinAmount.format(sats: 1234, unit: .bip177, locale: Locale(identifier: "sv_SE")))
+        payment.amountSat = UInt64.max
+        #expect(payment.formattedAmount(unit: .bip177, locale: Locale(identifier: "en_US")) == "₿\u{00A0}18,446,744,073,709,551,615")
+        #expect(payment.amountSat == UInt64.max)
+    }
+}

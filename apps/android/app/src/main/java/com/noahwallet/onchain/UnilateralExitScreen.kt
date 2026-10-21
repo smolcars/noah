@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import com.noahwallet.ui.WalletModalBottomSheet
 
 import com.noahwallet.localization.tr
+import com.noahwallet.localization.trPlural
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -46,10 +47,7 @@ fun UnilateralExitScreen(app: AppModel) {
         Text(tr("Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming."))
         Text(tr("Reading this screen and estimating fees never broadcasts an exit."))
         model.overview?.let { overview ->
-            AmountRow(app, "Pending exit value", overview.pendingTotal)
-            AmountRow(app, "Confirmed onchain funds", overview.confirmed)
-            Text(tr("Block height: ${overview.tip}"))
-            overview.claimableHeight?.let { Text(tr("All claimable at: Block $it")) }
+            ExitOverviewSummary(app, overview)
         }
         TextButton({ deposit = true }) { Text(tr("Deposit Onchain Funds")) }
         Text(tr("Start an exit"), style = MaterialTheme.typography.titleLarge)
@@ -91,6 +89,34 @@ fun UnilateralExitScreen(app: AppModel) {
 }
 
 @Composable
+internal fun ExitOverviewSummary(app: AppModel, overview: OnchainOverview) {
+    val exits = overview.exits
+    val eligible = overview.vtxos.filter { it.eligible }
+    val pending = exits.filter { it.state !in ExitTimeline.terminal }
+    DetailRow("Tracked", exits.size.toString())
+    DetailRow("Pending", pending.size.toString())
+    DetailRow("Claimable", exits.count { it.claimable }.toString())
+    DetailRow("Claiming", exits.count { it.state == "ClaimInProgress" }.toString())
+    DetailRow("Claimed", exits.count { it.state == "Claimed" }.toString())
+    DetailRow("Available", eligible.size.toString())
+    AmountRow(app, "Available Value", eligible.sumOf { it.amount })
+    AmountRow(app, "Pending exit value", overview.pendingTotal)
+    AmountRow(app, "Confirmed onchain funds", overview.confirmed)
+    Text(tr("Block height: ${overview.tip}"))
+    exits.mapNotNull { it.details.tip_height }.maxOrNull()?.let { DetailRow("Exit Synced Tip", it.toString()) }
+    val staleCount = exits.count { (it.details.tip_height ?: overview.tip) < overview.tip }
+    if (staleCount > 0) {
+        Text(trPlural("{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.", staleCount))
+    }
+    val belowDust = overview.vtxos.filter { it.state == "Spendable" && it.amount < ExitRules.dust }
+    if (belowDust.isNotEmpty()) {
+        DetailRow("Below dust limit", belowDust.size.toString())
+        AmountRow(app, "Below dust limit", belowDust.sumOf { it.amount })
+    }
+    overview.claimableHeight?.let { Text(tr("All claimable at: Block $it")) }
+}
+
+@Composable
 fun ExitVtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
     val model = rememberOnchainModel(app, id)
     val scope = rememberCoroutineScope()
@@ -101,9 +127,9 @@ fun ExitVtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
         if (exit != null) {
             AmountRow(app, "Amount", exit.amount)
             DetailRow("VTXO ID", id); Text(tr("State: ${ExitTimeline.labels[exit.state] ?: exit.state}"))
-            exit.details.claimable_height?.let { height ->
-                Text(tr("Claimable at: Block $height")); Text(tr("Remaining: ${maxOf(0, height - (model.overview?.tip ?: 0))} blocks"))
-            }
+            ExitBlockStatusRows(exit.details, model.overview?.tip)
+            Text(tr("Current State"), style = MaterialTheme.typography.titleLarge)
+            ExitDetailsRows(exit.details)
             if (exit.cancelable) TextButton({ scope.launch { model.review(OnchainAction.cancel, listOf(id)) } }, enabled = !model.busy) { Text(tr("Cancel Exit"), color = MaterialTheme.colorScheme.error) }
             exit.timeline.forEach { item ->
                 HorizontalDivider()
@@ -111,20 +137,35 @@ fun ExitVtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
                 Text(tr(item.description))
                 if (item.count > 1) Text(tr("Updates: ${item.count}"))
                 item.startHeight?.let { Text(tr("First height: $it")) }; item.endHeight?.let { Text(tr("Latest height: $it")) }
-                item.details?.let { details ->
-                    details.tip_height?.let { Text(tr("Synced tip: $it")) }
-                    details.confirmed_block?.let { Text(tr("Confirmed block: ${it.height}")) }
-                    details.claimable_since?.let { Text(tr("Claimable since: ${it.height}")) }
-                    details.last_scanned_block?.let { Text(tr("Last scanned: ${it.height}")) }
-                    (details.claim_txid ?: details.txid)?.let { TransactionRow(it) }
-                    details.transactions.orEmpty().forEachIndexed { index, tx ->
-                        Text(tr("Exit transaction ${index + 1}")); TransactionRow(tx.txid); Text(tr(tx.status.kind.replace('-', ' ')))
-                        tx.status.child_txid?.let { Text(tr("Child transaction")); TransactionRow(it) }
-                        tx.status.block?.let { Text(tr("Confirmed: Block ${it.height}")) }
-                    }
-                }
+                item.details?.let { ExitDetailsRows(it) }
             }
         } else if (!model.loading) Text(tr("Exit status is unavailable. Pull to refresh."))
+    }
+}
+
+@Composable
+internal fun ExitBlockStatusRows(details: ExitDetails, tip: Long?) {
+    DetailRow("Current Height", tip?.toString() ?: tr("Unknown"))
+    DetailRow("Exit Tip", details.tip_height?.toString() ?: tr("Unknown"))
+    DetailRow("Claimable Height", details.displayClaimableHeight?.toString() ?: tr("Unknown"))
+    DetailRow("Remaining", tr(OnchainDisplay.remaining(tip, details.displayClaimableHeight),
+        (details.displayClaimableHeight ?: 0) - (tip ?: 0)))
+}
+
+@Composable
+internal fun ExitDetailsRows(details: ExitDetails) {
+    details.tip_height?.let { DetailRow("Synced tip", it.toString()) }
+    details.confirmed_block?.let { DetailRow("Confirmed block", OnchainDisplay.block(it)) }
+    details.claimable_since?.let { DetailRow("Claimable since", OnchainDisplay.block(it)) }
+    details.last_scanned_block?.let { DetailRow("Last scanned", OnchainDisplay.block(it)) }
+    details.block?.let { DetailRow("Claimed block", OnchainDisplay.block(it)) }
+    details.displayClaimableHeight?.let { DetailRow("Claimable at", it.toString()) }
+    details.kind?.let { DetailRow("State detail", it) }
+    (details.claim_txid ?: details.txid)?.let { TransactionRow(it) }
+    details.transactions.orEmpty().forEachIndexed { index, tx ->
+        Text(tr("Exit transaction ${index + 1}")); TransactionRow(tx.txid); Text(tr(tx.status.kind.replace('-', ' ')))
+        tx.status.child_txid?.let { Text(tr("Child transaction")); TransactionRow(it) }
+        tx.status.block?.let { DetailRow("Confirmed", OnchainDisplay.block(it)) }
     }
 }
 

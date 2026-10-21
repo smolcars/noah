@@ -3,6 +3,8 @@ import SwiftUI
 struct RecurringPaymentEditorView: View {
     let executor: RecurringExecutor
     let original: RecurringPayment?
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
     @Environment(\.dismiss) private var dismiss
     private enum Field: Hashable { case label, recipient, amount, comment, days, count }
     @FocusState private var focus: Field?
@@ -37,6 +39,13 @@ struct RecurringPaymentEditorView: View {
         _endDate = State(initialValue: schedule?.endAt.map { Date(timeIntervalSince1970: $0 / 1000) } ?? tomorrow)
         _count = State(initialValue: schedule?.maxOccurrences.map(String.init) ?? "12")
     }
+    nonisolated static func limitedText(_ value: String, limit: Int) -> String {
+        var length = 0
+        return String(value.prefix { character in
+            length += String(character).utf16.count
+            return length <= limit
+        })
+    }
     private var interval: RecurringInterval { .init(unit: frequency, every: frequency == "day" ? (Int(customDays) ?? 0) : periodEvery) }
     private var destination: (destination: String, type: String)? { try? RecurringRecipient.resolve(recipient) }
     var body: some View {
@@ -47,7 +56,7 @@ struct RecurringPaymentEditorView: View {
                         .foregroundStyle(NoahColor.mutedForeground)
                     if original != nil { Text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.").font(NoahFont.footnote) }
                 }
-                Section("Name") { TextField("e.g. Rent, Donation, VPN", text: $label).focused($focus, equals: .label).id(Field.label).accessibilityIdentifier("recurring-label-input") }
+                Section("Name") { TextField("e.g. Rent, Donation, VPN", text: $label).onChange(of: label) { _, value in label = Self.limitedText(value, limit: 64) }.focused($focus, equals: .label).id(Field.label).accessibilityIdentifier("recurring-label-input") }
                 Section("Recipient") {
                     TextField("name@domain.com, ark1… or lno1…", text: $recipient)
                         .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .recipient).id(Field.recipient)
@@ -58,11 +67,11 @@ struct RecurringPaymentEditorView: View {
                 Section("Amount (sats)") {
                     TextField("Amount in sats", text: $amount).keyboardType(.numberPad).focused($focus, equals: .amount).id(Field.amount)
                         .accessibilityIdentifier("recurring-amount-input")
-                    Text("\(amount.isEmpty ? "0" : amount) sats per payment, plus network fees").font(NoahFont.footnote)
+                    Text(L10n.text("{_gt_value_2} per payment, plus network fees", BitcoinAmount.format(sats: Int64(amount) ?? 0, unit: app.amountUnit, locale: locale), locale: locale.identifier)).font(NoahFont.footnote)
                 }
                 if destination?.type == "lnurl" {
                     Section("Note (optional)") {
-                        TextField("Shared with the recipient", text: $comment).focused($focus, equals: .comment).id(Field.comment)
+                        TextField("Shared with the recipient", text: $comment).onChange(of: comment) { _, value in comment = Self.limitedText(value, limit: 140) }.focused($focus, equals: .comment).id(Field.comment)
                     }
                 }
             } secondary: {

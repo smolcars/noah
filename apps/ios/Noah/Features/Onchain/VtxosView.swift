@@ -68,7 +68,10 @@ struct VtxosView: View {
             Section {
                 Picker("Filter", selection: $filter) {
                     Text("All").tag(nil as VtxoStatus?)
-                    ForEach(VtxoStatus.allCases, id: \.self) { Text(LocalizedStringKey($0.label)).tag(Optional($0)) }
+                    ForEach(VtxoStatus.allCases, id: \.self) { status in
+                        Text("\(L10n.text(status.label)) (\((model.overview?.vtxos ?? []).filter { $0.statusID == status }.count))")
+                            .tag(Optional(status))
+                    }
                 }
                 if let overview = model.overview {
                     OnchainAmountRow(title: "Total", sats: overview.vtxos.reduce(0) { $0 + $1.amount })
@@ -77,6 +80,8 @@ struct VtxosView: View {
             }
             if selecting {
                 Section {
+                    LabeledContent("Selected", value: "\(selected.count)")
+                    OnchainAmountRow(title: "Amount selected", sats: (model.overview?.vtxos ?? []).filter { selected.contains($0.id) }.reduce(0) { $0 + $1.amount })
                     Button("Select visible") { selected = Set(visible.filter(\.refreshable).map(\.id)) }
                     Button("Select expiring") {
                         selected = Set(
@@ -135,6 +140,8 @@ private struct VtxoRow: View {
 }
 
 struct VtxoDetailView: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
     let id: String
     let model: OnchainModel
     var body: some View {
@@ -142,15 +149,20 @@ struct VtxoDetailView: View {
             if let vtxo = model.overview?.vtxos.first(where: { $0.id == id }) {
                 Section {
                     OnchainAmountRow(title: "Amount", sats: vtxo.amount)
-                    LabeledContent("State") { Text(LocalizedStringKey(vtxo.status)) }
-                    LabeledContent("VTXO ID") { Text(vtxo.id).textSelection(.enabled) }
+                    LabeledContent("State") { Text(LocalizedStringKey(vtxo.state)) }
+                    LabeledContent("Status") { Text(LocalizedStringKey(vtxo.status)) }
+                    NoahDetailRow(label: "VTXO ID", value: vtxo.id, copyable: true)
                     LabeledContent("Type", value: vtxo.kind)
-                    LabeledContent("Expiry Height", value: "\(vtxo.expiry)")
-                    LabeledContent("Blocks Until Expiry", value: "\(Int64(vtxo.expiry) - Int64(vtxo.tip))")
+                    LabeledContent("Current Block Height", value: vtxo.tip.formatted(.number.locale(locale)))
+                    LabeledContent("Expiry Height", value: vtxo.expiry.formatted(.number.locale(locale)))
+                    LabeledContent("Blocks Until Expiry", value: vtxo.expiry <= vtxo.tip ? L10n.text("Expired", locale: locale.identifier) : (vtxo.expiry - vtxo.tip).formatted(.number.locale(locale)))
                     LabeledContent("Exit Delta", value: "\(vtxo.exitDelta)")
                     LabeledContent("Point") { Text(vtxo.point).textSelection(.enabled) }
-                    LabeledContent("Anchor Point") { Text(vtxo.anchorPoint).textSelection(.enabled) }
-                    LabeledContent("Server Public Key") { Text(vtxo.serverPubkey).textSelection(.enabled) }
+                    NoahDetailRow(label: "Anchor Point", value: vtxo.anchorPoint, copyable: true)
+                    if let url = OnchainDisplay.explorerURL(vtxo.anchorPoint, variant: app.variant) {
+                        Link("View in explorer", destination: url)
+                    }
+                    NoahDetailRow(label: "Server Public Key", value: vtxo.serverPubkey, copyable: true)
                     LabeledContent("Exit depth", value: "\(vtxo.exitDepth)")
                     LabeledContent("Exit transaction weight", value: "\(vtxo.exitWeight) wu")
                     LabeledContent("Registered with server") { Text(LocalizedStringKey(vtxo.registered ? "Yes" : "No")) }

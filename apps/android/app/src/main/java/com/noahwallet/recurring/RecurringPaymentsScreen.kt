@@ -39,7 +39,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
     fun act(work: suspend () -> Unit) { actionError = null; scope.launch { try { work() } catch (e: Exception) { actionError = e.message ?: "Couldn't update recurring payments. Try again." } } }
     LaunchedEffect(Unit) { executor.reload(); runtime.executeInForeground() }
     BackHandler(editor) { editor = false }
-    if (editor) { RecurringPaymentEditorScreen(executor, editing) { editor = false }; return }
+    if (editor) { RecurringPaymentEditorScreen(executor, editing, app.amountUnit) { editor = false }; return }
     SettingsColumn {
         Text(tr("Automatic payments from your Ark balance. Lightning fees must fit both the quoted fee and the server's worst-case fee limit. Ark payments must have no fee. Other payments need manual approval. Keep notifications enabled."), color = MaterialTheme.colorScheme.onSurfaceVariant)
         NoahButton("New recurring payment", !app.isWalletSuspended, modifier = Modifier.testTag("recurring-new-button")) { editingID = null; editor = true }
@@ -53,7 +53,7 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
                 }), color = if (s.status.startsWith("needs_")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
             SelectionContainer { Text(s.destination, style = MaterialTheme.typography.bodySmall) }
-            Text(tr("${s.amountSat} sats"), style = MaterialTheme.typography.headlineMedium)
+            Text(s.formattedAmount(app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier)), style = MaterialTheme.typography.headlineMedium)
             if (!s.unsupportedStorage) Text(tr("${s.interval.description} · ${s.occurrencesPaid} paid" + (s.maxOccurrences?.let { " of $it" } ?: "")))
             if (s.status == "active") s.nextRunAt?.let { Text(tr("Next payment: {_gt_value_2}", recurringDate(it))) }
             s.endAt?.let { Text(tr("Ends: {_gt_value_2}", recurringDay(it))) }

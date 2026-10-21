@@ -168,3 +168,11 @@ enum RecurringError: LocalizedError {
     case message(String)
     var errorDescription: String? { switch self { case .message(let text): text } }
 }
+
+// Keep unsupported wide RN amounts visible without narrowing their stored value.
+extension RecurringPayment {
+    func formattedAmount(unit: BitcoinAmountUnit, locale: Locale) -> String {
+        let number = amountSat.formatted(.number.locale(locale))
+        return unit == .bip177 ? "₿\u{00A0}\(number)" : "\(number) sats"
+    }
+}

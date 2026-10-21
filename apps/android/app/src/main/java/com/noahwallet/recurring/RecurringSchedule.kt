@@ -112,3 +112,6 @@ import java.util.TimeZone
             runs = (listOf(Run(plan.occurrenceIndex!!, plan.scheduledFor!!, now, "failed", amountSat, message)) + runs).take(24))
     }
 }
+
+internal fun RecurringPayment.formattedAmount(unit: com.noahwallet.formatting.BitcoinAmountUnit, locale: java.util.Locale): String =
+    com.noahwallet.formatting.BitcoinAmount.format(amountSat, unit, locale)

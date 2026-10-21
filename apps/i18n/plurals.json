@@ -2,5 +2,9 @@
   "{_gt_value_4} places{_gt_value_3}": {
     "one": "One place{_gt_value_3}",
     "other": "{_gt_value_4} places{_gt_value_3}"
+  },
+  "{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.": {
+    "one": "One exit is behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.",
+    "other": "{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions."
   }
 }

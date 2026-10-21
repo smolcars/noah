@@ -23,12 +23,7 @@ struct UnilateralExitView: View {
                 Text("Reading this screen and estimating fees never broadcasts an exit.").foregroundStyle(
                     NoahColor.mutedForeground)
                 if let overview = model.overview {
-                    OnchainAmountRow(title: "Pending exit value", sats: overview.pendingTotal)
-                    OnchainAmountRow(title: "Confirmed onchain funds", sats: overview.confirmed)
-                    LabeledContent("Block height", value: "\(overview.tip)")
-                    if let height = overview.claimableHeight {
-                        LabeledContent("All claimable at", value: "Block \(height)")
-                    }
+                    ExitOverviewSummary(overview: overview)
                 }
                 Button("Deposit Onchain Funds") { showDeposit = true }
             }
@@ -125,9 +120,41 @@ struct UnilateralExitView: View {
     }
 }
 
-struct ExitVtxoDetailView: View {
-    @Environment(\.locale) private var locale
+struct ExitOverviewSummary: View {
+    let overview: OnchainOverview
+    private var exits: [ExitModel] { overview.exits }
+    private var eligible: [VtxoModel] { overview.vtxos.filter(\.eligible) }
+    private var pending: [ExitModel] { exits.filter { !["Canceled", "Claimed", "VtxoAlreadySpent", "VtxoSwept"].contains($0.state) } }
+    var body: some View {
+        LabeledContent("Tracked", value: "\(exits.count)")
+        LabeledContent("Pending", value: "\(pending.count)")
+        LabeledContent("Claimable", value: "\(exits.filter(\.claimable).count)")
+        LabeledContent("Claiming", value: "\(exits.filter { $0.state == "ClaimInProgress" }.count)")
+        LabeledContent("Claimed", value: "\(exits.filter { $0.state == "Claimed" }.count)")
+        LabeledContent("Available", value: "\(eligible.count)")
+        OnchainAmountRow(title: "Available Value", sats: eligible.reduce(0) { $0 + $1.amount })
+        OnchainAmountRow(title: "Pending exit value", sats: overview.pendingTotal)
+        OnchainAmountRow(title: "Confirmed onchain funds", sats: overview.confirmed)
+        LabeledContent("Block height", value: "\(overview.tip)")
+        if let syncedTip = exits.compactMap({ $0.details.tip_height }).max() {
+            LabeledContent("Exit Synced Tip", value: "\(syncedTip)")
+        }
+        let staleCount = exits.filter { $0.details.tip_height.map { $0 < overview.tip } == true }.count
+        if staleCount > 0 {
+            Text(L10n.plural("{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.", count: staleCount))
+        }
+        let belowDust = overview.vtxos.filter { $0.state == "Spendable" && $0.amount < ExitRules.dust }
+        if !belowDust.isEmpty {
+            LabeledContent("Below dust limit", value: "\(belowDust.count)")
+            OnchainAmountRow(title: "Below dust limit", sats: belowDust.reduce(0) { $0 + $1.amount })
+        }
+        if let height = overview.claimableHeight {
+            LabeledContent("All claimable at", value: "Block \(height)")
+        }
+    }
+}
 
+struct ExitVtxoDetailView: View {
     let id: String
     @State private var model: OnchainModel
     init(id: String, model: OnchainModel? = nil) {
@@ -141,18 +168,14 @@ struct ExitVtxoDetailView: View {
                     OnchainAmountRow(title: "Amount", sats: exit.amount)
                     LabeledContent("VTXO ID") { Text(id).textSelection(.enabled) }
                     LabeledContent("State") { Text(LocalizedStringKey(ExitTimeline.labels[exit.state] ?? exit.state)) }
-                    if let height = exit.details.claimable_height {
-                        LabeledContent("Claimable at", value: "Block \(height)")
-                        LabeledContent(
-                            "Remaining",
-                            value: L10n.text("{count} blocks", max(0, Int64(height) - Int64(model.overview?.tip ?? 0)), locale: locale.identifier))
-                    }
+                    ExitBlockStatusRows(details: exit.details, tip: model.overview?.tip)
                     if exit.cancelable {
                         Button("Cancel Exit", role: .destructive) {
                             Task { await model.review(.cancel, ids: [id]) }
                         }.disabled(model.locked)
                     }
                 }
+                Section("Current State") { ExitDetailsRows(details: exit.details) }
                 ForEach(Array(exit.timeline.enumerated()), id: \.offset) { _, item in
                     Section(item.label + (item.isCurrent ? " · Current" : "")) {
                         Text(LocalizedStringKey(item.description))
@@ -172,19 +195,36 @@ struct ExitVtxoDetailView: View {
     }
 }
 
-private struct ExitDetailsRows: View {
+struct ExitBlockStatusRows: View {
+    @Environment(\.locale) private var locale
+    let details: ExitDetails
+    let tip: UInt32?
+    var body: some View {
+        LabeledContent("Current Height", value: tip.map(String.init) ?? L10n.text("Unknown", locale: locale.identifier))
+        LabeledContent("Exit Tip", value: details.tip_height.map(String.init) ?? L10n.text("Unknown", locale: locale.identifier))
+        LabeledContent("Claimable Height", value: details.displayClaimableHeight.map(String.init) ?? L10n.text("Unknown", locale: locale.identifier))
+        LabeledContent("Remaining", value: OnchainDisplay.remaining(current: tip, target: details.displayClaimableHeight, locale: locale.identifier))
+    }
+}
+
+struct ExitDetailsRows: View {
     let details: ExitDetails
     var body: some View {
         if let tip = details.tip_height { LabeledContent("Synced tip", value: "\(tip)") }
         if let block = details.confirmed_block {
-            LabeledContent("Confirmed block", value: "\(block.height)")
+            LabeledContent("Confirmed block") { Text(OnchainDisplay.block(block)).textSelection(.enabled) }
         }
         if let block = details.claimable_since {
-            LabeledContent("Claimable since", value: "\(block.height)")
+            LabeledContent("Claimable since") { Text(OnchainDisplay.block(block)).textSelection(.enabled) }
         }
         if let block = details.last_scanned_block {
-            LabeledContent("Last scanned", value: "\(block.height)")
+            LabeledContent("Last scanned") { Text(OnchainDisplay.block(block)).textSelection(.enabled) }
         }
+        if let block = details.block {
+            LabeledContent("Claimed block") { Text(OnchainDisplay.block(block)).textSelection(.enabled) }
+        }
+        if let height = details.displayClaimableHeight { LabeledContent("Claimable at", value: "\(height)") }
+        if let kind = details.kind { LabeledContent("State detail", value: kind) }
         if let txid = details.claim_txid ?? details.txid {
             ExitTransactionRow(title: "Claim transaction", txid: txid)
         }
@@ -194,7 +234,7 @@ private struct ExitDetailsRows: View {
             if let child = tx.status.child_txid {
                 ExitTransactionRow(title: "Child transaction", txid: child)
             }
-            if let block = tx.status.block { LabeledContent("Confirmed", value: "Block \(block.height)") }
+            if let block = tx.status.block { LabeledContent("Confirmed") { Text(OnchainDisplay.block(block)).textSelection(.enabled) } }
         }
     }
 }

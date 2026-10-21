@@ -107,7 +107,9 @@
   <string name="gt_40ffd8e019ebd77e">"Ark残高から自動で支払います。ライトニング手数料はArkの公表手数料に基づき、上限は支払額の2%または200 satsのいずれか高い方です。上限を超える支払いには手動での承認が必要です。通知は有効にしておいてください。"</string>
   <string name="gt_07dc7c7250e1ca47">"Ark残高から自動で支払います。ライトニング手数料は、見積額とサーバーが定める最悪の場合の手数料上限のどちらも超えてはいけません。Arkでの支払いは手数料無料の場合に限ります。それ以外の支払いには手動での承認が必要です。通知は有効にしておいてください。"</string>
   <string name="gt_68afa57a1a60064b">"ウォレットを暗号化してから、自動または手動でバックアップします。"</string>
+  <string name="gt_e674447337e83c13">"利用可能"</string>
   <string name="gt_4e8ab9ee2ebee825">"利用可能なバックアップ"</string>
+  <string name="gt_83f44152274f9e00">"利用可能額"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12オファー"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
   <string name="gt_4216000d31d4c4e3">"BTC Map"</string>
@@ -136,6 +138,7 @@
   <string name="gt_d80412512553e428">"Noahのバッテリー最適化は無効になっています。"</string>
   <string name="gt_684f75e8eac9b75b">"バッテリーの最適化により、バックグラウンドでの支払いが遅れる場合があります。"</string>
   <string name="gt_93393c4e662bd5e9">"自分自身の銀行になろう。"</string>
+  <string name="gt_b6e65f6a71b4b6be">"ダスト限度額未満"</string>
   <string name="gt_2b680906402b453b">"生体認証"</string>
   <string name="gt_a7b822040637297e">"Bitcoin (BIP-177)"</string>
   <string name="gt_5538c35c05d2ea68">"Bitcoinマップ"</string>
@@ -221,12 +224,12 @@
   <string name="gt_aa87e940cf06cc86">"受け取り申請を送信しました。更新して確認状況を確認してください。"</string>
   <string name="gt_32a9a43b06393d19">"受け取りトランザクション"</string>
   <string name="gt_c52ed3f9cce24384">"受け取り可能"</string>
+  <string name="gt_dbebe786470be492">"受け取り可能になるブロック高"</string>
   <string name="gt_5791d9f14fa53cfd">"受け取り可能なライトニング入金"</string>
   <string name="gt_4354cda4deead68d">"受け取り可能になる時点"</string>
-  <string name="gt_4d4885540de9e710">"受け取り可能：ブロック%1$s以降"</string>
   <string name="gt_45def9fade860191">"受け取り可能になった時点"</string>
-  <string name="gt_ff535431674a0002">"受け取り可能になった日時：%1$s"</string>
   <string name="gt_ddcd2779294a61f0">"受け取り済み"</string>
+  <string name="gt_2dfe1661c34f3e0f">"受け取りが完了したブロック"</string>
   <string name="gt_9928373127bf808f">"受け取り処理中"</string>
   <string name="gt_83b12c2216efb4fd">"クリア"</string>
   <string name="gt_2cade3f6b9302759">"端末内のサーバー登録情報を消去して再登録しますか？ウォレットは保持されます。"</string>
@@ -248,10 +251,8 @@
   <string name="gt_617a8f15d57215f3">"ブロック%1$sで確認済み"</string>
   <string name="gt_aeae980b83b4c572">"ブロック %1$s で確認済み"</string>
   <string name="gt_6b2946528b3b4809">"確認されたブロック"</string>
-  <string name="gt_1eaf1ad8e5f877d0">"確認済みブロック：%1$s"</string>
   <string name="gt_6bcc1f9a831a85eb">"承認済みのオンチェーン残高"</string>
   <string name="gt_90733bdb40937a8c">"確認済みのオンチェーン資金"</string>
-  <string name="gt_eb3959b73f55b90f">"確認済み：ブロック %1$s"</string>
   <string name="gt_916a464e6cfffe51">"競合あり"</string>
   <string name="gt_f8d6b3c8e8b286e3">"ウォレットデータの不整合"</string>
   <string name="gt_7a766440fe6254ac">"非接触"</string>
@@ -336,7 +337,10 @@
   <string name="gt_e4bca5667d4fa25e">"作成に失敗しました。もう一度お試しください。"</string>
   <string name="gt_f9039698f684e234">"スクリーンショットを切り抜く"</string>
   <string name="gt_3ac1a9ec4fa7a9fa">"通貨"</string>
+  <string name="gt_79d5a9c6567df0af">"現在のブロック高"</string>
   <string name="gt_0f200023fd30d368">"現在のエンドポイント："</string>
+  <string name="gt_bac875f5494598a0">"現在のブロック高"</string>
+  <string name="gt_076e7f8f950658d4">"現在の状態"</string>
   <string name="gt_4893c3c6fefef086">"現在のバージョン"</string>
   <string name="gt_b7ac226f0f0cc024">"現在のバージョン：%1$s"</string>
   <string name="gt_494ca78f7374e46f">"カスタム"</string>
@@ -440,6 +444,8 @@
   <string name="gt_8ad236bd4bc3ed16">"既存のウォレットデータが不完全です。続行するにはウォレットを復元してください。"</string>
   <string name="gt_d285d8542e6aed66">"出金待機ブロック数"</string>
   <string name="gt_4f4388dc6ce48980">"退出の詳細"</string>
+  <string name="gt_0085d19b65acb661">"出金処理の同期済み最新ブロック"</string>
+  <string name="gt_6796f99963bfff4f">"退出の最新ブロック"</string>
   <string name="gt_b17b4e5b1642d246">"退出をキャンセルしました。VTXOは引き続き使用できます。"</string>
   <string name="gt_22b3b7a335275593">"退出の深度"</string>
   <string name="gt_ba61a6796c9bda55">"退出処理は完了前に取り消されました。"</string>
@@ -592,7 +598,6 @@
   <string name="gt_f21e156f77eaeac9">"前回のバックアップ %1$s"</string>
   <string name="gt_1a196f3801a01458">"前回のバックアップ：%1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"最終スキャン"</string>
-  <string name="gt_49b5e2e115f8bd65">"最終スキャン：%1$s"</string>
   <string name="gt_08116ac54c13a917">"最新バージョン"</string>
   <string name="gt_402096d46e687e6c">"最新バージョン：%1$s"</string>
   <string name="gt_4d7b2bf37878962a">"最新のブロック高"</string>
@@ -764,6 +769,7 @@
   <string name="gt_0f03e776ef5cf27e">"メモは639文字以内にしてください"</string>
   <string name="gt_045f910e6b3ce120">"メモは639文字以内にしてください。"</string>
   <string name="gt_44d87512663a5641">"Noto Sans Regular"</string>
+  <string name="gt_fe18013d93d22f4f">"現在"</string>
   <string name="gt_c28fbd1a8ec4cf5b">"支払い回数"</string>
   <string name="gt_565339bc4d33d728">"OK"</string>
   <string name="gt_9053e68ef6e93119">"Arkから出金"</string>
@@ -939,7 +945,6 @@
   <string name="gt_6cfaa6f78b393854">"登録処理中です。"</string>
   <string name="gt_3da089232bf0c887">"RegtestウォレットはEsploraの代わりにBitcoin Coreを使用します。"</string>
   <string name="gt_f3e4352a5df650e5">"残り"</string>
-  <string name="gt_2becb5be2b0201d6">"残り：%1$sブロック"</string>
   <string name="gt_c3812fc4acb861d5">"削除"</string>
   <string name="gt_86c0f68e1ece91e2">"スクリーンショットを削除"</string>
   <string name="gt_42674e881281d879">"金額を削除"</string>
@@ -1082,6 +1087,7 @@
   <string name="gt_ecbc89cd37a03734">"開始済み"</string>
   <string name="gt_96b98008aedf83c7">"復元を開始中…"</string>
   <string name="gt_a3b50c476732c740">"状態"</string>
+  <string name="gt_dd3b9c3445cd5eef">"状態の詳細"</string>
   <string name="gt_b09f5d5388526ffb">"状態：%1$s"</string>
   <string name="gt_920e413c7d411b61">"状態"</string>
   <string name="gt_1c23c9a0a6a0b504">"状況はまだ確定していません。ウォレットの同期時にNoahが自動的に再確認します。"</string>
@@ -1114,7 +1120,6 @@
   <string name="gt_429aa8abc9b40afd">"%1$sに切り替え"</string>
   <string name="gt_f0fe7ec1fdf9ab12">"Arkへの入金を準備する前に、ウォレットを一度同期してください。"</string>
   <string name="gt_cb24f22aa3099c53">"同期済みの最新ブロック"</string>
-  <string name="gt_1d0914052fccdb14">"同期済みの最新ブロック：%1$s"</string>
   <string name="gt_8a046cc90ab0a981">"同期中…"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_b1d47326a9839d79">"課税は窃盗です。"</string>
@@ -1221,6 +1226,7 @@
   <string name="gt_220753c790bf5c5f">"合計（確認済みのコイン）"</string>
   <string name="gt_1f51a34052ab8346">"合計（%1$s個のVTXO）"</string>
   <string name="gt_857d95d67fba62e3">"オンチェーンウォレットからの出金合計"</string>
+  <string name="gt_c273ea40b157fd8a">"追跡中"</string>
   <string name="gt_be8c6227042336e7">"取引ID"</string>
   <string name="gt_45e8220bd0af421e">"トランザクションの絞り込み"</string>
   <string name="gt_321e1df45aa6a9a3">"トランザクションのサイズ"</string>
@@ -1394,6 +1400,11 @@
   <string name="gt_3e4443e52275a9a0">"不明なエラー"</string>
   <string name="gt_a7e0d088b6ae2e19">"v%1$s"</string>
   <string name="gt_97af051a28d9808c">"your@email.com"</string>
+  <string name="gt_e8fd16d62fe0b616">"1回の支払いにつき%1$s＋ネットワーク手数料"</string>
+  <plurals name="gt_0339522c6cfc9440">
+    <item quantity="one">"1件の出金が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"</item>
+    <item quantity="other">"%1$s 件の退出が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"</item>
+  </plurals>
   <plurals name="gt_605cb36be5d371ea">
     <item quantity="one">"1か所%2$s"</item>
     <item quantity="other">"%1$s か所%2$s"</item>
@@ -1402,14 +1413,13 @@
   <string name="gt_1cfd3ae82c2e9be1">"%2$sに%1$sを送信しました。"</string>
   <string name="gt_16d7d21cf4846790">"%2$sへの%1$sの送信はまだ完了していません：%3$s"</string>
   <string name="gt_e4687b2d37b4a9a5">"明日、%2$sに%1$sを送金します。"</string>
+  <string name="gt_4ace755a59e3c6fc">"%1$s ブロック"</string>
   <string name="gt_1ad21324d7fd6678">"%1$s ブロック"</string>
   <string name="gt_4cf1134a8d162908">"%1$s件のラウンドが保留中"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>
   <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
   <string name="gt_7b6c3393b2b677b5">"12語中%1$s語"</string>
-  <string name="gt_c1287ab1db90e88c">"%1$s sats"</string>
   <string name="gt_d09927bfa36bfdb0">"Arkで%1$s satsを利用可能"</string>
-  <string name="gt_9ce70b4040c33371">"1回の支払いにつき%1$s sats、別途ネットワーク手数料"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s 支払い済み"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_dc1ce30e0377c13b">"%1$s/%2$s"</string>
