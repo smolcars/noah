@@ -269,6 +269,7 @@ final class LogFile: @unchecked Sendable {
         let escapes = percentEncoded ? encodedEscapes : jsonEscapes
         var views = [message]
         for _ in 0..<4 {
+            if compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last!) { return nil }
             let source = compatibility ? views.last!.precomposedStringWithCompatibilityMapping : views.last!
             if source != views.last! { views.append(source) }
             let matches = escapes.matches(in: source, range: NSRange(source.startIndex..., in: source))
@@ -288,6 +289,7 @@ final class LogFile: @unchecked Sendable {
             parts.append(original.substring(from: offset))
             views.append(parts.joined())
         }
+        if compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last!) { return nil }
         let last = compatibility ? views.last!.precomposedStringWithCompatibilityMapping : views.last!
         if last != views.last! { views.append(last) }
         guard escapes.firstMatch(in: last, range: NSRange(last.startIndex..., in: last)) == nil else { return nil }

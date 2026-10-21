@@ -33,6 +33,12 @@ struct EndpointPrivacyRound9Tests {
     }
 
     @Test func longCombiningRunsFailClosedBeforeNormalization() throws {
+        for mark in ["\u{0301}", "\u{0903}", "\u{20DD}", "\u{1D165}"] {
+            #expect(!EndpointLogPrivacy.hasExcessiveCombiningRun("x" + String(repeating: mark, count: 32)))
+            #expect(EndpointLogPrivacy.hasExcessiveCombiningRun("x" + String(repeating: mark, count: 33)))
+            #expect(!EndpointLogPrivacy.hasExcessiveCombiningRun(String(repeating: "x" + String(repeating: mark, count: 32), count: 2)))
+        }
+        #expect(LogFile.decodedViews("x" + String(repeating: #"\u0301\u0327"#, count: 33), percentEncoded: true, compatibility: true) == nil)
         for test in try cases("combining") {
             EndpointLogPrivacy.register(try #require(test["endpoint"] as? String))
             let input = "x" + String(repeating: try #require(test["unit"] as? String), count: try #require(test["count"] as? Int))

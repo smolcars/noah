@@ -30,6 +30,7 @@ enum EndpointLogPrivacy {
 
     static func register(_ endpoint: String?) {
         guard let endpoint else { return }
+        guard !hasExcessiveCombiningRun(endpoint) else { failClosed(); return }
         guard var url = URLComponents(string: endpoint) else { failClosed(); return }
         let credentials = [url.percentEncodedUser, url.percentEncodedPassword].compactMap { $0 }
         let query = url.percentEncodedQuery
@@ -112,6 +113,7 @@ enum EndpointLogPrivacy {
             text.decomposedStringWithCompatibilityMapping.lowercased(with: Locale(identifier: "en_US_POSIX")).uppercased(with: Locale(identifier: "en_US_POSIX")).decomposedStringWithCompatibilityMapping
         }
         func contains(_ text: String) -> Bool {
+            if EndpointLogPrivacy.hasExcessiveCombiningRun(text) { return true }
             guard nodes.count > 1 else { return false }
             // Decomposition keeps a following mark separate from the token's final scalar.
             return containsView(text) || containsView(Self.fold(text)) || containsView(Self.normalize(text))
@@ -128,6 +130,20 @@ enum EndpointLogPrivacy {
             }
             return false
         }
+    }
+
+    // Bound canonical reordering before Foundation normalizes any registered view.
+    static func hasExcessiveCombiningRun(_ text: String) -> Bool {
+        var run = 0
+        for scalar in text.unicodeScalars {
+            switch scalar.properties.generalCategory {
+            case .nonspacingMark, .spacingMark, .enclosingMark:
+                run += 1
+                if run > 32 { return true }
+            default: run = 0
+            }
+        }
+        return false
     }
 
     private static func authority(_ value: String) -> String? {
@@ -226,6 +242,7 @@ enum EndpointLogPrivacy {
         let (registered, matcher, _, unavailable) = snapshot()
         if unavailable { return "[custom-esplora]" }
         guard !registered.isEmpty else { return text }
+        if hasExcessiveCombiningRun(text) { return "[custom-esplora]" }
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128,
               let views = LogFile.decodedViews(text, percentEncoded: true, compatibility: true) else { return "[redacted]" }
         return views.contains(where: matcher.contains) ? "[custom-esplora]" : text
@@ -239,6 +256,7 @@ enum EndpointLogPrivacy {
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
     static func sanitize(_ text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher([]), hosts: Set<String> = []) -> String? {
+        if !registered.isEmpty && hasExcessiveCombiningRun(text) { return "[custom-esplora]" }
         // Exported lines include a bounded tag and timestamp as well as the message.
         guard text.utf8.count <= 2 * LogFile.maxMessageBytes + 128 else { return "[oversized log message omitted]" }
         func summary(_ value: String) -> String { matcher.contains(value) ? "[custom-esplora]" : value }
