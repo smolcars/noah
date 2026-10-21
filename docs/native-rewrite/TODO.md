@@ -11,7 +11,9 @@ Check items off in the commit that completes them. Every screen item means: iOS 
 - [x] Other image refs in `justfile` / `scripts/` updated
 - [x] `just setup-everything` works (run on existing volumes; recreates the bark CLI wallet)
 - [x] barkd 0.7.1 forwarding against captaind 2026-10-19: invoice-for-address → LND pays → VTXO delivered (no bump needed)
-- [ ] barkd restart while a forward is pending (not yet tested)
+- [x] barkd restart while a forward is pending (2026-10-21): with barkd stopped, LND paid a 2,222-sat invoice-for-address and stayed IN_FLIGHT. barkd started 37 s later, claimed through its mailbox notification within 1 s and forwarded exactly once (recipient movement 97, 2,117 sats after a 105-sat fee); LND SUCCEEDED. A 1,234-sat control without a restart also delivered once (movement 96, 1,131 sats).
+  - Root cause of the first, failed attempt: the stack's electrs had resolved `bitcoind` to a stale container IP after bitcoind was recreated, and stayed at block 179 while the chain was at 676. barkd uses electrs, so it reported "anchor not found" and requested an HTLC expiry that had already passed. After the stale view was fixed, barkd correctly refused to claim it ("timelocks leave no time to claim unilaterally"). Restarting electrs fixed it. That one regtest HTLC (3,333 sats, hash 35c1b483…) stays IN_FLIGHT in LND until its block-934 timelock refunds it; no funds were delivered or lost.
+  - [ ] Regtest stack hardening: restart electrs whenever bitcoind is recreated (for example a compose healthcheck or depends_on, or a check in `scripts/ark-dev.sh`), so the indexer can't silently stall at an old height.
 
 ### 0.2 Project scaffolding
 - [x] `apps/ios`: XcodeGen spec, SwiftPM deps, schemes `Noah` / `Noah-Signet` / `Noah-Regtest`, xcconfigs, bundle IDs `com.noahwallet.{mainnet,signet,regtest}`, entitlements (aps, app groups), URL schemes, Info.plist background modes
