@@ -22,7 +22,9 @@ class EndpointPrivacyRound9Test {
                 assertNull(test.toString(), AppTelemetry.scrub(event))
             } else {
                 val crumb = requireNotNull(serializer.deserialize(StringReader(payload.toString()), Breadcrumb::class.java))
-                assertNull(AppTelemetry.scrub(crumb))
+                // Sentry converts this epoch number to an ISO timestamp before submission.
+                val clean = requireNotNull(AppTelemetry.scrub(crumb))
+                assertFalse(AppTelemetry.json(clean).toString().contains("835917264"))
             }
         }
         val crumb = Breadcrumb().apply { message = "ordinary diagnostic" }
@@ -30,6 +32,12 @@ class EndpointPrivacyRound9Test {
     }
 
     @Test fun longCombiningRunsFailClosedBeforeNormalization() {
+        for (mark in listOf("\u0301", "\u0903", "\u20DD", "\uD834\uDD65")) {
+            assertFalse(EndpointLogPrivacy.hasExcessiveCombiningRun("x" + mark.repeat(32)))
+            assertTrue(EndpointLogPrivacy.hasExcessiveCombiningRun("x" + mark.repeat(33)))
+            assertFalse(EndpointLogPrivacy.hasExcessiveCombiningRun(("x" + mark.repeat(32)).repeat(2)))
+        }
+        assertNull(LogFile.decodedViews("x" + "\\u0301\\u0327".repeat(33), percentEncoded = true, compatibility = true))
         for (test in cases("combining")) {
             EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
             val input = "x" + test.getValue("unit").jsonPrimitive.content.repeat(test.getValue("count").jsonPrimitive.int)

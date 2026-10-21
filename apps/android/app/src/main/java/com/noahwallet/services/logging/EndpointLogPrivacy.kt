@@ -57,6 +57,7 @@ internal object EndpointLogPrivacy {
 
     @Synchronized fun register(endpoint: String?) {
         if (endpoint == null) return
+        if (hasExcessiveCombiningRun(endpoint)) { failClosed(); return }
         val url = endpoint.toHttpUrlOrNull()
         if (url == null) { failClosed(); return }
         // Selection validation rejects credentials/query; protect them in legacy registrations too.
@@ -128,6 +129,7 @@ internal object EndpointLogPrivacy {
             }
         }
         fun contains(text: String): Boolean {
+            if (hasExcessiveCombiningRun(text)) return true
             if (nodes.size == 1) return false
             // Decomposition keeps a following mark separate from the token's final scalar.
             return containsView(text) || containsView(fold(text)) || containsView(normalize(text))
@@ -148,6 +150,24 @@ internal object EndpointLogPrivacy {
                 java.text.Normalizer.Form.NFKD)
         }
     }
+    // Bound canonical reordering before the platform normalizes any registered view.
+    fun hasExcessiveCombiningRun(text: String): Boolean {
+        var run = 0
+        var index = 0
+        while (index < text.length) {
+            val scalar = text.codePointAt(index)
+            index += Character.charCount(scalar)
+            when (Character.getType(scalar)) {
+                Character.NON_SPACING_MARK.toInt(), Character.COMBINING_SPACING_MARK.toInt(), Character.ENCLOSING_MARK.toInt() -> {
+                    run++
+                    if (run > 32) return true
+                }
+                else -> run = 0
+            }
+        }
+        return false
+    }
+
     private val hostTokens = Regex("""\[[0-9a-fA-F.]*:[0-9a-fA-F:.]*(?:%[^\[\]\s]+)?\](?::[^\s<>"'()/\\?#,\];{}!$&*=^`|]+)?|[^\s<>"'()/\\?#,\[\];{}!$&*=^`|]+""")
     private fun redactHosts(text: String, registered: Set<String>): String {
         val urlRanges = urls.findAll(text).map { it.range }.toList()
@@ -209,6 +229,7 @@ internal object EndpointLogPrivacy {
         if (unavailable) return "[custom-esplora]"
         val snapshot = snapshot()
         if (snapshot.first.isEmpty()) return text
+        if (hasExcessiveCombiningRun(text)) return "[custom-esplora]"
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[redacted]"
         val views = LogFile.decodedViews(text, percentEncoded = true, compatibility = true) ?: return "[redacted]"
         return if (views.any(snapshot.second::contains)) "[custom-esplora]" else text
@@ -216,6 +237,7 @@ internal object EndpointLogPrivacy {
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
     internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()), hosts: Set<String> = emptySet()): String? {
+        if (registered.isNotEmpty() && hasExcessiveCombiningRun(text)) return "[custom-esplora]"
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
         fun summary(value: String) = if (matcher.contains(value)) "[custom-esplora]" else value

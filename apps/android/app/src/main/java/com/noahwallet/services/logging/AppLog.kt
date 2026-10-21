@@ -195,6 +195,7 @@ class LogFile(
             val escapes = if (percentEncoded) encodedEscapes else jsonEscapes
             val views = mutableListOf(message)
             repeat(4) {
+                if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last())) return null
                 val view = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
                 if (view != views.last()) views += view
                 var uncertain = false
@@ -221,6 +222,7 @@ class LogFile(
                 if (decoded == view) return views
                 views += decoded
             }
+            if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last())) return null
             val last = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
             if (last != views.last()) views += last
             if (escapes.containsMatchIn(last)) return null
