@@ -467,6 +467,7 @@ final class AppModel {
     }
 
     func appBecameInactive() {
+        summaryRefresh = UUID()
         foregroundActivation?.revoke()
         recurringForeground?.stop()
     }

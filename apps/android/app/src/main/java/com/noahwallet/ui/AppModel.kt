@@ -317,9 +317,10 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         val generation = summaryRefresh.incrementAndGet()
         val caller = currentCoroutineContext()
         val admission = com.noahwallet.recurring.RecurringRuntime.shared(getApplication()).syncForegroundAdmission
+        val activation = admission.generation
         fun checkStage() {
             caller.checkWalletAdmission()
-            admission.checkActive()
+            admission.checkActive(activation)
             if (summaryRefresh.get() != generation || isWalletSuspended || restoreLocation.restorePending ||
                 restoreLocation.deletionMarker.exists() ||
                 settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) throw CancellationException()

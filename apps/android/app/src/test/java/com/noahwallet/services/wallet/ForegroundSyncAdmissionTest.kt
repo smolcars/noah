@@ -15,6 +15,19 @@ class ForegroundSyncAdmissionTest {
         fun event(event: Lifecycle.Event) = lifecycle.handleLifecycleEvent(event)
     }
 
+    @Test fun summaryAdmissionStaysRevokedAfterResume() {
+        val activity = Activity(); val admission = ForegroundSyncAdmission()
+        activity.lifecycle.addObserver(admission)
+        activity.event(Lifecycle.Event.ON_RESUME)
+        val activation = admission.generation
+        admission.checkActive(activation)
+        activity.event(Lifecycle.Event.ON_PAUSE)
+        activity.event(Lifecycle.Event.ON_RESUME)
+        assertThrows(CancellationException::class.java) { admission.checkActive(activation) }
+        admission.checkActive(admission.generation)
+        activity.event(Lifecycle.Event.ON_STOP)
+    }
+
     @Test fun pauseRevokesEveryDelayedForegroundCallbackEvenAfterAnotherResume() = runBlocking {
         val activity = Activity(); val admission = ForegroundSyncAdmission()
         activity.lifecycle.addObserver(admission)
