@@ -1,0 +1,135 @@
+name: Native Signet Android Distribution
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "apps/android/**"
+      - "apps/fixtures/**"
+      - ".github/workflows/native-signet-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+
+jobs:
+  build:
+    runs-on: self-hosted
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      # Same keystore, alias and passwords as the RN signet distribution.
+      - name: Prepare release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          MYAPP_RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYAPP_RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          MYAPP_RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${KEYSTORE_BASE64:?Missing KEYSTORE_BASE64}"
+          : "${MYAPP_RELEASE_KEY_ALIAS:?Missing KEY_ALIAS}"
+          : "${MYAPP_RELEASE_STORE_PASSWORD:?Missing KEYSTORE_PASSWORD}"
+          : "${MYAPP_RELEASE_KEY_PASSWORD:?Missing KEY_PASSWORD}"
+          umask 077
+          signing_dir=$(mktemp -d "$RUNNER_TEMP/noah-signet-signing.XXXXXX")
+          echo "SIGNING_DIR=$signing_dir" >> "$GITHUB_ENV"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$signing_dir/release.keystore"
+          test -s "$signing_dir/release.keystore"
+          export MYAPP_RELEASE_STORE_FILE="$signing_dir/release.keystore"
+          python3 <<'PY'
+          import os
+          from pathlib import Path
+
+          keys = ("STORE_FILE", "KEY_ALIAS", "STORE_PASSWORD", "KEY_PASSWORD")
+          def escape(value):
+              return value.replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n").replace(" ", "\\ ")
+          Path("apps/android/local.properties").write_text("".join(
+              f"MYAPP_RELEASE_{key}={escape(os.environ[f'MYAPP_RELEASE_{key}'])}\n"
+              for key in keys
+          ), encoding="iso-8859-1")
+          PY
+
+      - name: Build signed native signet release APK
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: dunder-rn
+          SENTRY_PROJECT: react-native
+          CI_DEBUG_SIGNING: "false"
+        run: |
+          nix shell --inputs-from . nixpkgs#sentry-cli --command nix develop .# --command sh -c \
+            'cd apps/android && ./gradlew --max-workers=2 --dependency-verification=strict :app:assembleSignetRelease'
+
+      - name: Name APK with commit
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          cp apps/android/app/build/outputs/apk/signet/release/app-signet-release.apk \
+            "noah-native-signet-${COMMIT_SHA}.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: noah-native-signet-android-${{ github.sha }}
+          path: noah-native-signet-${{ github.sha }}.apk
+          if-no-files-found: error
+
+      - name: Remove signing files
+        if: always()
+        run: |
+          rm -f apps/android/local.properties
+          if [[ -n "${SIGNING_DIR:-}" ]]; then
+            rm -rf "$SIGNING_DIR"
+          fi
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: noah-native-signet-android-${{ github.sha }}
+
+      # RN also uses a local Bot API server to support APKs over Telegram's public upload limit.
+      - name: Start local Telegram Bot API server
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          docker run -d --name local-bot-api -p 127.0.0.1:8081:8081 \
+            -v "$GITHUB_WORKSPACE:/data" -e TELEGRAM_API_ID -e TELEGRAM_API_HASH \
+            aiogram/telegram-bot-api:latest --local
+          for attempt in {1..30}; do
+            if curl -s -o /dev/null http://localhost:8081/; then
+              exit 0
+            fi
+            echo "Waiting for Telegram Bot API ($attempt/30)..."
+            sleep 2
+          done
+          echo 'Telegram Bot API server did not start.' >&2
+          exit 1
+
+      - name: Post Native APK to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          BLIXT_CHAT_ID: ${{ secrets.BLIXT_CHAT_ID }}
+          BLIXT_TOPIC_ID: ${{ secrets.BLIXT_TOPIC_ID }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          printf 'Native Noah Signet Android build\nCommit: %s\n' "$COMMIT_SHA" > caption.txt
+          curl -fsS -X POST "http://localhost:8081/bot${TELEGRAM_TOKEN}/sendDocument" \
+            -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
+            -F "document=@noah-native-signet-${COMMIT_SHA}.apk" -F 'caption=<caption.txt' \
+            -o "$RUNNER_TEMP/telegram.json"
+          jq -e '.ok == true' "$RUNNER_TEMP/telegram.json" > /dev/null
+
+      - name: Stop local Telegram Bot API server
+        if: always()
+        run: docker rm -f local-bot-api
