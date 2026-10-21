@@ -32,6 +32,9 @@ pub const K1_TTL_SECONDS: usize = 600;
 
 #[derive(Clone)]
 pub struct AppStruct {
+    #[cfg(test)]
+    pub push_deliveries:
+        Option<tokio::sync::mpsc::UnboundedSender<(String, push::PushNotificationData)>>,
     pub config: Arc<Config>,
     pub lnurl_domain: String,
     pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
@@ -66,6 +69,8 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
     let barkd_invoice_provider = build_forwarding_invoice_provider(&config)?;
 
     Ok(Arc::new(AppStruct {
+        #[cfg(test)]
+        push_deliveries: None,
         config: Arc::new(config.clone()),
         lnurl_domain: config.lnurl_domain.clone(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),

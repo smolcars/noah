@@ -10,3 +10,5 @@ pub mod gated_recurring_payment_tests;
 pub mod gated_suggestions_tests;
 pub mod gated_user_tests;
 pub mod public_api_v0;
+
+mod push_delivery_tests;

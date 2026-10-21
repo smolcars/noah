@@ -165,6 +165,7 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
     let maintenance_store = setup_test_maintenance_store().await;
 
     let app_state = Arc::new(AppStruct {
+        push_deliveries: None,
         lnurl_domain: "localhost".to_string(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),
@@ -250,6 +251,15 @@ pub async fn setup_public_test_app() -> (Router, AppState, TestDbGuard) {
 pub async fn setup_public_test_app_with_barkd(
     barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
 ) -> (Router, AppState, TestDbGuard) {
+    setup_public_test_app_with_push(barkd_invoice_provider, None).await
+}
+
+pub async fn setup_public_test_app_with_push(
+    barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
+    push_deliveries: Option<
+        tokio::sync::mpsc::UnboundedSender<(String, crate::push::PushNotificationData)>,
+    >,
+) -> (Router, AppState, TestDbGuard) {
     let guard = acquire_test_db_guard().await;
 
     let db_pool = setup_test_database().await;
@@ -264,6 +274,7 @@ pub async fn setup_public_test_app_with_barkd(
     let maintenance_store = setup_test_maintenance_store().await;
 
     let app_state = Arc::new(AppStruct {
+        push_deliveries,
         lnurl_domain: "localhost".to_string(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),

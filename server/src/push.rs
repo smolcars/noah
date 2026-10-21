@@ -197,6 +197,7 @@ pub async fn send_push_notification(
     send_push_notification_internal(app_state, data, pubkey, true).await
 }
 
+#[cfg(test)]
 pub async fn send_expo_push_notification(
     app_state: AppState,
     data: PushNotificationData,
@@ -205,13 +206,11 @@ pub async fn send_expo_push_notification(
     send_push_notification_internal(app_state, data, pubkey, false).await
 }
 
-pub async fn has_expo_push_token(app_state: &AppState, pubkey: &str) -> Result<bool, ApiError> {
-    let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
-    let Some(push_token) = push_token_repo.find_by_pubkey(pubkey).await? else {
-        return Ok(false);
-    };
-
-    Ok(is_expo_token(&push_token))
+pub async fn has_push_token(app_state: &AppState, pubkey: &str) -> Result<bool, ApiError> {
+    Ok(PushTokenRepository::new(&app_state.db_pool)
+        .find_by_pubkey(pubkey)
+        .await?
+        .is_some())
 }
 
 pub async fn send_push_notification_with_unique_k1(
@@ -399,6 +398,19 @@ async fn send_push_notification_internal(
             );
             return Ok(());
         }
+    }
+
+    #[cfg(test)]
+    if let Some(deliveries) = &app_state.push_deliveries {
+        for token in expo_tokens
+            .iter()
+            .chain(unified_tokens.iter().filter(|_| allow_unified_push))
+        {
+            deliveries
+                .send((token.clone(), data.clone()))
+                .expect("test delivery receiver closed");
+        }
+        return Ok(());
     }
 
     if !expo_tokens.is_empty() {

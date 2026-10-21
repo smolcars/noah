@@ -80,6 +80,9 @@ const SUPPORT_TICKET_BODY_LIMIT_BYTES: usize = 8 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct AppStruct {
+    #[cfg(test)]
+    pub push_deliveries:
+        Option<tokio::sync::mpsc::UnboundedSender<(String, push::PushNotificationData)>>,
     pub config: Arc<Config>,
     pub lnurl_domain: String,
     pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
@@ -224,6 +227,8 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let barkd_invoice_provider = build_forwarding_invoice_provider(&config)?;
 
     let app_state = Arc::new(AppStruct {
+        #[cfg(test)]
+        push_deliveries: None,
         config: Arc::new(config.clone()),
         lnurl_domain: config.lnurl_domain.clone(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),

@@ -1062,3 +1062,108 @@ async fn test_historical_fiat_price_rejects_unsupported_currency() {
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
+
+#[tokio::test]
+async fn test_lnurlp_any_push_token_gate_and_invoice_delivery() {
+    use crate::tests::common::setup_public_test_app_with_push;
+    use crate::types::NotificationData;
+    use std::time::Duration;
+
+    let (sender, mut deliveries) = tokio::sync::mpsc::unbounded_channel();
+    let (app, state, _guard) = setup_public_test_app_with_push(None, Some(sender)).await;
+    let user = TestUser::new();
+    let pubkey = user.pubkey().to_string();
+    create_test_user(&state, &user, None).await;
+    let tokens = PushTokenRepository::new(&state.db_pool);
+    let mailbox = MailboxAuthorizationRepository::new(&state.db_pool);
+    // First exercise no registration, then each transport independently.
+    for token in [
+        None,
+        Some("ExpoPushToken[test-token]"),
+        Some("https://1.1.1.1/up/native"),
+    ] {
+        if let Some(token) = token {
+            tokens.upsert(&pubkey, token).await.unwrap();
+        }
+        mailbox
+            .upsert(
+                &pubkey,
+                "deadbeef",
+                "cafebabe",
+                Utc::now().timestamp() + 3600,
+            )
+            .await
+            .unwrap();
+        let request = Request::builder()
+            .uri("/.well-known/lnurlp/test?amount=330000")
+            .body(Body::empty())
+            .unwrap();
+        if let Some(token) = token {
+            let reply = async {
+                let (target, push) =
+                    tokio::time::timeout(Duration::from_secs(3), deliveries.recv())
+                        .await
+                        .unwrap()
+                        .unwrap();
+                assert_eq!(target, token);
+                assert_eq!(push.priority, expo_push_notification_client::Priority::High);
+                assert!(push.content_available);
+                assert!(push.title.is_none() && push.body.is_none());
+                let NotificationData::LightningInvoiceRequest(invoice) =
+                    serde_json::from_str(&push.data).unwrap()
+                else {
+                    panic!("expected invoice request");
+                };
+                assert_eq!(invoice.amount, 330000);
+                state
+                    .invoice_store
+                    .store(&invoice.transaction_id, "lnbcrt-test-invoice")
+                    .await
+                    .unwrap();
+            };
+            let (response, ()) = tokio::join!(app.clone().oneshot(request), reply);
+            let response = response.unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = response.into_body().collect().await.unwrap().to_bytes();
+            let invoice: LnurlpInvoiceResponse = serde_json::from_slice(&body).unwrap();
+            assert_eq!(invoice.pr, "lnbcrt-test-invoice");
+        } else {
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            let body = response.into_body().collect().await.unwrap().to_bytes();
+            let error: ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+            assert_eq!(error.code, "INVALID_ARGUMENT");
+            assert_eq!(
+                error.message,
+                "Lightning payments are not supported on this device right now."
+            );
+            assert!(deliveries.try_recv().is_err());
+        }
+    }
+    // UnifiedPush does not bypass the active-mailbox requirement.
+    tokens
+        .upsert(&pubkey, "https://1.1.1.1/up/native")
+        .await
+        .unwrap();
+    mailbox
+        .upsert(&pubkey, "deadbeef", "cafebabe", Utc::now().timestamp() - 60)
+        .await
+        .unwrap();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/.well-known/lnurlp/test?amount=330000")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let error: ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(
+        error.message,
+        "Lightning payments require mailbox notifications to be enabled."
+    );
+    assert!(deliveries.try_recv().is_err());
+}

@@ -26,7 +26,7 @@ use crate::{
     },
     errors::ApiError,
     fiat_rates::{CoinGeckoFiatRateProvider, is_supported_currency},
-    push::{PushNotificationData, has_expo_push_token, send_expo_push_notification},
+    push::{PushNotificationData, has_push_token, send_push_notification},
     types::{
         AppVersionCheckPayload, AppVersionInfo, AuthEvent, AuthLoginPayload, AuthLoginResponse,
         AuthenticatedUser, EmailVerificationResponse, FiatPricesPayload, FiatPricesResponse,
@@ -581,10 +581,10 @@ pub async fn lnurlp_request(
         }
     }
 
-    if !has_expo_push_token(&state, &pubkey).await? {
+    if !has_push_token(&state, &pubkey).await? {
         tracing::warn!(
             pubkey = %pubkey,
-            "Lightning LNURL invoice request rejected because user has no Expo push token"
+            "Lightning LNURL invoice request rejected because user has no push token"
         );
         return Err(ApiError::InvalidArgument(
             "Lightning payments are not supported on this device right now.".to_string(),
@@ -629,7 +629,7 @@ pub async fn lnurlp_request(
             priority: Priority::High,
             content_available: true,
         };
-        if let Err(e) = send_expo_push_notification(state_clone, data, Some(pubkey)).await {
+        if let Err(e) = send_push_notification(state_clone, data, Some(pubkey)).await {
             tracing::error!("Failed to send push notification: {}", e);
         }
     });
