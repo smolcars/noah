@@ -122,7 +122,7 @@ targets:
         NSFaceIDUsageDescription: "Allow $(NOAH_DISPLAY_NAME) to use Face ID."
         NSLocationWhenInUseUsageDescription: "Allow $(NOAH_DISPLAY_NAME) to use your location to find nearby places that accept bitcoin."
         NSPhotoLibraryUsageDescription: "Allow $(NOAH_DISPLAY_NAME) to access your photos so that you can pick screenshots to share feedback."
-        UIAppFonts: ["Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "Inter-Bold.ttf"]
+        UIAppFonts: ["Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "Inter-Bold.ttf", "SpaceGrotesk-Medium.ttf", "SpaceGrotesk-SemiBold.ttf"]
         UIApplicationSceneManifest: {"UIApplicationSupportsMultipleScenes": false}
         UILaunchScreen: {"UIColorName": "SplashScreenBackground", "UIImageName": "SplashScreenLogo"}
         UIRequiredDeviceCapabilities: ["arm64"]

@@ -77,6 +77,8 @@
 		<string>Inter-Medium.ttf</string>
 		<string>Inter-SemiBold.ttf</string>
 		<string>Inter-Bold.ttf</string>
+		<string>SpaceGrotesk-Medium.ttf</string>
+		<string>SpaceGrotesk-SemiBold.ttf</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
