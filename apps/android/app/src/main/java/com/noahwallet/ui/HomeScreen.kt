@@ -16,7 +16,6 @@ import com.noahwallet.history.RepeatPayment
 import com.noahwallet.ui.home.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.isActive
 import com.noahwallet.services.server.value
 import androidx.lifecycle.repeatOnLifecycle
@@ -67,19 +66,16 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
         return
     }
     val memory = model.homeMemory
-    // Each visit refreshes the balance. The first payment's baseline waits for a refresh that landed after the
-    // visit began (a superseded refresh is covered by whichever lands next), then reads the wallet as it is.
-    val visitRevision = remember { model.summaryRevision }
-    LaunchedEffect(Unit) {
-        model.refresh()
-        val watch = memory.firstPaymentWatch
-        if (watch.baseline != null) return@LaunchedEffect // A pose change continues the visit.
-        withTimeoutOrNull(15_000) { snapshotFlow { model.summaryRevision }.first { it > visitRevision } } ?: return@LaunchedEffect
-        snapshotFlow { model.history.isLoading }.first { !it }
-        val history = model.history.transactions
-        watch.caughtUp(HomeRules.state(model.isWalletSuspended, model.summary?.balance?.totalSats, model.history.isLoading,
-            model.history.error, history.isNotEmpty()), history)
-    }
+    // The first payment's baseline, once per foreground visit: after a refresh that landed since the visit began
+    // (retried if it fails), read the wallet as it is. Before Home's own refresh below, so it sees where it started.
+    com.noahwallet.ui.home.FirstPaymentVisits(memory.firstPaymentWatch, active = !model.isWalletSuspended, revision = { model.summaryRevision },
+        refresh = { model.refresh() }, settled = {
+            snapshotFlow { model.history.isLoading }.first { !it }
+            val history = model.history.transactions
+            HomeRules.state(model.isWalletSuspended, model.summary?.balance?.totalSats, false, model.history.error, history.isNotEmpty()) to history
+        })
+    // Each visit refreshes the balance.
+    LaunchedEffect(Unit) { model.refresh() }
     val toasts = remember { HomeToasts() }
     val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
     val uri = LocalUriHandler.current
@@ -112,7 +108,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     val newRows = if (seen == null) emptySet() else rows.filter { it.direction == "incoming" && !it.isInternalTransfer && it.id !in seen }.map { it.id }.toSet()
     val activity = LocalContext.current as? Activity
     DisposableEffect(lifecycle) {
-        fun hidden() { memory.seenRows = currentIds.toSet(); memory.firstPaymentWatch.hidden() }
+        fun hidden() { memory.seenRows = currentIds.toSet() }
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && activity?.isChangingConfigurations != true) hidden() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); if (activity?.isChangingConfigurations != true) hidden() }
