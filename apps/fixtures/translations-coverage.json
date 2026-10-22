@@ -2358,6 +2358,7 @@
         "{_gt_value_4} places{_gt_value_3}",
         "{amount} arriving",
         "{amount} available",
+        "{amount} is back in your wallet.",
         "{amount} is back in your wallet. Lightning couldn’t reach {name}.",
         "{amount} sent to {recipient}.",
         "{amount} to {recipient} could not be sent yet: {error}",

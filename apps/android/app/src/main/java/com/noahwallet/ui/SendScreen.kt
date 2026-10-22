@@ -134,11 +134,13 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
             else -> runCatching { SendProgressRules.refundRecorded(controller.state, attempt, app.session.movements()) }.getOrDefault(false)
         }
     }
+    // One State across recompositions: the refund state above is replaced whenever the attempt changes.
+    val currentRefund by rememberUpdatedState(refund)
     LaunchedEffect(presentation) {
-        snapshotFlow { listOf(controller.state, controller.attempt, presentation.submitting, refund) }.collect {
+        snapshotFlow { listOf(controller.state, controller.attempt, presentation.submitting, currentRefund) }.collect {
             val motion = presentation.motion ?: return@collect
             if (controller.state == SendController.State.ready && !presentation.submitting) { presentation.motion = null; return@collect }
-            SendProgressRules.milestone(controller.state, controller.attempt, !presentation.submitting, refund)?.let { milestone ->
+            SendProgressRules.milestone(controller.state, controller.attempt, !presentation.submitting, currentRefund)?.let { milestone ->
                 presentation.motion = motion.reach(milestone, SystemClock.elapsedRealtime() - motion.startedAt)
             }
         }

@@ -53209,6 +53209,42 @@
         }
       }
     },
+    "{amount} is back in your wallet.": {
+      "comment": "GT gt_2c6ed7402ae1aea6; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is back in your wallet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ ha vuelto a tu billetera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ はウォレットに戻りました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@이 지갑으로 돌아왔어요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ är tillbaka i din plånbok."
+          }
+        }
+      }
+    },
     "{amount} is back in your wallet. Lightning couldn’t reach {name}.": {
       "comment": "GT gt_2e0090829ec144ef; arguments: amount, name",
       "extractionState": "manual",

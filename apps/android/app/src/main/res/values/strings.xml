@@ -1483,6 +1483,7 @@
   <string name="gt_31ba1bfe057bd412">"%1$s arriving"</string>
   <string name="gt_05421802af3d82be">"%1$s available"</string>
   <string name="gt_07af0226de4cedc3">"%1$s available in Ark"</string>
+  <string name="gt_2c6ed7402ae1aea6">"%1$s is back in your wallet."</string>
   <string name="gt_2e0090829ec144ef">"%1$s is back in your wallet. Lightning couldn’t reach %2$s."</string>
   <string name="gt_1cfd3ae82c2e9be1">"%1$s sent to %2$s."</string>
   <string name="gt_16d7d21cf4846790">"%1$s to %2$s could not be sent yet: %3$s"</string>

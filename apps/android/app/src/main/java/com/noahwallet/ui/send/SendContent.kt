@@ -707,7 +707,9 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
             else -> tr("It confirms in about 20 minutes. Activity shows when.")
         }
         SendEnding.pending -> tr("Lightning is still finding a route. You can leave this screen; Noah finishes it in the background.")
-        SendEnding.refunded -> tr("{amount} is back in your wallet. Lightning couldn’t reach {name}.", formatted(amount, env), tr(who.name))
+        // Only a person or address can be "reached"; an invoice just gets the refund line.
+        SendEnding.refunded -> if (who.initial != null) tr("{amount} is back in your wallet. Lightning couldn’t reach {name}.", formatted(amount, env), who.name)
+            else tr("{amount} is back in your wallet.", formatted(amount, env))
         SendEnding.unknown -> tr(SendReceipt.uncertainMessage)
         else -> null
     }
