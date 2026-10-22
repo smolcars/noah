@@ -160,7 +160,6 @@
   "gt_1c37497466d54115": "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready.",
   "gt_1c7052816e70489e": "Require biometric authentication to unlock your wallet",
   "gt_1c7201294e18b007": "Unable to read available balances.",
-  "gt_1c736ed5f00ea1a6": "Renewed",
   "gt_1cae6dbd59729da3": "Email (Optional)",
   "gt_1cd009ba27e712a8": "Enable wallet authentication",
   "gt_1cfd3ae82c2e9be1": "{{amount}} sent to {{recipient}}.",

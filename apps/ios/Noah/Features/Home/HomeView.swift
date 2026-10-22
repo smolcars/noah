@@ -488,9 +488,13 @@ struct HomeView: View {
         case .notice: break
         case .renew(let renewal):
             haptics.play(.light)
-            // Opens the refresh review for exactly these VTXOs; nothing is submitted without confirmation.
+            // Opens the refresh review for exactly the coins that are still eligible (coins can expire,
+            // lock or renew automatically after the nudge appeared); nothing is submitted without confirmation.
             Task {
-                await renew.review(.refresh, ids: renewal.ids)
+                let current = await home.currentRenewal()
+                let ids = renewal.ids.filter { current?.ids.contains($0) == true }
+                guard !ids.isEmpty else { return }
+                await renew.review(.refresh, ids: ids)
                 if let error = renew.error { alert = error }
             }
         case .backupFailed:
@@ -513,15 +517,19 @@ struct HomeView: View {
         }
     }
 
+    /// Submits only while every reviewed coin is still refreshable and inside the window.
+    /// Submission isn't renewal, so there's no success toast: the nudge folds away once
+    /// nothing is left to renew.
     private func confirmRenew() {
         Task {
-            await renew.confirm()
-            if let error = renew.error {
-                alert = error
-            } else if renew.message != nil {
-                haptics.play(.medium)
-                showToast("Renewed")
+            guard let quote = renew.quote else { return }
+            guard let current = await home.currentRenewal(), Set(quote.ids).isSubset(of: Set(current.ids)) else {
+                renew.invalidate()
+                alert = OnchainFailure.changed.errorDescription
+                return
             }
+            await renew.confirm()
+            if let error = renew.error { alert = error }
             await home.refreshRenewal()
         }
     }

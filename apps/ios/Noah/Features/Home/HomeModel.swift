@@ -155,6 +155,18 @@ final class HomeModel {
         } while roundsRefreshPending && !backgroundRunning && !Task.isCancelled
     }
 
+    /// A fresh read for the renew review and its confirmation; nil when it fails, so
+    /// nothing is reviewed or submitted on stale data.
+    func currentRenewal() async -> HomeRenewal? {
+        do {
+            renewal = try await dependencies.renewal()
+            return renewal
+        } catch {
+            AppLog("home").w("Renewal status unavailable")
+            return nil
+        }
+    }
+
     func refreshRenewal() async {
         guard !loadingRenewal else { return }
         loadingRenewal = true

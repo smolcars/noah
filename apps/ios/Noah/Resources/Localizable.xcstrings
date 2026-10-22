@@ -34369,42 +34369,6 @@
         }
       }
     },
-    "Renewed": {
-      "comment": "GT gt_1c736ed5f00ea1a6; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Renewed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Renovado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更新しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "갱신됨"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Förnyad"
-          }
-        }
-      }
-    },
     "Repeat": {
       "comment": "GT gt_b6b7a0065808a62e; arguments: none",
       "extractionState": "manual",

@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1433,
-  "sourceKeys": 1436,
+  "catalogEntries": 1432,
+  "sourceKeys": 1435,
   "coverage": {
     "ios": {
       "used": [
@@ -759,7 +759,6 @@
         "Renew",
         "Renew {amount}",
         "Renewal status unavailable",
-        "Renewed",
         "Repeat",
         "Repeat payment",
         "Repeat protection overridden",
