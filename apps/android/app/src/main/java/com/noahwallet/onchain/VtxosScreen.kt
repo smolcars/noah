@@ -30,6 +30,14 @@ fun VtxosScreen(app: AppModel) {
     val selectedVtxos = OnchainDisplay.currentSelection(vtxos, selected)
     val visible = vtxos.filter { filter == null || it.statusID == filter }
     OnchainScreen(app, model) {
+        // Home's Renew: today's refresh review for exactly the expiring VTXOs it named; the user still confirms.
+        // Launched after OnchainScreen's own effects so their first reset can't drop the review.
+        LaunchedEffect(app.renewVtxos) {
+            val ids = app.renewVtxos ?: return@LaunchedEffect
+            app.renewVtxos = null
+            selecting = true; selected = ids.toSet()
+            model.review(OnchainAction.refresh, ids)
+        }
         Text(tr("VTXOs"), style = MaterialTheme.typography.headlineSmall)
         FilterMenu(filter, listOf(null) + VtxoStatus.entries, { status -> status?.let { "${it.label} (${vtxos.count { row -> row.statusID == it }})" } ?: "All" }) { filter = it }
         AmountRow(app, "Total (${vtxos.size} VTXOs)", vtxos.sumOf { it.amount })

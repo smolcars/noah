@@ -3,6 +3,7 @@ package com.noahwallet.ui
 import com.noahwallet.localization.tr
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -146,14 +147,21 @@ fun LaunchGateView(model: AppModel) {
         else -> LaunchRoute.message
     }
     // Onboarding and its gate screens split the whole window at a fold themselves; everything else keeps one pane.
+    // The wallet app applies that per screen: Home splits the window itself, other tabs keep one pane.
     val fullWindow = route in setOf(LaunchRoute.onboarding, LaunchRoute.push, LaunchRoute.battery)
+    val chrome = remember { WindowChrome() }
+    val insets = androidx.compose.foundation.layout.WindowInsets.safeDrawing
     androidx.compose.runtime.CompositionLocalProvider(LocalWalletPrivacy provides WalletPrivacy(covered,
-        unlock = if (model.walletLock.locked) ({ scope.launch { model.walletLock.unlock(activity) }; Unit }) else null)) {
+        unlock = if (model.walletLock.locked) ({ scope.launch { model.walletLock.unlock(activity) }; Unit }) else null), LocalWindowChrome provides chrome) {
     androidx.compose.material3.Surface(color = if (fullWindow) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()
             .walletContentProtection(covered)
-            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)
-            .avoidHinge(if (fullWindow) emptyList() else LocalFoldingFeatures.current)) {
+            .drawBehind {
+                chrome.background?.let { drawRect(it) }
+                chrome.bottom?.let { val inset = insets.getBottom(this).toFloat(); drawRect(it, androidx.compose.ui.geometry.Offset(0f, size.height - inset), androidx.compose.ui.geometry.Size(size.width, inset)) }
+            }
+            .windowInsetsPadding(insets)
+            .avoidHinge(if (fullWindow || route == LaunchRoute.app) emptyList() else LocalFoldingFeatures.current)) {
             when (route) {
                 LaunchRoute.customServer -> NoahForm("The custom server isn't responding.") {
                     if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))

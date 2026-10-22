@@ -142,6 +142,10 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var autoBoardSuccessBanner by mutableStateOf<Pair<Long, Long>?>(null)
     var scannedDestination by mutableStateOf<String?>(null)
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
+    /** The expiring VTXOs Home's Renew nudge hands to today's VTXO refresh review; consumed once. */
+    var renewVtxos by mutableStateOf<List<String>?>(null)
+    /** Home's in-memory presentation state; never persisted. */
+    var homeMemory = com.noahwallet.ui.home.HomeMemory(); private set
 
     fun preference(key: String, value: String) {
         settings.set(com.noahwallet.services.storage.SettingsPreferences.update(settings.string("profile-storage"), mapOf(key to JsonPrimitive(value))), "profile-storage")
@@ -182,7 +186,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             }
             throw failure
         }
-        history.clear(); repeatPayment = null; scannedDestination = null; autoBoardSuccessBanner = null
+        history.clear(); repeatPayment = null; scannedDestination = null; autoBoardSuccessBanner = null; renewVtxos = null
+        homeMemory = com.noahwallet.ui.home.HomeMemory()
         walletLock.reset(); restore.reset()
         open = false; onboarded = false; isWalletSuspended = false; summary = null; recoveryPhraseBackedUp = false
         hidden = false; amountUnit = BitcoinAmountUnit.bip177; preferredCurrency = "USD"; refreshLocale()

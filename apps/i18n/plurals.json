@@ -6,5 +6,9 @@
   "{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.": {
     "one": "One exit is behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.",
     "other": "{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions."
+  },
+  "Expires in {n} hours": {
+    "one": "Expires in {n} hour",
+    "other": "Expires in {n} hours"
   }
 }

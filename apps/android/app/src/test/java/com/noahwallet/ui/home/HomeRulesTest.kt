@@ -23,9 +23,6 @@ class HomeRulesTest {
             assertEquals(case.name, case.expected.jsonPrimitive.boolean, HomeRules.activeRound(i.getValue("final").jsonPrimitive.boolean, i.getValue("status").jsonPrimitive.content))
         }
     }
-    @Test fun factsMatchRN() {
-        assertEquals(SharedFixtures.document("home-status").jsonObject.getValue("facts").jsonArray.map { it.jsonPrimitive.content }, bitcoinFacts)
-    }
     @Test fun hiddenFiatDoesNotNeedAPriceAndUsesRNSymbols() {
         SharedFixtures.document("home-status").jsonObject.getValue("symbols").jsonObject.forEach { (currency, symbol) ->
             assertEquals("${symbol.jsonPrimitive.content} ••••", HomeRules.fiat(1_234, null, currency, Locale.US, true))

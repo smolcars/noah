@@ -757,6 +757,42 @@
         }
       }
     },
+    "Activity": {
+      "comment": "GT gt_38da1505ca837328; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actividad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティビティ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활동"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivitet"
+          }
+        }
+      }
+    },
     "Actual fee": {
       "comment": "GT gt_c0a85ce487304e8b; arguments: none",
       "extractionState": "manual",
@@ -897,6 +933,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Faktisk avgift på blockkedjan"
+          }
+        }
+      }
+    },
+    "Add": {
+      "comment": "GT gt_9fd728c66c9a256b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추가"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lägg till"
           }
         }
       }
@@ -1077,42 +1149,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ange ett belopp att ta emot via Lightning"
-          }
-        }
-      }
-    },
-    "Add email": {
-      "comment": "GT gt_bfe6b5725f300b5b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add email"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añadir correo electrónico"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メールアドレスを追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이메일 추가"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lägg till e-postadress"
           }
         }
       }
@@ -4357,6 +4393,42 @@
         }
       }
     },
+    "Back up": {
+      "comment": "GT gt_0054e707d5a94f9f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Respaldar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Säkerhetskopiera"
+          }
+        }
+      }
+    },
     "Back up your wallet": {
       "comment": "GT gt_52a7a389ef84accf; arguments: none",
       "extractionState": "manual",
@@ -4389,6 +4461,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopiera din plånbok"
+          }
+        }
+      }
+    },
+    "Backed up": {
+      "comment": "GT gt_2f2ccea17e5795d8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backed up"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia de seguridad hecha"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップしました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업 완료"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Säkerhetskopierad"
           }
         }
       }
@@ -4785,6 +4893,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopiorna krypteras med din återställningsfras och lagras säkert på våra servrar. Vi kan aldrig komma åt dina tillgångar eller dina data."
+          }
+        }
+      }
+    },
+    "Balance": {
+      "comment": "GT gt_d05e07b7c14e596a; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saldo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残高"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "잔액"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saldo"
           }
         }
       }
@@ -9433,6 +9577,42 @@
         }
       }
     },
+    "Confirming": {
+      "comment": "GT gt_d978a5522ce4865f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirming"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인 중"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bekräftas"
+          }
+        }
+      }
+    },
     "Conflicted": {
       "comment": "GT gt_916a464e6cfffe51; arguments: none",
       "extractionState": "manual",
@@ -12637,42 +12817,6 @@
         }
       }
     },
-    "Current Version: {nativeValue1}": {
-      "comment": "GT gt_b7ac226f0f0cc024; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Current Version: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Versión actual: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現在のバージョン：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "현재 버전: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktuell version: %1$@"
-          }
-        }
-      }
-    },
     "Custom": {
       "comment": "GT gt_494ca78f7374e46f; arguments: none",
       "extractionState": "manual",
@@ -14397,6 +14541,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "E-postadressen verifierad"
+          }
+        }
+      }
+    },
+    "Email added": {
+      "comment": "GT gt_de101ec2a9081a8b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email added"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correo añadido"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メールアドレスを追加しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일 추가됨"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-post tillagd"
           }
         }
       }
@@ -17317,6 +17497,138 @@
         }
       }
     },
+    "Expires in under an hour": {
+      "comment": "GT gt_96ca72eafe792fdf; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expires in under an hour"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caduca en menos de una hora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1時間以内に期限切れ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1시간 이내 만료"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löper ut om mindre än en timme"
+          }
+        }
+      }
+    },
+    "Expires in {n} hours": {
+      "comment": "GT gt_abf3777e2c2adc2c; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld hours"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Caduca en %1$lld hora"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Caduca en %1$lld horas"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld時間後に期限切れ"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld時間後に期限切れ"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld시간 후 만료"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld시간 후 만료"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Löper ut om %1$lld timme"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Löper ut om %1$lld timmar"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Expiring": {
       "comment": "GT gt_ff44a401445c99df; arguments: none",
       "extractionState": "manual",
@@ -18865,6 +19177,42 @@
         }
       }
     },
+    "For urgent wallet alerts": {
+      "comment": "GT gt_16e335b86c93460e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For urgent wallet alerts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para alertas urgentes de tu billetera"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウォレットの緊急通知用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "긴급 지갑 알림용"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "För brådskande plånboksaviseringar"
+          }
+        }
+      }
+    },
     "Forgetting this attempt does not cancel Bark’s stored transaction or its future broadcast retries. This payment may still complete. Check your full wallet history and confirm with the recipient first. Sending again may spend twice and cannot undo the first payment.": {
       "comment": "GT gt_db31b5552174642e; arguments: none",
       "extractionState": "manual",
@@ -19261,6 +19609,42 @@
         }
       }
     },
+    "Get the latest fixes": {
+      "comment": "GT gt_7108d01cdfb7e15d; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get the latest fixes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtén las últimas correcciones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新の修正を入手"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최신 수정 사항 받기"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Få de senaste rättningarna"
+          }
+        }
+      }
+    },
     "Give this payment a short name (max 64 characters).": {
       "comment": "GT gt_83047f2bb98b251f; arguments: none",
       "extractionState": "manual",
@@ -19617,42 +20001,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dolt av säkerhetsskäl"
-          }
-        }
-      }
-    },
-    "Hide balance details": {
-      "comment": "GT gt_1cf119e50e285d2e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide balance details"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar detalles del saldo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "残高の詳細を非表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "잔액 세부 정보 숨기기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dölj saldouppgifter"
           }
         }
       }
@@ -22177,42 +22525,6 @@
         }
       }
     },
-    "Latest Version: {nativeValue1}": {
-      "comment": "GT gt_402096d46e687e6c; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Latest Version: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Última versión: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最新バージョン：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최신 버전: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senaste version: %1$@"
-          }
-        }
-      }
-    },
     "Latest height": {
       "comment": "GT gt_4d7b2bf37878962a; arguments: none",
       "extractionState": "manual",
@@ -23217,42 +23529,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Läser in transaktioner"
-          }
-        }
-      }
-    },
-    "Loading transactions…": {
-      "comment": "GT gt_d69971d3db4883a6; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading transactions…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cargando transacciones…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取引を読み込み中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "거래 불러오는 중…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Läser in transaktioner…"
           }
         }
       }
@@ -27681,6 +27957,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noahs support"
+          }
+        }
+      }
+    },
+    "Noah user": {
+      "comment": "GT gt_ddecc0272120b4ba; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah user"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuario de Noah"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noahユーザー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah 사용자"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah-användare"
           }
         }
       }
@@ -32689,6 +33001,42 @@
         }
       }
     },
+    "Recent": {
+      "comment": "GT gt_690dbe9dc0993c42; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recientes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senaste"
+          }
+        }
+      }
+    },
     "Recent Activity": {
       "comment": "GT gt_9ef7d438ce5b0a38; arguments: none",
       "extractionState": "manual",
@@ -34809,6 +35157,114 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ta bort belopp"
+          }
+        }
+      }
+    },
+    "Renew": {
+      "comment": "GT gt_90c1689b0b74f032; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renovar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "갱신"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förnya"
+          }
+        }
+      }
+    },
+    "Renew {amount}": {
+      "comment": "GT gt_46e6876f99389ec8; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renovar %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@を更新"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 갱신"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förnya %1$@"
+          }
+        }
+      }
+    },
+    "Renewed": {
+      "comment": "GT gt_1c736ed5f00ea1a6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renewed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renovado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "갱신 완료"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förnyad"
           }
         }
       }
@@ -36973,6 +37429,42 @@
         }
       }
     },
+    "Save your recovery phrase": {
+      "comment": "GT gt_e0d94a676bb91ff5; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save your recovery phrase"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guarda tu frase de recuperación"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復元フレーズを保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복구 문구를 저장하세요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spara din återställningsfras"
+          }
+        }
+      }
+    },
     "Saved": {
       "comment": "GT gt_b5c120b316c237a0; arguments: none",
       "extractionState": "manual",
@@ -37441,6 +37933,42 @@
         }
       }
     },
+    "Scan with any Lightning wallet": {
+      "comment": "GT gt_ff900d6ce1964530; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan with any Lightning wallet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanea con cualquier billetera Lightning"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どのライトニングウォレットでもスキャンできます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어떤 Lightning 지갑으로든 스캔하세요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skanna med valfri Lightning-plånbok"
+          }
+        }
+      }
+    },
     "Schedule automatic weekly or monthly payments, and pause or cancel them.": {
       "comment": "GT gt_975c242e63b0b1c4; arguments: none",
       "extractionState": "manual",
@@ -37761,6 +38289,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säker lagring inte tillgänglig"
+          }
+        }
+      }
+    },
+    "See all": {
+      "comment": "GT gt_d7a8c446069a0585; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See all"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver todo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 보기"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visa alla"
           }
         }
       }
@@ -39277,42 +39841,6 @@
         }
       }
     },
-    "Show balance details": {
-      "comment": "GT gt_193124aa28317067; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show balance details"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostrar detalles del saldo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "残高の詳細を表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "잔액 세부 정보 표시"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visa saldouppgifter"
-          }
-        }
-      }
-    },
     "Show payment details": {
       "comment": "GT gt_4aa5f4cd7ecfd4da; arguments: none",
       "extractionState": "manual",
@@ -39525,6 +40053,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Överhoppad"
+          }
+        }
+      }
+    },
+    "Spend bitcoin nearby": {
+      "comment": "GT gt_83d21eddee267cd8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spend bitcoin nearby"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gasta bitcoin cerca de ti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "近くでビットコインを使う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근처에서 Bitcoin 사용하기"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spendera bitcoin i närheten"
           }
         }
       }
@@ -44929,6 +45493,42 @@
         }
       }
     },
+    "Today": {
+      "comment": "GT gt_2b065c7c9ce466e5; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idag"
+          }
+        }
+      }
+    },
     "Toggle balance details": {
       "comment": "GT gt_8e4e1f6b349304a4; arguments: none",
       "extractionState": "manual",
@@ -47161,6 +47761,42 @@
         }
       }
     },
+    "Update": {
+      "comment": "GT gt_c1c1009d3f37ec05; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uppdatera"
+          }
+        }
+      }
+    },
     "Update Available": {
       "comment": "GT gt_5ae200f91c64da48; arguments: none",
       "extractionState": "manual",
@@ -47169,6 +47805,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Update Available"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualización disponible"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートがあります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트 가능"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uppdatering tillgänglig"
+          }
+        }
+      }
+    },
+    "Update available": {
+      "comment": "GT gt_ff8b555d818f0b25; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update available"
           }
         },
         "es": {
@@ -50113,6 +50785,42 @@
         }
       }
     },
+    "Yesterday": {
+      "comment": "GT gt_566181254b293aa6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "昨日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Igår"
+          }
+        }
+      }
+    },
     "You can still browse the full map. Enable location in Settings to see nearby places.": {
       "comment": "GT gt_c863d86963f48c57; arguments: none",
       "extractionState": "manual",
@@ -51301,6 +52009,42 @@
         }
       }
     },
+    "from {name}": {
+      "comment": "GT gt_ac13979d20e7673e; arguments: name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "from %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "de %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@から"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낸 사람: %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "från %1$@"
+          }
+        }
+      }
+    },
     "name": {
       "comment": "GT gt_82a3537ff0dbce7e; arguments: none",
       "extractionState": "manual",
@@ -51777,6 +52521,42 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "{amount} arriving": {
+      "comment": "GT gt_31ba1bfe057bd412; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ arriving"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ en camino"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 入金予定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 도착 예정"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ på väg"
           }
         }
       }
@@ -52461,6 +53241,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "© OpenStreetMap"
+          }
+        }
+      }
+    },
+    "· nothing left your wallet": {
+      "comment": "GT gt_e3ca394fe5cc723f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· nothing left your wallet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· no salió nada de tu billetera"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· ウォレットからは何も出金されていません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· 지갑에서 나간 금액 없음"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· inget lämnade din plånbok"
           }
         }
       }

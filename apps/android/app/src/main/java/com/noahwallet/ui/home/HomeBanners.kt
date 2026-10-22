@@ -1,44 +1,46 @@
 package com.noahwallet.ui.home
 
-import com.noahwallet.ui.WalletModalBottomSheet
-
 import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.testTag
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.noahwallet.BuildConfig
 import com.noahwallet.api.generated.models.AppVersionInfo
 import com.noahwallet.services.backup.BackupCoordinator
+import com.noahwallet.services.storage.PersistedBackupState
 import com.noahwallet.ui.AppModel
 import io.github.niteshbalusu11.bark.PendingRoundStatus
 import kotlinx.coroutines.*
-import java.util.Locale
+
+/** Today's Home inputs: app version, backup status, pending rounds, background work and the renew check. */
+internal class HomeSignals(
+    val version: AppVersionInfo?, val backup: PersistedBackupState, val background: String?,
+    val rounds: List<PendingRoundStatus>, val now: Long, val retrying: Boolean,
+    val retry: () -> Unit,
+) {
+    val active get() = rounds.filter { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }
+}
 
 @Composable
-fun HomeBanners(app: AppModel, refresh: Int, onBackup: () -> Unit = {}) {
+internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory, onRenewed: () -> Unit): HomeSignals {
     val background by com.noahwallet.services.wallet.WalletBackgroundActivity.changes.collectAsState()
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
+    val walletRevision by app.session.walletChanges.collectAsState()
+    val context = LocalContext.current
     LaunchedEffect(app.server) { withContext(Dispatchers.IO) { app.server.checkVersionOnce() } }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var retrying by remember { mutableStateOf(false) }
     var rounds by remember { mutableStateOf<List<PendingRoundStatus>>(emptyList()) }
-    var showRounds by remember { mutableStateOf(false) }
+    var roundChecks by remember { mutableIntStateOf(0) }
     val boarding = app.autoBoardSuccessBanner
-    val locale = Locale.forLanguageTag(app.localeIdentifier)
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(app.session, refresh, lifecycle) {
@@ -48,7 +50,7 @@ fun HomeBanners(app: AppModel, refresh: Int, onBackup: () -> Unit = {}) {
                 walletChanges = app.session.walletChanges,
                 query = { withContext(Dispatchers.IO) { app.session.pendingRounds() } },
                 active = { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) },
-                publish = { rounds = it },
+                publish = { rounds = it; roundChecks++ },
                 initiallyActive = rounds.any { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) },
             )
         }
@@ -58,68 +60,38 @@ fun HomeBanners(app: AppModel, refresh: Int, onBackup: () -> Unit = {}) {
             homeBannerExpiries(listOfNotNull(backup.lastBackupAt?.toLong(), boarding?.second), publish = { now = it })
         }
     }
-    version?.takeIf { it.updateRequired }?.let { UpdateWarningBanner(it, BuildConfig.VERSION_NAME, BuildConfig.APP_VARIANT) }
-    if (!app.recoveryPhraseBackedUp) BackupPrompt(onBackup)
-    HomeRules.backup(backup, now, locale)?.let { banner -> StatusBanner(banner, retrying) {
+    // The renew nudge reuses today's refresh moments: Home appearing, wallet changes, round checks and pull-to-refresh.
+    LaunchedEffect(app.session, refresh, walletRevision, roundChecks, app.isWalletSuspended, lifecycle) {
+        if (app.isWalletSuspended) { memory.renew = null; return@LaunchedEffect }
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            if (com.noahwallet.onchain.onchainReady(app)) try {
+                val due = HomeRules.renew(withContext(Dispatchers.IO) { app.session.onchainOverview() }.vtxos)
+                memory.renew = due
+                // After Renew, the first check back on Home tells whether the reviewed refresh went through.
+                if (memory.renewRequested) { memory.renewRequested = false; if (due == null) onRenewed() }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Keep the last known answer; a background job or a closed session is transient. */ }
+            awaitCancellation()
+        }
+    }
+    // Today's one-time upgrade notices, taken once per process and kept until dismissed.
+    LaunchedEffect(lifecycle, app.isWalletSuspended) {
+        if (app.isWalletSuspended) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (!memory.noticesTaken) {
+                memory.notices = withContext(Dispatchers.IO) { com.noahwallet.services.storage.SettingsStorage(context).takeUpgradeNotices() }
+                memory.noticesTaken = true
+            }
+            awaitCancellation()
+        }
+    }
+    return HomeSignals(version, backup, background.message, rounds, now, retrying) {
         scope.launch {
             retrying = true
             try { withContext(Dispatchers.IO) { app.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false) } }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { /* Coordinator persists a safe error for this banner. */ }
+            catch (_: Exception) { /* Coordinator persists a safe error for the nudge. */ }
             finally { retrying = false }
-        }
-    } }
-    boarding?.let { (amount, created) -> HomeRules.boarding(amount, created, now, locale)?.let { StatusBanner(it) } }
-    val active = rounds.filter { HomeRules.activeRound(it.isFinal, it.status.name.lowercase()) }
-    if (active.isNotEmpty()) Card(onClick = { showRounds = true }, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text(tr(if (active.size == 1) "Round in progress" else "Rounds in progress"), style = MaterialTheme.typography.titleMedium)
-            Text(tr(if (active.size == 1) tr("Round #{id} {status}", active[0].roundId, active[0].status.name.lowercase().replaceFirstChar(Char::uppercase)) else tr("{count} rounds pending", active.size)))
-            TextButton({ showRounds = true }) { Text(tr("View")) }
-        }
-    }
-    background.message?.let { message ->
-        Card(Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator(Modifier.size(20.dp)); Text(tr(message))
-            }
-        }
-    }
-    if (showRounds && active.isNotEmpty()) PendingRoundsSheet(active) { showRounds = false }
-}
-
-/** Quiet until the phrase is confirmed: opens the authenticated recovery-phrase view. */
-@Composable
-internal fun BackupPrompt(onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth().testTag("home-backup-prompt")) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            androidx.compose.foundation.layout.Box(Modifier.size(8.dp).background(com.noahwallet.ui.design.NoahTokens.Light.orange, CircleShape))
-            Spacer(Modifier.width(12.dp))
-            Text(tr("Back up your wallet"), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}
-
-@Composable
-internal fun StatusBanner(banner: HomeRules.Banner, retrying: Boolean = false, retry: () -> Unit = {}) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(tr(banner.title), style = MaterialTheme.typography.titleMedium, color = if (banner.failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-            Text(tr(banner.message))
-            if (banner.retry) TextButton(retry, enabled = !retrying) { Text(tr(if (retrying) "Working" else "Retry")) }
-        }
-    }
-}
-
-@Composable
-internal fun UpdateWarningBanner(info: AppVersionInfo, currentVersion: String, variant: String) {
-    val uri = LocalUriHandler.current
-    Card(onClick = { uri.openUri(HomeRules.updateURL(variant)) }, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(tr("Update Available"), style = MaterialTheme.typography.titleMedium)
-            Text(tr("Please update to the latest version of the app for bug fixes and improvements."))
-            Text(tr("Current Version: $currentVersion"))
-            Text(tr("Latest Version: ${info.minimumRequiredVersion}"))
         }
     }
 }
@@ -127,7 +99,7 @@ internal fun UpdateWarningBanner(info: AppVersionInfo, currentVersion: String, v
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
-    WalletModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.noahwallet.ui.onboarding.OnboardingSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), padded = false) {
         com.noahwallet.ui.settings.SettingsColumn {
             TextButton(close) { Text(tr("Close")) }
             Text(tr("Pending Rounds"), style = MaterialTheme.typography.headlineMedium)
@@ -155,22 +127,4 @@ private fun RoundTransaction(label: String, txid: String, copyable: Boolean = fa
     TextButton({
         uri.openUri("https://mempool.space/${if (BuildConfig.APP_VARIANT == "mainnet") "" else "signet/"}tx/$txid")
     }) { Text(tr("Open {value1} in browser", label)) }
-}
-
-@Composable
-fun UpgradeNotices() {
-    val context = LocalContext.current
-    var upgradeNotices by remember { mutableStateOf<List<String>>(emptyList()) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            if (upgradeNotices.isEmpty()) upgradeNotices = withContext(Dispatchers.IO) {
-                com.noahwallet.services.storage.SettingsStorage(context).takeUpgradeNotices()
-            }
-            awaitCancellation()
-        }
-    }
-    upgradeNotices.forEach { message ->
-        Card(Modifier.fillMaxWidth()) { Text(tr(message), Modifier.padding(16.dp)) }
-    }
 }

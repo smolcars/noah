@@ -209,10 +209,10 @@ internal fun FormLayout(leadingTop: @Composable RowScope.() -> Unit = {}, traili
 internal data class SheetPane(val start: Dp, val width: Dp)
 internal val LocalSheetPane = staticCompositionLocalOf<SheetPane?> { null }
 
-/** A Material 3 sheet kept inside the trailing pane when the window is split. */
+/** A Material 3 sheet kept inside the trailing pane when the window is split. [padded] false leaves padding to [content]. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun OnboardingSheet(onDismissRequest: () -> Unit, sheetState: SheetState, content: @Composable ColumnScope.() -> Unit) {
+internal fun OnboardingSheet(onDismissRequest: () -> Unit, sheetState: SheetState, padded: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     val pane = LocalSheetPane.current
     val density = LocalDensity.current
     // Tabletop: the sheet's whole space starts below the fold, so it rises from the bottom pane and can't grow into the top.
@@ -224,7 +224,7 @@ internal fun OnboardingSheet(onDismissRequest: () -> Unit, sheetState: SheetStat
             else -> Modifier
         }, sheetState = sheetState, sheetMaxWidth = pane?.width ?: com.noahwallet.ui.AdaptiveLayout.readableWidth.dp,
         capAboveHorizontalFold = fold == null) {
-        Column(Modifier.fillMaxWidth().padding(start = NoahTokens.Space.screen, end = NoahTokens.Space.screen, bottom = NoahTokens.Space.xl), content = content)
+        Column(Modifier.fillMaxWidth().then(if (padded) Modifier.padding(start = NoahTokens.Space.screen, end = NoahTokens.Space.screen, bottom = NoahTokens.Space.xl) else Modifier), content = content)
     }
 }
 
@@ -237,7 +237,7 @@ internal class GateScene : androidx.lifecycle.ViewModel() { val clock = SceneClo
  * and the one tree canvas behind the content. Callers must not wrap it in `avoidHinge()`.
  */
 @Composable
-internal fun OnboardingFrame(clock: SceneClock?, content: @Composable () -> Unit) {
+internal fun OnboardingFrame(clock: SceneClock?, splitAtWindowCentre: Boolean = false, content: @Composable () -> Unit) {
     OnboardingTheme {
         val palette = LocalPalette.current
         val reduceMotion = LocalReduceMotion.current
@@ -252,12 +252,18 @@ internal fun OnboardingFrame(clock: SceneClock?, content: @Composable () -> Unit
             val keyboard = with(density) {
                 (WindowInsets.ime.getBottom(density) - WindowInsets.navigationBars.getBottom(density)).coerceAtLeast(0).toDp()
             }
-            val pose = OnboardingPose.resolve(maxWidth.value, (maxHeight + keyboard).value, hinges.map {
+            val window = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width
+            val resolved = OnboardingPose.resolve(maxWidth.value, (maxHeight + keyboard).value, hinges.map {
                 with(density) {
                     HingeBounds((it.left - origin.x).toDp().value, (it.top - origin.y).toDp().value,
                         (it.right - origin.x).toDp().value, (it.bottom - origin.y).toDp().value)
                 }
             })
+            // Home beside a navigation rail: with no separating fold, split where a fold would be (the window's
+            // centre), so a Pixel Fold keeps its panes in place as it bends from flat to book.
+            val centre = with(density) { (window / 2f - origin.x).toDp() }
+            val pose = if (splitAtWindowCentre && hinges.isEmpty() && resolved is OnboardingPose.Wide && centre > 280.dp && maxWidth - centre > 280.dp)
+                OnboardingPose.Wide(centre, centre) else resolved
             val sheetPane = (pose as? OnboardingPose.Wide)?.let { with(density) { SheetPane(origin.x.toDp() + it.end, maxWidth - it.end) } }
             val rootProvider = remember { { root } }
             CompositionLocalProvider(LocalPose provides pose, LocalSheetPane provides sheetPane,

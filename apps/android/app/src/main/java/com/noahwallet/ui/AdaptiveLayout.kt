@@ -56,6 +56,16 @@ internal fun usableRegion(width: Int, height: Int, hinges: List<WindowRegion>): 
 
 internal val LocalFoldingFeatures = compositionLocalOf<List<WindowRegion>> { emptyList() }
 
+/**
+ * Colours painted behind the system bars by whichever app chrome reaches them: Home's background behind the
+ * status bar while it owns the window, and the navigation bar's surface under the gesture area.
+ */
+internal class WindowChrome {
+    var background by mutableStateOf<androidx.compose.ui.graphics.Color?>(null)
+    var bottom by mutableStateOf<androidx.compose.ui.graphics.Color?>(null)
+}
+internal val LocalWindowChrome = staticCompositionLocalOf { WindowChrome() }
+
 @Composable
 internal fun FoldingFeatures(content: @Composable () -> Unit) {
     val activity = LocalContext.current as? Activity

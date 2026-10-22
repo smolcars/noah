@@ -80,7 +80,7 @@ class ParityUIDeviceTest {
             assertNull(text("Create Wallet"))
             assertNull(text("Turn on push notifications"))
             assertNull(text("Disable battery optimization"))
-            assertNull(text("Recent Activity"))
+            assertNull(text("Recent"))
         } finally {
             instrumentation.runOnMainSync { activity?.finish() }
             location.restoreDirectory.deleteRecursively()
@@ -167,8 +167,8 @@ class ParityUIDeviceTest {
         optIn()
         val activity = preview("status")
         try {
-            waitFor("Version warning appears") { text("Update Available") != null }
-            assertNotNull(text("Current Version: 0.2.0-regtest")); assertNotNull(text("Latest Version: 1.0.0"))
+            waitFor("Update nudge appears") { text("Update available") != null }
+            assertNotNull(text("Get the latest fixes")); assertNotNull(text("An unknown error occurred while backing up."))
             shot("status-banners")
             click("Retry")
             waitFor("Backup retry action") { text("Retried") != null }

@@ -2,6 +2,7 @@ package com.noahwallet.ui
 
 import com.noahwallet.localization.tr
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -19,20 +20,21 @@ import com.noahwallet.ui.settings.*
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import com.noahwallet.R
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.contentOrNull
 
+/** The four tabs; History's tab reads "Activity". */
 @Serializable
-enum class Destination(val title: Int, val icon: Int) : NavKey {
-    Home(R.string.home, R.drawable.ic_home),
-    Receive(R.string.receive, R.drawable.ic_receive),
-    Send(R.string.send, R.drawable.ic_send),
-    History(R.string.history, R.drawable.ic_history),
+enum class Destination(val title: String) : NavKey {
+    Home("Home"),
+    Receive("Receive"),
+    Send("Send"),
+    History("Activity"),
 }
 
+/** Today's QR hub, on My code or (from Home's scan button) straight on Scan. */
 @Serializable
-data object QRDestination : NavKey
+data class QRDestination(val scan: Boolean = false) : NavKey
 
 internal fun mainTabEntries(tab: Destination, homeStack: List<NavKey>): List<NavKey> =
     if (tab == Destination.Home) homeStack else listOf(tab)
@@ -70,7 +72,18 @@ fun NoahApp(model: AppModel) {
         model.repeatPayment = it
         showSend()
     }
-    AdaptiveNavigation(selectedTab, { selectedTab = it },
+    // Home splits the whole window at a fold itself; every other screen, and Home's map and email flows, keep one pane.
+    var homeOverlay by rememberSaveable { mutableStateOf<String?>(null) }
+    val homeVisible = backStack.last() == Destination.Home && (selectedTab == Destination.Home || model.isWalletSuspended)
+    val homeOwnsWindow = homeVisible && homeOverlay == null
+    val chrome = LocalWindowChrome.current
+    val palette = com.noahwallet.ui.onboarding.noahPalette()
+    DisposableEffect(homeOwnsWindow, palette) {
+        chrome.background = if (homeOwnsWindow) palette.background else null
+        onDispose { chrome.background = null }
+    }
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge(if (homeOwnsWindow) emptyList() else LocalFoldingFeatures.current)) {
+    AdaptiveNavigation(selectedTab, { selectedTab = it }, fullWindow = homeOwnsWindow,
         topBar = {
             val destination = if (selectedTab == Destination.Home) backStack.last() as? SettingsDestination else null
             if (destination != null) TopAppBar(title = { Text(tr(destination.title)) }, navigationIcon = {
@@ -84,7 +97,7 @@ fun NoahApp(model: AppModel) {
                 modifier = Modifier.padding(padding),
                 onBack = { goBack() },
                 entryProvider = entryProvider {
-                    entry<QRDestination> {
+                    entry<QRDestination> { destination ->
                         QRHubScreen(model.server.state.lightningAddress,
                             com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
                             onBack = { backStack.removeAt(backStack.lastIndex) },
@@ -92,7 +105,7 @@ fun NoahApp(model: AppModel) {
                             onScan = { value ->
                                 model.scannedDestination = value
                                 showSend()
-                            })
+                            }, startScanning = destination.scan)
                     }
                     entry<SettingsDestination> { destination ->
                         SettingsPage(model, destination, onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }) { next ->
@@ -102,9 +115,11 @@ fun NoahApp(model: AppModel) {
                         }
                     }
                     entry<Destination> { destination ->
-                        if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, onViewAll = {
+                        if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, homeOverlay, { homeOverlay = it }, onViewAll = {
                             selectedTab = Destination.History
-                        }, onRepeatPayment = repeat, onQR = { backStack.add(QRDestination) }, onBackup = { backStack.add(SettingsDestination.Seed) }) {
+                        }, onRepeatPayment = repeat, onQR = { scan -> backStack.add(QRDestination(scan)) }, onBackup = { backStack.add(SettingsDestination.Seed) },
+                            onProfile = { backStack.add(SettingsDestination.Profile) },
+                            onRenew = { ids -> model.renewVtxos = ids; backStack.add(SettingsDestination.Vtxos) }) {
                             backStack.add(SettingsDestination.Settings)
                         }
                         else if (destination == Destination.History) TransactionsScreen(model, repeat)
@@ -117,5 +132,6 @@ fun NoahApp(model: AppModel) {
                 },
             )
         }
+    }
     }
 }

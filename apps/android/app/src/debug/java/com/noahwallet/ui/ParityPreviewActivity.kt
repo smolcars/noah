@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import com.noahwallet.api.generated.models.AppVersionInfo
+import androidx.compose.ui.unit.dp
 import com.noahwallet.ui.home.*
 import com.noahwallet.ui.launch.*
 
@@ -31,13 +31,13 @@ class ParityPreviewActivity : FragmentActivity() {
                 "unified-push" -> UnifiedPushScreen(true) { result = "Continued" }
                 "rounds" -> PendingRoundsSheet(listOf(io.github.niteshbalusu11.bark.PendingRoundStatus(7u,
                     io.github.niteshbalusu11.bark.RoundOutcome.PENDING, "a".repeat(64), listOf("b".repeat(64)), "Example round error", false, false))) { finish() }
-                "status" -> NoahForm("Status banners") {
-                    UpdateWarningBanner(AppVersionInfo("1.0.0", true), "0.2.0-regtest", "regtest")
-                    StatusBanner(HomeRules.Banner("Backing up wallet", "Running in background"))
-                    StatusBanner(HomeRules.Banner("Backup failed", "An unknown error occurred while backing up.", failed = true, retry = true), false) { result = "Retried" }
-                    StatusBanner(HomeRules.Banner("Backup completed", "Last backup 12:00 PM"))
-                    StatusBanner(HomeRules.Banner("Boarding completed", "20,000 sats available in Ark"))
-                }
+                "status" -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NudgeCard(HomeIcons.update, "Update available", "Get the latest fixes", "Update", null, onAction = { result = "Updated" }, onDismiss = {})
+                    NudgeCard(HomeIcons.backupFailed, "Backup failed", "An unknown error occurred while backing up.", "Retry", null, onAction = { result = "Retried" }, onDismiss = {})
+                    NudgeCard(HomeIcons.backup, "Back up your wallet", "Save your recovery phrase", "Back up", null, onAction = { result = "Backup opened" }, onDismiss = {})
+                    NudgeCard(HomeIcons.email, "Add your email", "For urgent wallet alerts", "Add", "Dismiss emergency email prompt", onAction = { result = "Email opened" }, onDismiss = { result = "Dismissed" })
+                    StatusLine("Backing up wallet", failed = false, dot = true, onClick = {})
+                } }
                 else -> QRHubScreen(if (intent.getStringExtra("screen") == "qr-missing") null else "satoshi@example.test", "Satoshi",
                     onBack = { finish() }, onProfile = { result = "Profile opened" }, onScan = { result = "Payment request routed" })
             }
