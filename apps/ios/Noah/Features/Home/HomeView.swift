@@ -35,6 +35,8 @@ struct HomeView: View {
     @State private var emailFlowOpened = false
     @State private var scrollY: CGFloat = 0
     @State private var compactScroll = ScrollPosition(edge: .top)
+    /// The column's offset when the window last turned wide, restored when it narrows again.
+    @State private var restoreOffset: CGFloat = 0
     @State private var entrancePlayed = false
     @State private var qrRevealed = false
     @State private var folding = false
@@ -86,6 +88,7 @@ struct HomeView: View {
         .animation(NoahTokens.Motion.travel(reduceMotion), value: window.wide ? sheet : nil)
         .animation(NoahTokens.Motion.travel(reduceMotion), value: window.wide ? renew.quote?.id : nil)
         .onboardingWindow($window)
+        .onChange(of: window.wide) { _, wide in if wide { restoreOffset = scrollY } }
         .onboardingHaptics(haptics)
         .modifier(observation)
         .modifier(moments)
@@ -125,8 +128,13 @@ struct HomeView: View {
         }
         .scrollPosition($compactScroll)
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in scrollY = y }
-        // Back from a wide pose: return to where the column was.
-        .onAppear { if scrollY > 0 { compactScroll.scrollTo(y: scrollY) } }
+        // Back from a wide pose: return to where the column was, once it has laid out.
+        .task {
+            guard restoreOffset > 0 else { return }
+            do { try await Task.sleep(for: .milliseconds(80)) } catch { return }
+            compactScroll.scrollTo(y: restoreOffset)
+            restoreOffset = 0
+        }
         .refreshable { await pullToRefresh() }
         .modifier(HomeTopBarInset(scrolled: scrollY > 2) {
             topBar(tucked: true).padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 6).modifier(appear(0))
