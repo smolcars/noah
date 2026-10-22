@@ -53,6 +53,19 @@ class ParityUIDeviceTest {
         assertTrue("Public control can be clicked", target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true)
         instrumentation.waitForIdleSync()
     }
+    /** Performs the accessibility action labelled [label] (Home's balance and name chip have no visible button text). */
+    private fun act(label: String) {
+        fun find(node: AccessibilityNodeInfo?): Pair<AccessibilityNodeInfo, Int>? {
+            if (node == null) return null
+            node.actionList.firstOrNull { it.label?.toString() == label }?.let { return node to it.id }
+            for (i in 0 until node.childCount) find(node.getChild(i))?.let { return it }
+            return null
+        }
+        waitFor("Accessibility action appears: $label") { find(automation.rootInActiveWindow) != null }
+        val (node, action) = checkNotNull(find(automation.rootInActiveWindow))
+        assertTrue("Action performed: $label", node.performAction(action))
+        instrumentation.waitForIdleSync()
+    }
     private fun preview(screen: String) = instrumentation.startActivitySync(Intent(context, ParityPreviewActivity::class.java)
         .putExtra("screen", screen).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     private fun shot(name: String) {
@@ -218,13 +231,16 @@ class ParityUIDeviceTest {
         val request = services.session.receiveRequest().uri()
         val activity = instrumentation.startActivitySync(Intent(context, com.noahwallet.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         try {
-            click("Hide balance")
+            // Start from a shown balance whatever the persisted hide flag says.
+            waitFor("Home appears") { text("Recent") != null || text("Scan with any Lightning wallet") != null }
+            if (text("$ ••••") != null) { act("Show wallet balance"); waitFor("Balance shown") { text("$ ••••") == null } }
+            act("Hide wallet balance")
             waitFor("Fiat privacy uses the RN currency symbol") { text("$ ••••") != null }
             shot("home-hidden")
-            click("Show balance")
-            waitFor("Live fiat amount") { text("$0.00") != null }
+            act("Show wallet balance")
+            waitFor("Live fiat amount") { text("$ ••••") == null }
             shot("home-live")
-            click("QR Code")
+            act("QR Code")
             waitFor("Live identity QR") { text("This QR contains only your Lightning address.") != null }
             shot("qr-live-address")
             click("Scan")
