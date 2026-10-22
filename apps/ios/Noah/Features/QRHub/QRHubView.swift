@@ -3,11 +3,19 @@ import SwiftUI
 struct QRHubView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
-    @State private var hub = QRHubModel()
+    @State private var hub: QRHubModel
     @State private var displayName = ""
     @State private var pendingScan: String?
     let isActive: Bool
     let onScan: (String) -> Void
+
+    init(isActive: Bool, initialMode: QRHubModel.Mode = .myCode, onScan: @escaping (String) -> Void) {
+        self.isActive = isActive
+        self.onScan = onScan
+        let hub = QRHubModel()
+        hub.mode = initialMode
+        _hub = State(initialValue: hub)
+    }
 
     var body: some View {
         @Bindable var hub = hub
@@ -23,8 +31,8 @@ struct QRHubView: View {
                     if hub.mode == .myCode {
                         if let address = app.server.state.lightningAddress, !address.isEmpty {
                             AdaptiveColumns { _ in
-                                ReceiveQRCode(uri: address)
-                                    .aspectRatio(1, contentMode: .fit).frame(maxWidth: qrSide, maxHeight: qrSide).padding(20)
+                                StyledQRCode(content: address)
+                                    .frame(maxWidth: qrSide, maxHeight: qrSide).padding(20)
                                     .background(.white, in: RoundedRectangle(cornerRadius: 28))
                                     .frame(maxWidth: .infinity)
                                 VStack(spacing: 28) {
