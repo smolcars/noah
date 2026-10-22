@@ -195,15 +195,25 @@ private fun formatted(sats: Long, env: SendEnv) = BitcoinAmount.format(sats, env
  */
 @Composable
 private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Boolean, trailingAt: Alignment.Vertical,
-                      leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
+                      leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit,
+                      bottom: (@Composable ColumnScope.() -> Unit)? = null) {
     val pose = LocalPose.current
     val navRow = @Composable { Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically, content = nav) }
+    // One column (or tabletop's lower half): [trailing] from the top and [bottom] pinned to the foot, scrolling only if they don't fit.
+    val stacked = @Composable { modifier: Modifier ->
+        BoxWithConstraints(modifier) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
+                verticalArrangement = if (bottom != null) Arrangement.SpaceBetween else arrangement(trailingAt)) {
+                Column(Modifier.fillMaxWidth(), content = trailing)
+                bottom?.let { Column(Modifier.fillMaxWidth(), content = it) }
+            }
+        }
+    }
     when (pose) {
         OnboardingPose.Compact -> Column(Modifier.fillMaxSize().imePadding().padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 16.dp)) {
             navRow()
             Column(Modifier.fillMaxWidth().widthIn(max = 520.dp).align(Alignment.CenterHorizontally), content = leading)
-            Column(Modifier.fillMaxWidth().widthIn(max = 520.dp).weight(1f).align(Alignment.CenterHorizontally)
-                .verticalScroll(rememberScrollState()), verticalArrangement = arrangement(trailingAt), content = trailing)
+            stacked(Modifier.fillMaxWidth().widthIn(max = 520.dp).weight(1f).align(Alignment.CenterHorizontally))
         }
         is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
             Box(Modifier.width(pose.start).fillMaxHeight().padding(start = 34.dp, end = 34.dp, top = 14.dp, bottom = 24.dp), contentAlignment = Alignment.TopCenter) {
@@ -216,7 +226,7 @@ private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Bool
             Spacer(Modifier.width(pose.end - pose.start))
             Box(Modifier.weight(1f).fillMaxHeight().imePadding().padding(start = 40.dp, end = 34.dp, top = 22.dp, bottom = 24.dp), contentAlignment = Alignment.TopCenter) {
                 Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize().verticalScroll(rememberScrollState()),
-                    verticalArrangement = arrangement(trailingAt), content = trailing)
+                    verticalArrangement = arrangement(trailingAt)) { trailing(); bottom?.invoke(this) }
             }
         }
         is OnboardingPose.Tabletop -> Column(Modifier.fillMaxSize()) {
@@ -228,8 +238,7 @@ private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Bool
             }
             Spacer(Modifier.height(pose.bottom - pose.top))
             Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().imePadding().padding(horizontal = 20.dp, vertical = 12.dp), contentAlignment = Alignment.TopCenter) {
-                Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize().verticalScroll(rememberScrollState()),
-                    verticalArrangement = arrangement(trailingAt), content = trailing)
+                stacked(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize())
             }
         }
     }
@@ -553,6 +562,7 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
         reviewNote(model, quote, env, presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = palette.muted) }
         model.error?.let { ErrorLine(it, model) }
         controller.message?.let { ErrorLine(it) }
+    }, bottom = {
         Spacer(Modifier.height(24.dp))
         if (ready) HoldToSend(formatted(amount, env), enabled = !controller.locked, sending = controller.locked, modifier = Modifier.padding(bottom = 6.dp)) {
             presentation.confirm(payment!!, quote!!)
@@ -621,7 +631,9 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val resultShown = live == null || SendTimeline.resultShown(motion, elapsed, reduceMotion)
     val title = if (!resultShown || ending == null || ending == SendEnding.sending) tr("Sending {amount}", formatted(amount, env)) else resultTitle(ending, amount, receipt, env)
     val stageHeight: Dp = if (pose is OnboardingPose.Wide) 330.dp else if (pose is OnboardingPose.Tabletop) 200.dp else 270.dp
-    StepPanes(nav = { }, leadingCentred = true, trailingAt = Alignment.Bottom, leading = {
+    val show = remember { Animatable(if (resultShown) 1f else 0f) }
+    LaunchedEffect(resultShown) { if (resultShown) show.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) }
+    StepPanes(nav = { }, leadingCentred = true, trailingAt = Alignment.CenterVertically, leading = {
         SwapTitle(title, SendType.big, Modifier.padding(top = 6.dp).testTag("send-title"))
         Text(tr("to {name}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt, Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
@@ -630,11 +642,10 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
             phase.suffix?.let { (n, total) -> text + " · " + tr("{n} of {total}", n.toString(), total.toString()) } ?: text
         }, line?.done == true, Modifier.padding(top = 4.dp))
     }, trailing = {
-        val show = remember { Animatable(if (resultShown) 1f else 0f) }
-        LaunchedEffect(resultShown) { if (resultShown) show.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) }
         Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f); if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
             if (resultShown && ending != null) ResultArea(ending, controller, attempt, receipt, amount, who, confirmedAt, env, actions)
         }
+    }, bottom = {
         Spacer(Modifier.height(16.dp))
         val doneShown = resultShown && ending in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent, SendEnding.refunded,
             SendEnding.notSent, SendEnding.alreadyPaid, SendEnding.pending)

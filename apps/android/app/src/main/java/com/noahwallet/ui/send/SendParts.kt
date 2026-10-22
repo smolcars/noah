@@ -260,10 +260,11 @@ internal fun ValueRow(label: String, value: String, number: Boolean = false, ico
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
         .semantics(mergeDescendants = true) { }, verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.padding(end = 12.dp), style = SendType.body, color = palette.muted, maxLines = 1)
-        Spacer(Modifier.weight(1f))
-        if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
-        Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
+            Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+        }
         val copyLabel = tr("Copy")
         if (copy != null) Box(Modifier.padding(start = 8.dp).size(36.dp).tonal(CircleShape, palette.soft)
             .clickable(role = Role.Button, onClickLabel = copyLabel, onClick = copy).semantics { contentDescription = copyLabel }, contentAlignment = Alignment.Center) {
