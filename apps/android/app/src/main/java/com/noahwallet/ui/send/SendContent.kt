@@ -635,7 +635,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     LaunchedEffect(resultShown) { if (resultShown) show.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) }
     StepPanes(nav = { }, leadingCentred = true, trailingAt = Alignment.CenterVertically, leading = {
         SwapTitle(title, SendType.big, Modifier.padding(top = 6.dp).testTag("send-title"))
-        Text(tr("to {name}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (who.name.isNotEmpty()) Text(tr("to {name}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt, Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
         PhaseText(line?.let { phase ->
             val text = if (phase.argument != null) tr(phase.source, phase.argument) else tr(phase.source)
@@ -643,7 +643,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         }, line?.done == true, Modifier.padding(top = 4.dp))
     }, trailing = {
         Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f); if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
-            if (resultShown && ending != null) ResultArea(ending, controller, attempt, receipt, amount, who, confirmedAt, env, actions)
+            if (resultShown && ending != null && ending != SendEnding.sending) ResultArea(ending, controller, attempt, receipt, amount, who, confirmedAt, env, actions)
         }
     }, bottom = {
         Spacer(Modifier.height(16.dp))
