@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.*
@@ -44,6 +45,23 @@ internal fun WelcomeStep(model: AppModel, presentation: OnboardingPresentation) 
     })
     if (presentation.languageOpen) LanguageSheet(model, presentation)
     if (presentation.betaOpen) BetaSheet(model, presentation)
+}
+
+/**
+ * Welcome's top bar, words and buttons, invisible and inert: Creating and Restoring reserve exactly this
+ * space so the tree stays where Welcome left it, at any font size and after recreation in another pose.
+ */
+internal object WelcomeGhost {
+    @Composable fun Top(locale: String) = Box(Modifier.alpha(0f).clearAndSetSemantics { }) { LanguageButton(locale, enabled = false) {} }
+    @Composable fun Words() = Column(Modifier.alpha(0f).clearAndSetSemantics { }) {
+        Wordmark(play = false)
+        Text(tr("Bitcoin, simply."), Modifier.padding(top = NoahTokens.Space.s), style = NoahTokens.Typography.body)
+    }
+    @Composable fun Buttons() = Column(Modifier.alpha(0f).clearAndSetSemantics { }) {
+        Spacer(Modifier.height(NoahTokens.Space.xxl - NoahTokens.Space.xs))
+        PillButton(tr("Create wallet"), Modifier.fillMaxWidth(), enabled = false) {}
+        TextAction(tr("I already have a wallet"), Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = false) {}
+    }
 }
 
 /** The "Noah" letters rise with the bouncy spring after the tree has grown. */
@@ -87,10 +105,10 @@ internal fun Modifier.rise(play: Boolean, delayMillis: Long, distance: Float): M
 }
 
 @Composable
-private fun LanguageButton(locale: String, onClick: () -> Unit) {
+private fun LanguageButton(locale: String, enabled: Boolean = true, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val label = tr("Language")
-    TextButton(onClick, Modifier.heightIn(min = NoahTokens.Size.hitTarget).semantics { contentDescription = label },
+    TextButton(onClick, Modifier.heightIn(min = NoahTokens.Size.hitTarget).semantics { contentDescription = label }, enabled = enabled,
         colors = ButtonDefaults.textButtonColors(contentColor = palette.muted)) {
         GlobeIcon(palette.muted)
         Spacer(Modifier.width(6.dp))

@@ -42,7 +42,7 @@ internal fun CreatingStep(model: AppModel, presentation: OnboardingPresentation)
         }
         model.step = "name"
     }
-    SceneLayout(clock, SceneMode.create, below = {
+    SceneLayout(clock, SceneMode.create, welcomeGhost = model.localeIdentifier, below = {
         PhaseText(listOf(tr("Creating your keys"), tr("Joining the Ark"), tr("Ready"))[phase])
     }, bottom = {})
 }
@@ -90,7 +90,7 @@ internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation
         clock.frozenAt = if (issue != null) clock.frozenAt ?: clock.time(System.nanoTime()) else null
         if (issue != null) { model.holdRestoreCompletion = false; haptics.error() }
     }
-    SceneLayout(clock, SceneMode.restore, below = {
+    SceneLayout(clock, SceneMode.restore, welcomeGhost = model.localeIdentifier, below = {
         PhaseText(listOf(tr("Restoring your wallet"), tr("Finding your bitcoin"), tr("Ready"))[phase])
         val total = model.summary?.balance?.totalSats?.toLong()
         if (flow.completed && total != null && !model.hidden) CountUp(total, model, presentation)

@@ -36,10 +36,7 @@ internal fun Modifier.sceneSlot(clock: SceneClock, mode: SceneMode, fill: Boolea
     }
 }
 
-/**
- * Compact scene screens reserve Welcome's word and button heights (from the type scale, not a measurement,
- * so recreation in another pose agrees), keeping the tree exactly where Welcome left it.
- */
+/** Notifications' word and button heights in one column, from the type scale (Welcome's proportions). */
 @Composable
 private fun sceneTextHeights(): Pair<Dp, Dp> {
     val scale = LocalDensity.current.fontScale
@@ -76,11 +73,22 @@ private fun BoxScope.TopRow(leading: @Composable RowScope.() -> Unit = {}, trail
  */
 @Composable
 internal fun SceneLayout(clock: SceneClock, mode: SceneMode, topBar: @Composable RowScope.() -> Unit = {},
+                         welcomeGhost: String? = null,
                          below: @Composable ColumnScope.() -> Unit, bottom: @Composable ColumnScope.() -> Unit) {
     val pad = NoahTokens.Space.screen
     val (belowMin, bottomMin) = sceneTextHeights()
     when (val pose = LocalPose.current) {
-        OnboardingPose.Compact -> Column(Modifier.fillMaxSize().padding(horizontal = pad)) {
+        // [welcomeGhost] (the locale): reserve Welcome's exact areas so the tree doesn't move from Welcome.
+        OnboardingPose.Compact -> if (welcomeGhost != null) Column(Modifier.fillMaxSize().padding(horizontal = pad)) {
+            TopBar { WelcomeGhost.Top(welcomeGhost) }
+            Box(Modifier.weight(1f).fillMaxWidth().sceneSlot(clock, mode))
+            Box(Modifier.fillMaxWidth()) { WelcomeGhost.Words(); Column(Modifier.fillMaxWidth(), content = below) }
+            Box(Modifier.fillMaxWidth()) {
+                WelcomeGhost.Buttons()
+                Column(Modifier.matchParentSize(), verticalArrangement = Arrangement.Bottom, content = bottom)
+            }
+            Spacer(Modifier.height(NoahTokens.Space.s))
+        } else Column(Modifier.fillMaxSize().padding(horizontal = pad)) {
             TopBar(topBar)
             Box(Modifier.weight(1f).fillMaxWidth().sceneSlot(clock, mode))
             Column(Modifier.fillMaxWidth().heightIn(min = belowMin), content = below)
