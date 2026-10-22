@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
@@ -122,6 +122,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     val context = LocalContext.current
     val pose = LocalPose.current
     var sheet by rememberSaveable { mutableStateOf(false) }
+    val homeScroll = rememberHomeScroll()
     if (memory.enteredAt == null) memory.enteredAt = SystemClock.elapsedRealtime()
     val entered = rememberElapsed(memory.enteredAt, 1_600)
     val payment = memory.firstPayment
@@ -175,7 +176,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
             HomeRules.State.fresh -> GetPaidCard(ui, payment, paymentElapsed, wide, onCopy = copy, onShare = share, onProfile = actions.profile,
                 modifier = Modifier.rise(entered, 220 + after, 14f, reduceMotion))
             HomeRules.State.everyday -> if (!wide) Box(Modifier.rise(entered, 220 + after, 14f, reduceMotion).rise(revealed, 0, 12f, reduceMotion)) {
-                Recent(ui, entered, memory, actions)
+                Recent(ui, entered, memory, actions, onFirstRow = homeScroll::measureRecent)
             }
             else -> {}
         }
@@ -183,15 +184,29 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     val map = @Composable { Box(Modifier.padding(top = 22.dp).rise(entered, 260 + after, 14f, reduceMotion)) { MapRow({ haptics.light(); actions.map() }) } }
 
     val pullState = rememberPullToRefreshState()
+    // Scroll positions live above the pose switch, so folding, unfolding and bending keep them; between one column
+    // and two panes the position carries over through the activity row at the top.
+    val paned = pose !is OnboardingPose.Compact
+    var lastPaned by rememberSaveable { mutableStateOf(paned) }
+    val items = remember(ui.rows, ui.domain, ui.now) {
+        ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { it.second.size }, ui.rows.isEmpty())
+    }
+    val currentItems by rememberUpdatedState(items)
+    LaunchedEffect(paned) {
+        if (paned == lastPaned) return@LaunchedEffect
+        lastPaned = paned
+        if (paned) homeScroll.toPanes(currentItems) else homeScroll.toCompact(currentItems)
+    }
     when (pose) {
         OnboardingPose.Compact -> {
-            val scroll = rememberScrollState()
+            val scroll = homeScroll.compact
             val tuck = ((with(androidx.compose.ui.platform.LocalDensity.current) { scroll.value.toDp().value } - 4f) / 52f).coerceIn(0f, 1f)
             PullToRefreshBox(refreshing, actions.refresh, state = pullState, indicator = {
                 PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
                     containerColor = palette.sheet, color = palette.foreground)
             }) {
-                Column(Modifier.fillMaxSize().verticalScroll(scroll).testTag("home-scroll"), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxSize().verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }.testTag("home-scroll"),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
                     Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
                         Leading(tuck)
                         if (state != HomeRules.State.suspended) Primary(false)
@@ -209,7 +224,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
                     PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
                         containerColor = palette.sheet, color = palette.foreground)
                 }) {
-                    Pane(top = 70.dp, horizontal = 24.dp) {
+                    Pane(homeScroll.leading, top = 70.dp, horizontal = 24.dp) {
                         Leading(0f)
                         map()
                     }
@@ -219,7 +234,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
             }
             Spacer(Modifier.width(pose.end - pose.start))
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
-                TrailingPane(ui, state, entered, revealed, memory, actions) { Primary(true) }
+                TrailingPane(ui, state, entered, revealed, memory, actions, homeScroll) { Primary(true) }
             }
         }
         is OnboardingPose.Tabletop -> Column(Modifier.fillMaxSize()) {
@@ -228,7 +243,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
                     PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
                         containerColor = palette.sheet, color = palette.foreground)
                 }) {
-                    Pane(top = compactTop, horizontal = 24.dp) {
+                    Pane(homeScroll.leading, top = compactTop, horizontal = 24.dp) {
                         Leading(0f)
                         map()
                     }
@@ -239,7 +254,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
             }
             Spacer(Modifier.height(pose.bottom - pose.top))
             Box(Modifier.weight(1f).fillMaxWidth().clipToBounds(), contentAlignment = Alignment.TopCenter) {
-                TrailingPane(ui, state, entered, revealed, memory, actions) { Primary(true) }
+                TrailingPane(ui, state, entered, revealed, memory, actions, homeScroll) { Primary(true) }
             }
         }
     }
@@ -247,8 +262,8 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
 }
 
 @Composable
-private fun Pane(top: Dp, horizontal: Dp, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun Pane(state: ScrollState, top: Dp, horizontal: Dp, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxSize().verticalScroll(state).testTag("home-leading"), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(start = horizontal, end = horizontal, top = top, bottom = 32.dp), content = content)
     }
 }
@@ -495,31 +510,32 @@ private fun Suspended(settings: () -> Unit) {
 
 /** Wide and tabletop's second pane: the get-paid card centred, or the full activity list grouped by day. */
 @Composable
-private fun TrailingPane(ui: HomeUi, state: HomeRules.State, entered: Long, revealed: Long, memory: HomeMemory, actions: HomeActions, card: @Composable () -> Unit) {
+private fun TrailingPane(ui: HomeUi, state: HomeRules.State, entered: Long, revealed: Long, memory: HomeMemory, actions: HomeActions,
+                         scroll: HomeScroll, card: @Composable () -> Unit) {
     val reduceMotion = LocalReduceMotion.current
     when (state) {
         HomeRules.State.fresh -> BoxWithConstraints(Modifier.fillMaxSize()) {
             val height = maxHeight
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.fillMaxSize().verticalScroll(scroll.card), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.heightIn(min = height).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(horizontal = 32.dp, vertical = 28.dp),
                     contentAlignment = Alignment.Center) { card() }
             }
         }
         HomeRules.State.everyday -> Box(Modifier.fillMaxSize().rise(revealed, 0, 12f, reduceMotion), contentAlignment = Alignment.TopCenter) {
-            ActivityList(ui, entered, memory, actions)
+            ActivityList(ui, entered, memory, actions, scroll.list)
         }
         else -> {}
     }
 }
 
 @Composable
-private fun ActivityList(ui: HomeUi, entered: Long, memory: HomeMemory, actions: HomeActions) {
+private fun ActivityList(ui: HomeUi, entered: Long, memory: HomeMemory, actions: HomeActions, state: androidx.compose.foundation.lazy.LazyListState) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
     val rows = remember(ui.rows, ui.domain) { ui.rows.map { HomeRow.of(it, ui.domain) } }
     val groups = remember(rows, ui.now) { HomeDays.grouped(rows, { it.date }, ui.now) }
-    LazyColumn(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize().testTag("home-activity"), rememberLazyListState(),
+    LazyColumn(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize().testTag("home-activity"), state,
         contentPadding = PaddingValues(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 28.dp)) {
         item { Text(tr("Activity"), Modifier.padding(bottom = 8.dp).semantics { heading() }, style = HomeType.listTitle, color = palette.foreground) }
         if (rows.isEmpty()) item { Text(tr(ui.historyError ?: "No activity yet"), style = HomeType.line, color = palette.muted) }
@@ -543,7 +559,7 @@ private fun ActivityList(ui: HomeUi, entered: Long, memory: HomeMemory, actions:
 
 /** Compact Everyday: the five latest rows; "See all" opens Activity. */
 @Composable
-private fun Recent(ui: HomeUi, entered: Long, memory: HomeMemory, actions: HomeActions) {
+private fun Recent(ui: HomeUi, entered: Long, memory: HomeMemory, actions: HomeActions, onFirstRow: (androidx.compose.ui.layout.LayoutCoordinates) -> Unit) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
@@ -556,7 +572,8 @@ private fun Recent(ui: HomeUi, entered: Long, memory: HomeMemory, actions: HomeA
         }
         if (rows.isEmpty()) Text(tr(ui.historyError ?: "No activity yet"), Modifier.padding(top = 12.dp), style = HomeType.line, color = palette.muted)
         rows.forEachIndexed { i, row ->
-            Box(Modifier.rise(entered, 300L + i * 40, 10f, reduceMotion)) {
+            // Measured before the rise's layer, so the entrance offset doesn't count.
+            Box(Modifier.then(if (i == 0) Modifier.onGloballyPositioned(onFirstRow) else Modifier).rise(entered, 300L + i * 40, 10f, reduceMotion)) {
                 ActivityRow(row, ui.hidden, ui.unit, ui.locale, ui.now, new = row.id in ui.newRows, pop = memory.recentRevealAt != null,
                     divider = i < rows.lastIndex) { haptics.light(); actions.openRow(row.id) }
             }
