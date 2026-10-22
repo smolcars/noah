@@ -41,6 +41,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         private set
     var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.resolved(application))
         private set
+    /** Home offers the backup prompt until this wallet's phrase is confirmed; missing means not backed up. */
+    var recoveryPhraseBackedUp by mutableStateOf(RecoveryPhraseBackup.isBackedUp(settings))
+        private set
+    /** The onboarding restore screen finishes its "Ready" moment before Home appears. */
+    var holdRestoreCompletion by mutableStateOf(false)
 
     private val restoreLocation = WalletDataLocation(application.filesDir, BuildConfig.APP_VARIANT)
     private val restoreCompletionJournal = RestoreCompletionJournal(restoreLocation)
@@ -111,6 +116,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                             }
                         }
                         restore.run(mnemonic)
+                        if (restore.completed) {
+                            // Missing stays "not backed up", so a failed write only keeps the Home prompt.
+                            runCatching { RecoveryPhraseBackup.restored(settings, typedPhrase = phrase != null) }
+                            recoveryPhraseBackedUp = RecoveryPhraseBackup.isBackedUp(settings)
+                        }
                     }
                 }
             } catch (failure: Exception) { restore.reject(RestoreIssue.from(failure)) }
@@ -175,7 +185,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         }
         history.clear(); repeatPayment = null; scannedDestination = null; autoBoardSuccessBanner = null
         walletLock.reset(); restore.reset()
-        open = false; onboarded = false; isWalletSuspended = false; summary = null
+        open = false; onboarded = false; isWalletSuspended = false; summary = null; recoveryPhraseBackedUp = false
         hidden = false; amountUnit = BitcoinAmountUnit.bip177; preferredCurrency = "USD"; refreshLocale()
         step = "welcome"; launchState = LaunchState.onboarding
         withContext(Dispatchers.IO) { refreshRecoveryFiles() }
@@ -215,6 +225,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                         if (recovered == RestoreTransaction.Recovery.completed) services.tokens.clear()
                         recovering = false
                         isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
+                        recoveryPhraseBackedUp = RecoveryPhraseBackup.isBackedUp(settings)
                         launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
                         if (launchState == LaunchState.existingWallet) {
                             onboarded = services.isOnboarded()
@@ -226,7 +237,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                                         customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = null
                                         if (success) {
                                             open = true; onboarded = services.isOnboarded()
-                                            if (!onboarded) step = "mnemonic"
+                                            if (!onboarded) step = OnboardingNavigation.resumeStep
                                             refresh(); services.startServerServices()
                                         } else { error = "Couldn't open your wallet. Please try again." }
                                     }
@@ -235,7 +246,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                             }
                             open = true
                             onboarded = services.isOnboarded()
-                            if (!onboarded) step = "mnemonic"
+                            if (!onboarded) step = OnboardingNavigation.resumeStep
                             refresh(walletMutationHeld = true)
                             services.startServerServices()
                         }
@@ -264,14 +275,18 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         }
     }
 
-    fun action(fallback: String, useServerMessage: Boolean = false, block: suspend () -> Unit) {
+    /** [inline] receives the message instead of the shared alert, for errors shown in place. */
+    fun action(fallback: String, useServerMessage: Boolean = false, inline: ((String?) -> Unit)? = null, block: suspend () -> Unit) {
         if (busy) return
-        busy = true; error = null
+        busy = true; error = null; inline?.invoke(null)
         viewModelScope.launch {
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) { error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message
-                else if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback }
+            catch (failure: Exception) {
+                val message = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message
+                    else if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback
+                if (inline != null) inline(message) else error = message
+            }
             finally { busy = false }
         }
     }
@@ -284,9 +299,17 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         val key = session.peekPublicKey(0u)
         settings.setPersistedState(wallet.copy(isInitialized = false, staticVtxoPubkey = key), PersistedWalletState.key, 0)
-        open = true; step = "mnemonic"
-        // Server failure must never prevent showing the saved recovery phrase.
+        // A new wallet's phrase hasn't been seen; clear any stale answer (missing also means not backed up).
+        runCatching { RecoveryPhraseBackup.set(settings, false) }
+        recoveryPhraseBackedUp = false
+        open = true; step = "creating"
+        // Server failure must never block onboarding; the Name and Email steps register again.
         viewModelScope.launch { runCatching { server.ensureRegistered() } }
+    }
+
+    suspend fun confirmRecoveryPhraseBackup() {
+        withContext(Dispatchers.IO) { RecoveryPhraseBackup.set(settings, true) }
+        recoveryPhraseBackedUp = true
     }
 
     suspend fun mnemonic(): List<String> = withContext(Dispatchers.IO) {

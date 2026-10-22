@@ -67,6 +67,19 @@ class RecoveryPhraseInputTest {
         input.update("a", 0); assertEquals(5, input.suggestions(0).size)
         input.update("zzzz", 0); assertTrue(input.suggestions(0).isEmpty())
     }
+    @Test fun keyboardAccessoryOffersThreeAndSpaceAcceptsTheFirst() {
+        val input = RecoveryPhraseInput()
+        input.update("ab", 0)
+        assertEquals(listOf("abandon", "ability", "able"), input.suggestions(0).take(3))
+        input.update(input.suggestions(0).first(), 0)
+        assertEquals("abandon", input.words[0]); assertTrue(input.suggestions(0).isEmpty())
+        // Restore is enabled once every word is in the list; the checksum then decides.
+        input.update(List(12) { "abandon" }.joinToString(" "), 0)
+        assertTrue(input.words.all { it in RecoveryPhraseInput.wordList })
+        assertFalse(RecoveryPhraseInput.isValid(input.phrase))
+        input.update("abandn", 4)
+        assertEquals(4, input.words.indexOfFirst { it !in RecoveryPhraseInput.wordList })
+    }
     @Test fun sharedWordCountDictionaryChecksumAndNormalizationVectors() {
         for (case in SharedFixtures.load("restore-phrase")) {
             assertEquals(case.name, case.expected.jsonPrimitive.boolean,

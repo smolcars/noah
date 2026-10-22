@@ -86,10 +86,7 @@ fun LaunchGateView(model: AppModel) {
         if (Build.VERSION.SDK_INT >= 33) {
             requesting = true; permissionRequested = true
             scope.launch {
-                withContext(Dispatchers.IO) {
-                    context.getSharedPreferences("expo.modules.permissions.asked", android.content.Context.MODE_PRIVATE).edit()
-                        .putBoolean(Manifest.permission.POST_NOTIFICATIONS, true).apply()
-                }
+                withContext(Dispatchers.IO) { PlatformAccess.markNotificationsAsked(context) }
                 permission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         } else PlatformAccess.openSettings(activity)
@@ -133,27 +130,42 @@ fun LaunchGateView(model: AppModel) {
     val covered = model.walletLock.locked || checking
     val focus = LocalFocusManager.current
     LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
+    val route = when {
+        model.customServerUnresponsive -> LaunchRoute.customServer
+        state == LaunchState.seedWithoutWalletData -> LaunchRoute.storedSeed
+        !PlatformGateRules.launchResolved(state) -> LaunchRoute.message
+        !gatesReady && !hasResolvedPlatformGate -> LaunchRoute.loading
+        // A finished onboarding restore shows "Ready" and its balance before Home.
+        model.holdRestoreCompletion && model.onboarded && model.step == "restoring" -> LaunchRoute.onboarding
+        (model.open || model.isWalletSuspended) && model.onboarded -> when (platformGate) {
+            PlatformGateRules.Gate.push -> LaunchRoute.push
+            PlatformGateRules.Gate.battery -> LaunchRoute.battery
+            null -> LaunchRoute.app
+        }
+        state == LaunchState.onboarding || (model.open && !model.onboarded) -> LaunchRoute.onboarding
+        else -> LaunchRoute.message
+    }
+    // Onboarding and its gate screens split the whole window at a fold themselves; everything else keeps one pane.
+    val fullWindow = route in setOf(LaunchRoute.onboarding, LaunchRoute.push, LaunchRoute.battery)
     androidx.compose.runtime.CompositionLocalProvider(LocalWalletPrivacy provides WalletPrivacy(covered,
         unlock = if (model.walletLock.locked) ({ scope.launch { model.walletLock.unlock(activity) }; Unit }) else null)) {
-    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
+    androidx.compose.material3.Surface(color = if (fullWindow) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()
             .walletContentProtection(covered)
-            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing).avoidHinge()) {
-            when {
-                model.customServerUnresponsive -> NoahForm("The custom server isn't responding.") {
+            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)
+            .avoidHinge(if (fullWindow) emptyList() else LocalFoldingFeatures.current)) {
+            when (route) {
+                LaunchRoute.customServer -> NoahForm("The custom server isn't responding.") {
                     if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
                     NoahButton("Use default server", !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
                 }
-                state == LaunchState.seedWithoutWalletData -> RestoreWalletScreen(model, useStoredSeed = true)
-                !PlatformGateRules.launchResolved(state) -> LaunchMessage(state, model.error != null, model::start, model)
-                !gatesReady && !hasResolvedPlatformGate -> LaunchMessage(null, false, model::start, model)
-                (model.open || model.isWalletSuspended) && model.onboarded -> when (platformGate) {
-                    PlatformGateRules.Gate.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission, ::refreshPermission)
-                    PlatformGateRules.Gate.battery -> BatteryOptimizationScreen(model) { gateRevision++ }
-                    null -> NoahApp(model)
-                }
-                state == LaunchState.onboarding || (model.open && !model.onboarded) -> Onboarding(model)
-                else -> LaunchMessage(state, model.error != null, model::start, model)
+                LaunchRoute.storedSeed -> RestoreWalletScreen(model, useStoredSeed = true)
+                LaunchRoute.message -> LaunchMessage(state, model.error != null, model::start, model)
+                LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)
+                LaunchRoute.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission)
+                LaunchRoute.battery -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { BatteryOptimizationScreen(model) { gateRevision++ } }
+                LaunchRoute.app -> NoahApp(model)
+                LaunchRoute.onboarding -> Onboarding(model)
             }
         }
     }
@@ -179,6 +191,8 @@ fun LaunchGateView(model: AppModel) {
     }
 
 }
+
+private enum class LaunchRoute { customServer, storedSeed, message, loading, push, battery, app, onboarding }
 
 /** Modifier-only shielding preserves remember/NavDisplay state in the covered subtree. */
 internal fun Modifier.walletContentProtection(covered: Boolean): Modifier =

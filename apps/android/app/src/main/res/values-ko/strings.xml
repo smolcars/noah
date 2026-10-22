@@ -124,7 +124,6 @@
   <string name="gt_34a2564efc24f085">"출금 목록으로 돌아가기"</string>
   <string name="gt_c2c4dc4523848507">"결제로 돌아가기"</string>
   <string name="gt_52a7a389ef84accf">"지갑 백업하기"</string>
-  <string name="gt_7964c5bb92778dc1">"백그라운드 작업이 계속 실행됩니다"</string>
   <string name="gt_b77fead35a79fc03">"백그라운드 작업 진행 중..."</string>
   <string name="gt_f30a86f86c64f448">"지갑 백업 중"</string>
   <string name="gt_838557924a5cdfb2">"백업"</string>
@@ -211,7 +210,6 @@
   <string name="gt_756e44ed7badc707">"다른 결제를 하기 전에 현재 결제를 확인하세요."</string>
   <string name="gt_ff65032d5e881811">"다시 승인하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_6f113ce35347ffe6">"수정하기 전에 이 결제의 결과를 확인하세요."</string>
-  <string name="gt_d7eef838e946e289">"이 단어 확인"</string>
   <string name="gt_710d52f182321f4a">"%1$s번째 단어를 확인하세요"</string>
   <string name="gt_7732287944e204a9">"이메일을 확인하세요"</string>
   <string name="gt_4ac7dc7e4285ca5d">"결제 내역을 살펴보고 받는 사람에게도 확인하세요. 이미 전송된 결제일 수 있습니다."</string>
@@ -270,7 +268,6 @@
   <string name="gt_f8d6b3c8e8b286e3">"지갑 데이터 충돌"</string>
   <string name="gt_7a766440fe6254ac">"비접촉 결제"</string>
   <string name="gt_31fbef162594de01">"계속"</string>
-  <string name="gt_3b8c015d66490d97">"이메일 없이 계속하기"</string>
   <string name="gt_065277fcb38b2217">"예상 수수료 없이 계속"</string>
   <string name="gt_aced5f27d837a4e9">"예상 수수료 없이 계속할까요?"</string>
   <string name="gt_8d525e5f158b9afe">"복사됨"</string>
@@ -341,15 +338,12 @@
   <string name="gt_7bcc035ddf337589">"정기 결제를 업데이트하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_f9e607b9f67deda1">"이 설정을 변경하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_3cb296f54acaa925">"요청을 생성하지 못했습니다"</string>
-  <string name="gt_726aa71c01d0a369">"지갑 만들기"</string>
-  <string name="gt_5f118763298aec4a">"새 지갑을 만들거나 기존 지갑을 복원하세요."</string>
   <string name="gt_853bc38c249ac693">"암호화된 .noahbackup 파일 생성"</string>
   <string name="gt_c840c095b7c7c8ef">"지갑 데이터베이스가 포함된 암호화된 백업 파일을 만드세요."</string>
   <string name="gt_40a49ea198affe13">"지갑 만들기"</string>
   <string name="gt_7bef2fbf3b783bfe">"결제 요청서 생성 중…"</string>
   <string name="gt_2d011af498ebd5ea">"키를 만드는 중"</string>
   <string name="gt_0e534607e1589271">"결제 요청을 생성하는 중…"</string>
-  <string name="gt_924909629317d4f6">"지갑 생성 중..."</string>
   <string name="gt_5f5dc2dbbf448465">"생성에 실패했습니다. 다시 시도하세요."</string>
   <string name="gt_e4bca5667d4fa25e">"생성하지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_f9039698f684e234">"스크린샷 자르기"</string>
@@ -383,7 +377,7 @@
   <string name="gt_293d404a500f5f9a">"수신 주소"</string>
   <string name="gt_68fe721765d87b10">"혹시 이 주소인가요"</string>
   <string name="gt_47a081866ba71b83">"인증 코드를 받지 못하셨나요?"</string>
-  <string name="gt_db282d70878d9d3c">"받지 못했나요?"</string>
+  <string name="gt_db282d70878d9d3c">"받지 못하셨나요?"</string>
   <string name="gt_9c8a9579abe55bdc">"방향"</string>
   <string name="gt_c953567840067771">"길찾기"</string>
   <string name="gt_22285980b45cde91">"모든 지갑 기능을 비활성화합니다. 지갑이 닫히며, 다시 활성화할 때까지 열리지 않습니다."</string>
@@ -396,7 +390,7 @@
   <string name="gt_d003d9b4e9041e93">"중복된 정기 결제 속성"</string>
   <string name="gt_a9f51566bd6705f7">"E"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
-  <string name="gt_464c4ffd019e1e96">"편집"</string>
+  <string name="gt_464c4ffd019e1e96">"수정"</string>
   <string name="gt_f0a8e5021846e6dd">"긴급 연락용 이메일 수정"</string>
   <string name="gt_72f2925371ee93bd">"Esplora API 수정"</string>
   <string name="gt_7fdd70e51ffe66a8">"라이트닝 주소 수정"</string>
@@ -416,7 +410,6 @@
   <string name="gt_a9214c2e38df7318">"긴급 출금"</string>
   <string name="gt_cade2f4efb6f7c99">"에뮬레이터"</string>
   <string name="gt_ae08e4962577a7b8">"자동 백업 켜기"</string>
-  <string name="gt_682be64ae7801fd0">"알림 켜기"</string>
   <string name="gt_1cd009ba27e712a8">"지갑 인증 활성화"</string>
   <string name="gt_2941322d77d0f67a">"암호화된 지갑 스냅샷"</string>
   <string name="gt_14303aa0c4a08d39">"종료일"</string>
@@ -441,7 +434,6 @@
   <string name="gt_b07b96712b96ce92">"0보다 큰 금액을 입력해 주세요."</string>
   <string name="gt_a553c3e6a86cf907">"결제 횟수를 입력하세요."</string>
   <string name="gt_d22d6bb98979c568">"%1$s(으)로 보낸 코드를 입력하세요"</string>
-  <string name="gt_f6ff8ea16534cd0c">"12개 또는 24개 단어를 순서대로 입력하거나 원하는 단어 입력란에 전체 문구를 붙여넣으세요."</string>
   <string name="gt_06e4151b65a65de5">"복구 문구를 입력하세요."</string>
   <string name="gt_2c41befe9ea4cd5c">"입력 형식"</string>
   <string name="gt_54a0e8c17ebb21a1">"오류"</string>
@@ -569,12 +561,8 @@
   <string name="gt_5628552b1771ed1c">"더 공정한 금융 체계를 향한 희망."</string>
   <string name="gt_28b8708f20cec955">"시간: %1$s"</string>
   <string name="gt_06a1ee61a3f25ce6">"금액을 입력하세요"</string>
-  <string name="gt_7328abbbd5958e9b">"저장 완료, 계속하기"</string>
-  <string name="gt_d4d10acb9e4722e2">"동의"</string>
   <string name="gt_4c2a3b5df96f8af7">"이미 지갑이 있어요"</string>
   <string name="gt_ef9a2be3b826ee15">"내역을 확인했습니다"</string>
-  <string name="gt_9bb898fd8ad06771">"거부"</string>
-  <string name="gt_1e8d015a3e069b84">"알림을 켰어요 - 다시 확인"</string>
   <string name="gt_9e0f9b800b0db2b0">"동일한 작업이 반복될 수 있음을 이해합니다"</string>
   <string name="gt_806f6591e2359170">"복구 문구를 다른 사람과 공유하지 않겠습니다."</string>
   <string name="gt_306becc0aba824d9">"내역 확인 완료, 새 결제 시작"</string>
@@ -613,7 +601,7 @@
   <string name="gt_a1487c34b5c577e1">"Ark에 참여하는 중"</string>
   <string name="gt_6c9c568abe67785a">"저널을 격리할 수 없습니다"</string>
   <string name="gt_78bc8448cb3e1be8">"KRW"</string>
-  <string name="gt_9cbf9327c3a565fc">"Noah를 깨워 두세요"</string>
+  <string name="gt_9cbf9327c3a565fc">"Noah를 깨어 있게 하세요"</string>
   <string name="gt_8bfbe0f76a6ac225">"결제가 완료될 때까지 Noah를 열어 두세요."</string>
   <string name="gt_48d1780a0dd94191">"시도 유지"</string>
   <string name="gt_d5cd60055e4743d9">"계속 확인"</string>
@@ -646,7 +634,6 @@
   <string name="gt_6d65584b25b63eed">"Lightning 수신 실패"</string>
   <string name="gt_2e657776a316f205">"라이트닝 주소"</string>
   <string name="gt_fd323c8b42efb171">"라이트닝 주소를 사용할 수 없습니다"</string>
-  <string name="gt_b814823eabbe9053">"백그라운드에서도 Lightning 및 Ark 결제를 계속 받을 수 있습니다."</string>
   <string name="gt_d38ade727afcbfed">"라이트닝 인보이스"</string>
   <string name="gt_31312f51a5df40b4">"라이트닝 인보이스는 한 번만 결제할 수 있습니다. 라이트닝 주소나 라이트닝 오퍼를 사용하세요"</string>
   <string name="gt_ca7eb2b925786eb2">"라이트닝 오퍼"</string>
@@ -777,10 +764,8 @@
   <string name="gt_822918727e4f828f">"Noah 기본값"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah가 최종 결과를 확인하지 못했습니다. 다시 결제하지 마세요. 상태 확인으로는 새 결제가 제출되지 않습니다."</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noah가 잠겨 있습니다"</string>
-  <string name="gt_159ceccda632acb2">"Noah는 베타 버전입니다"</string>
-  <string name="gt_9354e260e9c82293">"Noah는 베타 버전이에요. 잃어도 괜찮은 금액만 보관하세요."</string>
+  <string name="gt_9354e260e9c82293">"Noah는 베타 버전입니다. 잃어도 괜찮은 만큼만 보관하세요."</string>
   <string name="gt_f590e31a6eb944e2">"Noah에서 백업을 마무리하는 중입니다. 잠시 후 다시 시도하세요."</string>
-  <string name="gt_6011bb0fd18f3808">"Noah는 아직 베타 버전으로, 자금을 잃을 위험이 있습니다. 잃어도 감당할 수 있는 금액만 입금하세요."</string>
   <string name="gt_338e68cc4323f294">"Noah 알림"</string>
   <string name="gt_88412489feb3f0b2">"GitHub의 Noah"</string>
   <string name="gt_f9e22cf4260bab0d">"Noah는 출금을 자동으로 진행합니다. 대기 중인 모든 출금을 수동으로 진행할 수도 있습니다."</string>
@@ -801,8 +786,8 @@
   <string name="gt_f9b73e1abc37cf5b">"메모(선택 사항)"</string>
   <string name="gt_0f03e776ef5cf27e">"메모는 639자 이하여야 합니다"</string>
   <string name="gt_045f910e6b3ce120">"메모는 639자 이하여야 합니다."</string>
-  <string name="gt_54ee6b72ca5e79e6">"알림이 필요해요"</string>
-  <string name="gt_fce40565eda8090e">"알림을 켜면 Noah가 결제를 받고 비트코인이 만료되기 전에 갱신할 수 있어요."</string>
+  <string name="gt_54ee6b72ca5e79e6">"알림이 필요합니다"</string>
+  <string name="gt_fce40565eda8090e">"알림을 켜면 Noah가 결제를 받고 비트코인이 만료되기 전에 갱신할 수 있습니다."</string>
   <string name="gt_44d87512663a5641">"Noto Sans Regular"</string>
   <string name="gt_fe18013d93d22f4f">"지금"</string>
   <string name="gt_c28fbd1a8ec4cf5b">"결제 횟수"</string>
@@ -824,7 +809,7 @@
   <string name="gt_9ef5c3ab9edb50eb">"온체인 송금"</string>
   <string name="gt_89cc4ee3c69a3b7e">"온체인 수수료"</string>
   <string name="gt_c35e69dac4ff6d3f">"남은 온체인 예비금"</string>
-  <string name="gt_4831cbdad7ad0bb6">"지갑에 관한 긴급 알림에만 사용해요."</string>
+  <string name="gt_4831cbdad7ad0bb6">"지갑에 관한 긴급 알림에만 사용합니다."</string>
   <string name="gt_4e8219ab02c82033">"Noah GitHub 저장소 열기"</string>
   <string name="gt_e2abf2ae09785e85">"Noah를 열어 %2$s에게 %1$s 보내세요."</string>
   <string name="gt_f9d77f6cb2f252e8">"프로필 열기"</string>
@@ -833,7 +818,6 @@
   <string name="gt_e7dc29e6891dbd79">"Telegram 지원 채팅 열기"</string>
   <string name="gt_3163b5ddd02cd435">"배터리 설정 열기"</string>
   <string name="gt_ca381c1e76e681b6">"설정 열기"</string>
-  <string name="gt_7c7462add12a7b6c">"설정을 열어 알림 허용"</string>
   <string name="gt_762a16c9c74f5e0f">"지갑 열기"</string>
   <string name="gt_6be6caff13df7c0f">"엔드포인트를 변경하기 전에 지갑을 여세요."</string>
   <string name="gt_f4ce6b8f22a13fe1">"브라우저에서 %1$s 열기"</string>
@@ -882,7 +866,7 @@
   <string name="gt_0461277d349fcc79">"대기 중인 라운드 상태를 확인할 수 없음"</string>
   <string name="gt_3b3123699c5288f1">"이 기기에서 이 지갑과 복구 문구를 영구적으로 삭제합니다."</string>
   <string name="gt_dbb6cf817820de0b">"권한 필요"</string>
-  <string name="gt_cbf613fce96573ac">"이름 고르기"</string>
+  <string name="gt_cbf613fce96573ac">"이름 정하기"</string>
   <string name="gt_46d931c1d03b0781">"현재 지도에 표시된 장소"</string>
   <string name="gt_436e61016e26fcb7">"재생"</string>
   <string name="gt_c12ff673ae9836ca">"재생 위치"</string>
@@ -907,8 +891,6 @@
   <string name="gt_a4760bf008eee954">"출금 진행하기"</string>
   <string name="gt_20febb4412fd675a">"공개 키"</string>
   <string name="gt_aa57b5a7f2eca156">"푸시 알림 등록이 완료되지 않았습니다."</string>
-  <string name="gt_207aa9dc56e39114">"푸시 알림은 앱이 정상적으로 작동하는 데 꼭 필요하며, 켜 두면 VTXO 만료를 방지하는 데 도움이 됩니다."</string>
-  <string name="gt_1a116c71830a205c">"푸시 알림을 계속 받을 수 있습니다"</string>
   <string name="gt_4945b348470f72c9">"푸시 알림 권한이 허용되지 않았습니다"</string>
   <string name="gt_cce48536f85a3b10">"푸시 토큰은 실제 기기에서만 사용할 수 있습니다"</string>
   <string name="gt_5a779155eadaaa3b">"QR 코드"</string>
@@ -925,7 +907,6 @@
   <string name="gt_85cf80c2abc7c5f1">"수신 DoS 방어"</string>
   <string name="gt_09ce4246d5463e45">"받기 작업 실패 (%1$s): %2$s"</string>
   <string name="gt_bedd47a25dbed27f">"Bitcoin을 받거나 보내면 내역이 표시됩니다."</string>
-  <string name="gt_07253a69f335ca41">"앱이 닫혀 있어도 받기"</string>
   <string name="gt_49f19beeecf442ef">"받음"</string>
   <string name="gt_076d920ee7b4ec38">"수신 주소"</string>
   <string name="gt_9ef7d438ce5b0a38">"최근 활동"</string>
@@ -965,7 +946,6 @@
   <string name="gt_abc9793f7de5bd33">"VTXO 새로고침"</string>
   <string name="gt_12e9814ebb03b5ec">"VTXO 새로고침"</string>
   <string name="gt_a6d23a9a6e2f9501">"앱 로그 새로고침"</string>
-  <string name="gt_fdcc6b6c73a300eb">"만료 임박 VTXO 갱신"</string>
   <string name="gt_5b987d1a4ee6d349">"갱신 수수료"</string>
   <string name="gt_ffc1364cefebd7a2">"네트워크 상태 새로 고침"</string>
   <string name="gt_5dbbba5210b8e6c2">"결제 상태 새로고침"</string>
@@ -997,13 +977,12 @@
   <string name="gt_0e4ca5508bb39bf5">"오류 신고 또는 의견 보내기"</string>
   <string name="gt_1adc3ea3fdbcbb26">"Noah 팀에 버그를 신고하거나 의견 보내기"</string>
   <string name="gt_fae09a4a2a5c48bb">"카메라 접근 권한 요청 중…"</string>
-  <string name="gt_8b895b87b336d87a">"요청 중..."</string>
   <string name="gt_e7e0eccff098717d">"지갑 잠금 해제 시 인증 필요"</string>
   <string name="gt_1c7052816e70489e">"지갑 잠금 해제 시 생체 인증 필요"</string>
   <string name="gt_ab6b06887f08fcb1">"입금에 필요한 확인 수"</string>
   <string name="gt_1f94843777aed851">"다시 보내기"</string>
   <string name="gt_8bbbb0b609c07e3f">"코드 다시 보내기"</string>
-  <string name="gt_538931fb28538397">"%1$s 후에 코드를 다시 보낼 수 있어요"</string>
+  <string name="gt_538931fb28538397">"%1$s 후 코드 다시 보내기"</string>
   <string name="gt_daee7606b339f3c3">"초기화"</string>
   <string name="gt_c72212abb47303d2">"서버 등록 초기화"</string>
   <string name="gt_6be538eb01cfe029">"Noah 기본값으로 재설정"</string>
@@ -1168,7 +1147,7 @@
   <string name="gt_cb24f22aa3099c53">"동기화된 최신 블록"</string>
   <string name="gt_8a046cc90ab0a981">"동기화 중…"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
-  <string name="gt_c76e6790bc5b4018">"이미 사용 중"</string>
+  <string name="gt_c76e6790bc5b4018">"사용 중"</string>
   <string name="gt_b1d47326a9839d79">"과세는 도둑질입니다."</string>
   <string name="gt_890ab358a55d7fce">"기술 세부 정보"</string>
   <string name="gt_55c7eb36ed47d5f6">"Telegram 지원"</string>
@@ -1176,7 +1155,7 @@
   <string name="gt_0b38e7e7a0f80600">"엔드포인트 테스트 및 저장"</string>
   <string name="gt_487cace9d67bfca4">"엔드포인트 테스트 중..."</string>
   <string name="gt_2034ce6155036f8a">"감사합니다"</string>
-  <string name="gt_2e48454ee6ef8e0a">"코드가 맞지 않아요. 다시 시도하세요."</string>
+  <string name="gt_2e48454ee6ef8e0a">"코드가 맞지 않습니다. 다시 시도하세요."</string>
   <string name="gt_19fe068bbdba00e6">"Esplora 엔드포인트에는 쿼리 문자열이나 프래그먼트를 포함할 수 없습니다."</string>
   <string name="gt_0ac08a81559f95ee">"Esplora 엔드포인트에는 인증 정보를 포함할 수 없습니다."</string>
   <string name="gt_96100ca2d23b8821">"Esplora 엔드포인트가 다른 Bitcoin 네트워크용입니다."</string>
@@ -1227,7 +1206,7 @@
   <string name="gt_89c82557e3a98b8d">"차선책은 없습니다."</string>
   <string name="gt_e05786d8bf8e865c">"이 코인은 사용할 수 없거나 검토 중인 다른 결제에 사용하도록 예약되어 있습니다. 해당 결제의 검토 화면을 닫고 다시 시도하세요."</string>
   <string name="gt_7689ea8bed273cfe">"이 정기 결제들은 이전 지갑에 속합니다. 내역은 보존되어 있지만 실행할 수는 없습니다. 해당 결제를 취소하고 이 지갑에서 새 일정을 만드세요."</string>
-  <string name="gt_2f1c3676c41f927f">"이 단어들로는 올바른 문구가 되지 않아요."</string>
+  <string name="gt_2f1c3676c41f927f">"이 단어들은 올바른 문구가 아닙니다."</string>
   <string name="gt_23333df084dfad80">"이 라이트닝 인보이스는 만료되었습니다. 새 결제 요청서를 요청해 주세요."</string>
   <string name="gt_74bb47afc8d3b8c4">"이 QR 코드에는 라이트닝 주소만 포함되어 있습니다."</string>
   <string name="gt_1d4b5ac7d8751913">"이 VTXO는 더 이상 지갑의 현재 VTXO 목록에 없습니다. 새로고침하여 상태를 확인하세요."</string>
@@ -1246,7 +1225,7 @@
   <string name="gt_f2faa6b386bacbee">"이 출금은 더 이상 취소할 수 없습니다. 최종 거래가 이미 전파되었을 수 있습니다. 상태를 새로 고치세요."</string>
   <string name="gt_5ed0c20bff01c0ca">"이 결제 요청서는 이미 결제되었습니다. 이번 회차에는 다시 전송하지 않았습니다. 재개하기 전에 받는 사람에게 확인하세요."</string>
   <string name="gt_ea01f6e9945bb818">"이미 결제된 결제 요청서입니다: %1$s sats"</string>
-  <string name="gt_e299e88d58a6c570">"다른 사람들이 이 이름으로 송금해요."</string>
+  <string name="gt_e299e88d58a6c570">"다른 사람들이 이 이름으로 송금합니다."</string>
   <string name="gt_766460156a897a88">"이 이전 버전의 결제에는 지갑 식별 정보가 없습니다. 삭제하기 전에 기록과 받는 사람을 확인하세요."</string>
   <string name="gt_bfbb491d06ec6963">"이 링크를 열 수 없습니다."</string>
   <string name="gt_70f6be0e72ef41e2">"이 작업으로 비상 출금 절차에 필요한 Bitcoin 거래가 전파되거나 거래 수수료가 인상될 수 있습니다. 수수료는 온체인 잔액에서 지불됩니다. 최종 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
@@ -1285,7 +1264,6 @@
   <string name="gt_950abf62a77396f0">"이체됨"</string>
   <string name="gt_d8b8392e2c542950">"다시 시도"</string>
   <string name="gt_92dfd3632baeb6d4">"알림 켜기"</string>
-  <string name="gt_35282984583528c6">"푸시 알림 켜기"</string>
   <string name="gt_baaddf70fb5d432b">"유형"</string>
   <string name="gt_11f461fc56ac26c4">"확인하려면 delete를 입력하세요"</string>
   <string name="gt_9b202ecbc6d45c6d">"US"</string>
@@ -1360,7 +1338,6 @@
   <string name="gt_d8a3ba6381971636">"VTXO"</string>
   <string name="gt_12a5507dc6b8ad1f">"Ark의 VTXO는 Bitcoin의 UTXO와 같은 역할을 합니다"</string>
   <string name="gt_2e1c5b1d82d2d6e7">"330 sats 미만의 VTXO는 온체인으로 출금할 수 없습니다."</string>
-  <string name="gt_3840dceff963d228">"앱이 닫혀 있어도 VTXO가 만료되지 않도록 백그라운드에서 계속 갱신됩니다."</string>
   <string name="gt_fbf9a3d817acb63b">"선택한 VTXO"</string>
   <string name="gt_72d4d360dea4e316">"선택된 VTXO: %1$s"</string>
   <string name="gt_f414d2a540db754b">"백업 검증 중…"</string>
@@ -1402,18 +1379,14 @@
   <string name="gt_d761927c2b2aeaf0">"지갑이 일시 중지되었거나 교체 대기 중입니다. 전송이 중지되었습니다."</string>
   <string name="gt_795e0058d0191f98">"지갑이 일시 중지되었습니다. 설정에서 지갑을 다시 활성화하세요."</string>
   <string name="gt_62c0adf992b7f00b">"지갑 사용 불가"</string>
-  <string name="gt_b22ad91c404edd55">"VTXO가 만료되지 않도록 백그라운드에서 갱신을 시도합니다."</string>
   <string name="gt_ebeb067bb53b2c70">"%1$s 주소로 6자리 인증 코드를 보냈습니다"</string>
   <string name="gt_9933a329e6966856">"다음 이메일 주소로 6자리 인증 코드를 보냈습니다:"</string>
   <string name="gt_b5a229ac8becc603">"웹사이트"</string>
   <string name="gt_2975132481a7a695">"매주"</string>
-  <string name="gt_6621249514b7887c">"다시 오신 것을 환영해요"</string>
-  <string name="gt_e36eb21b97962476">"Noah에 오신 것을 환영합니다"</string>
+  <string name="gt_6621249514b7887c">"다시 오신 것을 환영합니다"</string>
   <string name="gt_dca1b758516558c0">"의심이 들 때는 더 넓게 보세요."</string>
   <string name="gt_bdb5855e3bf745db">"누구에게 결제하시나요?"</string>
-  <string name="gt_94dc481c25cf7a6a">"최적화하지 않으면 알림이 지연될 뿐 아니라 아예 오지 않을 수 있습니다."</string>
-  <string name="gt_9c91b3b673435dea">"알림이 없으면 Noah가 결제를 받거나 비트코인이 만료되기 전에 갱신할 수 없어요."</string>
-  <string name="gt_1e94ca03313cb795">"단어 %1$s"</string>
+  <string name="gt_9c91b3b673435dea">"알림이 없으면 Noah는 결제를 받거나 비트코인이 만료되기 전에 갱신할 수 없습니다."</string>
   <string name="gt_426a2521e0e63bcc">"단어 %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"처리 중"</string>
   <string name="gt_e325adc5b94bc4ab">"다음 %1$s개의 단어를 순서대로 적어 안전한 곳에 보관하세요. 이 문구는 지갑을 복구할 수 있는 유일한 수단입니다."</string>
@@ -1443,7 +1416,7 @@
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
   <string name="gt_fda0b967abcc3d16">"지갑이 안전하게 백업되었습니다."</string>
   <string name="gt_50720c8f08138a5e">"현재 지갑 사용이 중지되어 있습니다. 모든 지갑 기능을 사용할 수 없습니다."</string>
-  <string name="gt_09233d973ee617bd">"지갑이 준비되었어요."</string>
+  <string name="gt_09233d973ee617bd">"지갑이 준비되었습니다."</string>
   <string name="gt_a672c47ec618d7b7">"지갑이 일시 중지되었습니다. 거래를 보려면 지갑을 재개하세요."</string>
   <string name="gt_b4a8692900c62adf">"지갑이 일시 중지되었습니다. 복구를 재개하여 백업을 복원하거나 기기에서 이 지갑을 삭제하세요."</string>
   <string name="gt_23a3ca761b70abf7">"지갑이 아직 준비되지 않았습니다. 다시 시도해 주세요."</string>
@@ -1478,7 +1451,6 @@
   <string name="gt_4cf1134a8d162908">"라운드 %1$s개 대기 중"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s 환율을 확인할 수 없음"</string>
   <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
-  <string name="gt_c76a6d8b5bc0e37b">"%2$s개 단어 중 %1$s개"</string>
   <string name="gt_d09927bfa36bfdb0">"Ark에서 %1$s sats 사용 가능"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s 결제됨"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
@@ -1494,5 +1466,4 @@
   <string name="receive">"받기"</string>
   <string name="send">"보내기"</string>
   <string name="history">"내역"</string>
-  <string name="launch_welcome">"Noah에 오신 것을 환영합니다"</string>
 </resources>

@@ -23,54 +23,83 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.currentStateAsState
 import kotlinx.coroutines.launch
+import androidx.compose.animation.togetherWith
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.Nostr
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The redesigned onboarding: Welcome → Creating → Name → Email → Notifications (→ battery) → Done, or
+ * Welcome → Restore → Restoring. One tree canvas sits behind every step; wallet, server and push logic
+ * stay in AppModel and the existing services.
+ */
 @Composable
 fun Onboarding(model: AppModel) {
-    var choosingLanguage by rememberSaveable { mutableStateOf(false) }
-    if (choosingLanguage) WalletModalBottomSheet(onDismissRequest = { choosingLanguage = false }) {
-        com.noahwallet.ui.settings.PreferenceScreen(model, com.noahwallet.ui.settings.SettingsDestination.Language) { choosingLanguage = false }
-    }
+    val presentation = androidx.lifecycle.viewmodel.compose.viewModel<com.noahwallet.ui.onboarding.OnboardingPresentation>()
+    presentation.arrive(model.step)
     var history by rememberSaveable { mutableStateOf(listOf(model.step)) }
-    LaunchedEffect(model.step) { history = OnboardingNavigation.visit(history, model.step) }
+    // Read by the transition when the step changes; not state, so setting it never recomposes.
+    val direction = remember { object { var back = false } }
+    LaunchedEffect(model.step) { history = OnboardingNavigation.visit(history, model.step); direction.back = false }
     fun goBack() {
-        history = OnboardingNavigation.back(OnboardingNavigation.visit(history, model.step), model.busy, model.restore.canLeave)
-        model.step = history.last()
+        val previous = OnboardingNavigation.back(OnboardingNavigation.visit(history, model.step), model.busy, model.restore.canLeave)
+        if (previous.last() == model.step) return
+        history = previous; direction.back = true
+        model.step = previous.last()
     }
+    // Predictive back: never back out of creation, restore or Done (OnboardingNavigation's boundaries).
     BackHandler(enabled = model.step != "welcome") { goBack() }
-    when (model.step) {
-        "welcome" -> NoahForm("Welcome to Noah") {
-            TextButton({ choosingLanguage = true }) { Text(tr("Language")) }
-            Spacer(Modifier.height(80.dp))
-            Text(tr("Create a new wallet or restore an existing one."))
-            NoahButton("Create Wallet") { model.step = "beta" }
-            NoahButton("Restore Wallet", secondary = true) { model.step = "restore" }
-        }
-        "restore" -> RestoreWalletScreen(model)
-        "beta" -> NoahForm("Noah is in beta") {
-            Text(tr("Noah is still in beta. There is a possibility you could lose money. Only deposit funds you are willing to lose."))
-            NoahButton(if (model.busy) "Creating your wallet..." else "I accept", !model.busy) {
-                model.action("Creation failed. Please try again.") { model.create() }
+    val scene = when (model.step) {
+        "welcome" -> com.noahwallet.ui.onboarding.SceneMode.welcome
+        "creating" -> com.noahwallet.ui.onboarding.SceneMode.create
+        "restoring" -> com.noahwallet.ui.onboarding.SceneMode.restore
+        "notifications" -> if (presentation.notificationStage == com.noahwallet.ui.onboarding.NotificationStage.distributor)
+            com.noahwallet.ui.onboarding.SceneMode.none else com.noahwallet.ui.onboarding.SceneMode.conveyor
+        else -> com.noahwallet.ui.onboarding.SceneMode.none
+    }
+    SideEffect { presentation.scene.show(scene) }
+    com.noahwallet.ui.onboarding.OnboardingFrame(presentation.scene) {
+        val reduceMotion = com.noahwallet.ui.onboarding.LocalReduceMotion.current
+        androidx.compose.animation.AnimatedContent(model.step, transitionSpec = {
+            onboardingTransition(targetState, direction.back, reduceMotion)
+        }, label = "onboarding") { step ->
+            when (step) {
+                "welcome" -> com.noahwallet.ui.onboarding.WelcomeStep(model, presentation)
+                "restore" -> RestoreWalletScreen(model)
+                "creating" -> com.noahwallet.ui.onboarding.CreatingStep(model, presentation)
+                "restoring" -> com.noahwallet.ui.onboarding.RestoringStep(model, presentation)
+                "name" -> com.noahwallet.ui.onboarding.NameStep(model, presentation)
+                "email" -> com.noahwallet.ui.onboarding.EmailStep(model, presentation)
+                "notifications" -> com.noahwallet.ui.onboarding.NotificationsStep(model, presentation)
+                "battery" -> com.noahwallet.ui.launch.BatteryOptimizationScreen(model, onBack = { goBack() }) { model.step = "done" }
+                "done" -> com.noahwallet.ui.onboarding.DoneStep(model, presentation)
             }
-            NoahButton("I decline", !model.busy, secondary = true) { model.step = "welcome" }
         }
-        "mnemonic" -> MnemonicScreen(model)
-        "email" -> EmergencyEmailScreen(model, fromOnboarding = true) { model.step = com.noahwallet.ui.launch.PlatformGateRules.afterEmail(
-            com.noahwallet.ui.launch.PlatformAccess.unifiedPush(model.getApplication()),
-            com.noahwallet.ui.launch.PlatformAccess.batteryEnabled(model.getApplication())) }
-        "unified-push" -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = true) { model.step = "battery" }
-        "battery" -> com.noahwallet.ui.launch.BatteryOptimizationScreen(model, onBack = { goBack() }) { model.step = "lightning" }
-        "lightning" -> LightningScreen(model)
     }
 }
 
+/**
+ * Steps slide in from the trailing edge (back: the leading edge) with a fade, on the snappy spring. Steps with
+ * the tree only fade, so the shared canvas never slides; Reduce Motion fades everything in 180 ms.
+ */
+private fun onboardingTransition(target: String, back: Boolean, reduceMotion: Boolean): androidx.compose.animation.ContentTransform {
+    val fade = androidx.compose.animation.core.tween<Float>(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS)
+    if (reduceMotion || target in setOf("welcome", "creating", "restoring", "notifications"))
+        return androidx.compose.animation.fadeIn(if (reduceMotion) fade else com.noahwallet.ui.design.NoahTokens.Motion.snappy()) togetherWith
+            androidx.compose.animation.fadeOut(if (reduceMotion) fade else com.noahwallet.ui.design.NoahTokens.Motion.snappy())
+    val spring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<androidx.compose.ui.unit.IntOffset>()
+    val fadeSpring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<Float>()
+    return (androidx.compose.animation.slideInHorizontally(spring) { if (back) -it / 10 else it / 9 } + androidx.compose.animation.fadeIn(fadeSpring)) togetherWith
+        (androidx.compose.animation.slideOutHorizontally(spring) { if (back) it / 9 else -it / 12 } + androidx.compose.animation.fadeOut(fadeSpring))
+}
+
+/**
+ * The authenticated recovery-phrase view (Settings, and the Home "Back up your wallet" prompt). While this
+ * wallet isn't backed up, it ends with "I’ve written it down", which records the backup.
+ */
 @Composable
-fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
+fun MnemonicScreen(model: AppModel, onBackedUp: () -> Unit = {}) {
     val context = LocalContext.current
     val activity = context as Activity
     var words by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -97,13 +126,6 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
     val generation = model.walletLock.generation
     LaunchedEffect(generation) { words = emptyList(); copied = false; warningGeneration = null; clear.run() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val resumed = lifecycle.currentStateAsState().value.isAtLeast(Lifecycle.State.RESUMED)
-    LaunchedEffect(model, generation, resumed) {
-        if (!fromSettings && resumed) {
-            val loaded = model.mnemonic()
-            if (generation == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
-        }
-    }
     suspend fun reveal() {
         val started = model.walletLock.generation
         val fragment = activity as androidx.fragment.app.FragmentActivity
@@ -114,7 +136,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
             if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
         }
     }
-    LaunchedEffect(model) { if (fromSettings) reveal() }
+    LaunchedEffect(model) { reveal() }
     if (warningGeneration != null) WalletAlertDialog(
         onDismissRequest = { warningGeneration = null },
         title = { Text(tr("No screen lock")) },
@@ -150,7 +172,7 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
             handler.removeCallbacks(clear); handler.postDelayed(clear, 120_000)
             copied = true
         }
-        if (fromSettings && words.isEmpty()) {
+        if (words.isEmpty()) {
             model.walletLock.error?.let { Text(tr(it)) }
             NoahButton("Authenticate to view your seed phrase", !model.walletLock.authenticating) {
                 scope.launch {
@@ -158,18 +180,20 @@ fun MnemonicScreen(model: AppModel, fromSettings: Boolean = false) {
                 }
             }
         }
-        if (!fromSettings) NoahButton("I Have Saved It, Continue", words.isNotEmpty()) { model.step = "email" }
+        if (words.isNotEmpty() && !model.recoveryPhraseBackedUp) NoahButton("I’ve written it down", !model.busy) {
+            model.action("Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); onBackedUp() }
+        }
     }
 }
 
 @Composable
-fun EmergencyEmailScreen(model: AppModel, fromOnboarding: Boolean = false, onContinue: () -> Unit) {
+fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     var sent by rememberSaveable { mutableStateOf(false) }
     var registered by remember { mutableStateOf(false) }
     val focus = LocalFocusManager.current
-    val presentation = EmergencyEmailPresentation(fromOnboarding, model.server.state.isEmailVerified == true, model.server.state.emailAddress)
+    val presentation = EmergencyEmailPresentation(model.server.state.isEmailVerified == true, model.server.state.emailAddress)
     val context = LocalContext.current
     fun register() = model.action("Failed to register with server. Please try again.") {
         model.server.ensureRegistered(); registered = true
@@ -207,19 +231,18 @@ fun EmergencyEmailScreen(model: AppModel, fromOnboarding: Boolean = false, onCon
                 enabled = !model.busy, singleLine = true)
             if (!registered) NoahButton("Retry registration", !model.busy, secondary = true) { register() }
             NoahButton(if (model.busy) "Please wait…" else "Send Verification Code", registered && email.isNotBlank() && !model.busy) { send() }
-            if (presentation.canSkip) NoahButton("Continue without email", registered && !model.busy, secondary = true) { focus.clearFocus(); onContinue() }
         }
     }
 }
 
 @Composable
-fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
+fun LightningScreen(model: AppModel, onContinue: suspend () -> Unit) {
     var username by rememberSaveable { mutableStateOf(model.server.state.lightningAddress?.substringBefore('@') ?: "") }
     var npub by rememberSaveable { mutableStateOf(Nostr.npub(model.server.state.nostrPubkey)) }
     val focus = LocalFocusManager.current
     val domain = LightningIdentity.domain(BuildConfig.APP_VARIANT)
     val unchanged = LightningIdentity.unchanged(username, npub, model.server.state.lightningAddress, model.server.state.nostrPubkey, domain)
-    fun finish() { focus.clearFocus(); model.action("Couldn't finish setup. Please try again.") { if (onContinue != null) onContinue() else model.finish() } }
+    fun finish() { focus.clearFocus(); model.action("Couldn't finish setup. Please try again.") { onContinue() } }
     NoahForm("Choose your Lightning Address") {
         Text(tr("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier."))
         OutlinedTextField(username, { username = LightningIdentity.normalizeUsername(it) }, label = { Text(tr("Username")) },
@@ -235,17 +258,16 @@ fun LightningScreen(model: AppModel, onContinue: (suspend () -> Unit)? = null) {
             catch (failure: IllegalArgumentException) { model.error = failure.message; return@NoahButton }
             focus.clearFocus()
             model.action("Failed to update Lightning address. Please try again.", useServerMessage = true) {
-                model.server.saveIdentity(username, npub); if (onContinue != null) onContinue() else model.finish()
+                model.server.saveIdentity(username, npub); onContinue()
             }
         }
         NoahButton("Skip", !model.busy, secondary = true) { finish() }
     }
 }
 
-internal data class EmergencyEmailPresentation(val fromOnboarding: Boolean, val verified: Boolean, val email: String?) {
-    val canSkip get() = fromOnboarding
+internal data class EmergencyEmailPresentation(val verified: Boolean, val email: String?) {
     fun explanation(context: Context): String {
-        if (!fromOnboarding && verified) {
+        if (verified) {
             if (!email.isNullOrEmpty()) return com.noahwallet.localization.L10n.text(context,
                 "Your current email, {email}, will stay active until the new email is verified.", email)
             return com.noahwallet.localization.L10n.text(context,

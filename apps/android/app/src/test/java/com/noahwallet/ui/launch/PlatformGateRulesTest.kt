@@ -23,10 +23,9 @@ class PlatformGateRulesTest {
                 flag("batteryEnabled"), flag("batterySeen"))?.name)
         }
     }
-    @Test fun emailOnboardingRouting() {
-        assertEquals("unified-push", PlatformGateRules.afterEmail(true, true))
-        assertEquals("unified-push", PlatformGateRules.afterEmail(true, false))
-        assertEquals("battery", PlatformGateRules.afterEmail(false, true))
-        assertEquals("lightning", PlatformGateRules.afterEmail(false, false))
+    @Test fun notificationsOnboardingRouting() {
+        // UnifiedPush setup finishes inside the Notifications step; battery stays Android's own step before Done.
+        assertEquals("battery", PlatformGateRules.afterNotifications(true))
+        assertEquals("done", PlatformGateRules.afterNotifications(false))
     }
 }

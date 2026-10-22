@@ -104,7 +104,9 @@ fun NoahApp(model: AppModel) {
                     entry<Destination> { destination ->
                         if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, onViewAll = {
                             selectedTab = Destination.History
-                        }, onRepeatPayment = repeat, onQR = { backStack.add(QRDestination) }) { backStack.add(SettingsDestination.Settings) }
+                        }, onRepeatPayment = repeat, onQR = { backStack.add(QRDestination) }, onBackup = { backStack.add(SettingsDestination.Seed) }) {
+                            backStack.add(SettingsDestination.Settings)
+                        }
                         else if (destination == Destination.History) TransactionsScreen(model, repeat)
                         else if (destination == Destination.Receive) ReceiveScreen(model) {
                             showHome()

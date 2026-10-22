@@ -13,9 +13,6 @@ object PlatformGateRules {
         !batterySeen && batteryEnabled -> Gate.battery
         else -> null
     }
-    fun afterEmail(unifiedPush: Boolean, batteryEnabled: Boolean) = when {
-        unifiedPush -> "unified-push"
-        batteryEnabled -> "battery"
-        else -> "lightning"
-    }
+    /** UnifiedPush setup happens inside the Notifications step; battery stays Android's own step. */
+    fun afterNotifications(batteryEnabled: Boolean) = if (batteryEnabled) "battery" else "done"
 }

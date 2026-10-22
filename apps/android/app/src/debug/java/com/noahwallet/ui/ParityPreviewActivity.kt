@@ -26,8 +26,8 @@ class ParityPreviewActivity : FragmentActivity() {
         setContent { NoahTheme { Surface { Box(Modifier.fillMaxSize().safeDrawingPadding()) {
             var result by remember { mutableStateOf<String?>(null) }
             when (intent.getStringExtra("screen")) {
-                "push" -> PushNotificationsRequiredScreen(false, { result = "Requested" }, { result = "Rechecked" })
-                "battery" -> BatteryOptimizationScreen(model) { result = "Continued" }
+                "push" -> PushNotificationsRequiredScreen(false) { result = "Requested" }
+                "battery" -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { BatteryOptimizationScreen(model) { result = "Continued" } }
                 "unified-push" -> UnifiedPushScreen(true) { result = "Continued" }
                 "rounds" -> PendingRoundsSheet(listOf(io.github.niteshbalusu11.bark.PendingRoundStatus(7u,
                     io.github.niteshbalusu11.bark.RoundOutcome.PENDING, "a".repeat(64), listOf("b".repeat(64)), "Example round error", false, false))) { finish() }

@@ -51,7 +51,7 @@ fun SettingsPage(model: AppModel, destination: SettingsDestination, onBack: () -
             SettingsDestination.Profile -> ProfileScreen(model, navigate)
             SettingsDestination.Language, SettingsDestination.Currency, SettingsDestination.Unit -> PreferenceScreen(model, destination, onBack)
             SettingsDestination.Backup -> BackupSettingsScreen(model)
-            SettingsDestination.Seed -> MnemonicScreen(model, fromSettings = true)
+            SettingsDestination.Seed -> MnemonicScreen(model, onBackedUp = onBack)
             SettingsDestination.Ark -> ArkInfoScreen(model, navigate)
             SettingsDestination.Esplora -> EsploraSettingsScreen(model)
             SettingsDestination.Export -> ExportScreen(model)

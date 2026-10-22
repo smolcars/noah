@@ -75,7 +75,7 @@ class AdaptiveLayoutDeviceTest {
             }
         }
         try {
-            for (step in listOf("welcome", "beta", "email", "lightning")) {
+            for (step in listOf("welcome", "name", "email", "notifications", "done")) {
                 instrumentation.runOnMainSync { model.step = step }
                 show("onboarding-$step", chrome = false) { Onboarding(model) }
             }

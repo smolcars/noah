@@ -63,14 +63,11 @@ class AccountParityTest {
         assertEquals(expected - setOf(WalletSettingsRow.UnifiedPush, WalletSettingsRow.Biometrics), walletSettingsRows(false, false))
     }
 
-    @Test fun replacementKeepsOldAddressAndCannotSkip() {
-        val replacement = EmergencyEmailPresentation(false, true, "old@example.com")
-        assertFalse(replacement.canSkip)
+    @Test fun replacementKeepsOldAddress() {
+        // Settings only: onboarding has its own optional email step.
+        val replacement = EmergencyEmailPresentation(true, "old@example.com")
         assertEquals("Your current email, old@example.com, will stay active until the new email is verified.", replacement.explanation(context))
         assertEquals("Your current email will stay active until the new email is verified.", replacement.copy(email = null).explanation(context))
-        assertTrue(replacement.copy(fromOnboarding = true).canSkip)
-        assertTrue(replacement.copy(fromOnboarding = true).explanation(context).startsWith("Email is optional."))
-        assertFalse(replacement.copy(verified = false).canSkip)
         assertTrue(replacement.copy(verified = false).explanation(context).startsWith("Email is optional."))
         context.getSharedPreferences("gt_store", 0).edit().putString(LegacyLocale.key, "es").commit()
         assertEquals(L10n.text(context, "Your current email, {email}, will stay active until the new email is verified.", "old@example.com"), replacement.explanation(context))

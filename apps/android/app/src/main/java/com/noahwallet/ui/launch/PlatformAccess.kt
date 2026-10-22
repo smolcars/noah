@@ -34,4 +34,14 @@ object PlatformAccess {
     ).any { intent -> runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false) }
     fun openSettings(context: Context) = context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
         Uri.parse("package:${context.packageName}")))
+    /** The app's own notification settings; after two denials Android no longer shows the prompt. */
+    fun openNotificationSettings(context: Context) {
+        val notifications = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        if (runCatching { context.startActivity(notifications) }.isFailure) openSettings(context)
+    }
+    /** Expo's flag, shared with RN: set before the first prompt so a later denial reads as denied. */
+    fun markNotificationsAsked(context: Context) = context.getSharedPreferences("expo.modules.permissions.asked", Context.MODE_PRIVATE)
+        .edit().putBoolean(Manifest.permission.POST_NOTIFICATIONS, true).apply()
+    fun notificationsAsked(context: Context) = context.getSharedPreferences("expo.modules.permissions.asked", Context.MODE_PRIVATE)
+        .getBoolean(Manifest.permission.POST_NOTIFICATIONS, false)
 }

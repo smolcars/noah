@@ -13,6 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -25,7 +28,7 @@ import kotlinx.coroutines.*
 import java.util.Locale
 
 @Composable
-fun HomeBanners(app: AppModel, refresh: Int) {
+fun HomeBanners(app: AppModel, refresh: Int, onBackup: () -> Unit = {}) {
     val background by com.noahwallet.services.wallet.WalletBackgroundActivity.changes.collectAsState()
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
@@ -56,6 +59,7 @@ fun HomeBanners(app: AppModel, refresh: Int) {
         }
     }
     version?.takeIf { it.updateRequired }?.let { UpdateWarningBanner(it, BuildConfig.VERSION_NAME, BuildConfig.APP_VARIANT) }
+    if (!app.recoveryPhraseBackedUp) BackupPrompt(onBackup)
     HomeRules.backup(backup, now, locale)?.let { banner -> StatusBanner(banner, retrying) {
         scope.launch {
             retrying = true
@@ -82,6 +86,18 @@ fun HomeBanners(app: AppModel, refresh: Int) {
         }
     }
     if (showRounds && active.isNotEmpty()) PendingRoundsSheet(active) { showRounds = false }
+}
+
+/** Quiet until the phrase is confirmed: opens the authenticated recovery-phrase view. */
+@Composable
+internal fun BackupPrompt(onClick: () -> Unit) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth().testTag("home-backup-prompt")) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            androidx.compose.foundation.layout.Box(Modifier.size(8.dp).background(com.noahwallet.ui.design.NoahTokens.Light.orange, CircleShape))
+            Spacer(Modifier.width(12.dp))
+            Text(tr("Back up your wallet"), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+        }
+    }
 }
 
 @Composable

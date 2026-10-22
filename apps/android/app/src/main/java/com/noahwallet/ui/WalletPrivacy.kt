@@ -56,6 +56,7 @@ internal fun WalletAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Com
 internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
     dragHandle: (@Composable () -> Unit)? = { BottomSheetDefaults.DragHandle() },
+    sheetMaxWidth: androidx.compose.ui.unit.Dp = AdaptiveLayout.readableWidth.dp,
     content: @Composable ColumnScope.() -> Unit) {
     val privacy = LocalWalletPrivacy.current
     val hinges = LocalFoldingFeatures.current
@@ -67,7 +68,7 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
     val sheetHeight = with(density) { (windowHeight - (horizontalFold ?: 0)).coerceAtLeast(1).toDp() }
     val verticalFolds = hinges.filter { it.height > it.width }
     ModalBottomSheet(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier.semantics { testTagsAsResourceId = true }.heightIn(max = sheetHeight),
-        sheetMaxWidth = AdaptiveLayout.readableWidth.dp,
+        sheetMaxWidth = sheetMaxWidth,
         sheetState = sheetState, sheetGesturesEnabled = !privacy.covered, dragHandle = dragHandle?.let { handle -> {
             Box(Modifier.fillMaxWidth().heightIn(max = sheetHeight).avoidHinge(verticalFolds),
                 contentAlignment = Alignment.Center) { handle() }

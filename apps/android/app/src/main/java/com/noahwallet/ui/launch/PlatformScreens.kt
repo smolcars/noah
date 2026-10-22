@@ -7,6 +7,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -21,22 +22,23 @@ import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.*
 import kotlinx.coroutines.*
 
+/** The launch gate's notifications screen: the onboarding Notifications step, frozen in its required state. */
 @Composable
-fun PushNotificationsRequiredScreen(requesting: Boolean, request: () -> Unit, retry: () -> Unit) {
+fun PushNotificationsRequiredScreen(requesting: Boolean, request: () -> Unit) {
     val context = LocalContext.current
     BackHandler { }
-    NoahForm("Turn on push notifications") {
-        Text(tr("Push notifications are critical for the app to function and enabling them helps prevent VTXOs from expiring."))
-        Text(tr("Refresh expiring VTXOs"), style = MaterialTheme.typography.titleMedium)
-        Text(tr("We attempt to refresh VTXOs in the background to prevent them from expiring."))
-        Text(tr("Receive while app is closed"), style = MaterialTheme.typography.titleMedium)
-        Text(tr("Lightning and Ark payments keep flowing, even in the background."))
-        NoahButton(if (requesting) "Requesting..." else "Enable notifications", !requesting, onClick = request)
-        NoahButton("I turned them on - check again", !requesting, secondary = true, onClick = retry)
-        NoahButton("Open settings to allow notifications", !requesting, secondary = true) { PlatformAccess.openSettings(context) }
+    val clock = androidx.lifecycle.viewmodel.compose.viewModel<com.noahwallet.ui.onboarding.GateScene>().clock
+    // Never asked (for example a restored or migrated wallet): offer the system prompt; otherwise only Settings.
+    val off = android.os.Build.VERSION.SDK_INT < 33 || PlatformAccess.notificationsAsked(context)
+    LaunchedEffect(Unit) { clock.show(com.noahwallet.ui.onboarding.SceneMode.conveyor) }
+    com.noahwallet.ui.onboarding.OnboardingFrame(clock) {
+        com.noahwallet.ui.onboarding.NotificationsContent(clock, off, busy = requesting) {
+            if (off) PlatformAccess.openNotificationSettings(context) else request()
+        }
     }
 }
 
+/** Android's battery-optimisation step: after Notifications in onboarding, and the launch gate for existing wallets. */
 @Composable
 fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onContinue: () -> Unit) {
     val context = LocalContext.current
@@ -65,15 +67,17 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
         onDispose { lifecycle.removeObserver(observer) }
     }
     BackHandler { if (!proceeding) onBack?.invoke() }
-    NoahForm("Disable battery optimization") {
-        Text(tr("Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly."))
-        Text(tr("Push notifications keep arriving"), style = MaterialTheme.typography.titleMedium)
-        Text(tr("Without optimization, notifications can drop off completely, not just be delayed."))
-        Text(tr("Background activity keeps working"), style = MaterialTheme.typography.titleMedium)
-        Text(tr("VTXOs keep refreshing in the background so they don't expire while the app is closed."))
-        NoahButton("Open battery settings") { failed = !PlatformAccess.openBattery(context) }
-        NoahButton("Skip", secondary = true) { proceed() }
-    }
+    com.noahwallet.ui.onboarding.FormLayout(trailingTop = {
+        com.noahwallet.ui.onboarding.TextAction(tr("Skip"), muted = true, enabled = !proceeding) { proceed() }
+    }, headline = { large ->
+        com.noahwallet.ui.onboarding.Headline(tr("Disable battery optimization"),
+            tr("Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly."),
+            large)
+    }, form = {}, actions = {
+        com.noahwallet.ui.onboarding.PillButton(tr("Open battery settings"), androidx.compose.ui.Modifier.fillMaxWidth()) {
+            failed = !PlatformAccess.openBattery(context)
+        }
+    })
     if (failed) WalletAlertDialog(onDismissRequest = { failed = false }, title = { Text(tr("Couldn't open battery settings")) },
         text = { Text(tr("Please open your device settings and allow Noah to run in the background, then continue.")) },
         confirmButton = { TextButton({ failed = false }) { Text(tr("OK")) } })
@@ -160,7 +164,6 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
                 finally { registering = false }
             }
         }
-        if (fromOnboarding) NoahButton("Skip", secondary = true, onClick = onContinue)
         Text(tr("Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."))
     }
 }

@@ -25,7 +25,7 @@ import androidx.lifecycle.repeatOnLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, onQR: () -> Unit, settings: () -> Unit) {
+fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatPayment) -> Unit, onQR: () -> Unit, onBackup: () -> Unit = {}, settings: () -> Unit) {
     var balanceExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedID by rememberSaveable { mutableStateOf<String?>(null) }
     var map by rememberSaveable { mutableStateOf(false) }
@@ -89,7 +89,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit, onRepeatPayment: (RepeatP
                     Modifier.background(if (BuildConfig.APP_VARIANT == "regtest") Color(0xFFFFCC00) else Color(0xFFFF9500), CircleShape)
                         .padding(horizontal = 10.dp, vertical = 4.dp), color = Color.Black,
                     style = MaterialTheme.typography.labelMedium)
-                com.noahwallet.ui.home.HomeBanners(model, refreshRevision)
+                com.noahwallet.ui.home.HomeBanners(model, refreshRevision, onBackup)
                 val locale = java.util.Locale.forLanguageTag(model.localeIdentifier)
                 val fiat = com.noahwallet.ui.home.HomeRules.fiat(model.summary?.balance?.totalSats?.toLong(), price, currency, locale, model.hidden)
                 if (fiat != null) Text(tr(fiat), style = MaterialTheme.typography.headlineMedium)
