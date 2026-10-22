@@ -51,9 +51,20 @@ internal class RecoveryWordEditText(context: Context, index: Int) : EditText(con
     private var downOffset = -1
     internal fun pressInsideSelection(offset: Int = downOffset) = hasSelection() && offset in selectionStart until selectionEnd
 
+    // A mouse moving onto the selection makes Editor start a global drag of it (every API from 24), and
+    // View.startDragAndDrop is final. Editor checks hasSelection() first, so hiding the selection during mouse
+    // moves turns that gesture into an ordinary mouse selection; clicks and selection drags are unchanged.
+    private var mouseMove = false
+    override fun hasSelection() = !mouseMove && super.hasSelection()
+
     override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
         if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) downOffset = getOffsetForPosition(event.x, event.y)
-        return super.onTouchEvent(event)
+        mouseMove = event.actionMasked == android.view.MotionEvent.ACTION_MOVE && event.isFromSource(android.view.InputDevice.SOURCE_MOUSE)
+        try {
+            return super.onTouchEvent(event)
+        } finally {
+            mouseMove = false
+        }
     }
 
     /** Toolbar items, Ctrl+C/X and the IME's context-menu actions all arrive here. */

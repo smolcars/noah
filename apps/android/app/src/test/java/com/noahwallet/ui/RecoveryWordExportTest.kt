@@ -1,22 +1,31 @@
 package com.noahwallet.ui
 
+import android.app.Activity
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Looper
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.EditText
 import android.widget.PopupMenu
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLog
 
 /** Visible recovery words never leave the field; paste (including a whole phrase) still works. Public test words only. */
 @RunWith(RobolectricTestRunner::class)
@@ -102,5 +111,76 @@ class RecoveryWordExportTest {
         assertEquals(field.pressInsideSelection(field.getOffsetForPosition(x, y)), field.pressInsideSelection())
         field.setSelection(7)
         assertFalse("without a selection a long press selects or pastes as usual", field.pressInsideSelection(3))
+    }
+
+    // Mouse positions map to text offsets, so these need real text metrics.
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test fun mouseDragInsideASelectionStartsNoDrag() {
+        // Control: a plain EditText turns these same events into a drag of the selected word.
+        attached(::EditText) { plain ->
+            plain.setSelection(0, 7)
+            mouseGesture(plain, 2, 4)
+            assertEquals(1, dragsStarted())
+        }
+        attached({ RecoveryWordEditText(it, 0) }) { field ->
+            field.setSelection(0, 7)
+            mouseGesture(field, 2, 4)
+            assertEquals(0, dragsStarted())
+            assertEquals("the press starts a new selection instead", 2 to 4, field.selectionStart to field.selectionEnd)
+            // Editor also drags when a press just past the selection moves onto it.
+            field.setSelection(0, 5)
+            mouseGesture(field, 6, 3)
+            assertEquals(0, dragsStarted())
+            assertEquals(3 to 6, field.selectionStart to field.selectionEnd)
+            assertEquals("unrelated", clip())
+            assertEquals("abandon", field.text.toString())
+        }
+    }
+
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test fun mouseClicksAndSelectionDragsStillWork() {
+        attached({ RecoveryWordEditText(it, 0) }) { field ->
+            field.setSelection(0, 7)
+            mouseGesture(field, 3)
+            assertEquals("a click places the caret", 3 to 3, field.selectionStart to field.selectionEnd)
+            mouseGesture(field, 1, 5, 3)
+            assertEquals("a drag selects from the press and follows the pointer back", 1 to 3, field.selectionStart to field.selectionEnd)
+            assertEquals(0, dragsStarted())
+        }
+    }
+
+    /** Mouse gestures need a field in a window: Editor only enables its selection controller there. */
+    private fun <T : EditText> attached(make: (Context) -> T, block: (T) -> Unit) {
+        Robolectric.buildActivity(Activity::class.java).setup().use { controller ->
+            val view = make(controller.get())
+            controller.get().setContentView(view, ViewGroup.LayoutParams(600, 120))
+            view.setText("abandon")
+            shadowOf(Looper.getMainLooper()).idle()
+            assertTrue(view.requestFocus())
+            ShadowLog.clear()
+            block(view)
+        }
+    }
+
+    /**
+     * Drags begun since the last call. Editor builds the word's ClipData only to hand it to View.startDragAndDrop,
+     * which logs on entry here because Robolectric windows have no valid surface.
+     */
+    private fun dragsStarted() = ShadowLog.getLogsForTag("View").count { it.msg.startsWith("startDragAndDrop") }
+        .also { ShadowLog.clear() }
+
+    private var clock = 0L
+    /** A primary-button mouse press at the first text offset, moves through the rest, then release. */
+    private fun mouseGesture(view: EditText, vararg offsets: Int) {
+        clock += 1_000 // Far enough apart that no two gestures read as a double click.
+        val downTime = clock
+        fun event(action: Int, offset: Int, buttons: Int) = MotionEvent.obtain(downTime, ++clock, action, 1,
+            arrayOf(MotionEvent.PointerProperties().apply { toolType = MotionEvent.TOOL_TYPE_MOUSE }),
+            arrayOf(MotionEvent.PointerCoords().apply {
+                x = view.totalPaddingLeft + view.layout.getPrimaryHorizontal(offset); y = view.height / 2f
+            }), 0, buttons, 1f, 1f, 0, 0, InputDevice.SOURCE_MOUSE, 0)
+        view.dispatchTouchEvent(event(MotionEvent.ACTION_DOWN, offsets.first(), MotionEvent.BUTTON_PRIMARY))
+        for (offset in offsets.drop(1)) view.dispatchTouchEvent(event(MotionEvent.ACTION_MOVE, offset, MotionEvent.BUTTON_PRIMARY))
+        view.dispatchTouchEvent(event(MotionEvent.ACTION_UP, offsets.last(), 0))
     }
 }
