@@ -57,7 +57,7 @@ object HomeFixtures {
 
     /** [state]: fresh, fresh-no-address, everyday, busy, suspended, loading. */
     fun ui(state: String, hidden: Boolean = false, now: Date = Date(), variant: String = "regtest", newRows: Set<String> = emptySet(),
-           backedUp: Boolean = false, emailPrompt: Boolean = true): HomeUi {
+           backedUp: Boolean = false, emailPrompt: Boolean = true, address: String = HomeFixtures.address): HomeUi {
         val locale = Locale.US
         val rows = when (state) { "everyday" -> everydayRows(now); "busy" -> busyRows(now); else -> emptyList() }
         val wallet = when (state) {

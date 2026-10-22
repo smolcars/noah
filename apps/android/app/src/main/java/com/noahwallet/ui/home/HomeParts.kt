@@ -47,24 +47,27 @@ import kotlin.math.roundToInt
 internal object HomeType {
     private val display = NoahTokens.Display
     private val trim = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both)
-    val chip = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp)
+    // CSS line boxes: a single line is as tall as its line height (prototype `font: 600 15px/20px`), and
+    // a fallback glyph such as ₿ can't make one line taller than another.
+    private val box = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
+    val chip = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp, lineHeightStyle = box)
     val chipInitial = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 14.sp, lineHeightStyle = trim)
-    val badge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp)
+    val badge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp, lineHeightStyle = box)
     val mini = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.02).em)
     val balance = NoahTokens.Typography.balance.copy(lineHeight = 50.sp, lineHeightStyle = trim)
-    val line = NoahTokens.Typography.sub
-    val strong = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp)
-    val small = TextStyle(fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp)
-    val header = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp)
-    val button = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp)
-    val qrName = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp)
-    val listTitle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.01).em)
-    val rowTitle = NoahTokens.Typography.body
-    val amount = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp, fontFeatureSettings = "tnum")
+    val line = NoahTokens.Typography.sub.copy(lineHeightStyle = box)
+    val strong = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp, lineHeightStyle = box)
+    val small = TextStyle(fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp, lineHeightStyle = box)
+    val header = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp, lineHeightStyle = box)
+    val button = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp, lineHeightStyle = box)
+    val qrName = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp, lineHeightStyle = box)
+    val listTitle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.01).em, lineHeightStyle = box)
+    val rowTitle = NoahTokens.Typography.body.copy(lineHeightStyle = box)
+    val amount = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp, fontFeatureSettings = "tnum", lineHeightStyle = box)
     val avatar = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 17.sp, lineHeightStyle = trim)
     val total = NoahTokens.Typography.amount.copy(lineHeight = 36.sp, lineHeightStyle = trim)
     val got = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, lineHeight = 30.sp, letterSpacing = (-0.02).em, lineHeightStyle = trim)
-    val toast = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp)
+    val toast = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp, lineHeightStyle = box)
 }
 
 /** A flat tonal surface: Android's answer to the prototype's Liquid Glass. */
@@ -93,8 +96,9 @@ internal fun NameChip(address: String?, variant: String, onClick: () -> Unit) {
             if (local != null) Text(local.take(1).lowercase(), style = HomeType.chipInitial, color = palette.foreground)
             else Icon(painterResource(HomeIcons.person), null, Modifier.size(18.dp), tint = palette.foreground)
         }
+        // Measured after the ring and badge, so a narrow bar shortens the name rather than dropping the badge.
         if (local != null) Text(local, style = HomeType.chip, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 160.dp))
+            modifier = Modifier.weight(1f, fill = false).widthIn(max = 160.dp))
         if (variant != "mainnet") Text(tr(variant.uppercase()), Modifier.padding(start = 2.dp).clip(CircleShape).background(palette.orangeTint)
             .padding(horizontal = 7.dp, vertical = 2.dp), style = HomeType.badge, color = palette.orangeText)
     }

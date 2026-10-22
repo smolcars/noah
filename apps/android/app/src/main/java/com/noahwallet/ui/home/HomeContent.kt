@@ -237,7 +237,8 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
                         Leading(0f)
                         map()
                     }
-                    TopBar(ui, actions, state, 0f, Modifier.padding(horizontal = 16.dp).widthIn(max = 640.dp).align(Alignment.TopCenter), entered)
+                    // Lined up with the content column below it (the bar sits 8 dp outside the content's edges).
+                    TopBar(ui, actions, state, 0f, Modifier.widthIn(max = OnboardingPose.paneContent.dp).padding(horizontal = 16.dp), entered)
                     HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 76.dp))
                 }
             }
@@ -272,11 +273,13 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
     Box(modifier.align(Alignment.TopCenter).fillMaxWidth().padding(top = 4.dp).height(44.dp).rise(entered, 60, 14f, reduceMotion)) {
-        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-            if (state != HomeRules.State.suspended) NameChip(ui.address, ui.variant) { haptics.light(); actions.myCode() }
-            // Scrolling tucks the balance into the bar, centred in the space the chip and buttons leave.
-            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                if (state != HomeRules.State.suspended) {
+        val suspended = state == HomeRules.State.suspended
+        // The buttons keep their size; the chip gets the rest (its name ellipsizes) and the tucked balance is
+        // centred in the gap between them, so a long name never pushes the buttons out of a narrow pane.
+        androidx.compose.ui.layout.Layout(contents = listOf(
+            { if (!suspended) NameChip(ui.address, ui.variant) { haptics.light(); actions.myCode() } },
+            {
+                if (!suspended) {
                     val shown = tuck > .7f
                     val alpha by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f, androidx.compose.animation.core.tween(if (reduceMotion) 180 else 250), label = "mini")
                     val rise by androidx.compose.animation.core.animateFloatAsState(if (shown || reduceMotion) 0f else 6f, androidx.compose.animation.core.tween(300), label = "mini-rise")
@@ -284,10 +287,26 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
                         Modifier.padding(horizontal = 8.dp).graphicsLayer { this.alpha = alpha; translationY = rise * density }.clearAndSetSemantics { },
                         style = HomeType.mini, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+            },
+            {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
+                    CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button")) { haptics.light(); actions.settings() }
+                }
+            },
+        ), Modifier.fillMaxSize()) { (chip, mini, buttons), constraints ->
+            val loose = constraints.copy(minWidth = 0, minHeight = 0)
+            val end = buttons.first().measure(loose)
+            val gapEnd = constraints.maxWidth - end.width
+            val start = chip.firstOrNull()?.measure(loose.copy(maxWidth = (gapEnd - 8.dp.roundToPx()).coerceAtLeast(0)))
+            val gapStart = start?.width ?: 0
+            val middle = mini.firstOrNull()?.measure(loose.copy(maxWidth = (gapEnd - gapStart).coerceAtLeast(0)))
+            layout(constraints.maxWidth, constraints.maxHeight) {
+                fun centreY(height: Int) = (constraints.maxHeight - height) / 2
+                start?.place(0, centreY(start.height))
+                end.place(gapEnd, centreY(end.height))
+                middle?.place(gapStart + (gapEnd - gapStart - middle.width) / 2, centreY(middle.height))
             }
-            if (state != HomeRules.State.suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
-            Spacer(Modifier.width(8.dp))
-            CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button")) { haptics.light(); actions.settings() }
         }
     }
 }
@@ -350,7 +369,9 @@ private fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, 
             if (symbol || text == null) Text("₿", Modifier.padding(end = 3.dp).height(line), style = HomeType.balance, color = if (text == null) palette.hairline else palette.foreground,
                 overflow = TextOverflow.Visible)
             if (digits != null) {
-                if (hidden) Text(digits, style = HomeType.balance.copy(letterSpacing = .06.em), color = palette.foreground, maxLines = 1)
+                // The same line box as the digits, so hiding never moves what's below.
+                if (hidden) Text(digits, Modifier.height(line), style = HomeType.balance.copy(letterSpacing = .06.em), color = palette.foreground, maxLines = 1,
+                    overflow = TextOverflow.Visible)
                 else RollingText(digits, HomeType.balance, palette.foreground, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0)
             }
         }

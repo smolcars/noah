@@ -69,8 +69,11 @@ class HomeFoldTest {
 
     @Test fun bookPostureSplitsAtTheHinge() {
         for (state in listOf("fresh", "everyday", "busy", "suspended")) {
-            val fold = show(HomeFixtures.ui(state), book)!!
+            // Regtest's server-assigned names are long; the chip must never push the buttons across the fold.
+            val fold = show(HomeFixtures.ui(state, address = "grandstanders49@localhost.com"), book)!!
             assertClear(state, fold)
+            val settings = bounds("home-settings-button")
+            assertTrue("$state: settings stays in the leading pane: $settings", settings.right <= fold.left && settings.width > 0)
             if (state == "suspended") continue
             assertTrue("$state: balance leads", bounds("home-balance").right <= fold.left)
             val trailing = if (state == "fresh") bounds("home-get-paid") else bounds("home-activity")
@@ -113,24 +116,32 @@ class HomeFoldTest {
         val compact = compose.onAllNodesWithTag("home-scroll").fetchSemanticsNodes().isNotEmpty()
         if (compact) {
             compose.onNodeWithTag("home-scroll").performTouchInput { swipeUp(startY = bottom * .8f, endY = bottom * .5f, durationMillis = 300) }
-            compose.mainClock.advanceTimeBy(1_000)
+            // Let the fling settle before taking positions.
+            compose.mainClock.advanceTimeBy(4_000)
         }
-        val before = bounds("home-balance")
+        val fiat = text("$283.07").top
         compose.onNodeWithTag("home-balance").performSemanticsAction(SemanticsActions.OnLongClick)
+        compose.mainClock.advanceTimeBy(1_000)
+        assertEquals("hiding the balance keeps its line box, so the fiat line stays put", fiat, text("$ ••••").top, 1f)
         compose.onNodeWithTag("home-balance").performSemanticsAction(SemanticsActions.OnClick)
         compose.mainClock.advanceTimeBy(1_500)
         assertTrue(hidden)
+        fun range() = compose.onNodeWithTag("home-scroll").fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
+        fun scrolled() = range().value()
+        // Only when Busy is taller than this window (the closed Pixel Fold); on a tall phone it fits without scrolling.
+        val before = if (compact && range().maxValue() > 0f) scrolled() else null
+        if (before != null) assertTrue("the swipe scrolled Home: $before", before > 0f)
         restoration.emulateSavedInstanceStateRestore()
         compose.mainClock.advanceTimeBy(1_500)
         assertTrue("the balance sheet is still open", compose.onAllNodesWithText("Balance", useUnmergedTree = true).fetchSemanticsNodes().any { it.boundsInWindow.height > 0 })
-        if (compact) assertEquals("scroll position kept", before.top, bounds("home-balance").top, 2f)
+        if (before != null) assertEquals("scroll position kept", before, scrolled(), 1f)
         assertTrue(hidden)
     }
 
     @Test fun firstPaymentContinuesAcrossRecreationWithoutStartingAgain() {
         compose.mainClock.autoAdvance = false
         val restoration = StateRestorationTester(compose)
-        val payment = HomeMemory.FirstPayment(android.os.SystemClock.elapsedRealtime() - 1_000, 21_000, null)
+        val payment = HomeMemory.FirstPayment(android.os.SystemClock.elapsedRealtime(), 21_000, null)
         val memory = HomeMemory().apply { enteredAt = 0L; firstPayment = payment }
         restoration.setContent { NoahTheme { HomePreviewHost(HomeFixtures.ui("everyday", newRows = setOf("f-1")), memory) } }
         compose.mainClock.advanceTimeBy(300)
@@ -139,7 +150,7 @@ class HomeFoldTest {
         compose.mainClock.advanceTimeBy(300)
         assertSame("the same sequence continues", payment, memory.firstPayment)
         compose.onNodeWithTag("home-get-paid").assertExists()
-        Thread.sleep(2_500)
+        Thread.sleep(3_200)
         compose.mainClock.advanceTimeBy(500)
         assertNull("the sequence ends once", memory.firstPayment)
         compose.onAllNodesWithTag("home-get-paid").assertCountEquals(0)

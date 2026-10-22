@@ -3,6 +3,7 @@ package com.noahwallet.ui
 import android.graphics.Bitmap
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -30,6 +31,8 @@ class HomeGalleryTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val folder = File(instrumentation.targetContext.filesDir, "home-shots/$label").apply { deleteRecursively(); mkdirs() }
         compose.mainClock.autoAdvance = false
+        // Edge to edge, as MainActivity draws it.
+        compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
         var scene by mutableStateOf<Scene?>(null)
         compose.setContent { NoahTheme { scene?.let { current -> key(current.name) { HomePreviewHost(current.ui, current.memory) } } } }
         // Home's sequences run on the wall clock (so a pose change resumes them); let real time pass, then draw.
@@ -48,6 +51,7 @@ class HomeGalleryTest {
             show(Scene(state + if (hidden) "-hidden" else "", HomeFixtures.ui(state, hidden, now)))
         }
         show(Scene("everyday-new", HomeFixtures.ui("everyday", now = now, newRows = setOf("f-1"))))
+        show(Scene("everyday-long-name", HomeFixtures.ui("everyday", now = now, address = "grandstanders49@localhost.com")))
         show(Scene("everyday-backed-up", HomeFixtures.ui("everyday", now = now, backedUp = true)))
         // The sheet's dialog window attaches on real frames; its show animation runs on the test clock.
         fun openSheet() { compose.onNodeWithTag("home-balance").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
