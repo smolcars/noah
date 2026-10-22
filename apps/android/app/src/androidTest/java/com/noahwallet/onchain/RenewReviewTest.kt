@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Rule
@@ -58,7 +59,8 @@ class RenewReviewTest {
         gate.complete(Unit)
         show()
         compose.waitUntil(5_000) { model.quote != null }
-        runBlocking { model.confirm() }
+        // On the main thread, as a tap confirms: never between the quote landing and the review noting which it is.
+        runBlocking(Dispatchers.Main) { model.confirm() }
         compose.waitUntil(5_000) { renewed != null }
         assertEquals(ids.sorted(), renewed)
     }
