@@ -314,7 +314,9 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
                     val ticks = launch {
                         delay(200); haptics.selection(); delay(200); haptics.light(); delay(200); haptics.medium()
                     }
-                    progress.animateTo(1f, tween(((1 - progress.value) * 800).toInt().coerceAtLeast(1), easing = LinearEasing))
+                    // Every hold is a full 0.8 s, even one that starts while the last one rewinds.
+                    progress.snapTo(0f)
+                    progress.animateTo(1f, tween(800, easing = LinearEasing))
                     ticks.cancel()
                     if (currentEnabled) { fired = true; haptics.heavy(); currentConfirm() }
                 }

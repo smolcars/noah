@@ -588,9 +588,16 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val route = payment?.let(SendRoute::of) ?: presentation.motion?.route ?: SendRoute.ark
     // A live motion runs on the wall clock (so pose changes resume it); otherwise show the ending's last frame.
     val live = presentation.motion?.takeIf { it.route == route }
-    val elapsed by produceState(live?.let { SystemClock.elapsedRealtime() - it.startedAt } ?: Long.MAX_VALUE / 4, live?.startedAt) {
+    val waitingForBlock = receipt?.chainStatus?.kind != com.noahwallet.services.wallet.ChainStatus.Kind.confirmed
+    // Ticks each frame until the picture is still; a new milestone (a new motion) starts it again.
+    val elapsed by produceState(live?.let { SystemClock.elapsedRealtime() - it.startedAt } ?: Long.MAX_VALUE / 4, live, waitingForBlock, reduceMotion) {
         if (live == null) return@produceState
-        while (isActive) { withFrameMillis { }; value = SystemClock.elapsedRealtime() - live.startedAt }
+        val quiet = SendTimeline.quietAt(live, reduceMotion, waitingForBlock)
+        while (isActive) {
+            withFrameMillis { }
+            value = SystemClock.elapsedRealtime() - live.startedAt
+            if (quiet != null && value > quiet) break
+        }
     }
     val ending = SendEnding.of(controller.state, attempt, env.refund, live?.let { SendTimeline.stillPaying(it, elapsed, reduceMotion) } ?: false)
     val motion = live ?: SendMotion(route, 0, staticMilestones(ending))

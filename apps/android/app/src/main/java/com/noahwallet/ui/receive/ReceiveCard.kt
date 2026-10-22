@@ -314,9 +314,14 @@ internal fun ReceiveBlockRow(arrival: ReceiveArrival?, tip: Long?, confirmedAt: 
     val format = remember(locale) { java.text.NumberFormat.getIntegerInstance(locale) }
     val nextLabel = tr("next")
     val (shownTip, slide, pop) = rememberBlockSlide(tip, reduceMotion)
-    val elapsed by produceState(0L, arrival?.startedAt) {
+    // Ticks while the row moves or the next block blinks; still once the transaction is in its block.
+    val elapsed by produceState(0L, arrival?.startedAt, confirmedAt != null, reduceMotion) {
         val started = arrival?.startedAt ?: return@produceState
-        while (isActive) { withFrameMillis { }; value = SystemClock.elapsedRealtime() - started }
+        while (isActive) {
+            withFrameMillis { }
+            value = SystemClock.elapsedRealtime() - started
+            if (value > 1_500 && (confirmedAt != null || reduceMotion)) break
+        }
     }
     val visible = arrival?.rail == ReceiveArrival.Rail.onchain && shownTip != null
     val fade = if (visible) step(elapsed, 0, SpringCurve.soft, reduceMotion = reduceMotion).coerceIn(0f, 1f) else 0f
