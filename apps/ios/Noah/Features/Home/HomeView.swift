@@ -377,7 +377,8 @@ struct HomeView: View {
         if model.isWalletSuspended { return nil }
         if home.backup.lastBackupStatus == .success, backupBanner != nil { return "Backup completed" }
         if let board = home.autoBoard {
-            return L10n.text("{amount} available in Ark", BitcoinAmount.format(sats: Int64(clamping: board.netSats), unit: .sats, locale: locale),
+            return L10n.text("{amount} available in Ark",
+                             WalletBalance.display(board.netSats, hidden: model.isBalanceHidden, unit: model.amountUnit, locale: locale),
                              locale: locale.identifier)
         }
         return nil
