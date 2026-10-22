@@ -295,13 +295,13 @@ struct OnboardingFlow: View {
         Task {
             await model.pushPermission.retry(request: true)
             requestingNotifications = false
-            switch model.pushPermission.status {
-            case .granted, .checking: notificationsGranted() // Simulators are never gated, as today.
-            case .denied:
+            switch model.pushPermission.onboardingStep {
+            case .proceed: notificationsGranted()
+            case .required:
                 haptics.play(.warning)
                 scene.frozenAt = Date().timeIntervalSince(scene.start)
                 notificationsRequired = true
-            case .undetermined: break // The request failed; ask again.
+            case .ask: break // The request didn't settle; the button asks again.
             }
         }
     }
@@ -320,7 +320,7 @@ struct OnboardingFlow: View {
         guard phase == .active, step == .notifications, notificationsRequired else { return }
         Task {
             await model.pushPermission.refresh()
-            guard model.pushPermission.status == .granted, notificationsRequired else { return }
+            guard model.pushPermission.onboardingStep == .proceed, notificationsRequired else { return }
             notificationsRequired = false
             scene = TreeScene.State(mode: .conveyor, start: .now)
             notificationsGranted()

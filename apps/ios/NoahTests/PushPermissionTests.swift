@@ -64,6 +64,42 @@ struct PushPermissionTests {
         #expect(requests == 1)
     }
 
+    @Test func onboardingContinuesOnlyOnceGrantedOnAPhysicalDevice() async {
+        struct Failure: Error {}
+        var status = PushPermissionModel.Status.undetermined
+        var failing = true
+        let model = PushPermissionModel(dependencies: .init(
+            isPhysicalDevice: true, status: { if failing { throw Failure() }; return status },
+            request: { if failing { throw Failure() } }))
+        // Checking is the initial status on every device.
+        #expect(model.status == .checking)
+        #expect(model.onboardingStep == .ask)
+        // A thrown authorization request keeps it.
+        await model.retry(request: true)
+        #expect(model.status == .checking)
+        #expect(model.onboardingStep == .ask)
+        failing = false
+        await model.retry(request: true)
+        #expect(model.status == .undetermined)
+        #expect(model.onboardingStep == .ask)
+        status = .denied
+        await model.retry(request: true)
+        #expect(model.onboardingStep == .required)
+        status = .granted
+        await model.refresh()
+        #expect(model.onboardingStep == .proceed)
+    }
+
+    @Test func simulatorsAreNeverGatedInOnboarding() async {
+        let model = PushPermissionModel(dependencies: .init(
+            isPhysicalDevice: false, status: { .denied }, request: { struct Failure: Error {}; throw Failure() }))
+        #expect(model.onboardingStep == .proceed)
+        await model.retry(request: true)
+        #expect(model.status == .checking)
+        #expect(model.onboardingStep == .proceed)
+        #expect(!model.blocksWallet(initialized: true))
+    }
+
     @Test func failedStatusAndRequestKeepLastState() async {
         struct Failure: Error {}
         var fails = false

@@ -47,6 +47,26 @@ final class PushPermissionModel {
         initialized && dependencies.isPhysicalDevice && status == .denied
     }
 
+    enum OnboardingStep: Equatable {
+        case proceed
+        /// Denied: only Settings can turn notifications back on.
+        case required
+        /// Not settled yet (still checking, or the request failed): ask again.
+        case ask
+    }
+
+    /// Onboarding's required Notifications step. Simulators are exempt, as from
+    /// `blocksWallet`; a physical device continues only once notifications are
+    /// granted, never on `checking` or `undetermined`.
+    var onboardingStep: OnboardingStep {
+        guard dependencies.isPhysicalDevice else { return .proceed }
+        switch status {
+        case .granted: return .proceed
+        case .denied: return .required
+        case .checking, .undetermined: return .ask
+        }
+    }
+
     func refresh() async {
         generation += 1
         let current = generation
