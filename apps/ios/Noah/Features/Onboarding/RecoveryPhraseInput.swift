@@ -53,4 +53,5 @@ struct RecoveryPhraseInput {
             let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
         return text.split(whereSeparator: \.isWhitespace).map(String.init)
     }()
+    static let wordSet = Set(wordList)
 }

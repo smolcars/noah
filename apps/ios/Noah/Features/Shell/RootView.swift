@@ -7,36 +7,41 @@ struct RootView: View {
     @State private var showingDelete = false
     @Environment(\.scenePhase) private var scenePhase
 
+    /// One onboarding instance across these phases, so a restore's closing
+    /// moment survives the switch to `.wallet`.
+    private var showsOnboarding: Bool {
+        model.phase == .onboarding || model.phase == .blocked(.seedWithoutWalletData) || model.holdsOnboardingAfterRestore
+    }
+
     var body: some View {
         Group {
-            switch model.phase {
-            case .launching:
-                if model.customServerUnresponsive {
-                    VStack(spacing: 16) {
-                        Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n.text("The custom server isn't responding."))
-                        Button("Use default server") { model.useDefaultEsploraServer() }
-                            .disabled(model.switchingToDefaultServer)
-                    }.padding()
-                } else { NoahColor.background.ignoresSafeArea() }
-            case .onboarding:
-                OnboardingFlow()
-            case .wallet:
-                if model.pushPermission.blocksWallet(initialized: true) {
-                    PushNotificationsRequiredView()
-                } else {
-                    WalletTabs()
-                }
-            case .blocked(let state):
-                if state == .seedWithoutWalletData {
-                    NavigationStack { RestoreWalletScreen(useStoredSeed: true) }
-                        .tint(NoahColor.brand)
-                } else {
+            if showsOnboarding {
+                OnboardingFlow(model: model, storedSeed: model.phase == .blocked(.seedWithoutWalletData))
+            } else {
+                switch model.phase {
+                case .launching:
+                    if model.customServerUnresponsive {
+                        VStack(spacing: 16) {
+                            Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n.text("The custom server isn't responding."))
+                            Button("Use default server") { model.useDefaultEsploraServer() }
+                                .disabled(model.switchingToDefaultServer)
+                        }.padding()
+                    } else { NoahColor.background.ignoresSafeArea() }
+                case .onboarding:
+                    EmptyView()
+                case .wallet:
+                    if model.pushPermission.blocksWallet(initialized: true) {
+                        PushNotificationsRequiredView()
+                    } else {
+                        WalletTabs()
+                    }
+                case .blocked(let state):
                     LaunchMessageView(state: state)
+                case .restoreIncomplete:
+                    LaunchMessageView(
+                        title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
+                        message: LocalizedStringKey(model.walletError ?? "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
                 }
-            case .restoreIncomplete:
-                LaunchMessageView(
-                    title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
-                    message: LocalizedStringKey(model.walletError ?? "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in

@@ -7,6 +7,8 @@ struct HomeView: View {
     @State private var home = HomeModel()
     @State private var upgradeNotices: [String] = []
     @State private var showEmail = false
+    @State private var showBackup = false
+    @State private var backupError: String?
     @State private var showMap = false
     @State private var showQR = false
     @State private var selectedID: String?
@@ -55,6 +57,7 @@ struct HomeView: View {
                         }
 
                         if !model.isWalletSuspended {
+                            if model.needsRecoveryPhraseBackup { BackupPrompt { showBackup = true } }
                             HomeStatusBanners(home: home)
                             AutoBoardingService()
                         }
@@ -201,9 +204,49 @@ struct HomeView: View {
             .navigationDestination(isPresented: $showQR) { QRHubView(isActive: isActive, onScan: onScan) }
             .navigationDestination(isPresented: $showMap) { BtcMapView() }
             .navigationDestination(isPresented: $showEmail) {
-                EmergencyEmailView(fromOnboarding: false, onContinue: { showEmail = false })
+                EmergencyEmailView(onContinue: { showEmail = false })
+            }
+            .navigationDestination(isPresented: $showBackup) {
+                MnemonicView(onConfirmBackup: confirmBackup)
+                    .alert("Error", isPresented: Binding(get: { backupError != nil }, set: { if !$0 { backupError = nil } })) {
+                        Button("OK", role: .cancel) {}
+                    } message: { Text(LocalizedStringKey(backupError ?? "")) }
             }
         }
+    }
+}
+
+private extension HomeView {
+    func confirmBackup() {
+        do {
+            try model.confirmRecoveryPhraseBackedUp()
+            showBackup = false
+        } catch { backupError = "Couldn't save your preference. Please try again." }
+    }
+}
+
+/// Quiet until the user has viewed the recovery phrase and confirmed writing it down.
+private struct BackupPrompt: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            NoahCard {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Back up your wallet").font(NoahFont.headline)
+                        Text("Write down your recovery phrase.")
+                            .font(NoahFont.footnote)
+                            .foregroundStyle(NoahColor.mutedForeground)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").foregroundStyle(NoahColor.mutedForeground).accessibilityHidden(true)
+                }
+                .foregroundStyle(NoahColor.foreground)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home-backup-prompt")
     }
 }
 

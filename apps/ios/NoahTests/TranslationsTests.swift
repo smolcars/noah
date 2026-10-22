@@ -15,7 +15,6 @@ struct TranslationsTests {
         #expect(LegacyLocale.read() == "es")
         #expect(model.summary == nil)
         #expect(model.phase == .launching)
-        #expect(OnboardingFlow.Step.language != .beta)
     }
 
     struct Input: Decodable { let locale: String; let source: String; let args: [String] }

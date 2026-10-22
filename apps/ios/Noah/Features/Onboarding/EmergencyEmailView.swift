@@ -1,7 +1,7 @@
 import SwiftUI
 
+/// Settings → Profile and Home's email prompt. Onboarding has its own email step.
 struct EmergencyEmailView: View {
-    let fromOnboarding: Bool
     let onContinue: () -> Void
 
     private enum Field: Hashable { case email, code }
@@ -68,7 +68,7 @@ struct EmergencyEmailView: View {
                         .frame(maxWidth: .infinity)
                         .disabled(busy)
                     } else {
-                        Text(Self.explanation(fromOnboarding: fromOnboarding, verified: model.server.state.isEmailVerified == true,
+                        Text(Self.explanation(verified: model.server.state.isEmailVerified == true,
                                               email: model.server.state.emailAddress, locale: locale.identifier))
                             .foregroundStyle(NoahColor.mutedForeground)
                         NoahCard {
@@ -127,12 +127,6 @@ struct EmergencyEmailView: View {
                 codeSent ? verify() : send()
             }
             .disabled((codeSent ? code.count != 6 : email.isEmpty) || model.server.isRegistering || registrationFailed)
-            if fromOnboarding && !codeSent {
-                Button("Continue without email") { focus = nil; onContinue() }
-                    .font(NoahFont.callout)
-                    .frame(minHeight: 44)
-                    .disabled(busy || model.server.isRegistering || registrationFailed)
-            }
         }
         .padding(.horizontal, 20).padding(.vertical, 12)
         .frame(maxWidth: 640)
@@ -140,8 +134,8 @@ struct EmergencyEmailView: View {
         .background(NoahColor.background)
     }
 
-    static func explanation(fromOnboarding: Bool, verified: Bool, email: String?, locale: String) -> String {
-        if !fromOnboarding && verified {
+    static func explanation(verified: Bool, email: String?, locale: String) -> String {
+        if verified {
             if let email, !email.isEmpty {
                 return L10n.text("Your current email, {email}, will stay active until the new email is verified.", email, locale: locale)
             }
@@ -151,7 +145,6 @@ struct EmergencyEmailView: View {
     }
 
     private func completed(alreadyVerified: Bool) {
-        if fromOnboarding { onContinue(); return }
         completeAfterAlert = true
         errorTitle = alreadyVerified ? "Already Verified" : "Email Verified"
         errorMessage = alreadyVerified ? "This email is already verified." : "Your email has been verified successfully."

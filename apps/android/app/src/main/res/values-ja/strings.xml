@@ -32,6 +32,7 @@
   <string name="gt_223e44268146e60d">"金額を追加"</string>
   <string name="gt_00df1293cf6d241b">"Lightningで受け取る金額を入力"</string>
   <string name="gt_bfe6b5725f300b5b">"メールアドレスを追加"</string>
+  <string name="gt_fcdcc9c0caf001eb">"メールアドレスを追加"</string>
   <string name="gt_73886d4afd4c8e01">"メモを追加すると、この支払いはLightning経由で行われます。"</string>
   <string name="gt_35cdc9f3eb810897">"承認済みのオンチェーン資金が追加で必要です。このまま追跡を開始しますが、出金処理を進める前にウォレットへ入金してください。"</string>
   <string name="gt_56ef8f20955f2564">"アドレス"</string>
@@ -94,6 +95,7 @@
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_f5d2fa6426c30863">"オンチェーン残高で%1$s satsと手数料をまかない、さらにオンチェーンに5,000 sats以上を残せる場合に、Arkに入金するか確認します。Arkへの入金前に、正確な手数料と残しておく金額を確認してください。"</string>
   <string name="gt_0c2d9eae6632bce6">"オンチェーン資金で%1$s sats、手数料、予備資金5,000 satsをまかなえる場合に、Arkへの入金を提案します。"</string>
+  <string name="gt_2bb9a4e3a6cb73a9">"3文字以上"</string>
   <string name="gt_4c9ce17646b28614">"監査を利用できません"</string>
   <string name="gt_c8271c0bafb7c1eb">"認証してウォレットにアクセスしてください"</string>
   <string name="gt_7dc5ec1879cdb204">"生体認証を無効にするために認証してください"</string>
@@ -121,6 +123,7 @@
   <string name="gt_3d61c6595d4cb00e">"VTXO一覧に戻る"</string>
   <string name="gt_34a2564efc24f085">"退出一覧に戻る"</string>
   <string name="gt_c2c4dc4523848507">"支払いに戻る"</string>
+  <string name="gt_52a7a389ef84accf">"ウォレットをバックアップ"</string>
   <string name="gt_7964c5bb92778dc1">"バックグラウンド動作を継続"</string>
   <string name="gt_b77fead35a79fc03">"バックグラウンド処理を実行中..."</string>
   <string name="gt_f30a86f86c64f448">"ウォレットをバックアップ中"</string>
@@ -140,7 +143,9 @@
   <string name="gt_d80412512553e428">"Noahのバッテリー最適化は無効になっています。"</string>
   <string name="gt_684f75e8eac9b75b">"バッテリーの最適化により、バックグラウンドでの支払いが遅れる場合があります。"</string>
   <string name="gt_93393c4e662bd5e9">"自分自身の銀行になろう。"</string>
+  <string name="gt_74e492d5d0df0bab">"はじめる前に"</string>
   <string name="gt_b6e65f6a71b4b6be">"ダスト限度額未満"</string>
+  <string name="gt_703390318bd55aef">"ベータ版"</string>
   <string name="gt_2b680906402b453b">"生体認証"</string>
   <string name="gt_a7b822040637297e">"Bitcoin (BIP-177)"</string>
   <string name="gt_5538c35c05d2ea68">"Bitcoinマップ"</string>
@@ -152,6 +157,7 @@
   <string name="gt_49f6aed17460951e">"Bitcoin加盟店マップ"</string>
   <string name="gt_a0b46a50136c0cc2">"Bitcoin支払いリクエスト"</string>
   <string name="gt_309f770f53455954">"ビットコインが使える場所"</string>
+  <string name="gt_a800b1a6af330022">"ビットコインを、シンプルに。"</string>
   <string name="gt_165fb7b76f269989">"Bitcoind RPC"</string>
   <string name="gt_97fffb31364c8804">"ブロックハッシュ"</string>
   <string name="gt_cc3bf438e0ff0a5a">"ブロック高"</string>
@@ -206,9 +212,12 @@
   <string name="gt_ff65032d5e881811">"再度承認する前に、この支払いの結果を確認してください。"</string>
   <string name="gt_6f113ce35347ffe6">"編集する前に、この支払いの結果を確認してください。"</string>
   <string name="gt_d7eef838e946e289">"この単語を確認"</string>
+  <string name="gt_710d52f182321f4a">"%1$s番目の単語を確認してください"</string>
+  <string name="gt_7732287944e204a9">"メールを確認してください"</string>
   <string name="gt_4ac7dc7e4285ca5d">"履歴を確認し、受取人にも確認してください。この支払いはすでに送金されている可能性があります。"</string>
   <string name="gt_9b69d23b16f9a10b">"復元フレーズを確認してください。12個または24個すべての単語を正しい順序で入力してください。"</string>
   <string name="gt_a3c8ad0d500b6aae">"取引履歴を確認し、再開する前に、破壊的な変更を伴う強制上書きを承認してください。"</string>
+  <string name="gt_0dfe1d63c9d86896">"確認中"</string>
   <string name="gt_ec963ffc911b8401">"確認中…"</string>
   <string name="gt_0a84829094f5cfed">"子取引"</string>
   <string name="gt_a06126f70960de59">"Lightningのユーザー名を設定してください。Nostrの公開鍵を紐づけることもできます。紐づけると、同じアドレスをNIP-05識別子としても使えます。"</string>
@@ -336,7 +345,9 @@
   <string name="gt_5f118763298aec4a">"新しいウォレットを作成するか、既存のウォレットを復元してください。"</string>
   <string name="gt_853bc38c249ac693">"暗号化された.noahbackupファイルを作成"</string>
   <string name="gt_c840c095b7c7c8ef">"ウォレットのデータベースを含む暗号化済みバックアップファイルを作成します。"</string>
+  <string name="gt_40a49ea198affe13">"ウォレットを作成"</string>
   <string name="gt_7bef2fbf3b783bfe">"請求書を作成中…"</string>
+  <string name="gt_2d011af498ebd5ea">"鍵を作成しています"</string>
   <string name="gt_0e534607e1589271">"支払いリクエストを作成中…"</string>
   <string name="gt_924909629317d4f6">"ウォレットを作成中..."</string>
   <string name="gt_5f5dc2dbbf448465">"作成に失敗しました。もう一度お試しください。"</string>
@@ -370,7 +381,9 @@
   <string name="gt_ae79af44798ae9ee">"オンチェーン資金を入金"</string>
   <string name="gt_526e0087cc3f254d">"説明"</string>
   <string name="gt_293d404a500f5f9a">"送金先"</string>
+  <string name="gt_68fe721765d87b10">"もしかして"</string>
   <string name="gt_47a081866ba71b83">"コードが届きませんか？"</string>
+  <string name="gt_db282d70878d9d3c">"届きませんか？"</string>
   <string name="gt_9c8a9579abe55bdc">"方向"</string>
   <string name="gt_c953567840067771">"経路"</string>
   <string name="gt_22285980b45cde91">"ウォレットのすべての操作を無効にします。ウォレットは閉じられ、再び有効にするまで読み込まれません。"</string>
@@ -383,10 +396,12 @@
   <string name="gt_d003d9b4e9041e93">"定期支払いのプロパティが重複しています"</string>
   <string name="gt_a9f51566bd6705f7">"E"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
+  <string name="gt_464c4ffd019e1e96">"編集"</string>
   <string name="gt_f0a8e5021846e6dd">"緊急連絡用メールアドレスを編集"</string>
   <string name="gt_72f2925371ee93bd">"Esplora APIを編集"</string>
   <string name="gt_7fdd70e51ffe66a8">"ライトニングアドレスを編集"</string>
   <string name="gt_422db74b1f68a344">"金額を編集"</string>
+  <string name="gt_84c74f3a02721306">"メールアドレスを編集"</string>
   <string name="gt_86c1a43426ba6fd7">"支払いを編集"</string>
   <string name="gt_283b7f6696239f99">"定期支払いを編集"</string>
   <string name="gt_02f81f1a5a7297bd">"実質的な残高の変動"</string>
@@ -396,6 +411,7 @@
   <string name="gt_bc512ab036ae1f01">"メールアドレスを確認しました"</string>
   <string name="gt_829e3579e020d067">"メールアドレスは確認済みです"</string>
   <string name="gt_50d8230c905d564f">"メールアドレスの登録は任意です。Noahは、ウォレットの安全に関する緊急連絡にのみ使用します。たとえば、VTXOがまもなく期限切れになり、オンラインで更新する必要がある場合にお知らせします。"</string>
+  <string name="gt_bdfb1e4f00c73e98">"メールアドレスを確認しました"</string>
   <string name="gt_3a9f176a663d540d">"緊急連絡用メールアドレス"</string>
   <string name="gt_a9214c2e38df7318">"緊急出金"</string>
   <string name="gt_cade2f4efb6f7c99">"エミュレーター"</string>
@@ -424,7 +440,9 @@
   <string name="gt_09694e31973d26c1">"Esplora APIのエンドポイントを入力してください。"</string>
   <string name="gt_b07b96712b96ce92">"0より大きい金額を入力してください。"</string>
   <string name="gt_a553c3e6a86cf907">"支払い回数を入力してください。"</string>
+  <string name="gt_d22d6bb98979c568">"%1$s に送信したコードを入力してください"</string>
   <string name="gt_f6ff8ea16534cd0c">"12個または24個の単語を順番に入力するか、いずれかの単語欄にフレーズ全体を貼り付けてください。"</string>
+  <string name="gt_06e4151b65a65de5">"復元フレーズを入力してください。"</string>
   <string name="gt_2c41befe9ea4cd5c">"入力形式"</string>
   <string name="gt_54a0e8c17ebb21a1">"エラー"</string>
   <string name="gt_a464fa0760351f31">"エラー：%1$s"</string>
@@ -505,10 +523,10 @@
   <string name="gt_f4ed8fa656b74c5d">"確定済み"</string>
   <string name="gt_b4221133c0166c16">"最終受け取りトランザクションをブロードキャストし、確認を待っています。"</string>
   <string name="gt_ef55a5e44973729e">"最終：%1$s"</string>
-  <string name="gt_fae6ce42a3ec73bc">"最終処理中…"</string>
   <string name="gt_d4531989954eac5c">"近くの施設を探す"</string>
   <string name="gt_664fa279a9ee2f99">"ビットコインが使えるお店を探す"</string>
   <string name="gt_6dfc37f56766e503">"位置情報を取得中"</string>
+  <string name="gt_280918c59094fc48">"ビットコインを探しています"</string>
   <string name="gt_ff8fa5b5d54ed7db">"ウォレットのバックグラウンド処理を行う前に、初期設定を完了してください"</string>
   <string name="gt_25cc2b0e08f9d856">"QRコードを共有する前に、ライトニングアドレスの設定を完了してください。"</string>
   <string name="gt_b7657804c2b4cf70">"別のリクエストを読み取る前に、現在の支払いを完了してください。"</string>
@@ -531,6 +549,7 @@
   <string name="gt_83047f2bb98b251f">"この支払いに短い名前を付けてください（最大64文字）。"</string>
   <string name="gt_ec7f128c4807e67b">"ウォレットを再開するには、設定 → 危険な操作を開いてください。"</string>
   <string name="gt_0c3587820d4cdb77">"Google Play開発者サービスを利用できません。通知を受け取るには、ntfyなどのUnifiedPush配信アプリを使用してください。"</string>
+  <string name="gt_5ad3dbd1242a4cea">"了解しました"</string>
   <string name="gt_61ef4f8abbc97707">"政府はお金を刷れても、ビットコインは刷れません。"</string>
   <string name="gt_44bd7ae60f478fae">"H"</string>
   <string name="gt_f7202940b694d0d1">"HTLC送信の有効期限差分"</string>
@@ -538,6 +557,7 @@
   <string name="gt_0a5639302aa6c182">"確認しましたか？"</string>
   <string name="gt_c41b2bdf4c4d8c50">"安全のため非表示"</string>
   <string name="gt_1cf119e50e285d2e">"残高の詳細を非表示"</string>
+  <string name="gt_f6b0718e33d9868e">"キーボードを隠す"</string>
   <string name="gt_a02180533bdc7fad">"場所を非表示"</string>
   <string name="gt_63a216f458c2aacd">"技術的な詳細を非表示"</string>
   <string name="gt_920ac8601c18daac">"ウォレット残高を非表示"</string>
@@ -551,6 +571,7 @@
   <string name="gt_06a1ee61a3f25ce6">"金額は？"</string>
   <string name="gt_7328abbbd5958e9b">"保存したので続ける"</string>
   <string name="gt_d4d10acb9e4722e2">"同意する"</string>
+  <string name="gt_4c2a3b5df96f8af7">"ウォレットを持っています"</string>
   <string name="gt_ef9a2be3b826ee15">"履歴を確認しました"</string>
   <string name="gt_9bb898fd8ad06771">"同意しない"</string>
   <string name="gt_1e8d015a3e069b84">"通知を有効にしたので再確認"</string>
@@ -586,10 +607,13 @@
   <string name="gt_7aabdd55b1ce8710">"請求書は支払い済みです"</string>
   <string name="gt_cb736bbe0310b99e">"請求金額が1 satoshi未満です。"</string>
   <string name="gt_34e3955669adcc0b">"ポケットに自由を。"</string>
+  <string name="gt_97812286b5d2cb4b">"書き留めました"</string>
   <string name="gt_b2307a77795822d1">"JPEGまたはPNG、5 MB以下"</string>
   <string name="gt_43d44ae6f646956e">"JPY"</string>
+  <string name="gt_a1487c34b5c577e1">"Arkに参加しています"</string>
   <string name="gt_6c9c568abe67785a">"ジャーナルを隔離できません"</string>
   <string name="gt_78bc8448cb3e1be8">"KRW"</string>
+  <string name="gt_9cbf9327c3a565fc">"Noahを起こしておきましょう"</string>
   <string name="gt_8bfbe0f76a6ac225">"支払いが完了するまでNoahを開いたままにしてください。"</string>
   <string name="gt_48d1780a0dd94191">"試行を保持"</string>
   <string name="gt_d5cd60055e4743d9">"確認を続ける"</string>
@@ -613,6 +637,7 @@
   <string name="gt_fa9a7513e80f546f">"NIP-05を使わずにLightningを利用する場合は、空欄のままにしてください。入力できるのはnpub形式の公開鍵のみです。nsec形式の秘密鍵は絶対に貼り付けないでください。"</string>
   <string name="gt_58eb9032e3bb83f0">"残り"</string>
   <string name="gt_68dc9d6d2e2e87ef">"旧式のAndroidコールバック"</string>
+  <string name="gt_17968e6e1b20c79e">"英字と数字"</string>
   <string name="gt_41e68f2cdb3806bb">"ライトニング"</string>
   <string name="gt_4e62bd8335f08ccf">"ライトニングアドレス"</string>
   <string name="gt_98da768cabdec246">"Lightning支払いを受け取りました！ ⚡"</string>
@@ -636,7 +661,6 @@
   <string name="gt_077216397a70125f">"配布元を読み込み中…"</string>
   <string name="gt_c1e8a31d06ddb8c7">"取引を読み込み中"</string>
   <string name="gt_d69971d3db4883a6">"取引を読み込み中…"</string>
-  <string name="gt_9b67c3ee6f166477">"ウォレットを読み込み中…"</string>
   <string name="gt_ba3bbbe10d8bef66">"読み込み中…"</string>
   <string name="gt_ac56027a0ba70a7c">"現在地を取得中…"</string>
   <string name="gt_2df39c51ede8a438">"位置情報を取得できません。位置情報が有効になっているか確認するか、都市を検索してください。"</string>
@@ -754,6 +778,7 @@
   <string name="gt_9bbbe9d436c3e3e3">"Noahは最終結果を確認できていません。再度支払わないでください。状態の確認によって別の支払いが送信されることはありません。"</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noahはロックされています"</string>
   <string name="gt_159ceccda632acb2">"Noahはベータ版です"</string>
+  <string name="gt_9354e260e9c82293">"Noahはベータ版です。失っても構わない金額だけを保管してください。"</string>
   <string name="gt_f590e31a6eb944e2">"Noahでバックアップ処理が続いています。少し待ってからもう一度お試しください。"</string>
   <string name="gt_6011bb0fd18f3808">"Noahはまだベータ版です。資金を失う可能性があります。失っても差し支えない金額のみ入金してください。"</string>
   <string name="gt_338e68cc4323f294">"Noahの通知"</string>
@@ -776,6 +801,8 @@
   <string name="gt_f9b73e1abc37cf5b">"メモ（任意）"</string>
   <string name="gt_0f03e776ef5cf27e">"メモは639文字以内にしてください"</string>
   <string name="gt_045f910e6b3ce120">"メモは639文字以内にしてください。"</string>
+  <string name="gt_54ee6b72ca5e79e6">"通知が必要です"</string>
+  <string name="gt_fce40565eda8090e">"通知をオンにすると、Noahは支払いを受け取り、期限が切れる前にビットコインを更新できます。"</string>
   <string name="gt_44d87512663a5641">"Noto Sans Regular"</string>
   <string name="gt_fe18013d93d22f4f">"現在"</string>
   <string name="gt_c28fbd1a8ec4cf5b">"支払い回数"</string>
@@ -797,6 +824,7 @@
   <string name="gt_9ef5c3ab9edb50eb">"オンチェーン送金"</string>
   <string name="gt_89cc4ee3c69a3b7e">"オンチェーン手数料"</string>
   <string name="gt_c35e69dac4ff6d3f">"オンチェーン予備資金の残額"</string>
+  <string name="gt_4831cbdad7ad0bb6">"ウォレットに関する緊急のお知らせにのみ使います。"</string>
   <string name="gt_4e8219ab02c82033">"NoahのGitHubリポジトリを開く"</string>
   <string name="gt_e2abf2ae09785e85">"Noahを開いて%2$sに%1$sを送金してください。"</string>
   <string name="gt_f9d77f6cb2f252e8">"プロフィールを開く"</string>
@@ -806,6 +834,7 @@
   <string name="gt_3163b5ddd02cd435">"バッテリー設定を開く"</string>
   <string name="gt_ca381c1e76e681b6">"設定を開く"</string>
   <string name="gt_7c7462add12a7b6c">"設定を開いて通知を許可"</string>
+  <string name="gt_762a16c9c74f5e0f">"ウォレットを開く"</string>
   <string name="gt_6be6caff13df7c0f">"エンドポイントを変更する前にウォレットを開いてください。"</string>
   <string name="gt_f4ce6b8f22a13fe1">"%1$sをブラウザーで開く"</string>
   <string name="gt_557d3ad870771176">"内蔵のBTC Mapを開いています…"</string>
@@ -853,6 +882,7 @@
   <string name="gt_0461277d349fcc79">"処理待ちのラウンドの状況を取得できません"</string>
   <string name="gt_3b3123699c5288f1">"このウォレットと復元フレーズをこの端末から完全に削除します。"</string>
   <string name="gt_dbb6cf817820de0b">"権限が必要です"</string>
+  <string name="gt_cbf613fce96573ac">"名前を選ぶ"</string>
   <string name="gt_46d931c1d03b0781">"表示範囲内の場所"</string>
   <string name="gt_436e61016e26fcb7">"再生"</string>
   <string name="gt_c12ff673ae9836ca">"再生位置"</string>
@@ -889,6 +919,7 @@
   <string name="gt_ecf58b0c890a1c76">"生の取引データ"</string>
   <string name="gt_8ac767353080eae7">"読み取り専用"</string>
   <string name="gt_cb1838ea58a69336">"この画面の閲覧や手数料の見積もりだけでは、退出取引はブロードキャストされません。"</string>
+  <string name="gt_5fa7aac5375c5815">"完了"</string>
   <string name="gt_bac9d15ad9f1ca0c">"受け取る"</string>
   <string name="gt_050e3ec1aa394826">"受取額はsats単位の正の整数である必要があります"</string>
   <string name="gt_85cf80c2abc7c5f1">"受信時のDoS対策"</string>
@@ -970,14 +1001,18 @@
   <string name="gt_e7e0eccff098717d">"ウォレットのロック解除に認証を求める"</string>
   <string name="gt_1c7052816e70489e">"ウォレットのロック解除に生体認証を必須にする"</string>
   <string name="gt_ab6b06887f08fcb1">"Arkへの入金に必要な承認数"</string>
+  <string name="gt_1f94843777aed851">"再送信"</string>
   <string name="gt_8bbbb0b609c07e3f">"コードを再送信"</string>
+  <string name="gt_538931fb28538397">"%1$s 後にコードを再送信できます"</string>
   <string name="gt_daee7606b339f3c3">"リセット"</string>
   <string name="gt_c72212abb47303d2">"サーバー登録をリセット"</string>
   <string name="gt_6be538eb01cfe029">"Noahの標準設定に戻す"</string>
   <string name="gt_5954f39fc8781bfa">"削除する前にNoahを再起動し、保留中の復元を完了してください"</string>
+  <string name="gt_a76e13b9839270eb">"復元"</string>
   <string name="gt_3b4a6b8e1dbe37e1">"ウォレットを復元"</string>
   <string name="gt_758420e6c40b4a1e">"復元が完了しませんでした"</string>
   <string name="gt_5d06ed14f9744167">"復元したウォレットの設定はまだ保存できません。ストレージが利用可能になったら、もう一度「再開」をお試しください。定期支払いは停止したままです。"</string>
+  <string name="gt_5e4fc738f6e005e0">"ウォレットを復元しています"</string>
   <string name="gt_6e7d50e84f4731ef">"結果"</string>
   <string name="gt_d640c7421da06661">"再開"</string>
   <string name="gt_fc7e92478faea878">"復元を再開"</string>
@@ -1050,6 +1085,7 @@
   <string name="gt_f6f4688ff23d50c6">"送る"</string>
   <string name="gt_84195de9375af87c">"フィードバックを送信"</string>
   <string name="gt_2bd7bfd7b3314b9b">"確認コードを送信"</string>
+  <string name="gt_66a5b4090d14cb41">"コードを送信"</string>
   <string name="gt_87feee6adc58b1a7">"いつでも、どこでも、誰にでも送金できます。"</string>
   <string name="gt_e595f17fac1d8384">"送金中"</string>
   <string name="gt_3a24958c28b72ab3">"支払いを送信中"</string>
@@ -1132,6 +1168,7 @@
   <string name="gt_cb24f22aa3099c53">"同期済みの最新ブロック"</string>
   <string name="gt_8a046cc90ab0a981">"同期中…"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
+  <string name="gt_c76e6790bc5b4018">"使用されています"</string>
   <string name="gt_b1d47326a9839d79">"課税は窃盗です。"</string>
   <string name="gt_890ab358a55d7fce">"技術的な詳細"</string>
   <string name="gt_55c7eb36ed47d5f6">"Telegramサポート"</string>
@@ -1139,6 +1176,7 @@
   <string name="gt_0b38e7e7a0f80600">"エンドポイントをテストして保存"</string>
   <string name="gt_487cace9d67bfca4">"エンドポイントをテスト中..."</string>
   <string name="gt_2034ce6155036f8a">"ありがとうございます"</string>
+  <string name="gt_2e48454ee6ef8e0a">"このコードは使えませんでした。もう一度お試しください。"</string>
   <string name="gt_19fe068bbdba00e6">"Esploraエンドポイントにクエリ文字列やフラグメントは含められません。"</string>
   <string name="gt_0ac08a81559f95ee">"Esploraエンドポイントに認証情報は含められません。"</string>
   <string name="gt_96100ca2d23b8821">"Esploraエンドポイントが別のBitcoinネットワーク用です。"</string>
@@ -1189,6 +1227,7 @@
   <string name="gt_89c82557e3a98b8d">"次善の選択肢はありません。"</string>
   <string name="gt_e05786d8bf8e865c">"これらのコインは利用できないか、確認中の別の支払いで確保されています。その確認画面を閉じてから、もう一度お試しください。"</string>
   <string name="gt_7689ea8bed273cfe">"これらの定期支払いは以前のウォレットのものです。保存されていますが、実行できません。これらをキャンセルし、このウォレット用に新しい支払いスケジュールを作成してください。"</string>
+  <string name="gt_2f1c3676c41f927f">"これらの単語は有効なフレーズになっていません。"</string>
   <string name="gt_23333df084dfad80">"このライトニング請求書は期限切れです。新しい請求書をリクエストしてください。"</string>
   <string name="gt_74bb47afc8d3b8c4">"このQRコードに含まれるのは、ご自身のライトニングアドレスのみです。"</string>
   <string name="gt_1d4b5ac7d8751913">"このVTXOは、ウォレット内の現在のVTXO一覧には含まれていません。更新して状況を確認してください。"</string>
@@ -1207,6 +1246,7 @@
   <string name="gt_f2faa6b386bacbee">"この退出はもう取り消せません。最終トランザクションがすでにブロードキャストされている可能性があります。状態を更新してください。"</string>
   <string name="gt_5ed0c20bff01c0ca">"この請求書は支払い済みです。今回分の支払いは再送していません。再開する前に受取人を確認してください。"</string>
   <string name="gt_ea01f6e9945bb818">"この請求書は支払い済みです：%1$s sats"</string>
+  <string name="gt_e299e88d58a6c570">"この名前で支払いを受け取れます。"</string>
   <string name="gt_766460156a897a88">"この旧形式の支払いにはウォレットの識別情報がありません。破棄する前に履歴と受取人を確認してください。"</string>
   <string name="gt_bfbb491d06ec6963">"このリンクを開けませんでした。"</string>
   <string name="gt_70f6be0e72ef41e2">"緊急退出処理に必要なBitcoin取引をブロードキャストしたり、手数料を引き上げたりする場合があります。手数料はオンチェーン残高から支払われます。キャンセルできるのは、最終の退出取引がブロードキャストされる前までです。"</string>
@@ -1244,6 +1284,7 @@
   <string name="gt_dde8bef78cbb7206">"資金移動"</string>
   <string name="gt_950abf62a77396f0">"移動済み"</string>
   <string name="gt_d8b8392e2c542950">"再試行"</string>
+  <string name="gt_92dfd3632baeb6d4">"通知をオンにする"</string>
   <string name="gt_35282984583528c6">"プッシュ通知を有効にする"</string>
   <string name="gt_baaddf70fb5d432b">"種類"</string>
   <string name="gt_11f461fc56ac26c4">"確認のためdeleteと入力"</string>
@@ -1324,6 +1365,7 @@
   <string name="gt_72d4d360dea4e316">"選択したVTXO：%1$s"</string>
   <string name="gt_f414d2a540db754b">"バックアップを検証中…"</string>
   <string name="gt_cb3a722bd933b8ca">"確認に失敗しました"</string>
+  <string name="gt_3ee75029c70e284c">"確認コード"</string>
   <string name="gt_4f7838402f37674e">"検証済み"</string>
   <string name="gt_87672f62ea3f7a51">"確認済み：%1$s"</string>
   <string name="gt_9ae9fbbcb1c80ca9">"メールアドレスを確認"</string>
@@ -1365,13 +1407,17 @@
   <string name="gt_9933a329e6966856">"次の宛先に6桁の確認コードを送信しました："</string>
   <string name="gt_b5a229ac8becc603">"ウェブサイト"</string>
   <string name="gt_2975132481a7a695">"毎週"</string>
+  <string name="gt_6621249514b7887c">"おかえりなさい"</string>
   <string name="gt_e36eb21b97962476">"Noahへようこそ"</string>
   <string name="gt_dca1b758516558c0">"迷ったら、視野を広げよう。"</string>
   <string name="gt_bdb5855e3bf745db">"支払い先は誰ですか？"</string>
   <string name="gt_94dc481c25cf7a6a">"最適化しないと、通知が遅れるだけでなく、まったく届かなくなる場合があります。"</string>
+  <string name="gt_9c91b3b673435dea">"通知がないと、Noahは支払いを受け取れず、期限が切れる前にビットコインを更新することもできません。"</string>
   <string name="gt_1e94ca03313cb795">"%1$s番目の単語"</string>
+  <string name="gt_426a2521e0e63bcc">"単語 %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"処理中"</string>
   <string name="gt_e325adc5b94bc4ab">"これらの%1$s個の単語を順番に書き留め、安全な場所に保管してください。このフレーズがウォレットを復元する唯一の手段です。"</string>
+  <string name="gt_b0e2e706ea5ac67a">"復元フレーズを書き留めてください。"</string>
   <string name="gt_4b68ab3847feda7d">"X"</string>
   <string name="gt_85a39ab345d672ff">"はい"</string>
   <string name="gt_c863d86963f48c57">"地図全体は引き続き閲覧できます。近くの場所を表示するには、設定で位置情報を有効にしてください。"</string>
@@ -1397,18 +1443,22 @@
   <string name="gt_d9a846242ed7a22f">"復元フレーズは引き続きこの端末に安全に保存されています。このフレーズを使って、バックアップからウォレットを復元してください。"</string>
   <string name="gt_fda0b967abcc3d16">"ウォレットのバックアップが正常に完了しました。"</string>
   <string name="gt_50720c8f08138a5e">"ウォレットは現在停止中です。すべてのウォレット操作が無効になっています。"</string>
+  <string name="gt_09233d973ee617bd">"ウォレットの準備ができました。"</string>
   <string name="gt_a672c47ec618d7b7">"ウォレットは一時停止中です。取引を表示するには再開してください。"</string>
   <string name="gt_b4a8692900c62adf">"ウォレットは停止中です。復旧を再開してバックアップを復元するか、このウォレットを端末から削除してください。"</string>
   <string name="gt_23a3ca761b70abf7">"ウォレットの準備ができていません。もう一度お試しください。"</string>
+  <string name="gt_f195f8e226312c3a">"準備が整いました"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_b5c755aaab1038b3">"送信先"</string>
   <string name="gt_7d7894104be6c089">"例：家賃、寄付、VPN"</string>
   <string name="gt_140a2c3b9322734d">"fiatjaf"</string>
+  <string name="gt_82a3537ff0dbce7e">"名前"</string>
   <string name="gt_7749eed65c4e3535">"name@domain.com、ark1… または lno1…"</string>
   <string name="gt_a6c585be6cfb7f0f">"npub1..."</string>
   <string name="gt_3e4443e52275a9a0">"不明なエラー"</string>
   <string name="gt_a7e0d088b6ae2e19">"v%1$s"</string>
+  <string name="gt_53e6cdc30765aade">"you@example.com"</string>
   <string name="gt_97af051a28d9808c">"your@email.com"</string>
   <string name="gt_e8fd16d62fe0b616">"1回の支払いにつき%1$s＋ネットワーク手数料"</string>
   <plurals name="gt_0339522c6cfc9440">

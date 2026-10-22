@@ -102,7 +102,7 @@ struct ProfileView: View {
         .settingsStyle("Profile")
         .scrollDismissesKeyboard(.interactively)
         .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
-        .navigationDestination(isPresented: $showEmail) { EmergencyEmailView(fromOnboarding: false) { showEmail = false } }
+        .navigationDestination(isPresented: $showEmail) { EmergencyEmailView { showEmail = false } }
         .navigationDestination(isPresented: $showIdentity) { LightningAddressView { showIdentity = false } }
         .task {
             name = Self.limitedName(SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName ?? "")

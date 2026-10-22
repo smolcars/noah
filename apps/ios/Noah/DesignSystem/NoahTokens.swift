@@ -100,6 +100,7 @@ enum NoahTokens {
         static let balance = TextStyle(size: 50, lineHeight: nil, weight: .semibold, display: true, tracking: -0.03, textStyle: .largeTitle)
         static let amount = TextStyle(size: 36, lineHeight: nil, weight: .semibold, display: true, tracking: -0.02, textStyle: .title1)
         static let code = TextStyle(size: 28, lineHeight: nil, weight: .semibold, display: true, tracking: 0, textStyle: .title2)
+        static let titleLarge = TextStyle(size: 40, lineHeight: 46, weight: .semibold, display: false, tracking: -0.02, textStyle: .body)
         static let title = TextStyle(size: 30, lineHeight: 36, weight: .semibold, display: false, tracking: -0.02, textStyle: .title1)
         static let sheetTitle = TextStyle(size: 24, lineHeight: 30, weight: .semibold, display: false, tracking: -0.015, textStyle: .title2)
         static let field = TextStyle(size: 24, lineHeight: 32, weight: .semibold, display: false, tracking: -0.01, textStyle: .title2)

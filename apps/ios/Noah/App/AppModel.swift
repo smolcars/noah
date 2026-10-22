@@ -27,6 +27,8 @@ final class AppModel {
     private(set) var resumeOnboarding = false
     /// Home's "Back up your wallet" prompt (`PersistedRecoveryPhraseBackup`).
     private(set) var needsRecoveryPhraseBackup = false
+    /// Onboarding stays on screen after a restore succeeds until its "Ready" moment ends.
+    private(set) var holdsOnboardingAfterRestore = false
     private(set) var isRestoring = false
     private(set) var restoreStep: WalletRestorer.Step?
     private(set) var restoreIssue: RestoreIssue?
@@ -199,6 +201,9 @@ final class AppModel {
             .needsBackup
     }
 
+    /// Onboarding's restore finished its closing moment; show the wallet.
+    func endOnboardingAfterRestore() { holdsOnboardingAfterRestore = false }
+
     func currentMnemonicWords() -> [String] {
         guard case .found(let value) = KeychainPassword.mnemonic(for: variant).read(),
               let mnemonic = try? StoredSeed.normalized(value) else { return [] }
@@ -211,7 +216,10 @@ final class AppModel {
         guard phase == .onboarding || phase == .blocked(.seedWithoutWalletData) else { return }
         isRestoring = true
         restoreIssue = nil
-        defer { isRestoring = false; restoreStep = nil }
+        defer {
+            isRestoring = false; restoreStep = nil
+            if phase != .wallet { holdsOnboardingAfterRestore = false }
+        }
         var committed = false
         do {
             let mnemonic = try phrase ?? AppServices.shared.readMnemonic()
@@ -246,6 +254,7 @@ final class AppModel {
                     await AppServices.shared.tokens.invalidate()
                     self.resumeOnboarding = false
                     self.reloadRecoveryPhraseBackup()
+                    self.holdsOnboardingAfterRestore = true
                     self.phase = .wallet
                     await self.openExistingWallet()
                 }).finish(outcome)

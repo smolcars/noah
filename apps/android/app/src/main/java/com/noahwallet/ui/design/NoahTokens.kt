@@ -110,6 +110,7 @@ object NoahTokens {
         val balance = TextStyle(fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 50.sp, letterSpacing = (-0.03).em)
         val amount = TextStyle(fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 36.sp, letterSpacing = (-0.02).em)
         val code = TextStyle(fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 28.sp)
+        val titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 40.sp, lineHeight = 46.sp, letterSpacing = (-0.02).em)
         val title = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 30.sp, lineHeight = 36.sp, letterSpacing = (-0.02).em)
         val sheetTitle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = (-0.015).em)
         val field = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = (-0.01).em)
