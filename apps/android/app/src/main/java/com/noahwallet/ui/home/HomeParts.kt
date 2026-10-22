@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -126,7 +127,7 @@ internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZ
         text.forEachIndexed { index, char ->
             key(text.length - index) {
                 // One line box for every character so they share a baseline; separators' descenders may overflow it.
-                if (!char.isDigit()) Text(char.toString(), Modifier.height(lineHeight), style = style, color = color, overflow = TextOverflow.Visible)
+                if (!char.isDigit()) Text(char.toString(), Modifier.height(lineHeight).testTag("home-balance-char"), style = style, color = color, overflow = TextOverflow.Visible)
                 else {
                     val target = char.digitToInt()
                     val order = digitIndex.indexOf(index)
@@ -141,7 +142,7 @@ internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZ
                     }
                     val travelled = if (target.toFloat() == from) 1f else ((position.value - from) / (target - from)).coerceIn(0f, 1f)
                     val blur = 2.5f * 4 * travelled * (1 - travelled)
-                    Box(Modifier.width(widths[target]).height(lineHeight).clipToBounds()
+                    Box(Modifier.width(widths[target]).height(lineHeight).clipToBounds().testTag("home-balance-char")
                         .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)) {
                         // Unbounded: the ten-digit column is taller than the one-line window it rolls through.
                         Column(Modifier.align(Alignment.TopCenter).wrapContentHeight(Alignment.Top, unbounded = true).requiredWidth(widths.max())

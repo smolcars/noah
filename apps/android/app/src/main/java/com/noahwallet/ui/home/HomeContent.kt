@@ -356,18 +356,46 @@ private fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, 
             customActions = listOf(CustomAccessibilityAction(toggleLabel) { onToggle(); true })
             testTag = "home-balance"
         }) {
-        // BIP-177's ₿ sits 3 dp from the digits at this size (prototype `.bal .b`), not a full no-break space.
-        val symbol = text?.startsWith("₿\u00a0") == true
-        val digits = if (symbol) text!!.removePrefix("₿\u00a0") else text
-        val line = with(androidx.compose.ui.platform.LocalDensity.current) { HomeType.balance.lineHeight.toDp() }
+        BalanceFigures(text, hidden, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0)
+    }
+}
+
+/**
+ * The balance's figures: Space Grotesk 50 sp, or smaller when the whole formatted amount (₿, its gap and every
+ * character's box) wouldn't fit the width available, as in a narrow book pane, so no digit column is squeezed
+ * out. The block keeps the 50 sp line box either way, so neither scaling nor hiding moves what follows.
+ */
+@Composable
+internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolean, startDelay: Long, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    // BIP-177's ₿ sits 3 dp from the digits at this size (prototype `.bal .b`), not a full no-break space.
+    val symbol = text?.startsWith("₿\u00a0") == true
+    val digits = if (symbol) text!!.removePrefix("₿\u00a0") else text
+    val base = HomeType.balance
+    val baseLine = with(density) { base.lineHeight.toDp() }
+    BoxWithConstraints(modifier.heightIn(min = baseLine), contentAlignment = Alignment.BottomStart) {
+        val needed = remember(digits, symbol, hidden, density) {
+            val head = if (symbol || text == null) measurer.measure("₿", base).size.width + with(density) { 3.dp.toPx() } else 0f
+            head + when {
+                digits == null -> 0f
+                hidden -> measurer.measure(digits, base.copy(letterSpacing = .06.em)).size.width.toFloat()
+                else -> digits.sumOf { measurer.measure(it.toString(), base).size.width.toDouble() }.toFloat()
+            }
+        }
+        // A pixel of slack for the per-glyph rounding of the scaled widths.
+        val scale = if (constraints.hasBoundedWidth && needed > constraints.maxWidth) ((constraints.maxWidth - 2) / needed).coerceAtLeast(.1f) else 1f
+        val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
+        val line = with(density) { style.lineHeight.toDp() }
         Row(verticalAlignment = Alignment.Bottom) {
-            if (symbol || text == null) Text("₿", Modifier.padding(end = 3.dp).height(line), style = HomeType.balance, color = if (text == null) palette.hairline else palette.foreground,
-                overflow = TextOverflow.Visible)
+            if (symbol || text == null) Text("₿", Modifier.padding(end = 3.dp * scale).height(line).testTag("home-balance-char"), style = style,
+                color = if (text == null) palette.hairline else palette.foreground, overflow = TextOverflow.Visible)
             if (digits != null) {
                 // The same line box as the digits, so hiding never moves what's below.
-                if (hidden) Text(digits, Modifier.height(line), style = HomeType.balance.copy(letterSpacing = .06.em), color = palette.foreground, maxLines = 1,
-                    overflow = TextOverflow.Visible)
-                else RollingText(digits, HomeType.balance, palette.foreground, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0)
+                if (hidden) Text(digits, Modifier.height(line).testTag("home-balance-char"), style = style.copy(letterSpacing = .06.em),
+                    color = palette.foreground, maxLines = 1, overflow = TextOverflow.Visible)
+                else RollingText(digits, style, palette.foreground, rollFromZero = rollFromZero, startDelay = startDelay)
             }
         }
     }
