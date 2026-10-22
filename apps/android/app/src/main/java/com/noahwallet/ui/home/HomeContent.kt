@@ -184,23 +184,24 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     val map = @Composable { Box(Modifier.padding(top = 22.dp).rise(entered, 260 + after, 14f, reduceMotion)) { MapRow({ haptics.light(); actions.map() }) } }
 
     val pullState = rememberPullToRefreshState()
-    // Scroll positions live above the pose switch, so folding, unfolding and bending keep them; between one column
-    // and two panes the saved anchor carries the place over. A switch places it first (again, if Home is recreated
-    // midway); only then does it follow the new layout's scrolling.
+    // Scroll positions live above the pose switch, so folding, unfolding and bending keep them; the saved anchor
+    // carries the place between one column and two panes and across recreation. Whenever Home is laid out (and after
+    // a switch) it puts the anchor in place, but only once history is known, so a slow or failed load can't drop it
+    // to the top or have it overwritten; only then does the anchor follow the reader's scrolling.
     val paned = pose !is OnboardingPose.Compact
-    var lastPaned by rememberSaveable { mutableStateOf(paned) }
     val items = remember(ui.rows, ui.domain, ui.now) {
-        ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { it.second.size }, ui.rows.isEmpty())
+        ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { (_, rows) -> rows.map { it.id } }, ui.rows.isEmpty())
     }
+    val recent = remember(ui.rows) { ui.rows.take(Recent.rows).map { it.id } }
     val currentItems by rememberUpdatedState(items)
+    val currentRecent by rememberUpdatedState(recent)
     val currentState by rememberUpdatedState(state)
-    LaunchedEffect(paned, lastPaned) {
-        if (paned != lastPaned) {
-            if (paned) homeScroll.toPanes(currentItems) else homeScroll.toCompact()
-            lastPaned = paned
-            return@LaunchedEffect
-        }
-        snapshotFlow { if (paned) homeScroll.panesAnchor(currentState, currentItems) else homeScroll.compactAnchor(currentState) }.collect { homeScroll.anchor = it }
+    val historyKnown = ui.rows.isNotEmpty() || (ui.state != HomeRules.State.loading && ui.historyError == null)
+    LaunchedEffect(paned, historyKnown) {
+        if (!historyKnown) return@LaunchedEffect
+        homeScroll.place(paned, currentItems, currentRecent)
+        snapshotFlow { if (paned) homeScroll.panesAnchor(currentState, currentItems) else homeScroll.compactAnchor(currentState, currentItems, currentRecent) }
+            .collect { homeScroll.anchor = it }
     }
     when (pose) {
         OnboardingPose.Compact -> {

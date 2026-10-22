@@ -158,6 +158,77 @@ class HomePoseScrollTest {
         assertTrue("open again, Copy is still in view", onScreen("Copy"))
     }
 
+    private fun activityEdge() = top("home-activity") + with(compose.density) { 28.dp.toPx() }
+    /** A payment that landed after the others: the newest row in history. */
+    private val newest = HistoryTransaction("n-0", "Lnurl", 777L, HistoryRules.isoDate(now), "outgoing", sortTimestamp = now.time + 1.0,
+        source = "ark", destination = "newest@example.com", movementStatus = "successful", effectiveBalanceSat = -777L, offchainFeeSat = 0)
+
+    @Test fun aPaymentInsertedAboveKeepsTheSameOneOnTop() {
+        assumeLargeWindow()
+        compose.mainClock.autoAdvance = false
+        val restoration = StateRestorationTester(compose)
+        // Neither is state: only the recreated Home sees the new pose and history, as after the process was gone.
+        var posture = Posture.Closed
+        var home = ui
+        val memory = HomeMemory().apply { enteredAt = 0L }
+        restoration.setContent { NoahTheme { Host(remember { posture }, memory, remember { home }) } }
+        settle()
+        val start = scrollRecent()
+        home = ui.copy(rows = listOf(newest) + rows)
+        posture = Posture.Open
+        restoration.recreate(); settle()
+        assertEquals("open, the same payment is on top", start, topRow(activityEdge(), 12))
+        posture = Posture.Closed
+        restoration.recreate(); settle()
+        // It's now Recent's row start + 1; the column scrolls it to the top unless it's the last row, which it can't.
+        if (start + 2 < Recent.rows) assertEquals("closed, the same payment is on top", start, topRow(top("home-scroll"), 5))
+        assertTrue("closed, the same payment is in view", onScreen(title(start), below = with(compose.density) { 64.dp.toPx() }))
+    }
+
+    @Test fun removalsKeepTheSamePaymentOrFallBackToTheOneAfterIt() {
+        assumeLargeWindow()
+        compose.mainClock.autoAdvance = false
+        val restoration = StateRestorationTester(compose)
+        var posture = Posture.Closed
+        var home = ui
+        val memory = HomeMemory().apply { enteredAt = 0L }
+        restoration.setContent { NoahTheme { Host(remember { posture }, memory, remember { home }) } }
+        settle()
+        val start = scrollRecent()
+        // An earlier payment is gone: the same one is still on top.
+        home = ui.copy(rows = rows.filterNot { it.id == "p-0" })
+        posture = Posture.Open
+        restoration.recreate(); settle()
+        assertEquals("open, the same payment is on top", start, topRow(activityEdge(), 12))
+        // Now that payment is gone too: the one that followed it takes its place.
+        home = ui.copy(rows = rows.filterNot { it.id == "p-0" || it.id == "p-$start" })
+        restoration.recreate(); settle()
+        assertEquals("the next payment takes its place", start + 1, topRow(activityEdge(), 12))
+    }
+
+    @Test fun aFailedThenSlowHistoryLoadKeepsTheSavedPlace() {
+        assumeLargeWindow()
+        compose.mainClock.autoAdvance = false
+        val restoration = StateRestorationTester(compose)
+        var posture = Posture.Closed
+        var history by mutableStateOf(ui)
+        val memory = HomeMemory().apply { enteredAt = 0L }
+        restoration.setContent { NoahTheme { Host(remember { posture }, memory, history) } }
+        settle()
+        val start = scrollRecent()
+        // History fails to load and its rows go, with an error, while Home is shown...
+        history = ui.copy(rows = emptyList(), historyError = "Couldn't load transactions. Please try again.")
+        settle()
+        // ...then Home is recreated as two panes while history is still loading, for a while.
+        history = HomeFixtures.ui("loading", now = now, backedUp = false)
+        posture = Posture.Open
+        restoration.recreate(); repeat(3) { settle() }
+        // It loads.
+        history = ui
+        settle()
+        assertEquals("the saved payment is on top once history is back", start, topRow(activityEdge(), 12))
+    }
+
     @Test fun recreatedStraightIntoTheOtherLayoutTheTopRowStaysOnTop() {
         assumeLargeWindow()
         compose.mainClock.autoAdvance = false
