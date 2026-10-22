@@ -84,6 +84,15 @@ object HomeRules {
         background != null -> Status.Background(background)
         else -> null
     }
+    /**
+     * What the balance depends on in history, by row: status, confirmation, direction, amounts, balance deltas
+     * and fees. Price and block-time enrichment (and the re-sorting it causes) leave it equal, so re-reading the
+     * balance whenever it changes can't loop.
+     */
+    fun accounting(rows: List<com.noahwallet.history.HistoryTransaction>): Map<String, List<Any?>> = rows.associate {
+        it.id to listOf(it.movementStatus, it.hasConfirmation, it.confirmationHeight, it.direction, it.amount,
+            it.effectiveBalanceSat, it.intendedBalanceSat, it.balanceChangeSat, it.offchainFeeSat, it.onchainFeeSat)
+    }
     /** "Backup completed" and automatic-boarding completion are toasts now, within today's expiry. */
     fun toast(backup: Banner?, boarding: Banner?): String? =
         backup?.title?.takeIf { it == "Backup completed" } ?: boarding?.title

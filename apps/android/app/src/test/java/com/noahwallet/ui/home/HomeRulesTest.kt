@@ -133,4 +133,20 @@ class HomeRulesTest {
         assertEquals("Boarding completed", HomeRules.toast(null, HomeRules.boarding(20_000, 1_000, 2_000, Locale.US)))
         assertNull(HomeRules.toast(HomeRules.backup(PersistedBackupState(lastBackupStatus = "in_progress"), 0, Locale.US), null))
     }
+
+    @Test fun balanceReReadsFollowAccountingChangesButNotEnrichment() {
+        val pending = com.noahwallet.history.HistoryTransaction("onchain-wallet-t", "Onchain", 100_000, "1970-01-01T00:00:00.000Z", "incoming",
+            dateLabel = "Unconfirmed", source = "onchain-wallet", txid = "t", balanceChangeSat = 100_000, hasConfirmation = false)
+        val ark = com.noahwallet.history.HistoryTransaction("movement-1", "Lnurl", 5_000, "2026-10-22T10:00:00.000Z", "outgoing",
+            source = "ark", movementStatus = "pending", effectiveBalanceSat = -5_000, offchainFeeSat = 0)
+        val base = HomeRules.accounting(listOf(pending, ark))
+        // Block times, prices and the re-sorting they cause don't move money.
+        val enriched = listOf(ark.copy(btcPrice = 112_000.0), pending.copy(date = "2026-10-22T09:00:00.000Z", dateLabel = null, sortTimestamp = 1.0, btcPrice = 111_000.0))
+        assertEquals(base, HomeRules.accounting(enriched))
+        // The same row confirming, or a pending send settling, does.
+        assertNotEquals(base, HomeRules.accounting(listOf(pending.copy(hasConfirmation = true, confirmationHeight = 220u), ark)))
+        assertNotEquals(base, HomeRules.accounting(listOf(pending, ark.copy(movementStatus = "successful"))))
+        assertNotEquals(base, HomeRules.accounting(listOf(pending, ark.copy(effectiveBalanceSat = -5_012, offchainFeeSat = 12))))
+        assertNotEquals(base, HomeRules.accounting(listOf(pending)))
+    }
 }

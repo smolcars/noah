@@ -87,10 +87,12 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     val historyLoaded = !model.history.isLoading
     val ids = rows.map { it.id }
     val currentIds by rememberUpdatedState(ids)
-    // A new history row (bark's state stream) means the balance moved too; re-read it so both agree. Home
-    // appearing already refreshes, so only a change of rows while it's shown does this.
-    var refreshedIds by remember { mutableStateOf(ids) }
-    LaunchedEffect(ids) { if (ids != refreshedIds) { refreshedIds = ids; if (historyLoaded) model.refresh() } }
+    // A history change that moves money (a new row, a confirmation, a status or delta change, from bark's state
+    // stream) means the balance moved too; re-read it so both agree. Enrichment doesn't count. Home appearing
+    // already refreshes, so only a change while it's shown does this.
+    val accounting = remember(rows) { HomeRules.accounting(rows) }
+    var refreshedAccounting by remember { mutableStateOf(accounting) }
+    LaunchedEffect(accounting) { if (accounting != refreshedAccounting) { refreshedAccounting = accounting; if (historyLoaded) model.refresh() } }
     SideEffect { if (memory.seenRows == null && historyLoaded) memory.seenRows = ids.toSet() }
     val seen = memory.seenRows
     val newRows = if (seen == null) emptySet() else rows.filter { it.direction == "incoming" && !it.isInternalTransfer && it.id !in seen }.map { it.id }.toSet()
