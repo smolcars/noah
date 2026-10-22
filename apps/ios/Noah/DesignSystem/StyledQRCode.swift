@@ -2,15 +2,19 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 import SwiftUI
 
-/// QR modules for a payload at error correction H, without the quiet zone.
+/// QR modules for a payload, without the quiet zone. Short payloads use error
+/// correction H; long ones (a payment request with an invoice) use M, which
+/// still leaves room for the logo hole (prototype `buildQR`).
 struct QRMatrix: Equatable, Sendable {
     let count: Int
     private let modules: [Bool]
 
+    static func correction(for text: String) -> String { text.utf8.count > 90 ? "M" : "H" }
+
     init?(_ text: String) {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(text.utf8)
-        filter.correctionLevel = "H"
+        filter.correctionLevel = Self.correction(for: text)
         guard let output = filter.outputImage,
               let image = CIContext().createCGImage(output, from: output.extent) else { return nil }
         let width = image.width, height = image.height
@@ -76,10 +80,12 @@ struct QRGeometry {
 }
 
 /// The styled receive QR: always near-black on white, with the longship app
-/// icon in the centre. Draws in once when `animate` is set (prototype `playQR`).
+/// icon in the centre. Draws in once when `animate` is set (prototype `playQR`);
+/// `reveal` only redraws the dots from the centre (a format change, prototype `buildQR(ripple)`).
 struct StyledQRCode: View {
     let content: String
     private let animate: Bool
+    private let reveal: Bool
     @State private var dots: Bool
     @State private var eyes: [Bool]
     @State private var logo: Bool
@@ -88,9 +94,19 @@ struct StyledQRCode: View {
     init(content: String, animate: Bool = false) {
         self.content = content
         self.animate = animate
+        reveal = false
         _dots = State(initialValue: !animate)
         _eyes = State(initialValue: Array(repeating: !animate, count: 3))
         _logo = State(initialValue: !animate)
+    }
+
+    init(content: String, reveal: Bool) {
+        self.content = content
+        animate = false
+        self.reveal = reveal
+        _dots = State(initialValue: !reveal)
+        _eyes = State(initialValue: [true, true, true])
+        _logo = State(initialValue: true)
     }
 
     var body: some View {
@@ -136,6 +152,10 @@ struct StyledQRCode: View {
     }
 
     private func drawIn() {
+        if reveal, !dots {
+            withAnimation(reduceMotion ? NoahTokens.Motion.reduceMotionFade : NoahTokens.Motion.soft) { dots = true }
+            return
+        }
         guard animate, !dots else { return }
         if reduceMotion {
             withAnimation(NoahTokens.Motion.reduceMotionFade.delay(0.2)) { dots = true }
