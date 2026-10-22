@@ -24,12 +24,13 @@ private val Destination.icon: Int get() = when (this) {
 
 /**
  * Material 3 navigation bar or (from medium width) rail, restyled monochrome: the tonal soft surface,
- * foreground icons and labels, and a hairline-tint indicator pill. [fullWindow] is Home splitting the whole
+ * foreground icons and labels, and a hairline-tint indicator pill. [fullWindow] is a tab splitting the whole
  * window itself: under a horizontal fold the bar stays in the bottom half instead of a rail crossing the fold.
+ * [showBar] false hides the bar (Send's steps after Amount); the rail always stays.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) -> Unit, fullWindow: Boolean = false,
+internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) -> Unit, fullWindow: Boolean = false, showBar: Boolean = true,
     topBar: @Composable () -> Unit = {}, content: @Composable (PaddingValues) -> Unit) {
     val palette = com.noahwallet.ui.onboarding.noahPalette()
     val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
@@ -44,7 +45,7 @@ internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) 
         val tabletop = fullWindow && hinges.any { it.width > it.height }
         val rail = AdaptiveLayout.useRail(maxWidth.value, maxHeight.value) && !tabletop
         val keyboard = WindowInsets.isImeVisible
-        val bar = !rail && !keyboard
+        val bar = !rail && !keyboard && showBar
         // The bar's surface continues under the gesture area when it reaches the window's bottom edge.
         val reachesBottom = fullWindow || hinges.isEmpty()
         DisposableEffect(bar, reachesBottom, palette) {

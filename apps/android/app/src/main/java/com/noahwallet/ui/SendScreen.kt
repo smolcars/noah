@@ -1,13 +1,11 @@
 package com.noahwallet.ui
 
 import com.noahwallet.ui.WalletAlertDialog
-import com.noahwallet.ui.WalletModalBottomSheet
 
 import com.noahwallet.localization.tr
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import androidx.compose.ui.graphics.Color
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -20,15 +18,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.noahwallet.formatting.FiatCurrency
 import com.noahwallet.history.HistoryTransaction
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -40,13 +35,18 @@ import com.noahwallet.api.generated.models.LightningAddressSuggestionsPayload
 import com.noahwallet.send.*
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.value
+import com.noahwallet.services.wallet.WalletConfiguration
+import com.noahwallet.ui.send.*
 import kotlinx.coroutines.*
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.serialization.json.JsonObject
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Send (docs/native-rewrite/design/send-receive.md): today's SendModel and SendController behind the
+ * redesigned steps. [tabBar] reports when the phone's tab bar hides (every step after Amount, back on Done).
+ */
 @Composable
-fun SendScreen(app: AppModel, onDone: () -> Unit) {
+fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit) {
     val context = LocalContext.current
     val presentation = viewModel<SendPresentation>(key = "send-presentation") { SendPresentation(SendModel(SendRuntime.shared(context).controller, BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend)) }
     val model = presentation.model
@@ -56,9 +56,8 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
     val focus = LocalFocusManager.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var scanner by rememberSaveable { mutableStateOf(false) }
-    var outcomeSheet by rememberSaveable { mutableStateOf(true) }
     fun leaveReview() { model.discardReview(); model.stage = if (model.isMax) SendStage.source else SendStage.recipient }
-    fun done() { scope.launch { controller.acknowledge(); if (!controller.locked) { model.reset(); app.refresh(); onDone() } } }
+    fun done() { scope.launch { controller.acknowledge(); if (!controller.locked) { presentation.motion = null; model.reset(); app.refresh() } } }
     LaunchedEffect(Unit) {
         model.fiatCurrency = app.preferredCurrency
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
@@ -104,6 +103,8 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
         if (previousStage != model.stage.name || previousOutcome != controller.state.name) focus.clearFocus()
         previousStage = model.stage.name; previousOutcome = controller.state.name
     }
+    // The invoice note: the amount you had typed before a recipient set its own.
+    LaunchedEffect(model.amount, model.stage) { if (model.stage == SendStage.amount) presentation.typedBefore = model.sats }
     DisposableEffect(model, lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE && !activity.isChangingConfigurations && !controller.locked) model.discardReview()
@@ -115,95 +116,85 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
             if (!activity.isChangingConfigurations) presentation.leave()
         }
     }
-    BackHandler(model.showReview && !controller.locked) { leaveReview() }
+    val quote = model.quote
+    if (model.showReview && quote != null && !controller.locked) LaunchedEffect(quote) {
+        quote.prepared?.let { prepared ->
+            delay(maxOf(0, prepared.createdAt + SendPrepared.lifetimeMillis - System.currentTimeMillis()))
+            if (!controller.locked && model.quote == quote) { leaveReview(); model.error = "This review expired. Review the payment again." }
+        }
+    }
+
+    // The motion follows the controller: each milestone is recorded when the wallet actually reaches it.
+    var refund by remember(controller.attempt?.startedAt) { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(controller.state, controller.attempt?.startedAt) {
+        val attempt = controller.attempt
+        refund = when {
+            controller.state != SendController.State.failed -> null
+            attempt?.payment?.method !in SendProgressRules.lightningMethods -> false
+            else -> runCatching { SendProgressRules.refundRecorded(controller.state, attempt, app.session.movements()) }.getOrDefault(false)
+        }
+    }
+    LaunchedEffect(presentation) {
+        snapshotFlow { listOf(controller.state, controller.attempt, presentation.submitting, refund) }.collect {
+            val motion = presentation.motion ?: return@collect
+            if (controller.state == SendController.State.ready && !presentation.submitting) { presentation.motion = null; return@collect }
+            SendProgressRules.milestone(controller.state, controller.attempt, !presentation.submitting, refund)?.let { milestone ->
+                presentation.motion = motion.reach(milestone, SystemClock.elapsedRealtime() - motion.startedAt)
+            }
+        }
+    }
+    // The block row's tip: re-read at most every 30 s while Send shows an on-chain payment; a new block re-checks it.
+    val onchain = controller.locked && controller.attempt?.payment?.method == "onchain"
+    var tip by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(onchain, app.isWalletSuspended) {
+        if (!onchain || app.isWalletSuspended) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (isActive) {
+                val next = runCatching { app.session.chainTip() }.getOrNull()
+                if (next != null && tip != null && next != tip) controller.checkStatus()
+                if (next != null) tip = next
+                delay(30_000)
+            }
+        }
+    }
+    // Today's estimates for the method cards; the review's quote stays the authority.
+    var estimates by remember { mutableStateOf<Map<SendRail, Long>>(emptyMap()) }
+    LaunchedEffect(model.stage, model.sats, model.destination) {
+        if (model.stage != SendStage.method) return@LaunchedEffect
+        val sats = model.sats.takeIf { it > 0 } ?: return@LaunchedEffect
+        val request = model.parsed.bip321
+        estimates = buildMap {
+            for (rail in model.rails) {
+                val destination = if (rail == SendRail.onchain) request?.get("onchainAddress") ?: SendDestination.cleaned(model.destination) else null
+                if (rail == SendRail.onchain && model.arkBalance < sats) continue
+                runCatching { app.session.estimateSendFee(rail, sats, destination) }.getOrNull()?.let { put(rail, it) }
+            }
+        }
+    }
+    val hideBar = model.stage != SendStage.amount && !controller.locked || controller.locked &&
+        controller.state != SendController.State.storageBlocked && !(controller.state == SendController.State.uncertain && controller.attempt?.existingLightning == null)
+    SideEffect { tabBar(hideBar && !scanner) }
+    DisposableEffect(Unit) { onDispose { tabBar(false) } }
+    BackHandler(!controller.locked && !model.busy && (model.stage != SendStage.amount || model.progress.recipientConfirmed)) { model.back() }
     if (scanner) {
-        SendScanner(onClose = { scanner = false }) { value -> scanner = false; scope.launch { model.importRecipient(value) } }
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge()) {
+            SendScanner(onClose = { scanner = false }) { value -> scanner = false; scope.launch { model.importRecipient(value) } }
+        }
         return
     }
-    if (controller.locked) {
-        if (controller.state == SendController.State.succeeded && outcomeSheet) {
-            WalletModalBottomSheet(onDismissRequest = { outcomeSheet = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-                SendOutcome(controller, app, model.btcPrice, ::done)
-            }
-        } else SendOutcome(controller, app, model.btcPrice, ::done)
-        return
-    }
-    Column(Modifier.fillMaxSize().readableWidth().imePadding().verticalScroll(rememberScrollState())) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = { focus.clearFocus(); model.reset() }, enabled = !model.busy, modifier = Modifier.testTag("send-start-over")) { Text(tr("Start over")) }
-            TextButton(onClick = { focus.clearFocus(); scanner = true }, enabled = !model.busy) { Text(tr("Scan QR")) }
-        }
-        Column(Modifier.padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            when (model.stage) {
-                SendStage.amount -> {
-                    Text(tr("How much?"), style = MaterialTheme.typography.headlineLarge)
-                    Text(tr(model.amount.ifEmpty { "0" }), style = MaterialTheme.typography.displaySmall, modifier = Modifier.testTag("send-amount").semantics { contentDescription = "Amount ${model.amount.ifEmpty { "0" }}" })
-                    TextButton(onClick = model::toggleCurrency, enabled = model.btcPrice != null && !model.busy && model.parsed.isAmountEditable, modifier = Modifier.testTag("send-currency-toggle")) { Text(tr(if (model.useFiat) model.fiatCurrency else "sats")) }
-                    Text(tr("${model.arkBalance} sats available in Ark"), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    app.summary?.balance?.let { balance ->
-                        balance.pendingRoundMessage("${balance.ark.pendingInRound} sats")?.let {
-                            Text(tr(it), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    if (!model.parsed.isAmountEditable) Text(tr("Amount set by payment request"))
-                    AmountKeypad(model.amount, model.useFiat, !model.busy && model.parsed.isAmountEditable) { model.amount = it }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = model::maxSend, enabled = !model.busy && model.parsed.isAmountEditable && (model.arkBalance > 0 || model.onchainBalance > 0), modifier = Modifier.testTag("send-max")) { Text(tr("MAX")) }
-                        TextButton(onClick = model::recipientFirst, enabled = !model.busy) { Text(tr("Choose recipient first")) }
-                    }
-                    PasteRecipient { value -> scope.launch { model.importRecipient(value) } }
-                }
-                SendStage.recipient -> {
-                    Text(tr("Who are you paying?"), style = MaterialTheme.typography.headlineMedium)
-                    OutlinedTextField(model.destination, model::setRecipient, label = { Text(tr("Address, invoice, or payment request")) },
-                        enabled = !model.busy, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth().testTag("send-recipient"))
-                    PasteRecipient { value -> focus.clearFocus(); scope.launch { model.importRecipient(value) } }
-                    model.matchingRoute?.let { route ->
-                        Text(tr("Recipient verified"), color = MaterialTheme.colorScheme.primary)
-                        if (route.commentAllowed > 0) {
-                            OutlinedTextField(model.comment, { model.comment = it }, label = { Text(tr("Add a note")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
-                            Text(tr("${model.comment.length}/${route.commentAllowed}"), style = MaterialTheme.typography.bodySmall)
-                            if (model.comment.isNotEmpty() && route.arkAddress != null) Text(tr("Adding a note will send this payment over Lightning."), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    model.suggestions.forEach { suggestion -> TextButton(onClick = { model.setRecipient(suggestion) }) { Text(tr(suggestion)) } }
-                }
-                SendStage.method -> {
-                    Text(tr("Choose payment method"), style = MaterialTheme.typography.headlineMedium)
-                    model.rails.forEach { rail ->
-                        SendChoice(rail.label, model.progress.selectedRail == rail, model.availability[rail.name] == true && !model.busy) { model.progress = model.progress.copy(selectedRail = rail, railConfirmed = true) }
-                    }
-                }
-                SendStage.source -> {
-                    Text(tr("Choose balance"), style = MaterialTheme.typography.headlineMedium)
-                    SendSource.entries.forEach { source ->
-                        SendChoice("${source.label} · ${if (source == SendSource.offchain) model.arkBalance else model.onchainBalance} sats", model.source == source, source in model.sources && !model.busy) { model.source = source }
-                    }
-                }
-                SendStage.review -> Text(tr("Review payment"), style = MaterialTheme.typography.headlineMedium)
-            }
-            model.error?.let { Text(model.destinationError?.localized(androidx.compose.ui.platform.LocalContext.current) ?: tr(it), color = MaterialTheme.colorScheme.error) }
-            controller.message?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-            Spacer(Modifier.height(8.dp))
-        }
-        Box(Modifier.padding(16.dp)) { NoahButton(if (model.busy || model.resolvingRecipient) "Preparing…" else "Continue", !model.busy && !model.resolvingRecipient, modifier = Modifier.testTag("send-continue")) { focus.clearFocus(); scope.launch { model.continueStage() } } }
-    }
-    val quote = model.quote; val payment = model.payment
-    if (model.showReview && quote != null && payment != null) {
-        LaunchedEffect(quote) {
-            quote.prepared?.let { prepared ->
-                delay(maxOf(0, prepared.createdAt + SendPrepared.lifetimeMillis - System.currentTimeMillis()))
-                if (!controller.locked && model.quote == quote) { leaveReview(); model.error = "This review expired. Review the payment again." }
-            }
-        }
-        WalletModalBottomSheet(onDismissRequest = { if (!controller.locked) leaveReview() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-            SendConfirmation(payment, quote, controller,
-                confirm = { focus.clearFocus(); controller.submit(payment, quote); model.showReview = false }, cancel = ::leaveReview)
-        }
+    val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
+    val address = app.server.state.lightningAddress
+    val env = SendEnv(app.amountUnit, locale, BuildConfig.APP_VARIANT, address?.substringAfter('@', "")?.takeIf { it.isNotEmpty() },
+        history = app.history.transactions,
+        pendingRound = app.summary?.balance?.let { balance -> balance.pendingRoundMessage(com.noahwallet.formatting.BitcoinAmount.format(balance.ark.pendingInRound.toLong(), app.amountUnit, locale)) },
+        tip = tip, chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(),
+        refund = refund, estimates = estimates, variant = BuildConfig.APP_VARIANT)
+    val actions = SendActions(scan = { focus.clearFocus(); scanner = true }, done = ::done, leave = onDone,
+        checkStatus = { scope.launch { controller.checkStatus() } }, startOver = { presentation.motion = null; model.reset() })
+    com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
+        SendContent(presentation, env, actions)
     }
 }
-
 
 @Composable internal fun SendConfirmation(payment: SendPayment, quote: SendQuote, controller: SendController, confirm: () -> Unit, cancel: () -> Unit) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -224,31 +215,6 @@ fun SendScreen(app: AppModel, onDone: () -> Unit) {
             }
 }
 
-@Composable private fun PasteRecipient(onPaste: (String) -> Unit) {
-    val context = LocalContext.current
-    TextButton(modifier = Modifier.testTag("send-paste"), onClick = {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString()?.let(onPaste)
-    }) { Text(tr("Paste")) }
-}
-@Composable private fun SendChoice(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    OutlinedButton(onClick, Modifier.fillMaxWidth().heightIn(min = 56.dp), enabled = enabled) {
-        RadioButton(selected, onClick = null, enabled = enabled); Spacer(Modifier.width(12.dp)); Text(tr(label), Modifier.weight(1f))
-    }
-}
-@Composable internal fun AmountKeypad(amount: String, decimal: Boolean, enabled: Boolean, onChange: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(if (decimal) "." else "", "0", null)).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { key ->
-                    TextButton(onClick = { onChange(keypadInput(amount, key, decimal)) }, enabled = enabled && key != "", modifier = Modifier.weight(1f).heightIn(min = 56.dp).testTag("send-key-${key ?: "⌫"}")) {
-                        Text(if (key == null) tr("Delete") else tr(key), style = if (key == null) MaterialTheme.typography.labelMedium else MaterialTheme.typography.headlineMedium)
-                    }
-                }
-            }
-        }
-    }
-}
 internal fun keypadInput(amount: String, key: String?, decimal: Boolean): String = when {
     key == null -> amount.dropLast(1)
     key == "." -> if (decimal && '.' !in amount) amount.ifEmpty { "0" } + "." else amount
@@ -329,8 +295,29 @@ internal fun keypadInput(amount: String, key: String?, decimal: Boolean): String
         dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text(tr("Keep checking")) } })
 }
 
+
 /** Configuration recreation retains only presentation; SendRuntime still owns every submission. */
 internal class SendPresentation(val model: SendModel) : ViewModel() {
+    /** The motion this screen's hold started; kept across recreation and pose changes so it resumes in place. */
+    var motion by mutableStateOf<SendMotion?>(null)
+    /** True until the submission's job returns: until then an uncertain state is still being reconciled. */
+    var submitting by mutableStateOf(false)
+    /** The motion time whose haptics have already played, so a recreation never repeats them. */
+    var hapticsAt = 0L
+    /** The amount typed before a recipient (an invoice) set its own, for the review's note. */
+    var typedBefore: Long? = null
+
+    /** Holding to send confirms exactly as today's confirm button did: once, for the reviewed quote only. */
+    fun confirm(payment: SendPayment, quote: SendQuote) {
+        val controller = model.controller
+        if (controller.locked || !model.showReview || model.quote !== quote || model.payment !== payment) return
+        val job = controller.submit(payment, quote) ?: return
+        model.showReview = false
+        motion = SendMotion(SendRoute.of(payment), SystemClock.elapsedRealtime())
+        hapticsAt = 0L
+        submitting = true
+        viewModelScope.launch { try { job.await() } catch (_: Exception) { } finally { submitting = false } }
+    }
     fun leave() { if (!model.controller.locked) model.reset() }
     override fun onCleared() { if (!model.controller.locked) model.discardReview() }
 }

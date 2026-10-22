@@ -72,10 +72,13 @@ fun NoahApp(model: AppModel) {
         model.repeatPayment = it
         showSend()
     }
-    // Home splits the whole window at a fold itself; every other screen, and Home's map and email flows, keep one pane.
+    // Home and Send split the whole window at a fold themselves; every other screen, and Home's map and
+    // email flows, keep one pane.
     var homeOverlay by rememberSaveable { mutableStateOf<String?>(null) }
+    var sendBarHidden by remember { mutableStateOf(false) }
     val homeVisible = backStack.last() == Destination.Home && (selectedTab == Destination.Home || model.isWalletSuspended)
-    val homeOwnsWindow = homeVisible && homeOverlay == null
+    val homeOwnsWindow = homeVisible && homeOverlay == null ||
+        !model.isWalletSuspended && selectedTab == Destination.Send
     val chrome = LocalWindowChrome.current
     val palette = com.noahwallet.ui.onboarding.noahPalette()
     DisposableEffect(homeOwnsWindow, palette) {
@@ -83,7 +86,7 @@ fun NoahApp(model: AppModel) {
         onDispose { chrome.background = null }
     }
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge(if (homeOwnsWindow) emptyList() else LocalFoldingFeatures.current)) {
-    AdaptiveNavigation(selectedTab, { selectedTab = it }, fullWindow = homeOwnsWindow,
+    AdaptiveNavigation(selectedTab, { selectedTab = it }, fullWindow = homeOwnsWindow, showBar = !(selectedTab == Destination.Send && sendBarHidden),
         topBar = {
             val destination = if (selectedTab == Destination.Home) backStack.last() as? SettingsDestination else null
             if (destination != null) TopAppBar(title = { Text(tr(destination.title)) }, navigationIcon = {
@@ -125,7 +128,7 @@ fun NoahApp(model: AppModel) {
                         else if (destination == Destination.History) TransactionsScreen(model, repeat)
                         else if (destination == Destination.Receive) ReceiveScreen(model) {
                             showHome()
-                        } else SendScreen(model) {
+                        } else SendScreen(model, tabBar = { sendBarHidden = it }) {
                             showHome()
                         }
                     }
