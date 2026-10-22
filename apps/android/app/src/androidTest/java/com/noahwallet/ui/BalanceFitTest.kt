@@ -1,17 +1,21 @@
 package com.noahwallet.ui
 
+import android.content.res.Configuration
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.ui.home.BalanceFigures
@@ -34,10 +38,25 @@ class BalanceFitTest {
     private fun chars() = compose.onAllNodesWithTag("home-balance-char", useUnmergedTree = true).fetchSemanticsNodes()
         .map { it.positionInRoot.x to it.positionInRoot.x + it.size.width }
 
-    @Test fun largeBalancesFitANarrowPaneInBothUnits() {
-        compose.setContent { NoahTheme { case?.let { (text, width) -> key(text, width) {
+    private fun host(density: Density? = null) = compose.setContent { NoahTheme {
+        CompositionLocalProvider(LocalDensity provides (density ?: LocalDensity.current)) { case?.let { (text, width) -> key(text, width) {
             Box(Modifier.width(width).testTag("pane")) { BalanceFigures(text, hidden = false, rollFromZero = false, startDelay = 0) }
-        } } } }
+        } } }
+    } }
+
+    @Test fun largeBalancesFitANarrowPaneInBothUnits() {
+        host()
+        assertLargeBalancesFit()
+    }
+
+    /** At 200% font size Android scales large text less than small text, so shrinking the sp size shrinks glyphs by less. */
+    @Test fun largeBalancesFitAtTheLargestFontSize() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        host(Density(context.createConfigurationContext(Configuration(context.resources.configuration).apply { fontScale = 2f })))
+        assertLargeBalancesFit()
+    }
+
+    private fun assertLargeBalancesFit() {
         // A book pane on a Pixel Fold leaves about 292 dp for the balance; 200 dp is a narrower stress.
         for (sats in listOf(100_000_000L, 2_100_000_000_000_000L)) for (unit in BitcoinAmountUnit.entries) for (width in listOf(292.dp, 200.dp)) {
             val text = BitcoinAmount.format(sats, unit, Locale.US)
@@ -56,9 +75,7 @@ class BalanceFitTest {
     }
 
     @Test fun anOrdinaryBalanceKeepsTheFullSize() {
-        compose.setContent { NoahTheme { case?.let { (text, width) -> key(text, width) {
-            Box(Modifier.width(width).testTag("pane")) { BalanceFigures(text, hidden = false, rollFromZero = false, startDelay = 0) }
-        } } } }
+        host()
         show(BitcoinAmount.format(152_742, BitcoinAmountUnit.bip177, Locale.US), 360.dp)
         val first = compose.onAllNodesWithTag("home-balance-char", useUnmergedTree = true).fetchSemanticsNodes().first()
         val fullLine = with(compose.density) { 50.sp.roundToPx() }

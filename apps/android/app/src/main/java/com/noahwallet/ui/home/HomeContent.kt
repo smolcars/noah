@@ -378,7 +378,9 @@ private fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, 
 /**
  * The balance's figures: Space Grotesk 50 sp, or smaller when the whole formatted amount (₿, its gap and every
  * character's box) wouldn't fit the width available, as in a narrow book pane, so no digit column is squeezed
- * out. The block keeps the 50 sp line box either way, so neither scaling nor hiding moves what follows.
+ * out. Each candidate size is measured as laid out, box by box, because Android scales large text less than small
+ * text at big font sizes, so a smaller sp doesn't shrink the figures in proportion. The block keeps the 50 sp line
+ * box either way, so neither scaling nor hiding moves what follows.
  */
 @Composable
 internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolean, startDelay: Long, modifier: Modifier = Modifier) {
@@ -391,16 +393,32 @@ internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolea
     val base = HomeType.balance
     val baseLine = with(density) { base.lineHeight.toDp() }
     BoxWithConstraints(modifier.heightIn(min = baseLine), contentAlignment = Alignment.BottomStart) {
-        val needed = remember(digits, symbol, hidden, density) {
-            val head = if (symbol || text == null) measurer.measure("₿", base).size.width + with(density) { 3.dp.toPx() } else 0f
-            head + when {
-                digits == null -> 0f
-                hidden -> measurer.measure(digits, base.copy(letterSpacing = .06.em)).size.width.toFloat()
-                else -> digits.sumOf { measurer.measure(it.toString(), base).size.width.toDouble() }.toFloat()
+        val available = constraints.maxWidth
+        val bounded = constraints.hasBoundedWidth
+        val scale = remember(digits, symbol, hidden, density, available, bounded) {
+            // The row's width in px at a scale: ₿ and its gap, then each character's own box (a digit's column is
+            // its measured width, rounded through dp as RollingText lays it out), or the hidden dots as one line.
+            fun needed(scale: Float): Int = with(density) {
+                val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
+                val head = if (symbol || text == null) measurer.measure("₿", style).size.width + (3.dp * scale).roundToPx() else 0
+                head + when {
+                    digits == null -> 0
+                    hidden -> measurer.measure(digits, style.copy(letterSpacing = .06.em)).size.width
+                    else -> digits.sumOf { char ->
+                        val width = measurer.measure(char.toString(), style).size.width
+                        if (char.isDigit()) width.toDp().roundToPx() else width
+                    }
+                }
             }
+            var scale = 1f
+            if (bounded) repeat(24) {
+                val width = needed(scale)
+                if (width <= available || scale <= .1f) return@remember scale
+                // Shrinking the size in proportion undershoots when the font scales nonlinearly; measure again.
+                scale = (scale * minOf(available.toFloat() / width, .98f)).coerceAtLeast(.1f)
+            }
+            scale
         }
-        // A pixel of slack for the per-glyph rounding of the scaled widths.
-        val scale = if (constraints.hasBoundedWidth && needed > constraints.maxWidth) ((constraints.maxWidth - 2) / needed).coerceAtLeast(.1f) else 1f
         val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
         val line = with(density) { style.lineHeight.toDp() }
         Row(verticalAlignment = Alignment.Bottom) {
