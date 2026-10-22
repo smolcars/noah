@@ -95,11 +95,6 @@ class HomeMemory {
 
     /** A running first-payment sequence; timed from [startedAt] so a pose change resumes it in place. */
     data class FirstPayment(val startedAt: Long, val sats: Long, val from: String?)
-    companion object {
-        const val receiptMillis = 2_400L
-        const val foldMillis = 520L
-        const val totalMillis = receiptMillis + foldMillis
-    }
 }
 
 class HomeToasts { var current by mutableStateOf<HomeToastMessage?>(null); fun show(text: String, millis: Long = 1_700) { current = HomeToastMessage(text, millis) } }
@@ -130,9 +125,10 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     if (memory.enteredAt == null) memory.enteredAt = SystemClock.elapsedRealtime()
     val entered = rememberElapsed(memory.enteredAt, 1_600)
     val payment = memory.firstPayment
-    val paymentElapsed = rememberElapsed(payment?.startedAt, HomeMemory.totalMillis)
-    LaunchedEffect(payment, paymentElapsed >= HomeMemory.totalMillis) {
-        if (payment != null && paymentElapsed >= HomeMemory.totalMillis) {
+    val paymentEnd = Receipt.end(reduceMotion)
+    val paymentElapsed = rememberElapsed(payment?.startedAt, paymentEnd)
+    LaunchedEffect(payment, paymentElapsed >= paymentEnd) {
+        if (payment != null && paymentElapsed >= paymentEnd) {
             memory.firstPayment = null
             memory.recentRevealAt = SystemClock.elapsedRealtime()
             haptics.light()
@@ -552,28 +548,29 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
     val address = ui.address
     val t = if (payment == null) 0L else elapsed
     val playing = payment != null
-    fun s(delay: Long, curve: SpringCurve, duration: Long? = null, keep: Boolean = false) =
-        if (!playing) 0f else step(t, delay, curve, duration, reduceMotion && !keep)
-    val qrOut = s(0, SpringCurve.snappy)
-    val gotIn = s(120, SpringCurve.snappy)
-    val ring = s(160, SpringCurve.soft, 700, keep = true)
-    val check = s(620, SpringCurve.soft, 420, keep = true)
-    val amountIn = s(560, SpringCurve.bouncy)
-    val fromIn = s(700, SpringCurve.snappy)
-    val buttonsOut = s(500, SpringCurve.snappy)
-    val folding = if (playing && t >= HomeMemory.receiptMillis) step(t, HomeMemory.receiptMillis, SpringCurve.soft, HomeMemory.foldMillis, reduceMotion) else 0f
+    val frame = if (playing) Receipt.at(t, reduceMotion) else Receipt.idle
+    val qrOut = frame.qrOut
+    val gotIn = frame.gotIn
+    val ring = frame.ring
+    val check = frame.check
+    val amountIn = frame.amountIn
+    val fromIn = frame.fromIn
+    val buttonsOut = frame.buttonsOut
+    val folding = frame.folding
+    // Folding collapses and shrinks the card; under Reduce Motion it only fades.
+    val collapsing = if (frame.collapse) folding else 0f
     val cardHeight = remember { IntArray(1) }
     val qrSide = if (wide) 228.dp else 212.dp
     Column(modifier.fillMaxWidth().padding(top = if (wide) 0.dp else 24.dp)
-        .then(if (folding > 0f) Modifier.clipToBounds() else Modifier)
+        .then(if (collapsing > 0f) Modifier.clipToBounds() else Modifier)
         .layout { measurable, constraints ->
             val placeable = measurable.measure(constraints)
             if (cardHeight[0] == 0 || !playing) cardHeight[0] = placeable.height
             // The prototype folds max-height from height + 80 px to 0, so the card shrinks late in the fold.
-            val max = ((cardHeight[0] + 80 * density) * (1 - folding)).toInt()
+            val max = ((cardHeight[0] + 80 * density) * (1 - collapsing)).toInt()
             layout(placeable.width, minOf(placeable.height, max.coerceAtLeast(0))) { placeable.place(0, 0) }
         }
-        .graphicsLayer { alpha = 1 - folding.coerceIn(0f, 1f); val sc = 1 - .04f * folding; scaleX = sc; scaleY = sc }
+        .graphicsLayer { alpha = 1 - folding.coerceIn(0f, 1f); val sc = 1 - .04f * collapsing; scaleX = sc; scaleY = sc }
         .testTag("home-get-paid")) {
         val ink = NoahTokens.Light.qrInk
         val copyLabel = tr("Copy Lightning address")

@@ -62,3 +62,35 @@ internal fun rememberElapsed(start: Long?, until: Long): Long {
 }
 
 internal fun lerp(from: Float, to: Float, fraction: Float) = from + (to - from) * fraction
+
+/**
+ * One frame of the first-payment sequence [t] ms in (prototype `firstPayment`): the QR blurs out and the card becomes
+ * the receipt (ring, check, amount), then it folds away. Under Reduce Motion the completed ring and check fade in
+ * with the receipt, and once it has finished the card fades out on its own, 180 ms, without folding.
+ */
+internal data class ReceiptFrame(val qrOut: Float, val gotIn: Float, val ring: Float, val check: Float, val amountIn: Float,
+                                 val fromIn: Float, val buttonsOut: Float, val folding: Float, val collapse: Boolean)
+
+internal object Receipt {
+    const val receiptMillis = 2_400L
+    const val foldMillis = 520L
+    fun end(reduceMotion: Boolean) = receiptMillis + if (reduceMotion) com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS.toLong() else foldMillis
+    val idle = ReceiptFrame(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, false)
+
+    fun at(t: Long, reduceMotion: Boolean): ReceiptFrame {
+        if (reduceMotion) {
+            val fade = com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS.toFloat()
+            val swap = (t / fade).coerceIn(0f, 1f)
+            val out = if (t < receiptMillis) 0f else ((t - receiptMillis) / fade).coerceIn(0f, 1f)
+            return ReceiptFrame(qrOut = swap, gotIn = swap, ring = 1f, check = 1f, amountIn = swap, fromIn = swap,
+                buttonsOut = swap, folding = out, collapse = false)
+        }
+        return ReceiptFrame(
+            qrOut = step(t, 0, SpringCurve.snappy), gotIn = step(t, 120, SpringCurve.snappy),
+            ring = step(t, 160, SpringCurve.soft, 700), check = step(t, 620, SpringCurve.soft, 420),
+            amountIn = step(t, 560, SpringCurve.bouncy), fromIn = step(t, 700, SpringCurve.snappy),
+            buttonsOut = step(t, 500, SpringCurve.snappy),
+            folding = if (t < receiptMillis) 0f else step(t, receiptMillis, SpringCurve.soft, foldMillis), collapse = true,
+        )
+    }
+}
