@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noah Send and Receive v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Roboto:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+.page{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;padding:4px 0 12px;font-family:-apple-system,system-ui,sans-serif;color:#111}
+.bezel{flex:none;padding:12px;background:#0b0b0b;border-radius:67px;box-shadow:0 30px 60px -24px rgba(0,0,0,.5),inset 0 0 0 1px #2b2b2b}
+.bezel.android{border-radius:52px}.bezel.duo{border-radius:40px}
+.side{flex:1 1 260px;min-width:260px;max-width:560px;display:flex;flex-direction:column;gap:18px;font-size:13px;line-height:1.45}
+.side h3{margin:0 0 8px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#777}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.chip{appearance:none;border:1px solid #ccc;background:transparent;color:#111;font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;cursor:pointer}
+.chip.on{background:#111;color:#fff;border-color:#111}
+.lbl{color:#777;padding:4px 2px;font-size:12px}
+.log{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#777}
+.spec{margin:0;padding-left:16px}.spec li{margin:3px 0}
+@media (max-width:1000px){.bezel.duo{zoom:.7}}
+@media (max-width:460px){.bezel{zoom:.86}}
+
+/* Device */
+.ph{--bg:#fff;--fg:#000;--mut:#707070;--hair:rgba(0,0,0,.12);--soft:#f2f2f2;--or:#F7931A;--ortx:#A85800;--fail:#D0312D;
+  --glass:rgba(255,255,255,.72);--glassline:rgba(0,0,0,.08);--lens:rgba(0,0,0,.07);
+  --sys:-apple-system,"SF Pro Text","SF Pro Display",system-ui,sans-serif;--grot:"Space Grotesk",-apple-system,system-ui,sans-serif;
+  width:393px;height:852px;border-radius:55px;position:relative;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--sys);-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;transition:background-color .4s,color .4s}
+.ph.dark{--bg:#000;--fg:#fff;--mut:#8f8f8f;--hair:rgba(255,255,255,.16);--soft:#1c1c1e;--ortx:#F7931A;--fail:#FF453A;--glass:rgba(40,40,42,.62);--glassline:rgba(255,255,255,.12);--lens:rgba(255,255,255,.12)}
+.ph.android{--sys:Roboto,system-ui,sans-serif;width:412px;height:892px;border-radius:40px;--soft:#f0f0f2}
+.ph.android.dark{--soft:#1b1b1d}
+.ph.duo{width:951px;height:669px;border-radius:28px}
+.status{position:absolute;top:0;left:0;right:0;height:54px;z-index:80;pointer-events:none}
+.status .t{position:absolute;left:52px;top:17px;font:600 17px/22px var(--sys)}
+.status svg{position:absolute;right:30px;top:22px}
+.island{position:absolute;top:11px;left:50%;width:124px;height:36px;margin-left:-62px;background:#000;border-radius:20px;z-index:81}
+.ph.android .status{height:40px}.ph.android .status .t{left:24px;top:11px;font:500 14px/20px var(--sys)}.ph.android .status svg{right:22px;top:14px}
+.ph.android .island{top:12px;width:22px;height:22px;margin-left:-11px;border-radius:50%}
+.ph.duo .status,.ph.duo .island,.ph.duo .homebar{display:none}
+.homebar{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--fg);z-index:90;pointer-events:none}
+.ph.android .homebar{width:108px;height:4px;margin-left:-54px;bottom:10px;opacity:.6}
+.hinge{display:none;position:absolute;top:0;bottom:0;left:50%;width:1px;margin-left:-.5px;background:linear-gradient(var(--hair),transparent 20%,transparent 80%,var(--hair));z-index:95;pointer-events:none}
+.ph.duo .hinge{display:block}
+
+/* Liquid Glass on iOS; flat tonal surfaces on Android */
+.gl{background:var(--glass);backdrop-filter:blur(18px) saturate(1.8);-webkit-backdrop-filter:blur(18px) saturate(1.8);box-shadow:inset 0 0 0 .5px var(--glassline),inset 0 1px 0 rgba(255,255,255,.35),0 6px 18px rgba(0,0,0,.06)}
+.ph.dark .gl{box-shadow:inset 0 0 0 .5px var(--glassline),inset 0 1px 0 rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.4)}
+.ph.android .gl{background:var(--soft);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+.ib{appearance:none;border:0;color:var(--fg);width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .16s;flex:none}
+.ib:active{transform:scale(.92)}
+.pill{appearance:none;border:0;height:52px;padding:0 22px;border-radius:26px;background:var(--fg);color:var(--bg);font:600 17px var(--sys);cursor:pointer;transition:transform .16s,opacity .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.pill:active{transform:scale(.97)}
+.pill[disabled]{opacity:.28;pointer-events:none}
+.pill.ol{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--hair)}
+.ph:not(.android) .pill.ol{background:var(--glass);box-shadow:inset 0 0 0 1px var(--hair);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.mchip{appearance:none;border:0;height:32px;padding:0 14px;border-radius:16px;font:600 14px var(--sys);color:var(--fg);cursor:pointer}
+
+/* Screens and views */
+.scr{position:absolute;inset:0;display:none}
+.scr.on{display:block}
+.view{position:absolute;inset:0;visibility:hidden;display:flex;flex-direction:column;padding:58px 20px 30px;box-sizing:border-box}
+.view.on{visibility:visible}
+.ph.android .view{padding-top:46px}
+.ph.duo .view{display:grid;grid-template-columns:1fr 1fr;padding:0}
+.L,.R{display:flex;flex-direction:column;min-height:0;position:relative}
+.ph.duo .L,.ph.duo .R{padding:22px 34px 24px}
+.ph.duo .R{padding-left:40px}
+.nav{height:44px;display:flex;align-items:center;justify-content:space-between;flex:none}
+.nav .ttl{font:600 17px var(--sys)}
+.grow{flex:1;min-height:0}
+.ph.duo #vAmount .L .nav{position:absolute;top:14px;left:34px;right:34px}
+.pill{white-space:nowrap}
+.ract2{display:none}
+.ph.duo .ract2{display:flex;gap:10px;margin-top:auto}
+.ph.duo .ract2 .pill{flex:1;height:52px}
+.ph.duo #ract,.ph.duo #copyBtn{display:none}
+.ph.duo #receive .L{justify-content:center;padding-bottom:96px}
+.ph.duo #receive .R{padding-bottom:24px}
+
+/* Amount */
+.avail{text-align:center;font:400 15px/20px var(--sys);color:var(--mut);margin-top:28px;height:20px}
+.avail.over{color:var(--fail)}
+.amt{text-align:center;font:600 68px/1 var(--grot);letter-spacing:-.035em;margin-top:30px;white-space:nowrap;height:72px;display:flex;justify-content:center;align-items:flex-end}
+.amt .d{display:inline-block}
+.amt .zero{color:var(--mut)}
+.fiatln{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:14px;font:400 17px/22px var(--sys);color:var(--mut);cursor:pointer}
+.maxrow{display:flex;justify-content:center;margin-top:16px}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);row-gap:2px;margin:0 6px}
+.k{height:60px;display:flex;align-items:center;justify-content:center;font:500 30px var(--grot);border-radius:30px;cursor:pointer;transition:background-color .15s}
+.k:active{background:var(--soft)}
+.k span{display:inline-block}
+.k.blank{pointer-events:none}
+.nextrow{margin-top:12px;margin-bottom:84px;display:flex}
+.nextrow .pill{flex:1}
+.ph.android .nextrow{margin-bottom:96px}
+.ph.duo .nextrow{margin-bottom:0}
+.ph.duo #vAmount .L{justify-content:center;padding-bottom:110px}
+.ph.duo #vAmount .R{justify-content:center}
+.ph.duo #vAmount .avail,.ph.duo #vAmount .amt{margin-top:18px}
+
+/* To */
+.sumamt{font:600 34px/1 var(--grot);letter-spacing:-.02em;margin-top:6px}
+.field{margin-top:18px;height:52px;border-radius:26px;display:flex;align-items:center;gap:10px;padding:0 8px 0 18px;font:400 17px var(--sys)}
+.field .to{color:var(--mut);font-weight:500}
+.field .txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.field .txt.ph0{color:var(--mut)}
+.caret{display:inline-block;width:2px;height:20px;background:var(--or);vertical-align:-4px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.sec{font:500 13px/18px var(--sys);color:var(--mut);margin:22px 0 8px}
+.recents{display:flex;gap:16px;overflow:hidden}
+.rc{display:flex;flex-direction:column;align-items:center;gap:6px;width:60px;cursor:pointer;font:400 12px var(--sys);color:var(--fg)}
+.rc span{max-width:60px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{flex:none;width:44px;height:44px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;font:600 18px/1 var(--grot);color:var(--fg);position:relative}
+.rc .av{width:56px;height:56px;font-size:22px}
+.av svg{width:20px;height:20px}
+.rw{height:64px;display:flex;align-items:center;gap:14px;cursor:pointer;position:relative}
+.rw::after{content:"";position:absolute;left:58px;right:0;bottom:0;height:1px;background:var(--hair)}
+.rw:last-child::after{display:none}
+.rw .w{flex:1;min-width:0}
+.rw .n{font:400 17px/22px var(--sys);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rw .s{font:400 13px/18px var(--sys);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.try{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.try .mchip{height:28px;font-size:12.5px;font-weight:500;padding:0 11px}
+
+/* Method */
+.rails{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+.railc{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:22px;cursor:pointer;position:relative;transition:transform .16s}
+.railc:active{transform:scale(.98)}
+.railc .ic{width:40px;height:40px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;flex:none}
+.ph.android .railc .ic{background:var(--bg)}
+.railc .ic svg{width:20px;height:20px}
+.railc .w{flex:1}
+.railc .n{font:600 17px/22px var(--sys)}
+.railc .s{font:400 13px/18px var(--sys);color:var(--mut)}
+.railc .tag{font:600 11px var(--sys);color:var(--ortx);background:rgba(247,147,26,.14);border-radius:999px;padding:3px 8px}
+
+/* Review */
+.big{font:600 40px/1.05 var(--grot);letter-spacing:-.025em;margin-top:18px}
+.who{display:flex;align-items:center;gap:12px;margin-top:16px;font:400 17px var(--sys)}
+.who .av{width:36px;height:36px;font-size:15px}
+.rows{margin-top:24px}
+.br{display:flex;justify-content:space-between;align-items:center;height:48px;box-shadow:inset 0 -1px 0 var(--hair);font:400 17px var(--sys)}
+.br:last-child{box-shadow:none}
+.br span{color:var(--mut)}
+.br b{font-weight:500;display:flex;align-items:center;gap:6px}
+.br b.n{font:500 17px var(--grot);font-variant-numeric:tabular-nums}
+.br b svg{width:16px;height:16px}
+.fine{font:400 13px/18px var(--sys);color:var(--mut);margin-top:12px}
+.holdwrap{position:relative;margin-top:auto;margin-bottom:6px}
+.hold{width:100%;height:58px;border-radius:29px;font-size:17px;position:relative;overflow:visible}
+.hold svg{position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);pointer-events:none;overflow:visible}
+.hold rect{fill:none;stroke:var(--or);stroke-width:3;stroke-linecap:round}
+.hold .hl{position:relative;z-index:1}
+.ph.duo #vReview .R{justify-content:flex-end}
+
+/* Stage (coins) */
+.stage{position:relative;height:270px;margin-top:8px;flex:none}
+.stage svg{width:100%;height:100%;overflow:visible}
+.ph.duo .stage{height:330px;margin-top:40px}
+.stage .t, .stage .anim{transform-box:fill-box;transform-origin:center}
+.sendsub{font:400 17px/22px var(--sys);color:var(--mut);margin-top:6px}
+.phase{text-align:center;font:500 15px/20px var(--sys);color:var(--mut);height:20px;margin-top:4px}
+.phase.ok{color:var(--fg)}
+.result{margin-top:18px;opacity:0}
+.result .big{margin-top:0}
+.result .sub{font:400 15px/20px var(--sys);color:var(--mut);margin-top:10px}
+.ph.duo #vSending .R{justify-content:center}
+.donerow{margin-top:auto;display:flex;gap:10px}
+.donerow .pill{flex:1}
+
+/* Receive */
+#receive .view{visibility:visible}
+.rnav{height:44px;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:none}
+.cardwrap{perspective:1400px;margin:12px auto 0;width:300px;position:relative}
+.ph.duo .cardwrap{width:310px;margin-top:0}
+.card3d{position:relative;transform-style:preserve-3d;transition:none}
+.face{border-radius:30px;background:#fff;color:#0a0a0a;box-shadow:0 14px 40px rgba(0,0,0,.08),inset 0 0 0 1px rgba(0,0,0,.07);backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+.ph.dark .face{box-shadow:0 14px 40px rgba(0,0,0,.6)}
+.front{padding:22px 22px 18px;display:flex;flex-direction:column;align-items:center;position:relative}
+.qrbox{width:226px;height:226px;position:relative}
+.ph.duo .qrbox{width:228px;height:228px}
+.qrbox svg{display:block;width:100%;height:100%;overflow:visible}
+.qrname{margin-top:12px;font:600 17px/22px var(--sys);color:#0a0a0a;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cap{margin-top:2px;font:400 13px/18px var(--sys);color:#6b6b6b;text-align:center}
+.band{margin:14px -22px -18px;align-self:stretch;background:#0a0a0a;color:#fff;padding:14px 22px;display:none;justify-content:space-between;align-items:baseline}
+.band b{font:600 24px/1 var(--grot);letter-spacing:-.02em}
+.band span{font:400 14px var(--sys);color:#bdbdbd}
+.back{position:absolute;inset:0;transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.back b{font:600 44px/1 var(--grot);letter-spacing:-.03em}
+.back .rl{display:flex;align-items:center;gap:6px;font:500 15px var(--sys);color:#6b6b6b}
+.back .rl svg{width:16px;height:16px}
+.back .tick{width:76px;height:76px}
+.back .tick circle{fill:none;stroke:var(--or);stroke-width:2.5}
+.back .tick path{fill:none;stroke:#0a0a0a;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.comet{position:absolute;inset:-3px;pointer-events:none;z-index:2}
+.comet rect{fill:none;stroke:var(--or);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:46 1200;animation:orbit 7s linear infinite}
+@keyframes orbit{to{stroke-dashoffset:-1246}}
+.ph.reduce .comet{display:none}
+.over{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:visible}
+.over .anim{transform-box:fill-box;transform-origin:center}
+.ract{display:flex;gap:10px;margin:18px auto 0;width:300px}
+.ract .pill{flex:1;height:48px;font-size:16px}
+.ph.duo .ract{width:310px}
+.rphase{text-align:center;font:500 15px/20px var(--sys);color:var(--mut);height:20px;margin-top:14px}
+.chainbox{width:300px;margin:8px auto 0;height:58px;position:relative;opacity:0}
+.chainbox svg{width:100%;height:100%;overflow:visible}
+.ph.duo .chainbox{width:310px}
+.fmt{display:none}
+.ph.duo .fmt{display:block}
+.ph.duo #receive .R{justify-content:flex-start;padding-top:40px}
+.fr{display:flex;align-items:center;gap:12px;min-height:66px;box-shadow:inset 0 -1px 0 var(--hair)}
+.fr:last-child{box-shadow:none}
+.fr .w{flex:1;min-width:0}
+.fr .n{font:600 15px/20px var(--sys)}
+.fr .v{font:400 13px/18px ui-monospace,Menlo,monospace;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.fr .s{font:400 13px/18px var(--sys);color:var(--mut)}
+.fr .ib{width:36px;height:36px}
+.fr{cursor:pointer}
+.fr .rad{width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--hair);flex:none;transition:background-color .2s}
+.fr.sel .rad{background:var(--fg);box-shadow:none}
+.fr.off{opacity:.35}
+
+/* Tabs */
+.tabs{position:absolute;left:20px;right:20px;bottom:26px;height:62px;border-radius:31px;display:flex;align-items:center;justify-content:space-around;padding:0 6px;z-index:40;transition:transform .35s cubic-bezier(.3,.9,.3,1)}
+.tabs.away{transform:translateY(130px)}
+.tab{flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--fg);font:500 10px var(--sys);cursor:pointer;transition:background-color .25s}
+.tab svg{width:24px;height:24px}
+.tab.on{background:var(--lens)}
+.ph.duo .tabs{left:94px;right:auto;width:288px;bottom:18px}
+.ph.android .tabs{left:0;right:0;bottom:0;height:88px;border-radius:0;padding:0 8px 18px;align-items:flex-end;background:var(--soft)}
+.ph.android .tab{height:64px;border-radius:0;gap:4px;font:500 12px var(--sys);background:none}
+.ph.android .tab .ind{width:64px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;transition:background-color .25s}
+.ph.android .tab.on .ind{background:var(--hair)}
+
+/* Sheets */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.3);opacity:0;pointer-events:none;z-index:60;transition:opacity .3s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;border-radius:44px;padding:10px 22px 26px;z-index:61;transform:translateY(110%);visibility:hidden}
+.ph:not(.android) .sheet{background:var(--glass);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:inset 0 0 0 .5px var(--glassline)}
+.ph.android .sheet{left:0;right:0;bottom:0;border-radius:28px 28px 0 0;background:var(--soft)}
+.ph.duo .sheet{left:auto;right:12px;width:451px;bottom:12px}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 14px}
+.sheet h2{margin:0 0 4px;font:600 22px/28px var(--sys)}
+.sheet .amt{margin-top:10px;font-size:54px;height:58px}
+.notechip{display:flex;justify-content:center;margin:12px 0 6px}
+.toast{position:absolute;left:50%;top:110px;transform:translateX(-50%);height:34px;padding:0 16px;border-radius:17px;background:var(--fg);color:var(--bg);font:600 13px/34px var(--sys);white-space:nowrap;opacity:0;pointer-events:none;z-index:70}
+.ph.duo .toast{top:22px}
+</style>
+</head>
+<body style="margin:0;padding:16px;font-family:-apple-system,system-ui,sans-serif">
+<div class="page">
+<div class="bezel" id="bezel"><div class="ph" id="ph">
+  <div class="status"><span class="t">9:41</span><svg width="77" height="13" viewBox="0 0 77 13"><rect x="0" y="9" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="6" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="10" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="13" rx="1" fill="currentColor"/><path d="M30 3.5a9 9 0 0 1 12 0M32.2 6.3a5.6 5.6 0 0 1 7.6 0M34.4 9a2.3 2.3 0 0 1 3.2 0" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect x="50" y="1" width="23" height="11" rx="3.2" stroke="currentColor" stroke-opacity=".4" fill="none"/><rect x="52" y="3" width="19" height="7" rx="1.8" fill="currentColor"/></svg></div>
+  <div class="island"></div><div class="hinge"></div>
+
+  <!-- SEND -->
+  <section class="scr on" id="send">
+    <div class="view on" id="vAmount">
+      <div class="L">
+        <div class="nav"><span></span><button class="ib gl" id="scanBtn" aria-label="Scan"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg></button></div>
+        <div class="avail" id="avail">₿152,742 available</div>
+        <div class="amt" id="amt"></div>
+        <div class="fiatln" id="fiatln"><span id="fiatTx">$0.00</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 4v16M8 20l-3-3M8 20l3-3M16 20V4M16 4l-3 3M16 4l3 3"/></svg></div>
+        <div class="maxrow"><button class="mchip gl" id="maxBtn">Max</button></div>
+      </div>
+      <div class="R grow" style="justify-content:flex-end">
+        <div class="kp" id="kp"></div>
+        <div class="nextrow"><button class="pill" id="nextBtn" disabled>Next</button></div>
+      </div>
+    </div>
+
+    <div class="view" id="vTo">
+      <div class="L">
+        <div class="nav"><button class="ib gl bk" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button><span class="ttl">Send</span><button class="ib gl" aria-label="Scan"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg></button></div>
+        <div class="sumamt" id="toAmt">₿500</div>
+        <div class="field gl"><span class="to">To</span><span class="txt" id="toTxt"></span><button class="mchip" id="pasteBtn" style="background:var(--bg)">Paste</button></div>
+        <div class="try" id="tryRow"></div>
+      </div>
+      <div class="R grow">
+        <div class="sec" id="recentsHdr">Recent</div>
+        <div class="recents" id="recents"></div>
+        <div class="sec" id="resHdr" style="display:none">Results</div>
+        <div id="results"></div>
+      </div>
+    </div>
+
+    <div class="view" id="vMethod">
+      <div class="L">
+        <div class="nav"><button class="ib gl bk" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button><span class="ttl">Send</span><span style="width:40px"></span></div>
+        <div class="big" id="mTitle">How to send ₿500</div>
+        <div class="fine">This request accepts three ways to pay.</div>
+      </div>
+      <div class="R grow"><div class="rails" id="rails"></div></div>
+    </div>
+
+    <div class="view" id="vReview">
+      <div class="L">
+        <div class="nav"><button class="ib gl bk" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button><span></span><span style="width:40px"></span></div>
+        <div class="big" id="rvTitle">Send ₿500</div>
+        <div class="who"><span class="av" id="rvAv">n</span><span id="rvTo">nitesh</span></div>
+      </div>
+      <div class="R grow">
+        <div class="rows" id="rvRows"></div>
+        <div class="fine" id="rvFine"></div>
+        <div class="holdwrap">
+          <button class="pill hold" id="hold"><svg><rect id="holdRect" x="2" y="2" rx="31" ry="31"/></svg><span class="hl" id="holdLbl">Hold to send</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="vSending">
+      <div class="L">
+        <div class="nav"><span></span><span></span><span></span></div>
+        <div class="big" id="sendTitle" style="margin-top:6px">Sending ₿500</div>
+        <div class="sendsub" id="sendSub">to maya</div>
+        <div class="stage"><svg id="stage" viewBox="20 10 320 230"></svg></div>
+        <div class="phase" id="phase"></div>
+      </div>
+      <div class="R grow">
+        <div class="result" id="result"><div class="sub" id="resSub" style="margin-top:0"></div><div class="rows" id="resRows"></div></div>
+        <div class="donerow"><button class="pill" id="doneBtn" style="opacity:0;pointer-events:none">Done</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECEIVE -->
+  <section class="scr" id="receive">
+    <div class="view on" id="vReceive">
+      <div class="L">
+        <div class="rnav"><button class="ib gl" id="copyBtn" aria-label="Copy a format"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button></div>
+        <div class="cardwrap" id="cardwrap">
+          <svg class="comet" id="comet"><rect id="cometRect" x="1.5" y="1.5" rx="31" ry="31"/></svg>
+          <div class="card3d" id="card3d">
+            <div class="face front" id="front">
+              <div class="qrbox"><svg id="qr" viewBox="0 0 244 244"></svg></div>
+              <div class="qrname" id="qrName">maya@noahwallet.io</div>
+              <div class="cap" id="cap">Scan with any Lightning wallet</div>
+              <div class="band" id="band"><b id="bandAmt">₿500</b><span id="bandSub">$0.56</span></div>
+            </div>
+            <div class="face back" id="backFace">
+              <svg class="tick" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" id="tkC"/><path d="M27 43 l10 10 l21 -22" id="tkP"/></svg>
+              <b id="backAmt">+₿2,100</b>
+              <div class="rl" id="backRail"></div>
+            </div>
+          </div>
+          <svg class="over" id="over" viewBox="0 0 300 330" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="rphase" id="rphase"></div>
+        <div class="chainbox" id="chainbox"><svg viewBox="0 0 300 58" id="chainsvg"></svg></div>
+        <div class="ract" id="ract"><button class="pill ol" id="addAmt">Add amount</button><button class="pill" id="shareBtn">Share</button></div>
+      </div>
+      <div class="R">
+        <div class="fmt" id="fmtPane"></div>
+        <div class="ract2"><button class="pill ol" id="addAmt2">Add amount</button><button class="pill" id="shareBtn2">Share</button></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="tabs gl" id="tabs">
+    <div class="tab" data-tab="home"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z"/></svg></span>Home</div>
+    <div class="tab" data-tab="receive"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span>Receive</div>
+    <div class="tab on" data-tab="send"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span>Send</div>
+    <div class="tab" data-tab="activity"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg></span>Activity</div>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="amtSheet"><div class="grab"></div><h2>Add amount</h2><div class="amt" id="samt"></div><div class="fiatln" style="margin-top:8px"><span id="sfiat">$0.00</span></div><div class="notechip"><button class="mchip gl" id="noteBtn">Add a note</button></div><div class="kp" id="skp"></div><div class="nextrow" style="margin-bottom:0"><button class="pill" id="sDone">Done</button></div></div>
+  <div class="sheet" id="fmtSheet"><div class="grab"></div><h2>Ways to pay you</h2><div id="fmtList"></div></div>
+  <div class="toast" id="toast"></div>
+  <div class="homebar"></div>
+</div></div>
+
+<div class="side">
+  <div><h3>Prototype</h3>
+    <div class="chips"><span class="lbl">Screen:</span><button class="chip on" data-scr="send">Send</button><button class="chip" data-scr="receive">Receive</button></div>
+    <div class="chips" id="sendCtl"><span class="lbl">Send to:</span><button class="chip on" data-pick="maya">maya (Ark)</button><button class="chip" data-pick="lucas">lucas@ln.tips (Lightning)</button><button class="chip" data-pick="chain">bc1q… (on-chain)</button><button class="chip" data-pick="req">Payment request</button></div>
+    <div class="chips"><span class="lbl">Outcome:</span><button class="chip on" data-out="ok">Works</button><button class="chip" data-out="slow">Slow</button><button class="chip" data-out="fail">Fails</button></div>
+    <div class="chips"><span class="lbl">Receive via:</span><button class="chip" data-arrive="ark">Ark</button><button class="chip" data-arrive="ln">Lightning</button><button class="chip" data-arrive="chain">On-chain</button></div>
+    <div class="chips"><span class="lbl">Device:</span><button class="chip on" data-dev="iphone">iPhone</button><button class="chip" data-dev="android">Android</button><button class="chip" data-dev="duo">iPhone Duo open</button></div>
+    <div class="chips"><button class="chip on" data-theme="light">Light</button><button class="chip" data-theme="dark">Dark</button><button class="chip" id="slowBtn">Slow ×3</button><button class="chip" id="rmBtn">Reduce Motion</button><button class="chip" id="autoBtn">Play whole send</button></div>
+    <div class="log" id="hap">haptic: —</div>
+  </div>
+  <div><h3>Ark-native motion</h3>
+    <ul class="spec">
+      <li><b>Your coin.</b> Ark money is coins (VTXOs). Yours have an orange ring; the recipient's piece is solid. No trees here: those stay in onboarding.</li>
+      <li><b>Ark send: split, sign, deliver.</b> Your coin splits into the payment and your change (bark's checkpoint fans one coin out). You (person) and the Ark server each draw a signature onto the payment. It drops into their mailbox. Instant, and Ark sends are free.</li>
+      <li><b>Lightning send: lock, pay, unlock.</b> The payment is padlocked so only a secret can release it, and tied to the Ark server, which holds it. Ark pays over Lightning (the bolt). Paying hands the payee a receipt: their secret, the preimage. It travels back through Ark as a key, the lock opens, and Ark takes the piece it paid for. If it fails, no key ever comes: Ark signs the piece back to you as a fresh coin.</li>
+      <li><b>On-chain send: swap, then blocks.</b> Ark pays the address from its own coins in exchange for yours. Your transaction (orange) waits in a blinking “next” block after the latest mined blocks, mempool.space style, with real heights from the explorer. When it's mined: “Confirmed in block 921,346”. Block times are sped up here.</li>
+      <li><b>Hold to send.</b> Your finger signs: an orange stroke traces the button while you hold, with haptic ticks. Let go early and it rewinds.</li>
+    </ul>
+  </div>
+  <div><h3>Receive</h3>
+    <ul class="spec">
+      <li><b>Listening.</b> A thin orange light circles the card while it can be paid. Lightning needs Noah awake to claim, so this is literal.</li>
+      <li><b>Your Lightning address is the default QR.</b> Add amount switches it to the unified payment request (Bitcoin and Ark addresses, the amount and a Lightning invoice in one code) with an amount band. Every format is in the list (Copy on phones, the right pane on the Duo): Lightning address, payment request, Lightning invoice, Ark address, Bitcoin address. Tap one to show it.</li>
+      <li><b>Ark arrives</b> from the Ark server (your mailbox) as a coin dropped into the card. <b>Lightning</b> hits the server, which hands you the payment locked to your secret; your phone's key opens it. <b>On-chain</b> waits in the next block under the card, then shows the block it confirmed in.</li>
+      <li>Then the card flips to the amount with the success haptic, and flips back.</li>
+      <li><b>Add amount</b> grows an inverted band on the card and the QR redraws with a Lightning invoice inside.</li>
+    </ul>
+  </div>
+  <div><h3>Wide and foldable</h3>
+    <ul class="spec">
+      <li><b>Send:</b> the amount and the motion stage on the left, the keypad, recipients and the hold button on the right.</li>
+      <li><b>Receive:</b> the card unfolds along the hinge: QR on the left, every format with Copy on the right. No sheets.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+const $=id=>document.getElementById(id), ph=$('ph');
+// Springs, same model as SwiftUI .spring(response:dampingFraction:).
+function spring(response,damping){const w0=2*Math.PI/response,z=damping;
+  const x=t=>z<1?1-Math.exp(-z*w0*t)*(Math.cos(w0*Math.sqrt(1-z*z)*t)+(z/Math.sqrt(1-z*z))*Math.sin(w0*Math.sqrt(1-z*z)*t)):1-Math.exp(-w0*t)*(1+w0*t);
+  let T=.05;for(;T<3;T+=.01){let ok=true;for(let t=T;t<T+.25;t+=.01)if(Math.abs(1-x(t))>.002){ok=false;break}if(ok)break}
+  const n=48,p=[];for(let i=0;i<=n;i++)p.push(+x(T*i/n).toFixed(4));p[n]=1;return{ease:`linear(${p.join(',')})`,dur:T}}
+const SP={snappy:spring(.30,.85),soft:spring(.50,1),bouncy:spring(.40,.60),tap:spring(.12,.80)};
+let slow=1,rm=false;
+const ms=k=>SP[k].dur*1000*slow;
+function anim(el,frames,k,o={}){if(!el)return;
+  if(rm&&!o.keep){const a=frames[0],b=frames[frames.length-1];return el.animate([{opacity:a.opacity??(b.opacity??1)},{opacity:b.opacity??1}],{duration:180*slow,easing:'ease',delay:(o.delay||0)*slow*.3,fill:o.fill||'both'})}
+  return el.animate(frames,{duration:o.dur??ms(k),easing:o.ease??SP[k].ease,delay:(o.delay||0)*slow,fill:o.fill||'both',iterations:o.it||1})}
+let timers=[];const T=(fn,t)=>timers.push(setTimeout(fn,t*slow*(rm?.45:1)));const clearT=()=>{timers.forEach(clearTimeout);timers=[]};
+function hap(n){const l=$('hap');l.textContent='haptic: '+n;l.animate([{opacity:.3},{opacity:1}],{duration:300})}
+function toast(t){const el=$('toast');el.textContent=t;el.getAnimations().forEach(a=>a.cancel());el.animate([{opacity:0,transform:'translate(-50%,8px) scale(.9)'},{opacity:1,transform:'translate(-50%,0)',offset:.2},{opacity:1,transform:'translate(-50%,0)',offset:.82},{opacity:0,transform:'translate(-50%,-4px)'}],{duration:1700*slow,easing:'ease-out'})}
+
+// Data
+const PRICE=112000,BAL=152742;
+const fmt=n=>'₿'+Math.abs(n).toLocaleString('en-US');
+const fiat=s=>'$'+(s*PRICE/1e8).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const G={
+  ark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h18l-2.6 4.5H5.6z"/><path d="M12 4v11M12 5.5l6 7.5h-6"/></svg>',
+  ln:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>',
+  chain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  copy:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
+  req:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><path d="M14 14h2v2M20 14v6h-6"/></svg>'};
+const RAIL={ark:{name:'Ark',arrives:'Instantly',fee:0,sub:'Instant · free'},
+  ln:{name:'Lightning',arrives:'In seconds',fee:12,sub:'Seconds · ₿12 fee'},
+  chain:{name:'On-chain',arrives:'In about 20 minutes',fee:420,sub:'About 20 min · ₿420 fee'}};
+const REC={
+  maya:{n:'maya',t:'maya',sub:'Noah user',av:'m',rail:'ark'},
+  lucas:{n:'lucas@ln.tips',t:'lucas@ln.tips',sub:'Lightning address',av:'l',rail:'ln'},
+  bob:{n:'bob@getalby.com',t:'bob@getalby.com',sub:'Lightning address',av:'b',rail:'ln'},
+  inv:{n:'Lightning invoice',t:'lnbc50u1pj…x7k2',sub:'Asks for ₿5,000',av:'ln',rail:'ln',fixed:5000},
+  chain:{n:'bc1q…h7r3',t:'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0h7r3',sub:'Bitcoin address',av:'chain',rail:'chain'},
+  req:{n:'Payment request',t:'bitcoin:bc1q…?ark=ark1…&lightning=lnbc…',sub:'Ark, Lightning or on-chain',av:'req',rail:null}};
+const S={scr:'send',v:'amount',dev:'iphone',dark:false,amt:'',fiat:false,rec:'maya',rail:'ark',out:'ok',
+  typed:'',rcvAmt:0,rcvDraft:'',busy:false};
+
+// Keypad
+const KEYS=['1','2','3','4','5','6','7','8','9','·','0','⌫'];
+function buildKp(el,onKey){el.innerHTML=KEYS.map(k=>`<div class="k${k==='·'?' blank':''}" data-k="${k}"><span>${k==='·'?'':k==='⌫'?'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9l-6-6z"/><path d="m12 10 4 4M16 10l-4 4"/></svg>':k}</span></div>`).join('');
+  el.addEventListener('pointerdown',e=>{const k=e.target.closest('.k');if(!k)return;anim(k.firstElementChild,[{transform:'scale(1)'},{transform:'scale(1.28)'},{transform:'scale(1)'}],'tap',{dur:220*slow,ease:'ease-out',fill:'none'});onKey(k.dataset.k)})}
+function amtHtml(str,fresh){if(!str)return'<span class="zero">₿0</span>';
+  const s=Number(str).toLocaleString('en-US');return'₿'+[...s].map((c,i)=>`<span class="d${fresh&&i===s.length-1?' nw':''}">${c}</span>`).join('')}
+function renderAmt(fresh){const el=$('amt');el.innerHTML=amtHtml(S.amt,fresh);
+  const nw=el.querySelector('.nw');if(nw)anim(nw,[{color:'var(--mut)',transform:'translateY(6px)',opacity:.4},{color:'var(--fg)',transform:'none',opacity:1}],'snappy',{fill:'none'});
+  const n=Number(S.amt||0);$('fiatTx').textContent=fiat(n);
+  const over=n>BAL;$('avail').classList.toggle('over',over);$('avail').textContent=over?`Only ${fmt(BAL)} available`:`${fmt(BAL)} available`;
+  $('nextBtn').disabled=!(n>0&&!over)}
+buildKp($('kp'),k=>{if(k==='⌫'){S.amt=S.amt.slice(0,-1);hap('selection');renderAmt(false);return}
+  if(k==='·')return;if(S.amt.length>=9)return;if(S.amt===''&&k==='0')return;
+  S.amt+=k;hap('selection');renderAmt(true);
+  if(Number(S.amt)>BAL){hap('error');anim($('amt'),[{transform:'translateX(0)'},{transform:'translateX(-10px)'},{transform:'translateX(9px)'},{transform:'translateX(-6px)'},{transform:'translateX(3px)'},{transform:'none'}],'snappy',{dur:380*slow,ease:'ease-out',fill:'none'})}});
+$('maxBtn').onclick=()=>{S.amt=String(BAL-420);hap('light');renderAmt(true)};
+$('fiatln').onclick=()=>{hap('selection');toast('Swaps to dollars first')};
+
+// Views
+const VIEWS={amount:'vAmount',to:'vTo',method:'vMethod',review:'vReview',sending:'vSending'};
+const ORDER=['amount','to','method','review','sending'];
+function go(v,instant){const from=S.v;S.v=v;
+  Object.entries(VIEWS).forEach(([k,id])=>$(id).classList.toggle('on',k===v));
+  $('tabs').classList.toggle('away',S.scr==='send'&&v!=='amount'&&S.dev!=='duo');
+  const el=$(VIEWS[v]);if(instant||from===v)return;
+  const fwd=ORDER.indexOf(v)>ORDER.indexOf(from);
+  anim(el,[{opacity:0,transform:`translateX(${fwd?28:-28}px)`},{opacity:1,transform:'none'}],'snappy',{fill:'none'})}
+document.querySelectorAll('.bk').forEach(b=>b.onclick=()=>{hap('light');go(S.v==='review'?(REC[S.rec].rail?'to':'method'):S.v==='method'?'to':'amount')});
+$('nextBtn').onclick=()=>{hap('light');renderTo();go('to')};
+
+// To
+function avHtml(r,cls=''){const g=G[r.av];return`<span class="av ${cls}">${g||r.av}</span>`}
+const TRY=[['maya','maya'],['lucas','lucas@ln.tips'],['inv','lnbc50u1…'],['chain','bc1q…'],['req','bitcoin:…']];
+function renderTo(){$('toAmt').textContent=fmt(Number(S.amt||0));
+  const typed=S.typed;$('toTxt').innerHTML=typed?`${typed}<span class="caret"></span>`:'<span class="caret"></span><span style="color:var(--mut)"> Name, address or invoice</span>';
+  $('tryRow').innerHTML=TRY.map(([k,l])=>`<button class="mchip gl" data-try="${k}">${l}</button>`).join('');
+  $('recents').innerHTML=['maya','lucas','bob','chain'].map(k=>`<div class="rc" data-pick="${k}">${avHtml(REC[k])}<span>${REC[k].n.split('@')[0]}</span></div>`).join('');
+  const show=!!typed;$('recentsHdr').style.display=show?'none':'';$('recents').style.display=show?'none':'';$('resHdr').style.display=show?'':'none';
+  $('results').innerHTML=show?resultsFor(typed).map(k=>`<div class="rw" data-pick="${k}">${avHtml(REC[k])}<div class="w"><div class="n">${REC[k].n}</div><div class="s">${REC[k].sub}</div></div></div>`).join('')||'<div class="fine">No matches</div>':''}
+function resultsFor(t){t=t.toLowerCase();if(t.startsWith('bitcoin:'))return['req'];if(t.startsWith('lnbc'))return['inv'];if(t.startsWith('bc1'))return['chain'];
+  return Object.keys(REC).filter(k=>['maya','lucas','bob'].includes(k)&&REC[k].n.includes(t))}
+$('vTo').addEventListener('click',e=>{const t=e.target.closest('[data-try]');if(t){const k=t.dataset.try;typeInto(REC[k].t,()=>{});return}
+  const p=e.target.closest('[data-pick]');if(p)pick(p.dataset.pick)});
+let typeTimer=0;function typeInto(text,done){clearInterval(typeTimer);S.typed='';let i=0;
+  typeTimer=setInterval(()=>{S.typed=text.slice(0,++i);renderTo();if(i>=text.length){clearInterval(typeTimer);done&&done()}},Math.max(8,28*slow/Math.max(1,text.length/14)))}
+$('pasteBtn').onclick=()=>{hap('light');S.typed=REC.lucas.t;renderTo()};
+function pick(k,instant){S.rec=k;const r=REC[k];hap('light');
+  if(r.fixed){const had=Number(S.amt||0);S.amt=String(r.fixed);S.fixedNote=had&&had!==r.fixed?`The invoice sets the amount to ${fmt(r.fixed)}.`:''}else S.fixedNote='';
+  if(!r.rail){renderMethod();go('method',instant);return}
+  S.rail=r.rail;renderReview();go('review',instant)}
+
+// Method
+function renderMethod(){$('mTitle').textContent=`How to send ${fmt(Number(S.amt||0))}`;
+  $('rails').innerHTML=['ark','ln','chain'].map((k,i)=>`<div class="railc gl" data-rail="${k}"><span class="ic">${G[k]}</span><div class="w"><div class="n">${RAIL[k].name}</div><div class="s">${RAIL[k].sub}</div></div>${i===0?'<span class="tag">Best</span>':''}</div>`).join('')}
+$('rails').onclick=e=>{const c=e.target.closest('[data-rail]');if(!c)return;hap('selection');S.rail=c.dataset.rail;renderReview();go('review')};
+
+// Review
+function renderReview(){const r=REC[S.rec],a=Number(S.amt||0),f=RAIL[S.rail].fee;
+  $('rvTitle').textContent=`Send ${fmt(a)}`;$('rvAv').innerHTML=G[r.av]||r.av;$('rvTo').textContent=r.n;
+  $('rvRows').innerHTML=`<div class="br"><span>Via</span><b>${G[S.rail]}${RAIL[S.rail].name}</b></div><div class="br"><span>Arrives</span><b>${RAIL[S.rail].arrives}</b></div><div class="br"><span>Fee</span><b class="n">${f?fmt(f):'Free'}</b></div><div class="br"><span>Total</span><b class="n">${fmt(a+f)}</b></div>`;
+  $('rvFine').textContent=S.fixedNote||(S.rail==='chain'?'Ark swaps your coins for an on-chain payment, then it needs two confirmations.':'');
+  resetHold()}
+
+// Hold to send: your finger signs.
+let holdAnim=null,holdTicks=[];
+function holdGeom(){const b=$('hold').getBoundingClientRect(),z=b.width/$('hold').offsetWidth||1,w=$('hold').offsetWidth+4,h=$('hold').offsetHeight+4,r=$('holdRect');
+  r.setAttribute('width',w);r.setAttribute('height',h);r.setAttribute('rx',h/2);r.setAttribute('ry',h/2);const L=2*(w-h)+Math.PI*h;r.style.strokeDasharray=L;return L}
+function resetHold(){requestAnimationFrame(()=>{const L=holdGeom();$('holdRect').style.strokeDashoffset=L;$('holdLbl').textContent='Hold to send'})}
+function holdStart(e){e.preventDefault();const L=holdGeom();if(holdAnim)holdAnim.cancel();holdTicks.forEach(clearTimeout);
+  const d=800*slow;holdAnim=$('holdRect').animate([{strokeDashoffset:L},{strokeDashoffset:0}],{duration:d,easing:'linear',fill:'forwards'});
+  anim($('hold'),[{transform:'scale(1)'},{transform:'scale(.97)'}],'tap',{fill:'forwards'});
+  holdTicks=[.25,.5,.75].map((p,i)=>setTimeout(()=>hap(['selection','light','medium'][i]),d*p));
+  holdAnim.onfinish=()=>{holdAnim=null;hap('heavy');$('holdLbl').textContent='Sending';startSend()}}
+function holdEnd(){if(!holdAnim)return;holdTicks.forEach(clearTimeout);const a=holdAnim;holdAnim=null;a.pause();const cur=getComputedStyle($('holdRect')).strokeDashoffset;a.cancel();
+  const L=holdGeom();$('holdRect').animate([{strokeDashoffset:cur},{strokeDashoffset:L}],{duration:260*slow,easing:'ease-out',fill:'forwards'});
+  anim($('hold'),[{transform:'scale(.97)'},{transform:'scale(1)'}],'snappy',{fill:'none'})}
+$('hold').addEventListener('pointerdown',holdStart);['pointerup','pointerleave','pointercancel'].forEach(t=>$('hold').addEventListener(t,holdEnd));
+
+// Sending stage: coins, seals, locks and the chain line.
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||$('stage')).appendChild(e);return e}
+const css=v=>`var(--${v})`;
+function coinGroup(x,y,r,kind,parent){const g=el('g',{class:'anim'},parent);
+  if(kind==='mine'){el('circle',{cx:x,cy:y,r,fill:css('soft'),stroke:css('or'),'stroke-width':3},g)}
+  else if(kind==='pay'){el('circle',{cx:x,cy:y,r,fill:css('fg')},g);const t=el('text',{x,y:y+r*.36,'text-anchor':'middle','font-family':'Space Grotesk','font-weight':600,'font-size':r*1.05,fill:css('bg')},g);t.textContent='₿'}
+  else if(kind==='refund'){el('circle',{cx:x,cy:y,r,fill:css('soft'),stroke:css('or'),'stroke-width':2.5},g)}
+  return g}
+function setPhase(t,ok){const p=$('phase');if(p.textContent===t)return;p.textContent=t;p.classList.toggle('ok',!!ok);anim(p,[{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],'snappy',{fill:'none'})}
+function setTitle(t,sub){const el=$('sendTitle');if(el.textContent!==t){anim(el,[{opacity:1,filter:'blur(0)'},{opacity:0,filter:'blur(4px)'}],'snappy',{dur:140*slow,fill:'none'});T(()=>{el.textContent=t;anim(el,[{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],'bouncy',{fill:'none'})},140)}
+  if(sub!=null)$('sendSub').textContent=sub}
+function showResult(big,sub,rows,pending){if(!pending)T(()=>anim($('phase'),[{opacity:1},{opacity:0}],'snappy'),500);setTitle(big,null);$('resSub').textContent=sub;$('resRows').innerHTML=rows.map(([k,v])=>`<div class="br"><span>${k}</span><b class="n">${v}</b></div>`).join('');
+  anim($('result'),[{opacity:0,transform:'translateY(16px)'},{opacity:1,transform:'none'}],'snappy');
+  const d=$('doneBtn');d.style.pointerEvents='auto';anim(d,[{opacity:0},{opacity:1}],'snappy',{delay:120})}
+
+function startSend(){clearT();go('sending');const st=$('stage');st.innerHTML='';$('phase').textContent='';$('result').style.opacity=0;$('doneBtn').style.opacity=0;$('doneBtn').style.pointerEvents='none';
+  $('result').getAnimations().forEach(a=>a.cancel());$('doneBtn').getAnimations().forEach(a=>a.cancel());
+  const r=REC[S.rec],a=Number(S.amt||0),C={x:150,y:118},D={x:300,y:118};
+  $('sendTitle').textContent=`Sending ${fmt(a)}`;$('sendSub').textContent=`to ${r.n}`;
+  // Destination: an initial for people, a glyph otherwise.
+  const dest=el('g',{});dest.style.transformBox='view-box';dest.style.transformOrigin=`${D.x}px ${D.y}px`;el('circle',{cx:D.x,cy:D.y,r:26,fill:css('soft')},dest);
+  if(G[r.av]){const fo=el('foreignObject',{x:D.x-11,y:D.y-11,width:22,height:22},dest);fo.innerHTML=`<div xmlns="http://www.w3.org/1999/xhtml" style="color:var(--fg);width:22px;height:22px">${G[r.av]}</div>`}
+  else{const t=el('text',{x:D.x,y:D.y+7,'text-anchor':'middle','font-family':'Space Grotesk','font-weight':600,'font-size':20,fill:css('fg')},dest);t.textContent=r.av}
+  const ring=el('circle',{cx:D.x,cy:D.y,r:33,fill:'none',stroke:css('or'),'stroke-width':2,'stroke-dasharray':208,'stroke-dashoffset':208,transform:`rotate(-90 ${D.x} ${D.y})`},dest);dest.ring=ring;
+  const badge=el('g',{class:'anim',opacity:0},dest);el('circle',{cx:D.x+19,cy:D.y-19,r:10,fill:css('fg')},badge);el('path',{d:`M${D.x+14.5} ${D.y-19}l3 3 5.5-6`,fill:'none',stroke:css('bg'),'stroke-width':2.2,'stroke-linecap':'round','stroke-linejoin':'round'},badge);
+  // The coin you spend, and the two pieces it splits into.
+  const mine=coinGroup(C.x,C.y,44,'mine'),pay=coinGroup(C.x,C.y,30,'pay'),chg=coinGroup(C.x,C.y,20,'mine');
+  pay.style.opacity=0;chg.style.opacity=0;
+  anim(mine,[{opacity:0,transform:'scale(.7)'},{opacity:1,transform:'none'}],'bouncy');
+  anim(dest,[{opacity:0,transform:'translateX(20px)'},{opacity:1,transform:'none'}],'snappy',{delay:80});
+  hap('heavy');
+  // 1 · Split: one coin fans out into the payment and your change.
+  T(()=>{setPhase(S.rail==='chain'?'Splitting off '+fmt(a):'Splitting your coin');
+    anim(mine,[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.82)'}],'snappy');
+    anim(pay,[{opacity:0,transform:'scale(.5)'},{opacity:1,transform:'translateX(40px)'}],'bouncy');
+    anim(chg,[{opacity:0,transform:'scale(.5)'},{opacity:1,transform:'translate(-62px,34px)'}],'bouncy');hap('light')},420);
+  // Change rolls back into your balance.
+  T(()=>{anim(chg,[{opacity:1,transform:'translate(-62px,34px)'},{opacity:0,transform:'translate(-140px,96px) scale(.6)'}],'soft')},1050);
+  const P={x:C.x+40,y:C.y};
+  if(S.rail==='ark')arkSend(pay,dest,badge,P,D,r,a);
+  else if(S.rail==='ln')lnSend(pay,dest,badge,P,D,r,a);
+  else chainSend(pay,dest,badge,P,D,r,a)}
+
+function finale(dest,badgeEl,D){const dx=180-D.x;
+  anim(dest,[{transform:'none'},{transform:`translateX(${dx}px) scale(1.5)`}],'snappy',{delay:120});
+  dest.ring.animate([{strokeDashoffset:208},{strokeDashoffset:0}],{duration:(rm?180:620)*slow,delay:260*slow,easing:SP.soft.ease,fill:'forwards'});
+  anim(badgeEl,[{opacity:0,transform:'scale(0)'},{opacity:1,transform:'scale(1)'}],'bouncy',{delay:520});hap('success')}
+
+// Who signs and who holds: you (a person, orange) and the Ark server.
+const ICON={
+  me:'<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.8-4 3.9-6 7.5-6s6.7 2 7.5 6"/>',
+  server:'<rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/><path d="M8 7.25h.01M8 16.75h.01" stroke-width="2.8"/>',
+  key:'<circle cx="7.5" cy="16" r="4"/><path d="M10.4 13.1 19 4.5M15.5 8l2.5 2.5M13.4 10.1l2 2"/>'};
+function badge(kind,x,y,parent,r=20){const me=kind==='me',g=el('g',{class:'anim'},parent);
+  el('circle',{cx:x,cy:y,r,fill:css('bg'),stroke:me?css('or'):css('hair'),'stroke-width':me?2:1.5},g);
+  const s=r*1.15,i=el('g',{transform:`translate(${x-s/2} ${y-s/2}) scale(${s/24})`,fill:'none',stroke:me?css('or'):css('fg'),'stroke-width':1.8,'stroke-linecap':'round','stroke-linejoin':'round'},g);
+  i.innerHTML=ICON[kind];return g}
+function keyGlyph(x,y,parent){const g=el('g',{class:'anim'},parent),s=24;
+  const i=el('g',{transform:`translate(${x-s/2} ${y-s/2}) scale(${s/24})`,fill:'none',stroke:css('or'),'stroke-width':2.4,'stroke-linecap':'round','stroke-linejoin':'round'},g);i.innerHTML=ICON.key;return g}
+function drawLine(x1,y1,x2,y2,color,delay,parent,dash){const ln=el('line',{x1,y1,x2,y2,stroke:css(color),'stroke-width':2,'stroke-linecap':'round'},parent);const L=Math.hypot(x2-x1,y2-y1);
+  if(dash){ln.setAttribute('stroke-dasharray','3 5');ln.animate([{opacity:0},{opacity:1}],{duration:300*slow,delay:(delay||0)*slow,fill:'both'});return ln}
+  ln.style.strokeDasharray=L;ln.animate([{strokeDashoffset:L},{strokeDashoffset:0}],{duration:(rm?1:320)*slow,delay:(delay||0)*slow,easing:'ease-out',fill:'both'});return ln}
+function padlock(x,y,parent){const g=el('g',{class:'anim'},parent);
+  const sh=el('path',{d:`M${x-8} ${y-1}v-7a8 8 0 0 1 16 0v7`,fill:'none',stroke:css('fg'),'stroke-width':3,'stroke-linecap':'round',class:'anim'},g);
+  el('rect',{x:x-12,y:y-2,width:24,height:18,rx:5,fill:css('bg'),stroke:css('fg'),'stroke-width':2.5},g);el('circle',{cx:x,cy:y+7,r:2.4,fill:css('fg')},g);g.shackle=sh;return g}
+const unlock=sh=>anim(sh,[{transform:'none'},{transform:'translateY(-7px) rotate(18deg)'}],'bouncy');
+
+// Ark: you and the Ark server both sign the payment, then it lands in their mailbox.
+function arkSend(pay,dest,badgeEl,P,D,r,a){const X=P.x,Y=P.y;
+  T(()=>{setPhase('Signing with Ark');
+    const me=badge('me',X-70,Y-72),sv=badge('server',X+70,Y-72);
+    anim(me,[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],'bouncy');
+    anim(sv,[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],'bouncy',{delay:110});
+    T(()=>{const l1=drawLine(X-58,Y-58,X-17,Y-24,'or',0),l2=drawLine(X+58,Y-58,X+17,Y-24,'fg',160);hap('light');
+      T(()=>{const seal=el('circle',{cx:X,cy:Y,r:30,fill:'none',stroke:css('fg'),'stroke-width':2,class:'anim'});
+        anim(seal,[{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(1.7)'}],'soft',{keep:true});
+        const ring=el('circle',{cx:X,cy:Y,r:34,fill:'none',stroke:css('fg'),'stroke-width':1.5,class:'anim'});anim(ring,[{opacity:0},{opacity:.5}],'snappy');hap('light');
+        [me,sv,l1,l2,ring].forEach(x=>x.dataset.k='sig')},480)},420)},1150);
+  T(()=>{setPhase('Delivering');[...$('stage').querySelectorAll('[data-k=sig]')].forEach(x=>anim(x,[{opacity:1},{opacity:0}],'snappy'));
+    anim(pay,[{opacity:1,transform:'translateX(40px)'},{opacity:0,transform:`translateX(${D.x-P.x+40}px) scale(.35)`}],'snappy')},2400);
+  T(()=>{finale(dest,badgeEl,D);setPhase('Delivered',true);
+    showResult(`Sent ${fmt(a)}`,'It arrived instantly. Ark sends are free.',[['Via','Ark'],['Fee','Free']])},2750)}
+
+// Lightning: your piece is locked so only the payee's secret can release it. The Ark server holds it and pays over
+// Lightning; the payee's secret (the preimage) comes back as a key and opens it. Failure: Ark signs it back to you.
+function lnSend(pay,dest,badgeEl,P,D,r,a){const X=P.x,Y=P.y,SV={x:X+56,y:Y-74};
+  const lock=padlock(X,Y-32);lock.style.opacity=0;let sv,tether;
+  T(()=>{setPhase('Locking '+fmt(a));anim(lock,[{opacity:0,transform:'translateY(-10px) scale(.6)'},{opacity:1,transform:'none'}],'bouncy');hap('light')},1150);
+  T(()=>{setPhase('Ark holds it while Lightning pays');sv=badge('server',SV.x,SV.y);anim(sv,[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],'bouncy');
+    tether=drawLine(X+14,Y-40,SV.x-13,SV.y+12,'fg',150,null,true)},1700);
+  const bolt=el('path',{d:`M${SV.x+15} ${SV.y+8} L${SV.x+34} ${SV.y+26} L${SV.x+26} ${SV.y+31} L${D.x-17} ${D.y-20}`,fill:'none',stroke:css('or'),'stroke-width':3,'stroke-linejoin':'round','stroke-linecap':'round',opacity:0});
+  const blen=140;bolt.style.strokeDasharray=`34 ${blen}`;
+  const zap=(delay,k=1)=>T(()=>{bolt.setAttribute('opacity',1);bolt.animate([{strokeDashoffset:34},{strokeDashoffset:-blen}],{duration:480*slow*k,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'})},delay);
+  T(()=>setPhase('Paying over Lightning'),2300);zap(2300);
+  if(S.out==='slow'){zap(3000,1.6);zap(4000,1.6);zap(5000,1.6);
+    T(()=>{setPhase('Still paying. This can take a few minutes.');
+      showResult(`Still sending ${fmt(a)}`,'Lightning is still finding a route. You can leave this screen; Noah finishes it in the background.',[['Via','Lightning'],['Fee','up to '+fmt(RAIL.ln.fee)]],true)},3200);return}
+  if(S.out==='fail'){T(()=>{bolt.animate([{opacity:1,stroke:'var(--or)'},{opacity:0,stroke:'var(--mut)'}],{duration:420*slow,fill:'forwards'});setPhase('That payment didn’t go through');hap('error');
+      anim(dest,[{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(5px)'},{transform:'none'}],'snappy',{dur:300*slow,ease:'ease-out',fill:'none'})},2950);
+    T(()=>{setPhase('Ark signs it back to you');unlock(lock.shackle);anim(tether,[{opacity:1},{opacity:0}],'snappy');anim(sv,[{opacity:1},{opacity:.35}],'soft')},3600);
+    T(()=>{anim(lock,[{opacity:1},{opacity:0}],'snappy');anim(pay,[{opacity:1,transform:'translateX(40px)'},{opacity:0,transform:'translateX(40px) scale(.6)'}],'snappy');
+      const back=coinGroup(X,Y,30,'refund');const bt=el('text',{x:X,y:Y+11,'text-anchor':'middle','font-family':'Space Grotesk','font-weight':600,'font-size':30,fill:css('fg')},back);bt.textContent='₿';
+      anim(back,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:`translateX(${180-X}px) scale(1.45)`}],'soft',{dur:900*slow});anim(dest,[{opacity:1},{opacity:.3}],'soft');anim(sv,[{opacity:.35},{opacity:0}],'soft');hap('success');
+      setPhase('Back in your wallet',true);
+      showResult('Payment failed',`${fmt(a)} is back in your wallet. Lightning couldn’t reach ${r.n}.`,[['Via','Lightning'],['Fee','None']])},4150);return}
+  // The payee's secret travels back through Ark as a key and opens the lock.
+  T(()=>{setPhase('Their receipt unlocks it');const key=keyGlyph(D.x-8,D.y-34);
+    key.animate([{opacity:0,transform:'none'},{opacity:1,transform:`translate(${SV.x-(D.x-8)}px,${SV.y-(D.y-34)}px)`,offset:.5},{opacity:1,transform:`translate(${X-(D.x-8)}px,${Y-30-(D.y-34)}px)`}],{duration:(rm?180:900)*slow,easing:'cubic-bezier(.35,0,.25,1)',fill:'forwards'});
+    T(()=>{key.remove();unlock(lock.shackle);hap('light')},900)},2950);
+  T(()=>{setPhase('Paid',true);anim(lock,[{opacity:1},{opacity:0}],'snappy');anim(tether,[{opacity:1},{opacity:0}],'snappy');
+    anim(pay,[{opacity:1,transform:'translateX(40px)'},{opacity:0,transform:`translate(${40+SV.x-X}px,${SV.y-Y}px) scale(.3)`}],'snappy');
+    T(()=>{anim(sv,[{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],'bouncy',{fill:'none'});anim(sv,[{opacity:1},{opacity:0}],'soft',{delay:300});bolt.remove();finale(dest,badgeEl,D);
+      showResult(`Sent ${fmt(a)}`,'Paid over Lightning. Their secret is your proof of payment.',[['Via','Lightning'],['Fee',fmt(RAIL.ln.fee)],['Proof of payment','9f2c…a41e']])},300)},4100)}
+
+// Blocks, mempool.space style: mined blocks with their heights, then a blinking "next" block that holds your
+// transaction until it's mined. Heights come from the explorer's tip.
+let TIP=921345;const fmtH=n=>n.toLocaleString('en-US');
+fetch('https://mempool.space/api/blocks/tip/height').then(r=>r.ok?r.text():null).then(t=>{const n=parseInt(t);if(n>800000)TIP=n}).catch(()=>{});
+function blockStrip(parent,x0,y,size,tip,light){const gap=size+12,g=el('g',{},parent),track=el('g',{},g);
+  const FG=light?'#0a0a0a':css('fg'),MUT=light?'#6b6b6b':css('mut'),BG=light?'#fff':css('bg');
+  const lab=(x,txt,mut)=>{const t=el('text',{x,y:y+size+14,'text-anchor':'middle','font-family':'Space Grotesk','font-weight':500,'font-size':size>34?11.5:10.5,fill:mut?MUT:FG},track);t.textContent=txt;return t};
+  const old=[];for(let i=0;i<3;i++){old.push([el('rect',{x:x0+i*gap,y,width:size,height:size,rx:7,fill:FG,opacity:.55+i*.15},track),lab(x0+i*gap+size/2,fmtH(tip-2+i),true)])}
+  let n=3,height=tip,held=null,shift=0,blinking=false;
+  const pending=()=>{const x=x0+n*gap,b=el('rect',{x,y,width:size,height:size,rx:6,fill:'none',stroke:FG,'stroke-width':2,'stroke-dasharray':'4 4',class:'anim'},track);return{b,l:lab(x+size/2,'next',true),x}};
+  let p=pending();
+  const blink=()=>{if(blinking&&!rm)p.b.animate([{opacity:1},{opacity:.3}],{duration:650,direction:'alternate',iterations:Infinity})};
+  return{g,slot:()=>({x:x0+n*gap+size/2-shift,y:y+size/2}),
+    hold(dot,after){T(()=>{dot.getAnimations().forEach(a=>a.cancel());dot.setAttribute('cx',x0+n*gap+size/2);dot.setAttribute('cy',y+size/2);track.appendChild(dot);held=dot},after||0)},
+    blink(on){blinking=on;if(on)blink();else p.b.getAnimations().forEach(a=>a.cancel())},
+    mine(){height++;p.b.getAnimations().forEach(a=>a.cancel());p.b.setAttribute('fill',FG);p.b.removeAttribute('stroke-dasharray');p.b.style.opacity=1;
+      anim(p.b,[{transform:'scale(1.22)'},{transform:'none'}],'bouncy',{fill:'none'});p.l.textContent=fmtH(height);p.l.setAttribute('fill',FG);
+      if(held){held.setAttribute('fill',BG);held=null}
+      const gone=old.shift();if(gone)gone.forEach(x=>x.animate([{opacity:x.getAttribute('opacity')||1},{opacity:0}],{duration:250*slow,fill:'forwards'}));old.push([p.b,p.l]);
+      n++;shift+=gap;track.animate([{transform:`translateX(${-(shift-gap)}px)`},{transform:`translateX(${-shift}px)`}],{duration:ms('snappy'),easing:SP.snappy.ease,fill:'forwards'});
+      p=pending();blink();return height}}}
+
+// On-chain: Ark swaps your coin for an on-chain payment from its own coins, which then waits for the next block.
+function chainSend(pay,dest,badgeEl,P,D,r,a){const X=P.x,Y=P.y,SV={x:X+56,y:Y-74};
+  const strip=blockStrip($('stage'),86,176,38,TIP);strip.g.style.opacity=0;let sv;
+  T(()=>anim(strip.g,[{opacity:0},{opacity:1}],'soft'),900);
+  T(()=>{setPhase('Swapping with Ark');sv=badge('server',SV.x,SV.y);anim(sv,[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],'bouncy');
+    const tether=drawLine(X+14,Y-26,SV.x-13,SV.y+12,'fg',150,null,true);
+    T(()=>{anim(pay,[{opacity:1,transform:'translateX(40px)'},{opacity:0,transform:`translate(${40+SV.x-X}px,${SV.y-Y}px) scale(.3)`}],'snappy');anim(tether,[{opacity:1},{opacity:0}],'snappy');
+      const s=strip.slot(),tx=el('circle',{cx:SV.x,cy:SV.y,r:6,fill:css('or'),class:'anim'});
+      anim(tx,[{opacity:0,transform:'none'},{opacity:1,transform:`translate(${s.x-SV.x}px,${s.y-SV.y}px)`}],'soft',{delay:250,keep:true});
+      strip.hold(tx,900);hap('light')},650)},1150);
+  T(()=>{setPhase(`Waiting for block ${fmtH(TIP+1)}`);strip.blink(true);anim(sv,[{opacity:1},{opacity:0}],'soft');
+    showResult(`Sent ${fmt(a)}`,'It’s in the next block’s queue. Two confirmations take about 20 minutes.',[['Via','On-chain'],['Fee',fmt(RAIL.chain.fee)]],true)},2400);
+  // Sped up for the prototype: a block every few seconds.
+  T(()=>{const h=strip.mine();setPhase(`Confirmed in block ${fmtH(h)} · 1 of 2`,true);hap('light');$('resSub').textContent=`Confirmed in block ${fmtH(h)}. One more block to go.`},4800);
+  T(()=>{const h=strip.mine();setPhase('2 of 2 confirmations',true);hap('success');$('resSub').textContent=`Confirmed in block ${fmtH(h-1)}.`;strip.blink(false)},7200)}
+
+$('doneBtn').onclick=()=>{hap('light');clearT();S.amt='';S.typed='';renderAmt(false);go('amount')};
+
+// Receive: your Lightning address by default. An amount switches to a Lightning invoice; Ark and Bitcoin addresses
+// can be shown instead from the format list.
+const LNADDR='maya@noahwallet.io';
+const ARKADDR='ark1qq9n6v0m8zk0r7c5xv2a4hd6qf9t3k8ps2w7e5u0y4l3j6n8x0c2r9d5g7f4h1k3m5q8s0t2v4w6z8a0c2e4g6j8l0n2p4r6u8w0y2';
+const BTCADDR='bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297';
+const INV='lnbc21u1pj9x8z3pp5qy7m0s4n2c8x6d0f9h3k5l7p2r4t6v8w0y2z4a6c8e0g2j4l6n8q0s2u4w6y8z0b2d4f6h8k0m2p4r6t8v0x2z4b6d8f0h2k4m6p8r0';
+// The unified request (BIP-321) carries the Bitcoin and Ark addresses, plus the amount and a Lightning invoice once
+// an amount is set. Adding an amount shows it.
+const bip321=()=>`bitcoin:${BTCADDR}?ark=${ARKADDR}`+(S.rcvAmt?`&amount=${(S.rcvAmt/1e8).toFixed(8).replace(/0+$/,'')}&lightning=${INV}`:'');
+const FMT={
+  lnaddr:{n:'Lightning address',v:()=>LNADDR,data:()=>LNADDR,title:()=>LNADDR,cap:()=>'Scan with any Lightning wallet',s:()=>'From any Lightning wallet'},
+  request:{n:'Payment request',v:()=>S.rcvAmt?'bitcoin:bc1p5d…?amount=…&ark=…&lightning=…':'bitcoin:bc1p5d…?ark=ark1qq9n…',data:bip321,title:()=>'Payment request',cap:()=>S.rcvAmt?'Scan with any bitcoin or Lightning wallet':'Scan with any bitcoin wallet',s:()=>S.rcvAmt?`Bitcoin, Ark and Lightning for ${fmt(S.rcvAmt)}`:'Bitcoin and Ark in one code. Add an amount for Lightning'},
+  invoice:{n:'Lightning invoice',v:()=>S.rcvAmt?'lnbc21u1pj9x8z…r0':'Add an amount first',data:()=>INV,title:()=>'Lightning invoice',cap:()=>'Scan with any Lightning wallet',s:()=>S.rcvAmt?`For ${fmt(S.rcvAmt)} only`:'Invoices need an amount'},
+  ark:{n:'Ark address',v:()=>'ark1qq9n6v…8w0y2',data:()=>ARKADDR,title:()=>'Ark address',cap:()=>'Scan with an Ark wallet',s:()=>'Instant and free from Ark wallets'},
+  onchain:{n:'Bitcoin address',v:()=>'bc1p5d7r…3297',data:()=>BTCADDR,title:()=>'Bitcoin address',cap:()=>'Scan with any bitcoin wallet',s:()=>'From any bitcoin wallet, about 20 min'}};
+S.fmt='lnaddr';
+function rr4(x,y,w,h,r){return`M${x+r} ${y}H${x+w-r}A${r} ${r} 0 0 1 ${x+w} ${y+r}V${y+h-r}A${r} ${r} 0 0 1 ${x+w-r} ${y+h}H${x+r}A${r} ${r} 0 0 1 ${x} ${y+h-r}V${y+r}A${r} ${r} 0 0 1 ${x+r} ${y}Z`}
+function buildQR(data,ripple){const S2=244;let n,dark;
+  if(typeof qrcode==='function'){const q=qrcode(0,data.length>90?'M':'H');q.addData(data,'Byte');q.make();n=q.getModuleCount();dark=(r,c)=>q.isDark(r,c)}
+  else{n=37;let s=data.length;const bits=Array.from({length:n*n},()=>(s=(s*16807)%2147483647)/2147483647<.5);dark=(r,c)=>bits[r*n+c]}
+  const m=S2/n,L=Math.round(n*.22)|1,c0=(n-L)/2,eye=(r,c)=>(r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7),
+    hole=(r,c)=>r>=c0-1&&r<c0+L+1&&c>=c0-1&&c<c0+L+1;
+  let d='';for(let r=0;r<n;r++)for(let c=0;c<n;c++){if(!dark(r,c)||eye(r,c)||hole(r,c))continue;const k=m*.44,x=c*m+m/2,y=r*m+m/2;d+=`M${x-k} ${y}a${k} ${k} 0 1 0 ${2*k} 0a${k} ${k} 0 1 0 ${-2*k} 0Z`}
+  const eyeSvg=(x,y)=>`<g class="eye"><path fill-rule="evenodd" d="${rr4(x,y,7*m,7*m,2.4*m)}${rr4(x+m,y+m,5*m,5*m,1.5*m)}"/><path d="${rr4(x+2*m,y+2*m,3*m,3*m,1.1*m)}"/></g>`;
+  const lx=c0*m,ls=L*m,pad=m*.6;
+  $('qr').innerHTML=`<defs><clipPath id="lgc"><rect x="${lx}" y="${lx}" width="${ls}" height="${ls}" rx="${ls*.23}"/></clipPath></defs><g id="qrMods" fill="#0a0a0a"><path d="${d}"/></g><g fill="#0a0a0a">${eyeSvg(0,0)}${eyeSvg((n-7)*m,0)}${eyeSvg(0,(n-7)*m)}</g><g id="qrLogo"><rect x="${lx-pad}" y="${lx-pad}" width="${ls+2*pad}" height="${ls+2*pad}" rx="${(ls+2*pad)*.26}" fill="#fff"/><image href="data:image/png;base64,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" x="${lx}" y="${lx}" width="${ls}" height="${ls}" clip-path="url(#lgc)" preserveAspectRatio="xMidYMid slice"/></g>`;
+  if(ripple&&!rm)anim($('qrMods'),[{clipPath:'circle(0% at 50% 50%)'},{clipPath:'circle(72% at 50% 50%)'}],'soft',{dur:900*slow})}
+function renderReceive(ripple){const f=FMT[S.fmt],has=S.rcvAmt>0;buildQR(f.data(),ripple);
+  $('band').style.display=(S.fmt==='invoice'||S.fmt==='request')&&has?'flex':'none';$('bandAmt').textContent=fmt(S.rcvAmt);$('bandSub').textContent=fiat(S.rcvAmt);
+  $('qrName').textContent=f.title();$('cap').textContent=f.cap();
+  $('addAmt').textContent=$('addAmt2').textContent=has?'Change amount':'Add amount';
+  const html=Object.entries(FMT).map(([k,x])=>{const on=k!=='invoice'||has;return`<div class="fr${on?'':' off'}${k===S.fmt?' sel':''}" data-fmt="${k}"><span class="rad"></span><div class="w"><div class="n">${x.n}</div><div class="v">${x.v()}</div><div class="s">${x.s()}</div></div><button class="ib gl" data-copy="${x.n}" ${on?'':'disabled'} aria-label="Copy ${x.n}">${G.copy}</button></div>`}).join('');
+  $('fmtList').innerHTML=html;$('fmtPane').innerHTML=`<div class="sec" style="margin-top:0">Show</div>${html}`;
+  requestAnimationFrame(cometGeom)}
+function cometGeom(){const w=$('card3d').offsetWidth+3,h=$('card3d').offsetHeight+3,r=$('cometRect');if(!w)return;$('comet').setAttribute('viewBox',`0 0 ${w+3} ${h+3}`);$('comet').style.width=(w+3)+'px';$('comet').style.height=(h+3)+'px';r.setAttribute('width',w);r.setAttribute('height',h)}
+document.addEventListener('click',e=>{const c=e.target.closest('[data-copy]');if(c){e.stopPropagation();hap('success');toast('Copied');return}
+  const r=e.target.closest('[data-fmt]');if(!r)return;const k=r.dataset.fmt;
+  if(k==='invoice'&&!S.rcvAmt){if($('fmtSheet').style.visibility==='visible')closeSheet('fmtSheet');setTimeout(()=>$('addAmt').click(),200);return}
+  if(k===S.fmt)return;S.fmt=k;hap('selection');renderReceive(true);
+  anim($('card3d'),[{transform:'rotateY(0deg)'},{transform:'rotateY(-10deg)'},{transform:'none'}],'bouncy',{fill:'none'});
+  if($('fmtSheet').style.visibility==='visible')setTimeout(()=>closeSheet('fmtSheet'),250)},true);
+
+// Amount sheet (Receive)
+buildKp($('skp'),k=>{if(k==='⌫')S.rcvDraft=S.rcvDraft.slice(0,-1);else if(k!=='·'&&S.rcvDraft.length<9&&!(S.rcvDraft===''&&k==='0'))S.rcvDraft+=k;
+  hap('selection');$('samt').innerHTML=amtHtml(S.rcvDraft,k!=='⌫');const nw=$('samt').querySelector('.nw');if(nw)anim(nw,[{color:'var(--mut)',opacity:.4},{color:'var(--fg)',opacity:1}],'snappy',{fill:'none'});$('sfiat').textContent=fiat(Number(S.rcvDraft||0))});
+function openSheet(id){const sh=$(id);sh.style.visibility='visible';$('scrim').classList.add('on');anim(sh,[{transform:'translateY(110%)'},{transform:'none'}],'snappy');$('scrim').onclick=()=>closeSheet(id)}
+function closeSheet(id){const sh=$(id);$('scrim').classList.remove('on');const a=anim(sh,[{transform:'none'},{transform:'translateY(110%)'}],'snappy');if(a)a.onfinish=()=>{sh.style.visibility='hidden'}}
+$('addAmt').onclick=()=>{hap('light');S.rcvDraft=S.rcvAmt?String(S.rcvAmt):'';$('samt').innerHTML=amtHtml(S.rcvDraft);$('sfiat').textContent=fiat(Number(S.rcvDraft||0));openSheet('amtSheet')};
+$('sDone').onclick=()=>{closeSheet('amtSheet');const v=Number(S.rcvDraft||0);if(v===S.rcvAmt)return;S.rcvAmt=v;hap('success');
+  S.fmt=v?'request':(S.fmt==='invoice'||S.fmt==='request'?'lnaddr':S.fmt);renderReceive(true);if(v){anim($('band'),[{opacity:0,transform:'translateY(30px)'},{opacity:1,transform:'none'}],'bouncy')}};
+$('noteBtn').onclick=()=>{hap('light');toast('Note: coffee ☕')};
+$('copyBtn').onclick=()=>{hap('light');if(S.dev==='duo'){toast('Every format is on the right');return}openSheet('fmtSheet')};
+$('shareBtn').onclick=()=>{hap('light');toast('Share sheet')};
+$('addAmt2').onclick=()=>$('addAmt').click();$('shareBtn2').onclick=()=>$('shareBtn').click();
+
+// Arrivals. The Ark server appears above the card: it delivers Ark coins from your mailbox, and it holds Lightning
+// payments until your phone's secret claims them. The card itself is always white, so its marks are fixed colours.
+function over(){const o=$('over');o.innerHTML='';const w=$('card3d').offsetWidth,h=$('card3d').offsetHeight;o.setAttribute('viewBox',`0 0 ${w} ${h}`);o.style.width=w+'px';o.style.height=h+'px';
+  const qb=$('front').querySelector('.qrbox');return{o,w,h,cx:w/2,cy:qb.offsetTop+qb.offsetHeight/2}}
+function rphase(t,ok){const p=$('rphase');p.textContent=t;p.style.color=ok?'var(--fg)':'';if(t)anim(p,[{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],'snappy',{fill:'none'})}
+function flip(amt,rail,sub,stay){$('backAmt').textContent='+'+fmt(amt);$('backRail').innerHTML=G[rail]+sub;
+  const c=$('card3d');hap('success');
+  anim(c,[{transform:'rotateY(0deg)'},{transform:'rotateY(180deg)'}],'bouncy',{keep:true,fill:'forwards'});
+  const tc=$('tkC'),tp=$('tkP');tc.style.strokeDasharray=252;tp.style.strokeDasharray=60;
+  anim(tc,[{strokeDashoffset:252},{strokeDashoffset:0}],'soft',{delay:250,dur:650*slow,keep:true});anim(tp,[{strokeDashoffset:60},{strokeDashoffset:0}],'soft',{delay:650,dur:380*slow,keep:true});
+  T(()=>{anim(c,[{transform:'rotateY(180deg)'},{transform:'rotateY(360deg)'}],'snappy',{keep:true,fill:'forwards'});T(()=>{c.getAnimations().forEach(a=>a.cancel())},700)},stay||2900)}
+function cardCoin(o,cx,cy){const g=el('g',{class:'anim'},o);el('circle',{cx,cy,r:26,fill:'#0a0a0a'},g);const t=el('text',{x:cx,y:cy+9,'text-anchor':'middle','font-family':'Space Grotesk','font-weight':600,'font-size':27,fill:'#fff'},g);t.textContent='₿';return g}
+function arrive(kind){clearT();$('card3d').getAnimations().forEach(a=>a.cancel());$('chainbox').style.opacity=0;rphase('');
+  const {o,w,cx,cy}=over();const SVY=-34;
+  if(kind==='ark'){// Ark's mailbox delivers a coin into your card.
+    const sv=badge('server',cx,SVY,o);anim(sv,[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],'bouncy');
+    const g=cardCoin(o,cx,cy);g.style.opacity=0;
+    T(()=>{anim(g,[{opacity:0,transform:`translateY(${SVY-cy}px) scale(.4)`},{opacity:1,transform:'none'}],'bouncy');anim(sv,[{opacity:1},{opacity:0}],'soft',{delay:250})},380);
+    T(()=>{const rg=el('circle',{cx,cy,r:28,fill:'none',stroke:'#F7931A','stroke-width':2.5,class:'anim'},o);anim(rg,[{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(2.6)'}],'soft',{keep:true});hap('light')},760);
+    T(()=>{anim(g,[{opacity:1},{opacity:0}],'snappy');flip(2100,'ark','via Ark · just now')},1250);return}
+  if(kind==='ln'){// The bolt hits Ark, which holds the payment locked to your secret; your phone's key claims it.
+    rphase('Incoming over Lightning');const sv=badge('server',cx,SVY,o);anim(sv,[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],'bouncy');
+    const bolt=el('path',{d:`M${w+40} ${SVY-60} L${cx+44} ${SVY-14} L${cx+52} ${SVY-2} L${cx+16} ${SVY}`,fill:'none',stroke:'#F7931A','stroke-width':3.2,'stroke-linejoin':'round','stroke-linecap':'round'},o);
+    bolt.style.strokeDasharray='240';bolt.animate([{strokeDashoffset:240},{strokeDashoffset:0},{strokeDashoffset:-240}],{duration:620*slow,delay:250*slow,easing:'cubic-bezier(.4,0,.2,1)',fill:'both'});
+    const coin=cardCoin(o,cx,cy);coin.style.opacity=0;
+    const lock=el('g',{class:'anim'},coin);const sh=el('path',{d:`M${cx-8} ${cy-26}v-7a8 8 0 0 1 16 0v7`,fill:'none',stroke:'#0a0a0a','stroke-width':3,'stroke-linecap':'round',class:'anim'},lock);
+    el('rect',{x:cx-12,y:cy-27,width:24,height:17,rx:5,fill:'#fff',stroke:'#0a0a0a','stroke-width':2.4},lock);
+    T(()=>{rphase('Ark holds it for you');anim(coin,[{opacity:0,transform:`translateY(${SVY-cy}px) scale(.4)`},{opacity:1,transform:'none'}],'bouncy');hap('light')},850);
+    T(()=>{rphase('Claiming with your key');const key=keyGlyph(cx,cy+170,o);
+      key.querySelector('g').setAttribute('stroke','#F7931A');
+      anim(key,[{opacity:0,transform:'none'},{opacity:1,transform:`translateY(${-(170+30)}px)`}],'snappy');
+      T(()=>{key.remove();unlock(sh);hap('light')},420)},1650);
+    T(()=>{anim(lock,[{opacity:1},{opacity:0}],'snappy');anim(sv,[{opacity:1},{opacity:0}],'soft');rphase('Received',true);
+      T(()=>{anim(coin,[{opacity:1},{opacity:0}],'snappy');flip(5000,'ln','via Lightning · just now');T(()=>rphase(''),1600)},260)},2500);return}
+  // On-chain: your incoming transaction waits in the next block, then the block is mined.
+  const cb=$('chainbox'),cs=$('chainsvg');cs.innerHTML='';
+  const strip=blockStrip(cs,72,6,30,TIP,false);anim(cb,[{opacity:0},{opacity:1}],'soft');rphase('Seen on the network');
+  const s=strip.slot(),tx=el('circle',{cx:s.x,cy:s.y,r:6,fill:css('or'),class:'anim'},cs);
+  anim(tx,[{opacity:0,transform:'translateY(-40px)'},{opacity:1,transform:'none'}],'bouncy',{delay:200,keep:true});strip.hold(tx,700);
+  T(()=>{strip.blink(true);rphase(`Waiting for block ${fmtH(TIP+1)}`);flip(100000,'chain','On-chain · waiting for a block')},900);
+  // Sped up for the prototype.
+  T(()=>{const h=strip.mine();strip.blink(false);rphase(`Confirmed in block ${fmtH(h)}`,true);hap('light')},5200)}
+
+// Shell
+function setScr(s){S.scr=s;$('send').classList.toggle('on',s==='send');$('receive').classList.toggle('on',s==='receive');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===s));
+  document.querySelectorAll('[data-scr]').forEach(x=>x.classList.toggle('on',x.dataset.scr===s));
+  $('tabs').classList.toggle('away',s==='send'&&S.v!=='amount'&&S.dev!=='duo');if(s==='receive'){renderReceive(true)}}
+$('tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(!t)return;hap('selection');if(t.dataset.tab==='send'||t.dataset.tab==='receive')setScr(t.dataset.tab);else toast('Home and Activity: see Home v2')});
+function render(){ph.className='ph'+(S.dark?' dark':'')+(S.dev==='android'?' android':'')+(S.dev==='duo'?' duo':'')+(rm?' reduce':'');
+  $('bezel').className='bezel'+(S.dev==='android'?' android':'')+(S.dev==='duo'?' duo':'');
+  renderAmt(false);renderTo();renderReview();renderReceive(false);go(S.v,true);setScr(S.scr)}
+function chipGroup(attr,fn){document.querySelectorAll(`[${attr}]`).forEach(b=>{if(!b.classList.contains('chip'))return;b.onclick=()=>{document.querySelectorAll(`.chip[${attr}]`).forEach(x=>x.classList.toggle('on',x===b));fn(b.getAttribute(attr))}})}
+chipGroup('data-scr',v=>setScr(v));
+chipGroup('data-dev',v=>{S.dev=v;render()});
+chipGroup('data-theme',v=>{S.dark=v==='dark';render()});
+chipGroup('data-out',v=>{S.out=v});
+chipGroup('data-pick',v=>{setScr('send');if(!S.amt)S.amt='500';renderAmt(false);S.typed='';pick(v)});
+document.querySelectorAll('.chip[data-arrive]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.chip[data-arrive]').forEach(x=>x.classList.toggle('on',x===b));setScr('receive');setTimeout(()=>arrive(b.dataset.arrive),300)});
+$('slowBtn').onclick=()=>{slow=slow===1?3:1;$('slowBtn').classList.toggle('on',slow!==1)};
+$('rmBtn').onclick=()=>{rm=!rm;$('rmBtn').classList.toggle('on',rm);ph.classList.toggle('reduce',rm)};
+$('autoBtn').onclick=()=>{setScr('send');clearT();S.amt='';S.typed='';renderAmt(false);go('amount');
+  const digits='500';[...digits].forEach((d,i)=>setTimeout(()=>{S.amt+=d;hap('selection');renderAmt(true)},400+i*260));
+  setTimeout(()=>{renderTo();go('to')},1500);setTimeout(()=>typeInto(REC[S.rec].t,()=>setTimeout(()=>pick(S.rec),500)),2000);
+  setTimeout(()=>{if(S.v==='review'){const ev=new PointerEvent('pointerdown');$('hold').dispatchEvent(ev)}},4800)};
+// Demo: plays every flow in sequence for recordings (#demo=1, or #demo=send / #demo=receive).
+const sleep=t=>new Promise(r=>setTimeout(r,t*slow));
+async function typeAmt(d){S.amt='';renderAmt(false);for(const c of d){await sleep(230);S.amt+=c;hap('selection');renderAmt(true);
+  const k=[...document.querySelectorAll('#kp .k')].find(x=>x.dataset.k===c);if(k)anim(k.firstElementChild,[{transform:'scale(1)'},{transform:'scale(1.28)'},{transform:'scale(1)'}],'tap',{dur:220*slow,ease:'ease-out',fill:'none'})}}
+async function sendDemo(rec,out,amt){S.out=out;setScr('send');clearT();S.typed='';go('amount');await typeAmt(amt);await sleep(500);
+  hap('light');renderTo();go('to');await sleep(500);await new Promise(r=>typeInto(REC[rec].t,r));await sleep(450);pick(rec);await sleep(1100);
+  if(!REC[rec].rail){S.rail='ark';await sleep(400);hap('selection');renderReview();go('review');await sleep(1000)}
+  $('hold').dispatchEvent(new PointerEvent('pointerdown'));await sleep(rec==='chain'?4800:out==='fail'?6200:out==='slow'?6000:5200);
+  $('doneBtn').click();await sleep(500)}
+async function receiveDemo(){setScr('receive');S.rcvAmt=0;S.fmt='lnaddr';renderReceive(true);await sleep(2600);
+  $('addAmt').click();await sleep(600);for(const c of '2100'){S.rcvDraft+=c;$('samt').innerHTML=amtHtml(S.rcvDraft,true);$('sfiat').textContent=fiat(+S.rcvDraft);hap('selection');await sleep(260)}
+  await sleep(400);$('sDone').click();await sleep(2200);
+  arrive('ark');await sleep(4200);arrive('ln');await sleep(5600);arrive('chain');await sleep(7600)}
+async function duoDemo(){await sendDemo('lucas','ok','2500');setScr('receive');S.rcvAmt=0;S.fmt='lnaddr';renderReceive(true);await sleep(2200);
+  $('addAmt2').click();await sleep(600);for(const c of '5000'){S.rcvDraft+=c;$('samt').innerHTML=amtHtml(S.rcvDraft,true);$('sfiat').textContent=fiat(+S.rcvDraft);hap('selection');await sleep(240)}
+  await sleep(400);$('sDone').click();await sleep(2000);arrive('chain');await sleep(7000)}
+async function demo(which){if(which==='duo')return duoDemo();if(which!=='receive'){await sendDemo('maya','ok','500');await sendDemo('lucas','ok','2500');await sendDemo('bob','fail','1200');await sendDemo('chain','ok','50000')}
+  if(which!=='send')await receiveDemo()}
+// URL presets: #scr=send&v=amount|to|method|review|sending&to=maya|lucas|chain|req|inv&out=ok|slow|fail&dev=duo&theme=dark&arrive=ark|ln|chain&amt=500&rcv=500&sheet=copy|amount&rm=1&at=ms
+(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>{const q=new URLSearchParams(location.hash.slice(1));
+  if(q.get('slow'))slow=+q.get('slow');if(q.get('dev'))S.dev=q.get('dev');S.dark=q.get('theme')==='dark';rm=q.get('rm')==='1';if(q.get('out'))S.out=q.get('out');
+  if(q.get('amt'))S.amt=q.get('amt');if(q.get('rcv')){S.rcvAmt=+q.get('rcv');S.fmt='request'}if(q.get('fmt'))S.fmt=q.get('fmt');if(q.get('scr'))S.scr=q.get('scr');if(q.get('to'))S.rec=q.get('to');
+  document.querySelectorAll('.chip[data-dev]').forEach(x=>x.classList.toggle('on',x.dataset.dev===S.dev));
+  document.querySelectorAll('.chip[data-theme]').forEach(x=>x.classList.toggle('on',(x.dataset.theme==='dark')===S.dark));
+  document.querySelectorAll('.chip[data-out]').forEach(x=>x.classList.toggle('on',x.dataset.out===S.out));
+  document.querySelectorAll('.chip[data-pick]').forEach(x=>x.classList.toggle('on',x.dataset.pick===S.rec));
+  $('rmBtn').classList.toggle('on',rm);
+  render();const v=q.get('v');
+  if(v==='to'){if(q.get('typed'))S.typed=q.get('typed');renderTo();go('to',true)}
+  if(v==='method'){renderMethod();go('method',true)}
+  if(v==='review'){pick(S.rec,true)}
+  if(v==='sending'){pick(S.rec,true);if(!REC[S.rec].rail)S.rail=q.get('rail')||'ark';renderReview();setTimeout(startSend,200)}
+  if(q.get('arrive'))setTimeout(()=>arrive(q.get('arrive')),400);
+  if(q.get('demo'))setTimeout(()=>demo(q.get('demo')),900);
+  if(q.get('sheet')==='copy')setTimeout(()=>openSheet('fmtSheet'),300);
+  if(q.get('sheet')==='amount')setTimeout(()=>{S.rcvDraft=q.get('draft')||'2100';$('samt').innerHTML=amtHtml(S.rcvDraft);$('sfiat').textContent=fiat(+S.rcvDraft);openSheet('amtSheet')},300);
+});
+</script>
+</body>
+</html>
