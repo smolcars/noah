@@ -70,9 +70,8 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
     com.noahwallet.ui.onboarding.FormLayout(trailingTop = {
         com.noahwallet.ui.onboarding.TextAction(tr("Skip"), muted = true, enabled = !proceeding) { proceed() }
     }, headline = { large ->
-        com.noahwallet.ui.onboarding.Headline(tr("Disable battery optimization"),
-            tr("Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly."),
-            large)
+        com.noahwallet.ui.onboarding.Headline(tr("Let Noah run in the background"),
+            tr("Otherwise Android may pause Noah, and payments could stop arriving."), large)
     }, form = {}, actions = {
         com.noahwallet.ui.onboarding.PillButton(tr("Open battery settings"), androidx.compose.ui.Modifier.fillMaxWidth()) {
             failed = !PlatformAccess.openBattery(context)

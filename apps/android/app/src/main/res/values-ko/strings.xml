@@ -70,7 +70,6 @@
   <string name="gt_b636320b54efe2b7">"백업 중 알 수 없는 오류가 발생했습니다."</string>
   <string name="gt_22b587b11be36edd">"앵커 지점"</string>
   <string name="gt_dea19a697a27a904">"Android SDK 빌드 대상"</string>
-  <string name="gt_399b59ca7b509491">"Android는 전력을 절약하기 위해 백그라운드에서 Noah를 절전 상태로 전환할 수 있습니다. 하지만 배터리 사용 시간을 늘리는 효과는 미미하며, 푸시 알림이 아예 수신되지 않을 수 있습니다. Noah의 배터리 최적화를 해제하면 지갑이 정상적으로 작동하도록 유지할 수 있습니다."</string>
   <string name="gt_15ea390b9d935697">"다른 Lightning 결제가 아직 진행 중입니다. 완료된 후 다시 시도하세요."</string>
   <string name="gt_2b16e2ecee477adb">"처리된 것으로 보입니다. 내역을 확인하세요"</string>
   <string name="gt_ac08210c6e686e23">"앱 로그"</string>
@@ -381,7 +380,6 @@
   <string name="gt_9c8a9579abe55bdc">"방향"</string>
   <string name="gt_c953567840067771">"길찾기"</string>
   <string name="gt_22285980b45cde91">"모든 지갑 기능을 비활성화합니다. 지갑이 닫히며, 다시 활성화할 때까지 열리지 않습니다."</string>
-  <string name="gt_223535a0e72287cc">"배터리 최적화 해제"</string>
   <string name="gt_4c5e9e2b90ab535d">"지갑 인증 비활성화"</string>
   <string name="gt_de55d749452d746b">"긴급 연락용 이메일 안내 닫기"</string>
   <string name="gt_11a6767d5674c7e4">"완료"</string>
@@ -625,6 +623,7 @@
   <string name="gt_fa9a7513e80f546f">"NIP-05 없이 Lightning을 사용하려면 이 칸을 비워 두세요. npub 공개 키만 사용할 수 있습니다. nsec 개인 키는 절대 붙여넣지 마세요."</string>
   <string name="gt_58eb9032e3bb83f0">"왼쪽"</string>
   <string name="gt_68dc9d6d2e2e87ef">"레거시 Android 콜백"</string>
+  <string name="gt_6e2d65a1c9f1b6a6">"Noah가 백그라운드에서 실행되게 하세요"</string>
   <string name="gt_17968e6e1b20c79e">"영문자와 숫자"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
   <string name="gt_4e62bd8335f08ccf">"라이트닝 주소"</string>
@@ -824,6 +823,7 @@
   <string name="gt_557d3ad870771176">"내장 BTC Map 여는 중…"</string>
   <string name="gt_438f1dbe9b370f38">"통합 요청이나 개별 결제 수단을 복사할 수 있는 메뉴를 엽니다"</string>
   <string name="gt_d9cc1f01d996a579">"알림을 켜 두면 VTXO가 만료되기 전에 조치가 필요할 때 알려드릴 수 있습니다."</string>
+  <string name="gt_f893fab7e39f5540">"그렇지 않으면 Android가 Noah를 일시 중지해 결제가 도착하지 않을 수 있습니다."</string>
   <string name="gt_3619cf0b90923a4b">"송신"</string>
   <string name="gt_5830129e672b39a9">"출력 VTXO"</string>
   <string name="gt_84c9bc73297ace6e">"재정의된 시도"</string>

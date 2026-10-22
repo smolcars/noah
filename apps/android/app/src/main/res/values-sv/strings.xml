@@ -70,7 +70,6 @@
   <string name="gt_b636320b54efe2b7">"Ett okänt fel uppstod vid säkerhetskopieringen."</string>
   <string name="gt_22b587b11be36edd">"Förankringspunkt"</string>
   <string name="gt_dea19a697a27a904">"Android SDK byggt för"</string>
-  <string name="gt_399b59ca7b509491">"Android kan försätta Noah i viloläge i bakgrunden för att spara energi. Det påverkar batteritiden ytterst lite, men kan göra att pushnotiser helt slutar komma fram. Inaktivera batterioptimering för Noah så att plånboken fortsätter att fungera som den ska."</string>
   <string name="gt_15ea390b9d935697">"En annan Lightning-betalning pågår fortfarande. Försök igen när den är klar."</string>
   <string name="gt_2b16e2ecee477adb">"Verkar ha gått igenom – kontrollera Historik"</string>
   <string name="gt_ac08210c6e686e23">"Apploggar"</string>
@@ -381,7 +380,6 @@
   <string name="gt_9c8a9579abe55bdc">"Riktning"</string>
   <string name="gt_c953567840067771">"Vägbeskrivning"</string>
   <string name="gt_22285980b45cde91">"Inaktivera alla plånboksfunktioner. Plånboken stängs och läses inte in förrän den aktiveras igen."</string>
-  <string name="gt_223535a0e72287cc">"Inaktivera batterioptimering"</string>
   <string name="gt_4c5e9e2b90ab535d">"Inaktivera autentisering för plånboken"</string>
   <string name="gt_de55d749452d746b">"Stäng uppmaningen om e-postadress för nödfall"</string>
   <string name="gt_11a6767d5674c7e4">"Klart"</string>
@@ -625,6 +623,7 @@
   <string name="gt_fa9a7513e80f546f">"Lämna fältet tomt för att använda Lightning utan NIP-05. Endast offentliga npub-nycklar accepteras. Klistra aldrig in en privat nsec-nyckel."</string>
   <string name="gt_58eb9032e3bb83f0">"Kvar"</string>
   <string name="gt_68dc9d6d2e2e87ef">"Äldre Android-återanrop"</string>
+  <string name="gt_6e2d65a1c9f1b6a6">"Låt Noah köras i bakgrunden"</string>
   <string name="gt_17968e6e1b20c79e">"Bokstäver och siffror"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
   <string name="gt_4e62bd8335f08ccf">"Lightning-adress"</string>
@@ -824,6 +823,7 @@
   <string name="gt_557d3ad870771176">"Öppnar den medföljande versionen av BTC Map…"</string>
   <string name="gt_438f1dbe9b370f38">"Öppnar alternativ för att kopiera den samlade betalningsbegäran eller en enskild betalningsmetod"</string>
   <string name="gt_d9cc1f01d996a579">"Valfria aviseringar kan hjälpa oss att nå dig om du behöver se över dina VTXO:er innan de löper ut."</string>
+  <string name="gt_f893fab7e39f5540">"Annars kan Android pausa Noah, och betalningar kan sluta komma fram."</string>
   <string name="gt_3619cf0b90923a4b">"Utgående"</string>
   <string name="gt_5830129e672b39a9">"Utgående VTXO:er"</string>
   <string name="gt_84c9bc73297ace6e">"Åsidosatt försök"</string>

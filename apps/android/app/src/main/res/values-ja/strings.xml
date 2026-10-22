@@ -70,7 +70,6 @@
   <string name="gt_b636320b54efe2b7">"バックアップ中に不明なエラーが発生しました。"</string>
   <string name="gt_22b587b11be36edd">"アンカーポイント"</string>
   <string name="gt_dea19a697a27a904">"Android SDKのビルド対象"</string>
-  <string name="gt_399b59ca7b509491">"Androidは節電のため、バックグラウンドでNoahの動作を停止することがあります。節電効果はごくわずかですが、プッシュ通知がまったく届かなくなる場合があります。ウォレットの正常な動作を保つには、Noahのバッテリー最適化を無効にしてください。"</string>
   <string name="gt_15ea390b9d935697">"別のライトニング支払いがまだ処理中です。完了してからもう一度お試しください。"</string>
   <string name="gt_2b16e2ecee477adb">"支払いが完了したようです。履歴を確認してください"</string>
   <string name="gt_ac08210c6e686e23">"アプリのログ"</string>
@@ -381,7 +380,6 @@
   <string name="gt_9c8a9579abe55bdc">"方向"</string>
   <string name="gt_c953567840067771">"経路"</string>
   <string name="gt_22285980b45cde91">"ウォレットのすべての操作を無効にします。ウォレットは閉じられ、再び有効にするまで読み込まれません。"</string>
-  <string name="gt_223535a0e72287cc">"バッテリー最適化を無効にする"</string>
   <string name="gt_4c5e9e2b90ab535d">"ウォレット認証を無効にする"</string>
   <string name="gt_de55d749452d746b">"緊急連絡用メールアドレスの案内を閉じる"</string>
   <string name="gt_11a6767d5674c7e4">"完了"</string>
@@ -625,6 +623,7 @@
   <string name="gt_fa9a7513e80f546f">"NIP-05を使わずにLightningを利用する場合は、空欄のままにしてください。入力できるのはnpub形式の公開鍵のみです。nsec形式の秘密鍵は絶対に貼り付けないでください。"</string>
   <string name="gt_58eb9032e3bb83f0">"残り"</string>
   <string name="gt_68dc9d6d2e2e87ef">"旧式のAndroidコールバック"</string>
+  <string name="gt_6e2d65a1c9f1b6a6">"Noah をバックグラウンドで動かす"</string>
   <string name="gt_17968e6e1b20c79e">"英字と数字"</string>
   <string name="gt_41e68f2cdb3806bb">"ライトニング"</string>
   <string name="gt_4e62bd8335f08ccf">"ライトニングアドレス"</string>
@@ -824,6 +823,7 @@
   <string name="gt_557d3ad870771176">"内蔵のBTC Mapを開いています…"</string>
   <string name="gt_438f1dbe9b370f38">"統合リクエストや個別の支払い方法をコピーできるメニューを開きます"</string>
   <string name="gt_d9cc1f01d996a579">"通知を有効にすると、VTXOの有効期限が切れる前に対応が必要な場合にお知らせできます。通知の設定は任意です。"</string>
+  <string name="gt_f893fab7e39f5540">"そうしないと Android が Noah を一時停止し、支払いが届かなくなることがあります。"</string>
   <string name="gt_3619cf0b90923a4b">"出金"</string>
   <string name="gt_5830129e672b39a9">"出力VTXO"</string>
   <string name="gt_84c9bc73297ace6e">"強制上書きされた試行"</string>

@@ -70,7 +70,6 @@
   <string name="gt_b636320b54efe2b7">"Se produjo un error desconocido al crear la copia de seguridad."</string>
   <string name="gt_22b587b11be36edd">"Punto de anclaje"</string>
   <string name="gt_dea19a697a27a904">"SDK de Android compilado para"</string>
-  <string name="gt_399b59ca7b509491">"Android puede suspender Noah en segundo plano para ahorrar energía. Esto apenas influye en la duración de la batería, pero puede hacer que las notificaciones push dejen de llegar por completo. Desactivar la optimización de la batería para Noah permite que la billetera siga funcionando correctamente."</string>
   <string name="gt_15ea390b9d935697">"Hay otro pago de Lightning en curso. Inténtalo de nuevo cuando termine."</string>
   <string name="gt_2b16e2ecee477adb">"Parece que se ha completado. Consulta el historial"</string>
   <string name="gt_ac08210c6e686e23">"Registros de la aplicación"</string>
@@ -381,7 +380,6 @@
   <string name="gt_9c8a9579abe55bdc">"Sentido"</string>
   <string name="gt_c953567840067771">"Cómo llegar"</string>
   <string name="gt_22285980b45cde91">"Desactiva todas las operaciones de la billetera. La billetera se cerrará y no se cargará hasta que se vuelva a activar."</string>
-  <string name="gt_223535a0e72287cc">"Desactivar la optimización de la batería"</string>
   <string name="gt_4c5e9e2b90ab535d">"Desactivar la autenticación de la billetera"</string>
   <string name="gt_de55d749452d746b">"Cerrar la solicitud de correo de emergencia"</string>
   <string name="gt_11a6767d5674c7e4">"Listo"</string>
@@ -625,6 +623,7 @@
   <string name="gt_fa9a7513e80f546f">"Deja este campo en blanco para usar Lightning sin NIP-05. Solo se aceptan claves públicas npub; nunca pegues una clave privada nsec."</string>
   <string name="gt_58eb9032e3bb83f0">"Restante"</string>
   <string name="gt_68dc9d6d2e2e87ef">"Función de retorno heredada de Android"</string>
+  <string name="gt_6e2d65a1c9f1b6a6">"Deja que Noah funcione en segundo plano"</string>
   <string name="gt_17968e6e1b20c79e">"Letras y números"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
   <string name="gt_4e62bd8335f08ccf">"Dirección Lightning"</string>
@@ -824,6 +823,7 @@
   <string name="gt_557d3ad870771176">"Abriendo BTC Map integrado…"</string>
   <string name="gt_438f1dbe9b370f38">"Abre las opciones para copiar la solicitud unificada o un método de pago individual"</string>
   <string name="gt_d9cc1f01d996a579">"Las alertas opcionales nos ayudan a avisarte si tus VTXOs necesitan atención antes de que caduquen."</string>
+  <string name="gt_f893fab7e39f5540">"Si no, Android puede pausar Noah y los pagos podrían dejar de llegar."</string>
   <string name="gt_3619cf0b90923a4b">"Saliente"</string>
   <string name="gt_5830129e672b39a9">"VTXOs de salida"</string>
   <string name="gt_84c9bc73297ace6e">"Intento anulado"</string>

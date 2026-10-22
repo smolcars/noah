@@ -70,7 +70,6 @@
   <string name="gt_b636320b54efe2b7">"An unknown error occurred while backing up."</string>
   <string name="gt_22b587b11be36edd">"Anchor Point"</string>
   <string name="gt_dea19a697a27a904">"Android SDK built for"</string>
-  <string name="gt_399b59ca7b509491">"Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly."</string>
   <string name="gt_15ea390b9d935697">"Another Lightning payment is still in progress. Try again once it completes."</string>
   <string name="gt_2b16e2ecee477adb">"Appears to have gone through — check History"</string>
   <string name="gt_ac08210c6e686e23">"Application logs"</string>
@@ -381,7 +380,6 @@
   <string name="gt_9c8a9579abe55bdc">"Direction"</string>
   <string name="gt_c953567840067771">"Directions"</string>
   <string name="gt_22285980b45cde91">"Disable all wallet operations. The wallet will be closed and won\'t load until re-enabled."</string>
-  <string name="gt_223535a0e72287cc">"Disable battery optimization"</string>
   <string name="gt_4c5e9e2b90ab535d">"Disable wallet authentication"</string>
   <string name="gt_de55d749452d746b">"Dismiss emergency email prompt"</string>
   <string name="gt_11a6767d5674c7e4">"Done"</string>
@@ -625,6 +623,7 @@
   <string name="gt_fa9a7513e80f546f">"Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key."</string>
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
   <string name="gt_68dc9d6d2e2e87ef">"Legacy Android callback"</string>
+  <string name="gt_6e2d65a1c9f1b6a6">"Let Noah run in the background"</string>
   <string name="gt_17968e6e1b20c79e">"Letters and numbers"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
   <string name="gt_4e62bd8335f08ccf">"Lightning Address"</string>
@@ -824,6 +823,7 @@
   <string name="gt_557d3ad870771176">"Opening the bundled BTC Map…"</string>
   <string name="gt_438f1dbe9b370f38">"Opens options to copy the unified request or an individual payment method"</string>
   <string name="gt_d9cc1f01d996a579">"Optional alerts can help us reach you if your VTXOs need attention before they expire."</string>
+  <string name="gt_f893fab7e39f5540">"Otherwise Android may pause Noah, and payments could stop arriving."</string>
   <string name="gt_3619cf0b90923a4b">"Outgoing"</string>
   <string name="gt_5830129e672b39a9">"Output VTXOs"</string>
   <string name="gt_84c9bc73297ace6e">"Overridden attempt"</string>

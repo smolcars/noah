@@ -2485,42 +2485,6 @@
         }
       }
     },
-    "Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly.": {
-      "comment": "GT gt_399b59ca7b509491; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android can put Noah to sleep in the background to save energy. This has a negligible effect on battery life, but can cause push notifications to stop arriving entirely. Disabling battery optimization for Noah keeps the wallet operating correctly."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android puede suspender Noah en segundo plano para ahorrar energía. Esto apenas influye en la duración de la batería, pero puede hacer que las notificaciones push dejen de llegar por completo. Desactivar la optimización de la batería para Noah permite que la billetera siga funcionando correctamente."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Androidは節電のため、バックグラウンドでNoahの動作を停止することがあります。節電効果はごくわずかですが、プッシュ通知がまったく届かなくなる場合があります。ウォレットの正常な動作を保つには、Noahのバッテリー最適化を無効にしてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android는 전력을 절약하기 위해 백그라운드에서 Noah를 절전 상태로 전환할 수 있습니다. 하지만 배터리 사용 시간을 늘리는 효과는 미미하며, 푸시 알림이 아예 수신되지 않을 수 있습니다. Noah의 배터리 최적화를 해제하면 지갑이 정상적으로 작동하도록 유지할 수 있습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android kan försätta Noah i viloläge i bakgrunden för att spara energi. Det påverkar batteritiden ytterst lite, men kan göra att pushnotiser helt slutar komma fram. Inaktivera batterioptimering för Noah så att plånboken fortsätter att fungera som den ska."
-          }
-        }
-      }
-    },
     "Another Lightning payment is still in progress. Try again once it completes.": {
       "comment": "GT gt_15ea390b9d935697; arguments: none",
       "extractionState": "manual",
@@ -13681,42 +13645,6 @@
         }
       }
     },
-    "Disable battery optimization": {
-      "comment": "GT gt_223535a0e72287cc; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Disable battery optimization"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desactivar la optimización de la batería"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バッテリー最適化を無効にする"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "배터리 최적화 해제"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inaktivera batterioptimering"
-          }
-        }
-      }
-    },
     "Disable wallet authentication": {
       "comment": "GT gt_4c5e9e2b90ab535d; arguments: none",
       "extractionState": "manual",
@@ -22465,6 +22393,42 @@
         }
       }
     },
+    "Let Noah run in the background": {
+      "comment": "GT gt_6e2d65a1c9f1b6a6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Let Noah run in the background"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deja que Noah funcione en segundo plano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah をバックグラウンドで動かす"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah가 백그라운드에서 실행되게 하세요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Låt Noah köras i bakgrunden"
+          }
+        }
+      }
+    },
     "Letters and numbers": {
       "comment": "GT gt_17968e6e1b20c79e; arguments: none",
       "extractionState": "manual",
@@ -29625,6 +29589,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Valfria aviseringar kan hjälpa oss att nå dig om du behöver se över dina VTXO:er innan de löper ut."
+          }
+        }
+      }
+    },
+    "Otherwise Android may pause Noah, and payments could stop arriving.": {
+      "comment": "GT gt_f893fab7e39f5540; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otherwise Android may pause Noah, and payments could stop arriving."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si no, Android puede pausar Noah y los pagos podrían dejar de llegar."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そうしないと Android が Noah を一時停止し、支払いが届かなくなることがあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그렇지 않으면 Android가 Noah를 일시 중지해 결제가 도착하지 않을 수 있습니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annars kan Android pausa Noah, och betalningar kan sluta komma fram."
           }
         }
       }
