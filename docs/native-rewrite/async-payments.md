@@ -1,6 +1,6 @@
 # Background payments: design
 
-**Status:** draft for review, revised after two reviews on 2026-10-22. Design only; no app or server code changes.
+**Status:** draft for review, revised after three reviews on 2026-10-22. Design only; no app or server code changes.
 
 **Scope:**
 - Lightning sends that outlast the screen.
@@ -27,7 +27,7 @@
 4. **iOS:** an amount-free Live Activity started at hold-to-send, updated whenever the app runs. No `BGContinuedProcessingTask`. Raw APNs Live Activity pushes are optional, last.
 5. **Android:** a `shortService` foreground service for up to 2 minutes, with an ongoing notification (Android 16 `ProgressStyle` Live Update, with a fallback below). Pushes and WorkManager finish slower sends.
 6. **On-chain:** the block row outside the app, refreshed when the app gets time. No long-running work.
-7. **bark:** three small fixes. Fix 2 (drivers reload under the send's lock) blocks `wait: false`. Until fixes 1 and 3 land, Noah shows "Still sending" or asks for a new invoice rather than guess.
+7. **bark:** three small fixes. Fix 2 (drivers reload under the send's lock and finish interrupted settlement) blocks `wait: false`. Until fixes 1 and 3 land, Noah shows "Still sending" or asks for a new invoice rather than guess.
 
 ## What happens today
 
@@ -44,6 +44,7 @@
 | **An error doesn't say where the send stopped.** `pay*` saves the checkpoint before contacting the server. With `wait: false` an error can come before anything exists, with the checkpoint kept for a retry, or after bark ended the send: an abort before cosigning fails the movement and removes the checkpoint, and an HTLC exit also ends in an error. | `B/bark/src/actions/mod.rs:647-654,694-699`; `pay.rs:203-283` |
 | **One movement per payment hash.** It is keyed by `ln_pay.<hash>` under a unique index and never unlinked, so re-paying an invoice after a failure reuses the old movement, still `Failed`. | `pay.rs:403-427`; `B/bark/src/persist/sqlite/mod.rs:132-154`; migration 39 |
 | **Drivers can act on a stale copy.** `drive_action` holds a per-send lock, but `check_lightning_payment`, the sync driver and the mailbox load the checkpoint before taking it, and mailbox settlement with a preimage takes no lock. The pay path checks `is_invoice_paid` before its lock. The foreground daemon reads the mailbox continuously and runs `wallet.sync()`, which drives pending sends too. | `B/bark/src/actions/mod.rs:540-553`; `B/bark/src/lightning/pay.rs:108-116,152-161,167-181,368-378`; `mailbox.rs:630-648`; `B/bark/src/daemon/mod.rs:128-150,281-400`; `B/bark/src/lib.rs:2014-2050` |
+| **Settlement takes several writes.** It records the paid invoice, then marks the HTLCs spent and finishes the movement; the driver then releases locks and removes the checkpoint. A crash in between leaves a paid record beside a checkpoint, perhaps with the movement still pending. `check_lightning_payment` and the mailbox stop at the paid record; only the sync driver re-polls and finishes it. | `pay.rs:651-660`; `B/bark/src/actions/mod.rs:529-533,688-693`; `B/bark/src/lightning/pay.rs:52-60,155-158`; `mailbox.rs:630-633` |
 | `wait: true` sleeps through parks and retries until done, so a stuck send blocks for hours. | `B/bark/src/actions/mod.rs:656-680` |
 | `check_lightning_payment(hash, false)` drives an existing checkpoint to its next park (at most one status poll) and never creates a payment. A resumed send keeps its original `retry_for`. | `B/bark/src/lightning/pay.rs:152-163,376-391` |
 
@@ -91,14 +92,16 @@
 | payment hash | From the invoice, the resolved LNURL invoice, the offer call's result, or reconstruction. |
 | movement ID | `LightningSend.movement_id` of this hash's checkpoint. It must be outside the baseline, unless the attempt resumes its own reviewed checkpoint (today's `SendLightningCheckpoint.movementID`). |
 | amount, fee bound, `retry_for`, start time | From the reviewed quote. |
-| attempt snapshot | Payment, quote, wallet identity, recurring key and `recurringAttemptID`: enough to settle without the Send journal. |
+| attempt snapshot | Payment, quote, wallet identity, recurring key, `recurringAttemptID` and the occurrence's marker (`markedAt`): enough to settle without the Send journal. |
 | state, highest phase, `revision`, display ids, settlement steps | Written only by the coordinator. |
 
-**Admission order.** Submission waits for a saved baseline:
-1. Write the journal marker, then the watch, both `admitting`.
+**Admission order.** Submission waits for a saved baseline, and only a live submission may save it:
+1. Register the attempt's submission authority with the coordinator. Write the journal marker, then the watch, both `admitting`.
 2. `prepare` reads the checkpoint state, the quote and history.
-3. Durably save the complete baseline with `prepared`: the journal (today's second write, `SendPayment.swift:328`; `SendController.kt:122`), then the watch.
-4. Only then `pay*`.
+3. Under the coordinator's authority lock, check the authority, then durably save the complete baseline with `prepared`: the journal (today's second write, `SendPayment.swift:328`; `SendController.kt:122`), then the watch.
+4. Under that lock again, check the authority and mark it paying. Only then `pay*`.
+
+Authority is in memory, per process. The authority lock is short: it guards these checks, recovery's decision and admission changes, never a bark call. Today's submit task survives screen and app transitions, and after `prepare` it checks only its generation (`SendPayment.swift:286-331`; `SendController.kt:103-137`). The lifecycle revokes authority under that lock; a revoked task stops at its next check, writes nothing and discards its quote. Once paying, authority can't be revoked.
 
 **Reused hashes.** Noah doesn't start an attempt on a payment hash that already has a finished bark movement; it asks for a new invoice. Bark 0.8 would reuse that movement, so no evidence could tell the attempts apart. LNURL, Lightning addresses and offers fetch a fresh invoice each time, so this only affects re-paying a pasted BOLT11 invoice. Resuming the user's own reviewed checkpoint stays allowed.
 
@@ -112,6 +115,7 @@
 | `InProgress(RevocableHtlcs)` | Finishing | no |
 | `InProgress(RevocationStuck)` | Stuck: active drivers stop; launch and hourly checks continue | no |
 | `Paid` + preimage + the bound movement `Successful`, amounts match | Paid | yes |
+| `Paid`, but the bound movement isn't `Successful` yet (settlement interrupted) | Paying; the next drive finishes it (bark change 2) | no |
 | no checkpoint + the bound movement `Failed`, effective balance 0, amounts match, no exited VTXOs | Failed (refunded) | yes |
 | no checkpoint + the bound movement `Failed` with exited VTXOs | Returning on-chain; Exits shows it | yes |
 | call returned; no paid record, checkpoint or bound movement for this hash; every read succeeded | Failed (never sent) | yes |
@@ -126,19 +130,20 @@ Today's guards stay: movement ID equality, a sent-to amount equal to the attempt
 
 | Rule | Detail |
 | --- | --- |
-| Requests | Drivers only call `request(reason)`. Requests coalesce into one running tick and one queued. |
-| Wallet access | A tick uses its caller's existing admission (iOS counted call or background gate; Android `withOpen` or `requireBackgroundWallet`). The coordinator's lock, not those paths, serializes decisions, so foreground and background ticks can't interleave. |
+| Requests | Drivers only call `request(reason)`, which never waits. Requests coalesce into one running tick and one queued. |
+| Wallet access | A tick reads bark under its caller's existing admission (iOS counted call or background gate; Android `withOpen` or `requireBackgroundWallet`). The coordinator's lock, not those paths, serializes decisions, so foreground and background ticks can't interleave. |
+| Lock order | Coordinator, then the wallet mutation gate, never the reverse. Step 2 takes the gate through the executors' `storage` (`I/Features/Recurring/RecurringExecutor.swift:62-63`; `A/recurring/RecurringExecutor.kt:42-57`), and neither gate is reentrant. Gate holders (foreground sync, wallet open, recurring storage) may `request` a tick but never await one, and a caller that awaits a tick holds no gate. After taking the gate, step 2 rechecks admission and wallet generation; if either changed it writes nothing and stays unfinished. |
 | Writes | Compare-and-set on `revision`. Terminal outcomes never change. A tick whose watch revision or wallet generation changed since it started drops its result. |
 | Display | Updated only from the committed watch. A terminal watch ends its display once and records that, so a stale tick can't recreate it. |
 | bark's own writers | The daemon and mailbox change bark state between ticks; the coordinator only reads bark. Bark change 2 stops their races from bringing a checkpoint back; bark's paid record wins in `lightning_send_state` either way. |
-| Lifecycle | On suspension, deletion or restore, `WalletLifecycle` closes the coordinator to new ticks, waits for the running tick and every admitted native call, stops the daemon (`stopDaemonWait`, as `I/Services/Wallet/WalletSession.swift:236` does), and only then ends activities, cancels notifications, stops the service and cancels watch work. Deletion then deletes the watches; suspension keeps them. |
+| Lifecycle | Android suspension and deletion, and iOS deletion and restore, hold the mutation gate during cleanup (`A/services/wallet/WalletLifecycle.kt:104-110,129-141`; `I/Services/Wallet/WalletLifecycle.swift:138-169`; `I/Services/Backup/WalletRestorer.swift:61`), so they drain the coordinator before taking it: (1) under the authority lock, close admission (every coordinator write checks it there) and revoke live submissions' authority; (2) wait for the running tick, bounded by deletion's drain timeout (if it expires, the late tick finds admission closed and writes nothing); (3) only then take the gate, wait for admitted native calls, stop the daemon (`stopDaemonWait`, as `I/Services/Wallet/WalletSession.swift:236` does), end activities, cancel notifications, stop the service and cancel watch work. Admission stays closed until the operation ends: after resume, or once the replacement wallet is open, bound to its generation. Deletion then deletes the watches; suspension keeps them. |
 
 **Recovery on launch and resume.**
 
 | Found | Action |
 | --- | --- |
 | unresolved journal attempt without a watch | Create it from the journal, with the journal's stage and baseline (the app died between the two writes). |
-| `admitting` attempt | `pay*` never started, because it waits for `prepared` on disk. Bind nothing and read no history as a baseline. Repeat the read-only inspection: no send for the invoice ends it "Not sent" (recurring: today's retryable not-submitted failure); an existing one shows as today's "already in progress" or "already paid"; an error keeps today's `uncertain`. An offer has no hash yet, so it ends "Not sent". |
+| `admitting` attempt | Decided under the authority lock. A live submission for it in this process is still in `prepare`: leave it to that task, which requests a tick when it ends. Otherwise (a new process, or authority revoked) `pay*` never started, because it needs `prepared` on disk and live authority. Bind nothing and read no history as a baseline. Repeat the read-only inspection: no send for the invoice ends it "Not sent" (recurring: today's retryable not-submitted failure); an existing one shows as today's "already in progress" or "already paid"; an error keeps today's `uncertain`. An offer has no hash yet, so it ends "Not sent". |
 | `prepared`, no hash, call not running | Using the saved baseline only, bind the one pending send or movement outside it with this offer (`payment_method`) and amount. None, with every read successful: Failed (never sent). Several, or a read error: uncertain, never terminal. |
 | bark pending send without a watch | Orphan watch: display only, settles no journal. |
 | terminal watch with unfinished settlement steps | Run those steps by `attemptID`, even if the journal is already terminal. |
@@ -154,10 +159,10 @@ Today's guards stay: movement ID equality, a sent-to amount equal to the attempt
    | Step | Runs when | Does | No-op when |
    | --- | --- | --- | --- |
    | 1. Send journal | The Send journal holds this `attemptID` | `settleWatched`: today's `finish` writes the result, recurring evidence included | The journal already holds this result, another attempt, or nothing |
-   | 2. Recurring | The watch has a recurring key and `recurringAttemptID` | `RecurringJournal.record` from the watch's attempt snapshot and outcome, then the executor's `settle` for that occurrence, once per settlement token | The entry is already final for this `recurringAttemptID`, released, or gone |
+   | 2. Recurring | The watch has a recurring key and `recurringAttemptID` | `RecurringJournal.record` from the watch's attempt snapshot and outcome, unless the entry already holds final evidence for this `recurringAttemptID` (step 1 may have written it). Then the executor's `settle` with the entry's settlement token, repeated until its durable flags (`resolved`, `historyApplied`, `released`) read released | The entry is released, gone (or holds another marker), or was consumed by the audited resume (resolved without final evidence) |
    | 3. Acknowledge | Acknowledgment is automatic: Done was tapped while pending, the attempt is parked, or a recurring send ran without review | Clears the Send journal if it still holds this `attemptID` with this result | The journal holds another attempt or nothing |
 
-   On every launch, resume and tick, the coordinator re-runs every unfinished step, whatever state the Send journal is in. A crash before a step's mark repeats the step, harmlessly. While the user views the result, acknowledgment stays with their Done.
+   On every launch, resume and tick, the coordinator re-runs every unfinished step, whatever state the Send journal is in. A crash before a step's mark repeats the step, harmlessly. Recorded evidence alone never completes step 2: after a crash between `record` and `settle`, or inside `settle`, it resumes `settle` with the same token. While the user views the result, acknowledgment stays with their Done.
 4. **Another send while one is pending.** Recommended: Send stays locked, as today, with a "Still sending · View" banner. The audited override ("Send another payment anyway") now parks the attempt instead of deleting it:
    - Parking copies the attempt snapshot into the watch and sets its owner to parked, fsynced before the Send journal is cleared.
    - A parked attempt A settles through steps 2 and 3; step 1 finds B's journal or none and does nothing. A is never restored into Send, and B's journal is never written: the executor's release clears only a journal holding A's `recurringAttemptID` (`SendPayment.swift:309-311`; `SendController.kt:164-165`).
@@ -278,7 +283,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 
 | Change | Blocks release? | Without it |
 | --- | --- | --- |
-| 2. Drive only the current checkpoint | Yes: Noah doesn't ship `wait: false` (phase 2) without it | A stale driver can bring a checkpoint back after the send ended. A refunded send then reads "Still sending" indefinitely, keeping Send locked, and a paid one stays in bark's pending sends. `wait: false` adds many drivers, so the race becomes likely. |
+| 2. Drive only the current checkpoint, and finish interrupted settlement | Yes: Noah doesn't ship `wait: false` (phase 2) without it | A stale driver can bring a checkpoint back after the send ended. A refunded send then reads "Still sending" indefinitely, keeping Send locked, and a paid one stays in bark's pending sends. `wait: false` adds many drivers, so the race becomes likely. A reload that stops at the paid record would strand interrupted settlement: the movement never becomes `Successful`, so Noah never shows Paid. |
 | 1. Late success after revoking starts | No | A late success shows Stuck: slow, but never a false refund. |
 | 3. One movement per attempt | No | Re-paying a failed BOLT11 invoice needs a new invoice. |
 
@@ -286,11 +291,19 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
    - In `RevocableHtlcs` and `RevocationStuck`, check the payment status before asking to revoke. On a valid preimage, settle as `PaymentInitiated` does: paid record, HTLCs spent, movement `Successful`.
    - Do the same when the server refuses because the payment completed (`B/server/src/ln/mod.rs:496,524`).
    - Let the mailbox settle a valid preimage in any phase that holds HTLCs (`mailbox.rs:638-648`).
-2. **Drive only the current checkpoint.** Every driver takes `ln_pay.<hash>`, then reloads the paid record and the checkpoint. If it finds a paid record or no checkpoint, it returns without writing; otherwise it drives the reloaded checkpoint, never the copy it was handed.
+2. **Drive only the current checkpoint.** Every driver takes `ln_pay.<hash>`, reloads the paid record and the checkpoint, and acts only on the reloaded state, never the copy it was handed:
+
+   | Reloaded | Action |
+   | --- | --- |
+   | no checkpoint | Return without writing; with a paid record, settlement is complete. |
+   | checkpoint, no paid record | Drive it. |
+   | checkpoint and a paid record | Settlement was interrupted. Finish it idempotently from the stored preimage: mark the checkpoint's HTLCs spent, finish the movement `Successful` unless it already is (`finish_movement_with_update` would rewrite it), release the action's locks, then remove the checkpoint. With the pay path's recheck, such a checkpoint always holds that payment's HTLCs. |
+
    - Callers that load first today: `check_lightning_payment` and the sync driver (`B/bark/src/lightning/pay.rs:155-161,108-116`), and the mailbox's drive (`mailbox.rs:635-644`). Reloading inside `drive_action` covers them all.
+   - `check_lightning_payment` and the mailbox no longer stop at a paid record while a checkpoint remains (`B/bark/src/lightning/pay.rs:155-158`; `mailbox.rs:630-633`).
    - Mailbox settlement with a preimage takes the same lock, skips when a drive holds it (that drive's status poll finds the result), and settles only a reloaded `PaymentInitiated` checkpoint.
    - The pay path rechecks `is_invoice_paid` under its lock (`B/bark/src/lightning/pay.rs:368-378`).
-   - Test: mailbox settlement while a driver holds a stale copy brings no checkpoint back.
+   - Tests: mailbox settlement while a driver holds a stale copy brings no checkpoint back. Interrupt settlement after each write (paid record, HTLCs spent, movement `Successful`, locks released), then drive through each caller: settlement finishes once, no checkpoint remains, and the movement is `Successful` with one update.
 3. **One movement per attempt.** When a send action ends, unlink its movement (`action_id = NULL`), so a new attempt on the same hash gets its own movement. Noah can then drop its "new invoice" rule.
 
 ## FFI changes (bark-bolt-ffi on bark 0.8.0)
@@ -309,7 +322,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
    | --- | --- |
    | `pay_*`, `wait: false` | Returns `InProgress` (normally at `PaymentInitiated`), `Paid`, or `Unknown` when the payment failed and was refunded inside the call. |
    | `pay_*` or `check_lightning_payment` error | Can come before anything was created (parsing, already paid, lock busy); while a checkpoint remains (a transient failure, or `RevocationStuck` parked with an error); or after bark ended the send (an abort before cosigning, with its movement `Failed`, or an HTLC exit). Until item 3, it can also be the FFI's own state read after bark returned, whatever the outcome. A missing checkpoint proves nothing: callers check `lightning_send_state` (paid record, then checkpoint), `pending_lightning_sends` and the movements before concluding. |
-   | `check_lightning_payment(hash, false)` | Never creates a payment; returns at the next park after at most one status poll. In revocation phases it only tries to revoke, until bark change 1. |
+   | `check_lightning_payment(hash, false)` | Never creates a payment; returns at the next park after at most one status poll. In revocation phases it only tries to revoke, until bark change 1. Until bark change 2 it returns `Paid` without driving, even when settlement was interrupted; after it, it finishes that settlement first. |
    | `phase` | `RevocableHtlcs` and `RevocationStuck` don't mean the payment failed. |
    | `movement_id` | `None` only at `Start`. |
    | `wait: true` | Can block until near HTLC expiry. |
@@ -351,7 +364,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 
 | Phase | Work | Tests |
 | --- | --- | --- |
-| 1. SDK and bark | Adopt the new FFI with `wait: true, retry_for: 60`; land bark change 2, then 1 and 3. | Options reach the call; an unroutable regtest invoice fails and refunds; current suites stay green. Change 2: the stale-driver test above. Change 1: an LND hold invoice held past expiry − 144 blocks, then settled → Paid, not stuck. |
+| 1. SDK and bark | Adopt the new FFI with `wait: true, retry_for: 60`; land bark change 2, then 1 and 3. | Options reach the call; an unroutable regtest invoice fails and refunds; current suites stay green. Change 2: the stale-driver and interrupted-settlement tests above. Change 1: an LND hold invoice held past expiry − 144 blocks, then settled → Paid, not stuck. |
 | 2. Pending state (needs bark change 2) | `wait: false`, the watch store, the coordinator, the `pending` journal states, settlement steps, in-app drivers. | See below. Regtest: an LND hold invoice (`just lncli addholdinvoice`) keeps a send pending; settle it → Sent, cancel it → Failed. |
 | 3. Server push and push jobs | The handler, type and clients; device push jobs. | Delivery to an Expo token and a UnifiedPush endpoint (`push_deliveries`); normal priority, content-available; no hash, amount or preimage; the job drives and ends the watch. Device: background the app, then settle the hold invoice. |
 | 4. System UI | The Live Activity, the handoff, the Android service and notification. | Content per state with hide-balance on and off. No amount in any Live Activity: the content type has no amount field, and on a device an activity left pending past 8 h, ended by iOS, then hide-balance turned on and Noah restarted, still shows none. Fixed tracker positions; a handoff that is `.invalid` or expires at once ends exactly once; the service's cap and `onTimeout`; a recurring send starts no activity or service. Manual: swipe-away (Pixel), force quit (iPhone), Live Activities off. Recordings per platform. |
@@ -363,11 +376,12 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 | Every evidence→state row | Revocation phases are never terminal. |
 | An old failed movement for the same hash | It never ends a new watch, and re-paying that hash is refused. |
 | A stale tick after a terminal write | It neither overwrites the outcome nor reposts the display. |
-| Suspension or deletion during a tick | Ticks and native calls drain before cleanup. |
+| Suspension, deletion or restore while a tick waits for the gate in step 2, while a gate holder requests a tick, and with the drain timing out | No deadlock: admission closes and ticks drain before the gate is taken; a late tick writes nothing; admission stays closed through replacement, and the step reruns after resume. |
 | The app killed while `admitting`, with an earlier payment to the same offer and amount in history | Recovery binds nothing and never reports Sent. |
+| Resume while the submit task is suspended in `prepare`; then the same with wallet suspension revoking its authority | Recovery leaves the live task alone, and it pays once; "Not sent" never precedes a payment. A revoked task never saves `prepared` or pays, and recovery then ends it "Not sent". |
 | The app killed between marker and watch; an offer killed mid-call after `prepared`; an errored `pay*` that left a checkpoint | Recovery binds or concludes correctly. |
 | A `pay*` error after bark paid, and after it refunded | The paid record or the bound movement settles it; a missing checkpoint never does. |
-| A crash after each settlement step, for Send-owned, parked and recurring attempts | Restart finishes the remaining steps once, and an automatic acknowledgment unlocks Send. |
+| A crash after each settlement step, between `record` and `settle`, and after each `settle` flag, for Send-owned, parked and recurring attempts | Restart finishes the remaining steps once: history applies once, the occurrence is released, and an automatic acknowledgment unlocks Send. |
 | Override while pending, then A finishes while B is pending | A is parked, not dropped; its occurrence settles; B's journal is untouched. |
 | Recurring pending → success and pending → refund, each across a restart | The occurrence stays locked and no history applies while pending; then it settles once: success restores `active`, a refund is retryable. |
 | A final recurring outcome followed by `pending` or `uncertain` | It stays final. |
@@ -379,7 +393,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 2. Is raw APNs (a .p8 key and a new sender) worth it, only to mark a force-quit app's activity "Finished · open Noah"?
 3. Should the server ping devices that registered "waiting on a block" (no txid) on each new block? Recommended: no; the server stays out of on-chain.
 4. Should incoming on-chain payments start a Live Activity or notification automatically, or only while Receive is open?
-5. Are amount-free Live Activities acceptable? iOS ends an activity by itself after 8 h and keeps its last content on the Lock Screen up to 4 h more, where Noah can't change it, so an amount there could outlive turning hide-balance on. The alternative shows amounts while hide-balance is off and accepts that gap. Recommended: amount-free.
+5. Live Activities stay amount-free whatever the hide-balance setting: iOS can keep an ended activity's last content for up to 4 h, where Noah can't change it. Is an activity that shows progress but no amount useful enough to ship at all, or should iOS rely on the in-app result and result notifications? Recommended: ship it; it answers "is my payment through?" at a glance.
 6. When Live Activities are off, should results arrive as ordinary notifications ("Sent ₿X")? Recommended: yes.
 7. While a Lightning send is pending, should Send stay locked, with the override parking it? Recommended: yes. Allowing other sends freely invites paying the same merchant twice.
 8. Bark change 2 blocks `wait: false`; changes 1 and 3 have conservative fallbacks. Should change 2 go into a Noah fork if upstream hasn't merged it by phase 2? Recommended: all three upstream, forking change 2 only then.
