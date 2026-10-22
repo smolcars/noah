@@ -171,6 +171,13 @@ class RecoveryPhraseBackupTest {
         assertNull(SettingsStorage(context, sync = {}).string(RecoveryPhraseBackup.key))
     }
 
+    @Test fun keyMatchesIOS() {
+        assertEquals("native-recovery-phrase-backup-v1", RecoveryPhraseBackup.key)
+        val settings = SettingsStorage(context, sync = {})
+        RecoveryPhraseBackup.set(settings, true)
+        assertEquals("""{"backedUp":true}""", SettingsStorage(context, sync = {}).string("native-recovery-phrase-backup-v1"))
+    }
+
     @Test fun onlyAnExplicitTrueCountsAsBackedUp() {
         assertFalse(RecoveryPhraseBackup.isBackedUp(null))
         assertFalse(RecoveryPhraseBackup.isBackedUp(""))

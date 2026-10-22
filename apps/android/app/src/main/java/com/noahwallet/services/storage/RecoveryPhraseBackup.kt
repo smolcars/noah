@@ -11,7 +11,8 @@ import kotlinx.serialization.json.*
  * Deleting the wallet clears it with every other setting.
  */
 object RecoveryPhraseBackup {
-    const val key = "native-recovery-phrase-backup"
+    /** Shared with iOS. */
+    const val key = "native-recovery-phrase-backup-v1"
 
     fun isBackedUp(raw: String?): Boolean = raw?.let {
         runCatching { Json.parseToJsonElement(it).jsonObject["backedUp"]?.jsonPrimitive?.takeIf { value -> !value.isString }?.booleanOrNull }.getOrNull()
