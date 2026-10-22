@@ -332,4 +332,55 @@ struct HomeRulesTests {
         tracker.update(state: .everyday, transactions: [Self.row("first")], balanceSats: 2_100, visible: true, walletKey: "w")
         #expect(tracker.celebration == nil && tracker.newIDs.isEmpty)
     }
+    @Test func catchUpPaymentsDoNotPlayAsLive() {
+        // Back on a Fresh Home: the payment that landed while away arrives with this visit's refresh.
+        let tracker = HomeActivityTracker()
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w", summaryRevision: 4)
+        #expect(!tracker.armed)
+        tracker.update(state: .everyday, transactions: [Self.row("away")], balanceSats: 2_100, visible: true, walletKey: "w",
+                       summaryRevision: 4, historyBusy: true)
+        tracker.update(state: .everyday, transactions: [Self.row("away")], balanceSats: 2_100, visible: true, walletKey: "w",
+                       summaryRevision: 5)
+        #expect(tracker.armed && tracker.celebration == nil && tracker.shown == .everyday)
+        // History still loading holds the arming, even after the refresh.
+        let loading = HomeActivityTracker()
+        loading.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w", summaryRevision: 1)
+        loading.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w", summaryRevision: 2,
+                       historyBusy: true)
+        #expect(!loading.armed)
+        loading.update(state: .everyday, transactions: [Self.row("away")], balanceSats: 2_100, visible: true, walletKey: "w",
+                       summaryRevision: 2)
+        #expect(loading.armed && loading.celebration == nil)
+    }
+
+    @Test func backgroundThenForegroundStillPlaysTheFirstPayment() throws {
+        let tracker = HomeActivityTracker()
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w", summaryRevision: 1)
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w", summaryRevision: 2)
+        #expect(tracker.armed)
+        // Backgrounding disarms; the foreground refresh (or a retried one) arms the new visit.
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: false, walletKey: "w", summaryRevision: 2)
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w", summaryRevision: 2)
+        #expect(!tracker.armed)
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w", summaryRevision: 3)
+        #expect(tracker.armed)
+        tracker.update(state: .everyday, transactions: [Self.row("live", amount: 5_000)], balanceSats: 0, visible: true,
+                       walletKey: "w", summaryRevision: 3)
+        #expect(try #require(tracker.celebration).sats == 5_000)
+    }
+
+    @Test func aFailedHistoryReadIsNotAPayment() {
+        let tracker = HomeActivityTracker()
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w")
+        #expect(tracker.armed)
+        // Fresh turns Everyday on a history error, with no record and no balance.
+        tracker.update(state: .everyday, transactions: [], balanceSats: 0, visible: true, walletKey: "w")
+        #expect(tracker.celebration == nil && tracker.shown == .everyday)
+        // Outgoing or internal records aren't a first payment either.
+        let other = HomeActivityTracker()
+        other.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w")
+        other.update(state: .everyday, transactions: [Self.row("board", type: "Onchain", kind: "onboard")], balanceSats: 0,
+                     visible: true, walletKey: "w")
+        #expect(other.celebration == nil)
+    }
 }

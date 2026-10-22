@@ -272,15 +272,26 @@ final class HomeActivityTracker {
     private(set) var celebration: Celebration?
     /// Incoming records that arrived since Home was last on screen.
     private(set) var newIDs: Set<String> = []
+    /// This visit's initial refresh and history load have landed, so a payment from
+    /// now on is live. Each visit (and each wallet) starts disarmed: whatever its
+    /// first refresh brings in arrived while you were away.
+    private(set) var armed = false
     private var baseline: Set<String>?
     private var visible = false
     private var walletKey: String?
     private var state = HomeLayoutState.loading
+    private var armedIDs: Set<String> = []
+    private var armedSats: UInt64 = 0
+    private var visitRevision: Int?
 
+    /// `summaryRevision` is the app's balance refresh count: a visit arms once it has
+    /// moved on from where the visit started and history isn't loading. Nil (fixtures)
+    /// has nothing to wait for.
     func update(state: HomeLayoutState, transactions: [HistoryTransaction], balanceSats: UInt64,
-                visible: Bool, walletKey: String?, now: Date = Date()) {
-        if walletKey != self.walletKey {
-            self.walletKey = walletKey
+                visible: Bool, walletKey: String?, summaryRevision: Int? = nil, historyBusy: Bool = false,
+                now: Date = Date()) {
+        let walletChanged = walletKey != self.walletKey
+        if walletChanged {
             baseline = nil
             newIDs = []
             celebration = nil
@@ -295,7 +306,17 @@ final class HomeActivityTracker {
             newIDs = []
             celebration = nil
         }
+        if self.visible != visible || walletChanged { armed = false }
+        if visible && (!self.visible || walletChanged) { visitRevision = summaryRevision }
+        self.walletKey = walletKey
         self.visible = visible
+        if visible && !armed && !historyBusy && state != .loading
+            && (summaryRevision == nil || summaryRevision.map { $0 > (visitRevision ?? $0) } == true) {
+            // Whatever this visit's first refresh brought in arrived while you were away.
+            armed = true
+            armedIDs = ids
+            armedSats = balanceSats
+        }
         if visible, let baseline {
             newIDs = Set(transactions.filter { !baseline.contains($0.id) && HomeActivityRow.isNewEligible($0) }.map(\.id))
         }
@@ -303,12 +324,22 @@ final class HomeActivityTracker {
             if state == .suspended || state == .loading { celebration = nil; shown = state }
             return
         }
-        if visible && shown == .fresh && state == .everyday {
-            let first = transactions.first(where: HomeActivityRow.isNewEligible)
-            celebration = Celebration(sats: first.map { UInt64(clamping: $0.amount) } ?? balanceSats, start: now)
+        if armed && visible && shown == .fresh && state == .everyday,
+           let sats = firstPayment(transactions, balanceSats: balanceSats) {
+            celebration = Celebration(sats: sats, start: now)
             return
         }
         shown = state
+    }
+
+    /// A first payment is an eligible incoming record that is new since arming, or
+    /// failing that a real balance increase. A failed history read is neither.
+    private func firstPayment(_ transactions: [HistoryTransaction], balanceSats: UInt64) -> UInt64? {
+        if let record = transactions.first(where: { !armedIDs.contains($0.id) && HomeActivityRow.isNewEligible($0) }),
+           record.amount > 0 {
+            return UInt64(record.amount)
+        }
+        return balanceSats > armedSats ? balanceSats - armedSats : nil
     }
 
     /// The card has folded away; Recent takes its place.

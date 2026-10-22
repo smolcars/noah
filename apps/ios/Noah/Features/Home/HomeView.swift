@@ -594,6 +594,18 @@ struct HomeView: View {
     private var moments: some ViewModifier {
         HomeMoments(
             noticesKey: scenePhase == .active && isActive, trackerInput: trackerInput,
+            awaitingRefresh: fixture == nil && visible && tracker.shown == .fresh && !tracker.armed
+                ? "\(summary?.fingerprint ?? ""):\(model.walletSessionRevision)" : nil,
+            requestVisitRefresh: {
+                // Give the app's own launch or foreground refresh a moment, then ask for the same
+                // read-only refresh; a failure retries (backing off) rather than leaving detection off.
+                var delay = 3.0
+                while !Task.isCancelled && !tracker.armed {
+                    do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+                    await model.refresh()
+                    delay = min(delay * 2, 30)
+                }
+            },
             celebrationID: tracker.celebration?.id, toastID: toast?.id, wallet: summary?.fingerprint,
             suspended: model.isWalletSuspended, emailVerified: model.server.state.isEmailVerified,
             takeNotices: {
@@ -603,7 +615,8 @@ struct HomeView: View {
             update: { input in
                 withAnimation(NoahTokens.Motion.travel(reduceMotion)) {
                     tracker.update(state: input.state, transactions: history.transactions, balanceSats: input.sats,
-                                   visible: input.visible, walletKey: input.wallet)
+                                   visible: input.visible, walletKey: input.wallet, summaryRevision: input.revision,
+                                   historyBusy: input.historyBusy)
                 }
             },
             celebrate: playCelebration,
@@ -690,6 +703,9 @@ private extension HomeView {
 private struct HomeMoments: ViewModifier {
     let noticesKey: Bool
     let trackerInput: HomeView.TrackerInput
+    /// Set while a Fresh visit waits for its first refresh before a payment can play.
+    let awaitingRefresh: String?
+    let requestVisitRefresh: () async -> Void
     let celebrationID: UUID?
     let toastID: UUID?
     let wallet: String?
@@ -714,6 +730,10 @@ private struct HomeMoments: ViewModifier {
                 if old.state != .loading, !Set(input.ids).isSubset(of: Set(old.ids)) { recordsArrived() }
             }
             .task(id: celebrationID) { await celebrate() }
+            .task(id: awaitingRefresh) {
+                guard awaitingRefresh != nil else { return }
+                await requestVisitRefresh()
+            }
             .task(id: toastID) { await expireToast() }
             .task { await entrance() }
             // As in the VTXO screen: a review never outlives backgrounding, leaving Home or a wallet change.
@@ -736,6 +756,46 @@ struct HomeFixture {
 
 extension EnvironmentValues {
     @Entry var homeFixture: HomeFixture?
+}
+
+/// Scroll offsets that survive a pose change. Each scroll area records its offset as
+/// it scrolls (not observed, so scrolling doesn't re-render Home); when the layout
+/// switches, the areas that leave hand their offsets to their next appearance. The
+/// Fresh card and the activity list keep separate positions.
+final class HomeScrollMemory {
+    enum Area: Hashable { case compact, leading, fresh, activity }
+    private var offsets: [Area: CGFloat] = [:]
+    private var restores: [Area: CGFloat] = [:]
+
+    func record(_ area: Area, _ offset: CGFloat) { offsets[area] = offset }
+
+    func layoutChanged(toWide wide: Bool) {
+        for area in wide ? [Area.compact] : [.leading, .fresh, .activity] { restores[area] = offsets[area] }
+    }
+
+    func takeRestore(_ area: Area) -> CGFloat? { restores.removeValue(forKey: area) }
+}
+
+private struct HomeScrollKeeper: ViewModifier {
+    let area: HomeScrollMemory.Area
+    let memory: HomeScrollMemory
+    var onOffset: (CGFloat) -> Void = { _ in }
+    @State private var position = ScrollPosition(edge: .top)
+
+    func body(content: Content) -> some View {
+        content
+            .scrollPosition($position)
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in
+                memory.record(area, y)
+                onOffset(y)
+            }
+            // Back from the other layout: return to where this area was, once it has laid out.
+            .task {
+                guard let offset = memory.takeRestore(area), offset > 0 else { return }
+                do { try await Task.sleep(for: .milliseconds(80)) } catch { return }
+                position.scrollTo(y: offset)
+            }
+    }
 }
 
 /// The entrance rise for one block; already shown once the entrance has played.
