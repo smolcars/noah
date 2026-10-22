@@ -24,7 +24,7 @@ class TranslationsTest {
         language("ja")
         assertEquals("ja", LegacyLocale.read(context))
         assertEquals("ja", LegacyLocale.resolved(context))
-        assertNotEquals("Welcome to Noah", L10n.text(context, "Welcome to Noah"))
+        assertNotEquals("Create wallet", L10n.text(context, "Create wallet"))
         language("sv")
         assertEquals("sv", L10n.context(context).resources.configuration.locales[0].language)
     }
