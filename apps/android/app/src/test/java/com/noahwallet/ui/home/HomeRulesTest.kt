@@ -113,17 +113,49 @@ class HomeRulesTest {
         com.noahwallet.services.wallet.WalletBalance.Ark(spendable, 0u, 0u, 0u, pendingInRound, 0u, 0u, 0u, 0u),
         com.noahwallet.services.wallet.WalletBalance.Onchain(0u, onchainPending, onchainPending))
 
+    private fun chain(id: String, change: Long, confirmed: Boolean = false) = com.noahwallet.history.HistoryTransaction(id, "Onchain",
+        kotlin.math.abs(change), "1970-01-01T00:00:00.000Z", if (change < 0) "outgoing" else "incoming", source = "onchain-wallet", txid = id,
+        balanceChangeSat = change, hasConfirmation = confirmed)
+
     @Test fun atMostOneStatusLineInTheSpecOrder() {
         val running = HomeRules.backup(PersistedBackupState(lastBackupStatus = "in_progress"), 0, Locale.US)
         val busy = balance(1_000u, pendingInRound = 300u, onchainPending = 5_000u)
-        assertEquals(HomeRules.Status.Error("e"), HomeRules.status("e", busy, 2, running, "bg"))
-        assertEquals(HomeRules.Status.Arriving(5_300uL), HomeRules.status(null, busy, 2, running, "bg"))
-        // Bark's pending total includes a round in progress, so the arriving line comes first.
-        assertEquals(HomeRules.Status.Rounds(2), HomeRules.status(null, balance(1_000u), 2, running, "bg"))
-        assertEquals(HomeRules.Status.BackingUp, HomeRules.status(null, balance(1_000u), 0, running, "bg"))
-        assertEquals(HomeRules.Status.Background("bg"), HomeRules.status(null, balance(1_000u), 0, null, "bg"))
-        assertNull(HomeRules.status(null, balance(1_000u), 0, HomeRules.backup(PersistedBackupState(lastBackupStatus = "failed"), 0, Locale.US), null))
-        assertNull(HomeRules.status(null, null, 0, null, null))
+        val deposit = listOf(chain("d", 5_000))
+        assertEquals(HomeRules.Status.Error("e"), HomeRules.status("e", busy, deposit, 2, running, "bg"))
+        assertEquals(HomeRules.Status.Arriving(5_000uL), HomeRules.status(null, busy, deposit, 2, running, "bg"))
+        // A round in progress is your own funds, its own line after anything arriving.
+        assertEquals(HomeRules.Status.InRound(300uL), HomeRules.status(null, balance(1_000u, pendingInRound = 300u), emptyList(), 2, running, "bg"))
+        assertEquals(HomeRules.Status.Rounds(2), HomeRules.status(null, balance(1_000u), emptyList(), 2, running, "bg"))
+        assertEquals(HomeRules.Status.BackingUp, HomeRules.status(null, balance(1_000u), emptyList(), 0, running, "bg"))
+        assertEquals(HomeRules.Status.Background("bg"), HomeRules.status(null, balance(1_000u), emptyList(), 0, null, "bg"))
+        assertNull(HomeRules.status(null, balance(1_000u), emptyList(), 0, HomeRules.backup(PersistedBackupState(lastBackupStatus = "failed"), 0, Locale.US), null))
+        assertNull(HomeRules.status(null, null, emptyList(), 0, null, null))
+    }
+
+    @Test fun arrivingCountsIncomingFundsOnly() {
+        fun ark(claimable: ULong = 0u, lightningSend: ULong = 0u, inRound: ULong = 0u, exit: ULong = 0u, board: ULong = 0u, arkoorSend: ULong = 0u,
+                offboard: ULong = 0u, onchainPending: ULong = 0u) = com.noahwallet.services.wallet.WalletBalance(
+            com.noahwallet.services.wallet.WalletBalance.Ark(1_000u, 0u, pendingLightningSend = lightningSend, claimableLightningReceive = claimable,
+                pendingInRound = inRound, pendingExit = exit, pendingBoard = board, pendingArkoorSend = arkoorSend, pendingOffboard = offboard),
+            com.noahwallet.services.wallet.WalletBalance.Onchain(0u, onchainPending, onchainPending))
+        fun status(balance: com.noahwallet.services.wallet.WalletBalance, rows: List<com.noahwallet.history.HistoryTransaction> = emptyList()) =
+            HomeRules.status(null, balance, rows, 0, null, null)
+        // Paying someone over Lightning: the Sending row shows it, never an arriving line.
+        val paying = com.noahwallet.history.HistoryTransaction("ln", "Bolt11", 5_000, "1970-01-01T00:00:00.000Z", "outgoing", source = "ark",
+            movementStatus = "pending", effectiveBalanceSat = -5_000)
+        assertNull(status(ark(lightningSend = 5_000u), listOf(paying)))
+        // Your own funds moving aren't arriving either: arkoor sends, offboards, exits, boards.
+        assertNull(status(ark(arkoorSend = 1u, offboard = 2u, exit = 3u, board = 4u)))
+        // An unconfirmed incoming deposit is, and so is a Lightning receive waiting to be claimed.
+        assertEquals(HomeRules.Status.Arriving(100_000uL), status(ark(onchainPending = 100_000u), listOf(chain("d", 100_000))))
+        assertEquals(HomeRules.Status.Arriving(2_100uL), status(ark(claimable = 2_100u)))
+        assertEquals(HomeRules.Status.Arriving(102_100uL), status(ark(claimable = 2_100u, onchainPending = 100_000u), listOf(chain("d", 100_000))))
+        // The change of your own unconfirmed spend sits in bark's on-chain pending too, but isn't arriving.
+        assertNull(status(ark(onchainPending = 40_000u), listOf(chain("spend", -60_000))))
+        assertEquals(HomeRules.Status.Arriving(100_000uL), status(ark(onchainPending = 140_000u), listOf(chain("spend", -60_000), chain("d", 100_000))))
+        // A confirmed deposit has arrived; and history never claims more than the wallet holds as pending.
+        assertNull(status(ark(), listOf(chain("d", 100_000, confirmed = true))))
+        assertEquals(HomeRules.Status.Arriving(30_000uL), status(ark(onchainPending = 30_000u), listOf(chain("d", 100_000))))
     }
 
     @Test fun backupAndBoardingCompletionAreToastsWithinTodaysExpiry() {

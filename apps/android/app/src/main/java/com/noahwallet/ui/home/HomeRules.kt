@@ -75,14 +75,25 @@ object HomeRules {
         data object BackingUp : Status
         data class Background(val message: String) : Status
     }
-    fun status(error: String?, balance: com.noahwallet.services.wallet.WalletBalance?, activeRounds: Int, backup: Banner?, background: String?): Status? = when {
+    fun status(error: String?, balance: com.noahwallet.services.wallet.WalletBalance?, rows: List<com.noahwallet.history.HistoryTransaction>,
+               activeRounds: Int, backup: Banner?, background: String?): Status? = when {
         error != null -> Status.Error(error)
-        balance != null && balance.pendingSats > 0uL -> Status.Arriving(balance.pendingSats)
+        balance != null && arriving(balance, rows) > 0uL -> Status.Arriving(arriving(balance, rows))
         balance != null && balance.ark.pendingInRound > 0uL -> Status.InRound(balance.ark.pendingInRound)
         activeRounds > 0 -> Status.Rounds(activeRounds)
         backup != null && !backup.failed && backup.title == "Backing up wallet" -> Status.BackingUp
         background != null -> Status.Background(background)
         else -> null
+    }
+    /**
+     * Money on its way in, and only that: incoming on-chain transactions not yet confirmed, plus Lightning receives
+     * waiting to be claimed. Bark's on-chain pending (BDK's trusted and untrusted pending together) also holds the
+     * change of your own unconfirmed spends, so history's unconfirmed incoming transactions pick out the incoming
+     * part, never more than that pending total. Sends, boards, offboards, exits and rounds are your own funds moving.
+     */
+    fun arriving(balance: com.noahwallet.services.wallet.WalletBalance, rows: List<com.noahwallet.history.HistoryTransaction>): ULong {
+        val deposits = rows.filter { it.source == "onchain-wallet" && it.hasConfirmation != true }.sumOf { (it.balanceChangeSat ?: 0L).coerceAtLeast(0L) }
+        return minOf(deposits.toULong(), balance.onchain.pending) + balance.ark.claimableLightningReceive
     }
     /**
      * What the balance depends on in history, by row: status, confirmation, direction, amounts, balance deltas

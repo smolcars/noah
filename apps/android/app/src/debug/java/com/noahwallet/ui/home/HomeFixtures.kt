@@ -73,7 +73,7 @@ object HomeFixtures {
             state = home, address = if (state == "fresh-no-address") null else address, variant = variant, balance = wallet,
             unit = BitcoinAmountUnit.bip177, locale = locale, hidden = hidden,
             fiat = HomeRules.fiat(wallet?.totalSats?.toLong(), price, "USD", locale, hidden),
-            status = HomeRules.status(null, wallet, 0, null, null),
+            status = HomeRules.status(null, wallet, rows, 0, null, null),
             nudge = HomeRules.nudge(emptyList(), if (state == "busy") renew else null, null, backedUp, emailPrompt, false),
             rows = rows, historyError = null, newRows = newRows, now = now,
         )
