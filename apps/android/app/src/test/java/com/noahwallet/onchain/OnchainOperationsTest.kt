@@ -4,6 +4,7 @@ import io.github.niteshbalusu11.bark.*
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -27,6 +28,35 @@ class OnchainOperationsTest {
         assertFalse(overridden.blocks(OnchainAction.board, emptyList()))
         ops.execute(ops.quote(OnchainAction.board, amount = 30_000))
         assertEquals(1, wallet.calls.count { it.startsWith("submit:") })
+    } }
+    @Test fun renewalChecksItsVtxosAreStillDueUnderTheLockJustBeforeSubmitting() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val expiry = Wallet.vtxo("a").expiryHeight.toLong()
+        wallet.expiringIDs = setOf("a"); wallet.tipHeight = expiry - 10
+        val reviewed = ops.quote(OnchainAction.refresh, listOf("a"))
+        // A sync holds the wallet's mutation lock while Renew's confirmation waits for it, and moves the tip past
+        // the VTXO's expiry. Bark still reports the VTXO spendable, so the refresh quote alone would pass.
+        val lock = kotlinx.coroutines.sync.Mutex(locked = true)
+        val confirming = async { lock.withLock { runCatching { ops.execute(reviewed, renewalThreshold = 144u) } } }
+        repeat(5) { yield() }
+        wallet.tipHeight = expiry
+        lock.unlock()
+        val failure = confirming.await().exceptionOrNull()
+        assertEquals(OnchainFailure.changed, (failure as OnchainException).reason)
+        assertTrue("nothing was submitted", wallet.calls.none { it.startsWith("refresh") })
+        assertTrue(journal.loadAll().isEmpty())
+        // Out of the expiring set (a sync's new threshold view) is the same: nothing is submitted.
+        wallet.tipHeight = expiry - 10; wallet.expiringIDs = emptySet()
+        assertEquals(OnchainFailure.changed, (runCatching { ops.execute(ops.quote(OnchainAction.refresh, listOf("a")), renewalThreshold = 144u) }
+            .exceptionOrNull() as OnchainException).reason)
+        assertTrue(wallet.calls.none { it.startsWith("refresh") })
+        // Still due when the lock is free: it's submitted.
+        wallet.expiringIDs = setOf("a")
+        ops.execute(ops.quote(OnchainAction.refresh, listOf("a")), renewalThreshold = 144u)
+        assertEquals(listOf("refresh:a"), wallet.calls.filter { it.startsWith("refresh") })
+        // A manual refresh isn't Renew: it isn't held to the expiring set, so an expired VTXO still refreshes as before.
+        wallet.items = listOf(Wallet.vtxo("a"), Wallet.vtxo("b")); wallet.tipHeight = expiry; wallet.expiringIDs = emptySet()
+        ops.execute(ops.quote(OnchainAction.refresh, listOf("b")))
+        assertEquals(listOf("refresh:a", "refresh:b"), wallet.calls.filter { it.startsWith("refresh") })
     } }
     @Test fun incompleteProbeCleanupStopsBeforePreparingAgain() = runBlocking { fixture { wallet, ops, journal, _ ->
         wallet.cleanupComplete = false
@@ -208,8 +238,11 @@ class OnchainOperationsTest {
         override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); return Companion.vtxo(id) }
         override suspend fun exits() = active
         override suspend fun status(id: String) = states[id]?.let { ExitTransactionStatus(id, 30_000u, it, listOf(ExitState.Start(100u), it), 0u, emptyList()) }
-        override suspend fun tip() = 100L
-        override suspend fun expiring(threshold: UInt) = emptySet<String>()
+        var tipHeight = 100L
+        var expiringIDs = emptySet<String>()
+        override suspend fun tip() = tipHeight
+        override suspend fun expiring(threshold: UInt) = expiringIDs
+        override suspend fun refresh(ids: List<String>): RoundState? { calls.add("refresh:${ids.joinToString()}"); return null }
         override suspend fun pendingTotal() = 0L
         override suspend fun claimableHeight(): Long? = null
         override suspend fun submitBoard(quote: OnchainQuote): BoardResult {

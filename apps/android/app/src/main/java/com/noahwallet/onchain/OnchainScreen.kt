@@ -54,6 +54,10 @@ internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
     } },
     detail = app.session::exitDetail, refreshReceipts = app.session::refreshOnchainReceiptFees,
     claimAddress = app.session::exitDepositAddress, claimOwnership = app.session::exitClaimDestinationIsMine, discard = app.session::discardBoardReview,
+    executeRenewal = { quote -> app.services.lifecycle.withWalletMutation {
+        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
+        app.session.executeOnchain(quote, renewal = true)
+    } },
 )
 
 @Composable

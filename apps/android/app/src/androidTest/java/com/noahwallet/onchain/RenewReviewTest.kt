@@ -27,8 +27,13 @@ class RenewReviewTest {
         ready = { true },
         overview = { OnchainOverview("wallet", emptyList(), emptyList(), 0, 0, 0, null) },
         quote = { action, ids, _, _ -> quoted++; gate.await(); OnchainQuote(action, "wallet", ids.sorted(), fee = 12, chainFee = 0) },
-        execute = { quote -> journal[quote.id] = OnchainOperationJournal.Attempt(quote, OnchainReceipt("Refresh submitted to delegated round 7.")); "Refresh submitted to delegated round 7." },
+        execute = { error("Renew is submitted through executeRenewal") },
         attempts = { emptyList() }, acknowledge = {}, check = { false }, override = {}, detail = { null }, refreshReceipts = {},
+        // As the session does, under the wallet's locks: every VTXO must still be due, or nothing is submitted.
+        executeRenewal = { quote ->
+            if (!quote.ids.all { it in due }) fail(OnchainFailure.changed)
+            journal[quote.id] = OnchainOperationJournal.Attempt(quote, OnchainReceipt("Refresh submitted to delegated round 7.")); "Refresh submitted to delegated round 7."
+        },
     ))
     private var renewed: List<String>? = null
     private var started: List<String>? = null
@@ -90,11 +95,11 @@ class RenewReviewTest {
         assertEquals("nothing was even quoted", 0, quoted)
     }
 
-    @Test fun confirmingChecksAgainThatEveryReviewedVtxoIsStillDue() {
+    @Test fun submittingChecksAgainThatEveryReviewedVtxoIsStillDue() {
         gate.complete(Unit)
         show()
         compose.waitUntil(5_000) { model.quote != null }
-        due = setOf("vtxo-a") // vtxo-b expires while the review is open
+        due = setOf("vtxo-a") // vtxo-b expires while the review is open, or while submitting waits for the locks
         runBlocking(Dispatchers.Main) { model.confirm() }
         compose.waitUntil(5_000) { !model.busy }
         assertTrue("nothing was submitted", journal.isEmpty())

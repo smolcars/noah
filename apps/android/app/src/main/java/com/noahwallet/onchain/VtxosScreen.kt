@@ -103,8 +103,9 @@ internal fun <T> FilterMenu(selected: T, values: List<T>, label: (T) -> String, 
 
 /**
  * Home's Renew: takes the request once and opens today's refresh review for those VTXOs that are still due ([due]:
- * expiring, spendable, not expired); the user still confirms, and confirming checks again that every reviewed VTXO
- * is still due. With none left there's no review, and Home's nudge catches up when it next checks. It's keyed on
+ * expiring, spendable, not expired); the user still confirms, and submitting checks again, under the wallet's
+ * locks, that every reviewed VTXO is still due. With none left there's no review, and Home's nudge catches up when
+ * it next checks. It's keyed on
  * nothing that changes, so clearing the request can't cancel a review whose quote is slow. [renewed] hears only of
  * success the journal proves (that reviewed quote's receipt); a dismissed, expired or failed review reports nothing.
  */
@@ -112,7 +113,7 @@ internal fun <T> FilterMenu(selected: T, values: List<T>, label: (T) -> String, 
 internal fun RenewReview(model: OnchainModel, take: () -> List<String>?, due: suspend (List<String>) -> List<String>,
                          attempt: suspend (String) -> OnchainOperationJournal.Attempt?, onStart: (List<String>) -> Unit, renewed: (List<String>) -> Unit) {
     var reviewed by remember { mutableStateOf<String?>(null) }
-    // A wallet that can't be read now has nothing proven due, so a review isn't opened or confirmed on it.
+    // A wallet that can't be read now has nothing proven due, so no review is opened on it.
     suspend fun stillDue(ids: List<String>): List<String> = try { withContext(Dispatchers.IO) { due(ids) } }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
         catch (_: Exception) { emptyList() }
@@ -122,7 +123,7 @@ internal fun RenewReview(model: OnchainModel, take: () -> List<String>?, due: su
         val ids = stillDue(requested)
         if (ids.isEmpty()) return@LaunchedEffect
         onStart(ids)
-        model.review(OnchainAction.refresh, ids, stillApplies = { quote -> stillDue(quote.ids).toSet() == quote.ids.toSet() })
+        model.review(OnchainAction.refresh, ids, renewal = true)
         reviewed = model.quote?.takeIf { it.action == OnchainAction.refresh && it.ids == ids.sorted() }?.id
     }
     LaunchedEffect(reviewed) {

@@ -395,8 +395,10 @@ class WalletSession internal constructor(
     }
     suspend fun autoBoardFunding(): AutoBoardFunding.Snapshot? = withM6 { onchainOperations(it).autoBoardFunding() }
     suspend fun autoBoardQuote(): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote() }
-    suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null): String = withM6 { handles ->
-        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding) }
+    /** [renewal]: Home's Renew, whose VTXOs must all still be due when it's submitted, checked under these locks. */
+    suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false): String = withM6 { handles ->
+        val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
+        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold) }
     }
     suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->
         onchainMutation.withLock { onchainOperations(handles).abandonUnsubmittedAutoBoard(quote) }

@@ -17,6 +17,12 @@ internal class OnchainOperations(
         val exits = wallet.allExits().map(::exitModel)
         return OnchainOverview(wallet.walletID, vtxos, exits, wallet.confirmed(), tip, wallet.pendingTotal(), wallet.claimableHeight())
     }
+    private suspend fun renewable(ids: List<String>, threshold: UInt): Boolean {
+        val tip = wallet.tip()
+        val expiring = wallet.expiring(threshold)
+        val due = wallet.vtxos().map { vtxoModel(it, tip, expiring) }.filter { it.renewable }.map { it.id }.toSet()
+        return ids.isNotEmpty() && ids.all { it in due }
+    }
     suspend fun detail(id: String): ExitModel? {
         val status = wallet.status(id) ?: return null
         return exitModel(status)
@@ -125,7 +131,11 @@ internal class OnchainOperations(
             chainFee = if (validated.action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),
             feeRate = if (validated.action == OnchainAction.claim) null else fee.feeRateSatPerVb.toLong())
     }
-    suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null): String {
+    /**
+     * [renewalThreshold]: the review was Home's Renew, so every VTXO must still be due (in the expiring set at this
+     * threshold, spendable, not expired), checked last, under the caller's locks, just before submitting.
+     */
+    suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding() != funding)) fail(OnchainFailure.changed)
@@ -140,6 +150,8 @@ internal class OnchainOperations(
                     estimate = !reviewed.hasUnknownFeeConsent)
             } catch (failure: ExitEstimateUnavailable) { throw failure.preserving(reviewed, now()) }
             if (!ready() || !reviewed.matches(fresh) || !reviewed.current(now())) fail(OnchainFailure.changed)
+            // A sync while this waited for the locks can move the tip past an expiry; the quote above can't tell.
+            if (renewalThreshold != null && (reviewed.action != OnchainAction.refresh || !renewable(reviewed.ids, renewalThreshold))) fail(OnchainFailure.changed)
         }
         try { return journal.perform(reviewed) { recordTransaction ->
             when (reviewed.action) {

@@ -23,24 +23,20 @@ class OnchainModelTest {
             model.confirm(); model.confirm(); assertEquals(1, submits); assertEquals(2, estimates)
         }
     }
-    @Test fun aReviewsOwnConditionIsCheckedAgainAtConfirmation() = runBlocking {
-        var submits = 0; var applies = true
+    @Test fun renewalReviewsAreSubmittedThroughTheLockHeldRenewalCheck() = runBlocking {
+        val submitted = mutableListOf<String>()
         val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") },
-            { action, ids, _, _ -> OnchainQuote(action, "wallet", ids.sorted()) }, { submits++; "submitted" },
-            { emptyList() }, {}, { false }, {}, { null }, {}))
-        model.review(OnchainAction.refresh, listOf("a"), stillApplies = { applies })
-        applies = false
+            { action, ids, _, _ -> OnchainQuote(action, "wallet", ids.sorted()) }, { submitted.add("execute"); "submitted" },
+            { emptyList() }, {}, { false }, {}, { null }, {}, executeRenewal = { submitted.add("renewal"); fail(OnchainFailure.changed) }))
+        model.review(OnchainAction.refresh, listOf("a"), renewal = true)
         model.confirm()
-        assertEquals("nothing is submitted once the condition fails", 0, submits)
-        assertEquals(OnchainFailure.changed.text, model.error)
-        // A later review without a condition isn't held to the earlier one.
+        assertEquals(listOf("renewal"), submitted)
+        assertEquals("the lock-held check's failure is the review's", OnchainFailure.changed.text, model.error)
+        // A review that isn't Renew, or one that replaced it, goes the usual way.
+        model.review(OnchainAction.refresh, listOf("a"), renewal = true)
         model.review(OnchainAction.refresh, listOf("a"))
         model.confirm()
-        assertEquals(1, submits)
-        // And one that still applies goes through.
-        model.review(OnchainAction.refresh, listOf("a"), stillApplies = { true })
-        model.confirm()
-        assertEquals(2, submits)
+        assertEquals(listOf("renewal", "execute"), submitted)
     }
     @Test fun failedPreparationOffersNoFallbackAndSuccessfulQuoteStaysNormal() = runBlocking {
         val fake = Fake(); val model = OnchainModel(fake.dependencies())
