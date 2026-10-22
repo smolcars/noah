@@ -81,8 +81,8 @@ class HomeMemory {
     var enteredAt: Long? = null
     /** Row IDs when Home was last hidden; incoming rows outside it are marked new. */
     var seenRows: Set<String>? = null
-    /** When Fresh came on screen (resumed); a payment after a moment of it is "live". Cleared when Home is hidden. */
-    var freshSince: Long? = null
+    /** Decides when the first payment plays; see [FirstPaymentWatch]. */
+    val firstPaymentWatch = FirstPaymentWatch()
     var notices by mutableStateOf<List<String>>(emptyList())
     /** The last renew check, so returning to Home shows it at once and can tell when it resolved. */
     var renew by mutableStateOf<HomeRules.Renew?>(null)

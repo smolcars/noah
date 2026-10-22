@@ -14,7 +14,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.noahwallet.BuildConfig
 import com.noahwallet.history.RepeatPayment
 import com.noahwallet.ui.home.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.isActive
 import com.noahwallet.services.server.value
 import androidx.lifecycle.repeatOnLifecycle
@@ -42,7 +44,6 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     val scope = rememberCoroutineScope()
     val currency = model.preferredCurrency.takeIf { it in com.noahwallet.formatting.FiatCurrency.supported } ?: "USD"
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(Unit) { model.refresh() }
     LaunchedEffect(currency, model.isWalletSuspended, lifecycle) {
         price = null
         if (model.isWalletSuspended) return@LaunchedEffect
@@ -66,6 +67,19 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
         return
     }
     val memory = model.homeMemory
+    // Each visit refreshes the balance. The first payment's baseline waits for a refresh that landed after the
+    // visit began (a superseded refresh is covered by whichever lands next), then reads the wallet as it is.
+    val visitRevision = remember { model.summaryRevision }
+    LaunchedEffect(Unit) {
+        model.refresh()
+        val watch = memory.firstPaymentWatch
+        if (watch.baseline != null) return@LaunchedEffect // A pose change continues the visit.
+        withTimeoutOrNull(15_000) { snapshotFlow { model.summaryRevision }.first { it > visitRevision } } ?: return@LaunchedEffect
+        snapshotFlow { model.history.isLoading }.first { !it }
+        val history = model.history.transactions
+        watch.caughtUp(HomeRules.state(model.isWalletSuspended, model.summary?.balance?.totalSats, model.history.isLoading,
+            model.history.error, history.isNotEmpty()), history)
+    }
     val toasts = remember { HomeToasts() }
     val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
     val uri = LocalUriHandler.current
@@ -98,38 +112,24 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     val newRows = if (seen == null) emptySet() else rows.filter { it.direction == "incoming" && !it.isInternalTransfer && it.id !in seen }.map { it.id }.toSet()
     val activity = LocalContext.current as? Activity
     DisposableEffect(lifecycle) {
-        fun hidden() { memory.seenRows = currentIds.toSet(); memory.freshSince = null }
+        fun hidden() { memory.seenRows = currentIds.toSet(); memory.firstPaymentWatch.hidden() }
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && activity?.isChangingConfigurations != true) hidden() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); if (activity?.isChangingConfigurations != true) hidden() }
     }
 
-    // The first payment plays only when Fresh has been on screen (resumed) for a moment, so a payment that
-    // landed while Home was away, and shows up in the refresh on return, just opens Everyday.
+    // The first payment: incoming funds that appear after this visit's baseline on a Fresh wallet, with Home on screen.
     val lifecycleState by lifecycle.currentStateFlow.collectAsState()
     val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
-    fun firstIncoming() = rows.firstOrNull { it.direction == "incoming" }
-    fun live(since: Long?) = since != null && resumed && SystemClock.elapsedRealtime() - since >= 1_000 && memory.firstPayment == null &&
-        (firstIncoming()?.amount ?: balance?.totalSats?.toLong() ?: 0L) > 0
+    val arrival = memory.firstPaymentWatch.arrival(rows, balance?.totalSats)
     // Until the effect below starts the sequence, keep showing Fresh rather than flashing Everyday for a frame.
-    val starting = state == HomeRules.State.everyday && live(memory.freshSince)
-    LaunchedEffect(state, resumed) {
-        if (!resumed) return@LaunchedEffect
-        when (state) {
-            HomeRules.State.fresh -> if (memory.freshSince == null) memory.freshSince = SystemClock.elapsedRealtime()
-            HomeRules.State.everyday -> {
-                val since = memory.freshSince
-                memory.freshSince = null
-                if (live(since)) {
-                    val incoming = firstIncoming()
-                    memory.firstPayment = HomeMemory.FirstPayment(SystemClock.elapsedRealtime(), incoming?.amount ?: balance?.totalSats?.toLong() ?: 0L,
-                        incoming?.let { HomeRow.of(it, address?.substringAfter('@')).counterparty })
-                    haptics.success()
-                }
-            }
-            HomeRules.State.suspended -> memory.freshSince = null
-            HomeRules.State.loading -> {}
-        }
+    val starting = arrival != null && resumed && memory.firstPayment == null
+    LaunchedEffect(arrival, resumed) {
+        if (arrival == null || !resumed || memory.firstPayment != null) return@LaunchedEffect
+        memory.firstPaymentWatch.played()
+        memory.firstPayment = HomeMemory.FirstPayment(SystemClock.elapsedRealtime(), arrival.sats,
+            arrival.row?.let { HomeRow.of(it, address?.substringAfter('@')).counterparty })
+        haptics.success()
     }
     // Toasts appear only after real success; "Backup completed" and boarding keep today's 5-second expiry.
     val backedUp = tr("Backed up")
