@@ -81,7 +81,7 @@ final class RegtestDriverTests: XCTestCase {
                 XCTFail("Native resumed onboarding after the upgrade")
                 return
             }
-            if element("History").exists { return }
+            if element("Activity").exists { return }
             sleep(1)
         }
         XCTFail("Native did not reach Home")

@@ -84,37 +84,79 @@ struct RootView: View {
     }
 }
 
-/// Home, Receive, Send, History, each with its own navigation stack.
+/// Home, Receive, Send, Activity, each with its own navigation stack. Wide
+/// windows (the iPhone Duo open or half-open) hide the system tab bar, which
+/// would cross the fold, and draw the same tabs as a glass bar in the leading pane.
 struct WalletTabs: View {
-    enum Tab: Hashable {
+    enum Tab: Hashable, CaseIterable {
         case home, receive, send, history
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .home: "Home"
+            case .receive: "Receive"
+            case .send: "Send"
+            case .history: "Activity"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .home: "house"
+            case .receive: "arrow.down.left"
+            case .send: "arrow.up.right"
+            case .history: "list.bullet"
+            }
+        }
     }
 
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
-    @State private var history = HistoryModel(dependencies: .live(
-        session: .shared, client: AppServices.shared.client, variant: .current))
+    @State private var history: HistoryModel
+    /// Home's model; screenshot fixtures pass fakes for both.
+    private let home: HomeModel?
     @State private var pendingRepeatPayment: RepeatPayment?
     @State private var send = SendModel()
     @State private var scanBlocked = false
     @State private var selection: Tab = .home
     @State private var recurringRoute = RecurringNotificationRoute.shared
+    @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
+
+    init(history: HistoryModel? = nil, home: HomeModel? = nil) {
+        _history = State(initialValue: history ?? HistoryModel(dependencies: .live(
+            session: .shared, client: AppServices.shared.client, variant: .current)))
+        self.home = home
+    }
 
     var body: some View {
         TabView(selection: $selection) {
-            SwiftUI.Tab("Home", systemImage: "house", value: .home) {
-                HomeView(isActive: selection == .home, onScan: scanned, onOpenHistory: { selection = .history }, onRepeatPayment: repeatPayment)
+            SwiftUI.Tab(Tab.home.title, systemImage: Tab.home.symbol, value: .home) {
+                HomeView(isActive: selection == .home, onScan: scanned, onOpenHistory: { selection = .history },
+                         onRepeatPayment: repeatPayment, home: home)
+                    .modifier(WideTabContent(wide: window.wide, home: true))
             }
-            SwiftUI.Tab("Receive", systemImage: "arrow.down.left", value: .receive) {
+            SwiftUI.Tab(Tab.receive.title, systemImage: Tab.receive.symbol, value: .receive) {
                 NavigationStack { ReceiveView(isActive: selection == .receive) { selection = .home } }
+                    .modifier(WideTabContent(wide: window.wide))
             }
-            SwiftUI.Tab("Send", systemImage: "arrow.up.right", value: .send) {
+            SwiftUI.Tab(Tab.send.title, systemImage: Tab.send.symbol, value: .send) {
                 NavigationStack { SendView(model: send, isActive: selection == .send) }
+                    .modifier(WideTabContent(wide: window.wide))
             }
-            SwiftUI.Tab("History", systemImage: "clock.arrow.circlepath", value: .history) {
+            SwiftUI.Tab(Tab.history.title, systemImage: Tab.history.symbol, value: .history) {
                 NavigationStack { TransactionsView(onRepeatPayment: repeatPayment) }
+                    .modifier(WideTabContent(wide: window.wide))
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            if window.wide {
+                WideTabBar(selection: $selection)
+                    .frame(width: max(0, window.size.width / 2 - window.insets.leading))
+                    .padding(.bottom, 18)
+                    .ignoresSafeArea(.keyboard)
+            }
+        }
+        .onboardingWindow($window)
         .onChange(of: pendingRepeatPayment) { _, _ in consumeRepeatPayment() }
         .onChange(of: send.controller.locked) { _, _ in consumeRepeatPayment() }
         .onChange(of: send.busy) { _, _ in consumeRepeatPayment() }
@@ -216,6 +258,63 @@ private struct LaunchMessageView: View {
         case .existingWallet, .onboarding:
             ""
         }
+    }
+}
+
+/// Wide windows: no system tab bar, and other tabs keep their content clear of the glass bar.
+private struct WideTabContent: ViewModifier {
+    let wide: Bool
+    var home = false
+
+    func body(content: Content) -> some View {
+        content
+            .toolbarVisibility(wide ? .hidden : .automatic, for: .tabBar)
+            .safeAreaPadding(.bottom, wide && !home ? WideTabBar.clearance : 0)
+    }
+}
+
+/// The four tabs as a Liquid Glass bar at the bottom of the leading pane (prototype `.ph.duo .tabs`).
+private struct WideTabBar: View {
+    static let clearance: CGFloat = 80
+    @Binding var selection: WalletTabs.Tab
+    @Namespace private var lens
+    @State private var haptics = OnboardingHaptics()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GlassGroup {
+            HStack(spacing: 0) {
+                ForEach(WalletTabs.Tab.allCases, id: \.self) { tab in
+                    Button {
+                        guard selection != tab else { return }
+                        haptics.play(.selection)
+                        withAnimation(NoahTokens.Motion.travel(reduceMotion)) { selection = tab }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Image(systemName: tab.symbol).font(.system(size: 19, weight: .medium)).frame(height: 24)
+                            Text(tab.title).noahText(HomeText.tab).lineLimit(1)
+                        }
+                        .foregroundStyle(NoahTokens.Colors.foreground)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background {
+                            if selection == tab {
+                                Capsule().fill(NoahTokens.Colors.foreground.opacity(0.08))
+                                    .matchedGeometryEffect(id: "lens", in: lens)
+                            }
+                        }
+                        .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selection == tab ? .isSelected : [])
+                    .accessibilityIdentifier("wide-tab-\(tab)")
+                }
+            }
+            .padding(.horizontal, 6)
+            .frame(width: 288, height: 62)
+            .glassCompat(in: Capsule())
+        }
+        .onboardingHaptics(haptics)
+        .accessibilityElement(children: .contain)
     }
 }
 

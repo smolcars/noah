@@ -61,7 +61,7 @@ appId: com.noahwallet.regtest
       platform: iOS
     commands:
       - tapOn: "Cancel"
-- tapOn: "History"
+- tapOn: "Activity"
 - assertVisible: "All"
 - setOrientation: LANDSCAPE_LEFT
 - assertVisible: "All"
