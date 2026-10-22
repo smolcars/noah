@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -28,6 +30,7 @@ class OnboardingFoldTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun show(step: String, hinge: (Int, Int) -> WindowRegion): WindowRegion {
+        compose.mainClock.autoAdvance = false
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application
         lateinit var model: AppModel
         lateinit var fold: WindowRegion
@@ -36,13 +39,14 @@ class OnboardingFoldTest {
             model.step = step
             val bounds = activity.window.decorView
             fold = hinge(bounds.width, bounds.height)
+            // Host it as MainActivity and LaunchGateView do: adjustResize and the safe-drawing insets (keyboard included).
+            @Suppress("DEPRECATION") activity.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             activity.setContent { NoahTheme { CompositionLocalProvider(LocalFoldingFeatures provides listOf(fold)) {
-                Box(Modifier.fillMaxSize()) { Onboarding(model) }
+                Box(Modifier.fillMaxSize().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)) { Onboarding(model) }
             } } }
         }
-        compose.waitForIdle()
-        Thread.sleep(800)
-        compose.waitForIdle()
+        // The tree and the caret animate forever; a paused clock lets layout settle without waiting for idleness.
+        compose.mainClock.advanceTimeBy(3_000)
         return fold
     }
 
@@ -58,6 +62,11 @@ class OnboardingFoldTest {
 
     private fun assertClear(step: String, fold: WindowRegion) {
         val vertical = fold.height > fold.width
+        if (InstrumentationRegistry.getArguments().getString("foldShots") != null) {
+            val shot = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "fold-$step-${if (vertical) "v" else "h"}.png")
+                .outputStream().use { shot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
         for (node in nodes()) {
             val bounds: Rect = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
