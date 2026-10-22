@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noah Home v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Roboto:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+.page{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;padding:4px 0 12px;font-family:var(--font-sans,-apple-system,system-ui,sans-serif);color:var(--foreground)}
+.bezel{flex:none;padding:12px;background:#0b0b0b;border-radius:67px;box-shadow:0 30px 60px -24px rgba(0,0,0,.5),inset 0 0 0 1px #2b2b2b;transition:border-radius .3s}
+.bezel.android{border-radius:52px}
+.bezel.duo{border-radius:40px}
+.side{flex:1 1 250px;min-width:250px;display:flex;flex-direction:column;gap:20px;font-size:13px;line-height:1.45}
+.side h3{margin:0 0 8px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted-foreground,#777)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.chip{appearance:none;border:1px solid var(--border,#ccc);background:transparent;color:var(--foreground,#111);font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;cursor:pointer}
+.chip.on{background:var(--foreground,#111);color:var(--background,#fff);border-color:var(--foreground,#111)}
+.lbl{color:var(--muted-foreground,#777);padding:4px 2px;font-size:12px}
+.log{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-size:12px;color:var(--muted-foreground,#777)}
+.spec{margin:0;padding-left:16px}.spec li{margin:3px 0}
+.mt{color:var(--muted-foreground,#777)}
+@media (max-width:1000px){.bezel.duo{zoom:.7}}
+@media (max-width:460px){.bezel{zoom:.86}}
+
+/* Device */
+.ph{--bg:#fff;--fg:#000;--mut:#707070;--hair:rgba(0,0,0,.12);--soft:#f2f2f2;--sheet:#fff;--or:#F7931A;--ortx:#A85800;--fail:#D0312D;
+  --glass:rgba(255,255,255,.72);--glassline:rgba(0,0,0,.08);--lens:rgba(0,0,0,.07);
+  --sys:-apple-system,"SF Pro Text","SF Pro Display",system-ui,sans-serif;--grot:"Space Grotesk",-apple-system,system-ui,sans-serif;
+  width:393px;height:852px;border-radius:55px;position:relative;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--sys);-webkit-font-smoothing:antialiased;transition:background-color .4s,color .4s;user-select:none;-webkit-user-select:none}
+.ph.dark{--bg:#000;--fg:#fff;--mut:#8f8f8f;--hair:rgba(255,255,255,.16);--soft:#1c1c1e;--sheet:#1c1c1e;--ortx:#F7931A;--fail:#FF453A;--glass:rgba(40,40,42,.62);--glassline:rgba(255,255,255,.12);--lens:rgba(255,255,255,.12)}
+.ph.android{--sys:Roboto,system-ui,sans-serif;width:412px;height:892px;border-radius:40px;--soft:#f0f0f2}
+.ph.android.dark{--soft:#1b1b1d}
+.ph.duo{width:951px;height:669px;border-radius:28px}
+
+.status{position:absolute;top:0;left:0;right:0;height:54px;z-index:80;pointer-events:none}
+.status .t{position:absolute;left:52px;top:17px;font:600 17px/22px var(--sys)}
+.status svg{position:absolute;right:30px;top:22px}
+.island{position:absolute;top:11px;left:50%;width:124px;height:36px;margin-left:-62px;background:#000;border-radius:20px;z-index:81}
+.ph.android .status{height:40px}.ph.android .status .t{left:24px;top:11px;font:500 14px/20px var(--sys)}.ph.android .status svg{right:22px;top:14px}
+.ph.android .island{top:12px;width:22px;height:22px;margin-left:-11px;border-radius:50%}
+.ph.duo .status,.ph.duo .island{display:none}
+.homebar{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:var(--fg);z-index:90;pointer-events:none}
+.ph.android .homebar{width:108px;height:4px;margin-left:-54px;bottom:10px;opacity:.6}
+.ph.duo .homebar{display:none}
+.hinge{display:none;position:absolute;top:0;bottom:0;left:50%;width:1px;margin-left:-.5px;background:linear-gradient(var(--hair),transparent 20%,transparent 80%,var(--hair));z-index:95;pointer-events:none}
+.ph.duo .hinge{display:block}
+
+/* Liquid Glass (iOS 26+). Android gets flat tonal surfaces instead. */
+.gl{background:var(--glass);backdrop-filter:blur(18px) saturate(1.8);-webkit-backdrop-filter:blur(18px) saturate(1.8);box-shadow:inset 0 0 0 .5px var(--glassline),inset 0 1px 0 rgba(255,255,255,.35),0 6px 18px rgba(0,0,0,.06)}
+.ph.dark .gl{box-shadow:inset 0 0 0 .5px var(--glassline),inset 0 1px 0 rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.4)}
+.ph.android .gl{background:var(--soft);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+
+/* Top bar */
+.top{position:absolute;left:16px;right:16px;top:58px;height:44px;display:flex;align-items:center;justify-content:space-between;z-index:30}
+.ph.android .top{top:44px}
+.ph.duo .top{top:14px;left:20px;right:auto;width:436px}
+.me{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 5px;border-radius:20px;cursor:pointer;font:600 15px var(--sys)}
+.me .av{width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--or);display:flex;align-items:center;justify-content:center;font:600 14px var(--grot);color:var(--fg)}
+.me .var{font:600 11px var(--sys);color:var(--ortx);background:rgba(247,147,26,.14);border-radius:999px;padding:2px 7px;margin-left:2px;display:none}
+.ib{appearance:none;border:0;color:var(--fg);width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin-left:8px;transition:transform .16s}
+.ib:active,.me:active{transform:scale(.94)}
+.mini{position:absolute;left:50%;top:0;height:44px;transform:translateX(-50%);display:flex;align-items:center;font:600 17px var(--grot);letter-spacing:-.02em;opacity:0;pointer-events:none;white-space:nowrap}
+
+/* Scroll edge: content fades under the top bar, like iOS 26's scroll edge effect. */
+.edge{position:absolute;left:0;right:0;top:0;height:118px;z-index:25;pointer-events:none;opacity:0;background:linear-gradient(var(--bg) 62%,color-mix(in srgb,var(--bg) 0%,transparent));transition:opacity .2s}
+.ph.android .edge{height:100px}
+.ph.duo .edge{display:none}
+/* Scroll + panes */
+.hm{position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;padding:112px 24px 140px;box-sizing:border-box;display:flex;flex-direction:column}
+.hm::-webkit-scrollbar{display:none}
+.ph.android .hm{padding-top:100px;padding-bottom:120px}
+.ca,.cb{display:contents}
+.ph.duo .hm{overflow:hidden;display:grid;grid-template-columns:1fr 1fr;column-gap:0;padding:0}
+.ph.duo .ca,.ph.duo .cb{display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none;padding:70px 32px 110px;box-sizing:border-box;min-height:0}
+.ph.duo .ca::-webkit-scrollbar,.ph.duo .cb::-webkit-scrollbar{display:none}
+.ph.duo .cb{padding-top:28px;padding-bottom:28px;justify-content:center}
+.ph.duo .cb.list{justify-content:flex-start}
+.o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}.o7{order:7}
+
+/* Balance */
+.bal{display:flex;align-items:flex-end;font:600 50px/1 var(--grot);letter-spacing:-.03em;white-space:nowrap;font-variant-numeric:proportional-nums;cursor:pointer;margin-top:8px;align-self:flex-start;position:relative}
+.bal .b{margin-right:3px}
+.dg{display:inline-block;height:1em;overflow:hidden;vertical-align:top}
+.col{display:flex;flex-direction:column}
+.col span{display:block;height:1em;line-height:1em;text-align:center}
+.sep{display:inline-block}
+.dots{letter-spacing:.06em}
+.fiat{display:flex;align-items:center;gap:8px;font:400 15px/20px var(--sys);color:var(--mut);margin-top:10px;cursor:pointer;align-self:flex-start}
+.pend{display:flex;align-items:center;gap:8px;font:400 15px/20px var(--sys);color:var(--fg);margin-top:8px;align-self:flex-start;cursor:pointer}
+.pend i{width:7px;height:7px;border-radius:50%;background:var(--mut);animation:pulse 1.6s ease-in-out infinite}
+.pend em{font-style:normal;color:var(--mut)}
+@keyframes pulse{50%{opacity:.25;transform:scale(.7)}}
+
+/* Nudge */
+.ndg{margin-top:24px;border-radius:22px;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;position:relative;overflow:hidden}
+.ndg .ic{flex:none;width:24px;height:24px;color:var(--fg)}
+.ndg .w{flex:1;min-width:0}
+.ndg .n{font:600 15px/20px var(--sys)}
+.ndg .s{font:400 13px/18px var(--sys);color:var(--mut)}
+.pill{appearance:none;border:0;height:36px;padding:0 16px;border-radius:18px;background:var(--fg);color:var(--bg);font:600 15px var(--sys);cursor:pointer;flex:none;transition:transform .16s}
+.pill:active{transform:scale(.95)}
+.nx{appearance:none;border:0;background:none;color:var(--mut);width:28px;height:28px;margin-left:-4px;border-radius:50%;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center}
+
+/* Get paid card */
+.get{margin-top:24px;display:flex;flex-direction:column;align-items:stretch}
+.qrcard{border-radius:30px;background:#fff;color:#0a0a0a;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;box-shadow:0 14px 40px rgba(0,0,0,.08),inset 0 0 0 1px rgba(0,0,0,.07);cursor:pointer;transition:transform .16s;position:relative;overflow:hidden}
+.qrcard:active{transform:scale(.985)}
+.ph.dark .qrcard{box-shadow:0 14px 40px rgba(0,0,0,.6)}
+.qrbox{width:212px;height:212px;position:relative}
+.ph.duo .qrbox{width:228px;height:228px}
+.qrbox svg{display:block;width:100%;height:100%;overflow:visible}
+.qrname{margin-top:14px;font:600 17px/22px var(--sys);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qrcap{margin-top:2px;font:400 13px/18px var(--sys);color:#6b6b6b}
+.got{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:0;pointer-events:none}
+.got svg{width:84px;height:84px}
+.got circle{fill:none;stroke:var(--or);stroke-width:2.5;stroke-dasharray:252;stroke-dashoffset:252;transform:rotate(-90deg);transform-origin:50% 50%;transform-box:fill-box}
+.got path{fill:none;stroke:#0a0a0a;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60}
+.got b{font:600 30px/1 var(--grot);letter-spacing:-.02em;margin-top:12px}
+.got span{font:400 15px/20px var(--sys);color:#6b6b6b}
+.qact{display:flex;gap:10px;margin-top:12px}
+.qact .pill{flex:1;height:48px;border-radius:24px;font-size:16px}
+.qact .pill.ol{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--hair)}
+.ph:not(.android) .qact .pill.ol{background:var(--glass);box-shadow:inset 0 0 0 1px var(--hair);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+
+/* Recent */
+.rec{margin-top:30px}
+.rh{display:flex;justify-content:space-between;align-items:baseline;font:500 13px/18px var(--sys);color:var(--mut);padding-bottom:2px}
+.rh b{color:var(--fg);font:600 15px var(--sys);cursor:pointer}
+.ph.duo .rh{font:600 22px/28px var(--sys);color:var(--fg);letter-spacing:-.01em;padding-bottom:8px}
+.day{font:500 13px/18px var(--sys);color:var(--mut);margin-top:14px}
+.rw{height:66px;display:flex;align-items:center;gap:14px;cursor:pointer;position:relative}
+.rw::after{content:"";position:absolute;left:56px;right:0;bottom:0;height:1px;background:var(--hair)}.rw:last-child::after{display:none}
+.rw .w{flex:1;min-width:0}
+.rw .n{font:400 17px/22px var(--sys);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rw .s{font:400 13px/18px var(--sys);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rw .s.f{color:var(--fail)}
+.rw .a{font:500 17px var(--grot);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rw .a.m{color:var(--mut)}
+.rw .a.x{color:var(--mut);text-decoration:line-through;text-decoration-thickness:1px}
+.rw .av{flex:none;width:42px;height:42px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;font:600 17px/1 var(--grot);color:var(--fg);position:relative;text-transform:lowercase}
+.rw .av svg{width:20px;height:20px}
+.rw .av.pend::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:1.5px dashed var(--mut);animation:spin 8s linear infinite}
+.rw .av .bad{position:absolute;right:-3px;bottom:-3px;width:17px;height:17px;border-radius:50%;background:var(--fail);color:#fff;font:700 11px/17px var(--sys);text-align:center;box-shadow:0 0 0 2px var(--bg)}
+.rw .av .new{position:absolute;right:-1px;top:-1px;width:11px;height:11px;border-radius:50%;background:var(--or);box-shadow:0 0 0 2px var(--bg);opacity:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ph.reduce .rw .av.pend::after{animation:none}
+
+/* Map row */
+.map{margin-top:22px;display:flex;align-items:center;gap:14px;padding:10px 14px 10px 10px;border-radius:22px;cursor:pointer}
+.map svg.t{flex:none;width:48px;height:48px;border-radius:14px}
+.map .w{flex:1;min-width:0}.map .n{font:600 15px/20px var(--sys)}.map .s{font:400 13px/18px var(--sys);color:var(--mut)}
+
+/* Tabs: iOS 26 floating glass bar; Android Material 3 navigation bar. */
+.tabs{position:absolute;left:20px;right:20px;bottom:26px;height:62px;border-radius:31px;display:flex;align-items:center;justify-content:space-around;padding:0 6px;z-index:40}
+.tab{flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--fg);font:500 10px var(--sys);cursor:pointer;transition:background-color .25s,color .25s}
+.tab svg{width:24px;height:24px}
+.tab.on{background:var(--lens);color:var(--fg)}
+.tab:not(.on){color:var(--fg);opacity:.92}
+.ph.duo .tabs{left:94px;right:auto;width:288px;bottom:18px}
+.ph.android .tabs{left:0;right:0;bottom:0;height:88px;border-radius:0;padding:0 8px 18px;align-items:flex-end;background:var(--soft)}
+.ph.android .tab{height:64px;border-radius:0;gap:4px;font:500 12px var(--sys);background:none;opacity:1}
+.ph.android .tab .ind{width:64px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;transition:background-color .25s}
+.ph.android .tab.on .ind{background:var(--hair)}
+.ph.android .tab.on{font-weight:600}
+
+/* Sheet + toast */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.3);opacity:0;pointer-events:none;z-index:60;transition:opacity .3s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;border-radius:44px;padding:10px 24px 28px;z-index:61;transform:translateY(110%);visibility:hidden}
+.ph:not(.android) .sheet{background:var(--glass);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:inset 0 0 0 .5px var(--glassline)}
+.ph.android .sheet{left:0;right:0;bottom:0;border-radius:28px 28px 0 0;background:var(--soft)}
+.ph.duo .sheet{left:auto;right:12px;width:451px;bottom:12px}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 20px}
+.sheet h2{margin:0 0 6px;font:600 24px/30px var(--sys);letter-spacing:-.015em}
+.sheet .tot{font:600 36px/1 var(--grot);letter-spacing:-.02em;margin:6px 0 16px}
+.br{display:flex;justify-content:space-between;align-items:baseline;height:46px;align-items:center;box-shadow:inset 0 -1px 0 var(--hair);font:400 17px var(--sys)}
+.br:last-of-type{box-shadow:none}
+.br span{color:var(--mut)}.br b{font:500 17px var(--grot);font-variant-numeric:tabular-nums}
+.sheet p{margin:14px 0 0;color:var(--mut);font:400 13px/18px var(--sys)}
+.toast{position:absolute;left:50%;top:116px;transform:translateX(-50%);height:34px;padding:0 16px;border-radius:17px;background:var(--fg);color:var(--bg);font:600 13px/34px var(--sys);white-space:nowrap;opacity:0;pointer-events:none;z-index:70}
+.ph.duo .toast{top:22px}
+</style>
+</head>
+<body style="margin:0;padding:16px;font-family:-apple-system,system-ui,sans-serif">
+<div class="page">
+<div class="bezel" id="bezel">
+<div class="ph" id="ph">
+  <div class="status"><span class="t" id="clock">9:41</span><svg width="77" height="13" viewBox="0 0 77 13"><rect x="0" y="9" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="6" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="10" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="13" rx="1" fill="currentColor"/><path d="M30 3.5a9 9 0 0 1 12 0M32.2 6.3a5.6 5.6 0 0 1 7.6 0M34.4 9a2.3 2.3 0 0 1 3.2 0" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect x="50" y="1" width="23" height="11" rx="3.2" stroke="currentColor" stroke-opacity=".4" fill="none"/><rect x="52" y="3" width="19" height="7" rx="1.8" fill="currentColor"/><rect x="74.5" y="4.5" width="1.6" height="4" rx=".8" fill="currentColor" fill-opacity=".4"/></svg></div>
+  <div class="island"></div>
+  <div class="hinge"></div>
+
+  <div class="hm" id="hm">
+    <div class="ca" id="ca">
+      <div class="bal o1" id="bal" aria-label="Balance. Tap for details, long-press to hide."><span class="b">₿</span><span id="balDigits"></span></div>
+      <div class="fiat o2" id="fiat"><span id="fiatTx">$0.00</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 4v16M8 20l-3-3M8 20l3-3M16 20V4M16 4l-3 3M16 4l3 3"/></svg></div>
+      <div class="pend o3" id="pend"><i></i><span id="pendTx"></span></div>
+      <div class="o4" id="ndgWrap"></div>
+      <div class="map gl o7" id="map">
+        <svg class="t" viewBox="0 0 48 48"><rect width="48" height="48" fill="#141414"/><path d="M-4 30 52 14M10 -4 22 52M-4 8 30 52M34 -4 44 52" stroke="#2e2e2e" stroke-width="3"/><path d="M-4 40 52 34" stroke="#2a2a2a" stroke-width="1.5"/><circle cx="14" cy="16" r="2.4" fill="#fff"/><circle cx="36" cy="22" r="2.4" fill="#fff"/><circle cx="31" cy="38" r="2.4" fill="#fff"/><circle cx="20" cy="30" r="3.4" fill="#F7931A"/><circle cx="20" cy="30" r="7" fill="#F7931A" fill-opacity=".22"/></svg>
+        <div class="w"><div class="n">Spend bitcoin nearby</div><div class="s" id="mapSub">4 places within 1 km</div></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mut)"><path d="m9 6 6 6-6 6"/></svg>
+      </div>
+    </div>
+    <div class="cb" id="cb">
+      <div class="get o5" id="get">
+        <div class="qrcard" id="qrcard">
+          <div class="qrbox" id="qrbox"><svg id="qr" viewBox="0 0 244 244"></svg></div>
+          <div class="qrname" id="qrName">maya@noahwallet.io</div>
+          <div class="qrcap" id="qrCap">Scan to pay with any bitcoin wallet</div>
+          <div class="got" id="got"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="40"/><path d="M27 43 l10 10 l21 -22"/></svg><b id="gotAmt">+₿21,000</b><span id="gotFrom">from alex@ln.tips</span></div>
+        </div>
+        <div class="qact" id="qact"><button class="pill ol" id="copyBtn">Copy</button><button class="pill" id="shareBtn">Share</button></div>
+      </div>
+      <div class="rec o6" id="rec"><div class="rh"><span id="recTitle">Recent</span><b id="seeAll">See all</b></div><div id="rows"></div></div>
+    </div>
+  </div>
+
+  <div class="edge" id="edge"></div>
+  <div class="top" id="top">
+    <div class="me gl" id="me"><span class="av">m</span><span id="meName">maya</span><span class="var" id="varBadge">Signet</span></div>
+    <span class="mini" id="mini"></span>
+    <span style="display:flex">
+      <button class="ib gl" aria-label="Scan"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 12h10"/></svg></button>
+      <button class="ib gl" aria-label="Settings"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </span>
+  </div>
+
+  <div class="tabs gl" id="tabs">
+    <div class="tab on" data-tab="Home"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z"/></svg></span>Home</div>
+    <div class="tab" data-tab="Receive"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span>Receive</div>
+    <div class="tab" data-tab="Send"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span>Send</div>
+    <div class="tab" data-tab="Activity"><span class="ind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg></span>Activity</div>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet"><div class="grab"></div><h2>Balance</h2><div class="tot" id="shTot"></div><div id="shRows"></div><p id="shNote"></p></div>
+  <div class="toast" id="toast"></div>
+  <div class="homebar"></div>
+</div>
+</div>
+
+<div class="side">
+  <div><h3>Prototype</h3>
+    <div class="chips"><span class="lbl">State:</span><button class="chip on" data-st="fresh">Fresh</button><button class="chip" data-st="everyday">Everyday</button><button class="chip" data-st="busy">Busy</button><button class="chip" id="payBtn">Receive first payment</button></div>
+    <div class="chips"><span class="lbl">Device:</span><button class="chip on" data-dev="iphone">iPhone</button><button class="chip" data-dev="android">Android</button><button class="chip" data-dev="duo">iPhone Duo open</button></div>
+    <div class="chips"><span class="lbl">Wallet:</span><button class="chip" id="bkBtn">Backed up</button><button class="chip" id="emBtn">Email added</button><button class="chip" id="hideBtn">Hide balance</button><button class="chip" id="netBtn">Signet</button></div>
+    <div class="chips"><button class="chip on" data-theme="light">Light</button><button class="chip" data-theme="dark">Dark</button><button class="chip" id="slowBtn">Slow ×3</button><button class="chip" id="rmBtn">Reduce Motion</button><button class="chip" id="replayBtn">Replay</button></div>
+    <div class="log" id="hap">haptic: —</div>
+    <div class="mt" style="margin-top:6px">Tap the balance for details; long-press it (or use Hide balance) to hide it. Tap a nudge's button to see it resolve and the next one slide in. Scroll Everyday to see the balance tuck into the top bar.</div>
+  </div>
+  <div><h3>The three moments</h3>
+    <ul class="spec">
+      <li><b>Fresh</b>: ₿0 and your logo QR front and centre, ready to share. No empty “No activity yet” list; the empty state is the way to get paid.</li>
+      <li><b>First payment</b>: the QR card turns into an orange ring and check, the amount and sender appear, the balance rolls up digit by digit, success haptic. Then the card folds away and Recent takes its place, with the new row marked by a small orange dot.</li>
+      <li><b>Everyday</b>: balance, fiat, then Recent (five rows, See all goes to Activity) and the small map row. The QR lives in the Receive tab from then on.</li>
+      <li><b>Busy</b>: an arriving deposit under the balance with a slow pulse, pending and failed rows, and the renew nudge.</li>
+      <li><b>Rows</b>: people and addresses get an initial; deposits, Lightning merchants and recurring payments get an icon. Pending rows get a slow dashed ring, failed ones a small red badge, and a new incoming payment a small orange dot.</li>
+    </ul>
+  </div>
+  <div><h3>Nudges</h3>
+    <ul class="spec">
+      <li>One at a time, in this order: renew bitcoin, back up your wallet, add your email, update available.</li>
+      <li>Renew shows only inside the 24-hour maintenance window, when automatic renewal hasn't happened yet. No earlier warning.</li>
+      <li>Backup clears only when you confirm after seeing the phrase. Email can be dismissed with ×.</li>
+      <li>Resolving one folds it away and slides the next one in.</li>
+    </ul>
+  </div>
+  <div><h3>Top bar</h3>
+    <ul class="spec">
+      <li>Left: you. An orange-ringed initial and your name; tap for your codes (today's QR hub). Signet and regtest builds show a small network badge here.</li>
+      <li>Right: scan and settings. The map moves out of the toolbar into the smaller map row.</li>
+      <li>Scrolling tucks the balance into the centre of the top bar.</li>
+    </ul>
+  </div>
+  <div><h3>Wide and foldable</h3>
+    <ul class="spec">
+      <li>iPhone Duo open, Pixel Fold open, tablets: two panes split at the fold. Left: you, balance, nudge, map. Right: the get-paid card when fresh, otherwise the activity list grouped by day.</li>
+      <li>The tab bar sits in the left pane, so nothing crosses the fold when the device is bent. Sheets open in the right pane.</li>
+      <li>Closed Duo and Pixel Fold closed use the phone layout.</li>
+    </ul>
+  </div>
+  <div><h3>Platform</h3>
+    <ul class="spec">
+      <li>iOS 26+: Liquid Glass on the top-bar controls, the nudge, the map row, Copy, the sheet and the native floating tab bar. Older iOS falls back to materials.</li>
+      <li>Android: the same layout with flat tonal surfaces and the Material 3 navigation bar, restyled monochrome.</li>
+    </ul>
+  </div>
+  <div><h3>Motion</h3>
+    <ul class="spec">
+      <li><b>Digits</b> roll with snappy and a light blur; <b>hide</b> morphs digits into dots with bouncy.</li>
+      <li><b>Check ring</b> and the card folding away use soft; <b>rows</b> slide in with snappy, 40 ms apart.</li>
+      <li>Reduce Motion turns all of it into 180 ms fades.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+const $=id=>document.getElementById(id), ph=$('ph');
+
+// Springs, same model as SwiftUI .spring(response:dampingFraction:).
+function spring(response,damping){
+  const w0=2*Math.PI/response,z=damping;
+  const x=t=>z<1?1-Math.exp(-z*w0*t)*(Math.cos(w0*Math.sqrt(1-z*z)*t)+(z/Math.sqrt(1-z*z))*Math.sin(w0*Math.sqrt(1-z*z)*t)):1-Math.exp(-w0*t)*(1+w0*t);
+  let T=.05;
+  for(;T<3;T+=.01){let ok=true;for(let t=T;t<T+.25;t+=.01)if(Math.abs(1-x(t))>.002){ok=false;break}if(ok)break}
+  const n=48,p=[];for(let i=0;i<=n;i++)p.push(+x(T*i/n).toFixed(4));p[n]=1;
+  return{ease:`linear(${p.join(',')})`,dur:T};
+}
+const SP={snappy:spring(.30,.85),soft:spring(.50,1),bouncy:spring(.40,.60),tap:spring(.12,.80)};
+let slow=1,rm=false;
+const ms=k=>SP[k].dur*1000*slow;
+function anim(el,frames,k,o={}){
+  if(!el)return;
+  if(rm&&!o.keep){const a=frames[0],b=frames[frames.length-1];frames=[{opacity:a.opacity??(b.opacity??1)},{opacity:b.opacity??1}];return el.animate(frames,{duration:180*slow,easing:'ease',delay:(o.delay||0)*slow*.3,fill:o.fill||'both'})}
+  return el.animate(frames,{duration:o.dur??ms(k),easing:o.ease??SP[k].ease,delay:(o.delay||0)*slow,fill:o.fill||'both'});
+}
+let timers=[];const T=(fn,t)=>timers.push(setTimeout(fn,t*slow));const clearT=()=>{timers.forEach(clearTimeout);timers=[]};
+function hap(n){const l=$('hap');l.textContent='haptic: '+n;l.animate([{opacity:.3},{opacity:1}],{duration:300})}
+function toast(t){const el=$('toast');el.textContent=t;el.getAnimations().forEach(a=>a.cancel());anim(el,[{opacity:0,transform:'translate(-50%,8px) scale(.9)'},{opacity:1,transform:'translate(-50%,0)',offset:.2},{opacity:1,transform:'translate(-50%,0)',offset:.82},{opacity:0,transform:'translate(-50%,-4px)'}],'snappy',{dur:1700*slow,ease:'ease-out',fill:'none'})}
+
+// Data
+const PRICE=112000; // USD per BTC
+const fiat=s=>'$'+(s*PRICE/1e8).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const sats=n=>'₿'+Math.abs(n).toLocaleString('en-US');
+const ROWS={
+  everyday:[
+    {day:'Today',n:'maya',s:'Noah user · 9:12',a:2100,av:'m'},
+    {day:'Yesterday',n:'Coffee Collective',s:'Lightning · 8:40',a:-4200,av:'ln'},
+    {day:'Yesterday',n:'lucas@ln.tips',s:'Lightning · 18:05',a:4842,av:'l'},
+    {day:'Oct 12',n:'Deposit',s:'On-chain · Oct 12',a:150000,av:'chain'},
+    {day:'Oct 9',n:'nitesh',s:'Noah user · Oct 9',a:-500,av:'n'},
+    {day:'Oct 9',n:'Savings',s:'Recurring · monthly',a:-10000,av:'rec'},
+    {day:'Oct 2',n:'alex@ln.tips',s:'Lightning · Oct 2',a:21000,av:'a'}],
+  busy:[
+    {day:'Today',n:'Deposit',s:'Confirming · about 30 min',a:100000,k:'m',av:'chain',p:1},
+    {day:'Today',n:'bob@getalby.com',s:'Sending · Lightning',a:-5000,k:'m',av:'b',p:1},
+    {day:'Today',n:'Coffee Collective',s:'Failed · nothing left your wallet',a:-4200,k:'x',f:1,av:'ln'},
+    {day:'Today',n:'maya',s:'Noah user · 9:12',a:2100,av:'m'},
+    {day:'Yesterday',n:'Savings',s:'Recurring · monthly',a:-10000,av:'rec'},
+    {day:'Yesterday',n:'lucas@ln.tips',s:'Lightning · 18:05',a:4842,av:'l'},
+    {day:'Oct 12',n:'Deposit',s:'On-chain · Oct 12',a:150000,av:'chain'}],
+  first:[{day:'Today',n:'alex@ln.tips',s:'Lightning · just now',a:21000,isNew:1,av:'a'}]
+};
+const BAL={fresh:0,first:21000,everyday:152742,busy:152742};
+const ICON={
+  renew:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/><path d="M12 8v4l2.5 2"/></svg>',
+  backup:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8.2 7 10 4-1.8 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>',
+  email:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>'};
+const NUDGES={
+  renew:{n:'Renew ₿20,000',s:'Expires in 18 hours',b:'Renew',done:'Renewed',h:'medium'},
+  backup:{n:'Back up your wallet',s:'Save your recovery phrase',b:'Back up',done:'Backed up',h:'success'},
+  email:{n:'Add your email',s:'For urgent wallet alerts',b:'Add',done:'Email added',h:'success',x:1}};
+
+// State
+const S={st:'fresh',dev:'iphone',backed:false,email:false,emailGone:false,hidden:false,dark:false,net:false,renewed:false};
+function nudgeKey(){if(S.st==='busy'&&!S.renewed)return'renew';if(!S.backed)return'backup';if(!S.email&&!S.emailGone)return'email';return null}
+
+// QR: a real BIP-321 URI (sample addresses), error correction H, dot modules, soft eyes, longship logo.
+const QR_DATA='bitcoin:bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297?ark=ark1qq9n6v0m8zk0r7c5xv2a4hd6qf9t3k8ps2w7e5u0y4l3j6n8x0c2r9d5g7f4h1k3m5q8s0t2v4w6z8a0c2e4g6j8l0n2p4r6u8w0y2';
+function rr4(x,y,w,h,[a,b,c,d]){return`M${x+a} ${y}H${x+w-b}${b?`A${b} ${b} 0 0 1 ${x+w} ${y+b}`:''}V${y+h-c}${c?`A${c} ${c} 0 0 1 ${x+w-c} ${y+h}`:''}H${x+d}${d?`A${d} ${d} 0 0 1 ${x} ${y+h-d}`:''}V${y+a}${a?`A${a} ${a} 0 0 1 ${x+a} ${y}`:''}Z`}
+function buildQR(){const S=244;let n,dark;
+  if(typeof qrcode==='function'){const q=qrcode(0,'H');q.addData(QR_DATA,'Byte');q.make();n=q.getModuleCount();dark=(r,c)=>q.isDark(r,c)}
+  else{n=41;let s=7;const bits=Array.from({length:n*n},()=>(s=(s*16807)%2147483647)/2147483647<.5);dark=(r,c)=>bits[r*n+c]}
+  const m=S/n,L=Math.round(n*.22)|1,c0=(n-L)/2,eye=(r,c)=>(r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7),
+    hole=(r,c)=>r>=c0-1&&r<c0+L+1&&c>=c0-1&&c<c0+L+1,on=(r,c)=>r>=0&&c>=0&&r<n&&c<n&&dark(r,c)&&!eye(r,c)&&!hole(r,c);
+  let d='';
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){if(!on(r,c))continue;const k=m*.44,x=c*m+m/2,y=r*m+m/2;d+=`M${x-k} ${y}a${k} ${k} 0 1 0 ${2*k} 0a${k} ${k} 0 1 0 ${-2*k} 0Z`}
+  const eyeSvg=(x,y)=>`<g class="eye" style="transform-origin:${x+3.5*m}px ${y+3.5*m}px"><path fill-rule="evenodd" d="${rr4(x,y,7*m,7*m,[2.4*m,2.4*m,2.4*m,2.4*m])}${rr4(x+m,y+m,5*m,5*m,[1.5*m,1.5*m,1.5*m,1.5*m])}"/><path d="${rr4(x+2*m,y+2*m,3*m,3*m,[1.1*m,1.1*m,1.1*m,1.1*m])}"/></g>`;
+  const lx=c0*m,ls=L*m,pad=m*.6;
+  $('qr').innerHTML=`<defs><clipPath id="lgc"><rect x="${lx}" y="${lx}" width="${ls}" height="${ls}" rx="${ls*.23}"/></clipPath></defs>
+    <g id="qrMods" fill="#0a0a0a"><path d="${d}"/></g><g id="qrEyes" fill="#0a0a0a">${eyeSvg(0,0)}${eyeSvg((n-7)*m,0)}${eyeSvg(0,(n-7)*m)}</g>
+    <g id="qrLogo" style="transform-origin:${S/2}px ${S/2}px"><rect x="${lx-pad}" y="${lx-pad}" width="${ls+2*pad}" height="${ls+2*pad}" rx="${(ls+2*pad)*.26}" fill="#fff"/><image href="data:image/png;base64,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" x="${lx}" y="${lx}" width="${ls}" height="${ls}" clip-path="url(#lgc)" preserveAspectRatio="xMidYMid slice"/></g>`}
+buildQR();
+
+// Balance digits: each digit is a column of 0-9 that rolls to its value.
+// Widths in CSS pixels: undo any CSS zoom on the device frame (the Duo frame is scaled on narrow pages).
+function digitWidths(el){const m=document.createElement('span');m.style.cssText='position:absolute;visibility:hidden;white-space:pre';el.appendChild(m);m.textContent='0000000000';const z=m.offsetWidth?m.getBoundingClientRect().width/m.offsetWidth:1;const w=[...'0123456789'].map(d=>{m.textContent=d;return m.getBoundingClientRect().width/z});m.remove();return w}
+let shownBal=0;
+function setBalance(n,roll,delay=0){const el=$('balDigits');
+  if(S.hidden){el.innerHTML='<span class="dots">••••••</span>';$('fiatTx').textContent='••••';shownBal=n;return}
+  const s=n.toLocaleString('en-US');
+  el.innerHTML=[...s].map(ch=>/\d/.test(ch)?`<span class="dg"><span class="col">${[...'0123456789'].map(d=>`<span>${d}</span>`).join('')}</span></span>`:`<span class="sep">${ch}</span>`).join('');
+  const cols=[...el.querySelectorAll('.col')],dg=[...s].filter(c=>/\d/.test(c)).map(Number),dw=digitWidths(el);
+  cols.forEach((c,i)=>{const to=`translateY(${-dg[i]}em)`;c.style.transform=to;c.parentNode.style.width=dw[dg[i]]+'px';if(!roll||rm)return;
+    c.animate([{transform:'translateY(0em)',filter:'blur(0px)'},{filter:'blur(2.5px)',offset:.45},{transform:to,filter:'blur(0px)'}],{duration:ms('snappy')*1.7,easing:SP.snappy.ease,delay:(delay+i*45)*slow,fill:'backwards'})});
+  $('fiatTx').textContent=fiat(n);shownBal=n;
+  if(roll&&rm)anim(el,[{opacity:0},{opacity:1}],'snappy',{delay})}
+
+// Render
+const GLYPH={
+  ln:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>',
+  chain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  rec:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 9M20 4v5h-5M20 12a8 8 0 0 1-13.7 5.6L4 15M4 20v-5h5"/></svg>'};
+function avatar(r){const g=GLYPH[r.av],inner=g||(r.av||r.n[0]);
+  return`<span class="av${r.p?' pend':''}">${inner}${r.f?'<span class="bad">!</span>':''}<span class="new"></span></span>`}
+function rowHtml(r,wide){const sign=r.a>0?'+':'−',cls=r.k?' '+r.k:'';
+  return`<div class="rw" data-n="${r.n}">${avatar(r)}<div class="w"><div class="n">${r.n}</div><div class="s${r.f?' f':''}">${r.s}</div></div><div class="a${cls}">${S.hidden?'••••':sign+sats(r.a)}</div></div>`}
+function renderRows(){const wide=S.dev==='duo';let list=ROWS[S.st]||[];
+  if(!wide)list=list.slice(0,5);
+  let h='',last='';
+  list.forEach(r=>{if(wide&&r.day!==last){h+=`<div class="day">${r.day}</div>`;last=r.day}h+=rowHtml(r,wide)});
+  $('rows').innerHTML=h;$('recTitle').textContent=wide?'Activity':'Recent';$('seeAll').style.display=wide?'none':'';
+  $('cb').classList.toggle('list',S.st!=='fresh')}
+function renderNudge(){const k=nudgeKey(),w=$('ndgWrap');
+  if(!k){w.innerHTML='';return}
+  const d=NUDGES[k];
+  w.innerHTML=`<div class="ndg gl" data-k="${k}">${ICON[k]}<div class="w"><div class="n">${d.n}</div><div class="s">${d.s}</div></div><button class="pill" data-act="${k}">${d.b}</button>${d.x?'<button class="nx" data-x="1" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>':''}</div>`}
+function render(){
+  ph.className='ph'+(S.dark?' dark':'')+(S.dev==='android'?' android':'')+(S.dev==='duo'?' duo':'')+(rm?' reduce':'');
+  $('bezel').className='bezel'+(S.dev==='android'?' android':'')+(S.dev==='duo'?' duo':'');
+  const fresh=S.st==='fresh';
+  $('get').style.display=fresh?'flex':'none';$('rec').style.display=fresh?'none':'block';
+  $('qrcard').style.height='';$('qrbox').style.opacity='';$('got').style.opacity=0;
+  $('pend').style.display=S.st==='busy'?'flex':'none';$('pendTx').innerHTML=S.hidden?'•••• arriving':`+${sats(100000)} arriving <em>· about 30 min</em>`;
+  $('varBadge').style.display=S.net?'inline-block':'none';
+  $('clock').textContent=S.dev==='android'?'9:41':'9:41';
+  setBalance(BAL[S.st],false);renderRows();renderNudge();
+  $('hm').scrollTop=0;onScroll()}
+
+// Entrance: content rises in, 40 ms apart.
+function enter(){clearT();const els=[$('top'),$('bal'),$('fiat'),$('pend'),$('ndgWrap'),$('get'),$('rec'),$('map')].filter(e=>e&&e.offsetParent!==null||e===$('top'));
+  els.forEach((e,i)=>anim(e,[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],'snappy',{delay:60+i*40,fill:'backwards'}));
+  [...$('rows').querySelectorAll('.rw')].forEach((e,i)=>anim(e,[{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}],'snappy',{delay:300+i*40,fill:'backwards'}));
+  anim($('tabs'),[{transform:'translateY(110px)'},{transform:'none'}],'snappy',{delay:200,fill:'backwards'});
+  if(S.st==='fresh')playQR();
+  if(S.st!=='fresh'&&!S.hidden)setBalance(BAL[S.st],true,160)}
+function playQR(){const mods=$('qrMods'),eyes=[...document.querySelectorAll('#qrEyes .eye')],logo=$('qrLogo');
+  [mods,logo,...eyes].forEach(e=>e.getAnimations().forEach(a=>a.cancel()));
+  if(rm){anim(mods,[{opacity:0},{opacity:1}],'soft',{delay:200});return}
+  anim(mods,[{clipPath:'circle(0% at 50% 50%)'},{clipPath:'circle(72% at 50% 50%)'}],'soft',{delay:320,dur:1000*slow,fill:'backwards'});
+  eyes.forEach((e,i)=>anim(e,[{opacity:0,transform:'scale(.4) rotate(-45deg)'},{opacity:1,transform:'none'}],'bouncy',{delay:560+i*110,fill:'backwards'}));
+  anim(logo,[{opacity:0,transform:'scale(.3) rotate(-12deg)'},{opacity:1,transform:'none'}],'bouncy',{delay:380,fill:'backwards'})}
+
+// First payment: the QR card becomes the receipt, the balance rolls, then the card folds into Recent.
+function firstPayment(){if(S.st!=='fresh'){S.st='fresh';render()}clearT();
+  const card=$('qrcard'),got=$('got'),qb=$('qrbox'),c=got.querySelector('circle'),p=got.querySelector('path');
+  hap('success');
+  anim(qb,[{opacity:1,transform:'none',filter:'blur(0)'},{opacity:0,transform:'scale(.86)',filter:'blur(6px)'}],'snappy');
+  anim($('qrName'),[{opacity:1},{opacity:0}],'snappy');anim($('qrCap'),[{opacity:1},{opacity:0}],'snappy');
+  anim(got,[{opacity:0},{opacity:1}],'snappy',{delay:120});
+  anim(c,[{strokeDashoffset:252},{strokeDashoffset:0}],'soft',{delay:160,dur:700*slow,keep:true});
+  anim(p,[{strokeDashoffset:60},{strokeDashoffset:0}],'soft',{delay:620,dur:420*slow,keep:true});
+  anim(got.querySelector('b'),[{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],'bouncy',{delay:560});
+  anim(got.querySelector('span'),[{opacity:0},{opacity:1}],'snappy',{delay:700});
+  T(()=>{setBalance(21000,true,0)},300);
+  anim($('qact'),[{opacity:1},{opacity:.0}],'snappy',{delay:500});
+  T(()=>{ // fold the card away, then reveal Recent with the new row
+    const h=card.offsetHeight;
+    const a=anim($('get'),[{opacity:1,transform:'none',maxHeight:h+80+'px'},{opacity:0,transform:'scale(.96)',maxHeight:'0px'}],'soft',{dur:520*slow});
+    T(()=>{S.st='first';$('get').getAnimations().forEach(x=>x.cancel());$('get').style.display='none';$('rec').style.display='block';renderRows();
+      const row=$('rows').querySelector('.rw');anim($('rec'),[{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],'snappy');
+      const dot=row&&row.querySelector('.new');if(dot){dot.style.opacity=1;anim(dot,[{transform:'scale(0)'},{transform:'scale(1)'}],'bouncy',{delay:120})}
+      hap('light')},520)},2400)}
+
+// Hide / show balance (long-press), digits morph into dots.
+function toggleHidden(){S.hidden=!S.hidden;$('hideBtn').classList.toggle('on',S.hidden);hap('medium');
+  const el=$('bal');anim(el,[{opacity:1,transform:'none',filter:'blur(0)'},{opacity:.0,transform:'scale(.96)',filter:'blur(4px)'}],'snappy',{dur:140*slow,fill:'none'});
+  T(()=>{setBalance(BAL[S.st],false);renderRows();$('pendTx').innerHTML=S.hidden?'•••• arriving':`+${sats(100000)} arriving <em>· about 30 min</em>`;
+    anim(el,[{opacity:0,transform:'scale(1.04)'},{opacity:1,transform:'none'}],'bouncy');onScroll()},140)}
+let pressT=0,longFired=false;
+$('bal').addEventListener('pointerdown',()=>{longFired=false;pressT=setTimeout(()=>{longFired=true;toggleHidden()},500)});
+['pointerup','pointerleave','pointercancel'].forEach(e=>$('bal').addEventListener(e,()=>clearTimeout(pressT)));
+$('bal').addEventListener('click',()=>{if(longFired)return;openSheet()});
+
+// Balance details sheet
+function openSheet(){hap('light');const b=BAL[S.st],h=S.hidden;const v=x=>h?'••••':sats(x);
+  const rows=S.st==='busy'?[['Ready to spend',b-30000],['On-chain',10000],['Arriving',100000],['Renew soon',20000]]:[['Ready to spend',b-(S.st==='everyday'?10000:0)],['On-chain',S.st==='everyday'?10000:0]];
+  $('shTot').textContent=h?'₿••••••':sats(b);
+  $('shRows').innerHTML=rows.map(([k,x])=>`<div class="br"><span>${k}</span><b>${v(x)}</b></div>`).join('');
+  $('shNote').textContent='Ready to spend is your Ark balance. On-chain bitcoin joins it automatically once confirmed.';
+  const sh=$('sheet');sh.style.visibility='visible';$('scrim').classList.add('on');
+  anim(sh,[{transform:'translateY(110%)'},{transform:'none'}],'snappy')}
+function closeSheet(){const sh=$('sheet');$('scrim').classList.remove('on');const a=anim(sh,[{transform:'none'},{transform:'translateY(110%)'}],'snappy');a.onfinish=()=>{sh.style.visibility='hidden'}}
+$('scrim').onclick=closeSheet;
+
+// Nudges: resolve, fold away, slide the next one in.
+$('ndgWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act],[data-x]');if(!b)return;const card=b.closest('.ndg'),k=card.dataset.k;
+  if(b.dataset.x){S.emailGone=true;hap('light')}else{const d=NUDGES[k];hap(d.h);toast(d.done);if(k==='backup'){S.backed=true;$('bkBtn').classList.add('on')}if(k==='email'){S.email=true;$('emBtn').classList.add('on')}if(k==='renew')S.renewed=true}
+  const h=card.offsetHeight;
+  const a=anim(card,[{opacity:1,transform:'none',height:h+'px',marginTop:'24px'},{opacity:0,transform:'translateX(30px)',height:'0px',marginTop:'0px'}],'soft',{dur:420*slow});
+  T(()=>{renderNudge();const n=$('ndgWrap').firstElementChild;if(n)anim(n,[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],'snappy')},420)});
+
+// Scroll: the balance tucks into the top bar.
+function onScroll(){const y=$('hm').scrollTop,wide=S.dev==='duo',p=wide?0:Math.min(1,Math.max(0,(y-4)/52)),mini=$('mini');
+  $('edge').style.opacity=!wide&&y>2?1:0;
+  $('bal').style.opacity=1-p;$('bal').style.transform=`translateY(${-6*p}px) scale(${1-.06*p})`;$('bal').style.transformOrigin='left bottom';
+  mini.textContent=S.hidden?'₿••••':sats(shownBal);
+  mini.style.transition=rm?'opacity .18s':'opacity .25s, transform .3s';mini.style.opacity=p>.7?1:0;mini.style.transform=`translateX(-50%) translateY(${p>.7?0:6}px)`}
+$('hm').addEventListener('scroll',onScroll);
+
+// Misc taps
+$('qrcard').onclick=()=>{if(S.st==='fresh'){hap('success');toast('Copied')}};
+$('copyBtn').onclick=()=>{hap('success');toast('Copied')};$('shareBtn').onclick=()=>{hap('light');toast('Share sheet')};
+$('fiat').onclick=()=>{hap('selection');toast('Shows fiat first')};
+$('me').onclick=()=>{hap('light');toast('Your codes')};
+$('map').onclick=()=>{hap('light');toast('Opens the map')};
+$('seeAll').onclick=()=>selectTab('Activity');
+$('rows').addEventListener('click',e=>{const r=e.target.closest('.rw');if(r){hap('light');toast(r.dataset.n)}});
+function selectTab(t){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));hap('selection');if(t!=='Home'){toast(t+' (next round)');setTimeout(()=>selectTab0(),900)}}
+function selectTab0(){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab==='Home'))}
+$('tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t)selectTab(t.dataset.tab)});
+
+// Controls
+function chipGroup(attr,fn){document.querySelectorAll(`[${attr}]`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`[${attr}]`).forEach(x=>x.classList.toggle('on',x===b));fn(b.getAttribute(attr))})}
+chipGroup('data-st',v=>{S.st=v;S.renewed=false;render();enter()});
+chipGroup('data-dev',v=>{S.dev=v;render();enter()});
+chipGroup('data-theme',v=>{S.dark=v==='dark';render()});
+$('payBtn').onclick=()=>{document.querySelectorAll('[data-st]').forEach(x=>x.classList.toggle('on',x.dataset.st==='fresh'));if(S.st!=='fresh'){S.st='fresh';render();enter();setTimeout(firstPayment,1400*slow)}else firstPayment()};
+$('bkBtn').onclick=()=>{S.backed=!S.backed;$('bkBtn').classList.toggle('on',S.backed);renderNudge()};
+$('emBtn').onclick=()=>{S.email=!S.email;S.emailGone=false;$('emBtn').classList.toggle('on',S.email);renderNudge()};
+$('hideBtn').onclick=toggleHidden;
+$('netBtn').onclick=()=>{S.net=!S.net;$('netBtn').classList.toggle('on',S.net);render()};
+$('slowBtn').onclick=()=>{slow=slow===1?3:1;$('slowBtn').classList.toggle('on',slow!==1)};
+$('rmBtn').onclick=()=>{rm=!rm;$('rmBtn').classList.toggle('on',rm);ph.classList.toggle('reduce',rm)};
+$('replayBtn').onclick=()=>{render();enter()};
+// URL presets for screenshots: #st=busy&dev=duo&theme=dark&hidden=1&backed=1&email=1&net=1&pay=1&scroll=200&sheet=1&rm=1
+(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){const q=new URLSearchParams(location.hash.slice(1));
+  if(q.get('st'))S.st=q.get('st');if(q.get('dev'))S.dev=q.get('dev');S.dark=q.get('theme')==='dark';
+  S.hidden=q.get('hidden')==='1';S.backed=q.get('backed')==='1';S.email=q.get('email')==='1';S.net=q.get('net')==='1';rm=q.get('rm')==='1';
+  document.querySelectorAll('[data-st]').forEach(x=>x.classList.toggle('on',x.dataset.st===S.st));
+  document.querySelectorAll('[data-dev]').forEach(x=>x.classList.toggle('on',x.dataset.dev===S.dev));
+  document.querySelectorAll('[data-theme]').forEach(x=>x.classList.toggle('on',(x.dataset.theme==='dark')===S.dark));
+  $('bkBtn').classList.toggle('on',S.backed);$('emBtn').classList.toggle('on',S.email);$('hideBtn').classList.toggle('on',S.hidden);$('netBtn').classList.toggle('on',S.net);$('rmBtn').classList.toggle('on',rm);
+  render();if(q.get('still')!=='1')enter();
+  if(q.get('pay')==='1')setTimeout(firstPayment,900);
+  if(q.get('scroll'))setTimeout(()=>{$('hm').scrollTop=+q.get('scroll');onScroll()},700);
+  if(q.get('sheet')==='1')setTimeout(openSheet,700);
+});
+</script>
+</body>
+</html>
