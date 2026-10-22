@@ -52,11 +52,13 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         catch (_: Exception) { if (address == claimDestination) claimDestinationError = "Enter a valid Bitcoin address for this network when the wallet is ready." }
     }
     private var generation = 0
+    /** The shown quote's own condition from the flow that asked for it, checked again just before submitting. */
+    private var stillApplies: (suspend (OnchainQuote) -> Boolean)? = null
     private val disposalScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     fun invalidate() {
         generation++
         quote?.let { held -> disposalScope.launch { dependencies.discard(held) } }
-        quote = null; estimateFallback = null
+        quote = null; estimateFallback = null; stillApplies = null
     }
     fun unavailable() { invalidate(); overview = null; exit = null }
     private fun visible(saved: List<OnchainOperationJournal.Attempt>) = saved.filter { it.overrideAudit?.acknowledgedAt == null }
@@ -82,7 +84,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }
         finally { loading = false }
     }
-    suspend fun review(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0, destination: String? = null) {
+    suspend fun review(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0, destination: String? = null,
+                       stillApplies: (suspend (OnchainQuote) -> Boolean)? = null) {
         if (busy) return
         invalidate(); error = null; message = null; busy = true
         val token = generation
@@ -92,7 +95,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             if (attempts.any { it.blocks(action, ids) }) fail(OnchainFailure.busy)
             val caller = currentCoroutineContext()
             val fresh = withContext(NonCancellable) { dependencies.quote(action, ids, amount, destination) }
-            if (caller.isActive && token == generation && dependencies.ready()) quote = fresh
+            if (caller.isActive && token == generation && dependencies.ready()) { quote = fresh; this.stillApplies = stillApplies }
             else withContext(NonCancellable) { dependencies.discard(fresh) }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: ExitEstimateUnavailable) {
@@ -112,10 +115,12 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
     suspend fun confirm() {
         if (busy) return
         val reviewed = quote ?: return
+        val applies = stillApplies
         val token = generation
-        quote = null; busy = true; error = null
+        quote = null; stillApplies = null; busy = true; error = null
         try {
             if (!dependencies.ready() || !reviewed.current()) fail(OnchainFailure.changed)
+            if (applies != null && !applies(reviewed)) fail(OnchainFailure.changed)
             message = dependencies.execute(reviewed)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: ExitEstimateUnavailable) {

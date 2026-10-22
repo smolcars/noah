@@ -84,6 +84,8 @@ data class VtxoModel(
     val status get() = statusID?.label ?: state
     val eligible get() = ExitRules.eligible(state, amount)
     val refreshable get() = state == "Spendable"
+    /** Due for Home's Renew: in the wallet's expiring set, spendable (so not locked) and not expired yet. */
+    val renewable get() = expiring && refreshable && !expired
 }
 data class ExitModel(val id: String, val amount: Long, val state: String, val details: ExitDetails,
     val history: List<String>, val historyDetails: List<ExitDetails>) {

@@ -41,7 +41,7 @@ object HomeRules {
         val hours get() = (blocks.coerceAtLeast(0) * 10) / 60
     }
     fun renew(vtxos: List<com.noahwallet.onchain.VtxoModel>): Renew? {
-        val due = vtxos.filter { it.expiring && it.refreshable && !it.expired }
+        val due = vtxos.filter { it.renewable }
         if (due.isEmpty()) return null
         return Renew(due.sumOf { it.amount }, due.minOf { it.expiry - it.tip }, due.map { it.id }.sorted())
     }

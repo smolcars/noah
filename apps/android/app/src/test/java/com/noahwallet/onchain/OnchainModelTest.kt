@@ -23,6 +23,25 @@ class OnchainModelTest {
             model.confirm(); model.confirm(); assertEquals(1, submits); assertEquals(2, estimates)
         }
     }
+    @Test fun aReviewsOwnConditionIsCheckedAgainAtConfirmation() = runBlocking {
+        var submits = 0; var applies = true
+        val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") },
+            { action, ids, _, _ -> OnchainQuote(action, "wallet", ids.sorted()) }, { submits++; "submitted" },
+            { emptyList() }, {}, { false }, {}, { null }, {}))
+        model.review(OnchainAction.refresh, listOf("a"), stillApplies = { applies })
+        applies = false
+        model.confirm()
+        assertEquals("nothing is submitted once the condition fails", 0, submits)
+        assertEquals(OnchainFailure.changed.text, model.error)
+        // A later review without a condition isn't held to the earlier one.
+        model.review(OnchainAction.refresh, listOf("a"))
+        model.confirm()
+        assertEquals(1, submits)
+        // And one that still applies goes through.
+        model.review(OnchainAction.refresh, listOf("a"), stillApplies = { true })
+        model.confirm()
+        assertEquals(2, submits)
+    }
     @Test fun failedPreparationOffersNoFallbackAndSuccessfulQuoteStaysNormal() = runBlocking {
         val fake = Fake(); val model = OnchainModel(fake.dependencies())
         fake.failPreparation = true; model.review(OnchainAction.startExit, listOf("a"))
