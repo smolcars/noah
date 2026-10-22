@@ -225,20 +225,22 @@ struct HomeActivityRow: Equatable {
     }
 
     /// "Nothing left your wallet" needs explicit zeros for every delta the record can
-    /// carry: the wallet's balance change, the Ark fee, any on-chain change and, for
-    /// on-chain operations, the on-chain fee. Anything unknown means we can't say.
+    /// carry: the wallet's balance change and the Ark fee and, for on-chain operations,
+    /// the on-chain change and fee. Other records may carry no on-chain values, but any
+    /// they carry must be zero. Anything unknown means we can't say.
     static func leftNothing(_ transaction: HistoryTransaction) -> Bool {
         guard transaction.effectiveBalanceSat == 0, transaction.offchainFeeSat == 0 else { return false }
-        if let change = transaction.balanceChangeSat, change != 0 { return false }
         let onchain = transaction.type == "Onchain"
             || ["onboard", "offboard", "send-onchain", "exit"].contains(transaction.movementKind)
-        return onchain ? transaction.onchainFeeSat == 0 : (transaction.onchainFeeSat ?? 0) == 0
+        return onchain
+            ? transaction.balanceChangeSat == 0 && transaction.onchainFeeSat == 0
+            : (transaction.balanceChangeSat ?? 0) == 0 && (transaction.onchainFeeSat ?? 0) == 0
     }
 
-    /// Incoming money, not a transfer between your own balances and not a failure.
+    /// Incoming money, not a transfer between your own balances, not a failure and not empty.
     static func isNewEligible(_ transaction: HistoryTransaction) -> Bool {
         transaction.direction == "incoming" && !transaction.isInternalTransfer
-            && !["failed", "canceled"].contains(transaction.movementStatus)
+            && !["failed", "canceled"].contains(transaction.movementStatus) && transaction.amount > 0
     }
 }
 

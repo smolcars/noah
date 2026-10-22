@@ -246,7 +246,7 @@ struct HomeRulesTests {
         row = HomeActivityRow(Self.row(type: "Onchain", status: "pending", kind: "onboard"), ownDomain: own)
         #expect(row.status == .confirming)
         row = HomeActivityRow(Self.row(type: "Onchain", direction: "outgoing", status: "failed", kind: "offboard", effective: 0,
-                                       offchainFee: 0, onchainFee: 0), ownDomain: own)
+                                       offchainFee: 0, onchainFee: 0, balanceChange: 0), ownDomain: own)
         #expect(row.status == .failed(nothingLeft: true) && row.status.isUnsuccessful && row.title == "Offboard")
         row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: -4_200), ownDomain: own)
         #expect(row.status == .failed(nothingLeft: false))
@@ -275,15 +275,26 @@ struct HomeRulesTests {
         #expect(!nothingLeft(row))
         #expect(HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: 0, offchainFee: 0,
                                          balanceChange: -4_200), ownDomain: "x").status == .failed(nothingLeft: false))
-        // On-chain operations also need their on-chain fee known to be zero.
+        // On-chain operations also need their on-chain change and fee known to be zero.
         let offboard = Self.row(type: "Onchain", direction: "outgoing", status: "failed", kind: "offboard", effective: 0,
                                 offchainFee: 0)
         #expect(!nothingLeft(offboard))
         row = offboard
         row.onchainFeeSat = 0
+        #expect(!nothingLeft(row), "the on-chain change is unknown")
+        row.balanceChangeSat = 0
         #expect(nothingLeft(row))
         row.onchainFeeSat = 300
         #expect(!nothingLeft(row))
+    }
+
+    @Test func onlyMoneyThatCameInIsEligible() {
+        #expect(HomeActivityRow.isNewEligible(Self.row()))
+        #expect(!HomeActivityRow.isNewEligible(Self.row(status: "canceled")))
+        #expect(!HomeActivityRow.isNewEligible(Self.row(status: "failed")))
+        #expect(!HomeActivityRow.isNewEligible(Self.row(direction: "outgoing")))
+        #expect(!HomeActivityRow.isNewEligible(Self.row(type: "Onchain", kind: "onboard")))
+        #expect(!HomeActivityRow.isNewEligible(Self.row(amount: 0)))
     }
 
     @Test func activityGroupsByDay() throws {
