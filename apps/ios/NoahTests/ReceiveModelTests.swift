@@ -39,11 +39,12 @@ struct ReceiveModelTests {
         await model.start()
         let save = Task { await model.save(amountSat: 500, description: "test") }
         while !(await gate.started) { await Task.yield() }
-        continuation.yield(.received(1234))
+        continuation.yield(.received(1234, rail: .lightning))
         while model.receivedSats == nil { await Task.yield() }
         await gate.finish(request)
         #expect(await save.value == false)
         #expect(model.receivedSats == 1234)
+        #expect(model.receivedRail == .lightning)
         #expect(model.request == nil)
     }
 

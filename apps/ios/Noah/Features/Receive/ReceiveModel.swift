@@ -20,6 +20,8 @@ final class ReceiveModel {
     private(set) var isGenerating = false
     private(set) var isSaving = false
     private(set) var receivedSats: Int64?
+    /// The rail of the payment in `receivedSats`.
+    private(set) var receivedRail: ReceiveCompletion.Rail?
     private(set) var baseError: String?
     private(set) var baseErrorTitle = L10n.text("Couldn’t create a request")
     var invoiceError: String?
@@ -34,6 +36,7 @@ final class ReceiveModel {
     func start() async {
         stop()
         receivedSats = nil
+        receivedRail = nil
         baseError = nil
         baseErrorTitle = L10n.text("Couldn’t create a request")
         isGenerating = true
@@ -107,7 +110,9 @@ final class ReceiveModel {
                         guard let self, !Task.isCancelled, self.generation == generation else { return }
                         self.stop()
                         switch event {
-                        case .received(let sats): self.receivedSats = sats
+                        case .received(let sats, let rail):
+                            self.receivedRail = rail
+                            self.receivedSats = sats
                         case .lightningFailed(let canceled):
                             self.baseErrorTitle = canceled ? L10n.text("Lightning Receive Canceled") : L10n.text("Lightning Receive Failed")
                             self.baseError = L10n.text("The Lightning payment could not be received. Generate a new payment request and try again.")

@@ -21,14 +21,14 @@ struct ReceiveCompletionTests {
 
     @Test func arkSumsOnlyCurrentDestination() {
         let event = movement(destinations: [destination("ark-current", 100), destination("other", 900), destination("ark-current", 200)])
-        #expect(ReceiveCompletion.matching(event, request: request) == .received(300))
+        #expect(ReceiveCompletion.matching(event, request: request) == .received(300, rail: .ark))
         #expect(ReceiveCompletion.matching(movement(destinations: [destination("other", 500)]), request: request) == nil)
         #expect(ReceiveCompletion.matching(movement(status: "pending", destinations: [destination("ark-current", 500)]), request: request) == nil)
     }
 
     @Test func zeroDestinationAmountUsesRequestedAmountOnlyIfPresent() {
         let event = movement(destinations: [destination("ark-current", 0)])
-        #expect(ReceiveCompletion.matching(event, request: request) == .received(500))
+        #expect(ReceiveCompletion.matching(event, request: request) == .received(500, rail: .ark))
         var amountless = request
         amountless.amountSat = nil
         #expect(ReceiveCompletion.matching(event, request: amountless) == nil)
@@ -38,7 +38,7 @@ struct ReceiveCompletionTests {
         for status in ["pending", "successful", "failed", "canceled"] {
             #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", status: status, hash: "old"), request: request) == nil)
         }
-        #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", hash: "current-hash"), request: request) == .received(500))
+        #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", hash: "current-hash"), request: request) == .received(500, rail: .lightning))
         #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", status: "failed", hash: "current-hash"), request: request) == .lightningFailed(canceled: false))
         #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", status: "canceled", hash: "current-hash"), request: request) == .lightningFailed(canceled: true))
     }
