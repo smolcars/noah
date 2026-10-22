@@ -34,9 +34,7 @@ struct HomeView: View {
     @State private var backupError: String?
     @State private var emailFlowOpened = false
     @State private var scrollY: CGFloat = 0
-    @State private var compactScroll = ScrollPosition(edge: .top)
-    /// The column's offset when the window last turned wide, restored when it narrows again.
-    @State private var restoreOffset: CGFloat = 0
+    @State private var scrollMemory = HomeScrollMemory()
     @State private var entrancePlayed = false
     @State private var qrRevealed = false
     @State private var folding = false
@@ -95,7 +93,7 @@ struct HomeView: View {
             if !model.isWalletSuspended { AutoBoardingService(message: $autoBoardMessage) }
         }
         .onboardingWindow($window)
-        .onChange(of: window.wide) { _, wide in if wide { restoreOffset = scrollY } }
+        .onChange(of: window.wide) { _, wide in scrollMemory.layoutChanged(toWide: wide) }
         .onboardingHaptics(haptics)
         .modifier(observation)
         .modifier(moments)
@@ -133,15 +131,7 @@ struct HomeView: View {
             .padding(.top, 10).padding(.bottom, 32)
             .onboardingPane()
         }
-        .scrollPosition($compactScroll)
-        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in scrollY = y }
-        // Back from a wide pose: return to where the column was, once it has laid out.
-        .task {
-            guard restoreOffset > 0 else { return }
-            do { try await Task.sleep(for: .milliseconds(80)) } catch { return }
-            compactScroll.scrollTo(y: restoreOffset)
-            restoreOffset = 0
-        }
+        .modifier(HomeScrollKeeper(area: .compact, memory: scrollMemory) { scrollY = $0 })
         .refreshable { await pullToRefresh() }
         .modifier(HomeTopBarInset(scrolled: scrollY > 2) {
             topBar(tucked: true).padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 6).modifier(appear(0))
@@ -169,6 +159,7 @@ struct HomeView: View {
                     .frame(maxWidth: OnboardingLayout.paneContentWidth + 64)
                     .frame(maxWidth: .infinity)
                 }
+                .modifier(HomeScrollKeeper(area: .leading, memory: scrollMemory))
                 .refreshable { await pullToRefresh() }
             }
             .frame(width: leadingWidth)
@@ -181,12 +172,17 @@ struct HomeView: View {
         if !model.isWalletSuspended {
             switch tracker.shown {
             case .fresh:
-                FitOrScroll {
-                    getPaidCard(qrSide: 228)
-                        .frame(maxWidth: OnboardingLayout.paneContentWidth)
-                        .padding(.horizontal, 32).padding(.vertical, 28)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .modifier(appear(5))
+                // Centred when it fits, scrolling only when it can't (as FitOrScroll), with its own position.
+                GeometryReader { proxy in
+                    ScrollView {
+                        getPaidCard(qrSide: 228)
+                            .frame(maxWidth: OnboardingLayout.paneContentWidth)
+                            .padding(.horizontal, 32).padding(.vertical, 28)
+                            .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                            .modifier(appear(5))
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .modifier(HomeScrollKeeper(area: .fresh, memory: scrollMemory))
                 }
             case .everyday:
                 ScrollView {
@@ -196,6 +192,7 @@ struct HomeView: View {
                         .frame(maxWidth: OnboardingLayout.paneContentWidth + 64)
                         .frame(maxWidth: .infinity)
                 }
+                .modifier(HomeScrollKeeper(area: .activity, memory: scrollMemory))
                 .refreshable { await pullToRefresh() }
                 .modifier(appear(5))
                 .transition(.homeRise(reduceMotion))
