@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The prototype's haptic log: selection, light, medium, success, warning, error.
+/// The prototype's haptic log: selection, light, medium, heavy, success, warning, error.
 @MainActor
 @Observable
 final class OnboardingHaptics {
-    enum Kind { case selection, light, medium, success, warning, error }
+    enum Kind { case selection, light, medium, heavy, success, warning, error }
 
     private(set) var tick = 0
     private(set) var kind = Kind.selection
@@ -19,6 +19,7 @@ final class OnboardingHaptics {
         case .selection: .selection
         case .light: .impact(weight: .light)
         case .medium: .impact(weight: .medium)
+        case .heavy: .impact(weight: .heavy)
         case .success: .success
         case .warning: .warning
         case .error: .error
