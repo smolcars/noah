@@ -194,10 +194,10 @@ struct HomeActivityRow: Equatable {
             avatar = lightning ? .lightning : onchain ? .chain : outgoing ? .outgoing : .incoming
         }
 
-        let balanceChange = transaction.effectiveBalanceSat ?? transaction.balanceChangeSat
+        let nothingLeft = Self.leftNothing(transaction)
         switch transaction.movementStatus {
-        case "failed": status = .failed(nothingLeft: balanceChange == 0)
-        case "canceled": status = .canceled(nothingLeft: balanceChange == 0)
+        case "failed": status = .failed(nothingLeft: nothingLeft)
+        case "canceled": status = .canceled(nothingLeft: nothingLeft)
         case "pending": status = outgoing ? .sending : .confirming
         default:
             status = transaction.source == "onchain-wallet" && transaction.hasConfirmation != true
@@ -205,6 +205,17 @@ struct HomeActivityRow: Equatable {
         }
         sats = transaction.amount
         sign = transaction.isInternalTransfer ? "" : outgoing ? "−" : "+"
+    }
+
+    /// "Nothing left your wallet" needs explicit zeros for every delta the record can
+    /// carry: the wallet's balance change, the Ark fee, any on-chain change and, for
+    /// on-chain operations, the on-chain fee. Anything unknown means we can't say.
+    static func leftNothing(_ transaction: HistoryTransaction) -> Bool {
+        guard transaction.effectiveBalanceSat == 0, transaction.offchainFeeSat == 0 else { return false }
+        if let change = transaction.balanceChangeSat, change != 0 { return false }
+        let onchain = transaction.type == "Onchain"
+            || ["onboard", "offboard", "send-onchain", "exit"].contains(transaction.movementKind)
+        return onchain ? transaction.onchainFeeSat == 0 : (transaction.onchainFeeSat ?? 0) == 0
     }
 
     /// Incoming money, not a transfer between your own balances and not a failure.

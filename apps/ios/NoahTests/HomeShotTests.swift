@@ -90,10 +90,15 @@ struct HomeShotTests {
         arriving.hasConfirmation = false
         arriving.dateLabel = "Unconfirmed"
         arriving.balanceChangeSat = 100_000
+        // Nothing left the wallet: every delta, fees included, is recorded as zero.
+        var failed = row("m8", "Onchain", 4_200, "outgoing", at(0, 9, 40), status: "failed", kind: "offboard", effective: 0)
+        failed.offchainFeeSat = 0
+        failed.onchainFeeSat = 0
+        var canceled = row("m9", "Bolt11", 1_500, "outgoing", at(0, 9, 30), to: "lnbcrt15u1fixture", status: "canceled", effective: 0)
+        canceled.offchainFeeSat = 0
         return [arriving,
                 row("m7", "Lnurl", 5_000, "outgoing", at(0, 10, 2), to: "bob@getalby.com", status: "pending"),
-                row("m8", "Onchain", 4_200, "outgoing", at(0, 9, 40), status: "failed", kind: "offboard", effective: 0),
-                row("m9", "Bolt11", 1_500, "outgoing", at(0, 9, 30), to: "lnbcrt15u1fixture", status: "canceled", effective: 0)]
+                failed, canceled]
             + everyday
     }
 

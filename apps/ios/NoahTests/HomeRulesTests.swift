@@ -222,14 +222,45 @@ struct HomeRulesTests {
         #expect(row.status == .sending && row.status.isPending)
         row = HomeActivityRow(Self.row(type: "Onchain", status: "pending", kind: "onboard"), ownDomain: own)
         #expect(row.status == .confirming)
-        row = HomeActivityRow(Self.row(type: "Onchain", direction: "outgoing", status: "failed", kind: "offboard", effective: 0),
-                              ownDomain: own)
+        row = HomeActivityRow(Self.row(type: "Onchain", direction: "outgoing", status: "failed", kind: "offboard", effective: 0,
+                                       offchainFee: 0, onchainFee: 0), ownDomain: own)
         #expect(row.status == .failed(nothingLeft: true) && row.status.isUnsuccessful && row.title == "Offboard")
         row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: -4_200), ownDomain: own)
         #expect(row.status == .failed(nothingLeft: false))
         // Canceled keeps the base label: the subtitle carries the status.
-        row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "canceled", effective: 0), ownDomain: own)
+        row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "canceled", effective: 0, offchainFee: 0),
+                              ownDomain: own)
         #expect(row.status == .canceled(nothingLeft: true) && row.title == "Lightning")
+    }
+
+    @Test func nothingLeftNeedsAZeroForEveryDelta() {
+        func nothingLeft(_ row: HistoryTransaction) -> Bool { HomeActivityRow.leftNothing(row) }
+        let failed = Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: 0, offchainFee: 0)
+        #expect(nothingLeft(failed))
+        // One zero isn't proof: an on-chain change, a fee or an unknown fee leaves it unsaid.
+        var row = failed
+        row.balanceChangeSat = -4_200
+        #expect(!nothingLeft(row))
+        row = failed
+        row.offchainFeeSat = 12
+        #expect(!nothingLeft(row))
+        row = failed
+        row.offchainFeeSat = nil
+        #expect(!nothingLeft(row))
+        row = failed
+        row.effectiveBalanceSat = nil
+        #expect(!nothingLeft(row))
+        #expect(HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: 0, offchainFee: 0,
+                                         balanceChange: -4_200), ownDomain: "x").status == .failed(nothingLeft: false))
+        // On-chain operations also need their on-chain fee known to be zero.
+        let offboard = Self.row(type: "Onchain", direction: "outgoing", status: "failed", kind: "offboard", effective: 0,
+                                offchainFee: 0)
+        #expect(!nothingLeft(offboard))
+        row = offboard
+        row.onchainFeeSat = 0
+        #expect(nothingLeft(row))
+        row.onchainFeeSat = 300
+        #expect(!nothingLeft(row))
     }
 
     @Test func activityGroupsByDay() throws {
