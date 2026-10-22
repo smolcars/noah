@@ -430,11 +430,15 @@ struct HomeView: View {
         var sats: UInt64
         var visible: Bool
         var wallet: String?
+        /// Nil for fixtures: nothing to wait for.
+        var revision: Int?
+        var historyBusy: Bool
     }
 
     var trackerInput: TrackerInput {
         TrackerInput(state: layoutState, ids: history.transactions.map(\.id), sats: summary?.balance.totalSats ?? 0,
-                     visible: visible, wallet: summary?.fingerprint)
+                     visible: visible, wallet: summary?.fingerprint, revision: fixture == nil ? model.summaryRevision : nil,
+                     historyBusy: history.isLoading || history.isRefreshing)
     }
 
     // MARK: Actions
