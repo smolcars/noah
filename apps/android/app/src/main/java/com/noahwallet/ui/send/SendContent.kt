@@ -49,6 +49,7 @@ import com.noahwallet.ui.keypadInput
 import com.noahwallet.ui.SendPresentation
 import com.noahwallet.ui.onboarding.*
 import kotlinx.coroutines.isActive
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -288,7 +289,7 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
     val model = presentation.model
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
-    val scope = rememberCoroutineScope()
+    val scope = presentation.viewModelScope
     val shake = rememberAmountShake()
     val available = maxOf(model.arkBalance, model.onchainBalance)
     val sats = model.sats
@@ -373,7 +374,7 @@ private fun ToStep(presentation: SendPresentation, env: SendEnv, actions: SendAc
     val model = presentation.model
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
-    val scope = rememberCoroutineScope()
+    val scope = presentation.viewModelScope
     val context = LocalContext.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     fun next() { focus.clearFocus(); scope.launch { model.continueStage() } }
@@ -468,7 +469,7 @@ private fun MethodStep(presentation: SendPresentation, env: SendEnv) {
     val model = presentation.model
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
-    val scope = rememberCoroutineScope()
+    val scope = presentation.viewModelScope
     val rails = model.rails
     val availability = model.availability
     val best = SendFlow.recommend(rails, availability)
@@ -497,7 +498,7 @@ private fun SourceStep(presentation: SendPresentation, env: SendEnv) {
     val model = presentation.model
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
-    val scope = rememberCoroutineScope()
+    val scope = presentation.viewModelScope
     StepPanes(nav = { Back { model.back() }; Title(); Spacer(Modifier.width(40.dp)) }, leadingCentred = true, trailingAt = Alignment.Top, leading = {
         Text(tr("Choose balance"), Modifier.padding(top = 18.dp).semantics { heading() }, style = SendType.big, color = palette.foreground)
         if (!model.isMax) Text(tr("Send {amount}", formatted(model.sats, env)), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.muted)
@@ -525,10 +526,10 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
     val controller = model.controller
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
-    val scope = rememberCoroutineScope()
+    val scope = presentation.viewModelScope
     val quote = model.quote
     val payment = model.payment
-    val ready = model.showReview && quote != null && payment != null
+    val ready = (model.showReview || controller.locked) && quote != null && payment != null
     val rail = model.progress.selectedRail
     val amount = quote?.amount ?: model.sats
     val who = SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain)
