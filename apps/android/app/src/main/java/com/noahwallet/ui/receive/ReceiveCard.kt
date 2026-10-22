@@ -164,7 +164,8 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
             }
             if (arrival != null && arrival.rail != ReceiveArrival.Rail.onchain && !showBack) ArrivalOverlay(arrival.rail, elapsed, qrSide, Modifier.matchParentSize())
         }
-        if (listening && !reduceMotion && arrival == null) ListeningLight(Modifier.matchParentSize())
+        // Listening again once an arrival has played (an on-chain one stays for its block row).
+        if (listening && !reduceMotion && (arrival == null || elapsed > ReceiveTimeline.end(arrival.rail, false))) ListeningLight(Modifier.matchParentSize())
     }
 }
 
