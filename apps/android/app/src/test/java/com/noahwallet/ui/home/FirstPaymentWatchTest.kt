@@ -95,6 +95,8 @@ class FirstPaymentWatchTest {
         val board = HistoryTransaction("board", "Onchain", 50_000, "2026-10-22T10:00:00.000Z", "incoming", source = "ark", movementKind = "onboard")
         val sent = HistoryTransaction("sent", "Lnurl", 1_000, "2026-10-22T10:00:00.000Z", "outgoing", source = "ark")
         assertNull(watch.arrival(listOf(board, sent), 0u))
+        // A canceled or failed receive brought nothing in.
+        assertNull(watch.arrival(listOf(incoming("c").copy(movementStatus = "canceled"), incoming("f").copy(movementStatus = "failed")), 0u))
         // The first refresh of a visit sets the baseline; later ones don't move it.
         watch.caughtUp(HomeRules.State.everyday, listOf(incoming("x")))
         assertEquals(true, watch.baseline!!.fresh)

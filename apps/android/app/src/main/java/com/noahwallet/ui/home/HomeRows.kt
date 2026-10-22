@@ -68,13 +68,19 @@ data class HomeRow(
 
         /**
          * Explicit evidence that nothing left the wallet: an Ark movement whose recorded balance change and fee are
-         * both zero, and for kinds that also move on-chain funds, a merged chain record showing no change. Anything
-         * unknown is not evidence; such rows just say "Failed" or "Canceled".
+         * both zero, and for kinds that also move on-chain funds, a merged chain record showing no change and a zero
+         * on-chain fee. Other kinds may carry no chain values, but any they carry must be zero. Anything unknown is
+         * not evidence; such rows just say "Failed" or "Canceled".
          */
         internal fun provesNothingLeft(row: HistoryTransaction): Boolean {
             if (row.source != "ark" || row.effectiveBalanceSat != 0L || row.offchainFeeSat != 0L) return false
-            return row.movementKind !in chainKinds || row.balanceChangeSat == 0L
+            return if (row.movementKind in chainKinds) row.balanceChangeSat == 0L && row.onchainFeeSat == 0L
+                else (row.balanceChangeSat ?: 0L) == 0L && (row.onchainFeeSat ?: 0L) == 0L
         }
+
+        /** Money that actually came in: incoming, not a transfer between your own balances, not failed or canceled. */
+        internal fun received(row: HistoryTransaction) = row.direction == "incoming" && !row.isInternalTransfer &&
+            row.movementStatus != "failed" && !row.isCanceled && row.amount > 0
     }
 }
 

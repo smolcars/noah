@@ -69,9 +69,22 @@ class HomeRowsTest {
         val board = row("Onchain", "incoming", status = "failed", kind = "onboard", effective = 0).copy(offchainFeeSat = 0)
         assertFalse("no chain record merged", proof(board))
         assertFalse("the merged chain record shows money moved", proof(board.copy(balanceChangeSat = -51_000)))
-        assertTrue("an explicit zero on both sides", proof(board.copy(balanceChangeSat = 0)))
+        assertFalse("the on-chain fee is unknown", proof(board.copy(balanceChangeSat = 0)))
+        assertFalse("an on-chain fee was paid", proof(board.copy(balanceChangeSat = 0, onchainFeeSat = 150)))
+        assertTrue("an explicit zero on both sides", proof(board.copy(balanceChangeSat = 0, onchainFeeSat = 0)))
+        // A Lightning row carries no chain values; any it does carry must be zero.
+        assertFalse(proof(row("Bolt11", "outgoing", status = "canceled", effective = 0).copy(offchainFeeSat = 0, onchainFeeSat = 20)))
         // Successful rows never carry the phrase.
         assertFalse(proof(row("Bolt11", "outgoing", effective = 0).copy(offchainFeeSat = 0)))
+    }
+
+    @Test fun onlyMoneyThatCameInCountsAsReceived() {
+        assertTrue(HomeRow.received(row("Arkoor", "incoming")))
+        assertFalse("canceled", HomeRow.received(row("Arkoor", "incoming", status = "canceled")))
+        assertFalse("failed", HomeRow.received(row("Arkoor", "incoming", status = "failed")))
+        assertFalse("outgoing", HomeRow.received(row("Arkoor", "outgoing")))
+        assertFalse("own transfer", HomeRow.received(row("Onchain", "incoming", kind = "onboard")))
+        assertFalse("nothing arrived", HomeRow.received(row("Arkoor", "incoming").copy(amount = 0)))
     }
 
     @Test fun daysGroupTodayYesterdayAndDatesKeepingUndatedRowsInPlace() {

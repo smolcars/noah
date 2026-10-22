@@ -102,7 +102,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     LaunchedEffect(accounting) { if (accounting != refreshedAccounting) { refreshedAccounting = accounting; if (historyLoaded) model.refresh() } }
     SideEffect { if (memory.seenRows == null && historyLoaded) memory.seenRows = ids.toSet() }
     val seen = memory.seenRows
-    val newRows = if (seen == null) emptySet() else rows.filter { it.direction == "incoming" && !it.isInternalTransfer && it.id !in seen }.map { it.id }.toSet()
+    val newRows = if (seen == null) emptySet() else rows.filter { com.noahwallet.ui.home.HomeRow.received(it) && it.id !in seen }.map { it.id }.toSet()
     val activity = LocalContext.current as? Activity
     DisposableEffect(lifecycle) {
         fun hidden() { memory.seenRows = currentIds.toSet() }

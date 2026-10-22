@@ -68,7 +68,7 @@ class FirstPaymentWatch {
     /** It plays once per visit: afterwards the baseline is no longer Fresh. */
     fun played() { baseline = baseline?.copy(fresh = false) }
 
-    private val HistoryTransaction.isIncoming get() = direction == "incoming" && !isInternalTransfer
+    private val HistoryTransaction.isIncoming get() = HomeRow.received(this)
 
     private fun incoming(rows: List<HistoryTransaction>) = rows.filter { it.isIncoming }.map { it.id }.toSet()
 }
