@@ -25,6 +25,8 @@ internal class OnboardingPresentation : ViewModel() {
         if (step == "welcome") reset()
         // Coming back to Notifications after granting asks again rather than skipping ahead.
         if (step == "notifications" && notificationStage == NotificationStage.granted) notificationStage = NotificationStage.ask
+        // Back at Email after verifying: show the address again rather than bouncing forward.
+        if (step == "email" && emailStage == EmailStage.verified) { emailStage = EmailStage.entry; otp = OtpEntry() }
     }
     /** Entrances play once per visit, so recreation never replays them. */
     fun firstShow(step: String) = played.add("$step#$visit")
