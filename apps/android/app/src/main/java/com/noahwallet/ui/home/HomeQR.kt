@@ -20,7 +20,7 @@ import com.noahwallet.R
 import com.noahwallet.ui.design.NoahTokens
 
 /**
- * The styled QR (prototype `buildQR`): error correction H, round dot modules, rounded finder eyes and
+ * The styled QR (prototype `buildQR`): error correction H (M for long payloads), round dot modules, rounded finder eyes and
  * the longship in a white tile over a cleared centre. Ink and tile are fixed; the card is always white.
  */
 internal class StyledQRModel(val size: Int, private val dark: BooleanArray) {
@@ -33,8 +33,8 @@ internal class StyledQRModel(val size: Int, private val dark: BooleanArray) {
     fun dot(r: Int, c: Int) = isDark(r, c) && !isEye(r, c) && !isHole(r, c)
 
     companion object {
-        fun encode(content: String): StyledQRModel? = runCatching {
-            val matrix = Encoder.encode(content, ErrorCorrectionLevel.H).matrix
+        fun encode(content: String, correction: ErrorCorrectionLevel = ErrorCorrectionLevel.H): StyledQRModel? = runCatching {
+            val matrix = Encoder.encode(content, correction).matrix
             StyledQRModel(matrix.width, BooleanArray(matrix.width * matrix.height) { matrix.get(it % matrix.width, it / matrix.width).toInt() == 1 })
         }.getOrNull()
     }
@@ -49,8 +49,9 @@ private fun roundRect(x: Float, y: Float, side: Float, radius: Float) = RoundRec
  * time it appears; [reveal] false or Reduce Motion skips straight to (or fades to) the final code.
  */
 @Composable
-internal fun StyledQR(content: String, modifier: Modifier = Modifier, reveal: Boolean = true, reduceMotion: Boolean = false) {
-    val model = remember(content) { StyledQRModel.encode(content) } ?: return
+internal fun StyledQR(content: String, modifier: Modifier = Modifier, reveal: Boolean = true, reduceMotion: Boolean = false,
+                      correction: ErrorCorrectionLevel = ErrorCorrectionLevel.H) {
+    val model = remember(content, correction) { StyledQRModel.encode(content, correction) } ?: return
     val logo = ImageBitmap.imageResource(R.drawable.qr_logo)
     val start = rememberSaveable(content) { if (reveal) android.os.SystemClock.elapsedRealtime() else 0L }
     val elapsed = rememberElapsed(start.takeIf { it > 0 }, 2_000)

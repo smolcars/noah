@@ -259,7 +259,7 @@ class ParityUIDeviceTest {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Receive request", request))
             }
             click("Paste")
-            waitFor("Recipient-first Send route reaches amount entry") { text("How much?") != null }
+            waitFor("Recipient-first Send route reaches amount entry") { text("send-amount") != null || text("Next") != null }
             shot("qr-send-route")
             // No amount is entered and no payment is submitted.
         } finally { instrumentation.runOnMainSync { activity.finish() } }

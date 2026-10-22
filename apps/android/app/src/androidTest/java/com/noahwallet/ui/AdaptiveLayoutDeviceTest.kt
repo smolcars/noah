@@ -87,8 +87,8 @@ class AdaptiveLayoutDeviceTest {
             show("send") { SendScreen(model) {} }
             show("scanner") { SendScanner({}, {}) }
             show("receive-amount") { WalletModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-                ReceiveAmountSheet(com.noahwallet.services.wallet.ReceiveRequest("tark1layout", "bcrt1layout"),
-                    com.noahwallet.formatting.BitcoinAmountUnit.sats, null, "USD", java.util.Locale.US, false, {}, { _, _ -> })
+                com.noahwallet.ui.receive.ReceiveAmountSheet(com.noahwallet.ui.receive.ReceiveUi(com.noahwallet.services.wallet.ReceiveRequest("tark1layout", "bcrt1layout"),
+                    null, com.noahwallet.ui.receive.ReceiveFormat.request, com.noahwallet.formatting.BitcoinAmountUnit.sats, java.util.Locale.US, null, "USD")) { _, _ -> }
             } }
             show("history") { TransactionsScreen(model) {} }
             show("btc-map") { com.noahwallet.btcmap.BtcMapScreen {} }

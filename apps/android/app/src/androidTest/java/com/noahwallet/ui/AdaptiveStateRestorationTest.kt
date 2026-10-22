@@ -40,19 +40,22 @@ class AdaptiveStateRestorationTest {
         }
     }
 
+    private fun receiveUi() = com.noahwallet.ui.receive.ReceiveUi(ReceiveRequest("ark", "onchain"), null, com.noahwallet.ui.receive.ReceiveFormat.request,
+        BitcoinAmountUnit.sats, Locale.US, null, "USD")
+
     @Test fun receiveAmountAndNoteRestoreTogetherWithTheirAction() {
         val restoration = StateRestorationTester(compose)
         var saved: Pair<Long, String>? = null
         restoration.setContent { NoahTheme {
-            ReceiveAmountSheet(ReceiveRequest("ark", "onchain"), BitcoinAmountUnit.sats, null, "USD", Locale.US,
-                saving = false, onRemove = {}, onSave = { amount, note -> saved = amount to note })
+            com.noahwallet.ui.receive.ReceiveAmountSheet(receiveUi()) { amount, note -> saved = amount to note }
         } }
-        compose.onNodeWithText("Amount (sats)").performTextInput("500")
-        compose.onNodeWithText("Description").performScrollTo().performClick().performTextInput("Rotation draft")
+        for (key in "500") compose.onNodeWithTag("send-key-$key").performScrollTo().performClick()
+        compose.onNodeWithTag("receive-note-chip").performScrollTo().performClick()
+        compose.onNodeWithTag("receive-description-input").performScrollTo().performClick().performTextInput("Rotation draft")
         restoration.emulateSavedInstanceStateRestore()
-        compose.onNodeWithText("Amount (sats)").performScrollTo().assertTextContains("500")
-        compose.onNodeWithText("Description").performScrollTo().assertTextContains("Rotation draft")
-        compose.onNodeWithText("Save request").performScrollTo().performClick()
+        compose.onNodeWithTag("receive-amount-input", useUnmergedTree = true).assertContentDescriptionContains("500", substring = true)
+        compose.onNodeWithTag("receive-description-input").performScrollTo().assertTextContains("Rotation draft")
+        compose.onNodeWithTag("receive-amount-submit").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(500L to "Rotation draft", saved) }
     }
 
@@ -217,14 +220,14 @@ class AdaptiveStateRestorationTest {
             val reported = LocalFoldingFeatures.current
             SideEffect { hinges = reported }
             WalletModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-                ReceiveAmountSheet(ReceiveRequest("ark", "onchain"), BitcoinAmountUnit.sats, null, "USD", Locale.US,
-                    false, {}, { _, _ -> })
+                com.noahwallet.ui.receive.ReceiveAmountSheet(receiveUi()) { _, _ -> }
             }
         } }
-        compose.onNodeWithText("Description").performScrollTo().performClick().performTextInput("Fold draft")
-        compose.onNodeWithText("Save request").performScrollTo().assertIsDisplayed()
-        for (label in listOf("Amount (sats)", "Description", "Save request")) {
-            val node = compose.onNodeWithText(label).performScrollTo().fetchSemanticsNode()
+        compose.onNodeWithTag("receive-note-chip").performScrollTo().performClick()
+        compose.onNodeWithTag("receive-description-input").performScrollTo().performClick().performTextInput("Fold draft")
+        compose.onNodeWithTag("receive-amount-submit").performScrollTo().assertIsDisplayed()
+        for (label in listOf("receive-amount-input", "receive-description-input", "receive-amount-submit")) {
+            val node = compose.onNodeWithTag(label, useUnmergedTree = true).performScrollTo().fetchSemanticsNode()
             val bounds = node.boundsInWindow
             for (hinge in hinges) {
                 assertFalse("$label crosses a vertical fold", hinge.height > hinge.width && bounds.left < hinge.left && bounds.right > hinge.right)
@@ -307,9 +310,11 @@ class AdaptiveStateRestorationTest {
         compose.runOnIdle {
             draft.setRecipient("layout-ark-recipient"); draft.amount = "500"; draft.comment = "Retained note"
             draft.parsed = SendDestination("ark"); draft.progress = SendProgress(selectedRail = SendRail.ark)
+            // Review is now a step rather than a sheet over any step.
+            draft.stage = SendStage.review
         }
         runBlocking(Dispatchers.Main) { draft.review() }
-        compose.onNodeWithText("Confirm payment").assertIsDisplayed()
+        compose.onNodeWithTag("send-hold").assertIsDisplayed()
         fun recreate(rotate: Boolean = false) {
             if (rotate) {
                 val previous = compose.activity
@@ -334,21 +339,24 @@ class AdaptiveStateRestorationTest {
                 }
                 compose.waitUntil(10_000) { compose.activity !== previous }
                 compose.activityRule.scenario.onActivity { activity -> activity.setContent { NoahTheme { SendScreen(app) {} } } }
-                compose.onNodeWithText("Confirm payment").assertIsDisplayed()
+                compose.onNodeWithTag("send-hold").assertIsDisplayed()
             }
         }
         recreate(rotate = true)
-        compose.onNodeWithText("Confirm payment").assertIsDisplayed()
+        compose.onNodeWithTag("send-hold").assertIsDisplayed()
         captureSendFixture("send-review")
         compose.runOnIdle { assertEquals("500", draft.amount); assertEquals("Retained note", draft.comment) }
-        compose.onNodeWithText("Confirm", useUnmergedTree = true).performScrollTo().performClick()
+        // Hold to send for 0.8 s: the same submission the old Confirm button made.
+        compose.onNodeWithTag("send-hold").performScrollTo().performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onRoot().performTouchInput { up() }
         compose.waitUntil { calls == 1 }
         recreate(rotate = true)
         compose.runOnIdle { assertTrue(controller.locked); assertEquals(1, calls) }
         gate.complete(Unit)
         compose.waitUntil { controller.state == SendController.State.succeeded }
         recreate()
-        compose.onNodeWithText("Payment sent").assertIsDisplayed()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Sent", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         captureSendFixture("send-receipt")
         compose.runOnIdle { assertEquals(1, calls); assertEquals(500L, controller.attempt?.receipt?.amount) }
     }
