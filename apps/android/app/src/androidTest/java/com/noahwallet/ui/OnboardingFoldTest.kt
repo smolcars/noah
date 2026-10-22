@@ -29,7 +29,8 @@ import org.junit.Test
 class OnboardingFoldTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun show(step: String, hinge: (Int, Int) -> WindowRegion): WindowRegion {
+    private fun show(step: String, stage: com.noahwallet.ui.onboarding.NotificationStage = com.noahwallet.ui.onboarding.NotificationStage.ask,
+                     hinge: (Int, Int) -> WindowRegion): WindowRegion {
         compose.mainClock.autoAdvance = false
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application
         lateinit var model: AppModel
@@ -37,6 +38,7 @@ class OnboardingFoldTest {
         compose.activityRule.scenario.onActivity { activity ->
             model = AppModel(app)
             model.step = step
+            androidx.lifecycle.ViewModelProvider(activity)[com.noahwallet.ui.onboarding.OnboardingPresentation::class.java].notificationStage = stage
             val bounds = activity.window.decorView
             fold = hinge(bounds.width, bounds.height)
             // Host it as MainActivity and LaunchGateView do: adjustResize and the safe-drawing insets (keyboard included).
@@ -81,6 +83,14 @@ class OnboardingFoldTest {
             val fold = show(step) { width, height -> WindowRegion(width / 2 - 12, 0, width / 2 + 12, height) }
             assertClear(step, fold)
         }
+        // UnifiedPush distributor setup (devices without Google Play Services) stays in the trailing pane.
+        val vertical = show("notifications", com.noahwallet.ui.onboarding.NotificationStage.distributor) { width, height ->
+            WindowRegion(width / 2 - 12, 0, width / 2 + 12, height)
+        }
+        assertClear("distributor", vertical)
+        compose.onNodeWithText("Select Distributor", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+            assertTrue("distributor setup trails: $it", it.left >= vertical.right)
+        }
         val fold = show("name") { width, height -> WindowRegion(width / 2 - 12, 0, width / 2 + 12, height) }
         val headline = compose.onNodeWithText("Pick a name", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         val button = compose.onNodeWithText("Continue", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
@@ -92,6 +102,13 @@ class OnboardingFoldTest {
         for (step in listOf("name", "email", "done", "notifications")) {
             val fold = show(step) { width, height -> WindowRegion(0, height / 2 - 12, width, height / 2 + 12) }
             assertClear(step, fold)
+        }
+        val horizontal = show("notifications", com.noahwallet.ui.onboarding.NotificationStage.distributor) { width, height ->
+            WindowRegion(0, height / 2 - 12, width, height / 2 + 12)
+        }
+        assertClear("distributor", horizontal)
+        compose.onNodeWithText("Select Distributor", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+            assertTrue("distributor setup below the fold: $it", it.top >= horizontal.bottom)
         }
         val fold = show("name") { width, height -> WindowRegion(0, height / 2 - 12, width, height / 2 + 12) }
         val headline = compose.onNodeWithText("Pick a name", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow

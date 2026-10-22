@@ -50,16 +50,18 @@ fun Onboarding(model: AppModel) {
     }
     // Predictive back: never back out of creation, restore or Done (OnboardingNavigation's boundaries).
     BackHandler(enabled = model.step != "welcome") { goBack() }
-    val scene = when (model.step) {
-        "welcome" -> com.noahwallet.ui.onboarding.SceneMode.welcome
-        "creating" -> com.noahwallet.ui.onboarding.SceneMode.create
-        "restoring" -> com.noahwallet.ui.onboarding.SceneMode.restore
-        "notifications" -> if (presentation.notificationStage == com.noahwallet.ui.onboarding.NotificationStage.distributor)
-            com.noahwallet.ui.onboarding.SceneMode.none else com.noahwallet.ui.onboarding.SceneMode.conveyor
-        else -> com.noahwallet.ui.onboarding.SceneMode.none
-    }
-    SideEffect { presentation.scene.show(scene) }
     com.noahwallet.ui.onboarding.OnboardingFrame(presentation.scene) {
+        // UnifiedPush setup keeps the conveyor beside it in split panes; one column has no room for it.
+        val distributorAlone = presentation.notificationStage == com.noahwallet.ui.onboarding.NotificationStage.distributor &&
+            com.noahwallet.ui.onboarding.LocalPose.current == com.noahwallet.ui.onboarding.OnboardingPose.Compact
+        val scene = when (model.step) {
+            "welcome" -> com.noahwallet.ui.onboarding.SceneMode.welcome
+            "creating" -> com.noahwallet.ui.onboarding.SceneMode.create
+            "restoring" -> com.noahwallet.ui.onboarding.SceneMode.restore
+            "notifications" -> if (distributorAlone) com.noahwallet.ui.onboarding.SceneMode.none else com.noahwallet.ui.onboarding.SceneMode.conveyor
+            else -> com.noahwallet.ui.onboarding.SceneMode.none
+        }
+        SideEffect { presentation.scene.show(scene) }
         val reduceMotion = com.noahwallet.ui.onboarding.LocalReduceMotion.current
         androidx.compose.animation.AnimatedContent(model.step, transitionSpec = {
             onboardingTransition(targetState, direction.back, reduceMotion)

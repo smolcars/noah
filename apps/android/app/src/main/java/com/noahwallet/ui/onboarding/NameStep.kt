@@ -100,7 +100,7 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
     }, headline = { large ->
         Headline(tr("Pick a name"), tr("This is how people pay you."), large, modifier = Modifier.entrance(0, play))
     }, form = {
-        Column(Modifier.padding(top = NoahTokens.Space.xxxl).entrance(2, play)) {
+        Column(Modifier.padding(top = formGap(NoahTokens.Space.xxxl)).entrance(2, play)) {
             FlowRow(verticalArrangement = Arrangement.Bottom, itemVerticalAlignment = Alignment.Bottom) {
                 val label = tr("Pick a name")
                 BasicTextField(name, { presentation.name = NameRules.normalize(it) },

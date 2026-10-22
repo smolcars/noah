@@ -160,7 +160,7 @@ private fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, enab
     }
     LaunchedEffect(Unit) { if (play) { delay(380); runCatching { focus.requestFocus() } } else runCatching { focus.requestFocus() } }
     Column {
-        Row(Modifier.padding(top = 36.dp).entrance(2, play), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(top = formGap(36.dp)).entrance(2, play), verticalAlignment = Alignment.CenterVertically) {
             val label = tr("Add your email")
             BasicTextField(email, { presentation.email = EmailRules.normalize(it) },
                 Modifier.weight(1f).focusRequester(focus).onFocusChanged { focused = it.isFocused }
@@ -235,7 +235,7 @@ private fun CodeEntry(model: AppModel, presentation: OnboardingPresentation, onT
     Column {
         val label = tr("6-digit code")
         var rowWidth by remember { mutableIntStateOf(0) }
-        BasicTextField(otp.code, onTyped, Modifier.padding(top = 34.dp).fillMaxWidth().focusRequester(focus)
+        BasicTextField(otp.code, onTyped, Modifier.padding(top = formGap(34.dp)).fillMaxWidth().focusRequester(focus)
             .graphicsLayer { translationX = shake.value * density }
             .semantics { contentDescription = label; contentType = ContentType.SmsOtpCode },
             // Read-only while a request runs keeps the keyboard up but takes no digits.

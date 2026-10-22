@@ -169,7 +169,7 @@ private fun PhraseRestoreScreen(model: AppModel) {
     }, headline = { large ->
         Headline(tr("Welcome back"), tr("Enter your recovery phrase."), large, modifier = Modifier.entrance(0, play))
     }, form = {
-        WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = 22.dp).entrance(2, play)) { count ->
+        WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = formGap(22.dp)).entrance(2, play)) { count ->
             if (count == words.size) return@WordCountControl
             focus.clearFocus(); focused = null; input.selectWordCount(count)
             leftBad = emptySet(); changed(); clearGeneration++; haptics.selection()

@@ -23,6 +23,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlin.math.*
 
+/** A screen's tree area; [fill] scales the tree up to fill a split pane and centres it. */
+internal data class SceneSlot(val rect: Rect, val fill: Boolean)
+
 /** What the shared canvas draws. Only Welcome, Creating, Restoring and Notifications use the tree. */
 internal enum class SceneMode { none, welcome, create, restore, conveyor }
 
@@ -43,8 +46,8 @@ internal class SceneClock {
     /** Last frame time; the canvas reads it so each frame only redraws. */
     var frameNanos by mutableLongStateOf(0L)
     /** Where the current screen wants the tree, in canvas pixels; kept while the canvas fades out. */
-    var slot by mutableStateOf<Rect?>(null)
-    private val slots = mutableStateMapOf<SceneMode, Rect>()
+    var slot by mutableStateOf<SceneSlot?>(null)
+    private val slots = mutableStateMapOf<SceneMode, SceneSlot>()
 
     fun show(next: SceneMode) {
         if (next == mode) return
@@ -58,9 +61,9 @@ internal class SceneClock {
         slots[next]?.let { slot = it }
     }
 
-    fun report(mode: SceneMode, rect: Rect) {
-        slots[mode] = rect
-        if (mode == this.mode) slot = rect
+    fun report(mode: SceneMode, slot: SceneSlot) {
+        slots[mode] = slot
+        if (mode == this.mode) this.slot = slot
     }
 
     fun time(now: Long = frameNanos): Float = ((now - startNanos).coerceAtLeast(0) / 1e9).toFloat()
@@ -91,18 +94,23 @@ internal fun TreeSceneCanvas(clock: SceneClock, foreground: Color, reduceMotion:
         val t = clock.time()
         val painter = ScenePainter(this, foreground, reduceMotion, clock.frozenAt != null)
         when (clock.drawn) {
-            SceneMode.welcome -> painter.frame(slot, welcomeBox) { painter.welcome(if (reduceMotion) 60f else t) }
-            SceneMode.create -> painter.frame(slot, welcomeBox) { painter.create(t) }
-            SceneMode.restore -> painter.frame(slot, welcomeBox) { painter.restore(clock.frozenAt ?: t, clock.readyAt) }
-            SceneMode.conveyor -> painter.frame(slot, conveyorBox) { painter.conveyor(clock.frozenAt ?: if (reduceMotion) 1f else t) }
+            SceneMode.welcome -> painter.frame(slot, treeBoxes) { painter.welcome(if (reduceMotion) 60f else t) }
+            SceneMode.create -> painter.frame(slot, treeBoxes) { painter.create(t) }
+            SceneMode.restore -> painter.frame(slot, treeBoxes) { painter.restore(clock.frozenAt ?: t, clock.readyAt) }
+            SceneMode.conveyor -> painter.frame(slot, conveyorBoxes) { painter.conveyor(clock.frozenAt ?: if (reduceMotion) 1f else t) }
             SceneMode.none -> Unit
         }
     }
 }
 
-/** The design-space box (prototype points) each mode fits into its slot. */
-private val welcomeBox = Rect(0f, 196f, 393f, 508f)
-private val conveyorBox = Rect(0f, 168f, 393f, 344f)
+/**
+ * The design-space boxes (prototype points) a mode fits into its slot: the prototype's full width in one
+ * column, and the drawing's own bounds when it fills a pane. The conveyor may run past a pane's sides,
+ * like a belt, so its trees stay legible in narrow panes.
+ */
+private class Boxes(val column: Rect, val pane: Rect, val overflow: Float = 1f)
+private val treeBoxes = Boxes(Rect(0f, 196f, 393f, 508f), Rect(24f, 200f, 369f, 502f))
+private val conveyorBoxes = Boxes(Rect(0f, 168f, 393f, 344f), Rect(28f, 172f, 372f, 340f), overflow = 1.45f)
 
 private fun clamp(x: Float, a: Float = 0f, b: Float = 1f) = x.coerceIn(a, b)
 private fun ease(x: Float) = 1 - (1 - x).pow(3)
@@ -133,12 +141,14 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
     var left = 0f
     var right = 393f
 
-    fun frame(slot: Rect, box: Rect, draw: () -> Unit) {
-        // Fit the box's width to the slot; never taller than the slot. Bottom-aligned so the chain sits above the text.
-        val scale = minOf(slot.width / box.width, slot.height / box.height, 2.2f * g.density)
+    fun frame(target: SceneSlot, boxes: Boxes, draw: () -> Unit) {
+        val slot = target.rect
+        val box = if (target.fill) boxes.pane else boxes.column
+        // One column: fit the width, sitting low so the chain line is just above the words. A pane: fill it and centre.
+        val scale = if (target.fill) minOf(slot.width * boxes.overflow / box.width, slot.height / box.height, 3f * g.density)
+            else minOf(slot.width / box.width, slot.height / box.height, 2.2f * g.density)
         val x = slot.left + (slot.width - box.width * scale) / 2 - box.left * scale
-        // Low in the slot, so the chain line sits just above the words, with some air above the leaves.
-        val y = slot.top + (slot.height - box.height * scale) * .72f - box.top * scale
+        val y = slot.top + (slot.height - box.height * scale) * (if (target.fill) .5f else .72f) - box.top * scale
         left = (slot.left - x) / scale; right = (slot.right - x) / scale
         g.clipRect(slot.left, 0f, slot.right, g.size.height) {
             withTransform({ translate(x, y); scale(scale, scale, Offset.Zero) }) { draw() }

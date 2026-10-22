@@ -65,16 +65,26 @@ class OnboardingGalleryTest {
             ui { presentation.languageOpen = false; presentation.betaOpen = true }; screen("beta")
             ui { presentation.betaOpen = false }
             step("creating"); screen("creating", 2600)
-            step("name"); ui { presentation.name = "maya" }; screen("name", 2500)
-            step("email"); ui { presentation.email = "maya@gmial.com" }; screen("email")
+            /** The same screen with the keyboard down, to check both panes share one centre. */
+            fun keyboardDown(name: String) {
+                ui {
+                    activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                        .hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
+                }
+                screen(name)
+            }
+            step("name"); ui { presentation.name = "maya" }; screen("name-keyboard", 2500); keyboardDown("name")
+            step("email"); ui { presentation.email = "maya@gmial.com" }; screen("email-keyboard"); keyboardDown("email")
             ui {
                 presentation.email = "maya@gmail.com"; presentation.codeSentAt = android.os.SystemClock.elapsedRealtime()
                 presentation.otp = com.noahwallet.ui.onboarding.OtpEntry().typed("482")
                 presentation.emailStage = com.noahwallet.ui.onboarding.EmailStage.code
             }
-            screen("email-code")
+            screen("email-code-keyboard"); keyboardDown("email-code")
+            ui { presentation.emailStage = com.noahwallet.ui.onboarding.EmailStage.entry }
             step("notifications"); screen("notifications", 3000)
             ui { presentation.notificationStage = com.noahwallet.ui.onboarding.NotificationStage.off }; screen("notifications-required")
+            ui { presentation.notificationStage = com.noahwallet.ui.onboarding.NotificationStage.distributor }; screen("notifications-unifiedpush")
             step("battery"); screen("battery")
             step("done"); screen("done", 3000)
             ui {

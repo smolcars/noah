@@ -89,7 +89,14 @@ internal fun NotificationsStep(model: AppModel, presentation: OnboardingPresenta
         if (stage == NotificationStage.off) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { if (granted()) allowed() }
     }
     if (stage == NotificationStage.distributor) {
-        com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = true) { next() }
+        // Today's distributor setup, kept clear of any fold: one column, or the trailing pane beside the conveyor.
+        LaunchedEffect(Unit) { presentation.scene.frozenAt = null }
+        when (val pose = LocalPose.current) {
+            OnboardingPose.Compact -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = true) { next() }
+            else -> SplitPanes(pose, picture = {
+                Box(Modifier.fillMaxSize().padding(NoahTokens.Space.screen).sceneSlot(presentation.scene, SceneMode.conveyor, fill = true))
+            }) { com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = true) { next() } }
+        }
         return
     }
     NotificationsContent(presentation.scene, off = stage == NotificationStage.off) {
