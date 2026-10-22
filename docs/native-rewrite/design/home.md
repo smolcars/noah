@@ -96,7 +96,7 @@ There is one nudge card at a time, in this order:
 | **Email** | email not verified and the prompt not dismissed (today's server state) | "Add your email" / "For urgent wallet alerts" | "Add" opens today's email flow; × dismisses it with today's `dismissEmailPrompt` |
 | Update | today's `updateRequired` | "Update available" / "Get the latest fixes" | "Update" opens today's update link |
 
-Resolving or dismissing a nudge folds it away with the soft spring, and the next one slides in with snappy. The prototype's toasts ("Renewed", "Backed up", "Email added") appear only after real success. "Backup completed" and today's automatic-boarding completion become 5-second toasts instead of cards, keeping today's expiry rules.
+Resolving or dismissing a nudge folds it away with the soft spring, and the next one slides in with snappy. The prototype's "Backed up" and "Email added" toasts appear only after real success. There is no "Renewed" toast: submitting a renewal only hands the coins to a round, so the app can't confirm it at that moment; the nudge folds away once nothing is due. "Backup completed" and today's automatic-boarding completion become 5-second toasts instead of cards, keeping today's expiry rules.
 
 The renew check reuses today's refresh moments: Home appearing, wallet change events, round checks and pull-to-refresh. Don't add a faster timer.
 
@@ -157,7 +157,7 @@ The redesign only changes how Home looks and which existing actions it links to.
 Add every new string to `apps/i18n/en/native.json`, hand-translate it into es, ja, ko and sv, and regenerate with `bun apps/tools/translations.mjs`. Never run the paid `translate` command.
 
 New strings:
-- "Renew {amount}", "Expires in {n} hours" (plural), "Expires in under an hour", "Renew", "Renewed";
+- "Renew {amount}", "Expires in {n} hours" (plural), "Expires in under an hour", "Renew";
 - "Save your recovery phrase", "Back up", "Backed up";
 - "Add your email", "For urgent wallet alerts", "Add", "Email added";
 - "Update available", "Get the latest fixes", "Update";

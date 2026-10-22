@@ -79,10 +79,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     val toasts = remember { HomeToasts() }
     val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
     val uri = LocalUriHandler.current
-    val renewed = tr("Renewed")
     val signals = rememberHomeSignals(model, refreshRevision, memory)
-    // Only the refresh flow's own receipt for the reviewed VTXOs counts as renewed; the nudge folds away regardless.
-    LaunchedEffect(model.renewSucceeded) { if (model.renewSucceeded != null) { model.renewSucceeded = null; toasts.show(renewed); haptics.success() } }
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     val balance = model.summary?.balance
     val rows = model.history.transactions

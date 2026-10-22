@@ -11,8 +11,7 @@ import org.junit.Test
 
 /**
  * Home's Renew opens today's refresh review for exactly the expiring VTXOs that are still due, even when the quote
- * is slow, checks again at confirmation, and reports "Renewed" only when the journal holds that reviewed quote's
- * receipt.
+ * is slow, and checks again at confirmation.
  */
 class RenewReviewTest {
     @get:Rule val compose = createComposeRule()
@@ -35,7 +34,6 @@ class RenewReviewTest {
             journal[quote.id] = OnchainOperationJournal.Attempt(quote, OnchainReceipt("Refresh submitted to delegated round 7.")); "Refresh submitted to delegated round 7."
         },
     ))
-    private var renewed: List<String>? = null
     private var started: List<String>? = null
 
     /** Hosts the request the way VtxosScreen does, with the request read during composition (so clearing it recomposes). */
@@ -43,8 +41,8 @@ class RenewReviewTest {
         var request by mutableStateOf<List<String>?>(ids)
         compose.setContent {
             Text(request)
-            RenewReview(model, take = { request.also { request = null } }, due = { ids -> ids.filter { it in due } }, attempt = { journal[it] },
-                onStart = { started = it }, renewed = { renewed = it })
+            RenewReview(model, take = { request.also { request = null } }, due = { ids -> ids.filter { it in due } },
+                onStart = { started = it })
         }
     }
     @Composable private fun Text(@Suppress("UNUSED_PARAMETER") request: List<String>?) {}
@@ -61,17 +59,17 @@ class RenewReviewTest {
         compose.waitUntil(5_000) { model.quote != null }
         assertEquals(ids.sorted(), model.quote!!.ids)
         assertEquals(OnchainAction.refresh, model.quote!!.action)
-        assertNull("nothing is renewed until the user confirms", renewed)
+        assertTrue("nothing is submitted until the user confirms", journal.isEmpty())
     }
 
-    @Test fun onlyAConfirmedReviewWithAReceiptReportsRenewed() {
+    @Test fun confirmingSubmitsExactlyTheReviewedVtxos() {
         gate.complete(Unit)
         show()
         compose.waitUntil(5_000) { model.quote != null }
-        // On the main thread, as a tap confirms: never between the quote landing and the review noting which it is.
+        // On the main thread, as a tap confirms.
         runBlocking(Dispatchers.Main) { model.confirm() }
-        compose.waitUntil(5_000) { renewed != null }
-        assertEquals(ids.sorted(), renewed)
+        compose.waitUntil(5_000) { journal.isNotEmpty() }
+        assertEquals(ids.sorted(), journal.values.single().quote.ids)
     }
 
     @Test fun aVtxoThatStoppedBeingDueSinceHomeCheckedIsLeftOut() {
@@ -104,13 +102,9 @@ class RenewReviewTest {
         compose.waitUntil(5_000) { !model.busy }
         assertTrue("nothing was submitted", journal.isEmpty())
         assertEquals(OnchainFailure.changed.text, model.error)
-        compose.waitForIdle()
-        Thread.sleep(300)
-        compose.waitForIdle()
-        assertNull(renewed)
     }
 
-    @Test fun aDismissedReviewReportsNothing() {
+    @Test fun aDismissedReviewSubmitsNothing() {
         gate.complete(Unit)
         show()
         compose.waitUntil(5_000) { model.quote != null }
@@ -118,7 +112,6 @@ class RenewReviewTest {
         compose.waitForIdle()
         Thread.sleep(300)
         compose.waitForIdle()
-        assertNull(renewed)
         assertTrue(journal.isEmpty())
     }
 }

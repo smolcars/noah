@@ -11,7 +11,6 @@ import com.noahwallet.ui.DetailValue
 import androidx.compose.ui.platform.LocalUriHandler
 import com.noahwallet.BuildConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -36,8 +35,7 @@ fun VtxosScreen(app: AppModel) {
         // Inside OnchainScreen's content, so its effects (and their first reset) run before the review starts.
         RenewReview(model, take = { app.renewVtxos?.also { app.renewVtxos = null } },
             due = { ids -> app.session.onchainOverview().vtxos.filter { it.id in ids && it.renewable }.map { it.id } },
-            attempt = { id -> withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() }.firstOrNull { it.id == id } },
-            onStart = { ids -> selecting = true; selected = ids.toSet() }, renewed = { app.renewSucceeded = it })
+            onStart = { ids -> selecting = true; selected = ids.toSet() })
         Text(tr("VTXOs"), style = MaterialTheme.typography.headlineSmall)
         FilterMenu(filter, listOf(null) + VtxoStatus.entries, { status -> status?.let { "${it.label} (${vtxos.count { row -> row.statusID == it }})" } ?: "All" }) { filter = it }
         AmountRow(app, "Total (${vtxos.size} VTXOs)", vtxos.sumOf { it.amount })
@@ -106,13 +104,12 @@ internal fun <T> FilterMenu(selected: T, values: List<T>, label: (T) -> String, 
  * expiring, spendable, not expired); the user still confirms, and submitting checks again, under the wallet's
  * locks, that every reviewed VTXO is still due. With none left there's no review, and Home's nudge catches up when
  * it next checks. It's keyed on
- * nothing that changes, so clearing the request can't cancel a review whose quote is slow. [renewed] hears only of
- * success the journal proves (that reviewed quote's receipt); a dismissed, expired or failed review reports nothing.
+ * nothing that changes, so clearing the request can't cancel a review whose quote is slow. Nothing announces a
+ * renewal: submitting only hands the VTXOs to a round, so the nudge simply folds away once none are due.
  */
 @Composable
 internal fun RenewReview(model: OnchainModel, take: () -> List<String>?, due: suspend (List<String>) -> List<String>,
-                         attempt: suspend (String) -> OnchainOperationJournal.Attempt?, onStart: (List<String>) -> Unit, renewed: (List<String>) -> Unit) {
-    var reviewed by remember { mutableStateOf<String?>(null) }
+                         onStart: (List<String>) -> Unit) {
     // A wallet that can't be read now has nothing proven due, so no review is opened on it.
     suspend fun stillDue(ids: List<String>): List<String> = try { withContext(Dispatchers.IO) { due(ids) } }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
@@ -124,13 +121,5 @@ internal fun RenewReview(model: OnchainModel, take: () -> List<String>?, due: su
         if (ids.isEmpty()) return@LaunchedEffect
         onStart(ids)
         model.review(OnchainAction.refresh, ids, renewal = true)
-        reviewed = model.quote?.takeIf { it.action == OnchainAction.refresh && it.ids == ids.sorted() }?.id
-    }
-    LaunchedEffect(reviewed) {
-        val id = reviewed ?: return@LaunchedEffect
-        // The review is over once its quote has gone and nothing is being submitted: confirmed, dismissed or expired.
-        snapshotFlow { model.quote?.id == id || model.busy }.first { !it }
-        attempt(id)?.takeIf { it.receipt != null }?.let { renewed(it.quote.ids) }
-        reviewed = null
     }
 }

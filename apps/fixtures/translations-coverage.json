@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1476,
-  "sourceKeys": 1479,
+  "catalogEntries": 1475,
+  "sourceKeys": 1478,
   "coverage": {
     "ios": {
       "used": [
@@ -1954,7 +1954,6 @@
         "Remove amount",
         "Renew",
         "Renew {amount}",
-        "Renewed",
         "Repeat",
         "Repeat payment",
         "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again.",
