@@ -131,7 +131,8 @@ sealed class SendDestinationError : Exception() {
         if (this is InvalidMethods) return errors.joinToString(", ") { it.message }
         val (source, args) = template
         var index = 0
-        return Regex("\\{\\w+}").replace(source) { args[index++] }
+        // Android's ICU regex needs the closing brace escaped too (the JVM's doesn't).
+        return Regex("\\{\\w+\\}").replace(source) { args[index++] }
     }
     fun localized(context: android.content.Context): String {
         if (this is InvalidMethods) return errors.joinToString(", ") { it.localized(context) }
