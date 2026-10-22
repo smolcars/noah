@@ -16,8 +16,34 @@ final class AppModel {
         case restoreIncomplete
     }
 
+    /// Returning to the foreground catches the wallet up: a sync, then the balance read.
+    /// Leaving the foreground starts a catch-up and that read finishes it. Home's first
+    /// payment waits for it, so what it imports doesn't play as live. In memory only.
+    struct CatchUp: Equatable {
+        var started = 0
+        var finished = 0
+        /// `summaryRevision` just before the finished catch-up's balance read: any later
+        /// revision was read after its sync.
+        var summaryRevision = 0
+
+        var pending: Bool { finished < started }
+
+        /// An older return finishing late leaves a newer one pending.
+        mutating func finish(_ started: Int, summaryRevision: Int) {
+            guard started > finished else { return }
+            finished = started
+            self.summaryRevision = summaryRevision
+        }
+
+        /// The sync is done, a balance read after it has landed, and history has been reloaded since.
+        func isCaughtUp(summaryRevision: Int, historyReloadedFor reloaded: Int) -> Bool {
+            !pending && summaryRevision > self.summaryRevision && reloaded == finished
+        }
+    }
+
     private(set) var phase: Phase = .launching
     private(set) var summaryRevision = 0
+    private(set) var catchUp = CatchUp()
     private(set) var summary: WalletSession.Summary?
     private(set) var walletSessionRevision = 0
     private(set) var walletError: String?
@@ -511,6 +537,7 @@ final class AppModel {
         summaryRefresh = UUID()
         foregroundActivation?.revoke()
         recurringForeground?.stop()
+        catchUp.started += 1
     }
 
     func appBecameActive() async {
@@ -522,12 +549,14 @@ final class AppModel {
             budget.revoke()
             if foregroundActivation === budget { foregroundActivation = nil }
         }
-        await ForegroundExecution.run(budget: budget) { await refreshOnForeground() }
+        let started = catchUp.started
+        await ForegroundExecution.run(budget: budget) { await refreshOnForeground(catchingUp: started) }
     }
 
-    private func refreshOnForeground() async {
+    private func refreshOnForeground(catchingUp started: Int) async {
         await session.waitForBackgroundAccess()
         guard RecurringSubmissionBudget.available, UIApplication.shared.applicationState == .active else { return }
+        var synced = summaryRevision
         RestoreTransaction(location: WalletDataLocation(variant: variant)).completeSettings(settings)
         if phase == .wallet, !isWalletSuspended, !(await session.isOpen) { await openExistingWallet() }
         await retrySecureStorage()
@@ -541,8 +570,10 @@ final class AppModel {
             try? await server.refreshMailboxIfNeeded()
             await AppServices.shared.syncInForeground()
             await RecurringExecutor.shared.execute()
+            synced = summaryRevision
             await refresh()
         }
+        catchUp.finish(started, summaryRevision: synced)
         await reconcileBackupTriggers()
         guard canCoordinateBackups else { return }
         await AppServices.shared.backupCoordinator.schedule(.appForeground, immediate: true)

@@ -23,6 +23,8 @@ struct HomeView: View {
     @Environment(\.homeFixture) private var fixture
     @State private var home: HomeModel
     @State private var tracker = HomeActivityTracker()
+    /// The foreground catch-up (`AppModel.CatchUp.finished`) history has been reloaded for.
+    @State private var historyCatchUp = 0
     @State private var renew = OnchainModel(dependencies: .renew())
     @State private var haptics = OnboardingHaptics()
     @State private var path: [Route] = []
@@ -431,12 +433,15 @@ struct HomeView: View {
         /// Nil for fixtures: nothing to wait for.
         var revision: Int?
         var historyBusy: Bool
+        var caughtUp: Bool
     }
 
     var trackerInput: TrackerInput {
         TrackerInput(state: layoutState, ids: history.transactions.map(\.id), sats: summary?.balance.totalSats ?? 0,
                      visible: visible, wallet: summary?.fingerprint, revision: fixture == nil ? model.summaryRevision : nil,
-                     historyBusy: history.isLoading || history.isRefreshing)
+                     historyBusy: history.isLoading || history.isRefreshing,
+                     caughtUp: fixture != nil || (history.error == nil && model.catchUp.isCaughtUp(
+                        summaryRevision: model.summaryRevision, historyReloadedFor: historyCatchUp)))
     }
 
     // MARK: Actions
@@ -594,10 +599,23 @@ struct HomeView: View {
             requestVisitRefresh: {
                 // Give the app's own launch or foreground refresh a moment, then ask for the same
                 // read-only refresh; a failure retries (backing off) rather than leaving detection off.
+                // It can't arm a visit on its own while a foreground catch-up is still running.
                 var delay = 3.0
                 while !Task.isCancelled && !tracker.armed {
                     do { try await Task.sleep(for: .seconds(delay)) } catch { return }
                     await model.refresh()
+                    delay = min(delay * 2, 30)
+                }
+            },
+            catchUpID: fixture == nil ? model.catchUp.finished : nil,
+            reloadHistoryAfterCatchUp: {
+                // Read what the catch-up imported before arming, retrying a failed read.
+                let finished = model.catchUp.finished
+                var delay = 3.0
+                while historyCatchUp != finished && !Task.isCancelled {
+                    await history.refresh(currency: model.preferredCurrency)
+                    if history.error == nil && !Task.isCancelled { historyCatchUp = finished; return }
+                    do { try await Task.sleep(for: .seconds(delay)) } catch { return }
                     delay = min(delay * 2, 30)
                 }
             },
@@ -611,7 +629,7 @@ struct HomeView: View {
                 withAnimation(NoahTokens.Motion.travel(reduceMotion)) {
                     tracker.update(state: input.state, transactions: history.transactions, balanceSats: input.sats,
                                    visible: input.visible, walletKey: input.wallet, summaryRevision: input.revision,
-                                   historyBusy: input.historyBusy)
+                                   historyBusy: input.historyBusy, caughtUp: input.caughtUp)
                 }
             },
             celebrate: playCelebration,
@@ -701,6 +719,9 @@ private struct HomeMoments: ViewModifier {
     /// Set while a Fresh visit waits for its first refresh before a payment can play.
     let awaitingRefresh: String?
     let requestVisitRefresh: () async -> Void
+    /// The latest finished foreground catch-up; nil for fixtures.
+    let catchUpID: Int?
+    let reloadHistoryAfterCatchUp: () async -> Void
     let celebrationID: UUID?
     let toastID: UUID?
     let wallet: String?
@@ -728,6 +749,10 @@ private struct HomeMoments: ViewModifier {
             .task(id: awaitingRefresh) {
                 guard awaitingRefresh != nil else { return }
                 await requestVisitRefresh()
+            }
+            .task(id: catchUpID) {
+                guard catchUpID != nil else { return }
+                await reloadHistoryAfterCatchUp()
             }
             .task(id: toastID) { await expireToast() }
             .task { await entrance() }

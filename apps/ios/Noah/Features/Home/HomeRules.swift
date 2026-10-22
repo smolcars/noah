@@ -303,10 +303,12 @@ final class HomeActivityTracker {
 
     /// `summaryRevision` is the app's balance refresh count: a visit arms once it has
     /// moved on from where the visit started and history isn't loading. Nil (fixtures)
-    /// has nothing to wait for.
+    /// has nothing to wait for. `caughtUp` holds it until the foreground catch-up and the
+    /// history reload after it have landed: a balance refresh alone can't arm a visit
+    /// while a slow catch-up is still importing what arrived while you were away.
     func update(state: HomeLayoutState, transactions: [HistoryTransaction], balanceSats: UInt64,
                 visible: Bool, walletKey: String?, summaryRevision: Int? = nil, historyBusy: Bool = false,
-                now: Date = Date()) {
+                caughtUp: Bool = true, now: Date = Date()) {
         let walletChanged = walletKey != self.walletKey
         if walletChanged {
             baseline = nil
@@ -327,7 +329,7 @@ final class HomeActivityTracker {
         if visible && (!self.visible || walletChanged) { visitRevision = summaryRevision }
         self.walletKey = walletKey
         self.visible = visible
-        if visible && !armed && !historyBusy && state != .loading
+        if visible && !armed && caughtUp && !historyBusy && state != .loading
             && (summaryRevision == nil || summaryRevision.map { $0 > (visitRevision ?? $0) } == true) {
             // Whatever this visit's first refresh brought in arrived while you were away.
             armed = true

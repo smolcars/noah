@@ -392,6 +392,93 @@ struct HomeRulesTests {
         #expect(try #require(tracker.celebration).sats == 5_000)
     }
 
+    /// Home on a Fresh wallet, armed, then backgrounded and brought back while the
+    /// foreground catch-up is slower than the 3 s fallback refresh.
+    @MainActor final class SlowReturn {
+        let tracker = HomeActivityTracker()
+        var catchUp = AppModel.CatchUp()
+        var summaryRevision = 3
+        var reloaded = 0
+        var rows: [HistoryTransaction] = []
+        var sats: UInt64 = 0
+
+        init() {
+            show(true)
+            summaryRevision += 1 // This visit's first balance read.
+            show(true)
+            #expect(tracker.armed)
+            show(false)
+            catchUp.started += 1 // Leaving the foreground.
+            show(true)
+        }
+
+        func show(_ visible: Bool, historyBusy: Bool = false) {
+            tracker.update(state: rows.isEmpty && sats == 0 ? .fresh : .everyday, transactions: rows, balanceSats: sats,
+                           visible: visible, walletKey: "w", summaryRevision: summaryRevision, historyBusy: historyBusy,
+                           caughtUp: catchUp.isCaughtUp(summaryRevision: summaryRevision, historyReloadedFor: reloaded))
+        }
+
+        /// The fallback refresh at 3 s reads the cached balance before the sync has run.
+        func fallbackRefresh() { summaryRevision += 1; show(true) }
+
+        /// The catch-up's balance read after its sync (failing leaves the revision alone),
+        /// then Home's history reload for it.
+        func finishCatchUp(readSucceeds: Bool = true) {
+            let synced = summaryRevision
+            if readSucceeds { summaryRevision += 1 }
+            catchUp.finish(catchUp.started, summaryRevision: synced)
+            show(true)
+            #expect(!tracker.armed) // Not before the history reload.
+            reloaded = catchUp.finished
+            show(true)
+        }
+    }
+
+    @Test func aSlowCatchUpDoesNotPlayWhatItImportsAsLive() {
+        let home = SlowReturn()
+        home.fallbackRefresh()
+        #expect(!home.tracker.armed)
+        // The sync imports the payment that landed while away.
+        home.rows = [Self.row("away", amount: 2_100)]
+        home.show(true, historyBusy: true)
+        home.sats = 2_100
+        home.show(true)
+        #expect(home.tracker.celebration == nil && home.tracker.shown == .everyday)
+        home.finishCatchUp()
+        #expect(home.tracker.armed && home.tracker.celebration == nil)
+    }
+
+    @Test func aPaymentAfterASlowCatchUpStillPlays() throws {
+        let home = SlowReturn()
+        home.fallbackRefresh()
+        #expect(!home.tracker.armed)
+        home.finishCatchUp()
+        #expect(home.tracker.armed && home.tracker.shown == .fresh)
+        home.rows = [Self.row("live", amount: 5_000)]
+        home.sats = 5_000
+        home.show(true)
+        #expect(try #require(home.tracker.celebration).sats == 5_000)
+    }
+
+    @Test func aCatchUpNeedsItsOwnBalanceReadAndTheLatestReturn() {
+        // The catch-up's balance read failed: a retried read after it is still needed.
+        let home = SlowReturn()
+        home.finishCatchUp(readSucceeds: false)
+        #expect(!home.tracker.armed)
+        home.fallbackRefresh()
+        #expect(home.tracker.armed)
+        // An older return's catch-up finishing late leaves the newer one pending.
+        var catchUp = AppModel.CatchUp()
+        catchUp.started = 2
+        catchUp.finish(1, summaryRevision: 7)
+        #expect(catchUp.pending && !catchUp.isCaughtUp(summaryRevision: 9, historyReloadedFor: 1))
+        catchUp.finish(2, summaryRevision: 8)
+        catchUp.finish(1, summaryRevision: 3)
+        #expect(!catchUp.pending && catchUp.summaryRevision == 8)
+        #expect(catchUp.isCaughtUp(summaryRevision: 9, historyReloadedFor: 2))
+        #expect(!catchUp.isCaughtUp(summaryRevision: 8, historyReloadedFor: 2))
+    }
+
     @Test func aFailedHistoryReadIsNotAPayment() {
         let tracker = HomeActivityTracker()
         tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w")
