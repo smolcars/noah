@@ -126,9 +126,12 @@ final class SettingsStorage: @unchecked Sendable {
         catch { AppLog("settings").e("Settings write failed") }
     }
     func setDurably(_ value: String, forKey key: String) throws {
+        try setDurably([key: value])
+    }
+    private func setDurably(_ values: [String: String]) throws {
         Self.access.lock(); defer { Self.access.unlock() }
         let previous = load()
-        var state = previous; state.values[key] = value
+        var state = previous; state.values.merge(values) { _, new in new }
         do { try persist(state) }
         catch { fallback = previous; throw error }
     }
@@ -192,10 +195,17 @@ final class SettingsStorage: @unchecked Sendable {
         } catch { fallback = state; return false }
     }
 
-    func beginOnboarding() throws {
+    /// One commit before the seed exists: only a restore counts as backed up,
+    /// and a new wallet never inherits an earlier wallet's flag.
+    func beginOnboarding(recoveryPhraseBackedUp: Bool) throws {
+        Self.access.lock(); defer { Self.access.unlock() }
         var wallet = persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isInitialized = false
-        try setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
+        try setDurably([
+            PersistedWalletState.key: encodedPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version),
+            PersistedRecoveryPhraseBackup.key: encodedPersistedState(PersistedRecoveryPhraseBackup(isBackedUp: recoveryPhraseBackedUp),
+                key: PersistedRecoveryPhraseBackup.key, version: PersistedRecoveryPhraseBackup.version),
+        ])
     }
 
     /// Reads a zustand-persisted store. Returns `nil` when the key is absent
@@ -213,11 +223,13 @@ final class SettingsStorage: @unchecked Sendable {
 
     /// Writes a zustand-compatible envelope so the value round-trips.
     func setPersistedState<State: Encodable>(_ state: State, key: String, version: Int) throws {
+        try setDurably(encodedPersistedState(state, key: key, version: version), forKey: key)
+    }
+    private func encodedPersistedState<State: Encodable>(_ state: State, key: String, version: Int) throws -> String {
         let data = try JSONEncoder().encode(PersistedEnvelope(state: state, version: version))
         let encoded = String(decoding: data, as: UTF8.self)
-        let value = RNStoreCodec.schemas[key] == nil ? encoded
+        return RNStoreCodec.schemas[key] == nil ? encoded
             : try RNStoreCodec.merging(encoded, into: string(forKey: key), key: key)
-        try setDurably(value, forKey: key)
     }
 
     /// Native writes remain observable by financial automation.

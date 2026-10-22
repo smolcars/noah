@@ -25,6 +25,8 @@ final class AppModel {
     private(set) var switchingToDefaultServer = false
     @ObservationIgnored private var customOpenWait: EsploraOpenWait?
     private(set) var resumeOnboarding = false
+    /// Home's "Back up your wallet" prompt (`PersistedRecoveryPhraseBackup`).
+    private(set) var needsRecoveryPhraseBackup = false
     private(set) var isRestoring = false
     private(set) var restoreStep: WalletRestorer.Step?
     private(set) var restoreIssue: RestoreIssue?
@@ -147,10 +149,11 @@ final class AppModel {
         }
         RestoreTransaction(location: WalletDataLocation(variant: variant)).completeSettings(settings)
         isWalletSuspended = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended == true
+        reloadRecoveryPhraseBackup()
         let state = readLaunchState()
         switch state {
         case .existingWallet:
-            resumeOnboarding = settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false
+            resumeOnboarding = Self.resumesOnboarding(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
             await openExistingWallet()
             if phase == .launching && !customServerUnresponsive { phase = resumeOnboarding ? .onboarding : .wallet }
         case .onboarding:
@@ -160,7 +163,14 @@ final class AppModel {
         }
     }
 
-    /// Onboarding "I accept": create (or resume) the wallet.
+    /// Seed plus wallet data opens Home even when settings are missing or
+    /// damaged; only a readable store that says onboarding never finished
+    /// resumes it (at Name).
+    nonisolated static func resumesOnboarding(_ wallet: PersistedWalletState?) -> Bool {
+        wallet?.isInitialized == false
+    }
+
+    /// Onboarding "Got it": create (or resume) the wallet.
     func createWallet() async throws {
         do { try await creator.createOrResume() }
         catch {
@@ -174,6 +184,19 @@ final class AppModel {
         try settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
         // Registration failure must not hide the newly created recovery phrase.
         Task { await startServerServices() }
+    }
+
+    /// The user confirmed they wrote the phrase down after viewing it.
+    func confirmRecoveryPhraseBackedUp() throws {
+        try settings.setPersistedState(PersistedRecoveryPhraseBackup(isBackedUp: true),
+                                       key: PersistedRecoveryPhraseBackup.key, version: PersistedRecoveryPhraseBackup.version)
+        reloadRecoveryPhraseBackup()
+    }
+
+    private func reloadRecoveryPhraseBackup() {
+        // Missing or unreadable never hides the prompt.
+        needsRecoveryPhraseBackup = (settings.persistedState(PersistedRecoveryPhraseBackup.self, key: PersistedRecoveryPhraseBackup.key) ?? .init())
+            .needsBackup
     }
 
     func currentMnemonicWords() -> [String] {
@@ -204,7 +227,7 @@ final class AppModel {
                 variant: variant, session: session, location: location,
                 seed: KeychainPassword.mnemonic(for: variant),
                 makeClient: { ServerClient.makeRestore(variant: variant, mnemonic: $0) },
-                beginOnboarding: { [settings] in try settings.beginOnboarding() })
+                beginOnboarding: { [settings] in try settings.beginOnboarding(recoveryPhraseBackedUp: true) })
             let outcome = try await restorer.restore(mnemonic: mnemonic) { [weak self] step in
                 Task { @MainActor in
                     if self?.isRestoring == true { self?.restoreStep = step }
@@ -222,6 +245,7 @@ final class AppModel {
                 openWallet: {
                     await AppServices.shared.tokens.invalidate()
                     self.resumeOnboarding = false
+                    self.reloadRecoveryPhraseBackup()
                     self.phase = .wallet
                     await self.openExistingWallet()
                 }).finish(outcome)
@@ -239,6 +263,7 @@ final class AppModel {
         wallet.isInitialized = true
         wallet.isWalletLoaded = true
         try? settings.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
+        reloadRecoveryPhraseBackup()
         phase = .wallet
         await pushPermission.refresh()
         guard !pushPermission.blocksWallet(initialized: true) else { return }
@@ -383,6 +408,7 @@ final class AppModel {
         walletError = nil
         isWalletSuspended = false
         resumeOnboarding = false
+        needsRecoveryPhraseBackup = false
         server.reload()
         phase = .onboarding
     }

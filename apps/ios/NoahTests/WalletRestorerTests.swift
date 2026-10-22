@@ -118,7 +118,7 @@ struct WalletRestorerTests {
         await #expect(throws: SettingsStorage.OpenError.self) { try await restorer.restore(mnemonic: mnemonic) }
         try expectPreviousWalletBack(seed)
         let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
-        restorer.beginOnboarding = { try settings.beginOnboarding() }
+        restorer.beginOnboarding = { try settings.beginOnboarding(recoveryPhraseBackedUp: true) }
         _ = try await restorer.restore(mnemonic: mnemonic)
         #expect(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == false)
         #expect(seed.current == mnemonic)
@@ -129,7 +129,7 @@ struct WalletRestorerTests {
         let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
         let seed = FakeSeed(Self.previousSeed)
         var (restorer, mnemonic) = try await setUp(seed: seed)
-        restorer.beginOnboarding = { try settings.beginOnboarding() }
+        restorer.beginOnboarding = { try settings.beginOnboarding(recoveryPhraseBackedUp: true) }
         _ = try await restorer.restore(mnemonic: mnemonic) { step in
             if step == .loading || step == .finalizing {
                 let reopened = try? SettingsStorage(rootPath: root.appending(path: "mmkv").path)

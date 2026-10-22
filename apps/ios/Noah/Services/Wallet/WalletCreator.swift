@@ -168,6 +168,6 @@ extension WalletCreator.Dependencies {
             reserve: { try await session.reserve() },
             release: { await session.release($0) },
             createNew: { try await session.createNew($0, mnemonic: $1, runDaemon: true, appVersion: appVersion) },
-            beginOnboarding: { try settings.beginOnboarding() })
+            beginOnboarding: { try settings.beginOnboarding(recoveryPhraseBackedUp: false) })
     }
 }

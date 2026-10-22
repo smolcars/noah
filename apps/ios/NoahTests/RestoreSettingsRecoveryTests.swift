@@ -93,7 +93,7 @@ struct RestoreSettingsRecoveryTests {
         let committed = !["journal", "previousMoved", "installed", "committing"].contains(step)
         if mode != "recover" {
             try fm.createDirectory(at: preferences, withIntermediateDirectories: true)
-            try SettingsStorage(rootPath: settingsRoot.path).beginOnboarding()
+            try SettingsStorage(rootPath: settingsRoot.path).beginOnboarding(recoveryPhraseBackedUp: true)
             try fm.createDirectory(at: location.directory, withIntermediateDirectories: true)
             try Data("old".utf8).write(to: location.database)
             try tx.prepare()
