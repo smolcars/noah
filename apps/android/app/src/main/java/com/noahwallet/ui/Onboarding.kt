@@ -128,7 +128,8 @@ fun MnemonicScreen(model: AppModel, onBackedUp: () -> Unit = {}) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     suspend fun reveal() {
         val started = model.walletLock.generation
-        val fragment = activity as androidx.fragment.app.FragmentActivity
+        // Authentication needs the app's FragmentActivity; any other host never reveals the phrase.
+        val fragment = activity as? androidx.fragment.app.FragmentActivity ?: return
         if (com.noahwallet.ui.settings.WalletLock.hasNoScreenLock(fragment)) {
             if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) warningGeneration = started
         } else if (model.walletLock.authenticate(fragment, "View your seed phrase")) {
