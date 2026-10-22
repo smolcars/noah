@@ -192,7 +192,7 @@ struct HomeView: View {
                         .frame(maxWidth: OnboardingLayout.paneContentWidth + 64)
                         .frame(maxWidth: .infinity)
                 }
-                .modifier(HomeScrollKeeper(area: .activity, memory: scrollMemory))
+                .modifier(HomeScrollKeeper(area: .activity, memory: scrollMemory, rows: history.transactions.map(\.id)))
                 .refreshable { await pullToRefresh() }
                 .modifier(appear(5))
                 .transition(.homeRise(reduceMotion))
@@ -766,36 +766,63 @@ extension EnvironmentValues {
 /// Fresh card and the activity list keep separate positions.
 final class HomeScrollMemory {
     enum Area: Hashable { case compact, leading, fresh, activity }
-    private var offsets: [Area: CGFloat] = [:]
-    private var restores: [Area: CGFloat] = [:]
+    /// The lazy activity list is remembered by its first visible row: an offset can't be
+    /// restored into rows the list hasn't measured yet.
+    enum Position: Equatable { case offset(CGFloat), row(String) }
+    private var positions: [Area: Position] = [:]
+    private var restores: [Area: Position] = [:]
 
-    func record(_ area: Area, _ offset: CGFloat) { offsets[area] = offset }
+    func record(_ area: Area, _ position: Position) { positions[area] = position }
 
     func layoutChanged(toWide wide: Bool) {
-        for area in wide ? [Area.compact] : [.leading, .fresh, .activity] { restores[area] = offsets[area] }
+        for area in wide ? [Area.compact] : [.leading, .fresh, .activity] { restores[area] = positions[area] }
     }
 
-    func takeRestore(_ area: Area) -> CGFloat? { restores.removeValue(forKey: area) }
+    func takeRestore(_ area: Area) -> Position? { restores.removeValue(forKey: area) }
 }
 
 private struct HomeScrollKeeper: ViewModifier {
     let area: HomeScrollMemory.Area
     let memory: HomeScrollMemory
+    /// Track rows by their String IDs (transaction IDs), in this display order, instead of
+    /// the offset; the content needs `scrollTargetLayout()`.
+    var rows: [String]?
     var onOffset: (CGFloat) -> Void = { _ in }
     @State private var position = ScrollPosition(edge: .top)
+    @State private var offset: CGFloat = 0
+    @State private var topRow: String?
 
     func body(content: Content) -> some View {
         content
             .scrollPosition($position)
             .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in
-                memory.record(area, y)
+                offset = y
                 onOffset(y)
+            }
+            .onScrollTargetVisibilityChange(idType: String.self) { visible in
+                guard let rows else { return }
+                let shown = Set(visible)
+                if let first = rows.first(where: shown.contains) { topRow = first }
+            }
+            // Keep where a user's scroll comes to rest. A pose change squeezes the pane and
+            // resets its offset while idle, so those moves are never kept.
+            .onScrollPhaseChange { old, new in
+                guard new == .idle, old != .idle else { return }
+                if rows != nil, offset > 1, let topRow {
+                    memory.record(area, .row(topRow))
+                } else {
+                    memory.record(area, .offset(offset))
+                }
             }
             // Back from the other layout: return to where this area was, once it has laid out.
             .task {
-                guard let offset = memory.takeRestore(area), offset > 0 else { return }
+                guard let restore = memory.takeRestore(area) else { return }
+                memory.record(area, restore)
                 do { try await Task.sleep(for: .milliseconds(80)) } catch { return }
-                position.scrollTo(y: offset)
+                switch restore {
+                case .offset(let offset): if offset > 0 { position.scrollTo(y: offset) }
+                case .row(let id): position.scrollTo(id: id, anchor: .top)
+                }
             }
     }
 }

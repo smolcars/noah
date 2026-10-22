@@ -237,6 +237,8 @@ struct HomeActivityList: View {
                 }
             }
         }
+        // Rows are scroll targets so Home can return to the first visible one after a pose change.
+        .scrollTargetLayout()
         .animation(NoahTokens.Motion.travel(reduceMotion), value: history.transactions.map(\.id))
     }
 
