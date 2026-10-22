@@ -1,39 +1,56 @@
 appId: com.noahwallet.regtest
 ---
-- assertVisible: Emergency Email
-- takeScreenshot: ${SHOTS}/email
+- assertVisible: Pick a name
+- tapOn:
+    id: lightning-username-input
+- inputText: ${USERNAME}
+- extendedWaitUntil:
+    visible: Available
+    timeout: 15000
+- takeScreenshot: ${SHOTS}/name
+- tapOn:
+    id: onboarding-name-continue
+- extendedWaitUntil:
+    visible: Add your email
+    timeout: 30000
 - tapOn:
     id: email-address-input
 - inputText: ${EMAIL}
-- tapOn: Done
-- tapOn: Send Verification Code
+# The keyboard's Send key submits; tapping the button right after inputText can hit a
+# pre-keyboard frame that Maestro cached during the same run.
+- pressKey: Enter
 - extendedWaitUntil:
-    visible: Enter Verification Code
+    visible: Check your email
     timeout: 30000
-- takeScreenshot: ${SHOTS}/code-keyboard
+- takeScreenshot: ${SHOTS}/code
 - inputText: '000001'
-- tapOn: Verify Email
-- assertVisible: Verification Failed
-- tapOn: OK
-- assertVisible: 6-digit code
-- scrollUntilVisible:
-    element: Resend Code
-    direction: DOWN
-- tapOn: Resend Code
 - extendedWaitUntil:
-    visible: 6-digit code
-    timeout: 30000
+    visible: That code didn’t work. Try again.
+    timeout: 15000
 - inputText: '000000'
-- tapOn: Verify Email
 - extendedWaitUntil:
-    visible: Choose your Lightning Address
+    visible: Keep Noah awake
     timeout: 30000
-- takeScreenshot: ${SHOTS}/lightning
 - tapOn:
-    id: lightning-username-input
-- eraseText: 100
-- inputText: ${USERNAME}
-- tapOn: Done
+    id: notifications-enable
+- extendedWaitUntil:
+    visible: You’re all set
+    timeout: 30000
+- assertVisible: ${USERNAME}@.*
+- tapOn:
+    id: onboarding-open-wallet
+- extendedWaitUntil:
+    visible:
+      id: home-backup-prompt
+    timeout: 30000
+- assertNotVisible: Add Emergency Email
+- takeScreenshot: ${SHOTS}/home
+# The Nostr key moved from onboarding to Settings → Profile → Edit Lightning Address.
+- tapOn:
+    id: home-settings-button
+- tapOn:
+    id: settings-profile
+- tapOn: Edit Lightning Address
 - scrollUntilVisible:
     element:
       id: nostr-public-key-input
@@ -51,8 +68,10 @@ appId: com.noahwallet.regtest
 - inputText: npub1kp34665c28f6a5xdd3y4k2ppv7k0wctjjpudja0uxsdjyegtq7us853d4g
 - tapOn: Done
 - tapOn: Save
+# The editor confirms, then returns to Profile, which now lists the key.
 - extendedWaitUntil:
-    visible: Recent Activity
+    visible: Edit Lightning Address
     timeout: 30000
-- assertNotVisible: Add Emergency Email
-- takeScreenshot: ${SHOTS}/home
+- scrollUntilVisible:
+    element: Nostr Public Key
+    direction: DOWN

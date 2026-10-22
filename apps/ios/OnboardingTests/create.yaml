@@ -1,24 +1,23 @@
 appId: com.noahwallet.regtest
 ---
 - launchApp
-- tapOn: Create Wallet
-- tapOn: I accept
 - extendedWaitUntil:
-    visible: Your Recovery Phrase
+    visible:
+      id: onboarding-create
     timeout: 60000
+- takeScreenshot: ${SHOTS}/welcome
+- tapOn:
+    id: onboarding-create
+- assertVisible: Before you start
+- tapOn:
+    id: onboarding-beta-confirm
+- extendedWaitUntil:
+    visible: Pick a name
+    timeout: 60000
+# An interrupted onboarding resumes at Name; the recovery phrase is no longer an onboarding step.
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: Your Recovery Phrase
-    timeout: 30000
-- scrollUntilVisible:
-    element: I Have Saved It, Continue
-    direction: DOWN
-- tapOn: I Have Saved It, Continue
-- extendedWaitUntil:
-    visible: Emergency Email
+    visible: Pick a name
     timeout: 60000
-- extendedWaitUntil:
-    notVisible: Setting up your account...
-    timeout: 60000
-- assertNotVisible: Failed to register with server. Please try again.
+- assertNotVisible: Your Recovery Phrase

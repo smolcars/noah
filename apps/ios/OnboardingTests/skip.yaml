@@ -1,48 +1,51 @@
 appId: com.noahwallet.regtest
 ---
-- assertVisible: Emergency Email
-- takeScreenshot: ${SHOTS}/email
+- assertVisible: Pick a name
+- takeScreenshot: ${SHOTS}/name
+- tapOn:
+    id: onboarding-name-skip
+- extendedWaitUntil:
+    visible: Add your email
+    timeout: 30000
 - tapOn:
     id: email-address-input
-- inputText: se@example.com
-- assertVisible: Done
-- takeScreenshot: ${SHOTS}/email-keyboard
-- tapOn: Done
-- tapOn: Send Verification Code
+- inputText: se@gmial.com
+- assertVisible: Did you mean
+- takeScreenshot: ${SHOTS}/email-typo
+- tapOn: se@gmail.com
 - extendedWaitUntil:
-    visible: Enter Verification Code
+    visible:
+      id: onboarding-email-send
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: onboarding-email-send
+- extendedWaitUntil:
+    visible: Check your email
     timeout: 30000
-- takeScreenshot: ${SHOTS}/code-keyboard
-- tapOn: Done
-- scrollUntilVisible:
-    element: Change email address
-    direction: DOWN
-- tapOn: Change email address
+- takeScreenshot: ${SHOTS}/code
+- tapOn:
+    id: onboarding-email-edit
 - assertVisible:
     id: email-address-input
-- tapOn: Done
-- tapOn: Continue without email
+- tapOn:
+    id: onboarding-email-skip
 - extendedWaitUntil:
-    visible: Choose your Lightning Address
+    visible: Keep Noah awake
     timeout: 30000
 - tapOn:
-    id: lightning-username-input
-- takeScreenshot: ${SHOTS}/username-keyboard
-- tapOn: Done
-- scrollUntilVisible:
-    element:
-      id: nostr-public-key-input
-    direction: DOWN
+    id: notifications-enable
+- extendedWaitUntil:
+    visible: You’re all set
+    timeout: 30000
+- assertVisible: Your wallet is ready.
 - tapOn:
-    id: nostr-public-key-input
-- inputText: npub1
-- assertVisible: Done
-- takeScreenshot: ${SHOTS}/npub-keyboard
-- tapOn: Done
-- tapOn: Skip
+    id: onboarding-open-wallet
 - extendedWaitUntil:
     visible: Add Emergency Email
     timeout: 30000
+- assertVisible:
+    id: home-backup-prompt
 - takeScreenshot: ${SHOTS}/home-banner
 - tapOn: Add Emergency Email
 - assertVisible: Emergency Email
@@ -51,4 +54,8 @@ appId: com.noahwallet.regtest
 - assertNotVisible: Add Emergency Email
 - stopApp
 - launchApp
+- extendedWaitUntil:
+    visible:
+      id: home-backup-prompt
+    timeout: 60000
 - assertNotVisible: Add Emergency Email

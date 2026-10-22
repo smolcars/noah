@@ -25,7 +25,11 @@ maestro --device "$NOAH_TEST_UDID" test --debug-output apps/ios/build/maestro \
   apps/ios/OnboardingTests/create-and-verify.yaml
 ```
 
-`create-and-verify.yaml` covers fresh creation, restart/resume at the recovery phrase, registration, invalid-code clearing, resend, successful email verification, nsec rejection, npub linking and arrival at Home without the email banner. `create-and-skip.yaml` covers both skips, email/code/username/npub keyboard layouts, changing the email address, the Home email entry point and persisted banner dismissal. Supply `SHOTS` for either flow. Screenshots begin after the recovery phrase.
+`create-and-verify.yaml` covers the redesigned flow: Welcome → beta sheet → Creating, a restart that resumes at Name (the recovery phrase is no longer an onboarding step), an available name, the email code with a wrong code and the regtest code, required notifications, Done with the saved address, Home with the backup prompt and no email banner, then nsec rejection and npub linking in Settings → Profile → Edit Lightning Address (where the Nostr field now lives). `create-and-skip.yaml` covers skipping the name, the typo chip, sending a code and editing the address, skipping email, "Your wallet is ready.", the Home email entry point, persisted banner dismissal and the persisted backup prompt. Supply `SHOTS` for either flow.
+
+The email address is submitted with the keyboard's Send key: tapping the button straight after `inputText` can hit the button's pre-keyboard position, which Maestro caches within a run (it lands on the keyboard's `@` key).
+
+All onboarding states, including ones the simulator can't reach (it never denies notifications), render from fakes in `NoahTests/OnboardingShotTests.swift`: run it with `TEST_RUNNER_NOAH_ONBOARDING_SHOTS=1` and write a state name (`welcome`, `beta`, `name-taken`, `email-code`, `notifications-required`, `restoring-ready`, …) to the app's `Documents/onboarding-shot`; `stop` ends the session. The restore states use only the public BIP-39 test vector.
 
 Use `xcrun simctl ui "$NOAH_TEST_UDID" appearance light` or `dark` before each pass. An iPhone SE (3rd generation) provides the 375 × 667 layout. Delete `apps/ios/build/DerivedData` and temporary Maestro debug output after verification. Screenshots go to the `SHOTS` directory and are not committed (`apps/ios/OnboardingTests/screenshots/` is git-ignored).
 
