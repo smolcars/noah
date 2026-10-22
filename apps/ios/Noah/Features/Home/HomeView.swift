@@ -23,7 +23,7 @@ struct HomeView: View {
     @Environment(\.homeFixture) private var fixture
     @State private var home: HomeModel
     @State private var tracker = HomeActivityTracker()
-    @State private var renew = OnchainModel()
+    @State private var renew = OnchainModel(dependencies: .renew())
     @State private var haptics = OnboardingHaptics()
     @State private var path: [Route] = []
     @State private var upgradeNotices: [String] = []
@@ -520,17 +520,11 @@ struct HomeView: View {
         }
     }
 
-    /// Submits only while every reviewed coin is still refreshable and inside the window.
-    /// Submission isn't renewal, so there's no success toast: the nudge folds away once
-    /// nothing is left to renew.
+    /// Submits only while every reviewed coin is still refreshable and inside the window;
+    /// `WalletSession.executeRenewal` checks that under the wallet's locks. Submission isn't
+    /// renewal, so there's no success toast: the nudge folds away once nothing is left to renew.
     private func confirmRenew() {
         Task {
-            guard let quote = renew.quote else { return }
-            guard let current = await home.currentRenewal(), Set(quote.ids).isSubset(of: Set(current.ids)) else {
-                renew.invalidate()
-                alert = OnchainFailure.changed.errorDescription
-                return
-            }
             await renew.confirm()
             if let error = renew.error { alert = error }
             await home.refreshRenewal()

@@ -1,5 +1,6 @@
 import BarkBoltFFI
 import Foundation
+import Synchronization
 
 extension WalletSession {
     func onchainOverview() async throws -> OnchainOverview {
@@ -377,6 +378,63 @@ extension WalletSession {
                 }
             }
         }
+    }
+
+    /// Home's Renew. The review is the existing refresh review; submission takes this path
+    /// instead of `executeOnchain`, so it can carry the expiry threshold. Manual refreshes
+    /// (the VTXO screen refreshes any spendable VTXO) keep `executeOnchain`.
+    func executeRenewal(_ quote: OnchainQuote, journal: OnchainOperationJournal = .shared) async throws -> String {
+        let flight = syncFlight
+        let threshold = UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)
+        return try await withOpenWallet { handles in
+            try await Self.submitRenewal(
+                quote, threshold: threshold, journal: journal, flight: flight,
+                requote: {
+                    try await Self.onchainQuote(handles, action: .refresh, ids: quote.ids, amount: quote.amount,
+                                                destination: nil, automatic: quote.automatic)
+                },
+                expiring: { try await handles.wallet.getExpiringVtxos(thresholdBlocks: $0).map(Self.renewalCoin) },
+                tip: { try await handles.onchain.tipHeight() },
+                refresh: { ids in
+                    let round = try await handles.wallet.refreshVtxosDelegated(vtxoIds: ids)
+                    return OnchainReceipt(
+                        message: round.map { "Refresh submitted to delegated round \($0.id)." }
+                            ?? "No refresh round was needed.")
+                })
+        }
+    }
+
+    /// Holds the sync flight from the final re-quote to submission, so no app sync can move
+    /// the tip meanwhile, and runs the eligibility check inside the journal's single on-chain
+    /// operation, immediately before submitting with nothing awaited in between: every VTXO
+    /// must still be in the expiring set at this threshold and tip, spendable and unexpired.
+    /// Otherwise nothing is submitted and the review has changed.
+    static func submitRenewal(
+        _ quote: OnchainQuote, threshold: UInt32, journal: OnchainOperationJournal, flight: WalletSync,
+        requote: @escaping @Sendable () async throws -> OnchainQuote,
+        expiring: @escaping @Sendable (UInt32) async throws -> [HomeRenewal.Coin],
+        tip: @escaping @Sendable () async throws -> UInt32,
+        refresh: @escaping @Sendable ([String]) async throws -> OnchainReceipt
+    ) async throws -> String {
+        guard quote.action == .refresh, ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        let message = Mutex<String?>(nil)
+        try await flight.serialized {
+            let fresh = try await requote()
+            guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+            let receipt = try await journal.perform(quote) {
+                // The expiring set first, then the tip it's judged against.
+                let current = HomeRenewal.select(try await expiring(threshold), tip: try await tip())
+                guard HomeRenewal.allEligible(quote.ids, in: current) else { throw OnchainFailure.changed }
+                return try await refresh(quote.ids)
+            }
+            message.withLock { $0 = receipt }
+        }
+        guard let result = message.withLock({ $0 }) else { throw OnchainFailure.uncertain }
+        return result
+    }
+
+    static func renewalCoin(_ vtxo: Vtxo) -> HomeRenewal.Coin {
+        .init(id: vtxo.id, sats: vtxo.amountSats, expiryHeight: vtxo.expiryHeight, spendable: vtxo.state == .spendable)
     }
 
     func refreshOnchainReceiptFees(journal: OnchainOperationJournal = .shared) async throws {

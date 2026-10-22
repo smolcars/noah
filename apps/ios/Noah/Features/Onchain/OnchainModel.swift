@@ -40,6 +40,14 @@ final class OnchainModel {
                 claimOwnership: { try await session.exitClaimDestinationIsMine($0) },
                 discardReview: { await session.discardBoard($0) })
         }
+
+        /// Home's Renew: the same review, submitted through the renewal path that rechecks
+        /// eligibility under the sync flight and the journal's operation.
+        static func renew(session: WalletSession = .shared) -> Self {
+            var dependencies = live(session: session)
+            dependencies.execute = { try await session.executeRenewal($0) }
+            return dependencies
+        }
     }
     private let dependencies: Dependencies
     private let detailID: String?

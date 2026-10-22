@@ -20,9 +20,7 @@ extension WalletSession {
             let tip = try await handles.onchain.tipHeight()
             let expiring = try await handles.wallet.getExpiringVtxos(
                 thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold))
-            return HomeRenewal.select(expiring.map {
-                .init(id: $0.id, sats: $0.amountSats, expiryHeight: $0.expiryHeight, spendable: $0.state == .spendable)
-            }, tip: tip)
+            return HomeRenewal.select(expiring.map(Self.renewalCoin), tip: tip)
         }
     }
 }
