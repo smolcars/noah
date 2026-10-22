@@ -273,7 +273,8 @@ struct HomeView: View {
                         onCopy: copyAddress, onShare: { haptics.play(.light) }, onProfile: { open(.profile) })
             .opacity(folding ? 0 : 1)
             .scaleEffect(folding && !reduceMotion ? 0.96 : 1)
-            .frame(height: folding ? 0 : nil, alignment: .top)
+            // Reduce Motion fades the card without folding it; Recent then fades in on its own.
+            .frame(height: folding && !reduceMotion ? 0 : nil, alignment: .top)
             // Clip only the fold, never the card's shadow.
             .clipShape(Rectangle().inset(by: folding ? 0 : -48))
             .task {

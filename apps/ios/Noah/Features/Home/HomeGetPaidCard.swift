@@ -169,13 +169,16 @@ private struct HomeReceipt: View {
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
-                Circle().trim(from: 0, to: ring ? 1 : 0)
+                // Reduce Motion draws the complete ring and check and only fades them in.
+                Circle().trim(from: 0, to: ring || reduceMotion ? 1 : 0)
                     .stroke(NoahTokens.Colors.orange, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .padding(1.25)
+                    .opacity(ring || !reduceMotion ? 1 : 0)
                 CheckShape(points: [CGPoint(x: 27, y: 43), CGPoint(x: 37, y: 53), CGPoint(x: 58, y: 31)], box: 84)
-                    .trim(from: 0, to: check ? 1 : 0)
+                    .trim(from: 0, to: check || reduceMotion ? 1 : 0)
                     .stroke(NoahTokens.Colors.qrInk, style: StrokeStyle(lineWidth: 3.2, lineCap: .round, lineJoin: .round))
+                    .opacity(check || !reduceMotion ? 1 : 0)
             }
             .frame(width: 84, height: 84)
             Text(verbatim: hidden ? "••••" : "+" + BitcoinAmount.format(sats: Int64(clamping: celebration.sats), unit: unit, locale: locale))
