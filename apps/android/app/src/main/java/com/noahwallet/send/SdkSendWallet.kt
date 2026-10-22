@@ -11,6 +11,12 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     override suspend fun retryDiscards() = preparations.retryDiscards()
     fun recipientService() = SendRecipientService(network, warn, arkServerKey = { wallet.arkInfo()?.serverPubkey }, validateArk = { wallet.validateArkoorAddress(it) })
     suspend fun pendingHashes() = wallet.pendingLightningSends().map { it.paymentHash }.toSet()
+    /** The SDK estimates today's quotes start from. Prepares and reserves nothing; never used to pay. */
+    suspend fun estimateFee(rail: SendRail, amount: Long, destination: String?): Long = when (rail) {
+        SendRail.ark -> wallet.estimateArkoorPaymentFee(amount.toULong())
+        SendRail.lightning -> wallet.estimateLightningSendFee(amount.toULong())
+        SendRail.onchain -> wallet.estimateSendOnchainFee(destination ?: throw SendFailure(SendFailure.Reason.invalid), amount.toULong())
+    }.feeSats.toLong()
     override suspend fun identity() = SendIdentity(wallet.fingerprint(), wallet.network().name)
     override suspend fun quote(payment: SendPayment): SendQuote {
         requireSend(payment.amount in 1..2_100_000_000_000_000L || payment.max && payment.amount >= 0)

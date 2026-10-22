@@ -194,6 +194,13 @@ class WalletSession internal constructor(
         sdk.recipientService().resolve(destination)
     }
     suspend fun pendingSendHashes(): Set<String> = withOpen { (it.send as SdkSendWallet).pendingHashes() }
+    /** Display only, for Send's method cards; the review's quote stays the authority. */
+    suspend fun estimateSendFee(rail: com.noahwallet.send.SendRail, amount: Long, destination: String?): Long =
+        withOpen { (it.send as SdkSendWallet).estimateFee(rail, amount, destination) }
+    /** bark's own records, for Send to read a failed Lightning send's recorded refund. */
+    suspend fun movements(): List<io.github.niteshbalusu11.bark.Movement> = withOpen { it.history() }
+    /** The tip of the chain source the wallet already uses, for Send and Receive's block row. */
+    suspend fun chainTip(): Long = withOpen { it.m6.tip() }
 
     class Reservation internal constructor()
     private var runningCalls = 0
