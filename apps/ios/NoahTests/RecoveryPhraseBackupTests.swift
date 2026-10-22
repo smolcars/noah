@@ -68,8 +68,8 @@ struct RecoveryPhraseBackupTests {
     @Test func restoredWalletOpensHomeWithoutThePromptAndCreationResetsIt() throws {
         let (settings, root) = try storage()
         defer { try? FileManager.default.removeItem(at: root) }
-        // What `restoreWallet` writes before installing the backup, then completion.
-        try settings.beginOnboarding(recoveryPhraseBackedUp: true)
+        // What `restoreWallet(phrase:)` writes before installing the backup, then completion.
+        try AppModel.beginRestore(settings, typedPhrase: true)
         #expect(settings.completeRestore())
         let restored = try #require(wallet(settings))
         #expect(restored.isInitialized == true)
@@ -80,6 +80,26 @@ struct RecoveryPhraseBackupTests {
         try settings.beginOnboarding(recoveryPhraseBackedUp: false)
         #expect(backup(settings).needsBackup)
         #expect(wallet(settings)?.isInitialized == false)
+    }
+
+    @Test func keychainOnlyRestoreNeverMarksTheBackup() throws {
+        let (settings, root) = try storage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        // Reinstall recovery: settings are gone, the seed survives in the Keychain.
+        try AppModel.beginRestore(settings, typedPhrase: false)
+        #expect(settings.completeRestore())
+        #expect(wallet(settings)?.isInitialized == true)
+        #expect(backup(settings).isBackedUp == nil)
+        #expect(backup(settings).needsBackup)
+        let reopened = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        #expect(backup(reopened).needsBackup)
+
+        // Nor does it overwrite an unconfirmed wallet's answer.
+        try settings.beginOnboarding(recoveryPhraseBackedUp: false)
+        try AppModel.beginRestore(settings, typedPhrase: false)
+        #expect(settings.completeRestore())
+        #expect(backup(settings).isBackedUp == false)
+        #expect(backup(settings).needsBackup)
     }
 
     @Test func flagSurvivesReopenAndUnrelatedWalletWrites() throws {

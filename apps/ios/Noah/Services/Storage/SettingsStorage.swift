@@ -195,17 +195,20 @@ final class SettingsStorage: @unchecked Sendable {
         } catch { fallback = state; return false }
     }
 
-    /// One commit before the seed exists: only a restore counts as backed up,
-    /// and a new wallet never inherits an earlier wallet's flag.
-    func beginOnboarding(recoveryPhraseBackedUp: Bool) throws {
+    /// One commit before the seed exists. `false` for a new wallet, which never
+    /// inherits an earlier wallet's flag; `true` only for a typed-phrase
+    /// restore; nil leaves the flag as it is (a restore from the stored seed
+    /// proves nothing about a backup).
+    func beginOnboarding(recoveryPhraseBackedUp: Bool?) throws {
         Self.access.lock(); defer { Self.access.unlock() }
         var wallet = persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isInitialized = false
-        try setDurably([
-            PersistedWalletState.key: encodedPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version),
-            PersistedRecoveryPhraseBackup.key: encodedPersistedState(PersistedRecoveryPhraseBackup(isBackedUp: recoveryPhraseBackedUp),
-                key: PersistedRecoveryPhraseBackup.key, version: PersistedRecoveryPhraseBackup.version),
-        ])
+        var values = [PersistedWalletState.key: try encodedPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)]
+        if let recoveryPhraseBackedUp {
+            values[PersistedRecoveryPhraseBackup.key] = try encodedPersistedState(PersistedRecoveryPhraseBackup(isBackedUp: recoveryPhraseBackedUp),
+                key: PersistedRecoveryPhraseBackup.key, version: PersistedRecoveryPhraseBackup.version)
+        }
+        try setDurably(values)
     }
 
     /// Reads a zustand-persisted store. Returns `nil` when the key is absent

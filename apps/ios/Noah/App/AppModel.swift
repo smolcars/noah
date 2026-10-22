@@ -172,6 +172,13 @@ final class AppModel {
         wallet?.isInitialized == false
     }
 
+    /// Marks onboarding unfinished before a restore installs anything. Only a
+    /// phrase the user typed counts as backed up; reinstall recovery from the
+    /// stored seed leaves the backup prompt as it was.
+    nonisolated static func beginRestore(_ settings: SettingsStorage, typedPhrase: Bool) throws {
+        try settings.beginOnboarding(recoveryPhraseBackedUp: typedPhrase ? true : nil)
+    }
+
     /// Onboarding "Got it": create (or resume) the wallet.
     func createWallet() async throws {
         do { try await creator.createOrResume() }
@@ -235,7 +242,7 @@ final class AppModel {
                 variant: variant, session: session, location: location,
                 seed: KeychainPassword.mnemonic(for: variant),
                 makeClient: { ServerClient.makeRestore(variant: variant, mnemonic: $0) },
-                beginOnboarding: { [settings] in try settings.beginOnboarding(recoveryPhraseBackedUp: true) })
+                beginOnboarding: { [settings] in try Self.beginRestore(settings, typedPhrase: phrase != nil) })
             let outcome = try await restorer.restore(mnemonic: mnemonic) { [weak self] step in
                 Task { @MainActor in
                     if self?.isRestoring == true { self?.restoreStep = step }
