@@ -87,11 +87,20 @@ class OnboardingGalleryTest {
             ui { presentation.notificationStage = com.noahwallet.ui.onboarding.NotificationStage.distributor }; screen("notifications-unifiedpush")
             step("battery"); screen("battery")
             step("done"); screen("done", 3000)
-            ui {
-                ViewModelProvider(activity)[RecoveryPhrasePresentation::class.java].input
-                    .update(List(11) { "abandon" }.plus("about").joinToString(" "), 0)
+            /** Scrolls the restore form to its end (in tabletop, the pane below the fold). */
+            fun scrollToEnd() = repeat(3) {
+                val view = activity.window.decorView
+                instrumentation.uiAutomation.executeShellCommand("input swipe ${view.width / 2} ${(view.height * .92).toInt()} " +
+                    "${view.width / 2} ${(view.height * .6).toInt()} 300").close()
+                Thread.sleep(700)
             }
-            step("restore"); secure("restore")
+            val input = ViewModelProvider(activity)[RecoveryPhrasePresentation::class.java].input
+            // Public BIP-39 test vectors only.
+            ui { input.update(List(11) { "abandon" }.plus("about").joinToString(" "), 0) }
+            step("restore"); secure("restore"); scrollToEnd(); secure("restore-end", 600)
+            step("welcome"); Thread.sleep(600)
+            ui { input.update(List(23) { "abandon" }.plus("art").joinToString(" "), 0) }
+            step("restore"); secure("restore-24"); scrollToEnd(); secure("restore-24-end", 600)
             step("restoring"); secure("restoring", 2600)
         }
     }

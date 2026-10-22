@@ -15,7 +15,9 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.onRoot
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
@@ -30,7 +32,7 @@ class OnboardingFoldTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun show(step: String, stage: com.noahwallet.ui.onboarding.NotificationStage = com.noahwallet.ui.onboarding.NotificationStage.ask,
-                     hinge: (Int, Int) -> WindowRegion): WindowRegion {
+                     words: List<String>? = null, hinge: (Int, Int) -> WindowRegion): WindowRegion {
         compose.mainClock.autoAdvance = false
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application
         lateinit var model: AppModel
@@ -39,6 +41,8 @@ class OnboardingFoldTest {
             model = AppModel(app)
             model.step = step
             androidx.lifecycle.ViewModelProvider(activity)[com.noahwallet.ui.onboarding.OnboardingPresentation::class.java].notificationStage = stage
+            // Public BIP-39 test vectors only.
+            words?.let { androidx.lifecycle.ViewModelProvider(activity)[RecoveryPhrasePresentation::class.java].input.update(it.joinToString(" "), 0) }
             val bounds = activity.window.decorView
             fold = hinge(bounds.width, bounds.height)
             // Host it as MainActivity and LaunchGateView do: adjustResize and the safe-drawing insets (keyboard included).
@@ -56,9 +60,11 @@ class OnboardingFoldTest {
         val all = mutableListOf<SemanticsNode>()
         fun walk(node: SemanticsNode) { all += node; node.children.forEach(::walk) }
         walk(compose.onRoot(useUnmergedTree = true).fetchSemanticsNode())
+        // Text, controls, fields, and the recovery word cells (platform fields tagged restore-word-N).
         return all.filter {
             it.config.getOrNull(SemanticsProperties.Text) != null || it.config.getOrNull(SemanticsActions.OnClick) != null ||
-                it.config.getOrNull(SemanticsProperties.EditableText) != null
+                it.config.getOrNull(SemanticsProperties.EditableText) != null ||
+                it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("restore-word-") == true
         }
     }
 
@@ -115,5 +121,52 @@ class OnboardingFoldTest {
         val button = compose.onNodeWithText("Continue", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         assertTrue("headline above: $headline", headline.bottom <= fold.top)
         assertTrue("controls below: $button", button.top >= fold.bottom)
+    }
+
+    @Test fun tabletopScrollsOnlyThePaneBelowTheFold() {
+        val horizontal = { width: Int, height: Int -> WindowRegion(0, height / 2 - 12, width, height / 2 + 12) }
+        for (words in listOf(List(11) { "abandon" } + "about", List(23) { "abandon" } + "art")) {
+            // Leaving Restore clears its words by design; let any previous Restore go before entering these.
+            show("name", hinge = horizontal)
+            val fold = show("restore", words = words, hinge = horizontal)
+            // Measure the keyboard-hidden layout (Name may have opened the keyboard).
+            compose.activityRule.scenario.onActivity {
+                it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .hideSoftInputFromWindow(it.window.decorView.windowToken, 0)
+            }
+            Thread.sleep(1_500)
+            compose.mainClock.advanceTimeBy(1_000)
+            assertEquals(words.size, compose.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("word cell") {
+                it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("restore-word-") == true
+            }, useUnmergedTree = true).fetchSemanticsNodes().size)
+            val label = "restore-${words.size}"
+            assertNoneOverlap("$label top", fold)
+            val headline = compose.onNodeWithText("Welcome back", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
+            // Scroll the lower pane to its end, as reaching Restore needs with 24 words. Restore has no endless
+            // Compose animation, so the clock can run while the scroll animates.
+            compose.mainClock.autoAdvance = true
+            compose.onNodeWithText("Restore", useUnmergedTree = true).performScrollTo()
+            compose.waitForIdle()
+            compose.mainClock.autoAdvance = false
+            assertNoneOverlap("$label end", fold)
+            val after = compose.onNodeWithText("Welcome back", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
+            assertEquals("$label: the headline stays fixed above the fold", headline, after)
+            assertTrue("$label: headline above the fold", after.bottom <= fold.top)
+            val restore = compose.onNodeWithText("Restore", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
+            assertTrue("$label: Restore reachable below the fold: $restore", restore.top >= fold.bottom && restore.height > 0f)
+            val lastWord = compose.onNodeWithTag("restore-word-${words.size}").fetchSemanticsNode().boundsInWindow
+            assertTrue("$label: last word below the fold: $lastWord", lastWord.height <= 0f || lastWord.top >= fold.bottom)
+        }
+    }
+
+    /** No field, word cell, button or text may overlap the hinge band at all. */
+    private fun assertNoneOverlap(step: String, fold: WindowRegion) {
+        for (node in nodes()) {
+            val bounds: Rect = node.boundsInWindow
+            if (bounds.width <= 0f || bounds.height <= 0f) continue
+            assertFalse("$step overlaps the fold: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString()
+                ?: node.config.getOrNull(SemanticsProperties.TestTag)} $bounds $fold",
+                bounds.top < fold.bottom && bounds.bottom > fold.top)
+        }
     }
 }

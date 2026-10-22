@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -159,18 +160,22 @@ internal fun FormLayout(leadingTop: @Composable RowScope.() -> Unit = {}, traili
         OnboardingPose.Compact -> OneColumn(Modifier.fillMaxSize())
         is OnboardingPose.Tabletop -> CompositionLocalProvider(LocalTabletopKeyboard provides keyboard) {
             Box(Modifier.fillMaxSize()) {
-                // With the keyboard up, everything stays above the fold and the bottom half is the keyboard's.
+                // Keyboard hidden: the headline stays fixed above the fold and only the pane below scrolls, clipped
+                // to that pane, so nothing scrolls through the hinge. Keyboard up: headline, field and primary
+                // action share the top half and the keyboard has the bottom. The form keeps its place either way.
                 Column(Modifier.fillMaxWidth().then(if (keyboard) Modifier.heightIn(max = pose.top) else Modifier.fillMaxHeight())
                     .padding(horizontal = pad), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Column(Modifier.weight(1f, fill = false).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth()
-                        .verticalScroll(rememberScrollState())) {
-                        Spacer(Modifier.height(topBarHeight))
-                        Box(Modifier.fillMaxWidth().then(if (keyboard) Modifier else Modifier.height(pose.top - topBarHeight)),
-                            contentAlignment = Alignment.CenterStart) { headline(false) }
-                        Spacer(Modifier.height(if (keyboard) 0.dp else pose.bottom - pose.top + NoahTokens.Space.l))
+                    Box(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(top = topBarHeight)
+                        .then(if (keyboard) Modifier else Modifier.height(pose.top - topBarHeight)),
+                        contentAlignment = Alignment.CenterStart) { headline(false) }
+                    Spacer(Modifier.height(if (keyboard) 0.dp else pose.bottom - pose.top))
+                    Column(Modifier.weight(1f, fill = !keyboard).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth()
+                        .clipToBounds().verticalScroll(rememberScrollState())) {
+                        Spacer(Modifier.height(if (keyboard) 0.dp else NoahTokens.Space.l))
                         form()
                         Spacer(Modifier.height(NoahTokens.Space.xl))
                         if (!(accessory && keyboard)) actions()
+                        Spacer(Modifier.height(NoahTokens.Space.s))
                     }
                     if (accessory && keyboard) Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth(), content = actions)
                 }
