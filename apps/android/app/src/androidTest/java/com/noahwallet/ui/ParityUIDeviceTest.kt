@@ -11,17 +11,22 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.google.zxing.*
 import com.google.zxing.common.HybridBinarizer
 import com.noahwallet.BuildConfig
+import com.noahwallet.api.generated.client.V0PricesClient
 import com.noahwallet.services.AppServices
+import com.noahwallet.services.server.value
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.WalletCreator
+import com.noahwallet.ui.home.HomeRules
 import com.noahwallet.ui.launch.PlatformAccess
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.Locale
 
 /** Opt-in public Compose UI checks on an owned disposable emulator only. No seed is displayed. */
 @RunWith(AndroidJUnit4::class)
@@ -238,7 +243,12 @@ class ParityUIDeviceTest {
             waitFor("Fiat privacy uses the RN currency symbol") { text("$ ••••") != null }
             shot("home-hidden")
             act("Show wallet balance")
-            waitFor("Live fiat amount") { text("$ ••••") == null }
+            // The live amount Home must show: this wallet's total at the server's current rate, in the user's currency and locale.
+            val currency = SettingsPreferences.preferredCurrency(SettingsStorage(context).string("profile-storage"))
+            val rate = V0PricesClient(services.client).fiatPrices(JsonObject(emptyMap())).value().rates[currency]
+            val total = checkNotNull(services.session.summary()).balance.totalSats.toLong()
+            val live = checkNotNull(HomeRules.fiat(total, rate, currency, Locale.forLanguageTag(LegacyLocale.resolved(context)), hidden = false)) { "a live $currency rate" }
+            waitFor("Live fiat amount $live") { text(live) != null }
             shot("home-live")
             act("QR Code")
             waitFor("Live identity QR") { text("This QR contains only your Lightning address.") != null }
