@@ -395,10 +395,10 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 1. **`retry_for`:** the new bark-bolt-ffi (0.6, in progress) exposes it. Noah passes an explicit value on every Lightning send, starting at 60 s (today's server default), and can tune it later.
 2. **Raw APNs:** explained to the user (Expo can't send Live Activity pushes). Pending their call; recommended later.
 3. **Server pings on new blocks:** no.
-4. **Automatic on-chain progress:** explained (detected only when a wallet sync sees an unconfirmed incoming transaction; no server-side address watching). Pending their OK on: start an ordinary notification when any sync sees one, and a Live Activity only when Noah is open.
+4. **Automatic on-chain progress:** yes, as recommended. An incoming transaction is noticed only when a wallet sync sees it unconfirmed (foreground, background refresh or the server's refresh wake); the server never watches addresses. A sync that sees one posts an ordinary notification (an Android progress notification), followed by "Confirmed in block N"; a Live Activity starts only when Noah is open.
 5. **Amount-free Live Activities:** yes, ship them.
 6. **Result notifications when Live Activities are off:** yes.
 7. **Send stays locked while a Lightning send is pending,** with the override parking it: yes.
-8. **Bark changes:** explained. Pending their OK on: all three upstream, and fork change 2 only if upstream hasn't merged it by phase 2.
+8. **Bark changes:** send all three upstream. Change 2 blocks only `wait: false` background payments (phase 2), not today's app or the Send/Receive redesign; fork it only if upstream hasn't merged it by then.
 9. **"Ask for a new invoice" when re-paying a failed BOLT11 invoice** until bark change 3: explained. Pending their OK.
 10. **Push priority:** normal for every push this design adds. The existing high-priority server wake pushes (maintenance refresh) stay as they are.
