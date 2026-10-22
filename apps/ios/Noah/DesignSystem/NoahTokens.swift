@@ -80,9 +80,18 @@ enum NoahTokens {
         let tracking: CGFloat
         let textStyle: UIFont.TextStyle
 
+        private var displayName: String { weight == .semibold ? "SpaceGrotesk-SemiBold" : "SpaceGrotesk-Medium" }
+
         func font(size: CGFloat) -> Font {
             guard display else { return .system(size: size, weight: weight) }
-            return .custom(weight == .semibold ? "SpaceGrotesk-SemiBold" : "SpaceGrotesk-Medium", fixedSize: size)
+            return .custom(displayName, fixedSize: size)
+        }
+
+        /// The UIKit font behind `font(size:)`, for its real line height.
+        func uiFont(size: CGFloat) -> UIFont {
+            let uiWeight: UIFont.Weight = weight == .semibold ? .semibold : weight == .medium ? .medium : .regular
+            guard display, let font = UIFont(name: displayName, size: size) else { return .systemFont(ofSize: size, weight: uiWeight) }
+            return font
         }
     }
 
@@ -107,12 +116,18 @@ struct NoahTextModifier: ViewModifier {
     let style: NoahTokens.TextStyle
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    func body(content: Content) -> some View {
+    @ViewBuilder func body(content: Content) -> some View {
         let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
         let metrics = UIFontMetrics(forTextStyle: style.textStyle)
         let size = metrics.scaledValue(for: style.size, compatibleWith: traits)
-        let extra = style.lineHeight.map { max(0, metrics.scaledValue(for: $0, compatibleWith: traits) - size * 1.2) } ?? 0
-        return content.font(style.font(size: size)).tracking(style.tracking * size).lineSpacing(extra)
+        let lineHeight = style.lineHeight.map { metrics.scaledValue(for: $0, compatibleWith: traits) }
+        let styled = content.font(style.font(size: size)).tracking(style.tracking * size)
+        if #available(iOS 26.0, *) {
+            styled.lineHeight(lineHeight.map { .exact(points: $0) })
+        } else {
+            // No line-box API before iOS 26: space lines apart, and single lines keep the font's own height.
+            styled.lineSpacing(lineHeight.map { max(0, $0 - style.uiFont(size: size).lineHeight) } ?? 0)
+        }
     }
 }
 

@@ -24,10 +24,22 @@ Welcome ─ Create wallet → Beta sheet → Creating → Name → Email (option
 ```
 
 **Recovery phrase.** It is no longer shown during onboarding. Home shows a "Back up your wallet" prompt until the user has viewed the phrase and confirmed they wrote it down. That state is persisted per wallet:
-- restored wallets count as backed up;
-- wallets migrated from React Native count as backed up, because RN showed the phrase during onboarding.
+- only restored wallets count as backed up, because typing the phrase proves the user has it;
+- every other wallet keeps the prompt until the user confirms: new wallets, wallets migrated from React Native, and wallets made by earlier native builds.
+
+React Native records no acknowledgement. A user who quit RN onboarding before seeing the phrase still gets `finishOnboarding()` on the next launch, so a migrated wallet's backup status is unknown.
 
 **Resuming.** An interrupted onboarding (the wallet exists but `isInitialized == false`) resumes at Name instead of the old recovery-phrase step.
+
+## Existing and migrated wallets
+
+Wallets migrated from React Native and wallets made by earlier native builds must keep working exactly as they do today. The redesign only replaces the onboarding UI.
+
+- **Launch:** a seed in the keychain plus a wallet database opens Home, never onboarding, the recovery phrase or a new blocking screen. This holds even when the imported settings are missing, cleared or damaged. The only exception stays as it is today: a readable RN store that explicitly says `isInitialized=false` resumes onboarding, now at Name.
+- **Storage:** don't change keychain items, the wallet database, the RN settings import or any existing settings key. The backup flag is a new key. When it's missing, the wallet counts as not backed up.
+- **Settings:** the language picker moves to Welcome, but an imported or previously chosen language still applies on first launch.
+- **Notifications:** the push gate keeps today's rules for existing wallets. Only its look changes.
+- **Tests:** an RN-migrated fixture and an existing native wallet both open Home and show the backup prompt; a restored wallet opens Home without it; an interrupted onboarding resumes at Name. Keep the existing migration and upgrade tests green.
 
 ## Screens
 
@@ -37,8 +49,8 @@ Welcome ─ Create wallet → Beta sheet → Creating → Name → Email (option
 | **Beta sheet** | Bottom sheet with an orange-tint "Beta" badge, "Before you start", "Noah is in beta. Only keep what you’re comfortable losing." and a "Got it" button. "Got it" creates the wallet (today's `createWallet`) and fades to Creating; the tree stays in place. Creation errors show inline in the sheet using today's messages. |
 | **Creating** | **Tree create sequence:** <ul><li>12 orange specks converge into your leaf;</li><li>the leaf fills;</li><li>your branch traces up from the root;</li><li>a ripple, then a wave runs through the other leaves.</li></ul> **Phase text:** "Creating your keys", then "Joining the Ark", then "Ready" (success haptic). About 3.6 s total, then Name. |
 | **Name** | **Copy:** "Pick a name" / "This is how people pay you." **Input:** large inline `name@noahwallet.io`, normalized to `[a-z0-9_.-]`. **Availability:** debounced (~500 ms). States: "Letters and numbers", "At least 3 characters", "Checking" (pulsing orange dot), "Available" (orange dot pops), "Taken" (hollow dot plus three suggestion chips). Use the public LNURL lookup as a hint (taken if `/.well-known/lnurlp/<name>` answers 200), and treat `update_lightning_identity` as the authority. **Exits:** "Continue" saves the name. "Skip" keeps the address the server already assigned. The Nostr key field moves to Settings. |
-| **Email** | **Optional;** Skip stays. **Entry:** "Add your email" / "Only for urgent alerts about your wallet." <ul><li>email field with an orange check when the address is valid;</li><li>domain completion chips;</li><li>typo fixes ("Did you mean maya@gmail.com").</li></ul> **Send code:** the button morphs into a spinner and the screen swaps to code entry. **Code entry:** "Check your email" / "Enter the code we sent to x Edit". <ul><li>six boxes with an orange active box, verifying automatically at six digits;</li><li>iOS one-time-code autofill (`.oneTimeCode`); Android SMS/autofill hints where available;</li><li>"Resend code in 0:30", then "Didn't get it? Resend";</li><li>a wrong code shakes, turns the boxes red, shows "That code didn’t work. Try again." and clears.</li></ul> **Success:** the boxes fold into the orange check ring, the title reads "Email verified", then Notifications. Uses today's `/email/send_verification` and `/email/verify` calls. |
-| **Notifications** | **Required, no skip.** **Conveyor scene:** small trees; your leaf hops from an expiring tree into the next round's tree while the old one is swept. **Copy:** "Keep Noah awake" / "Notifications let Noah receive payments and renew your bitcoin before it expires." **Button:** "Turn on notifications" shows the system prompt. **If denied:** the scene freezes and greys out, the copy becomes "Notifications are required" / "Without them, Noah can’t receive payments or renew your bitcoin before it expires.", and the button becomes "Open Settings". On return to the foreground, re-check and continue automatically once granted. **Later:** if notifications are turned off after onboarding, the same required screen blocks the wallet at launch, as `PushNotificationsRequiredView` does today. |
+| **Email** | **Optional;** Skip stays. **Entry:** "Add your email" / "Only for urgent alerts about your wallet." <ul><li>email field with an orange check when the address is valid;</li><li>domain completion chips;</li><li>typo fixes ("Did you mean maya@gmail.com").</li></ul> **Send code:** the button morphs into a spinner and the screen swaps to code entry. **Code entry:** "Check your email" / "Enter the code we sent to x Edit". <ul><li>six boxes with an orange active box, verifying automatically at six digits;</li><li>iOS one-time-code autofill (`.oneTimeCode`); Android SMS/autofill hints where available;</li><li>"Resend code in 0:30", then "Didn't get it? Resend";</li><li>a wrong code shakes, turns the boxes red, shows "That code didn’t work. Try again." and clears.</li></ul> **Success:** the boxes fold into the orange check ring, the title reads "Email verified", then Notifications. **Already verified:** `/email/send_verification` answers "already verified" without sending a code, for example when onboarding resumes after verification. The existing `sendEmail()` wrappers report this; go straight to the verified state and never ask for a code. Uses today's `/email/send_verification` and `/email/verify` calls. |
+| **Notifications** | **Required, no skip.** **Conveyor scene:** small trees; your leaf hops from an expiring tree into the next round's tree while the old one is swept. **Copy:** "Keep Noah awake" / "Notifications let Noah receive payments and renew your bitcoin before it expires." **Button:** "Turn on notifications" shows the system prompt. **If denied:** the scene freezes and greys out, the copy becomes "Notifications are required" / "Without them, Noah can’t receive payments or renew your bitcoin before it expires.", and the button becomes "Open Settings". On return to the foreground, re-check and continue automatically once granted. **Later:** if notifications are turned off after onboarding, the same required screen blocks the wallet at launch, as `PushNotificationsRequiredView` does today. **Android without Google Play Services:** keep today's conditional UnifiedPush distributor setup (`Onboarding.kt`, around lines 63–67) inside this step. Granting the permission isn't enough without a distributor, so don't continue until the existing setup succeeds or reports it isn't needed. |
 | **Done** | Orange ring draws, check draws, two ripples, success haptic. **Copy:** "You’re all set", then `name@noahwallet.io` (or "Your wallet is ready."). **Button:** "Open wallet" calls today's `finishOnboarding`. |
 | **Restore** | **Copy:** "Welcome back" / "Enter your recovery phrase." **12 / 24 control:** sliding-pill segmented control. **Grid:** 2 columns for 12 words, 3 for 24, no scrolling at 24 on a 393-pt phone. **Cells:** <ul><li>BIP-39 prefix autocomplete in the keyboard accessory (up to three; the first is bold); space or return accepts the first;</li><li>an invalid word shows red text and underline plus "Check word N";</li><li>pasting a whole phrase into any cell fills every word with a stagger.</li></ul> **Paste button:** reads the clipboard through the existing `RestorePasteboard` / `RestoreClipboard` paths. **Restore:** enabled when every word is in the list. A bad checksum shakes the grid and shows "These words don’t form a valid phrase." The phrase never appears in logs or screenshots, and the screen keeps today's secret shielding. |
 | **Restoring** | **Tree restore sequence:** an orange scan band sweeps the leaves; your leaves light up with their branches drawn to the root, and the balance counts up below. **Phase text:** "Restoring your wallet", then "Finding your bitcoin", then "Ready". **Progress:** drive it from the real restore step callbacks (`restoreStep`); it may hold on "Finding your bitcoin" while restore is still running. Errors use today's `RestoreIssue` messages. |
@@ -53,6 +65,33 @@ The tree is drawn the way bark builds it (`lib/src/tree/mod.rs`, `RADIX = 4`):
 - **Chain line:** the Bitcoin line at the root has small block ticks that drift slowly.
 - **Where it's drawn:** one canvas behind the onboarding screens (SwiftUI `Canvas` + `TimelineView`; Compose `Canvas` + `withFrameNanos`). It persists across Welcome → Creating → Name so the tree never jumps.
 - **Where it appears:** only Welcome, Creating, Restoring and Notifications. Nowhere else in the app.
+
+## Foldables, tablets and landscape
+
+Design for the iPhone Duo first, then make Android foldables match. The Duo's closed panel is about 466×678 pt. Open and half-open, the window is about 951×669 pt with a vertical fold down the middle.
+
+- **Compact (phones, Duo closed, Pixel Fold closed):** one column, as in the prototype. The Duo's closed panel is short, so every screen must fit in 678 pt without clipping: the tree scales to the space left, and scrolling is the last resort. Buttons must never be cut off.
+- **Wide (Duo open or half-open, Pixel Fold open, tablets, wide landscape):** two panes split at the fold. The leading pane holds the picture and the trailing pane holds the words and controls.
+  - **Welcome, Creating, Restoring, Notifications:** the tree scene fills and is centred in the leading pane. The wordmark or headline, copy and buttons go in the trailing pane.
+  - **Name, Email, Restore, Done:** the headline and its short line move to the leading pane at a larger size. Done puts its ring and check there. The field, chips, code boxes, word grid and buttons go in the trailing pane.
+  - **Beta and language sheets:** stay inside the trailing pane. They never cross the fold.
+  - **Content width:** keep each pane's content at most about 420 pt wide and centred in its pane.
+- **Bent (half-open):** nothing crosses the fold: no text, button, field, chip, sheet or tree.
+  - **Book posture (vertical fold):** the two-pane split above, with the split on the hinge.
+  - **Tabletop posture (horizontal fold):** the tree or headline sits on the top half; controls, input and the keyboard on the bottom half.
+  - **iOS:** SwiftUI has no hinge API. Observe `UIHingeInteraction` (iOS 27.1+, `UIHinge.Status.partiallyOpen`) through a small `UIViewRepresentable`. Earlier iOS versions have no hinge. Lay out from the window size and system safe area; don't invent a hinge gutter. See `docs/native-rewrite/adaptive-layouts-ios.md` for what the Duo simulator reports.
+  - **Android:** use `LocalFoldingFeatures` and `avoidHinge()` from `ui/AdaptiveLayout.kt`. They only report separating folds.
+- **Changing pose:** folding, unfolding or rotating at any step keeps everything: the current step, the typed name, email and code digits, the resend countdown, restore words (in memory only, under the existing secret rules) and in-flight wallet creation or restore. The tree keeps its animation clock, so it neither restarts nor jumps. A pose change must never create a second wallet, restore twice or resend a code.
+
+## Testing
+
+Test every screen in light and dark on all of these:
+- an iPhone simulator (iPhone 17, iOS 27.0);
+- an iPhone Duo simulator (iOS 27.1, the only runtime that supports it), closed, half-open and open;
+- an Android phone emulator;
+- an Android foldable emulator (Pixel Fold), closed, half-open and open.
+
+Use your own simulators and emulators. Also change pose in the middle of Creating, Email code entry and Restoring.
 
 ## Out of scope for this round
 
