@@ -48,7 +48,15 @@ class RestoreUIDeviceTest {
         for (i in 0 until node.childCount) find(node.getChild(i), predicate)?.let { return it }
         return null
     }
-    private fun text(value: String) = find(automation.rootInActiveWindow) { !it.isPassword && it.text?.toString() == value }
+    private fun text(value: String) = find(automation.rootInActiveWindow) { !it.isEditable && it.text?.toString() == value }
+    /** A recovery word cell: visible text (as on iOS and RN), labelled by its invisible "Word N" hint. */
+    private fun wordField() = find(automation.rootInActiveWindow) { it.isEditable && it.hintText?.toString()?.startsWith("Word ") == true }
+    private fun clickDescription(value: String) {
+        waitFor("Control appears: $value") { find(automation.rootInActiveWindow) { it.contentDescription?.toString() == value } != null }
+        var target = find(automation.rootInActiveWindow) { it.contentDescription?.toString() == value }
+        while (target != null && !target.isClickable) target = target.parent
+        assertTrue("Control can be clicked", target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true)
+    }
     private fun clickText(value: String) {
         waitFor("Public UI control appears: $value") { text(value) != null }
         val node = checkNotNull(text(value)) { "Expected public UI control" }
@@ -57,8 +65,8 @@ class RestoreUIDeviceTest {
         assertTrue("Public control can be clicked", target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true)
     }
     private fun enterPhrase(phrase: String) {
-        waitFor("Private phrase field appears") { find(automation.rootInActiveWindow) { it.isEditable && it.isPassword } != null }
-        val field = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && it.isPassword }) { "Private phrase field exists" }
+        waitFor("Private phrase field appears") { wordField() != null }
+        val field = checkNotNull(wordField()) { "Private phrase field exists" }
         assertTrue("Whole phrase paste accepted", field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, phrase) }))
         instrumentation.waitForIdleSync()
@@ -69,8 +77,9 @@ class RestoreUIDeviceTest {
             button != null
         }
     }
+    /** "Restore" on the phrase screen; the stored-seed recovery screen keeps "Restore Wallet". */
     private fun submitButton() = find(automation.rootInActiveWindow) { node ->
-        node.isClickable && node.isEnabled && find(node) { !it.isPassword && it.text?.toString() == "Restore Wallet" } != null
+        node.isClickable && node.isEnabled && find(node) { !it.isEditable && it.text?.toString() in setOf("Restore", "Restore Wallet") } != null
     }
 
     private fun launch(): Pair<MainActivity, AppModel> {
@@ -152,7 +161,7 @@ class RestoreUIDeviceTest {
             assertEquals(LaunchState.onboarding, restoredModel.launchState)
 
             stage = "open restore entry"
-            clickText("Restore Wallet")
+            clickText("I already have a wallet")
             waitFor("Private screen protected") { activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
             stage = "paste phrase with no backup"
             val noBackupPhrase = generateMnemonic()
@@ -167,10 +176,11 @@ class RestoreUIDeviceTest {
 
             stage = "clear phrase on leaving"
             // Entry was already discarded on submit; leave and return through the actual controls.
-            clickText("Back"); waitFor("Welcome returns") { text("Welcome to Noah") != null }
+            clickText("Back"); waitFor("Phrase screen returns") { wordField() != null }
+            clickDescription("Back"); waitFor("Welcome returns") { text("I already have a wallet") != null }
             assertEquals(0, activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
-            clickText("Restore Wallet")
-            waitFor("Phrase input returns") { find(automation.rootInActiveWindow) { it.isEditable && it.isPassword } != null }
+            clickText("I already have a wallet")
+            waitFor("Phrase input returns") { wordField() != null }
             stage = "clear phrase on background"
             instrumentation.runOnMainSync {
                 (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
@@ -194,7 +204,12 @@ class RestoreUIDeviceTest {
             automation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
             waitFor("Activity backgrounded") { !activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
             context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            waitFor("Phrase cleared on background") { text("0 of 12 words") != null }
+            fun firstWordEmpty(): Boolean {
+                var empty = false
+                instrumentation.runOnMainSync { empty = firstField(activity!!.window.decorView)?.text?.isEmpty() == true }
+                return empty
+            }
+            waitFor("Phrase cleared on background") { firstWordEmpty() }
             instrumentation.runOnMainSync {
                 val fresh = checkNotNull(firstField(activity!!.window.decorView))
                 assertTrue("Security clear recreates native fields", fresh !== oldField)
@@ -205,7 +220,7 @@ class RestoreUIDeviceTest {
                     })
                 assertTrue("Hardware Undo cannot restore cleared words", fresh.text.isEmpty())
             }
-            assertNotNull(text("0 of 12 words"))
+            assertTrue(firstWordEmpty())
             instrumentation.runOnMainSync {
                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 assertTrue("Background preserves replacement clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "unrelated replacement")
@@ -288,7 +303,7 @@ class RestoreUIDeviceTest {
             }
             assertTrue(checkNotNull(find(automation.rootInActiveWindow) { node -> node.isClickable && node.isEnabled &&
                 find(node) { it.text?.toString() == "Delete Wallet" } != null }).performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            waitFor("Creation available after confirmed deletion") { text("Create Wallet") != null }
+            waitFor("Creation available after confirmed deletion") { text("Create wallet") != null }
             assertEquals(LaunchState.onboarding, model.launchState)
             assertEquals(SecretResult.NotFound, SeedStorage(context, "regtest").read())
         } finally {
@@ -297,18 +312,10 @@ class RestoreUIDeviceTest {
         }
     }
 
-    @Test fun platformPasswordNodesEventsAndImeArePrivate() {
+    @Test fun platformWordFieldsAreVisibleAndKeepTheKeyboardPrivate() {
         optIn()
         val activity = launch().first
-        val events = java.util.concurrent.CopyOnWriteArrayList<android.view.accessibility.AccessibilityEvent>()
-        val resolver = context.contentResolver
-        val setting = android.provider.Settings.Secure.ACCESSIBILITY_SPEAK_PASSWORD
-        val previous = android.provider.Settings.Secure.getString(resolver, setting)
-        val priorEventTypes = automation.serviceInfo.eventTypes
-        automation.serviceInfo = automation.serviceInfo.apply { eventTypes = android.view.accessibility.AccessibilityEvent.TYPES_ALL_MASK }
-        automation.adoptShellPermissionIdentity(android.Manifest.permission.WRITE_SECURE_SETTINGS)
         try {
-            android.provider.Settings.Secure.putInt(resolver, setting, 0)
             lateinit var field: RecoveryWordEditText
             instrumentation.runOnMainSync {
                 field = RecoveryWordEditText(activity, 0)
@@ -316,47 +323,26 @@ class RestoreUIDeviceTest {
                 field.requestFocus()
             }
             instrumentation.waitForIdleSync()
-            waitFor("Native password is attached") { find(automation.rootInActiveWindow) { it.isEditable && it.isPassword } != null }
-            automation.setOnAccessibilityEventListener { event ->
-                events.add(android.view.accessibility.AccessibilityEvent.obtain(event))
-            }
-            val before = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && it.isPassword })
-            before.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS)
-            assertTrue(before.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
-                Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "abando") }))
-            instrumentation.runOnMainSync { field.setSelection(field.length()) }
-            instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_N)
-            instrumentation.waitForIdleSync()
-            waitFor("Password node updates after edit") {
-                find(automation.rootInActiveWindow) { it.isEditable && it.isPassword }?.text?.length == 7
-            }
-            Thread.sleep(400)
-            val node = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && it.isPassword })
-            assertTrue("Password node text is redacted", node.text?.contains("abandon") != true)
+            waitFor("Word field is attached") { wordField() != null }
+            val node = checkNotNull(wordField())
+            // Visible words are a deliberate usability decision, as on iOS and RN; FLAG_SECURE covers screenshots.
+            assertFalse("Words are not masked", node.isPassword)
             assertTrue("Word position remains accessible", node.hintText?.contains("Word 1") == true)
             assertTrue("Editing remains available", node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT })
-            assertTrue("Actual password text-change events were observed", events.any {
-                it.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED && it.isPassword
-            })
-            assertTrue("Password event text and beforeText are redacted", events.all { event ->
-                event.text.none { it.contains("abando") } && event.beforeText?.contains("abando") != true
-            })
             instrumentation.runOnMainSync {
                 val info = android.view.inputmethod.EditorInfo()
                 field.onCreateInputConnection(info)
                 assertTrue(info.imeOptions and android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0)
                 assertTrue(info.inputType and android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0)
-                assertTrue(info.inputType and android.text.InputType.TYPE_MASK_VARIATION == android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD)
+                assertTrue(info.inputType and android.text.InputType.TYPE_MASK_VARIATION == android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD)
+                assertNull("No masking transformation", field.transformationMethod)
                 assertFalse(field.isSaveEnabled)
+                if (android.os.Build.VERSION.SDK_INT >= 26)
+                    assertEquals(android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS, field.importantForAutofill)
                 field.setText("")
             }
         } finally {
-            automation.setOnAccessibilityEventListener(null)
-            automation.serviceInfo = automation.serviceInfo.apply { eventTypes = priorEventTypes }
-            android.provider.Settings.Secure.putString(resolver, setting, previous)
-            automation.dropShellPermissionIdentity()
             instrumentation.runOnMainSync { activity.finish() }
-            events.forEach { it.recycle() }
         }
     }
 

@@ -3,7 +3,6 @@ package com.noahwallet.ui
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
-import android.text.method.PasswordTransformationMethod
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.inputmethod.EditorInfo
@@ -15,15 +14,24 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.widget.doAfterTextChanged
 
-/** Let TextView apply the platform's password accessibility and text-change event policy. */
+/**
+ * One recovery word. Words are visible, as on iOS and RN (a deliberate usability decision); the field still
+ * keeps them out of keyboard learning and suggestions, autofill, content capture and saved state. The
+ * screen adds FLAG_SECURE and clears the words on background or leaving.
+ */
 internal class RecoveryWordEditText(context: Context, index: Int) : EditText(context) {
     init {
-        // The visible number labels the cell; TalkBack gets "Word N" without a visible hint.
-        contentDescription = com.noahwallet.localization.L10n.text(context, "Word {number}", index + 1)
+        // The visible number labels the cell; TalkBack gets "Word N" from an invisible hint.
+        hint = com.noahwallet.localization.L10n.text(context, "Word {number}", index + 1)
+        setHintTextColor(android.graphics.Color.TRANSPARENT)
+        // API 24–25 expose no separate accessibility hint; later versions read the word itself plus the hint.
+        if (android.os.Build.VERSION.SDK_INT < 26) contentDescription = hint
         isSingleLine = true
         isSaveEnabled = false
-        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-        transformationMethod = PasswordTransformationMethod.getInstance()
+        // Visible-password variation: the keyboard treats it like a password field (no learning, no
+        // suggestions) without masking the word.
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        typeface = android.graphics.Typeface.DEFAULT // The variation switches TextView to monospace; keep the app's face.
         imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
             if (index == 11) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
         if (android.os.Build.VERSION.SDK_INT >= 26) importantForAutofill = IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
