@@ -1,0 +1,312 @@
+import BarkBoltFFI
+import Foundation
+import SwiftUI
+import Testing
+import UIKit
+@testable import Noah
+
+/// The Send motion follows the payment controller's real state (send-receive.md).
+@MainActor
+struct SendMotionTests {
+    typealias Attempt = SendPaymentController.Attempt
+    static let lightning = SendPayment(destination: SendReceiveShotTests.invoice, method: "lightning", amount: 1_500)
+    static let ark = SendPayment(destination: SendReceiveShotTests.ark, method: "ark", amount: 2_500)
+
+    static func attempt(_ payment: SendPayment, failureMessage: String? = nil, existing: SendLightningProgress? = nil,
+                        receipt: SendReceipt? = nil) -> Attempt {
+        var attempt = Attempt(payment: payment, snapshot: .init(movementIDs: []))
+        attempt.failureMessage = failureMessage
+        attempt.existingLightning = existing
+        attempt.receipt = receipt
+        attempt.paymentHash = PaymentEncoding.invoice(payment.destination)?.hash
+        return attempt
+    }
+
+    /// Every phase the stage shows over a minute, sampled every 50 ms.
+    static func phases(_ rail: SendMotion.Rail, _ outcome: SendMotion.Outcome, outcomeAt: Double, confirmedAt: Double? = nil) -> [SendMotion.Phase] {
+        stride(from: 0.0, through: 60, by: 0.05).map {
+            SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, confirmedAt: confirmedAt, at: $0)
+        }
+    }
+
+    @Test func outcomesComeOnlyFromTheControllersState() {
+        let refundable = Self.attempt(Self.lightning)
+        #expect(SendMotion.outcome(state: .submitting, attempt: refundable, checking: false, refund: nil) == .inFlight)
+        // A failed Lightning send holds until its refund evidence is read, then shows it only if recorded.
+        #expect(SendMotion.outcome(state: .failed, attempt: refundable, checking: false, refund: nil) == .inFlight)
+        #expect(SendMotion.outcome(state: .failed, attempt: refundable, checking: false, refund: true) == .refunded)
+        #expect(SendMotion.outcome(state: .failed, attempt: refundable, checking: false, refund: false) == .stopped)
+        // Nothing was submitted: no refund to show.
+        let notSubmitted = Self.attempt(Self.lightning, failureMessage: "The available funds changed. Review the payment again.")
+        #expect(SendMotion.outcome(state: .failed, attempt: notSubmitted, checking: false, refund: true) == .stopped)
+        #expect(SendMotion.outcome(state: .failed, attempt: Self.attempt(Self.ark), checking: false, refund: true) == .stopped)
+        // Unknown outcomes keep today's handling.
+        #expect(SendMotion.outcome(state: .uncertain, attempt: refundable, checking: false, refund: nil) == .stopped)
+        #expect(SendMotion.outcome(state: .uncertain, attempt: refundable, checking: true, refund: nil) == .inFlight)
+        #expect(SendMotion.outcome(state: .uncertain, attempt: Self.attempt(Self.lightning, receipt: .init(amount: 1, txid: "a")),
+                                   checking: true, refund: nil) == .stopped)
+        #expect(SendMotion.outcome(state: .uncertain, attempt: Self.attempt(Self.lightning, existing: .init(amount: 1_500, fee: 3)),
+                                   checking: false, refund: nil) == .pending)
+        #expect(SendMotion.outcome(state: .storageBlocked, attempt: nil, checking: false, refund: nil) == .stopped)
+        #expect(SendMotion.outcome(state: .alreadyPaid(.init(amount: 1_500)), attempt: refundable, checking: false, refund: nil) == .stopped)
+        var awaiting = SendReceipt(amount: 1, txid: "a")
+        awaiting.broadcastRetryPending = true
+        #expect(SendMotion.outcome(state: .succeeded(awaiting), attempt: refundable, checking: false, refund: nil) == .stopped)
+        #expect(SendMotion.outcome(state: .succeeded(.init(amount: 1)), attempt: refundable, checking: false, refund: nil) == .succeeded)
+    }
+
+    @Test(arguments: [SendMotion.Rail.ark, .lightning, .onchainSwap, .onchainWallet])
+    func aFailureNeverShowsTheKeyOrTheFinale(rail: SendMotion.Rail) {
+        for outcome in [SendMotion.Outcome.inFlight, .pending, .stopped, .refunded] {
+            for outcomeAt in [0.2, 1.0, 2.6, 8.0, 20.0] {
+                let seen = Self.phases(rail, outcome, outcomeAt: outcomeAt)
+                let success = seen.filter(\.isSuccessEnding)
+                #expect(success.isEmpty, "\(rail) \(outcome) at \(outcomeAt)")
+                #expect(!seen.contains(.confirmed) && !seen.contains(.waiting) && !seen.contains(.drop))
+                let haptics = SendMotion.haptics(rail: rail, outcome: outcome, outcomeAt: outcomeAt, confirmations: 2, required: 2,
+                                                 confirmedAt: outcomeAt + 1)
+                let endings = haptics.filter { $0.key == "finale" || $0.key == "unlock" || $0.key.hasPrefix("confirmed") }
+                #expect(endings.isEmpty)
+            }
+        }
+    }
+
+    @Test func backInYourWalletAppearsOnlyWithARecordedRefund() {
+        for outcome in [SendMotion.Outcome.inFlight, .pending, .stopped, .succeeded] {
+            let refund = Self.phases(.lightning, outcome, outcomeAt: 3).filter(\.isRefundEnding)
+            #expect(refund.isEmpty, "\(outcome)")
+        }
+        let refunded = Self.phases(.lightning, .refunded, outcomeAt: 3)
+        #expect(refunded.contains(.fizzle) && refunded.contains(.signBack) && refunded.last == .refunded)
+        // The result reads "Payment failed" with the refund only for that outcome.
+        #expect(SendResultKind.of(state: .failed, outcome: .refunded, slow: false) == .refunded)
+        #expect(SendResultKind.of(state: .failed, outcome: .stopped, slow: false) == .failed)
+        #expect(SendResultKind.of(state: .failed, outcome: .inFlight, slow: false) == .sending)
+        #expect(SendMotion.haptics(rail: .lightning, outcome: .refunded, outcomeAt: 3).map(\.key).contains("fizzle"))
+    }
+
+    @Test func phasesNeverRunAheadOfTheWallet() {
+        // Whatever the timer says, an in-flight call holds at its last in-flight phase.
+        #expect(SendMotion.phase(rail: .ark, outcome: .inFlight, outcomeAt: .infinity, at: 600) == .sign)
+        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .inFlight, outcomeAt: .infinity, at: 600) == .swap)
+        #expect(SendMotion.phase(rail: .onchainWallet, outcome: .inFlight, outcomeAt: .infinity, at: 600) == .start)
+        #expect(SendMotion.phase(rail: .lightning, outcome: .inFlight, outcomeAt: .infinity, at: 5) == .paying)
+        #expect(SendMotion.phase(rail: .lightning, outcome: .inFlight, outcomeAt: .infinity, at: 13) == .stillPaying)
+        // A fast success still plays the earlier phases in order before its ending.
+        let ark = Self.phases(.ark, .succeeded, outcomeAt: 0.3)
+        let order: [SendMotion.Phase] = [.start, .split, .sign, .deliver, .delivered]
+        #expect(ark.reduce(into: [SendMotion.Phase]()) { if $0.last != $1 { $0.append($1) } } == order)
+        // A slow success starts its ending only when the wallet reports it.
+        let late = Self.phases(.lightning, .succeeded, outcomeAt: 20)
+        #expect(late[Int(19.9 / 0.05)] == .stillPaying)
+        #expect(late[Int(20.1 / 0.05)] == .unlock)
+        // On-chain confirms only once the confirmation is seen.
+        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, at: 10) == .waiting)
+        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, confirmedAt: 30, at: 29) == .waiting)
+        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, confirmedAt: 30, at: 31) == .confirmed)
+        #expect(SendMotion.confirmations(height: 101, tip: 102) == 2)
+    }
+
+    @Test func aRestoredStageShowsItsEndQuietlyAndHapticsPlayOnce() {
+        let clock = SendMotionClock()
+        clock.observe(.succeeded)
+        #expect(clock.elapsed(Date()) >= 59)
+        #expect(!clock.shouldPlay("finale", at: 2.75))
+        // A status check never takes a shown outcome back to in flight.
+        clock.observe(.inFlight)
+        #expect(clock.outcome == .succeeded)
+        let live = SendMotionClock()
+        live.start()
+        #expect(live.shouldPlay("split", at: 0.42))
+        #expect(!live.shouldPlay("split", at: 0.42))
+    }
+
+    // MARK: Refund evidence
+
+    static func send(status: String, hash: String = "hash", outputs: [String] = ["v1"], exited: [String] = [],
+                     effective: Int64 = 0, fee: UInt64 = 0) -> Movement {
+        Movement(id: 7, status: status, subsystemName: "bark.lightning_send", subsystemKind: "send", metadataJson: "{}",
+                 intendedBalanceSats: -1_500, effectiveBalanceSats: effective, offchainFeeSats: fee,
+                 sentToAddresses: [], receivedOnAddresses: [], inputVtxoIds: ["in"], outputVtxoIds: outputs,
+                 exitedVtxoIds: exited, createdAt: "", updatedAt: "", completedAt: nil,
+                 paymentHash: hash, lightningInvoice: nil, lightningOffer: nil)
+    }
+
+    @Test func aRefundIsARevokedSendThatLeftNothing() {
+        #expect(SendRefundEvidence.recorded([Self.send(status: "failed")], paymentHash: "hash"))
+        // Escalated to an emergency exit, still pending, not zero, or not this payment: no refund.
+        #expect(!SendRefundEvidence.recorded([Self.send(status: "failed", outputs: [], exited: ["v1"])], paymentHash: "hash"))
+        #expect(!SendRefundEvidence.recorded([Self.send(status: "pending")], paymentHash: "hash"))
+        #expect(!SendRefundEvidence.recorded([Self.send(status: "failed", effective: -12, fee: 12)], paymentHash: "hash"))
+        #expect(!SendRefundEvidence.recorded([Self.send(status: "failed", hash: "other")], paymentHash: "hash"))
+        #expect(!SendRefundEvidence.recorded([Self.send(status: "failed"), Self.send(status: "failed")], paymentHash: "hash"))
+        #expect(!SendRefundEvidence.recorded([], paymentHash: "hash"))
+    }
+
+    // MARK: Hold to send
+
+    actor Gate {
+        var calls = 0
+        private var continuation: CheckedContinuation<SendReceipt, Never>?
+        func pay() async -> SendReceipt {
+            calls += 1
+            return await withCheckedContinuation { continuation = $0 }
+        }
+        func finish() { continuation?.resume(returning: .init(amount: 2_500, proof: .submitReturnedArkSuccess)); continuation = nil }
+    }
+
+    @Test func holdToSendCannotDoubleSubmitAcrossPoses() async throws {
+        let gate = Gate()
+        let storage = SendPaymentTests.Storage()
+        let controller = SendPaymentController(dependencies: .init(
+            prepare: { _, _ in .init(movementIDs: []) }, pay: { _, _, _ in await gate.pay() },
+            reconcile: { _ in .uncertain }, read: { storage.attempt }, write: { try storage.write($0) }))
+        let payment = Self.ark, quote = SendQuote(amount: 2_500, fee: 0, total: 2_500)
+        let hold = SendHoldGate()
+        var confirms = 0
+        let confirm = {
+            hold.confirm(generation: controller.generation) {
+                confirms += 1
+                controller.submit(payment, quote: quote)
+            }
+        }
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 402, height: 874))
+        func show() {
+            // A pose change rebuilds the review; Send's gate and the controller outlive it.
+            window.rootViewController = UIHostingController(rootView: SendConfirmation(
+                payment: payment, quote: quote, controller: controller, cancel: {}, done: {}, gate: hold))
+        }
+        window.isHidden = false
+        defer { window.isHidden = true; window.rootViewController = nil }
+        show()
+        let generation = controller.generation
+        // Two completions racing from the same review: one submission.
+        #expect(hold.confirm(generation: generation) { confirms += 1; controller.submit(payment, quote: quote) })
+        #expect(!hold.confirm(generation: generation) { confirms += 1; controller.submit(payment, quote: quote) })
+        try await SendPaymentTests.waitUntil { controller.state == .submitting }
+        for size in [CGSize(width: 466, height: 678), .init(width: 951, height: 669), .init(width: 466, height: 678),
+                     .init(width: 951, height: 669)] {
+            window.frame.size = size
+            show()
+            window.layoutIfNeeded()
+            confirm()
+            try await Task.sleep(for: .milliseconds(20))
+            #expect(controller.locked && controller.attempt?.payment == payment)
+        }
+        try await SendPaymentTests.waitUntil { controller.attempt != nil }
+        #expect(await gate.calls == 1)
+        await gate.finish()
+        try await SendPaymentTests.waitUntil { controller.state != .submitting }
+        #expect(controller.state == .succeeded(.init(amount: 2_500, proof: .submitReturnedArkSuccess)))
+        #expect(await gate.calls == 1)
+    }
+
+    @Test func aRefusedReservationLetsYouHoldAgain() {
+        let hold = SendHoldGate()
+        var submitted = 0
+        #expect(hold.confirm(generation: 4) { submitted += 1 })
+        // The controller bumped its generation for the attempt; no payment was made, so a new hold is a new attempt.
+        #expect(hold.confirm(generation: 5) { submitted += 1 })
+        #expect(!hold.confirm(generation: 5) { submitted += 1 })
+        #expect(submitted == 2)
+    }
+
+    // MARK: Recent recipients
+
+    @Test func recentsComeFromHistoryWithoutInvoices() {
+        let rows = [
+            HomeShotTests.row("a", "Lnurl", 1, "outgoing", HomeShotTests.at(0, 9, 0), to: "Maya@LocalHost.com"),
+            HomeShotTests.row("b", "Bolt11", 1, "outgoing", HomeShotTests.at(0, 8, 0), to: SendReceiveShotTests.invoice),
+            HomeShotTests.row("c", "Onchain", 1, "outgoing", HomeShotTests.at(0, 7, 0), to: SendReceiveShotTests.bitcoin),
+            HomeShotTests.row("d", "Lnurl", 1, "outgoing", HomeShotTests.at(0, 6, 0), to: "maya@localhost.com"),
+            HomeShotTests.row("e", "Lnurl", 1, "outgoing", HomeShotTests.at(0, 5, 0), to: "bob@getalby.com", status: "failed"),
+            HomeShotTests.row("f", "Arkoor", 1, "incoming", HomeShotTests.at(0, 4, 0), to: "lucas@ln.tips"),
+        ]
+        let recents = SendRecent.from(rows, ownDomain: "localhost.com")
+        #expect(recents.map(\.destination) == ["maya@localhost.com", SendReceiveShotTests.bitcoin])
+        #expect(recents.first?.label == SendRecipientLabel(name: "maya", nameIsVerbatim: true, avatar: .initial("m")))
+        #expect(recents.last?.label.avatar == .chain)
+        #expect(SendRecent.matching(recents, query: "ma").map(\.destination) == ["maya@localhost.com"])
+    }
+}
+
+/// Receive shows exactly the chosen format, and its arrivals follow real events.
+@MainActor
+struct ReceiveFormatTests {
+    static let address = "maya@noahwallet.io"
+    static let plain = ReceiveRequest(arkAddress: SendReceiveShotTests.ark, onchainAddress: SendReceiveShotTests.bitcoin)
+    static var priced: ReceiveRequest {
+        var request = plain
+        request.amountSat = 1_500
+        request.lightningInvoice = SendReceiveShotTests.invoice
+        request.paymentHash = PaymentEncoding.invoice(SendReceiveShotTests.invoice)?.hash
+        return request
+    }
+
+    @Test func eachFormatCarriesExactlyItsPayload() throws {
+        #expect(ReceiveFormat.lightningAddress.payload(request: nil, address: Self.address) == Self.address)
+        #expect(ReceiveFormat.lightningAddress.payload(request: Self.plain, address: nil) == nil)
+        #expect(ReceiveFormat.request.payload(request: Self.plain, address: Self.address) == (try Self.plain.uri()))
+        #expect(ReceiveFormat.request.payload(request: Self.priced, address: Self.address) == (try Self.priced.uri()))
+        #expect(try Self.priced.uri().contains("lightning="))
+        #expect(ReceiveFormat.invoice.payload(request: Self.plain, address: Self.address) == nil)
+        #expect(ReceiveFormat.invoice.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.invoice)
+        #expect(ReceiveFormat.ark.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.ark)
+        #expect(ReceiveFormat.bitcoin.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.bitcoin)
+        #expect(ReceiveFormat.allCases.count == 5)
+        // An amount shows the unified request; clearing it returns to the Lightning address.
+        #expect(ReceiveFormat.after(amountChange: true, from: .lightningAddress) == .request)
+        #expect(ReceiveFormat.after(amountChange: false, from: .invoice) == .lightningAddress)
+        #expect(ReceiveFormat.after(amountChange: false, from: .ark) == .ark)
+        #expect(ReceiveFormat.request.showsBand(hasAmount: true) && !ReceiveFormat.ark.showsBand(hasAmount: true))
+        #expect(QRMatrix.correction(for: try Self.priced.uri()) == "M" && QRMatrix.correction(for: Self.address) == "H")
+    }
+
+    /// The card as drawn decodes to exactly the shown format, in both themes, with the logo.
+    @Test(arguments: [ColorScheme.light, .dark])
+    func theShownQRDecodesToTheChosenFormat(scheme: ColorScheme) throws {
+        for request in [Self.plain, Self.priced] {
+            for format in ReceiveFormat.allCases {
+                guard let payload = format.payload(request: request, address: Self.address) else { continue }
+                let card = ReceiveCard(payload: payload, title: format.name, caption: format.caption(hasAmount: request.amountSat != nil),
+                                       band: format.showsBand(hasAmount: request.amountSat != nil) ? ("₿ 1,500", nil) : nil, qrSide: 226,
+                                       reveal: false)
+                    .frame(width: 300)
+                    .padding(24)
+                    .background(NoahTokens.Colors.background)
+                    .environment(\.colorScheme, scheme)
+                #expect(try StyledQRCodeTests.decode(card) == [payload], "\(format) in \(scheme)")
+            }
+        }
+    }
+
+    @Test func onchainArrivalPrefersThisRequestsAddress() {
+        let snapshot = ReceiveChainSnapshot(tip: 100, incoming: [
+            .init(txid: "old", toAddress: 5, received: 5, confirmedHeight: nil),
+            .init(txid: "other", toAddress: 0, received: 9, confirmedHeight: nil),
+            .init(txid: "mine", toAddress: 7, received: 7, confirmedHeight: nil),
+            .init(txid: "mined", toAddress: 8, received: 8, confirmedHeight: 99),
+        ])
+        #expect(snapshot.arrival(excluding: ["old"])?.txid == "mine")
+        #expect(snapshot.arrival(excluding: ["old", "mine"])?.txid == "other")
+        #expect(snapshot.arrival(excluding: ["old", "mine", "other"]) == nil)
+    }
+
+    @Test func arrivalsFlipOnlyAfterTheirPhasesAndPlayEachHapticOnce() {
+        let start = Date()
+        let lightning = ReceiveArrival(rail: .lightning, sats: 1_500, start: start)
+        let english = Locale(identifier: "en")
+        #expect(lightning.phase(at: 0.1, tip: nil, locale: english).text == "Incoming over Lightning")
+        #expect(lightning.phase(at: 1.0, tip: nil, locale: english).text == "Ark holds it for you")
+        #expect(lightning.phase(at: 2.0, tip: nil, locale: english).text == "Claiming with your key")
+        #expect(lightning.phase(at: 2.6, tip: nil, locale: english) == ("Received", true))
+        #expect(lightning.angle(at: 2.7) == 0 && lightning.angle(at: 3.5) > 90 && lightning.angle(at: 20) == 0)
+        #expect(Set(lightning.haptics.map(\.key)).count == lightning.haptics.count)
+        var onchain = ReceiveArrival(rail: .onchain, sats: 100_000, start: start, txid: "tx")
+        #expect(onchain.phase(at: 2, tip: 100, locale: english).text == "Waiting for block 101")
+        onchain.confirmedHeight = 101
+        onchain.confirmedAt = start.addingTimeInterval(10)
+        #expect(onchain.phase(at: 9, tip: 101, locale: english).text == "Waiting for block 102")
+        #expect(onchain.phase(at: 11, tip: 101, locale: english) == ("Confirmed in block 101", true))
+    }
+}
