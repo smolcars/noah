@@ -10,7 +10,10 @@ import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.DetailValue
 import androidx.compose.ui.platform.LocalUriHandler
 import com.noahwallet.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun VtxosScreen(app: AppModel) {
@@ -30,14 +33,10 @@ fun VtxosScreen(app: AppModel) {
     val selectedVtxos = OnchainDisplay.currentSelection(vtxos, selected)
     val visible = vtxos.filter { filter == null || it.statusID == filter }
     OnchainScreen(app, model) {
-        // Home's Renew: today's refresh review for exactly the expiring VTXOs it named; the user still confirms.
-        // Launched after OnchainScreen's own effects so their first reset can't drop the review.
-        LaunchedEffect(app.renewVtxos) {
-            val ids = app.renewVtxos ?: return@LaunchedEffect
-            app.renewVtxos = null
-            selecting = true; selected = ids.toSet()
-            model.review(OnchainAction.refresh, ids)
-        }
+        // Inside OnchainScreen's content, so its effects (and their first reset) run before the review starts.
+        RenewReview(model, take = { app.renewVtxos?.also { app.renewVtxos = null } },
+            attempt = { id -> withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() }.firstOrNull { it.id == id } },
+            onStart = { ids -> selecting = true; selected = ids.toSet() }, renewed = { app.renewSucceeded = it })
         Text(tr("VTXOs"), style = MaterialTheme.typography.headlineSmall)
         FilterMenu(filter, listOf(null) + VtxoStatus.entries, { status -> status?.let { "${it.label} (${vtxos.count { row -> row.statusID == it }})" } ?: "All" }) { filter = it }
         AmountRow(app, "Total (${vtxos.size} VTXOs)", vtxos.sumOf { it.amount })
@@ -98,5 +97,30 @@ internal fun <T> FilterMenu(selected: T, values: List<T>, label: (T) -> String, 
         DropdownMenu(open, onDismissRequest = { open = false }) {
             values.forEach { value -> DropdownMenuItem(text = { Text(tr(label(value))) }, onClick = { change(value); open = false }) }
         }
+    }
+}
+
+/**
+ * Home's Renew: takes the request once and opens today's refresh review for exactly those VTXOs; the user still
+ * confirms. It's keyed on nothing that changes, so clearing the request can't cancel a review whose quote is slow.
+ * [renewed] hears only of success the journal proves (that reviewed quote's receipt); a dismissed, expired or
+ * failed review reports nothing.
+ */
+@Composable
+internal fun RenewReview(model: OnchainModel, take: () -> List<String>?, attempt: suspend (String) -> OnchainOperationJournal.Attempt?,
+                         onStart: (List<String>) -> Unit, renewed: (List<String>) -> Unit) {
+    var reviewed by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        val ids = take() ?: return@LaunchedEffect
+        onStart(ids)
+        model.review(OnchainAction.refresh, ids)
+        reviewed = model.quote?.takeIf { it.action == OnchainAction.refresh && it.ids == ids.sorted() }?.id
+    }
+    LaunchedEffect(reviewed) {
+        val id = reviewed ?: return@LaunchedEffect
+        // The review is over once its quote has gone and nothing is being submitted: confirmed, dismissed or expired.
+        snapshotFlow { model.quote?.id == id || model.busy }.first { !it }
+        attempt(id)?.takeIf { it.receipt != null }?.let { renewed(it.quote.ids) }
+        reviewed = null
     }
 }

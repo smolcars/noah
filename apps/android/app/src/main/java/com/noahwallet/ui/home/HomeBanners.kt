@@ -29,7 +29,7 @@ internal class HomeSignals(
 }
 
 @Composable
-internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory, onRenewed: () -> Unit): HomeSignals {
+internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory): HomeSignals {
     val background by com.noahwallet.services.wallet.WalletBackgroundActivity.changes.collectAsState()
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
@@ -65,10 +65,7 @@ internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory
         if (app.isWalletSuspended) { memory.renew = null; return@LaunchedEffect }
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             if (com.noahwallet.onchain.onchainReady(app)) try {
-                val due = HomeRules.renew(withContext(Dispatchers.IO) { app.session.onchainOverview() }.vtxos)
-                memory.renew = due
-                // After Renew, the first check back on Home tells whether the reviewed refresh went through.
-                if (memory.renewRequested) { memory.renewRequested = false; if (due == null) onRenewed() }
+                memory.renew = HomeRules.renew(withContext(Dispatchers.IO) { app.session.onchainOverview() }.vtxos)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* Keep the last known answer; a background job or a closed session is transient. */ }
             awaitCancellation()

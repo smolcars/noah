@@ -89,7 +89,6 @@ class HomeMemory {
     var noticesTaken = false
     var firstPayment by mutableStateOf<FirstPayment?>(null)
     var recentRevealAt by mutableStateOf<Long?>(null)
-    var renewRequested = false
     var backedUpSeen: Boolean? = null
     var emailSeen: Boolean? = null
     var toastSeen: String? = null
@@ -170,7 +169,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
         }
         Box(Modifier.rise(entered, 180 + after, 14f, reduceMotion)) {
             NudgeHost(ui, onAction = { nudge ->
-                if (nudge is HomeRules.Nudge.Renewal) { haptics.medium(); memory.renewRequested = true } else haptics.light()
+                if (nudge is HomeRules.Nudge.Renewal) haptics.medium() else haptics.light()
                 actions.nudge(nudge)
             }, onDismiss = { haptics.light(); actions.dismiss(it) })
         }

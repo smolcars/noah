@@ -144,6 +144,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
     /** The expiring VTXOs Home's Renew nudge hands to today's VTXO refresh review; consumed once. */
     var renewVtxos by mutableStateOf<List<String>?>(null)
+    /** The VTXOs a reviewed refresh from Renew just submitted (its journal receipt), for Home's "Renewed"; consumed once. */
+    var renewSucceeded by mutableStateOf<List<String>?>(null)
     /** Home's in-memory presentation state; never persisted. */
     var homeMemory = com.noahwallet.ui.home.HomeMemory(); private set
 
@@ -186,7 +188,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             }
             throw failure
         }
-        history.clear(); repeatPayment = null; scannedDestination = null; autoBoardSuccessBanner = null; renewVtxos = null
+        history.clear(); repeatPayment = null; scannedDestination = null; autoBoardSuccessBanner = null; renewVtxos = null; renewSucceeded = null
         homeMemory = com.noahwallet.ui.home.HomeMemory()
         walletLock.reset(); restore.reset()
         open = false; onboarded = false; isWalletSuspended = false; summary = null; recoveryPhraseBackedUp = false
