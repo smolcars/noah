@@ -17,12 +17,17 @@ struct HomeGetPaidCard: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button(action: { if address != nil { onCopy() } }) {
-                HomeQRCard(address: address, qrSide: qrSide, celebration: celebration, animateQR: animateQR,
-                           unit: unit, hidden: hidden, onProfile: onProfile)
+            if address != nil {
+                Button(action: onCopy) {
+                    HomeQRCard(address: address, qrSide: qrSide, celebration: celebration, animateQR: animateQR,
+                               unit: unit, hidden: hidden)
+                }
+                .buttonStyle(HomePressStyle(scale: 0.985))
+            } else {
+                // No address yet: the card holds the Profile action, so it can't sit inside the copy button.
+                HomeQRCard(address: nil, qrSide: qrSide, celebration: celebration, unit: unit, hidden: hidden,
+                           onProfile: onProfile)
             }
-            .buttonStyle(HomePressStyle(scale: 0.985))
-            .disabled(address == nil && celebration == nil)
             if let address {
                 HomeCardActions(address: address, celebration: celebration, onCopy: onCopy, onShare: onShare)
             }
