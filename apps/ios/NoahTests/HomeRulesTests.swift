@@ -144,6 +144,24 @@ struct HomeRulesTests {
         #expect(HomeRenewal.select([], tip: 1_000) == nil)
     }
 
+    @Test func reviewAndConfirmationUseTheNudgesRule() {
+        let tip: UInt32 = 1_000
+        let shown = HomeRenewal.select([.init(id: "a", sats: 1, expiryHeight: 1_050, spendable: true),
+                                        .init(id: "b", sats: 1, expiryHeight: 1_060, spendable: true)], tip: tip)
+        // By review time "b" has locked and "a" is still in the window.
+        let later = HomeRenewal.select([.init(id: "a", sats: 1, expiryHeight: 1_050, spendable: true),
+                                        .init(id: "b", sats: 1, expiryHeight: 1_060, spendable: false)], tip: tip)
+        #expect(HomeRenewal.eligible(shown?.ids ?? [], in: later) == ["a"])
+        #expect(HomeRenewal.allEligible(["a"], in: later))
+        #expect(!HomeRenewal.allEligible(["a", "b"], in: later))
+        // "a" expires before confirmation: nothing is submitted.
+        let expired = HomeRenewal.select([.init(id: "a", sats: 1, expiryHeight: 1_050, spendable: true)], tip: 1_050)
+        #expect(expired == nil && !HomeRenewal.allEligible(["a"], in: expired))
+        // A failed wallet read counts as not eligible.
+        #expect(HomeRenewal.eligible(["a"], in: nil).isEmpty && !HomeRenewal.allEligible(["a"], in: nil))
+        #expect(!HomeRenewal.allEligible([], in: later))
+    }
+
     @Test func statusLineShowsTheFirstThatApplies() {
         func line(_ balance: WalletBalance?, incoming: UInt64 = 0, error: String? = nil, rounds: Int = 0,
                   backingUp: Bool = false, background: String? = nil) -> HomeStatusLine? {

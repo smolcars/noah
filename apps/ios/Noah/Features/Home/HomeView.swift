@@ -495,8 +495,7 @@ struct HomeView: View {
             // Opens the refresh review for exactly the coins that are still eligible (coins can expire,
             // lock or renew automatically after the nudge appeared); nothing is submitted without confirmation.
             Task {
-                let current = await home.currentRenewal()
-                let ids = renewal.ids.filter { current?.ids.contains($0) == true }
+                let ids = HomeRenewal.eligible(renewal.ids, in: await home.currentRenewal())
                 guard !ids.isEmpty else { return }
                 await renew.review(.refresh, ids: ids)
                 if let error = renew.error { alert = error }

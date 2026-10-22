@@ -32,11 +32,25 @@ struct HomeRenewal: Equatable, Sendable {
     /// Blocks until the soonest of them expires.
     let blocksLeft: UInt32
 
+    /// The one eligibility rule for the nudge, the review and its confirmation: reported
+    /// by `getExpiringVtxos`, spendable (not locked) and not yet expired.
+    static func isEligible(_ coin: Coin, tip: UInt32) -> Bool { coin.spendable && coin.expiryHeight > tip }
+
     /// Expired and locked VTXOs are left out: they can't be refreshed from here.
     static func select(_ expiring: [Coin], tip: UInt32) -> Self? {
-        let coins = expiring.filter { $0.spendable && $0.expiryHeight > tip }
+        let coins = expiring.filter { isEligible($0, tip: tip) }
         guard let soonest = coins.map(\.expiryHeight).min() else { return nil }
         return Self(ids: coins.map(\.id), sats: coins.reduce(0) { $0 + $1.sats }, blocksLeft: soonest - tip)
+    }
+
+    /// The requested coins that are still eligible in a fresh read; a failed read (nil) has none.
+    static func eligible(_ requested: [String], in current: Self?) -> [String] {
+        requested.filter { current?.ids.contains($0) == true }
+    }
+
+    /// Confirmation goes ahead only if every reviewed coin is still eligible.
+    static func allEligible(_ reviewed: [String], in current: Self?) -> Bool {
+        !reviewed.isEmpty && eligible(reviewed, in: current).count == reviewed.count
     }
 
     /// Whole hours left at ten minutes a block.
