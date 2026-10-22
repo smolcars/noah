@@ -106,6 +106,8 @@ enum NoahTokens {
         static let handle = TextStyle(size: 34, lineHeight: 40, weight: .semibold, display: false, tracking: -0.02, textStyle: .title1)
         static let body = TextStyle(size: 17, lineHeight: 22, weight: .regular, display: false, tracking: 0, textStyle: .body)
         static let button = TextStyle(size: 17, lineHeight: 22, weight: .semibold, display: false, tracking: 0, textStyle: .headline)
+        static let label = TextStyle(size: 17, lineHeight: 22, weight: .medium, display: false, tracking: 0, textStyle: .body)
+        static let control = TextStyle(size: 15, lineHeight: 20, weight: .medium, display: false, tracking: 0, textStyle: .body)
         static let sub = TextStyle(size: 15, lineHeight: 20, weight: .regular, display: false, tracking: 0, textStyle: .subheadline)
         static let caption = TextStyle(size: 13, lineHeight: 18, weight: .medium, display: false, tracking: 0.01, textStyle: .caption1)
     }
