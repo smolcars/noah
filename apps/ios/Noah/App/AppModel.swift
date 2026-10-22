@@ -204,8 +204,7 @@ final class AppModel {
 
     private func reloadRecoveryPhraseBackup() {
         // Missing or unreadable never hides the prompt.
-        needsRecoveryPhraseBackup = (settings.persistedState(PersistedRecoveryPhraseBackup.self, key: PersistedRecoveryPhraseBackup.key) ?? .init())
-            .needsBackup
+        needsRecoveryPhraseBackup = PersistedRecoveryPhraseBackup.read(from: settings).needsBackup
     }
 
     /// Onboarding's restore finished its closing moment; show the wallet.

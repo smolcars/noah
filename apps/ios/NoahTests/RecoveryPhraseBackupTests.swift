@@ -17,7 +17,7 @@ struct RecoveryPhraseBackupTests {
     }
 
     private func backup(_ settings: SettingsStorage) -> PersistedRecoveryPhraseBackup {
-        settings.persistedState(PersistedRecoveryPhraseBackup.self, key: PersistedRecoveryPhraseBackup.key) ?? .init()
+        PersistedRecoveryPhraseBackup.read(from: settings)
     }
 
     @Test func reactNativeMigrationOpensHomeWithThePrompt() throws {
@@ -100,6 +100,41 @@ struct RecoveryPhraseBackupTests {
         #expect(settings.completeRestore())
         #expect(backup(settings).isBackedUp == false)
         #expect(backup(settings).needsBackup)
+    }
+
+    @Test(arguments: [
+        (#"{"state":{"isBackedUp":true},"version":0}"#, true),
+        (#"{"state":{"isBackedUp":true},"version":99}"#, false), // A version this build doesn't write.
+        (#"{"state":{"isBackedUp":true},"version":-1}"#, false),
+        (#"{"state":{"isBackedUp":true}}"#, false), // Missing version.
+        (#"{"state":{"isBackedUp":true},"version":null}"#, false),
+        (#"{"state":{"isBackedUp":true},"version":"0"}"#, false), // Malformed versions.
+        (#"{"state":{"isBackedUp":true},"version":0.5}"#, false),
+        (#"{"state":{"isBackedUp":true},"version":true}"#, false),
+        (#"{"state":{"isBackedUp":"true"},"version":0}"#, false), // Wrong types.
+        (#"{"state":{"isBackedUp":1},"version":0}"#, false),
+        (#"{"state":true,"version":0}"#, false),
+        (#"{"isBackedUp":true}"#, false),
+        ("not json", false),
+    ])
+    func onlyTheEnvelopeVersionThisBuildWritesCounts(raw: String, backedUp: Bool) throws {
+        let (settings, root) = try storage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        settings.set(raw, forKey: PersistedRecoveryPhraseBackup.key)
+        #expect(backup(settings).needsBackup == !backedUp, "\(raw)")
+    }
+
+    @MainActor @Test func appModelReadsTheFlagStrictly() throws {
+        let (settings, root) = try storage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(settings: settings)
+        // What this build writes is honoured…
+        try model.confirmRecoveryPhraseBackedUp()
+        #expect(!model.needsRecoveryPhraseBackup)
+        #expect(settings.string(forKey: PersistedRecoveryPhraseBackup.key)?.contains(#""version":0"#) == true)
+        // …a future or foreign envelope never hides the prompt.
+        settings.set(#"{"state":{"isBackedUp":true},"version":99}"#, forKey: PersistedRecoveryPhraseBackup.key)
+        #expect(PersistedRecoveryPhraseBackup.read(from: settings).needsBackup)
     }
 
     @Test func flagSurvivesReopenAndUnrelatedWalletWrites() throws {

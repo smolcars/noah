@@ -15,4 +15,19 @@ struct PersistedRecoveryPhraseBackup: Codable, Equatable, Sendable {
     var isBackedUp: Bool?
 
     var needsBackup: Bool { isBackedUp != true }
+
+    /// Reads the flag strictly: only the envelope version this build writes
+    /// counts. Any other version, a missing or malformed one, or a value that
+    /// doesn't decode reads as not backed up, so it can never hide the prompt.
+    static func read(from settings: SettingsStorage) -> Self {
+        guard let raw = settings.string(forKey: key),
+              let envelope = try? JSONDecoder().decode(Envelope.self, from: Data(raw.utf8)),
+              envelope.version == version else { return .init() }
+        return envelope.state
+    }
+
+    private struct Envelope: Decodable {
+        let state: PersistedRecoveryPhraseBackup
+        let version: Int
+    }
 }
