@@ -34,13 +34,17 @@ internal fun Modifier.sceneSlot(clock: SceneClock, mode: SceneMode): Modifier {
     }
 }
 
-/** Heights Welcome measures so Creating and Restoring keep the tree exactly where it was. */
-internal class SceneMetrics {
-    var below by mutableIntStateOf(0)
-    var bottom by mutableIntStateOf(0)
+/**
+ * Compact scene screens reserve Welcome's word and button heights (from the type scale, not a measurement,
+ * so recreation in another pose agrees), keeping the tree exactly where Welcome left it.
+ */
+@Composable
+private fun sceneTextHeights(): Pair<Dp, Dp> {
+    val scale = LocalDensity.current.fontScale
+    val below = (80 * minOf(scale, 1.3f) + 8 + 22 * scale).dp
+    val bottom = NoahTokens.Space.xxl - NoahTokens.Space.xs + NoahTokens.Size.button + 52.dp + NoahTokens.Space.s
+    return below to bottom
 }
-
-internal val LocalSceneMetrics = staticCompositionLocalOf { SceneMetrics() }
 
 /**
  * Welcome, Creating, Restoring and Notifications: the tree fills the picture area; words and buttons sit
@@ -48,20 +52,15 @@ internal val LocalSceneMetrics = staticCompositionLocalOf { SceneMetrics() }
  */
 @Composable
 internal fun SceneLayout(clock: SceneClock, mode: SceneMode, topBar: @Composable RowScope.() -> Unit = {},
-                         measure: Boolean = false, below: @Composable ColumnScope.() -> Unit, bottom: @Composable ColumnScope.() -> Unit) {
-    val metrics = LocalSceneMetrics.current
-    val density = LocalDensity.current
+                         below: @Composable ColumnScope.() -> Unit, bottom: @Composable ColumnScope.() -> Unit) {
     val pad = NoahTokens.Space.screen
-    val belowMin = with(density) { metrics.below.toDp() }
-    val bottomMin = with(density) { metrics.bottom.toDp() }
+    val (belowMin, bottomMin) = sceneTextHeights()
     when (val pose = LocalPose.current) {
         OnboardingPose.Compact -> Column(Modifier.fillMaxSize().padding(horizontal = pad)) {
             TopBar(topBar)
             Box(Modifier.weight(1f).fillMaxWidth().sceneSlot(clock, mode))
-            Column(Modifier.fillMaxWidth().heightIn(min = if (measure) 0.dp else belowMin)
-                .then(if (measure) Modifier.onSizeChanged { metrics.below = it.height } else Modifier), content = below)
-            Column(Modifier.fillMaxWidth().heightIn(min = if (measure) 0.dp else bottomMin)
-                .then(if (measure) Modifier.onSizeChanged { metrics.bottom = it.height } else Modifier)) {
+            Column(Modifier.fillMaxWidth().heightIn(min = belowMin), content = below)
+            Column(Modifier.fillMaxWidth().heightIn(min = bottomMin), verticalArrangement = Arrangement.Bottom) {
                 bottom(); Spacer(Modifier.height(NoahTokens.Space.s))
             }
         }
@@ -97,10 +96,11 @@ internal fun TopBar(content: @Composable RowScope.() -> Unit) {
  * headline (larger) to the leading pane and keeps fields and actions in the trailing pane; tabletop keeps
  * the headline above the fold and fields, actions and the keyboard below it.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FormLayout(leadingTop: @Composable RowScope.() -> Unit = {}, trailingTop: @Composable RowScope.() -> Unit = {},
                         headline: @Composable (large: Boolean) -> Unit, form: @Composable ColumnScope.() -> Unit,
-                        actions: @Composable ColumnScope.() -> Unit, scroll: Boolean = true) {
+                        actions: @Composable ColumnScope.() -> Unit, scroll: Boolean = true, accessory: Boolean = false) {
     val pad = NoahTokens.Space.screen
     when (val pose = LocalPose.current) {
         OnboardingPose.Compact -> Column(Modifier.fillMaxSize().padding(horizontal = pad)) {
@@ -123,12 +123,19 @@ internal fun FormLayout(leadingTop: @Composable RowScope.() -> Unit = {}, traili
                 }
             }
         }) {
+            // A short pane with the keyboard up (landscape, tabletop): fields and actions scroll together
+            // so the focused field always stays visible.
+            // [accessory] actions (Restore's suggestions) stay pinned above the keyboard instead.
+            val keyboard = WindowInsets.isImeVisible && !accessory
             Column(Modifier.fillMaxSize().padding(horizontal = pad)) {
-                Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.xs).heightIn(min = NoahTokens.Size.hitTarget),
+                if (!keyboard) Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.xs).heightIn(min = NoahTokens.Size.hitTarget),
                     verticalAlignment = Alignment.CenterVertically) { Spacer(Modifier.weight(1f)); trailingTop() }
-                Column(Modifier.weight(1f).fillMaxWidth().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
-                    verticalArrangement = if (pose is OnboardingPose.Wide) Arrangement.Center else Arrangement.Top, content = form)
-                Column(Modifier.fillMaxWidth().padding(bottom = NoahTokens.Space.s), content = actions)
+                Column(Modifier.weight(1f).fillMaxWidth().then(if (scroll || keyboard) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+                    verticalArrangement = if (pose is OnboardingPose.Wide && !keyboard) Arrangement.Center else Arrangement.Top) {
+                    form()
+                    if (keyboard) Column(Modifier.fillMaxWidth().padding(vertical = NoahTokens.Space.s), content = actions)
+                }
+                if (!keyboard) Column(Modifier.fillMaxWidth().padding(bottom = NoahTokens.Space.s), content = actions)
             }
         }
     }
@@ -143,8 +150,16 @@ internal val LocalSheetPane = staticCompositionLocalOf<SheetPane?> { null }
 @Composable
 internal fun OnboardingSheet(onDismissRequest: () -> Unit, sheetState: SheetState, content: @Composable ColumnScope.() -> Unit) {
     val pane = LocalSheetPane.current
-    WalletModalBottomSheet(onDismissRequest, modifier = if (pane != null) Modifier.padding(start = pane.start) else Modifier,
-        sheetState = sheetState, sheetMaxWidth = pane?.width ?: com.noahwallet.ui.AdaptiveLayout.readableWidth.dp) {
+    val density = LocalDensity.current
+    // Tabletop: the sheet's whole space starts below the fold, so it rises from the bottom pane and can't grow into the top.
+    val fold = com.noahwallet.ui.LocalFoldingFeatures.current.filter { it.width > it.height }.maxOfOrNull { it.bottom }
+        ?.takeIf { LocalPose.current is OnboardingPose.Tabletop }
+    WalletModalBottomSheet(onDismissRequest, modifier = when {
+            pane != null -> Modifier.padding(start = pane.start)
+            fold != null -> Modifier.padding(top = with(density) { fold.toDp() })
+            else -> Modifier
+        }, sheetState = sheetState, sheetMaxWidth = pane?.width ?: com.noahwallet.ui.AdaptiveLayout.readableWidth.dp,
+        capAboveHorizontalFold = fold == null) {
         Column(Modifier.fillMaxWidth().padding(start = NoahTokens.Space.screen, end = NoahTokens.Space.screen, bottom = NoahTokens.Space.xl), content = content)
     }
 }
@@ -166,7 +181,6 @@ internal fun OnboardingFrame(clock: SceneClock?, content: @Composable () -> Unit
         val hinges = com.noahwallet.ui.LocalFoldingFeatures.current
         var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
         var root by remember { mutableStateOf<LayoutCoordinates?>(null) }
-        val metrics = remember { SceneMetrics() }
         BoxWithConstraints(Modifier.fillMaxSize().background(palette.background).onGloballyPositioned {
             root = it; origin = it.positionInWindow()
         }) {
@@ -182,7 +196,7 @@ internal fun OnboardingFrame(clock: SceneClock?, content: @Composable () -> Unit
             })
             val sheetPane = (pose as? OnboardingPose.Wide)?.let { with(density) { SheetPane(origin.x.toDp() + it.end, maxWidth - it.end) } }
             CompositionLocalProvider(LocalPose provides pose, LocalSheetPane provides sheetPane,
-                LocalSceneRoot provides { root }, LocalSceneMetrics provides metrics) {
+                LocalSceneRoot provides { root }) {
                 if (clock != null) TreeSceneCanvas(clock, palette.foreground, reduceMotion, Modifier.fillMaxSize())
                 content()
             }

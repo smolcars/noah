@@ -29,7 +29,7 @@ internal fun WelcomeStep(model: AppModel, presentation: OnboardingPresentation) 
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val play = remember { presentation.firstShow("welcome") }
-    SceneLayout(presentation.scene, SceneMode.welcome, measure = true, topBar = {
+    SceneLayout(presentation.scene, SceneMode.welcome, topBar = {
         LanguageButton(model.localeIdentifier) { presentation.languageOpen = true }
     }, below = {
         Wordmark(play)

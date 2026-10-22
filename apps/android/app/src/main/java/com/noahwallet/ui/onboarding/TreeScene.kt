@@ -77,7 +77,7 @@ internal fun TreeSceneCanvas(clock: SceneClock, foreground: Color, reduceMotion:
     // The frame loop runs only while something is drawn and the activity is on screen.
     val running = clock.mode != SceneMode.none || alpha > 0f
     val static = (reduceMotion && clock.mode in setOf(SceneMode.welcome, SceneMode.conveyor)) ||
-        (clock.mode == SceneMode.conveyor && clock.frozenAt != null)
+        (clock.mode in setOf(SceneMode.conveyor, SceneMode.restore) && clock.frozenAt != null)
     LaunchedEffect(running, static, lifecycle) {
         if (!running) return@LaunchedEffect
         if (static) { clock.frameNanos = System.nanoTime(); return@LaunchedEffect }
@@ -93,7 +93,7 @@ internal fun TreeSceneCanvas(clock: SceneClock, foreground: Color, reduceMotion:
         when (clock.drawn) {
             SceneMode.welcome -> painter.frame(slot, welcomeBox) { painter.welcome(if (reduceMotion) 60f else t) }
             SceneMode.create -> painter.frame(slot, welcomeBox) { painter.create(t) }
-            SceneMode.restore -> painter.frame(slot, welcomeBox) { painter.restore(t, clock.readyAt) }
+            SceneMode.restore -> painter.frame(slot, welcomeBox) { painter.restore(clock.frozenAt ?: t, clock.readyAt) }
             SceneMode.conveyor -> painter.frame(slot, conveyorBox) { painter.conveyor(clock.frozenAt ?: if (reduceMotion) 1f else t) }
             SceneMode.none -> Unit
         }
@@ -270,6 +270,7 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
     fun restore(t: Float, readyAt: Float?) {
         chain(496f, if (reduceMotion) 0f else t * 7)
         tree(welcomeTree, listOf(1f, 1f, 1f))
+        if (off) { welcomeTree.leaves.forEach { dot(it.x, it.y, 1.5f, base, .38f) }; return }
         val bandX = 20 + 353 * pr(t, bandStart, bandEnd)
         if (!reduceMotion && t > bandStart && t < bandEnd + .15f) {
             g.drawRect(Brush.horizontalGradient(listOf(orange.copy(alpha = 0f), orange.copy(alpha = .18f), orange.copy(alpha = 0f)),

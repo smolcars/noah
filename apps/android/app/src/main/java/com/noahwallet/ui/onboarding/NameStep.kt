@@ -12,8 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -142,8 +141,6 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
 private fun AvailabilityRow(state: NameAvailability, modifier: Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
-    val pulse = rememberInfiniteTransition(label = "checking")
-    val pulseAlpha by pulse.animateFloat(1f, .25f, infiniteRepeatable(tween(400), RepeatMode.Reverse), label = "pulse")
     val pop = remember { Animatable(1f) }
     LaunchedEffect(state) { if (state == NameAvailability.available && !reduceMotion) { pop.snapTo(2f); pop.animateTo(1f, NoahTokens.Motion.bouncy()) } }
     val text = when (state) {
@@ -156,8 +153,8 @@ private fun AvailabilityRow(state: NameAvailability, modifier: Modifier) {
     Row(modifier.heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically) {
         val dot = Modifier.size(8.dp)
         when (state) {
-            NameAvailability.checking -> Box(dot.alpha(if (reduceMotion) 1f else pulseAlpha).background(palette.orange, CircleShape))
-            NameAvailability.available -> Box(dot.scale(pop.value).background(palette.orange, CircleShape))
+            NameAvailability.checking -> PulsingDot(dot, reduceMotion)
+            NameAvailability.available -> Box(dot.graphicsLayer { scaleX = pop.value; scaleY = pop.value }.background(palette.orange, CircleShape))
             NameAvailability.taken -> Box(dot.border(1.5.dp, palette.muted, CircleShape))
             else -> Box(dot.background(palette.hairline, CircleShape))
         }
@@ -165,6 +162,15 @@ private fun AvailabilityRow(state: NameAvailability, modifier: Modifier) {
         Text(text, Modifier.semantics { liveRegion = LiveRegionMode.Polite }, style = NoahTokens.Typography.sub,
             color = if (state == NameAvailability.available) palette.foreground else palette.muted)
     }
+}
+
+/** "Checking": the orange dot pulses; the value is read while drawing, so nothing recomposes per frame. */
+@Composable
+private fun PulsingDot(modifier: Modifier, reduceMotion: Boolean) {
+    val palette = LocalPalette.current
+    val pulse = rememberInfiniteTransition(label = "checking")
+    val alpha = pulse.animateFloat(1f, .25f, infiniteRepeatable(tween(400), RepeatMode.Reverse), label = "pulse")
+    Box(modifier.graphicsLayer { this.alpha = if (reduceMotion) 1f else alpha.value }.background(palette.orange, CircleShape))
 }
 
 /** A hairline pill for suggestions and completions. */

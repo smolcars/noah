@@ -85,7 +85,11 @@ internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation
         delay((1400 - shown).coerceAtLeast(0))
         model.holdRestoreCompletion = false
     }
-    LaunchedEffect(issue) { if (issue != null) { model.holdRestoreCompletion = false; haptics.error() } }
+    LaunchedEffect(issue) {
+        // A failed restore found nothing: the scene greys out and stops claiming leaves.
+        clock.frozenAt = if (issue != null) clock.frozenAt ?: clock.time(System.nanoTime()) else null
+        if (issue != null) { model.holdRestoreCompletion = false; haptics.error() }
+    }
     SceneLayout(clock, SceneMode.restore, below = {
         PhaseText(listOf(tr("Restoring your wallet"), tr("Finding your bitcoin"), tr("Ready"))[phase])
         val total = model.summary?.balance?.totalSats?.toLong()

@@ -131,8 +131,11 @@ private fun PhraseRestoreScreen(model: AppModel) {
     val blocked = model.busy || !flow.canLeave
     val presentation = androidx.lifecycle.viewmodel.compose.viewModel<OnboardingPresentation>()
     val play = remember { presentation.firstShow("restore") }
+    // The word cells are platform EditTexts: clearing Compose focus alone leaves their keyboard up.
+    fun hideKeyboard() = activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+        ?.hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
     fun clear() {
-        clipboard.clearIfUnchanged(); focus.clearFocus(); input.clear(); focused = null
+        clipboard.clearIfUnchanged(); focus.clearFocus(); hideKeyboard(); input.clear(); focused = null
         leftBad = emptySet(); checksumFailed = false; revision++; clearGeneration++
     }
     fun leave() { clear(); flow.clearIssue(); model.step = "welcome" }
@@ -142,14 +145,14 @@ private fun PhraseRestoreScreen(model: AppModel) {
     val words = remember(revision) { input.words }
     val wordList = RecoveryPhraseInput.wordList
     fun changed() { revision++; checksumFailed = false; flow.clearIssue() }
-    fun moveOn(index: Int) { if (index < words.size - 1) requesters[index + 1].requestFocus() else focus.clearFocus() }
+    fun moveOn(index: Int) { if (index < words.size - 1) requesters[index + 1].requestFocus() else { focus.clearFocus(); hideKeyboard() } }
     fun accept(word: String, index: Int) {
         input.update(word, index); changed(); haptics.selection(); moveOn(index)
     }
     fun fill(text: String): Boolean {
         val count = RecoveryPhraseInput.normalizedWords(text).size
         if (count !in listOf(12, 24)) { input.update(text, 0); changed(); return false }
-        focus.clearFocus(); focused = null
+        focus.clearFocus(); hideKeyboard(); focused = null
         input.update(text, 0); clipboard.accepted(text)
         changed(); fillGeneration++; clearGeneration++; haptics.light()
         leftBad = input.words.indices.filter { input.words[it] !in wordList }.toSet()
@@ -209,7 +212,7 @@ private fun PhraseRestoreScreen(model: AppModel) {
         }
         Text(message.orEmpty(), Modifier.padding(top = 14.dp).heightIn(min = 20.dp).testTag("restore-error")
             .semantics { liveRegion = LiveRegionMode.Assertive }, style = NoahTokens.Typography.sub, color = palette.failure)
-    }, actions = {
+    }, accessory = true, actions = {
         if (keyboard) {
             val index = focused ?: 0
             val suggestions = input.suggestions(index).take(3)
@@ -223,7 +226,7 @@ private fun PhraseRestoreScreen(model: AppModel) {
                 clipboard.text()?.let { fill(it) }
             }
             PillButton(tr("Restore"), Modifier.weight(1f).testTag("restore-submit"), enabled = complete && model.canRestoreWallet) {
-                focus.clearFocus()
+                focus.clearFocus(); hideKeyboard()
                 if (!RecoveryPhraseInput.isValid(input.phrase) || !runCatching { io.github.niteshbalusu11.bark.validateMnemonic(input.phrase) }.getOrDefault(false)) {
                     haptics.error(); checksumFailed = true; return@PillButton
                 }
@@ -281,18 +284,18 @@ private fun WordCell(word: String, index: Int, count: Int, bad: Boolean, focused
         delay(index * 28L)
         if (reduceMotion) appear.animateTo(1f, tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else appear.animateTo(1f, NoahTokens.Motion.snappy())
     }
-    Row(modifier.height(44.dp).graphicsLayer {
+    Row(modifier.heightIn(min = 44.dp).graphicsLayer {
         alpha = appear.value.coerceIn(0f, 1f)
         if (!reduceMotion) translationY = (1 - appear.value) * 8 * density
     }, verticalAlignment = Alignment.CenterVertically) {
-        Text("${index + 1}", Modifier.width(18.dp).clearAndSetSemantics { }, textAlign = TextAlign.End,
-            style = TextStyleNumber, color = palette.muted)
+        Text("${index + 1}", Modifier.widthIn(min = 18.dp).clearAndSetSemantics { }, textAlign = TextAlign.End,
+            style = TextStyleNumber, color = palette.muted, maxLines = 1, softWrap = false)
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.weight(1f).fillMaxHeight()) {
+        Box(Modifier.weight(1f).heightIn(min = 44.dp), contentAlignment = Alignment.CenterStart) {
             RecoveryWordField(word, index, onChange, onFocus = onFocus, onNext = onNext, wordCount = count,
                 textColor = if (bad) palette.failure else palette.foreground, cursorColor = palette.orange,
                 textSize = if (count == 24) 16f else 17f, enabled = enabled,
-                modifier = Modifier.fillMaxSize().focusRequester(requester).testTag("restore-word-${index + 1}"))
+                modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp).focusRequester(requester).testTag("restore-word-${index + 1}"))
             Underline(focused, failed = bad, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 5.dp), thickness = 1.dp)
         }
     }

@@ -268,8 +268,6 @@ private fun OtpBox(digit: String, active: Boolean, failed: Boolean, ok: Boolean,
     val palette = LocalPalette.current
     val pop = remember { Animatable(1f) }
     LaunchedEffect(digit) { if (digit.isNotEmpty()) { pop.snapTo(.7f); pop.animateTo(1f, NoahTokens.Motion.bouncy()) } }
-    val blink = rememberInfiniteTransition(label = "caret")
-    val caret by blink.animateFloat(1f, 0f, infiniteRepeatable(keyframes { durationMillis = 1000; 1f at 0; 1f at 499; 0f at 500 }), label = "blink")
     val color = when { failed -> palette.failure; active || ok -> palette.orange; else -> palette.hairline }
     val width = if (active || ok) 2.dp else 1.5.dp
     Box(modifier.fillMaxHeight().graphicsLayer {
@@ -283,8 +281,17 @@ private fun OtpBox(digit: String, active: Boolean, failed: Boolean, ok: Boolean,
         alpha = (1 - fold) * (.3f + .7f * ((pop.value - .7f) / .3f).coerceIn(0f, 1f))
     }.border(width, color, RoundedCornerShape(NoahTokens.Radius.field)), contentAlignment = Alignment.Center) {
         if (digit.isNotEmpty()) Text(digit, style = NoahTokens.Typography.code, color = if (failed) palette.failure else palette.foreground)
-        else if (active) Box(Modifier.width(2.dp).height(26.dp).alpha(caret).background(palette.orange, RoundedCornerShape(1.dp)))
+        else if (active) Caret()
     }
+}
+
+/** The active box's blinking caret; read while drawing, so the row doesn't recompose each frame. */
+@Composable
+private fun Caret() {
+    val palette = LocalPalette.current
+    val blink = rememberInfiniteTransition(label = "caret")
+    val caret = blink.animateFloat(1f, 0f, infiniteRepeatable(keyframes { durationMillis = 1000; 1f at 0; 1f at 499; 0f at 500 }), label = "blink")
+    Box(Modifier.width(2.dp).height(26.dp).graphicsLayer { alpha = caret.value }.background(palette.orange, RoundedCornerShape(1.dp)))
 }
 
 @Composable
