@@ -35,8 +35,9 @@ struct OnboardingLayout: Equatable {
         // Design boxes: the welcome tree spans y 110…510 (chain 496), the conveyor 150…350 (chain 334).
         let box = conveyor ? CGRect(x: 0, y: 150, width: 393, height: 200) : CGRect(x: 0, y: 110, width: 393, height: 400)
         if wide {
-            // Fill the pane with what is drawn (leaves to chain, both conveyor trees), centred.
-            let content = conveyor ? CGRect(x: 35, y: 180, width: 330, height: 160) : CGRect(x: 20, y: 120, width: 353, height: 380)
+            // Fill the pane with what is drawn and centre it: the scan band's top to the chain line
+            // (leaves at 214, root at 496), or both conveyor trees with the hop.
+            let content = conveyor ? CGRect(x: 35, y: 180, width: 330, height: 160) : CGRect(x: 20, y: 196, width: 353, height: 304)
             let pane = CGRect(x: insets.leading, y: insets.top, width: leadingPane.width - insets.leading,
                               height: size.height - insets.top - insets.bottom)
             let scale = min(pane.width * 0.94 / content.width, pane.height * (conveyor ? 0.7 : 0.86) / content.height, 2.6)

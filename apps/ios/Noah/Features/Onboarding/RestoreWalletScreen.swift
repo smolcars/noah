@@ -45,7 +45,9 @@ struct RestoreWalletScreen: View {
     private var keyboardUp: Bool { draft.focusedWord != nil }
 
     var body: some View {
-        let column = OnboardingColumn(wide: layout.wide, keyboard: keyboardUp)
+        // Wide panes always top-align: the headline sits level with the 12/24 control,
+        // keyboard or not, since a 24-word grid fills the pane anyway.
+        let column = OnboardingColumn(wide: layout.wide, keyboard: layout.wide || keyboardUp)
         OnboardingPanes(wide: layout.wide, column: .leadingFits, sideInsets: (layout.insets.leading, layout.insets.trailing)) {
             OnboardingHeadline(title: Text("Welcome back"), subtitle: Text("Enter your recovery phrase."), large: layout.wide)
                 .padding(.top, layout.wide ? column.headlineTop : 56) // 56 keeps 24 words unscrolled on a 393-pt phone.
@@ -90,7 +92,6 @@ struct RestoreWalletScreen: View {
                 }
             }
         }
-        .animation(NoahTokens.Motion.travel(reduceMotion), value: layout.wide && keyboardUp)
         .overlay(alignment: .topLeading) {
             Button(action: onBack) { Image(systemName: "chevron.left").font(.body.weight(.semibold)) }
                 .buttonStyle(OnboardingBarButtonStyle(muted: false))
