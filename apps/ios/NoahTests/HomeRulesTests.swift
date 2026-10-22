@@ -1,0 +1,276 @@
+import Foundation
+import Testing
+@testable import Noah
+
+/// Home's layout, nudge, status and row rules (docs/native-rewrite/design/home.md).
+@MainActor
+struct HomeRulesTests {
+    static func balance(ark: UInt64 = 0, onchain: UInt64 = 0, onchainPending: UInt64 = 0, inRound: UInt64 = 0) -> WalletBalance {
+        WalletBalance(
+            ark: .init(spendable: ark, needsRefresh: 0, pendingLightningSend: 0, claimableLightningReceive: 0,
+                       pendingInRound: inRound, pendingExit: 0, pendingBoard: 0, pendingArkoorSend: 0, pendingOffboard: 0),
+            onchain: .init(confirmed: onchain, pending: onchainPending, total: onchain + onchainPending))
+    }
+
+    static func row(_ id: String = "movement-1", type: String = "Arkoor", amount: Int64 = 2_100, direction: String = "incoming",
+                    status: String? = "successful", kind: String? = nil, destination: String? = nil,
+                    date: String = "2026-10-22T09:12:00Z", source: String = "ark", effective: Int64? = nil) -> HistoryTransaction {
+        HistoryTransaction(id: id, type: type, amount: amount, date: date, direction: direction, source: source,
+                           destination: destination, movementStatus: status, movementKind: kind,
+                           effectiveBalanceSat: effective ?? (direction == "incoming" ? amount : -amount))
+    }
+
+    private func storage() throws -> (SettingsStorage, URL) {
+        let root = FileManager.default.temporaryDirectory.appending(path: "home-rules-\(UUID())")
+        return (try SettingsStorage(rootPath: root.appending(path: "mmkv").path), root)
+    }
+
+    // MARK: Existing and migrated wallets
+
+    @Test func reactNativeMigratedWalletWithHistoryOpensEverydayWithTheBackupNudge() throws {
+        let (settings, root) = try storage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        settings.set(RecoveryPhraseBackupTests.rnWallet, forKey: PersistedWalletState.key)
+        let wallet = try #require(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
+        #expect(!AppModel.resumesOnboarding(wallet))
+        let history = [Self.row(), Self.row("movement-2", amount: 500, direction: "outgoing")]
+        let state = HomeLayoutState.of(suspended: wallet.isWalletSuspended == true, balance: Self.balance(ark: 1_600),
+                                       historyLoaded: true, historyFailed: false, transactions: history)
+        #expect(state == .everyday)
+        let nudge = HomeNudge.current(.init(needsRecoveryPhraseBackup: PersistedRecoveryPhraseBackup.read(from: settings).needsBackup,
+                                            isEmailVerified: nil, isEmailPromptDismissed: nil))
+        #expect(nudge == .backUp)
+        #expect(settings.string(forKey: PersistedWalletState.key) == RecoveryPhraseBackupTests.rnWallet)
+    }
+
+    @Test func restoredWalletOpensWithoutTheBackupNudge() throws {
+        let (settings, root) = try storage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try AppModel.beginRestore(settings, typedPhrase: true)
+        #expect(settings.completeRestore())
+        let backup = PersistedRecoveryPhraseBackup.read(from: settings)
+        let nudge = HomeNudge.current(.init(needsRecoveryPhraseBackup: backup.needsBackup, isEmailVerified: true))
+        #expect(nudge == nil)
+        #expect(HomeNudge.current(.init(needsRecoveryPhraseBackup: backup.needsBackup)) == .email)
+    }
+
+    @Test func newEmptyWalletOpensFresh() {
+        #expect(HomeLayoutState.of(suspended: false, balance: Self.balance(), historyLoaded: true, historyFailed: false,
+                                   transactions: []) == .fresh)
+        // Not until both the balance and the first history read have arrived.
+        #expect(HomeLayoutState.of(suspended: false, balance: nil, historyLoaded: true, historyFailed: false,
+                                   transactions: []) == .loading)
+        #expect(HomeLayoutState.of(suspended: false, balance: Self.balance(), historyLoaded: false, historyFailed: false,
+                                   transactions: []) == .loading)
+        // A failed read isn't an empty history.
+        #expect(HomeLayoutState.of(suspended: false, balance: Self.balance(), historyLoaded: true, historyFailed: true,
+                                   transactions: []) == .everyday)
+        // Any balance (pending deposits included) or any record is Everyday.
+        #expect(HomeLayoutState.of(suspended: false, balance: Self.balance(onchainPending: 1), historyLoaded: true,
+                                   historyFailed: false, transactions: []) == .everyday)
+        #expect(HomeLayoutState.of(suspended: false, balance: Self.balance(), historyLoaded: true, historyFailed: false,
+                                   transactions: [Self.row(direction: "outgoing")]) == .everyday)
+    }
+
+    @Test func suspendedWalletShowsOnlyTheSuspendedState() throws {
+        let (settings, root) = try storage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        settings.set(RecoveryPhraseBackupTests.rnWallet.replacingOccurrences(of: #""isWalletSuspended":false"#,
+                                                                             with: #""isWalletSuspended":true"#),
+                     forKey: PersistedWalletState.key)
+        let app = AppModel(settings: settings)
+        #expect(app.isWalletSuspended)
+        #expect(HomeLayoutState.of(suspended: app.isWalletSuspended, balance: Self.balance(ark: 5), historyLoaded: true,
+                                   historyFailed: false, transactions: [Self.row()]) == .suspended)
+        #expect(HomeNudge.current(.init(upgradeNotices: ["notice"], needsRecoveryPhraseBackup: true, updateRequired: true,
+                                        suspended: true)) == nil)
+    }
+
+    // MARK: Nudges and status
+
+    @Test func nudgesShowOneAtATimeInOrder() {
+        let renewal = HomeRenewal(ids: ["a"], sats: 20_000, blocksLeft: 108)
+        var failed = PersistedBackupState()
+        failed.markFailed("Offline")
+        var inputs = HomeNudge.Inputs(upgradeNotices: ["Settings were reset"], renewal: renewal,
+                                      backup: HomeBanner.backup(failed, now: 0, locale: Locale(identifier: "en")),
+                                      needsRecoveryPhraseBackup: true, updateRequired: true)
+        var seen: [String] = []
+        while let nudge = HomeNudge.current(inputs) {
+            seen.append(nudge.id)
+            switch nudge {
+            case .notice: inputs.upgradeNotices.removeFirst()
+            case .renew: inputs.renewal = nil
+            case .backupFailed: inputs.backup = nil
+            case .backUp: inputs.needsRecoveryPhraseBackup = false
+            case .email: inputs.isEmailPromptDismissed = true
+            case .update: inputs.updateRequired = false
+            }
+        }
+        #expect(seen == ["notice:Settings were reset", "renew", "backup-failed", "back-up", "email", "update"])
+        // A verified email never asks; an in-progress backup is a status line, not a nudge.
+        var progress = PersistedBackupState()
+        progress.markInProgress(now: 1)
+        #expect(HomeNudge.current(.init(backup: HomeBanner.backup(progress, now: 1, locale: .current), isEmailVerified: true)) == nil)
+    }
+
+    @Test func renewalCountsOnlyRefreshableUnexpiredCoins() {
+        let coins: [HomeRenewal.Coin] = [
+            .init(id: "soon", sats: 15_000, expiryHeight: 1_108, spendable: true),
+            .init(id: "later", sats: 5_000, expiryHeight: 1_140, spendable: true),
+            .init(id: "locked", sats: 7_000, expiryHeight: 1_010, spendable: false),
+            .init(id: "expired", sats: 9_000, expiryHeight: 1_000, spendable: true),
+        ]
+        let renewal = HomeRenewal.select(coins, tip: 1_000)
+        #expect(renewal == HomeRenewal(ids: ["soon", "later"], sats: 20_000, blocksLeft: 108))
+        #expect(renewal?.hoursLeft == 18)
+        #expect(renewal?.expiryText(locale: "en") == "Expires in 18 hours")
+        #expect(HomeRenewal(ids: ["a"], sats: 1, blocksLeft: 6).expiryText(locale: "en") == "Expires in 1 hour")
+        #expect(HomeRenewal(ids: ["a"], sats: 1, blocksLeft: 5).expiryText(locale: "en") == "Expires in under an hour")
+        #expect(HomeRenewal.select(coins.filter { !$0.spendable || $0.expiryHeight <= 1_000 }, tip: 1_000) == nil)
+        #expect(HomeRenewal.select([], tip: 1_000) == nil)
+    }
+
+    @Test func statusLineShowsTheFirstThatApplies() {
+        let pending = Self.balance(ark: 10, onchainPending: 100_000)
+        #expect(HomeStatusLine.current(error: "Couldn't open your wallet.", balance: pending, activeRounds: 1, backingUp: true,
+                                       backgroundMessage: "x") == .error("Couldn't open your wallet."))
+        #expect(HomeStatusLine.current(error: nil, balance: pending, activeRounds: 1, backingUp: true,
+                                       backgroundMessage: "x") == .arriving(100_000))
+        // Funds in a round get their own line, after anything else that is arriving.
+        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(onchainPending: 7, inRound: 5), activeRounds: 1,
+                                       backingUp: false, backgroundMessage: nil) == .arriving(7))
+        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(inRound: 5), activeRounds: 1, backingUp: false,
+                                       backgroundMessage: nil) == .pendingRound(5))
+        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(ark: 1), activeRounds: 2, backingUp: true,
+                                       backgroundMessage: "x") == .rounds(2))
+        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(ark: 1), activeRounds: 0, backingUp: true,
+                                       backgroundMessage: "x") == .backingUp)
+        #expect(HomeStatusLine.current(error: nil, balance: nil, activeRounds: 0, backingUp: false,
+                                       backgroundMessage: "Background task in progress...") == .background("Background task in progress..."))
+        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(ark: 1), activeRounds: 0, backingUp: false,
+                                       backgroundMessage: nil) == nil)
+        #expect(HomeStatusLine.rounds(1).opensRounds && !HomeStatusLine.backingUp.opensRounds)
+    }
+
+    // MARK: Rows
+
+    @Test func rowsNameOnlyWhatTheRecordHolds() {
+        let own = "noahwallet.io"
+        var noah = Self.row(type: "Lnurl", direction: "outgoing", destination: "Maya@NoahWallet.io")
+        var row = HomeActivityRow(noah, ownDomain: own)
+        #expect(row.title == "maya" && row.titleIsAddress && row.kind == .noahUser && row.avatar == .initial("m"))
+        #expect(row.sign == "−" && row.status == .done)
+
+        noah.destination = "lucas@ln.tips"
+        row = HomeActivityRow(noah, ownDomain: own)
+        #expect(row.title == "lucas@ln.tips" && row.kind == .lightning && row.avatar == .initial("l"))
+
+        // An invoice or Ark address names nobody; incoming records hold our own receiving method.
+        row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", destination: "lnbcrt1invoice"), ownDomain: own)
+        #expect(row.title == "Lightning" && !row.titleIsAddress && row.kind == nil && row.avatar == .lightning)
+        row = HomeActivityRow(Self.row(type: "Lnurl", destination: "maya@noahwallet.io"), ownDomain: own)
+        #expect(row.title == "Lightning" && row.avatar == .lightning && row.sign == "+")
+        row = HomeActivityRow(Self.row(), ownDomain: own)
+        #expect(row.title == "Ark" && row.avatar == .incoming)
+        row = HomeActivityRow(Self.row(direction: "outgoing", destination: "tark1address"), ownDomain: own)
+        #expect(row.avatar == .outgoing && row.sign == "−")
+
+        // On-chain movements get the link; a board is a transfer between your own balances.
+        row = HomeActivityRow(Self.row(type: "Onchain", kind: "onboard"), ownDomain: own)
+        #expect(row.title == "Board" && row.kind == .onchain && row.avatar == .chain && row.sign == "")
+        var deposit = Self.row("onchain-wallet-tx", type: "Onchain", status: nil, source: "onchain-wallet")
+        deposit.hasConfirmation = false
+        row = HomeActivityRow(deposit, ownDomain: own)
+        #expect(row.title == "Onchain" && row.kind == nil && row.avatar == .chain && row.status == .confirming)
+        deposit.hasConfirmation = true
+        #expect(HomeActivityRow(deposit, ownDomain: own).status == .done)
+    }
+
+    @Test func pendingFailedAndCanceledRows() {
+        let own = "noahwallet.io"
+        var row = HomeActivityRow(Self.row(type: "Lnurl", direction: "outgoing", status: "pending",
+                                           destination: "bob@getalby.com"), ownDomain: own)
+        #expect(row.status == .sending && row.status.isPending)
+        row = HomeActivityRow(Self.row(type: "Onchain", status: "pending", kind: "onboard"), ownDomain: own)
+        #expect(row.status == .confirming)
+        row = HomeActivityRow(Self.row(type: "Onchain", direction: "outgoing", status: "failed", kind: "offboard", effective: 0),
+                              ownDomain: own)
+        #expect(row.status == .failed(nothingLeft: true) && row.status.isUnsuccessful && row.title == "Offboard")
+        row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: -4_200), ownDomain: own)
+        #expect(row.status == .failed(nothingLeft: false))
+        // Canceled keeps the base label: the subtitle carries the status.
+        row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "canceled", effective: 0), ownDomain: own)
+        #expect(row.status == .canceled(nothingLeft: true) && row.title == "Lightning")
+    }
+
+    @Test func activityGroupsByDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+        let now = try #require(HistoryRules.parseDate("2026-10-22T12:00:00Z"))
+        var unconfirmed = Self.row("chain", type: "Onchain", status: nil, date: "1970-01-01T00:00:00Z", source: "onchain-wallet")
+        unconfirmed.dateLabel = "Unconfirmed"
+        let rows = [unconfirmed, Self.row("a", date: "2026-10-22T09:12:00Z"), Self.row("b", date: "2026-10-21T18:05:00Z"),
+                    Self.row("c", date: "2026-10-21T08:40:00Z"), Self.row("d", date: "2026-10-12T10:00:00Z")]
+        let days = HomeActivityDay.group(rows, now: now, calendar: calendar)
+        #expect(days.map(\.title) == [.today, .yesterday, .date(try #require(HistoryRules.parseDate("2026-10-12T00:00:00Z")))])
+        #expect(days.map { $0.transactions.map(\.id) } == [["chain", "a"], ["b", "c"], ["d"]])
+    }
+
+    // MARK: New dot and first payment
+
+    @Test func newDotMarksArrivalsSinceHomeWasLastShown() {
+        let tracker = HomeActivityTracker()
+        let first = [Self.row("old")]
+        tracker.update(state: .everyday, transactions: first, balanceSats: 2_100, visible: true, walletKey: "w")
+        #expect(tracker.newIDs.isEmpty) // History at launch is never "new".
+        let arrived = [Self.row("in"), Self.row("out", direction: "outgoing"), Self.row("board", type: "Onchain", kind: "onboard")] + first
+        tracker.update(state: .everyday, transactions: arrived, balanceSats: 5_000, visible: true, walletKey: "w")
+        #expect(tracker.newIDs == ["in"])
+        // Leaving Home clears the dots; what arrives while away is new on return.
+        tracker.update(state: .everyday, transactions: arrived, balanceSats: 5_000, visible: false, walletKey: "w")
+        #expect(tracker.newIDs.isEmpty)
+        let later = [Self.row("away")] + arrived
+        tracker.update(state: .everyday, transactions: later, balanceSats: 7_000, visible: false, walletKey: "w")
+        tracker.update(state: .everyday, transactions: later, balanceSats: 7_000, visible: true, walletKey: "w")
+        #expect(tracker.newIDs == ["away"])
+        // Another wallet starts over.
+        tracker.update(state: .everyday, transactions: later, balanceSats: 7_000, visible: true, walletKey: "other")
+        #expect(tracker.newIDs.isEmpty)
+    }
+
+    @Test func firstPaymentPlaysOnlyWhileHomeIsOnScreen() throws {
+        let tracker = HomeActivityTracker()
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w")
+        #expect(tracker.shown == .fresh)
+        // The balance can land before the record.
+        tracker.update(state: .everyday, transactions: [], balanceSats: 21_000, visible: true, walletKey: "w")
+        let celebration = try #require(tracker.celebration)
+        #expect(celebration.sats == 21_000 && tracker.shown == .fresh)
+        tracker.update(state: .everyday, transactions: [Self.row("first", amount: 21_000)], balanceSats: 21_000,
+                       visible: true, walletKey: "w")
+        #expect(tracker.celebration == celebration && tracker.newIDs == ["first"])
+        tracker.finishCelebration(UUID())
+        #expect(tracker.celebration != nil)
+        tracker.finishCelebration(celebration.id)
+        #expect(tracker.celebration == nil && tracker.shown == .everyday && tracker.newIDs == ["first"])
+
+        let away = HomeActivityTracker()
+        away.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w")
+        away.update(state: .fresh, transactions: [], balanceSats: 0, visible: false, walletKey: "w")
+        away.update(state: .everyday, transactions: [Self.row("first")], balanceSats: 2_100, visible: false, walletKey: "w")
+        away.update(state: .everyday, transactions: [Self.row("first")], balanceSats: 2_100, visible: true, walletKey: "w")
+        #expect(away.celebration == nil && away.shown == .everyday && away.newIDs == ["first"])
+    }
+
+    @Test func leavingHomeEndsARunningFirstPayment() {
+        let tracker = HomeActivityTracker()
+        tracker.update(state: .fresh, transactions: [], balanceSats: 0, visible: true, walletKey: "w")
+        tracker.update(state: .everyday, transactions: [Self.row("first")], balanceSats: 2_100, visible: true, walletKey: "w")
+        #expect(tracker.celebration != nil)
+        tracker.update(state: .everyday, transactions: [Self.row("first")], balanceSats: 2_100, visible: false, walletKey: "w")
+        #expect(tracker.celebration == nil && tracker.shown == .everyday)
+        tracker.update(state: .everyday, transactions: [Self.row("first")], balanceSats: 2_100, visible: true, walletKey: "w")
+        #expect(tracker.celebration == nil && tracker.newIDs.isEmpty)
+    }
+}

@@ -1,376 +1,741 @@
 import SwiftUI
 
+/// Home (docs/native-rewrite/design/home.md). Compact windows get one column;
+/// wide ones (the iPhone Duo open or half-open, iPad, landscape) split into two
+/// panes at the window's centre, where the Duo folds. Every action links to an
+/// existing flow; nothing here changes wallet, payment or backup behaviour.
 struct HomeView: View {
+    enum Route: Hashable {
+        case settings, codes(QRHubModel.Mode), map, email, backup, profile
+    }
+
+    enum Sheet: Hashable, Identifiable {
+        case balance, rounds, transaction(String)
+        var id: Self { self }
+    }
+
     @Environment(AppModel.self) private var model
     @Environment(HistoryModel.self) private var history
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var home = HomeModel()
+    @Environment(\.scenePhase) private var environmentPhase
+    @Environment(\.locale) private var locale
+    @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.homeFixture) private var fixture
+    @State private var home: HomeModel
+    @State private var tracker = HomeActivityTracker()
+    @State private var renew = OnchainModel()
+    @State private var haptics = OnboardingHaptics()
+    @State private var path: [Route] = []
     @State private var upgradeNotices: [String] = []
-    @State private var showEmail = false
-    @State private var showBackup = false
+    @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
+    @State private var sheet: Sheet?
+    @State private var toast: HomeToast?
+    @State private var alert: String?
     @State private var backupError: String?
-    @State private var showMap = false
-    @State private var showQR = false
-    @State private var selectedID: String?
+    @State private var emailFlowOpened = false
+    @State private var scrollY: CGFloat = 0
+    @State private var compactScroll = ScrollPosition(edge: .top)
+    @State private var entrancePlayed = false
+    @State private var qrRevealed = false
+    @State private var folding = false
     let isActive: Bool
     let onScan: (String) -> Void
     let onOpenHistory: () -> Void
     let onRepeatPayment: (RepeatPayment) -> Void
 
-    private var observationWalletID: String? {
-        scenePhase == .active && !model.isWalletSuspended
-            ? model.summary.map { "\($0.fingerprint):\(model.walletSessionRevision)" } : nil
+    init(isActive: Bool, onScan: @escaping (String) -> Void, onOpenHistory: @escaping () -> Void,
+         onRepeatPayment: @escaping (RepeatPayment) -> Void, home: HomeModel? = nil) {
+        self.isActive = isActive
+        self.onScan = onScan
+        self.onOpenHistory = onOpenHistory
+        self.onRepeatPayment = onRepeatPayment
+        _home = State(initialValue: home ?? HomeModel())
     }
 
+    private var observationWalletID: String? {
+        scenePhase == .active && !model.isWalletSuspended
+            ? summary.map { "\($0.fingerprint):\(model.walletSessionRevision)" } : nil
+    }
+
+    /// Fixture hosts sit outside a SwiftUI scene, so they count as active.
+    private var scenePhase: ScenePhase { fixture == nil ? environmentPhase : .active }
+
+    /// App state, or a screenshot fixture's stand-in for it.
+    private var summary: WalletSession.Summary? { fixture.map(\.summary) ?? model.summary }
+    private var walletError: String? { fixture.map(\.walletError) ?? model.walletError }
+    private var needsRecoveryPhraseBackup: Bool { fixture?.needsRecoveryPhraseBackup ?? model.needsRecoveryPhraseBackup }
+    private var updateRequired: Bool { fixture?.updateRequired ?? model.versionCheck.updateRequired }
+
     var body: some View {
-        @Bindable var model = model
-        NavigationStack {
-            ScrollView {
-                AdaptiveColumns { _ in
-                    VStack(spacing: 28) {
-                        Color.clear.frame(height: 0).task(id: scenePhase == .active && isActive) {
-                            guard scenePhase == .active, isActive else { return }
-                            if upgradeNotices.isEmpty { upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? [] }
-                        }
-                        ForEach(upgradeNotices, id: \.self) { message in
-                            NoahCard { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
-                        }
-                        if !model.isWalletSuspended { UpdateWarningView() }
-                        if let error = model.walletError {
-                            NoahCard {
-                                Label(LocalizedStringKey(error), systemImage: "exclamationmark.triangle")
-                                    .font(NoahFont.callout)
-                                    .foregroundStyle(NoahColor.destructive)
-                            }
-                        }
+        NavigationStack(path: $path) {
+            root
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(for: Route.self, destination: destination)
+        }
+    }
 
+    // MARK: Layout
+
+    private var root: some View {
+        ZStack(alignment: .topLeading) {
+            NoahTokens.Colors.background.ignoresSafeArea()
+            if window.wide { widePanes } else { compactColumn }
+            toastLayer
+            if window.wide { paneSheets }
+        }
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: window.wide ? sheet : nil)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: window.wide ? renew.quote?.id : nil)
+        .onboardingWindow($window)
+        .onboardingHaptics(haptics)
+        .modifier(observation)
+        .modifier(moments)
+        .sheet(item: Binding(get: { window.wide ? nil : sheet }, set: { if !window.wide { sheet = $0 } })) { sheet in
+            compactSheet(sheet)
+        }
+        .sheet(item: Binding(get: { window.wide ? nil : renew.quote }, set: { if !window.wide && $0 == nil { renew.invalidate() } })) { quote in
+            OnchainReviewSheet(quote: quote, confirm: confirmRenew)
+        }
+        .alert("Error", isPresented: Binding(get: { alert != nil }, set: { if !$0 { alert = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(LocalizedStringKey(alert ?? "")) }
+    }
+
+    private var compactColumn: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if model.isWalletSuspended {
+                    HomeSuspendedView().padding(.top, 24).modifier(appear(1))
+                } else {
+                    balanceBlock(tuck: tuck)
+                    switch tracker.shown {
+                    case .fresh:
+                        getPaidCard(qrSide: min(212, max(168, window.size.height - 500)))
+                            .padding(.top, 24).modifier(appear(5))
+                    case .everyday:
+                        recent.padding(.top, 30).modifier(appear(5))
+                            .transition(.homeRise(reduceMotion))
+                    case .loading, .suspended:
+                        EmptyView()
+                    }
+                    HomeMapRow { open(.map) }.padding(.top, 22).modifier(appear(6))
+                }
+            }
+            .padding(.top, 10).padding(.bottom, 32)
+            .onboardingPane()
+        }
+        .scrollPosition($compactScroll)
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in scrollY = y }
+        // Back from a wide pose: return to where the column was.
+        .onAppear { if scrollY > 0 { compactScroll.scrollTo(y: scrollY) } }
+        .refreshable { await pullToRefresh() }
+        .modifier(HomeTopBarInset(scrolled: scrollY > 2) {
+            topBar(tucked: true).padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 6).modifier(appear(0))
+        })
+    }
+
+    private var tuck: CGFloat { min(1, max(0, (scrollY - 4) / 52)) }
+
+    private var leadingWidth: CGFloat { max(0, window.size.width / 2 - window.insets.leading) }
+
+    private var widePanes: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                topBar(tucked: false).padding(.horizontal, 20).padding(.top, 14).modifier(appear(0))
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
                         if model.isWalletSuspended {
-                            SuspendedWalletCard()
-                                .padding(.top, 24)
+                            HomeSuspendedView().padding(.top, 24).modifier(appear(1))
                         } else {
-                            BalanceHeader(
-                                balance: model.summary?.balance,
-                                unit: model.amountUnit,
-                                btcPrice: home.btcPrice, currency: model.preferredCurrency,
-                                isHidden: $model.isBalanceHidden)
-                                .padding(.top, 24)
-                        }
-
-                        if !model.isWalletSuspended {
-                            if model.needsRecoveryPhraseBackup { BackupPrompt { showBackup = true } }
-                            HomeStatusBanners(home: home)
-                            AutoBoardingService()
-                        }
-
-                        // Like RN, a suspended wallet shows only the suspended card.
-                        if !model.isWalletSuspended && model.server.state.isEmailVerified != true
-                            && model.server.state.isEmailPromptDismissed != true
-                        {
-                            NoahCard {
-                                HStack(alignment: .top, spacing: 12) {
-                                    Button { showEmail = true } label: {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            Label("Add Emergency Email", systemImage: "envelope")
-                                                .font(NoahFont.headline)
-                                            Text("Optional alerts can help us reach you if your VTXOs need attention before they expire.")
-                                                .font(NoahFont.footnote)
-                                                .foregroundStyle(NoahColor.mutedForeground)
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                    .buttonStyle(.plain)
-                                    Button("Dismiss emergency email prompt", systemImage: "xmark") {
-                                        model.server.dismissEmailPrompt()
-                                    }
-                                    .labelStyle(.iconOnly)
-                                    .frame(minWidth: 44, minHeight: 44)
-                                }
-                            }
+                            balanceBlock(tuck: 0)
+                            HomeMapRow { open(.map) }.padding(.top, 22).modifier(appear(6))
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    VStack(spacing: 28) {
-                        if !model.isWalletSuspended {
-                            NoahCard {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    HStack {
-                                        Text("Recent Activity").font(NoahFont.headline)
-                                        Spacer()
-                                        Button("View all", action: onOpenHistory).font(NoahFont.footnote)
-                                    }
-                                    if history.isLoading {
-                                        ProgressView("Loading transactions")
-                                    } else if let error = history.error {
-                                        Text(LocalizedStringKey(error)).font(NoahFont.footnote)
-                                        Button("Retry") { Task { await history.refresh(currency: model.preferredCurrency) } }
-                                    } else if history.transactions.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            Text("No activity yet").font(NoahFont.callout)
-                                            Text("Receive or send bitcoin to start your history.")
-                                                .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                                        }
-                                    } else {
-                                        ForEach(Array(history.transactions.prefix(3))) { transaction in
-                                            Button { selectedID = transaction.id } label: {
-                                                TransactionRow(transaction: transaction, unit: model.amountUnit, recent: true)
-                                                    .padding(.vertical, 8)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if !model.isWalletSuspended {
-                            Text(LocalizedStringKey(home.fact))
-                            .font(NoahFont.footnote)
-                            .foregroundStyle(NoahColor.mutedForeground)
-                            .padding(.top, 24)
-                        }
-                    }
+                    .padding(.horizontal, 32).padding(.top, 12).padding(.bottom, 110)
+                    .frame(maxWidth: OnboardingLayout.paneContentWidth + 64)
                     .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 20)
-                .frame(maxWidth: AdaptiveLayout.pairedWidth)
-                .frame(maxWidth: .infinity)
+                .refreshable { await pullToRefresh() }
             }
-            .task { await model.versionCheck.checkOnce() }
-            .task(id: observationWalletID) {
-                guard observationWalletID != nil else { return }
-                await home.refresh(currency: model.preferredCurrency)
-            }
-            .task(id: observationWalletID) {
-                guard observationWalletID != nil else { return }
-                await home.observeBackground()
-            }
-            .task(id: observationWalletID) {
-                guard observationWalletID != nil else { return }
-                await home.observeWallet()
-            }
-            .task(id: observationWalletID) {
-                guard observationWalletID != nil else { return }
-                await home.observeBackup()
-            }
-            .task(id: observationWalletID) {
-                guard observationWalletID != nil else { return }
-                await home.observeBoarding()
-            }
-            .task(id: observationWalletID == nil ? nil : home.nextRoundCheck) {
-                guard observationWalletID != nil else { return }
-                await home.waitForRoundCheck()
-            }
-            .task(id: observationWalletID == nil ? nil : home.nextBannerExpiry) {
-                guard observationWalletID != nil else { return }
-                await home.waitForBannerExpiry()
-            }
-            .task(id: model.preferredCurrency) { await home.loadPrice(currency: model.preferredCurrency) }
-            .refreshable {
-                guard !model.isWalletSuspended else { return }
-                await model.sync()
-                guard !model.isWalletSuspended else { return }
-                await history.refresh(currency: model.preferredCurrency)
-                await home.refresh(currency: model.preferredCurrency)
-            }
-            .sheet(isPresented: Binding(get: { selectedID != nil }, set: { if !$0 { selectedID = nil } })) {
-                if let transaction = history.transactions.first(where: { $0.id == selectedID }) {
-                    NavigationStack {
-                        TransactionDetailView(transaction: transaction, onRepeatPayment: { details in
-                            selectedID = nil
-                            onRepeatPayment(details)
-                        }, onClose: { selectedID = nil })
-                    }
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+            .frame(width: leadingWidth)
+            trailingPane
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder private var trailingPane: some View {
+        if !model.isWalletSuspended {
+            switch tracker.shown {
+            case .fresh:
+                FitOrScroll {
+                    getPaidCard(qrSide: 228)
+                        .frame(maxWidth: OnboardingLayout.paneContentWidth)
+                        .padding(.horizontal, 32).padding(.vertical, 28)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .modifier(appear(5))
                 }
-            }
-            .background(NoahColor.background.ignoresSafeArea())
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    NavigationLink { SettingsView() } label: { Label("Open settings", systemImage: "gearshape") }
-                        .accessibilityIdentifier("home-settings-button")
-                    Button("Find places that accept bitcoin", systemImage: "map") { showMap = true }
-                        .accessibilityIdentifier("home-btc-map-button")
+            case .everyday:
+                ScrollView {
+                    HomeActivityList(history: history, ownDomain: ownDomain, unit: model.amountUnit, hidden: model.isBalanceHidden,
+                                     newIDs: tracker.newIDs, onRetry: retryHistory, onSelect: select)
+                        .padding(.horizontal, 32).padding(.vertical, 28)
+                        .frame(maxWidth: OnboardingLayout.paneContentWidth + 64)
+                        .frame(maxWidth: .infinity)
                 }
-                ToolbarItem(placement: .principal) {
-                    VariantBadge(variant: model.variant)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Open QR code", systemImage: "qrcode") { showQR = true }
-                        .accessibilityIdentifier("home-qr-button")
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $showQR) { QRHubView(isActive: isActive, onScan: onScan) }
-            .navigationDestination(isPresented: $showMap) { BtcMapView() }
-            .navigationDestination(isPresented: $showEmail) {
-                EmergencyEmailView(onContinue: { showEmail = false })
-            }
-            .navigationDestination(isPresented: $showBackup) {
-                MnemonicView(onConfirmBackup: confirmBackup)
-                    .alert("Error", isPresented: Binding(get: { backupError != nil }, set: { if !$0 { backupError = nil } })) {
-                        Button("OK", role: .cancel) {}
-                    } message: { Text(LocalizedStringKey(backupError ?? "")) }
+                .refreshable { await pullToRefresh() }
+                .modifier(appear(5))
+                .transition(.homeRise(reduceMotion))
+            case .loading, .suspended:
+                Color.clear
             }
         }
+    }
+
+    /// Balance, fiat, the status line and the nudge.
+    @ViewBuilder private func balanceBlock(tuck: CGFloat) -> some View {
+        HomeBalanceView(sats: summary?.balance.totalSats, unit: model.amountUnit, hidden: model.isBalanceHidden,
+                        tuck: tuck, onDetails: openBalance, onToggleHidden: toggleHidden)
+            .padding(.top, 8).modifier(appear(1))
+        fiat.padding(.top, 10).modifier(appear(2))
+        if let status {
+            HomeStatusRow(line: status, balance: summary?.balance, unit: model.amountUnit, hidden: model.isBalanceHidden) {
+                statusTapped(status)
+            }
+                .padding(.top, 8).modifier(appear(3))
+        }
+        HomeNudgeSlot(nudge: nudge) { nudge in
+            HomeNudgeCard(nudge: nudge, unit: model.amountUnit, hidden: model.isBalanceHidden, busy: busy(nudge),
+                          action: { act(nudge) }, dismiss: { dismiss(nudge) })
+        }
+        .modifier(appear(4))
+    }
+
+    private var fiat: some View {
+        Group {
+            if model.isBalanceHidden {
+                Text(verbatim: HomeModel.hiddenFiat(currency: model.preferredCurrency))
+            } else if let sats = summary?.balance.totalSats, let price = home.btcPrice {
+                Text(verbatim: FiatCurrency.display(sats: Int64(clamping: sats), btcPrice: price,
+                                                    currency: model.preferredCurrency, locale: locale))
+                    .contentTransition(.numericText())
+            } else {
+                Text(verbatim: " ")
+            }
+        }
+        .noahText(NoahTokens.Typography.sub)
+        .foregroundStyle(NoahTokens.Colors.muted)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: summary?.balance.totalSats)
+    }
+
+    private func topBar(tucked: Bool) -> some View {
+        HomeTopBar(address: address, variant: model.variant,
+                   tucked: tucked && !model.isWalletSuspended ? tuckedBalance : nil, tuckShown: tuck > 0.7,
+                   onCodes: { open(.codes(.myCode)) }, onScan: { open(.codes(.scan)) }, onSettings: { open(.settings) })
+    }
+
+    private var tuckedBalance: String? {
+        guard let sats = summary?.balance.totalSats else { return nil }
+        if model.isBalanceHidden { return model.amountUnit == .bip177 ? "₿••••" : "•••• sats" }
+        return BitcoinAmount.format(sats: Int64(clamping: sats), unit: model.amountUnit, locale: locale)
+    }
+
+    private var recent: some View {
+        HomeRecentList(history: history, ownDomain: ownDomain, unit: model.amountUnit, hidden: model.isBalanceHidden,
+                       newIDs: tracker.newIDs, animateRows: !entrancePlayed,
+                       onSeeAll: { haptics.play(.selection); onOpenHistory() }, onRetry: retryHistory, onSelect: select)
+    }
+
+    private func getPaidCard(qrSide: CGFloat) -> some View {
+        HomeGetPaidCard(address: address, qrSide: qrSide, celebration: tracker.celebration, animateQR: !qrRevealed,
+                        unit: model.amountUnit, hidden: model.isBalanceHidden,
+                        onCopy: copyAddress, onShare: { haptics.play(.light) }, onProfile: { open(.profile) })
+            .opacity(folding ? 0 : 1)
+            .scaleEffect(folding && !reduceMotion ? 0.96 : 1)
+            .frame(height: folding ? 0 : nil, alignment: .top)
+            // Clip only the fold, never the card's shadow.
+            .clipShape(Rectangle().inset(by: folding ? 0 : -48))
+            .task {
+                do { try await Task.sleep(for: .seconds(1.6)) } catch { return }
+                qrRevealed = true
+            }
+    }
+
+    /// The entrance: content rises in, 40 ms apart, once per Home (not again on a pose change).
+    private func appear(_ order: Int) -> HomeAppear {
+        HomeAppear(order: order, animated: !entrancePlayed)
+    }
+
+    // MARK: Sheets
+
+    @ViewBuilder private func compactSheet(_ sheet: Sheet) -> some View {
+        switch sheet {
+        case .balance:
+            if let balance = summary?.balance {
+                HomeBalanceSheet(balance: balance, unit: model.amountUnit, hidden: model.isBalanceHidden)
+                    .padding(.top, 14)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+        case .rounds:
+            PendingRoundsView(rounds: home.activeRounds) { self.sheet = nil }
+        case .transaction(let id):
+            if let transaction = history.transactions.first(where: { $0.id == id }) {
+                NavigationStack { detail(transaction) }
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+
+    /// Wide windows: sheets stay in the trailing pane, clear of the fold.
+    @ViewBuilder private var paneSheets: some View {
+        let width = max(0, window.size.width / 2 - window.insets.trailing)
+        if let sheet {
+            switch sheet {
+            case .balance:
+                if let balance = summary?.balance {
+                    HomePaneSheet(width: width, onDismiss: closeSheet) {
+                        HomeBalanceSheet(balance: balance, unit: model.amountUnit, hidden: model.isBalanceHidden)
+                            .frame(height: max(200, min(560, window.size.height - window.insets.top - window.insets.bottom - 80)))
+                    }
+                }
+            case .rounds:
+                HomePaneSheet(width: width, fitted: false, onDismiss: closeSheet) {
+                    PendingRoundsView(rounds: home.activeRounds, onClose: closeSheet)
+                }
+            case .transaction(let id):
+                if let transaction = history.transactions.first(where: { $0.id == id }) {
+                    HomePaneSheet(width: width, fitted: false, onDismiss: closeSheet) {
+                        NavigationStack { detail(transaction) }
+                    }
+                }
+            }
+        }
+        if let quote = renew.quote {
+            HomePaneSheet(width: width, fitted: false, onDismiss: { renew.invalidate() }) {
+                OnchainReviewSheet(quote: quote, confirm: confirmRenew, onCancel: { renew.invalidate() })
+            }
+        }
+    }
+
+    private func detail(_ transaction: HistoryTransaction) -> some View {
+        TransactionDetailView(transaction: transaction, onRepeatPayment: { details in
+            sheet = nil
+            onRepeatPayment(details)
+        }, onClose: closeSheet)
+    }
+
+    private func closeSheet() {
+        withAnimation(NoahTokens.Motion.travel(reduceMotion)) { sheet = nil }
+    }
+
+    // MARK: Toast
+
+    private var toastLayer: some View {
+        let text = toast?.text ?? statusToast
+        return VStack {
+            if let text {
+                HomeToastView(text: text)
+                    .id(text)
+                    .transition(.homeToast(reduceMotion))
+            }
+        }
+        .frame(width: window.wide ? leadingWidth : nil)
+        .frame(maxWidth: window.wide ? nil : .infinity)
+        .padding(.top, window.wide ? 66 : 60)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: text)
+        .allowsHitTesting(false)
+    }
+
+    /// Backup completion and automatic boarding show for five seconds, as their banners did.
+    private var statusToast: String? {
+        if model.isWalletSuspended { return nil }
+        if home.backup.lastBackupStatus == .success, backupBanner != nil { return "Backup completed" }
+        if let board = home.autoBoard {
+            return L10n.text("{amount} available in Ark", BitcoinAmount.format(sats: Int64(clamping: board.netSats), unit: .sats, locale: locale),
+                             locale: locale.identifier)
+        }
+        return nil
+    }
+
+    private func showToast(_ text: String) {
+        withAnimation(NoahTokens.Motion.travel(reduceMotion)) { toast = HomeToast(text: text) }
+    }
+
+    // MARK: State
+
+    private var address: String? {
+        model.server.state.lightningAddress.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Payments to this domain are to other Noah users.
+    private var ownDomain: String {
+        address?.split(separator: "@").last.map(String.init) ?? LightningIdentity.domain(for: model.variant)
+    }
+
+    private var layoutState: HomeLayoutState {
+        .of(suspended: model.isWalletSuspended, balance: summary?.balance, historyLoaded: !history.isLoading,
+            historyFailed: history.error != nil, transactions: history.transactions)
+    }
+
+    private var visible: Bool { isActive && scenePhase == .active && path.isEmpty }
+
+    private var backupBanner: HomeBanner? {
+        HomeBanner.backup(home.backup, now: home.bannerNow.timeIntervalSince1970 * 1000, locale: locale)
+    }
+
+    private var nudge: HomeNudge? {
+        HomeNudge.current(.init(
+            upgradeNotices: upgradeNotices, renewal: home.renewal, backup: backupBanner,
+            needsRecoveryPhraseBackup: needsRecoveryPhraseBackup,
+            isEmailVerified: model.server.state.isEmailVerified, isEmailPromptDismissed: model.server.state.isEmailPromptDismissed,
+            updateRequired: updateRequired, suspended: model.isWalletSuspended))
+    }
+
+    private var status: HomeStatusLine? {
+        HomeStatusLine.current(error: walletError, balance: summary?.balance, activeRounds: home.activeRounds.count,
+                               backingUp: home.backup.lastBackupStatus == .inProgress, backgroundMessage: home.backgroundMessage)
+    }
+
+    struct TrackerInput: Equatable {
+        var state: HomeLayoutState
+        var ids: [String]
+        var sats: UInt64
+        var visible: Bool
+        var wallet: String?
+    }
+
+    var trackerInput: TrackerInput {
+        TrackerInput(state: layoutState, ids: history.transactions.map(\.id), sats: summary?.balance.totalSats ?? 0,
+                     visible: visible, wallet: summary?.fingerprint)
+    }
+
+    // MARK: Actions
+
+    private func open(_ route: Route) {
+        haptics.play(.light)
+        if route == .email { emailFlowOpened = true }
+        path.append(route)
+    }
+
+    private func openBalance() {
+        guard summary != nil else { return }
+        haptics.play(.light)
+        withAnimation(window.wide ? NoahTokens.Motion.travel(reduceMotion) : nil) { sheet = .balance }
+    }
+
+    private func toggleHidden() {
+        haptics.play(.medium)
+        withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy)) { model.isBalanceHidden.toggle() }
+    }
+
+    private func statusTapped(_ line: HomeStatusLine) {
+        if line.opensRounds {
+            haptics.play(.light)
+            withAnimation(window.wide ? NoahTokens.Motion.travel(reduceMotion) : nil) { sheet = .rounds }
+        } else {
+            openBalance()
+        }
+    }
+
+    private func select(_ transaction: HistoryTransaction) {
+        haptics.play(.light)
+        withAnimation(window.wide ? NoahTokens.Motion.travel(reduceMotion) : nil) { sheet = .transaction(transaction.id) }
+    }
+
+    private func copyAddress() {
+        guard let address else { return }
+        UIPasteboard.general.string = address
+        haptics.play(.success)
+        showToast("Copied")
+    }
+
+    private func busy(_ nudge: HomeNudge) -> Bool {
+        switch nudge {
+        case .renew: renew.busy
+        case .backupFailed: home.isRetryingBackup
+        default: false
+        }
+    }
+
+    private func act(_ nudge: HomeNudge) {
+        switch nudge {
+        case .notice: break
+        case .renew(let renewal):
+            haptics.play(.light)
+            // Opens the refresh review for exactly these VTXOs; nothing is submitted without confirmation.
+            Task {
+                await renew.review(.refresh, ids: renewal.ids)
+                if let error = renew.error { alert = error }
+            }
+        case .backupFailed:
+            haptics.play(.light)
+            Task { await home.retryBackup() }
+        case .backUp: open(.backup)
+        case .email: open(.email)
+        case .update:
+            haptics.play(.light)
+            openURL(AppVersionCheck.updateURL(variant: model.variant))
+        }
+    }
+
+    private func dismiss(_ nudge: HomeNudge) {
+        haptics.play(.light)
+        switch nudge {
+        case .notice(let text): upgradeNotices.removeAll { $0 == text }
+        case .email: model.server.dismissEmailPrompt()
+        default: break
+        }
+    }
+
+    private func confirmRenew() {
+        Task {
+            await renew.confirm()
+            if let error = renew.error {
+                alert = error
+            } else if renew.message != nil {
+                haptics.play(.medium)
+                showToast("Renewed")
+            }
+            await home.refreshRenewal()
+        }
+    }
+
+    private func confirmBackup() {
+        do {
+            try model.confirmRecoveryPhraseBackedUp()
+            path.removeAll { $0 == .backup }
+            haptics.play(.success)
+            showToast("Backed up")
+        } catch { backupError = "Couldn't save your preference. Please try again." }
+    }
+
+    private func retryHistory() {
+        Task { await history.refresh(currency: model.preferredCurrency) }
+    }
+
+    private func pullToRefresh() async {
+        guard !model.isWalletSuspended else { return }
+        await model.sync()
+        guard !model.isWalletSuspended else { return }
+        await history.refresh(currency: model.preferredCurrency)
+        await home.refresh(currency: model.preferredCurrency)
+    }
+
+    /// The first payment: the receipt shows on the card for about 2.4 s, then the
+    /// card folds away and Recent takes its place.
+    private func playCelebration() async {
+        guard let celebration = tracker.celebration else { folding = false; return }
+        let elapsed = Date().timeIntervalSince(celebration.start)
+        if elapsed < 0.3 { haptics.play(.success) }
+        do { try await Task.sleep(for: .seconds(max(0, 2.4 - elapsed))) } catch { return }
+        withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft)) { folding = true }
+        do { try await Task.sleep(for: .milliseconds(520)) } catch { return }
+        withAnimation(NoahTokens.Motion.travel(reduceMotion)) {
+            folding = false
+            tracker.finishCelebration(celebration.id)
+        }
+        haptics.play(.light)
+    }
+
+    @ViewBuilder private func destination(_ route: Route) -> some View {
+        switch route {
+        case .settings: SettingsView()
+        case .codes(let mode): QRHubView(isActive: isActive, initialMode: mode, onScan: onScan)
+        case .map: BtcMapView()
+        case .email: EmergencyEmailView(onContinue: { path.removeAll { $0 == .email } })
+        case .backup:
+            MnemonicView(onConfirmBackup: confirmBackup)
+                .alert("Error", isPresented: Binding(get: { backupError != nil }, set: { if !$0 { backupError = nil } })) {
+                    Button("OK", role: .cancel) {}
+                } message: { Text(LocalizedStringKey(backupError ?? "")) }
+        case .profile: ProfileView()
+        }
+    }
+
+    // MARK: Moments
+
+    /// Upgrade notices, the tracker, timers for the first payment and toasts, and the review lifecycle.
+    private var moments: some ViewModifier {
+        HomeMoments(
+            noticesKey: scenePhase == .active && isActive, trackerInput: trackerInput,
+            celebrationID: tracker.celebration?.id, toastID: toast?.id, wallet: summary?.fingerprint,
+            suspended: model.isWalletSuspended, emailVerified: model.server.state.isEmailVerified,
+            takeNotices: {
+                guard scenePhase == .active, isActive, upgradeNotices.isEmpty else { return }
+                upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? []
+            },
+            update: { input in
+                withAnimation(NoahTokens.Motion.travel(reduceMotion)) {
+                    tracker.update(state: input.state, transactions: history.transactions, balanceSats: input.sats,
+                                   visible: input.visible, walletKey: input.wallet)
+                }
+            },
+            celebrate: playCelebration,
+            expireToast: {
+                guard let current = toast else { return }
+                do { try await Task.sleep(for: .seconds(current.seconds)) } catch { return }
+                withAnimation(NoahTokens.Motion.travel(reduceMotion)) { if toast?.id == current.id { toast = nil } }
+            },
+            entrance: {
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                entrancePlayed = true
+            },
+            invalidateReview: { renew.invalidate() },
+            suspendedChanged: { suspended in
+                guard suspended else { return }
+                renew.invalidate()
+                sheet = nil
+            },
+            recordsArrived: {
+                // The balance follows its records (the same read the 60 s foreground refresh does),
+                // so a payment's receipt and balance land together.
+                guard fixture == nil, scenePhase == .active else { return }
+                Task { await model.refresh() }
+            },
+            emailVerifiedChanged: { verified in
+                guard verified == true, emailFlowOpened else { return }
+                emailFlowOpened = false
+                haptics.play(.success)
+                showToast("Email added")
+            })
+    }
+
+    // MARK: Observation
+
+    /// Today's refresh moments: Home appearing, wallet events, round checks, banner expiry.
+    private var observation: HomeObservation {
+        HomeObservation(home: home, observationWalletID: observationWalletID, isActive: isActive)
     }
 }
 
 private extension HomeView {
-    func confirmBackup() {
-        do {
-            try model.confirmRecoveryPhraseBackedUp()
-            showBackup = false
-        } catch { backupError = "Couldn't save your preference. Please try again." }
+    struct HomeObservation: ViewModifier {
+        let home: HomeModel
+        let observationWalletID: String?
+        let isActive: Bool
+        @Environment(AppModel.self) private var model
+
+        func body(content: Content) -> some View {
+            content
+                .task { await model.versionCheck.checkOnce() }
+                .task(id: observationWalletID) {
+                    guard observationWalletID != nil else { return }
+                    await home.refresh(currency: model.preferredCurrency)
+                }
+                .task(id: observationWalletID) {
+                    guard observationWalletID != nil else { return }
+                    await home.observeBackground()
+                }
+                .task(id: observationWalletID) {
+                    guard observationWalletID != nil else { return }
+                    await home.observeWallet()
+                }
+                .task(id: observationWalletID) {
+                    guard observationWalletID != nil else { return }
+                    await home.observeBackup()
+                }
+                .task(id: observationWalletID) {
+                    guard observationWalletID != nil else { return }
+                    await home.observeBoarding()
+                }
+                .task(id: observationWalletID == nil ? nil : home.nextRoundCheck) {
+                    guard observationWalletID != nil else { return }
+                    await home.waitForRoundCheck()
+                }
+                .task(id: observationWalletID == nil ? nil : home.nextBannerExpiry) {
+                    guard observationWalletID != nil else { return }
+                    await home.waitForBannerExpiry()
+                }
+                .task(id: model.preferredCurrency) { await home.loadPrice(currency: model.preferredCurrency) }
+        }
     }
 }
 
-/// Quiet until the user has viewed the recovery phrase and confirmed writing it down.
-private struct BackupPrompt: View {
-    let action: () -> Void
+private struct HomeMoments: ViewModifier {
+    let noticesKey: Bool
+    let trackerInput: HomeView.TrackerInput
+    let celebrationID: UUID?
+    let toastID: UUID?
+    let wallet: String?
+    let suspended: Bool
+    let emailVerified: Bool?
+    let takeNotices: () -> Void
+    let update: (HomeView.TrackerInput) -> Void
+    let celebrate: () async -> Void
+    let expireToast: () async -> Void
+    let entrance: () async -> Void
+    let invalidateReview: () -> Void
+    let suspendedChanged: (Bool) -> Void
+    let recordsArrived: () -> Void
+    let emailVerifiedChanged: (Bool?) -> Void
+    @Environment(\.scenePhase) private var scenePhase
 
-    var body: some View {
-        Button(action: action) {
-            NoahCard {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Back up your wallet").font(NoahFont.headline)
-                        Text("Write down your recovery phrase.")
-                            .font(NoahFont.footnote)
-                            .foregroundStyle(NoahColor.mutedForeground)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").foregroundStyle(NoahColor.mutedForeground).accessibilityHidden(true)
-                }
-                .foregroundStyle(NoahColor.foreground)
+    func body(content: Content) -> some View {
+        content
+            .task(id: noticesKey) { takeNotices() }
+            .onChange(of: trackerInput, initial: true) { old, input in
+                update(input)
+                if old.state != .loading, !Set(input.ids).isSubset(of: Set(old.ids)) { recordsArrived() }
             }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("home-backup-prompt")
+            .task(id: celebrationID) { await celebrate() }
+            .task(id: toastID) { await expireToast() }
+            .task { await entrance() }
+            // As in the VTXO screen: a review never outlives backgrounding, leaving Home or a wallet change.
+            .onChange(of: scenePhase) { _, _ in invalidateReview() }
+            .onChange(of: wallet) { _, _ in invalidateReview() }
+            .onDisappear(perform: invalidateReview)
+            .onChange(of: suspended) { _, value in suspendedChanged(value) }
+            .onChange(of: emailVerified) { _, value in emailVerifiedChanged(value) }
     }
 }
 
-private struct BalanceHeader: View {
-    let balance: WalletBalance?
-    private var sats: Int64? { balance.map { Int64(clamping: $0.totalSats) } }
-    @State private var expanded = false
-    let unit: BitcoinAmountUnit
-    let btcPrice: Double?
-    let currency: String
-    @Environment(\.locale) private var locale
-    @Binding var isHidden: Bool
+/// Stand-ins for app state that only a live wallet sets, for the opt-in
+/// screenshot fixtures (`NoahTests/HomeShotTests`). Never set in the app.
+struct HomeFixture {
+    var summary: WalletSession.Summary?
+    var walletError: String?
+    var needsRecoveryPhraseBackup = false
+    var updateRequired = false
+}
 
-    var body: some View {
-        VStack(spacing: 12) {
-            if isHidden {
-                Text(HomeModel.hiddenFiat(currency: currency))
-                    .font(NoahFont.title).foregroundStyle(NoahColor.mutedForeground)
-            } else if let sats, let btcPrice {
-                Text(FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: currency, locale: locale))
-                    .font(NoahFont.title).foregroundStyle(NoahColor.mutedForeground)
-            } else { ProgressView().frame(height: 32) }
-            HStack(spacing: 14) {
-            Button { expanded.toggle() } label: {
-            HStack {
-            Group {
-                if isHidden {
-                    Text(verbatim: "••••")
-                } else if let sats {
-                    Text(BitcoinAmount.format(sats: sats, unit: unit, locale: locale))
-                        .contentTransition(.numericText())
-                } else {
-                    ProgressView()
-                }
-            }
-            .font(NoahFont.inter(44, .bold, relativeTo: .largeTitle))
-            .foregroundStyle(NoahColor.foreground)
-            .minimumScaleFactor(0.5)
-            .lineLimit(1)
-            Image(systemName: expanded ? "chevron.up" : "chevron.down")
-            }
-            }.buttonStyle(.plain).accessibilityLabel("Toggle balance details")
-            .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+extension EnvironmentValues {
+    @Entry var homeFixture: HomeFixture?
+}
 
-            Button {
-                withAnimation(.snappy) { isHidden.toggle() }
-            } label: {
-                Image(systemName: isHidden ? "eye" : "eye.slash")
-                    .font(.title3)
-                    .foregroundStyle(NoahColor.foreground)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel(Text(LocalizedStringKey(isHidden ? "Show wallet balance" : "Hide wallet balance")))
-        }
-            if let balance {
-                if balance.pendingSats > 0 {
-                    Text(L10n.text("Pending balance: {_gt_value_2}", WalletBalance.display(balance.pendingSats, hidden: isHidden, unit: unit, locale: locale)))
-                        .font(NoahFont.footnote)
-                }
-                if let message = balance.pendingRoundMessage(amount: WalletBalance.display(balance.ark.pendingInRound, hidden: isHidden, unit: unit, locale: locale)) {
-                    Text(LocalizedStringKey(message)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                }
-                if expanded {
-                    NoahCard {
-                        VStack(spacing: 8) {
-                            Text("Balance Details").font(NoahFont.headline)
-                            ForEach(balance.details, id: \.label) { row in
-                                LabeledContent(row.label, value: WalletBalance.display(row.sats, hidden: isHidden, unit: unit, locale: locale))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .sensoryFeedback(.selection, trigger: isHidden)
+/// The entrance rise for one block; already shown once the entrance has played.
+private struct HomeAppear: ViewModifier {
+    let order: Int
+    let animated: Bool
+
+    func body(content: Content) -> some View {
+        content.onboardingAppear(order, base: 0.06, step: 0.04, distance: 14, animated: animated)
     }
 }
 
-struct VariantBadge: View {
-    let variant: AppVariant
+/// The top bar over the scrolling column. iOS 26 fades content under it with the
+/// system scroll edge effect; earlier versions with a background gradient.
+private struct HomeTopBarInset<Bar: View>: ViewModifier {
+    let scrolled: Bool
+    @ViewBuilder let bar: Bar
 
-    var body: some View {
-        switch variant {
-        case .mainnet:
-            EmptyView()
-        case .signet:
-            badge("SIGNET", color: .orange)
-        case .regtest:
-            badge("REGTEST", color: .yellow)
-        }
-    }
-
-    private func badge(_ text: String, color: Color) -> some View {
-        Text(verbatim: text)
-            .font(NoahFont.inter(13, .bold))
-            .foregroundStyle(.black)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(color, in: Capsule())
-    }
-}
-
-/// RN Home's suspended state: every wallet operation is off until resumed.
-private struct SuspendedWalletCard: View {
-    var body: some View {
-        NoahCard {
-            VStack(spacing: 12) {
-                Image(systemName: "pause.circle")
-                    .font(.system(size: 44))
-                    .foregroundStyle(NoahColor.destructive)
-                Text("Wallet Suspended")
-                    .font(NoahFont.title)
-                    .foregroundStyle(NoahColor.foreground)
-                Text("Your wallet is currently suspended. All wallet operations are disabled.")
-                    .font(NoahFont.body)
-                    .foregroundStyle(NoahColor.mutedForeground)
-                    .multilineTextAlignment(.center)
-                Text("Go to Settings → Danger Zone to resume your wallet.")
-                    .font(NoahFont.footnote)
-                    .foregroundStyle(NoahColor.mutedForeground)
-                    .multilineTextAlignment(.center)
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content
+                .safeAreaBar(edge: .top, spacing: 0) { bar }
+                .scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            content.safeAreaInset(edge: .top, spacing: 0) {
+                bar.background(alignment: .top) {
+                    LinearGradient(stops: [.init(color: NoahTokens.Colors.background, location: 0.62),
+                                           .init(color: NoahTokens.Colors.background.opacity(0), location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .padding(.bottom, -16)
+                        .ignoresSafeArea(edges: .top)
+                        .opacity(scrolled ? 1 : 0)
+                        .animation(.easeOut(duration: 0.2), value: scrolled)
+                        .allowsHitTesting(false)
+                }
             }
-            .frame(maxWidth: .infinity)
         }
     }
 }

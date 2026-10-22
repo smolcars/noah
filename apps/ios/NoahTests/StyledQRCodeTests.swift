@@ -11,6 +11,19 @@ struct StyledQRCodeTests {
     static let addresses = ["a@noahwallet.io", "maya@noahwallet.io", "satoshi.nakamoto_21@signet.noahwallet.io",
                             "lightning-address-with-a-long-name@localhost.com"]
 
+    /// Home's get-paid card as drawn: white in both themes, logo in the middle.
+    @Test(arguments: [ColorScheme.light, .dark])
+    func getPaidCardDecodes(scheme: ColorScheme) throws {
+        for address in Self.addresses {
+            let card = HomeQRCard(address: address, qrSide: 212, unit: .bip177, hidden: false)
+                .frame(width: 345)
+                .padding(24)
+                .background(NoahTokens.Colors.background)
+                .environment(\.colorScheme, scheme)
+            #expect(try Self.decode(card) == [address], "\(address) in \(scheme)")
+        }
+    }
+
     @Test(arguments: [ColorScheme.light, .dark])
     func styledCodeDecodesWithTheLogo(scheme: ColorScheme) throws {
         for address in Self.addresses {

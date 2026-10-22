@@ -59,9 +59,9 @@ struct HomeParityTests {
         }
     }
 
-    @Test func factsAndHiddenFiatMatchSharedRNFixtures() throws {
+    // Home v2 dropped the Bitcoin facts line; hidden fiat still matches RN.
+    @Test func hiddenFiatMatchesSharedRNFixtures() throws {
         let fixtures = try Fixtures.decode("home-status", as: StatusFixtures.self)
-        #expect(fixtures.facts.count == 24 && HomeFacts.values == fixtures.facts)
         #expect(fixtures.symbols.count == FiatCurrency.supported.count)
         for (currency, symbol) in fixtures.symbols {
             #expect(HomeModel.hiddenFiat(currency: currency) == "\(symbol) ••••")

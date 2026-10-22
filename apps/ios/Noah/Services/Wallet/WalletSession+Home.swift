@@ -12,4 +12,17 @@ extension WalletSession {
             }
         }
     }
+
+    /// Home's renew nudge: what `getExpiringVtxos` reports inside the refresh
+    /// threshold (the maintenance window). Read-only; renewing goes through the review.
+    func homeRenewal() async throws -> HomeRenewal? {
+        try await withOpenWallet { handles in
+            let tip = try await handles.onchain.tipHeight()
+            let expiring = try await handles.wallet.getExpiringVtxos(
+                thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold))
+            return HomeRenewal.select(expiring.map {
+                .init(id: $0.id, sats: $0.amountSats, expiryHeight: $0.expiryHeight, spendable: $0.state == .spendable)
+            }, tip: tip)
+        }
+    }
 }

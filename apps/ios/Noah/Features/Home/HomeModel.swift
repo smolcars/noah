@@ -65,6 +65,7 @@ final class HomeModel {
         var boardingChanges: () -> AsyncStream<Void> = { AsyncStream { $0.finish() } }
         var sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
         var now: () -> Date = { Date() }
+        var renewal: () async throws -> HomeRenewal? = { nil }
 
         static var live: Self {
             Self(
@@ -96,7 +97,8 @@ final class HomeModel {
                     }
                 },
                 backupChanges: { AppServices.shared.backupCoordinator.statusUpdates.stream() },
-                boardingChanges: { OnchainOperationJournal.shared.changes.stream() })
+                boardingChanges: { OnchainOperationJournal.shared.changes.stream() },
+                renewal: { try await WalletSession.shared.homeRenewal() })
         }
     }
 
@@ -106,7 +108,9 @@ final class HomeModel {
     private(set) var isRetryingBackup = false
     private(set) var backgroundRunning = false
     var backgroundMessage: String? { backgroundRunning ? "Background task in progress..." : nil }
-    private(set) var fact = HomeFacts.values.randomElement() ?? ""
+    /// Refreshable VTXOs automatic renewal hasn't reached; checked at the existing refresh moments.
+    private(set) var renewal: HomeRenewal?
+    private var loadingRenewal = false
     private(set) var autoBoard: (netSats: UInt64, createdAt: Date)?
     private let dependencies: Dependencies
     private var quotes: [String: (price: Double, at: Date)] = [:]
@@ -151,6 +155,14 @@ final class HomeModel {
         } while roundsRefreshPending && !backgroundRunning && !Task.isCancelled
     }
 
+    func refreshRenewal() async {
+        guard !loadingRenewal else { return }
+        loadingRenewal = true
+        defer { loadingRenewal = false }
+        do { renewal = try await dependencies.renewal() }
+        catch { AppLog("home").w("Renewal status unavailable") }
+    }
+
     func backgroundChanged(_ snapshot: WalletBackgroundActivity.Snapshot) async {
         guard backgroundRevision.map({ snapshot.revision >= $0 }) ?? true else { return }
         backgroundRevision = snapshot.revision
@@ -176,6 +188,7 @@ final class HomeModel {
                     guard !Task.isCancelled else { return }
                     // Round sync writes its own pending state; those events must retain the 30 s cadence.
                     await refreshRounds(force: activeRounds.isEmpty)
+                    await refreshRenewal()
                     if reason == "resyncRequired" { resubscribe = true; break }
                 }
             }
@@ -245,14 +258,15 @@ final class HomeModel {
         catch { return }
         guard !Task.isCancelled else { return }
         await refreshRounds()
+        await refreshRenewal()
     }
 
     func refresh(currency: String) async {
-        fact = HomeFacts.values.randomElement() ?? ""
         updateBackup(dependencies.backup())
         await backgroundChanged(await dependencies.backgroundSnapshot())
         await refreshAutoBoards()
         await refreshRounds(force: true)
+        await refreshRenewal()
         await loadPrice(currency: currency)
     }
 

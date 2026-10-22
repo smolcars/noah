@@ -32,9 +32,10 @@ extension View {
     }
 
     /// The prototype's `[data-s]` entrance: rise and fade in, staggered.
-    /// Runs once per view, so a pose change doesn't replay it.
-    func onboardingAppear(_ order: Int, base: Double = 0.09, step: Double = 0.06, distance: CGFloat = 14) -> some View {
-        modifier(OnboardingAppear(delay: base + Double(order) * step, distance: distance))
+    /// Runs once per view, so a pose change doesn't replay it. `animated: false` starts shown.
+    func onboardingAppear(_ order: Int, base: Double = 0.09, step: Double = 0.06, distance: CGFloat = 14,
+                          animated: Bool = true) -> some View {
+        modifier(OnboardingAppear(delay: base + Double(order) * step, distance: distance, shown: !animated))
     }
 
     /// Centres content in its pane, at most `OnboardingLayout.paneContentWidth` wide.
@@ -55,7 +56,13 @@ extension NoahTokens.Motion {
 private struct OnboardingAppear: ViewModifier {
     let delay: Double
     let distance: CGFloat
-    @State private var shown = false
+    @State private var shown: Bool
+
+    init(delay: Double, distance: CGFloat, shown: Bool) {
+        self.delay = delay
+        self.distance = distance
+        _shown = State(initialValue: shown)
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {

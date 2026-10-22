@@ -48,19 +48,21 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var isInternalTransfer: Bool { movementKind == "onboard" }
     var canRepeat: Bool { direction == "outgoing" && movementStatus == "successful" && repeatPayment != nil }
     var displayLabel: String {
-        let label: String
+        isCanceled ? L10n.text("Canceled {value1}", baseLabel) : baseLabel
+    }
+    /// The label without the canceled prefix.
+    var baseLabel: String {
         switch movementKind {
-        case "onboard": label = "Board"
-        case "offboard": label = "Offboard"
-        case "exit": label = "Ark Exit"
+        case "onboard": "Board"
+        case "offboard": "Offboard"
+        case "exit": "Ark Exit"
         default:
             switch type {
-            case "Bolt11", "Lnurl": label = "Lightning"
-            case "Arkoor": label = "Ark"
-            default: label = type
+            case "Bolt11", "Lnurl": "Lightning"
+            case "Arkoor": "Ark"
+            default: type
             }
         }
-        return isCanceled ? L10n.text("Canceled {value1}", label) : label
     }
 
     struct Accounting: Codable, Equatable {
