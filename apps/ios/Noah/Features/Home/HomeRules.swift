@@ -108,7 +108,8 @@ enum HomeStatusLine: Equatable {
                         backingUp: Bool, backgroundMessage: String?) -> Self? {
         if let error { return .error(error) }
         // Never sends, offboards, exits or boards: those are your own money leaving or moving.
-        let arriving = (balance?.ark.claimableLightningReceive ?? 0) + incomingOnchain
+        // The records' incoming amount can't exceed what the wallet itself counts as pending on-chain.
+        let arriving = (balance?.ark.claimableLightningReceive ?? 0) + min(incomingOnchain, balance?.onchain.pending ?? 0)
         if arriving > 0 { return .arriving(arriving) }
         if let balance, balance.ark.pendingInRound > 0 { return .pendingRound(balance.ark.pendingInRound) }
         if activeRounds > 0 { return .rounds(activeRounds) }
@@ -117,10 +118,12 @@ enum HomeStatusLine: Equatable {
         return nil
     }
 
-    /// Unconfirmed on-chain transactions that add to the wallet. The SDK's
-    /// on-chain pending balance can't tell others' payments from your own
-    /// unconfirmed change, so this reads the records: a send's change shows
-    /// up as a smaller outgoing amount there, never as incoming.
+    /// Unconfirmed on-chain transactions that add to the wallet, by their net change.
+    /// The SDK's on-chain pending balance is BDK's trusted plus untrusted pending in
+    /// one number, so it can't tell others' payments from your own unconfirmed change;
+    /// the records can: a send's change only shrinks its outgoing net amount. An
+    /// unconfirmed transaction that pays this wallet from its own funds with a net
+    /// gain would still count.
     static func incomingOnchain(_ transactions: [HistoryTransaction]) -> UInt64 {
         transactions.reduce(0) { sum, transaction in
             guard transaction.source == "onchain-wallet", transaction.hasConfirmation != true,

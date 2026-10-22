@@ -179,6 +179,11 @@ struct HomeRulesTests {
         // Unconfirmed change from your own send, and confirmed deposits, are not.
         #expect(line(Self.balance(ark: 20_000, onchainPending: 40_000), [Self.deposit("send", -10_000, confirmed: false),
                                                                           Self.deposit("old", 5_000, confirmed: true)]) == nil)
+        // The records never claim more than the wallet's own on-chain pending total.
+        #expect(line(Self.balance(ark: 20_000, onchainPending: 60_000), [Self.deposit("in", 100_000, confirmed: false)])
+                == .arriving(60_000))
+        #expect(line(Self.balance(ark: 20_000, claimable: 2_100), [Self.deposit("in", 100_000, confirmed: false)])
+                == .arriving(2_100))
     }
 
     // MARK: Rows
