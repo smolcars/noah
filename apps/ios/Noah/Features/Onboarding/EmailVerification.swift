@@ -72,6 +72,9 @@ final class EmailVerification {
     private(set) var resendAvailable: Date?
     /// Wrong attempts, so the view can shake on each.
     private(set) var failures = 0
+    /// A send or resend is in flight. The server keeps one challenge per
+    /// account, so sends never overlap, and Edit and verification wait.
+    private(set) var isSending = false
     @ObservationIgnored private var verifying = ""
 
     /// Answers true when the address is already verified and no code was sent.
@@ -99,7 +102,9 @@ final class EmailVerification {
     }
 
     func sendCode() async {
-        guard stage == .entry, isValid else { return }
+        guard stage == .entry, isValid, !isSending else { return }
+        isSending = true
+        defer { isSending = false }
         email = text
         error = nil
         stage = .sending
@@ -123,7 +128,8 @@ final class EmailVerification {
     }
 
     func resend() async {
-        guard stage == .code || stage == .wrongCode, resendRemaining(at: now()) == 0 else { return }
+        guard stage == .code || stage == .wrongCode, resendRemaining(at: now()) == 0, !isSending else { return }
+        isSending = true
         resendAvailable = now().addingTimeInterval(Self.resendDelay)
         error = nil
         do {
@@ -132,6 +138,9 @@ final class EmailVerification {
             resendAvailable = nil
             self.error = ServerFailure.message(for: error, fallback: "Failed to send verification code. Please try again.")
         }
+        isSending = false
+        // Digits typed while the resend was in flight are checked now.
+        if stage == .code || stage == .wrongCode { await codeChanged() }
     }
 
     /// Digits only, up to six; the sixth verifies. Edits while verifying are ignored.
@@ -144,7 +153,7 @@ final class EmailVerification {
         if digits != code { code = digits }
         guard stage == .code || stage == .wrongCode else { return }
         if stage == .wrongCode && !digits.isEmpty { stage = .code; error = nil }
-        guard digits.count == Self.codeLength else { return }
+        guard digits.count == Self.codeLength, !isSending else { return }
         verifying = digits
         stage = .verifying
         error = nil
@@ -162,7 +171,7 @@ final class EmailVerification {
 
     /// "Edit": back to the address, which keeps what was typed.
     func edit() {
-        guard stage == .code || stage == .wrongCode else { return }
+        guard stage == .code || stage == .wrongCode, !isSending else { return }
         code = ""
         error = nil
         resendAvailable = nil

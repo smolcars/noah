@@ -250,6 +250,60 @@ struct OnboardingCodeTests {
         #expect(email.error == "Failed to send verification code. Please try again.")
     }
 
+    /// Holds a request until the test opens it.
+    @MainActor final class Gate {
+        private var continuation: CheckedContinuation<Void, Never>?
+        private var opened = false
+        func wait() async {
+            if opened { return }
+            await withCheckedContinuation { continuation = $0 }
+        }
+        func open() {
+            opened = true
+            continuation?.resume()
+            continuation = nil
+        }
+    }
+
+    @Test func aResendInFlightBlocksEditOtherSendsAndVerification() async {
+        let gate = Gate(), clock = Clock()
+        var sent: [String] = [], verified: [String] = []
+        var holdSends = false
+        let email = EmailVerification(send: { address in
+            sent.append(address)
+            if holdSends { await gate.wait() }
+            return false
+        }, verify: { code, _ in verified.append(code) }, now: { clock.now }, clearDelay: .zero)
+        email.text = "first@gmail.com"
+        await email.sendCode()
+        clock.now = clock.now.addingTimeInterval(30)
+
+        holdSends = true
+        let resend = Task { await email.resend() }
+        for _ in 0..<1000 where !email.isSending { await Task.yield() }
+        #expect(email.isSending)
+
+        // Edit can't start another address while the first request is pending…
+        email.edit()
+        #expect(email.stage == .code)
+        email.text = "second@gmail.com"
+        await email.sendCode()
+        // …nor can a second resend or a verification overlap it.
+        await email.resend()
+        email.code = "000000"
+        await email.codeChanged()
+        #expect(sent == ["first@gmail.com", "first@gmail.com"])
+        #expect(verified.isEmpty)
+        #expect(email.stage == .code)
+
+        gate.open()
+        await resend.value
+        #expect(!email.isSending)
+        #expect(verified == ["000000"]) // Checked once the resend settled.
+        #expect(email.stage == .verified)
+        #expect(sent == ["first@gmail.com", "first@gmail.com"])
+    }
+
     @Test func editReturnsToTheAddress() async {
         let email = model(Server())
         email.text = "maya@gmail.com"

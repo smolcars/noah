@@ -83,7 +83,7 @@ struct EmailScreen: View {
                                    large: layout.wide) {
                     Button("Edit") { email.edit() }
                         .buttonStyle(OnboardingBarButtonStyle(muted: false))
-                        .disabled(email.stage == .verifying)
+                        .disabled(email.stage == .verifying || email.isSending)
                         .accessibilityLabel(Text("Edit email address"))
                         .accessibilityIdentifier("onboarding-email-edit")
                 }
@@ -251,7 +251,7 @@ struct EmailScreen: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .disabled(email.stage == .verifying)
+                    .disabled(email.stage == .verifying || email.isSending)
                     .accessibilityIdentifier("onboarding-email-resend")
                 }
             }
