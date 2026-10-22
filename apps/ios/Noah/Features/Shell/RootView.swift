@@ -113,19 +113,24 @@ struct WalletTabs: View {
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
     @State private var history: HistoryModel
-    /// Home's model; screenshot fixtures pass fakes for both.
+    /// Home's and Receive's models; screenshot fixtures pass fakes for these and Send's.
     private let home: HomeModel?
+    private let receive: ReceiveModel?
     @State private var pendingRepeatPayment: RepeatPayment?
-    @State private var send = SendModel()
+    @State private var send: SendModel
     @State private var scanBlocked = false
-    @State private var selection: Tab = .home
+    @State private var selection: Tab
     @State private var recurringRoute = RecurringNotificationRoute.shared
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
-    init(history: HistoryModel? = nil, home: HomeModel? = nil) {
+    init(history: HistoryModel? = nil, home: HomeModel? = nil, send: SendModel? = nil, receive: ReceiveModel? = nil,
+         tab: Tab = .home) {
         _history = State(initialValue: history ?? HistoryModel(dependencies: .live(
             session: .shared, client: AppServices.shared.client, variant: .current)))
         self.home = home
+        self.receive = receive
+        _send = State(initialValue: send ?? SendModel())
+        _selection = State(initialValue: tab)
     }
 
     var body: some View {
@@ -133,15 +138,15 @@ struct WalletTabs: View {
             SwiftUI.Tab(Tab.home.title, systemImage: Tab.home.symbol, value: .home) {
                 HomeView(isActive: selection == .home, onScan: scanned, onOpenHistory: { selection = .history },
                          onRepeatPayment: repeatPayment, home: home)
-                    .modifier(WideTabContent(wide: window.wide, home: true))
+                    .modifier(WideTabContent(wide: window.wide, padsForBar: false))
             }
             SwiftUI.Tab(Tab.receive.title, systemImage: Tab.receive.symbol, value: .receive) {
-                NavigationStack { ReceiveView(isActive: selection == .receive) { selection = .home } }
-                    .modifier(WideTabContent(wide: window.wide))
+                NavigationStack { ReceiveView(isActive: selection == .receive, model: receive) }
+                    .modifier(WideTabContent(wide: window.wide, padsForBar: false))
             }
             SwiftUI.Tab(Tab.send.title, systemImage: Tab.send.symbol, value: .send) {
-                NavigationStack { SendView(model: send, isActive: selection == .send) }
-                    .modifier(WideTabContent(wide: window.wide))
+                NavigationStack { SendView(model: send, isActive: selection == .send) { selection = .home } }
+                    .modifier(WideTabContent(wide: window.wide, padsForBar: false, barHidden: send.hidesTabBar))
             }
             SwiftUI.Tab(Tab.history.title, systemImage: Tab.history.symbol, value: .history) {
                 NavigationStack { TransactionsView(onRepeatPayment: repeatPayment) }
@@ -262,14 +267,17 @@ private struct LaunchMessageView: View {
 }
 
 /// Wide windows: no system tab bar, and other tabs keep their content clear of the glass bar.
+/// Home, Receive and Send keep their own leading pane clear of it. Send hides the phone
+/// tab bar on its steps after Amount.
 private struct WideTabContent: ViewModifier {
     let wide: Bool
-    var home = false
+    var padsForBar = true
+    var barHidden = false
 
     func body(content: Content) -> some View {
         content
-            .toolbarVisibility(wide ? .hidden : .automatic, for: .tabBar)
-            .safeAreaPadding(.bottom, wide && !home ? WideTabBar.clearance : 0)
+            .toolbarVisibility(wide || barHidden ? .hidden : .automatic, for: .tabBar)
+            .safeAreaPadding(.bottom, wide && padsForBar ? WideTabBar.clearance : 0)
     }
 }
 

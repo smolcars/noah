@@ -64,8 +64,6 @@ struct AdaptivePresentationTests {
                     view = AnyView(NavigationStack { TransactionsView(onRepeatPayment: { _ in }) })
                 case "transaction":
                     view = AnyView(NavigationStack { TransactionDetailView(transaction: transaction, onRepeatPayment: { _ in }, onClose: {}) })
-                case "receive-success":
-                    view = AnyView(NavigationStack { ReceiveSuccessView(amountSat: 500, btcPrice: 100000, done: {}) })
                 case "board-review":
                     view = AnyView(OnchainReviewSheet(quote: .init(action: .board, walletID: "layout", ids: [],
                         amount: 50000, fee: 100, chainFee: 500, confirmed: 80000), confirm: {}))
