@@ -28,7 +28,7 @@ object HomeFixtures {
                     status: String = "successful", kind: String? = null, effective: Long = if (direction == "outgoing") -amount else amount) =
         HistoryTransaction(id, type, amount, at(now, minutesAgo), direction, sortTimestamp = (now.time - minutesAgo * minute).toDouble(),
             source = "ark", destination = destination, movementStatus = status, movementKind = kind, effectiveBalanceSat = effective,
-            intendedBalanceSat = effective)
+            intendedBalanceSat = if (status == "canceled") -amount else effective, offchainFeeSat = 0)
     private fun chain(id: String, amount: Long, now: Date, minutesAgo: Long, confirmed: Boolean) =
         HistoryTransaction(id, "Onchain", amount, if (confirmed) at(now, minutesAgo) else HistoryRules.isoDate(Date(0)), "incoming",
             dateLabel = if (confirmed) null else "Unconfirmed", sortTimestamp = if (confirmed) (now.time - minutesAgo * minute).toDouble() else null,
@@ -47,6 +47,7 @@ object HomeFixtures {
         chain("b-1", 100_000, now, 0, confirmed = false),
         ark("b-2", "Lnurl", 5_000, "outgoing", now, 3, destination = "bob@getalby.com", status = "pending"),
         ark("b-3", "Onchain", 4_200, "incoming", now, 12, status = "failed", kind = "onboard", effective = 0),
+        ark("b-4", "Bolt11", 1_500, "outgoing", now, 25, status = "canceled", effective = 0),
     ) + everydayRows(now)
 
     private fun balance(spendable: ULong, onchainConfirmed: ULong = 0u, onchainPending: ULong = 0u) = WalletBalance(

@@ -62,8 +62,18 @@ data class HomeRow(
             val sign = if (row.isInternalTransfer) "" else if (outgoing) "−" else "+"
             return HomeRow(row.id, avatar, title, kind?.takeIf { it != title },
                 row.timestamp?.takeIf { it.time > 0 && row.dateLabel == null }, row.amount, sign, pending, failed, row.isCanceled,
-                unchanged = (failed || row.isCanceled) && (row.effectiveBalanceSat ?: row.balanceChangeSat ?: 0L) == 0L,
+                unchanged = (failed || row.isCanceled) && provesNothingLeft(row),
                 incoming = !outgoing, counterparty = address)
+        }
+
+        /**
+         * Explicit evidence that nothing left the wallet: an Ark movement whose recorded balance change and fee are
+         * both zero, and for kinds that also move on-chain funds, a merged chain record showing no change. Anything
+         * unknown is not evidence; such rows just say "Failed" or "Canceled".
+         */
+        internal fun provesNothingLeft(row: HistoryTransaction): Boolean {
+            if (row.source != "ark" || row.effectiveBalanceSat != 0L || row.offchainFeeSat != 0L) return false
+            return row.movementKind !in chainKinds || row.balanceChangeSat == 0L
         }
     }
 }

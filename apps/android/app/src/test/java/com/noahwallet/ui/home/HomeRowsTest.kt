@@ -49,11 +49,29 @@ class HomeRowsTest {
         val sending = HomeRow.of(row("Lnurl", "outgoing", "bob@getalby.com", status = "pending"), null)
         assertTrue(sending.pending); assertEquals("Sending", sending.state)
         val failed = HomeRow.of(row("Onchain", "incoming", status = "failed", kind = "onboard", effective = 0), null)
-        assertTrue(failed.failed); assertTrue("nothing left the wallet", failed.unchanged); assertEquals("Failed", failed.state)
-        assertFalse(HomeRow.of(row("Onchain", "incoming", status = "failed", kind = "onboard", effective = -400), null).unchanged)
+        assertTrue(failed.failed); assertEquals("Failed", failed.state)
         val canceled = HomeRow.of(row("Bolt11", "outgoing", status = "canceled", effective = 0), null)
         assertTrue(canceled.canceled); assertFalse(canceled.failed); assertEquals("Canceled", canceled.state)
         assertEquals("Canceled Lightning", canceled.title)
+    }
+
+    @Test fun nothingLeftYourWalletNeedsExplicitZeroDeltas() {
+        fun proof(row: HistoryTransaction) = HomeRow.of(row, null).unchanged
+        // An Ark movement that recorded a zero balance change and a zero fee.
+        assertTrue(proof(row("Bolt11", "outgoing", status = "canceled", effective = 0).copy(offchainFeeSat = 0)))
+        // Unknown never counts as unchanged: a missing delta or fee, or a record that isn't an Ark movement.
+        assertFalse(proof(row("Bolt11", "outgoing", status = "canceled", effective = 0)))
+        assertFalse(proof(row("Bolt11", "outgoing", status = "canceled", effective = 0).copy(effectiveBalanceSat = null, offchainFeeSat = 0)))
+        assertFalse(proof(row("Bolt11", "outgoing", status = "canceled", effective = 0, source = "onchain-wallet").copy(offchainFeeSat = 0)))
+        assertFalse("a fee left", proof(row("Bolt11", "outgoing", status = "canceled", effective = 0).copy(offchainFeeSat = 3)))
+        assertFalse(proof(row("Onchain", "incoming", status = "failed", kind = "onboard", effective = -400).copy(offchainFeeSat = 0)))
+        // A failed board moves on-chain funds: a zero Ark change says nothing about the chain side.
+        val board = row("Onchain", "incoming", status = "failed", kind = "onboard", effective = 0).copy(offchainFeeSat = 0)
+        assertFalse("no chain record merged", proof(board))
+        assertFalse("the merged chain record shows money moved", proof(board.copy(balanceChangeSat = -51_000)))
+        assertTrue("an explicit zero on both sides", proof(board.copy(balanceChangeSat = 0)))
+        // Successful rows never carry the phrase.
+        assertFalse(proof(row("Bolt11", "outgoing", effective = 0).copy(offchainFeeSat = 0)))
     }
 
     @Test fun daysGroupTodayYesterdayAndDatesKeepingUndatedRowsInPlace() {
