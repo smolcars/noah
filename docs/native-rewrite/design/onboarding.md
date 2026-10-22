@@ -5,7 +5,9 @@ Approved by the user on 2026-10-21. The interactive prototype is
 script holds every timing and position: read it, don't guess.
 Tokens live in [`apps/design/tokens.json`](../../../apps/design/tokens.json),
 generated into `NoahTokens.swift` / `NoahTokens.kt` by
-`bun apps/tools/design-tokens.mjs`.
+`bun apps/tools/design-tokens.mjs`. Exact line boxes need iOS 26. On iOS
+18–25, single lines keep the font's natural height, which is an accepted
+exception.
 
 ## Principles
 
@@ -35,7 +37,9 @@ React Native records no acknowledgement. A user who quit RN onboarding before se
 
 Wallets migrated from React Native and wallets made by earlier native builds must keep working exactly as they do today. The redesign only replaces the onboarding UI.
 
-- **Launch:** a seed in the keychain plus a wallet database opens Home, never onboarding, the recovery phrase or a new blocking screen. This holds even when the imported settings are missing, cleared or damaged. The only exception stays as it is today: a readable RN store that explicitly says `isInitialized=false` resumes onboarding, now at Name.
+- **Launch:** a seed in the keychain plus a wallet database opens Home, never onboarding, the recovery phrase or a new blocking screen. This holds even when the imported settings are missing, cleared or damaged. Two existing rules still apply:
+  - a readable RN store that explicitly says `isInitialized=false` resumes onboarding, now at Name;
+  - the notifications-required screen still blocks a wallet whose notifications are off. RN does the same (`PushNotificationsRequiredScreen`), notifications are required to renew VTXOs, and turning them on clears it. Missing or damaged settings never cause it.
 - **Storage:** don't change keychain items, the wallet database, the RN settings import or any existing settings key. The backup flag is a new key. When it's missing, the wallet counts as not backed up.
 - **Settings:** the language picker moves to Welcome, but an imported or previously chosen language still applies on first launch.
 - **Notifications:** the push gate keeps today's rules for existing wallets. Only its look changes.
@@ -78,9 +82,14 @@ Design for the iPhone Duo first, then make Android foldables match. The Duo's cl
   - **Content width:** keep each pane's content at most about 420 pt wide and centred in its pane.
 - **Bent (half-open):** nothing crosses the fold: no text, button, field, chip, sheet or tree.
   - **Book posture (vertical fold):** the two-pane split above, with the split on the hinge.
-  - **Tabletop posture (horizontal fold):** the tree or headline sits on the top half; controls, input and the keyboard on the bottom half.
-  - **iOS:** SwiftUI has no hinge API. Observe `UIHingeInteraction` (iOS 27.1+, `UIHinge.Status.partiallyOpen`) through a small `UIViewRepresentable`. Earlier iOS versions have no hinge. Lay out from the window size and system safe area; don't invent a hinge gutter. See `docs/native-rewrite/adaptive-layouts-ios.md` for what the Duo simulator reports.
-  - **Android:** use `LocalFoldingFeatures` and `avoidHinge()` from `ui/AdaptiveLayout.kt`. They only report separating folds.
+  - **Tabletop posture (horizontal fold), Android only:** the tree or headline sits on the top half; controls, input and the keyboard on the bottom half.
+  - **iOS:** lay out from the window size and system safe area alone.
+    - `UIHinge` (iOS 27.1) reports only status and angle, not the fold's orientation or position.
+    - The Duo's fold is vertical down the middle in every recorded pose (`docs/native-rewrite/adaptive-layouts-ios.md`). So a wide window always gets the two-pane split at its centre, whether it's open or half-open, and a narrow one gets the single column.
+    - There's no iOS tabletop layout and no hinge gutter. Don't add `UIHingeInteraction` unless it drives something visible.
+  - **Android:** use the fold bounds from `LocalFoldingFeatures` in `ui/AdaptiveLayout.kt`, which only reports separating folds.
+    - `LaunchGateView` wraps onboarding in `avoidHinge()`, which keeps only the larger side of a fold. Onboarding must not sit inside it. Give onboarding the full window and let it split at the reported fold bounds, keeping each pane clear of the hinge.
+    - Every other launch state keeps `avoidHinge()`.
 - **Changing pose:** folding, unfolding or rotating at any step keeps everything: the current step, the typed name, email and code digits, the resend countdown, restore words (in memory only, under the existing secret rules) and in-flight wallet creation or restore. The tree keeps its animation clock, so it neither restarts nor jumps. A pose change must never create a second wallet, restore twice or resend a code.
 
 ## Testing
