@@ -3,6 +3,11 @@ package com.noahwallet.services.storage
 import android.app.Application
 import android.content.ContextWrapper
 import com.noahwallet.fixtures.SharedFixtures
+import com.noahwallet.services.backup.RestoreTransaction
+import com.noahwallet.services.backup.WalletRestorer
+import com.noahwallet.ui.RestoreCompletion
+import com.noahwallet.ui.RestoreCompletionJournal
+import kotlinx.coroutines.runBlocking
 import com.noahwallet.ui.OnboardingNavigation
 import java.io.File
 import java.nio.file.Files
@@ -83,26 +88,73 @@ class RecoveryPhraseBackupTest {
         assertTrue(relaunched.showsPrompt())
     }
 
-    @Test fun restoredWalletOpensHomeWithoutThePrompt() {
+    private val location get() = WalletDataLocation(context.filesDir, "regtest").also {
+        if (!it.databaseExists) { it.directory.mkdirs(); it.database.writeText("committed wallet") }
+    }
+
+    /** AppModel's real completion wiring, with engine-side steps faked and an optional crash point. */
+    private fun completion(settings: SettingsStorage, journal: RestoreCompletionJournal, crash: String? = null) =
+        RestoreCompletion.withSettings(settings, journal,
+            seedRestored = { _, _ -> if (crash == "seed") error("crash") },
+            recover = { if (crash == "recover") error("crash"); RestoreTransaction.Recovery.nothingPending },
+            openWallet = { if (crash == "open") error("crash") },
+            clearToken = { if (crash == "token") error("crash") })
+
+    @Test fun restoredWalletOpensHomeWithoutThePrompt() = runBlocking {
         val settings = SettingsStorage(context, sync = {})
         settings.beginOnboarding()
-        assertTrue(settings.completeRestore())
-        RecoveryPhraseBackup.restored(settings, typedPhrase = true)
+        val journal = RestoreCompletionJournal(location) {}
+        completion(settings, journal).finish(WalletRestorer.Outcome("backup", "snapshot", typedPhrase = true))
         val relaunched = SettingsStorage(context, sync = {})
         assertTrue(relaunched.opensHome())
         assertFalse(relaunched.showsPrompt())
+        assertFalse(journal.pending)
     }
 
-    @Test fun storedSeedRecoveryKeepsTheEarlierAnswer() {
+    @Test fun typedRestoreAcknowledgementSurvivesProcessDeathAtEveryBoundary() = runBlocking {
+        // The engine writes the receipt before installing; death can follow at any later point.
+        for (boundary in listOf("engineReturn", "recover", "token", "seed", "open")) {
+            root.resolve("files").deleteRecursively(); root.resolve("no-backup").deleteRecursively()
+            val settings = SettingsStorage(context, sync = {})
+            settings.beginOnboarding()
+            RestoreCompletionJournal(location) {}.write(WalletRestorer.Outcome("backup", "snapshot", typedPhrase = true))
+            if (boundary != "engineReturn") assertTrue(boundary, runCatching {
+                completion(settings, RestoreCompletionJournal(location) {}, crash = boundary)
+                    .finish(WalletRestorer.Outcome("backup", "snapshot", cleanupPending = true, typedPhrase = true))
+            }.isFailure)
+            // Relaunch: fresh storage and receipt, as after process death; startup replays completion.
+            val relaunched = SettingsStorage(context, sync = {})
+            val journal = RestoreCompletionJournal(location) {}
+            assertTrue(boundary, journal.pending)
+            completion(relaunched, journal).replay(RestoreTransaction.Recovery.nothingPending, hasDatabase = true)
+            val after = SettingsStorage(context, sync = {})
+            assertFalse(boundary, journal.pending)
+            assertTrue(boundary, after.opensHome())
+            assertFalse("$boundary: typed restore must not keep the prompt", after.showsPrompt())
+        }
+    }
+
+    @Test fun storedSeedRecoveryKeepsTheEarlierAnswer() = runBlocking {
         // "Recovery phrase found" restores from the keychain; nobody typed the phrase.
-        val settings = SettingsStorage(context, sync = {})
-        RecoveryPhraseBackup.set(settings, false)
-        assertTrue(settings.completeRestore())
-        RecoveryPhraseBackup.restored(settings, typedPhrase = false)
-        assertTrue(SettingsStorage(context, sync = {}).showsPrompt())
-        RecoveryPhraseBackup.set(settings, true)
-        RecoveryPhraseBackup.restored(settings, typedPhrase = false)
-        assertFalse(SettingsStorage(context, sync = {}).showsPrompt())
+        for (earlier in listOf<Boolean?>(null, false, true)) {
+            root.resolve("files").deleteRecursively(); root.resolve("no-backup").deleteRecursively()
+            val settings = SettingsStorage(context, sync = {})
+            earlier?.let { RecoveryPhraseBackup.set(settings, it) }
+            RestoreCompletionJournal(location) {}.write(WalletRestorer.Outcome(null, "snapshot"))
+            completion(SettingsStorage(context, sync = {}), RestoreCompletionJournal(location) {})
+                .replay(RestoreTransaction.Recovery.nothingPending, hasDatabase = true)
+            assertEquals("$earlier", earlier == true, !SettingsStorage(context, sync = {}).showsPrompt())
+        }
+    }
+
+    @Test fun receiptKeepsTypedProvenanceAndReadsOlderReceiptsAsStoredSeed() {
+        val journal = RestoreCompletionJournal(location) {}
+        journal.write(WalletRestorer.Outcome("b", "s", typedPhrase = true))
+        assertEquals(true, journal.read()?.typedPhrase)
+        journal.write(WalletRestorer.Outcome("b", "s"))
+        assertEquals(false, journal.read()?.typedPhrase)
+        File(location.restoreDirectory, "completion.json").writeText("""{"version":1,"backupId":"b","snapshotSha256":"s"}""")
+        assertEquals(false, RestoreCompletionJournal(location) {}.read()?.typedPhrase)
     }
 
     @Test fun newWalletShowsThePromptUntilConfirmedAndDeletionClearsIt() {

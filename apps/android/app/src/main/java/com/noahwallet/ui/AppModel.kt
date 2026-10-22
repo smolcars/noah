@@ -49,16 +49,15 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
 
     private val restoreLocation = WalletDataLocation(application.filesDir, BuildConfig.APP_VARIANT)
     private val restoreCompletionJournal = RestoreCompletionJournal(restoreLocation)
-    private fun restoreCompletion(openWallet: suspend () -> Unit) = RestoreCompletion(
-        loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
-        saveState = { if (!settings.completeRestore()) throw SettingsStorage.Unavailable() },
+    private fun restoreCompletion(openWallet: suspend () -> Unit) = RestoreCompletion.withSettings(settings, restoreCompletionJournal,
         seedRestored = { hash, id -> services.backupCoordinator.seedRestored(hash, id); settings.sync() },
         recover = { services.recoverRestore(walletMutationHeld = true) },
         openWallet = openWallet,
-        journal = restoreCompletionJournal,
         clearToken = services.tokens::clear,
-        settingsUnavailable = { runCatching { settings.requireHealthy() }.isFailure },
+        acknowledged = { recoveryPhraseBackedUp = true },
     )
+    /** Set for the restore in flight; the receipt carries it so completion or replay records the backup. */
+    @Volatile private var restoringTypedPhrase = false
 
     val restore = RestoreFlow(
         restore = { phrase, progress ->
@@ -66,7 +65,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             if (location.restorePending || location.deletionMarker.exists()) throw RestoreCompletion.RestartRequired()
             if (location.hasAnyData) throw WalletSession.OpenError(WalletSession.OpenFailure.walletDatabaseExists)
             check(!open && !isWalletSuspended)
-            try { services.restorer().restore(phrase, beforeInstall = restoreCompletionJournal::write, progress = progress) }
+            val typed = restoringTypedPhrase
+            try {
+                services.restorer().restore(phrase, beforeInstall = { restoreCompletionJournal.write(it.copy(typedPhrase = typed)) },
+                    progress = progress).copy(typedPhrase = typed)
+            }
             catch (failure: Exception) {
                 if (!location.restorePending && !location.databaseExists) {
                     try { restoreCompletionJournal.clear() } catch (_: Exception) { throw RestoreCompletion.RestartRequired() }
@@ -115,12 +118,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                                 else -> throw WalletRestorer.Failure(WalletRestorer.Reason.secureStorageUnavailable)
                             }
                         }
+                        restoringTypedPhrase = phrase != null
                         restore.run(mnemonic)
-                        if (restore.completed) {
-                            // Missing stays "not backed up", so a failed write only keeps the Home prompt.
-                            runCatching { RecoveryPhraseBackup.restored(settings, typedPhrase = phrase != null) }
-                            recoveryPhraseBackedUp = RecoveryPhraseBackup.isBackedUp(settings)
-                        }
                     }
                 }
             } catch (failure: Exception) { restore.reject(RestoreIssue.from(failure)) }

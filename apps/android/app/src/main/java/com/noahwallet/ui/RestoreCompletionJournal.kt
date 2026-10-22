@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
 
 /** Metadata only. Written before installation so even death before the engine returns is replayable. */
 class RestoreCompletionJournal(location: WalletDataLocation, private val sync: (File) -> Unit = ::syncDirectory) {
-    @Serializable private data class Record(val version: Int = 1, val backupId: String?, val snapshotSha256: String?)
+    @Serializable private data class Record(val version: Int = 1, val backupId: String?, val snapshotSha256: String?, val typedPhrase: Boolean = false)
     private val directory = location.restoreDirectory
     private val file = File(directory, "completion.json")
     val pending get() = file.exists()
@@ -20,7 +20,8 @@ class RestoreCompletionJournal(location: WalletDataLocation, private val sync: (
         val temporary = File(directory, "completion.tmp")
         try {
             FileOutputStream(temporary).use {
-                it.write(Json.encodeToString(Record(backupId = outcome.backupId, snapshotSha256 = outcome.snapshotSha256)).toByteArray())
+                it.write(Json.encodeToString(Record(backupId = outcome.backupId, snapshotSha256 = outcome.snapshotSha256,
+                    typedPhrase = outcome.typedPhrase)).toByteArray())
                 it.fd.sync()
             }
             check(temporary.renameTo(file))
@@ -31,7 +32,7 @@ class RestoreCompletionJournal(location: WalletDataLocation, private val sync: (
         if (!pending) return null
         val record = Json.decodeFromString<Record>(file.readText())
         check(record.version == 1)
-        return WalletRestorer.Outcome(record.backupId, record.snapshotSha256, cleanupPending = true)
+        return WalletRestorer.Outcome(record.backupId, record.snapshotSha256, cleanupPending = true, typedPhrase = record.typedPhrase)
     }
     fun clear() { check(!file.exists() || file.delete()); if (directory.exists()) sync(directory) }
 }

@@ -4,6 +4,8 @@ import androidx.compose.runtime.*
 import com.noahwallet.services.backup.RestoreTransaction
 import com.noahwallet.services.backup.WalletRestorer
 import com.noahwallet.services.storage.PersistedWalletState
+import com.noahwallet.services.storage.RecoveryPhraseBackup
+import com.noahwallet.services.storage.SettingsStorage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -26,8 +28,25 @@ class RestoreCompletion(
     private val journal: RestoreCompletionJournal? = null,
     private val clearToken: suspend () -> Unit = {},
     private val settingsUnavailable: () -> Boolean = { false },
+    private val acknowledgeBackup: () -> Unit = {},
 ) {
     class RestartRequired : Exception()
+
+    companion object {
+        /**
+         * The app's wiring: wallet flags and, for a typed phrase, the backup acknowledgement land in settings
+         * inside completion, before the receipt clears, so a replay after process death applies them too.
+         */
+        fun withSettings(settings: SettingsStorage, journal: RestoreCompletionJournal?, seedRestored: (String, String?) -> Unit,
+                         recover: suspend () -> RestoreTransaction.Recovery, openWallet: suspend () -> Unit,
+                         clearToken: suspend () -> Unit = {}, acknowledged: () -> Unit = {}) = RestoreCompletion(
+            loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
+            saveState = { if (!settings.completeRestore()) throw SettingsStorage.Unavailable() },
+            seedRestored = seedRestored, recover = recover, openWallet = openWallet, journal = journal, clearToken = clearToken,
+            settingsUnavailable = { runCatching { settings.requireHealthy() }.isFailure },
+            acknowledgeBackup = { RecoveryPhraseBackup.set(settings, true); acknowledged() },
+        )
+    }
     suspend fun replay(recovery: RestoreTransaction.Recovery, hasDatabase: Boolean) {
         val outcome = journal?.read() ?: return
         if (recovery == RestoreTransaction.Recovery.waitingForSecret) throw RestartRequired()
@@ -44,6 +63,7 @@ class RestoreCompletion(
         try {
             val wallet = loadState()
             saveState(wallet.copy(isInitialized = true, isWalletLoaded = true))
+            if (outcome.typedPhrase) acknowledgeBackup()
             outcome.snapshotSha256?.let { seedRestored(it, outcome.backupId) }
         } catch (failure: Exception) {
             if (failure is CancellationException || !settingsUnavailable()) throw failure

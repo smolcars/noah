@@ -35,7 +35,8 @@ class WalletRestorer(
         secureStorageUnavailable, rollbackFailed, seedStateUnknown }
     class Failure(val reason: Reason) : Exception(reason.name)
     enum class Step { fetching, validating, loading, finalizing }
-    data class Outcome(val backupId: String?, val snapshotSha256: String?, val cleanupPending: Boolean = false)
+    /** [typedPhrase]: the user typed the phrase (not the stored-seed recovery), so the wallet counts as backed up. */
+    data class Outcome(val backupId: String?, val snapshotSha256: String?, val cleanupPending: Boolean = false, val typedPhrase: Boolean = false)
 
     suspend fun restore(mnemonic: String, beforeInstall: (Outcome) -> Unit = {},
                         progress: (Step) -> Unit = {}): Outcome = withContext(Dispatchers.IO) {
