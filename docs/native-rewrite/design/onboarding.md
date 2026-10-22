@@ -78,7 +78,8 @@ Design for the iPhone Duo first, then make Android foldables match. The Duo's cl
 - **Compact (phones, Duo closed, Pixel Fold closed):** one column, as in the prototype. The Duo's closed panel is short, so every screen must fit in 678 pt without clipping: the tree scales to the space left, and scrolling is the last resort. Buttons must never be cut off.
 - **Wide (Duo open or half-open, Pixel Fold open, tablets, wide landscape):** two panes split at the fold. The leading pane holds the picture and the trailing pane holds the words and controls.
   - **Welcome, Creating, Restoring, Notifications:** the tree scene fills and is centred in the leading pane. The wordmark or headline, copy and buttons go in the trailing pane.
-  - **Name, Email, Restore, Done:** the headline and its short line move to the leading pane at a larger size. Done puts its ring and check there. The field, chips, code boxes, word grid and buttons go in the trailing pane.
+  - **Name, Email, Restore:** the headline and its short line move to the leading pane at a larger size. The field, chips, code boxes, word grid and buttons go in the trailing pane, aligned with the headline.
+  - **Done:** the ring and check fill the leading pane. The title, address and button sit together in the trailing pane.
   - **Beta and language sheets:** stay inside the trailing pane. They never cross the fold.
   - **Content width:** keep each pane's content at most about 420 pt wide and centred in its pane.
 - **Bent (half-open):** nothing crosses the fold: no text, button, field, chip, sheet or tree.
