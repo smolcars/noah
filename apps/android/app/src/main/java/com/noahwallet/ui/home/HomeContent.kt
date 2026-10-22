@@ -185,17 +185,21 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
 
     val pullState = rememberPullToRefreshState()
     // Scroll positions live above the pose switch, so folding, unfolding and bending keep them; between one column
-    // and two panes the position carries over through the activity row at the top.
+    // and two panes the saved anchor carries the place over. A switch places it first (again, if Home is recreated
+    // midway); only then does it follow the new layout's scrolling.
     val paned = pose !is OnboardingPose.Compact
     var lastPaned by rememberSaveable { mutableStateOf(paned) }
     val items = remember(ui.rows, ui.domain, ui.now) {
         ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { it.second.size }, ui.rows.isEmpty())
     }
     val currentItems by rememberUpdatedState(items)
-    LaunchedEffect(paned) {
-        if (paned == lastPaned) return@LaunchedEffect
-        lastPaned = paned
-        if (paned) homeScroll.toPanes(currentItems) else homeScroll.toCompact(currentItems)
+    LaunchedEffect(paned, lastPaned) {
+        if (paned != lastPaned) {
+            if (paned) homeScroll.toPanes(currentItems) else homeScroll.toCompact()
+            lastPaned = paned
+            return@LaunchedEffect
+        }
+        snapshotFlow { if (paned) homeScroll.panesAnchor(currentItems) else homeScroll.compactAnchor() }.collect { homeScroll.anchor = it }
     }
     when (pose) {
         OnboardingPose.Compact -> {

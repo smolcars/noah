@@ -5,6 +5,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.LayoutCoordinates
 import kotlinx.coroutines.flow.first
@@ -13,11 +15,23 @@ import kotlin.math.roundToInt
 
 /**
  * Home's scroll positions, hoisted above the pose switch (all saveable) so folding, unfolding and bending keep
- * them. Moving between one column and two panes carries the position over through the activity row at the top:
- * Recent's row k is the activity list's row k, and back; above the rows, the leading content's offset carries over.
+ * them, and where the reader is in either layout's terms ([anchor], saved too, so a layout recreated straight
+ * into the other one can place it without ever having laid out the first). The anchor follows the settled
+ * layout's scrolling; switching between one column and two panes puts the same place at the top of the other:
+ * Recent's row k is the activity list's row k, and above the rows the balance column's offset carries over.
  */
 @Stable
-class HomeScroll internal constructor(val compact: ScrollState, val leading: ScrollState, val list: LazyListState, val card: ScrollState) {
+class HomeScroll internal constructor(val compact: ScrollState, val leading: ScrollState, val list: LazyListState, val card: ScrollState,
+                                      anchor: MutableState<Anchor>) {
+    sealed interface Anchor {
+        /** Above the rows: this far (px) down the balance column. */
+        data class Above(val offset: Int) : Anchor
+        /** Activity row [row] at the top, [offset] px into it. */
+        data class Row(val row: Int, val offset: Int) : Anchor
+    }
+    var anchor by anchor
+        internal set
+
     /** The compact column's scrolled content, to place Recent's first row in it. Layout only, never state. */
     internal var content: LayoutCoordinates? = null
     /** Where Recent's first row starts in the compact column, and one row's height, px; -1 until measured. */
@@ -30,26 +44,43 @@ class HomeScroll internal constructor(val compact: ScrollState, val leading: Scr
         rowHeight = firstRow.size.height
     }
 
+    /** Where the one column is now. */
+    internal fun compactAnchor(): Anchor {
+        val y = compact.value
+        if (recentTop < 0 || rowHeight <= 0 || y <= recentTop) return Anchor.Above(y)
+        val row = ((y - recentTop) / rowHeight).coerceAtMost(Recent.rows - 1)
+        return Anchor.Row(row, y - recentTop - row * rowHeight)
+    }
+
+    /** Where the two panes are now: the activity list's row at the top, or else the balance pane's offset. */
+    internal fun panesAnchor(items: ActivityItems): Anchor =
+        items.rowAt(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset)?.let { (row, offset) -> Anchor.Row(row, offset) }
+            ?: Anchor.Above(leading.value)
+
     /** One column → two panes. [items] is the activity list's layout (see [ActivityItems]). */
     internal suspend fun toPanes(items: ActivityItems) {
-        val y = compact.value
-        if (recentTop >= 0 && rowHeight > 0 && y > recentTop) {
-            val row = ((y - recentTop) / rowHeight).coerceAtMost(Recent.rows - 1)
-            items.indexOfRow(row)?.let { list.scrollToItem(it, y - recentTop - row * rowHeight) }
-        } else {
-            list.scrollToItem(0)
-            leading.scrollTo(y)
+        when (val at = anchor) {
+            is Anchor.Row -> list.scrollToItem(items.indexOfRow(at.row) ?: 0, at.offset)
+            is Anchor.Above -> { list.scrollToItem(0); leading.scrollTo(at.offset) }
         }
     }
 
     /** Two panes → one column. Waits (briefly) for the column to lay Recent out before placing a row. */
-    internal suspend fun toCompact(items: ActivityItems) {
-        val (row, offset) = items.rowAt(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset) ?: (null to 0)
-        if (row == null) { compact.scrollTo(leading.value); return }
-        if (withTimeoutOrNull(2_000) { snapshotFlow { recentTop to rowHeight }.first { it.first >= 0 && it.second > 0 } } == null) return
-        compact.scrollTo(if (row < Recent.rows) recentTop + row * rowHeight + offset else Int.MAX_VALUE)
+    internal suspend fun toCompact() {
+        when (val at = anchor) {
+            is Anchor.Above -> compact.scrollTo(at.offset)
+            is Anchor.Row -> {
+                if (withTimeoutOrNull(2_000) { snapshotFlow { recentTop to rowHeight }.first { it.first >= 0 && it.second > 0 } } == null) return
+                compact.scrollTo(if (at.row < Recent.rows) recentTop + at.row * rowHeight + at.offset else Int.MAX_VALUE)
+            }
+        }
     }
 }
+
+private val anchorSaver = Saver<HomeScroll.Anchor, List<Int>>(
+    save = { when (it) { is HomeScroll.Anchor.Above -> listOf(0, it.offset); is HomeScroll.Anchor.Row -> listOf(1, it.row, it.offset) } },
+    restore = { if (it[0] == 1) HomeScroll.Anchor.Row(it[1], it[2]) else HomeScroll.Anchor.Above(it[1]) },
+)
 
 @Composable
 fun rememberHomeScroll(): HomeScroll {
@@ -57,7 +88,8 @@ fun rememberHomeScroll(): HomeScroll {
     val leading = rememberScrollState()
     val list = rememberLazyListState()
     val card = rememberScrollState()
-    return remember(compact, leading, list, card) { HomeScroll(compact, leading, list, card) }
+    val anchor = rememberSaveable(stateSaver = anchorSaver) { mutableStateOf<HomeScroll.Anchor>(HomeScroll.Anchor.Above(0)) }
+    return remember(compact, leading, list, card, anchor) { HomeScroll(compact, leading, list, card, anchor) }
 }
 
 internal object Recent { const val rows = 5 }
