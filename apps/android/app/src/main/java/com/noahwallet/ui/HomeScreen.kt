@@ -85,8 +85,10 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     val historyLoaded = !model.history.isLoading
     val ids = rows.map { it.id }
     val currentIds by rememberUpdatedState(ids)
-    // A new history row (bark's state stream) means the balance moved too; re-read it so both agree.
-    LaunchedEffect(ids) { if (historyLoaded && ids.isNotEmpty()) model.refresh() }
+    // A new history row (bark's state stream) means the balance moved too; re-read it so both agree. Home
+    // appearing already refreshes, so only a change of rows while it's shown does this.
+    var refreshedIds by remember { mutableStateOf(ids) }
+    LaunchedEffect(ids) { if (ids != refreshedIds) { refreshedIds = ids; if (historyLoaded) model.refresh() } }
     SideEffect { if (memory.seenRows == null && historyLoaded) memory.seenRows = ids.toSet() }
     val seen = memory.seenRows
     val newRows = if (seen == null) emptySet() else rows.filter { it.direction == "incoming" && !it.isInternalTransfer && it.id !in seen }.map { it.id }.toSet()
