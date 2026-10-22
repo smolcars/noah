@@ -11,12 +11,18 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -24,19 +30,24 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 
-/** QRHub's code is the literal Lightning address, never the unified Receive request. */
+/** QRHub's code is the literal Lightning address, never the unified Receive request. [startScanning] opens it on Scan. */
 @Composable
-fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Unit, onProfile: () -> Unit, onScan: (String) -> Unit) {
+fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Unit, onProfile: () -> Unit, onScan: (String) -> Unit,
+                startScanning: Boolean = false) {
     val address = lightningAddress?.takeIf { it.isNotEmpty() }
     val context = LocalContext.current
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
-    var scanning by rememberSaveable { mutableStateOf(false) }
+    val cameraGranted = context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    var scanning by rememberSaveable { mutableStateOf(startScanning && cameraGranted) }
+    var askedToScan by rememberSaveable { mutableStateOf(false) }
     var permissionDenied by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         scanning = granted; permissionDenied = !granted
     }
+    // Opened from Home's scan button: ask for the camera once, as the Scan button does.
+    LaunchedEffect(Unit) { if (startScanning && !cameraGranted && !askedToScan) { askedToScan = true; permission.launch(Manifest.permission.CAMERA) } }
     LaunchedEffect(copied) { if (copied) { delay(1800); copied = false } }
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && !(context as android.app.Activity).isChangingConfigurations) scanning = false }
@@ -65,7 +76,7 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
             }
         }
         val code: @Composable () -> Unit = {
-            if (address != null) ReceiveQR(address, actionLabel = "Copy Lightning address", maximumSide = qrSide) {
+            if (address != null) LightningAddressQR(address, qrSide) {
                 clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", address)); copied = true
             }
         }
@@ -97,4 +108,18 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
     if (permissionDenied) WalletAlertDialog(onDismissRequest = { permissionDenied = false }, title = { Text(tr("Permission required")) },
         text = { Text(tr("Camera permission is required to scan QR codes.")) },
         confirmButton = { TextButton({ permissionDenied = false }) { Text(tr("OK")) } })
+}
+
+/** My code: the styled QR of the literal Lightning address on its always-white tile; tapping copies it. */
+@Composable
+private fun LightningAddressQR(address: String, maximumSide: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    val label = tr("Copy Lightning address")
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+    Box(Modifier.sizeIn(maxWidth = maximumSide).aspectRatio(1f).clip(shape)
+        .background(com.noahwallet.ui.design.NoahTokens.Light.qrCard)
+        .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = label, onClick = onClick)
+        .clearAndSetSemantics { contentDescription = label; role = androidx.compose.ui.semantics.Role.Button; this.onClick(label) { onClick(); true } }
+        .padding(20.dp)) {
+        com.noahwallet.ui.home.StyledQR(address, Modifier.fillMaxSize(), reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion())
+    }
 }
