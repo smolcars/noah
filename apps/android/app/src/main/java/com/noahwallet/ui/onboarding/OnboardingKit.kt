@@ -75,6 +75,8 @@ internal class Haptics(private val perform: (HapticFeedbackType) -> Unit) {
     fun success() = perform(HapticFeedbackType.Confirm)
     fun warning() = perform(HapticFeedbackType.LongPress)
     fun error() = perform(HapticFeedbackType.Reject)
+    /** The prototype's "heavy": Hold to send completing. */
+    fun heavy() = perform(HapticFeedbackType.LongPress)
 }
 
 @Composable
