@@ -103,18 +103,30 @@ enum HomeStatusLine: Equatable {
 
     var opensRounds: Bool { if case .rounds = self { true } else { false } }
 
-    static func current(error: String?, balance: WalletBalance?, activeRounds: Int, backingUp: Bool,
-                        backgroundMessage: String?) -> Self? {
+    /// `incomingOnchain` comes from `incomingOnchain(_:)`: only money coming in counts as arriving.
+    static func current(error: String?, balance: WalletBalance?, incomingOnchain: UInt64, activeRounds: Int,
+                        backingUp: Bool, backgroundMessage: String?) -> Self? {
         if let error { return .error(error) }
-        // Today's pending balance, less what the round line below reports, so that line can show.
-        if let balance, balance.pendingSats > balance.ark.pendingInRound {
-            return .arriving(balance.pendingSats - balance.ark.pendingInRound)
-        }
+        // Never sends, offboards, exits or boards: those are your own money leaving or moving.
+        let arriving = (balance?.ark.claimableLightningReceive ?? 0) + incomingOnchain
+        if arriving > 0 { return .arriving(arriving) }
         if let balance, balance.ark.pendingInRound > 0 { return .pendingRound(balance.ark.pendingInRound) }
         if activeRounds > 0 { return .rounds(activeRounds) }
         if backingUp { return .backingUp }
         if let backgroundMessage { return .background(backgroundMessage) }
         return nil
+    }
+
+    /// Unconfirmed on-chain transactions that add to the wallet. The SDK's
+    /// on-chain pending balance can't tell others' payments from your own
+    /// unconfirmed change, so this reads the records: a send's change shows
+    /// up as a smaller outgoing amount there, never as incoming.
+    static func incomingOnchain(_ transactions: [HistoryTransaction]) -> UInt64 {
+        transactions.reduce(0) { sum, transaction in
+            guard transaction.source == "onchain-wallet", transaction.hasConfirmation != true,
+                  let change = transaction.balanceChangeSat, change > 0 else { return sum }
+            return sum + UInt64(change)
+        }
     }
 }
 

@@ -5,19 +5,32 @@ import Testing
 /// Home's layout, nudge, status and row rules (docs/native-rewrite/design/home.md).
 @MainActor
 struct HomeRulesTests {
-    static func balance(ark: UInt64 = 0, onchain: UInt64 = 0, onchainPending: UInt64 = 0, inRound: UInt64 = 0) -> WalletBalance {
+    static func balance(ark: UInt64 = 0, onchain: UInt64 = 0, onchainPending: UInt64 = 0, inRound: UInt64 = 0,
+                        lightningSend: UInt64 = 0, claimable: UInt64 = 0, arkoorSend: UInt64 = 0, offboard: UInt64 = 0,
+                        exit: UInt64 = 0, board: UInt64 = 0) -> WalletBalance {
         WalletBalance(
-            ark: .init(spendable: ark, needsRefresh: 0, pendingLightningSend: 0, claimableLightningReceive: 0,
-                       pendingInRound: inRound, pendingExit: 0, pendingBoard: 0, pendingArkoorSend: 0, pendingOffboard: 0),
+            ark: .init(spendable: ark, needsRefresh: 0, pendingLightningSend: lightningSend, claimableLightningReceive: claimable,
+                       pendingInRound: inRound, pendingExit: exit, pendingBoard: board, pendingArkoorSend: arkoorSend,
+                       pendingOffboard: offboard),
             onchain: .init(confirmed: onchain, pending: onchainPending, total: onchain + onchainPending))
     }
 
     static func row(_ id: String = "movement-1", type: String = "Arkoor", amount: Int64 = 2_100, direction: String = "incoming",
                     status: String? = "successful", kind: String? = nil, destination: String? = nil,
-                    date: String = "2026-10-22T09:12:00Z", source: String = "ark", effective: Int64? = nil) -> HistoryTransaction {
+                    date: String = "2026-10-22T09:12:00Z", source: String = "ark", effective: Int64? = nil,
+                    offchainFee: Int64? = nil, onchainFee: Int64? = nil, balanceChange: Int64? = nil) -> HistoryTransaction {
         HistoryTransaction(id: id, type: type, amount: amount, date: date, direction: direction, source: source,
                            destination: destination, movementStatus: status, movementKind: kind,
-                           effectiveBalanceSat: effective ?? (direction == "incoming" ? amount : -amount))
+                           effectiveBalanceSat: effective ?? (direction == "incoming" ? amount : -amount),
+                           offchainFeeSat: offchainFee, onchainFeeSat: onchainFee, balanceChangeSat: balanceChange)
+    }
+
+    static func deposit(_ id: String, _ sats: Int64, confirmed: Bool) -> HistoryTransaction {
+        var deposit = row(id, type: "Onchain", amount: abs(sats), direction: sats < 0 ? "outgoing" : "incoming", status: nil,
+                          source: "onchain-wallet", balanceChange: sats)
+        deposit.effectiveBalanceSat = nil
+        deposit.hasConfirmation = confirmed
+        return deposit
     }
 
     private func storage() throws -> (SettingsStorage, URL) {
@@ -132,25 +145,40 @@ struct HomeRulesTests {
     }
 
     @Test func statusLineShowsTheFirstThatApplies() {
-        let pending = Self.balance(ark: 10, onchainPending: 100_000)
-        #expect(HomeStatusLine.current(error: "Couldn't open your wallet.", balance: pending, activeRounds: 1, backingUp: true,
-                                       backgroundMessage: "x") == .error("Couldn't open your wallet."))
-        #expect(HomeStatusLine.current(error: nil, balance: pending, activeRounds: 1, backingUp: true,
-                                       backgroundMessage: "x") == .arriving(100_000))
-        // Funds in a round get their own line, after anything else that is arriving.
-        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(onchainPending: 7, inRound: 5), activeRounds: 1,
-                                       backingUp: false, backgroundMessage: nil) == .arriving(7))
-        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(inRound: 5), activeRounds: 1, backingUp: false,
-                                       backgroundMessage: nil) == .pendingRound(5))
-        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(ark: 1), activeRounds: 2, backingUp: true,
-                                       backgroundMessage: "x") == .rounds(2))
-        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(ark: 1), activeRounds: 0, backingUp: true,
-                                       backgroundMessage: "x") == .backingUp)
-        #expect(HomeStatusLine.current(error: nil, balance: nil, activeRounds: 0, backingUp: false,
-                                       backgroundMessage: "Background task in progress...") == .background("Background task in progress..."))
-        #expect(HomeStatusLine.current(error: nil, balance: Self.balance(ark: 1), activeRounds: 0, backingUp: false,
-                                       backgroundMessage: nil) == nil)
+        func line(_ balance: WalletBalance?, incoming: UInt64 = 0, error: String? = nil, rounds: Int = 0,
+                  backingUp: Bool = false, background: String? = nil) -> HomeStatusLine? {
+            HomeStatusLine.current(error: error, balance: balance, incomingOnchain: incoming, activeRounds: rounds,
+                                   backingUp: backingUp, backgroundMessage: background)
+        }
+        let deposit = Self.balance(ark: 10, onchainPending: 100_000)
+        #expect(line(deposit, incoming: 100_000, error: "Couldn't open your wallet.", rounds: 1, backingUp: true, background: "x")
+                == .error("Couldn't open your wallet."))
+        #expect(line(deposit, incoming: 100_000, rounds: 1, backingUp: true, background: "x") == .arriving(100_000))
+        // Funds in a round get their own line, after anything that is arriving.
+        #expect(line(Self.balance(inRound: 5, claimable: 7), rounds: 1) == .arriving(7))
+        #expect(line(Self.balance(inRound: 5), rounds: 1) == .pendingRound(5))
+        #expect(line(Self.balance(ark: 1), rounds: 2, backingUp: true, background: "x") == .rounds(2))
+        #expect(line(Self.balance(ark: 1), backingUp: true, background: "x") == .backingUp)
+        #expect(line(nil, background: "Background task in progress...") == .background("Background task in progress..."))
+        #expect(line(Self.balance(ark: 1)) == nil)
         #expect(HomeStatusLine.rounds(1).opensRounds && !HomeStatusLine.backingUp.opensRounds)
+    }
+
+    @Test func onlyIncomingFundsAreArriving() {
+        func line(_ balance: WalletBalance, _ transactions: [HistoryTransaction] = []) -> HomeStatusLine? {
+            HomeStatusLine.current(error: nil, balance: balance, incomingOnchain: HomeStatusLine.incomingOnchain(transactions),
+                                   activeRounds: 0, backingUp: false, backgroundMessage: nil)
+        }
+        // Your own money leaving or moving is never "arriving".
+        #expect(line(Self.balance(ark: 20_000, lightningSend: 5_000)) == nil)
+        #expect(line(Self.balance(ark: 20_000, arkoorSend: 1, offboard: 2, exit: 3, board: 4)) == nil)
+        // An unconfirmed deposit is; so is a Lightning payment waiting to be claimed.
+        #expect(line(Self.balance(ark: 20_000, onchainPending: 100_000), [Self.deposit("in", 100_000, confirmed: false)])
+                == .arriving(100_000))
+        #expect(line(Self.balance(ark: 20_000, claimable: 2_100)) == .arriving(2_100))
+        // Unconfirmed change from your own send, and confirmed deposits, are not.
+        #expect(line(Self.balance(ark: 20_000, onchainPending: 40_000), [Self.deposit("send", -10_000, confirmed: false),
+                                                                          Self.deposit("old", 5_000, confirmed: true)]) == nil)
     }
 
     // MARK: Rows

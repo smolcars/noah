@@ -419,7 +419,8 @@ struct HomeView: View {
     }
 
     private var status: HomeStatusLine? {
-        HomeStatusLine.current(error: walletError, balance: summary?.balance, activeRounds: home.activeRounds.count,
+        HomeStatusLine.current(error: walletError, balance: summary?.balance,
+                               incomingOnchain: HomeStatusLine.incomingOnchain(history.transactions), activeRounds: home.activeRounds.count,
                                backingUp: home.backup.lastBackupStatus == .inProgress, backgroundMessage: home.backgroundMessage)
     }
 

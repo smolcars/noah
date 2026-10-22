@@ -89,6 +89,7 @@ struct HomeShotTests {
         arriving.source = "onchain-wallet"
         arriving.hasConfirmation = false
         arriving.dateLabel = "Unconfirmed"
+        arriving.balanceChangeSat = 100_000
         return [arriving,
                 row("m7", "Lnurl", 5_000, "outgoing", at(0, 10, 2), to: "bob@getalby.com", status: "pending"),
                 row("m8", "Onchain", 4_200, "outgoing", at(0, 9, 40), status: "failed", kind: "offboard", effective: 0),
