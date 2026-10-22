@@ -16,8 +16,10 @@ import androidx.core.widget.doAfterTextChanged
 
 /**
  * One recovery word. Words are visible, as on iOS and RN (a deliberate usability decision); the field still
- * keeps them out of keyboard learning and suggestions, autofill, content capture and saved state. The
- * screen adds FLAG_SECURE and clears the words on background or leaving.
+ * keeps them out of keyboard learning and suggestions, autofill, content capture and saved state, and never
+ * lets them leave: no Copy, Cut, Share or text-processing (Translate, Search…) from the toolbars, keyboard
+ * shortcuts, the IME or accessibility, and no dragging a selection out. Paste keeps working, including a
+ * whole phrase. The screen adds FLAG_SECURE and clears the words on background or leaving.
  */
 internal class RecoveryWordEditText(context: Context, index: Int) : EditText(context) {
     init {
@@ -40,6 +42,51 @@ internal class RecoveryWordEditText(context: Context, index: Int) : EditText(con
         background = null
         setPadding(0, 0, 0, 0)
         gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        customSelectionActionModeCallback = ExportBlocker
+        customInsertionActionModeCallback = ExportBlocker
+        // A long press inside a selection would start a drag that can drop the word into another app.
+        setOnLongClickListener { pressInsideSelection() }
+    }
+
+    private var downOffset = -1
+    internal fun pressInsideSelection(offset: Int = downOffset) = hasSelection() && offset in selectionStart until selectionEnd
+
+    override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+        if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) downOffset = getOffsetForPosition(event.x, event.y)
+        return super.onTouchEvent(event)
+    }
+
+    /** Toolbar items, Ctrl+C/X and the IME's context-menu actions all arrive here. */
+    override fun onTextContextMenuItem(id: Int): Boolean = if (id in exported) false else super.onTextContextMenuItem(id)
+
+    override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.removeAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_COPY)
+        info.removeAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_CUT)
+    }
+
+    override fun performAccessibilityAction(action: Int, arguments: android.os.Bundle?): Boolean =
+        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_COPY ||
+            action == android.view.accessibility.AccessibilityNodeInfo.ACTION_CUT) false
+        else super.performAccessibilityAction(action, arguments)
+
+    /** The selection and insertion toolbars keep only Paste and Select all. */
+    internal object ExportBlocker : android.view.ActionMode.Callback {
+        override fun onCreateActionMode(mode: android.view.ActionMode?, menu: android.view.Menu): Boolean { strip(menu); return true }
+        override fun onPrepareActionMode(mode: android.view.ActionMode?, menu: android.view.Menu): Boolean { strip(menu); return true }
+        override fun onActionItemClicked(mode: android.view.ActionMode?, item: android.view.MenuItem) = false
+        override fun onDestroyActionMode(mode: android.view.ActionMode?) {}
+        fun strip(menu: android.view.Menu) {
+            while (true) {
+                val item = (0 until menu.size()).map(menu::getItem).firstOrNull { it.itemId !in kept } ?: return
+                menu.removeItem(item.itemId)
+            }
+        }
+    }
+
+    companion object {
+        private val exported = setOf(android.R.id.copy, android.R.id.cut, android.R.id.shareText)
+        private val kept = setOf(android.R.id.paste, android.R.id.pasteAsPlainText, android.R.id.selectAll)
     }
 }
 
