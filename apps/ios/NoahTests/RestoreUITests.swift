@@ -284,6 +284,90 @@ struct RestoreFieldPrivacyTests {
         #expect(field.undoManager == nil)
     }
 
+    @Test func recoveryFieldRefusesCopyCutAndShare() {
+        let field = RecoveryWordTextField()
+        field.text = "abandon"
+        for action in RecoveryWordTextField.blockedActions {
+            #expect(!field.canPerformAction(action, withSender: nil), "\(action)")
+        }
+        #expect(RecoveryWordTextField.blockedActions.contains(#selector(UIResponderStandardEditActions.copy(_:))))
+        #expect(RecoveryWordTextField.blockedActions.contains(#selector(UIResponderStandardEditActions.cut(_:))))
+        #expect(field.writingToolsBehavior == .none)
+        #expect(field.textDragInteraction?.isEnabled != true)
+        // Shortcuts and direct calls change neither the pasteboard nor the field.
+        let general = UIPasteboard.general
+        let previous = general.items
+        defer { general.items = previous }
+        general.string = "sentinel"
+        field.selectAll(nil)
+        field.copy(nil)
+        field.cut(nil)
+        #expect(general.string == "sentinel")
+        #expect(field.text == "abandon")
+        // Disabled in menus that validate commands (iPad keyboard shortcuts).
+        let copy = UIKeyCommand(title: "Copy", action: #selector(UIResponderStandardEditActions.copy(_:)), input: "c", modifierFlags: .command)
+        field.validate(copy)
+        #expect(copy.attributes.contains(.disabled))
+    }
+
+    @Test func recoveryFieldMenuKeepsOnlyPasteAndSelection() {
+        func command(_ title: String, _ action: Selector) -> UICommand { UICommand(title: title, action: action) }
+        let suggested: [UIMenuElement] = [
+            UIMenu(options: .displayInline, children: [
+                command("Cut", #selector(UIResponderStandardEditActions.cut(_:))),
+                command("Copy", #selector(UIResponderStandardEditActions.copy(_:))),
+                command("Paste", #selector(UIResponderStandardEditActions.paste(_:))),
+            ]),
+            UIMenu(options: .displayInline, children: [
+                command("Select", #selector(UIResponderStandardEditActions.select(_:))),
+                command("Select All", #selector(UIResponderStandardEditActions.selectAll(_:))),
+            ]),
+            UIMenu(options: .displayInline, children: [
+                command("Look Up", Selector(("_lookup:"))), command("Translate", Selector(("_translate:"))),
+                command("Share…", Selector(("_share:"))),
+            ]),
+            UIAction(title: "AutoFill") { _ in },
+        ]
+        let kept = RecoveryWordTextField.editMenu(suggested).flatMap { ($0 as? UIMenu)?.children ?? [$0] }
+        #expect(kept.compactMap { ($0 as? UICommand)?.title } == ["Paste", "Select", "Select All"])
+        #expect(kept.count == 3)
+    }
+
+    @Test func recoveryFieldStillPastesAWholePhrase() throws {
+        let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 320, height: 200)
+        let host = UIViewController()
+        window.rootViewController = host
+        window.isHidden = false
+        defer { window.isHidden = true }
+        let field = RecoveryWordTextField(frame: CGRect(x: 0, y: 0, width: 300, height: 44))
+        host.view.addSubview(field)
+        var received = ""
+        let wrapper = RecoveryWordField(text: Binding(get: { received }, set: { received = $0 }), index: 0, focusedWord: .constant(0))
+        let coordinator = wrapper.makeCoordinator()
+        field.addTarget(coordinator, action: #selector(RecoveryWordField.Coordinator.changed(_:)), for: .editingChanged)
+        #expect(field.becomeFirstResponder())
+        let general = UIPasteboard.general
+        let previous = general.items
+        defer { general.items = previous; field.resignFirstResponder() }
+        let phrase = (Array(repeating: "abandon", count: 11) + ["about"]).joined(separator: " ")
+        general.string = phrase
+        let paste = #selector(UIResponderStandardEditActions.paste(_:))
+        #expect(field.canPerformAction(paste, withSender: nil))
+        let stock = UITextField(frame: CGRect(x: 0, y: 50, width: 300, height: 44))
+        host.view.addSubview(stock)
+        #expect(stock.becomeFirstResponder())
+        let stockCanPaste = stock.canPerformAction(paste, withSender: nil)
+        #expect(field.becomeFirstResponder())
+        #expect(field.canPerformAction(paste, withSender: nil) == stockCanPaste)
+        // A programmatic paste(_:) waits for the system's paste consent in any text field, so
+        // insert the pasted text as paste does and follow it into the whole-phrase path.
+        field.insertText(phrase)
+        #expect(field.text == phrase)
+        #expect(received == phrase) // RecoveryPhraseInput and RestorePasteboard take it from here.
+    }
+
     @Test func acceptedPasteClearsOnlyMatchingClipboardContent() {
         let name = UIPasteboard.Name("noah-restore-test-\(UUID().uuidString)")
         let board = UIPasteboard(name: name, create: true)!

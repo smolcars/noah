@@ -406,12 +406,53 @@ struct RecoveryWordField: UIViewRepresentable {
             if !parent.acceptFirst(), !(textField.text ?? "").isEmpty { advance() }
             return false
         }
+        /// The edit menu offers only Paste and selection.
+        func textField(_ textField: UITextField, editMenuForCharactersIn range: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
+            UIMenu(children: RecoveryWordTextField.editMenu(suggestedActions))
+        }
     }
 }
 
-/// Recovery words must never be retained in UIKit's shared undo manager.
+/// Recovery words must never be retained in UIKit's shared undo manager, and
+/// never leave the field: they stay visible, but Copy, Cut, Share, Look Up,
+/// Translate and Define are refused from the edit menu, keyboard shortcuts and
+/// accessibility, and dragging text out is off. Paste and selection still work.
 final class RecoveryWordTextField: UITextField {
     override var undoManager: UndoManager? { nil }
+
+    static let blockedActions: Set<Selector> = [
+        #selector(UIResponderStandardEditActions.copy(_:)), #selector(UIResponderStandardEditActions.cut(_:)),
+        Selector(("_share:")), Selector(("_lookup:")), Selector(("_translate:")), Selector(("_define:")),
+    ]
+    static let menuActions: Set<Selector> = [
+        #selector(UIResponderStandardEditActions.paste(_:)), #selector(UIResponderStandardEditActions.select(_:)),
+        #selector(UIResponderStandardEditActions.selectAll(_:)),
+    ]
+
+    /// Keeps only Paste and selection commands; actions without a selector (AutoFill, Writing Tools, Share) go.
+    static func editMenu(_ elements: [UIMenuElement]) -> [UIMenuElement] {
+        elements.compactMap { element in
+            if let command = element as? UICommand { return menuActions.contains(command.action) ? command : nil }
+            if let menu = element as? UIMenu {
+                let children = editMenu(menu.children)
+                return children.isEmpty ? nil : menu.replacingChildren(children)
+            }
+            return nil
+        }
+    }
+
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        Self.blockedActions.contains(action) ? false : super.canPerformAction(action, withSender: sender)
+    }
+
+    /// ⌘C, ⌘X and any other direct call export nothing.
+    override func copy(_ sender: Any?) {}
+    override func cut(_ sender: Any?) {}
+
+    override func validate(_ command: UICommand) {
+        super.validate(command)
+        if Self.blockedActions.contains(command.action) { command.attributes.insert(.disabled) }
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -426,6 +467,8 @@ final class RecoveryWordTextField: UITextField {
         textContentType = nil
         keyboardType = .asciiCapable
         autocapitalizationType = .none
+        writingToolsBehavior = .none
+        textDragInteraction?.isEnabled = false
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
