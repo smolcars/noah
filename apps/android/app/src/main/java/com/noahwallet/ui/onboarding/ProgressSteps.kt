@@ -127,7 +127,7 @@ private fun CountUp(total: Long, model: AppModel, presentation: OnboardingPresen
     val elapsed = ((System.nanoTime() - presentation.restoreReadyAt) / 1_000_000).toFloat()
     val progress = remember { Animatable((elapsed / 900f).coerceIn(0f, 1f)) }
     LaunchedEffect(total) { progress.animateTo(1f, tween((900 * (1 - progress.value)).toInt().coerceAtLeast(0), easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
-    val shown = (total * progress.value).toLong()
+    val shown = countUpSats(total, progress.value)
     Text(BitcoinAmount.format(shown, model.amountUnit, Locale.forLanguageTag(model.localeIdentifier)),
         Modifier.fillMaxWidth().padding(top = NoahTokens.Space.l).graphicsLayer { alpha = (progress.value * 3).coerceAtMost(1f) },
         style = NoahTokens.Typography.amount.copy(fontFeatureSettings = "tnum"), color = palette.foreground, textAlign = TextAlign.Center)

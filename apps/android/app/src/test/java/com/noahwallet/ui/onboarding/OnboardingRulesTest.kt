@@ -94,6 +94,34 @@ class OtpEntryTest {
         assertFalse(otp.failed); assertEquals("4", otp.code)
     }
 
+    @Test fun typingWhileARequestRunsIsIgnoredSoVerifyingNeverSticks() {
+        // A request "runs" from verify until its result, including the 650 ms pause after a wrong code.
+        var busy = false
+        val requests = mutableListOf<String>()
+        var otp = OtpEntry()
+        fun type(text: String) {
+            val (next, verifyNow) = otp.input(text, busy)
+            otp = next
+            if (verifyNow) { requests += next.code; busy = true }
+        }
+        type("000000")
+        assertEquals(listOf("000000"), requests); assertTrue(otp.verifying)
+        // Wrong code: boxes turn red, then the action pauses 650 ms before clearing, still busy.
+        otp = otp.rejected()
+        type("123456")
+        type("1")
+        assertEquals("replacement during the pause sends nothing", listOf("000000"), requests)
+        assertFalse(otp.verifying); assertEquals("000000", otp.code)
+        otp = otp.cleared(); busy = false
+        assertFalse("never stuck verifying after the clear", otp.verifying); assertTrue(otp.failed)
+        type("4")
+        assertEquals("4", otp.code); assertFalse(otp.failed)
+        type("482913")
+        assertEquals(listOf("000000", "482913"), requests); assertTrue(otp.verifying)
+        // While verifying (busy), nothing changes.
+        assertEquals(otp to false, otp.input("999999", busy = true))
+    }
+
     @Test fun resendCountdown() {
         assertEquals(30, ResendTimer.remaining(1_000, 1_000))
         assertEquals(30, ResendTimer.remaining(1_000, 1_999))
@@ -112,6 +140,19 @@ class OtpEntryTest {
         assertFalse(wrongCode(ServerFailure("busy", 429)))
         assertFalse(wrongCode(ServerFailure("boom", 500)))
         assertFalse(wrongCode(IllegalStateException("other")))
+    }
+}
+
+class CountUpTest {
+    @Test fun endsExactlyOnTheBalanceWithoutFloatRounding() {
+        for (total in listOf(0L, 1L, 152_742L, 16_777_217L, 2_100_000_000_000_000L)) {
+            assertEquals(total, countUpSats(total, 1f))
+            assertEquals(0L, countUpSats(total, 0f))
+            assertTrue(countUpSats(total, .5f) <= total)
+        }
+        assertTrue(countUpSats(16_777_217L, .5f) in 8_388_608L..8_388_609L)
+        // Float maths would land on 16,777,216.
+        assertNotEquals(16_777_217L, (16_777_217L * 1f).toLong())
     }
 }
 

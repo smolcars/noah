@@ -74,9 +74,7 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
             if (!resend) { presentation.emailStage = EmailStage.code; haptics.success() }
         }
     }
-    fun verify() {
-        val code = presentation.otp.code
-        presentation.otp = presentation.otp.verifyStarted()
+    fun verify(code: String) {
         model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
             try { model.server.verifyEmail(code, presentation.email) }
             catch (failure: Exception) {
@@ -119,11 +117,9 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
             when (shown) {
                 EmailStage.entry -> EmailEntry(presentation, play, enabled = !model.busy) { send() }
                 else -> CodeEntry(model, presentation, onTyped = { input ->
-                    val next = presentation.otp.typed(input)
-                    if (next != presentation.otp) {
-                        presentation.otp = next
-                        if (next.complete) verify()
-                    }
+                    val (next, verifyNow) = presentation.otp.input(input, busy = model.busy)
+                    presentation.otp = next
+                    if (verifyNow) verify(next.code)
                 }, resend = { send(resend = true) })
             }
         }
@@ -242,7 +238,8 @@ private fun CodeEntry(model: AppModel, presentation: OnboardingPresentation, onT
         BasicTextField(otp.code, onTyped, Modifier.padding(top = 34.dp).fillMaxWidth().focusRequester(focus)
             .graphicsLayer { translationX = shake.value * density }
             .semantics { contentDescription = label; contentType = ContentType.SmsOtpCode },
-            enabled = !verified,
+            // Read-only while a request runs keeps the keyboard up but takes no digits.
+            enabled = !verified, readOnly = model.busy,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             singleLine = true, cursorBrush = SolidColor(palette.orange.copy(alpha = 0f)),
             decorationBox = { inner ->

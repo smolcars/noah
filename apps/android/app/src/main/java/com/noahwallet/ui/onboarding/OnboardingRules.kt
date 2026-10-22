@@ -87,6 +87,16 @@ internal data class OtpEntry(val code: String = "", val verifying: Boolean = fal
         return copy(code = digits, failed = if (digits != code) false else failed)
     }
     fun verifyStarted() = copy(verifying = true, failed = false)
+
+    /**
+     * Typing while a request runs (sending, verifying, or the pause after a wrong code) is ignored, so a code
+     * only starts verifying when a request really starts. Returns the new entry and whether to verify it now.
+     */
+    fun input(text: String, busy: Boolean): Pair<OtpEntry, Boolean> {
+        if (busy) return this to false
+        val next = typed(text)
+        return if (next != this && next.complete) next.verifyStarted() to true else next to false
+    }
     fun rejected() = copy(verifying = false, failed = true)
     /** After the shake, the boxes clear for another try. */
     fun cleared() = copy(code = "")
@@ -102,6 +112,10 @@ internal object ResendTimer {
         (seconds - ((nowMillis - sentAtMillis).coerceAtLeast(0) / 1000).toInt()).coerceIn(0, seconds)
     fun clock(remaining: Int) = "0:%02d".format(Locale.ROOT, remaining)
 }
+
+/** The restored balance while it counts up: exact at the end, with no Float rounding of large amounts. */
+internal fun countUpSats(total: Long, progress: Float): Long =
+    if (progress >= 1f) total else kotlin.math.round(total.toDouble() * progress.coerceAtLeast(0f)).toLong().coerceIn(0L, total)
 
 /** A wrong or expired code gets the shake; connectivity and server failures keep today's alert. */
 internal fun wrongCode(failure: Exception) = failure is ServerFailure && failure.kind == ServerFailure.Kind.request &&
