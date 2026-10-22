@@ -4,32 +4,32 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OnboardingNavigationTest {
-    @Test fun emailAndLightningReturnThroughVisitedScreens() {
-        for (middle in listOf(emptyList(), listOf("battery"), listOf("unified-push", "battery"))) {
-            var history = listOf("welcome", "beta", "mnemonic", "email")
-            assertEquals("mnemonic", OnboardingNavigation.back(history, false, true).last())
-            for (step in middle + "lightning") history = OnboardingNavigation.visit(history, step)
-            assertEquals(middle.lastOrNull() ?: "email", OnboardingNavigation.back(history, false, true).last())
+    @Test fun laterStepsReturnThroughVisitedScreens() {
+        val history = listOf("welcome", "creating", "name", "email", "notifications")
+        assertEquals(listOf("welcome", "creating", "name", "email"), OnboardingNavigation.back(history, false, true))
+        assertEquals(listOf("welcome", "creating", "name"), OnboardingNavigation.back(history.dropLast(1), false, true))
+        assertEquals(history, OnboardingNavigation.back(OnboardingNavigation.visit(history, "battery"), false, true))
+    }
+
+    @Test fun backNeverUndoesCreationRestoreOrDone() {
+        // Name is the first step after the wallet exists; back there must not reach Welcome or Creating.
+        for (boundary in listOf("creating", "name", "restoring", "done")) {
+            val history = listOf("welcome", "restore", "creating", "name", "email", "notifications", "done").takeWhile { it != boundary } + boundary
+            assertEquals(boundary, history, OnboardingNavigation.back(history, false, true))
         }
+        assertEquals(listOf("welcome"), OnboardingNavigation.back(listOf("welcome", "restore"), false, true))
+        assertEquals(listOf("notifications"), OnboardingNavigation.back(listOf("notifications", "battery"), false, true))
     }
 
-    @Test fun unifiedPushBackReturnsToEmailAndBatteryBackDoesNotAdvance() {
-        val history = listOf("mnemonic", "email", "unified-push", "battery")
-        val fromBattery = OnboardingNavigation.back(history, false, true)
-        assertEquals(listOf("mnemonic", "email", "unified-push"), fromBattery)
-        assertEquals(listOf("mnemonic", "email"), OnboardingNavigation.back(fromBattery, false, true))
-        assertEquals(listOf("mnemonic", "email"), OnboardingNavigation.back(listOf("mnemonic", "email", "battery"), false, true))
-    }
-
-    @Test fun busyRestoreAndRecoveryPhraseBoundariesStillHold() {
-        val history = listOf("welcome", "beta", "mnemonic", "email")
+    @Test fun busyAndRestoreInFlightBlockBack() {
+        val history = listOf("name", "email")
         assertEquals(history, OnboardingNavigation.back(history, true, true))
         assertEquals(history, OnboardingNavigation.back(history, false, false))
-        val mnemonic = history.dropLast(1)
-        assertEquals(mnemonic, OnboardingNavigation.back(mnemonic, false, true))
-        assertEquals(listOf("welcome"), OnboardingNavigation.back(listOf("welcome", "restore"), false, true))
-        assertEquals(listOf("welcome"), OnboardingNavigation.back(listOf("welcome", "beta"), false, true))
         assertEquals(history, OnboardingNavigation.visit(history, "email"))
-        assertEquals(listOf("mnemonic"), OnboardingNavigation.back(listOf("mnemonic"), false, true))
+        assertEquals(listOf("welcome"), OnboardingNavigation.back(listOf("welcome"), false, true))
+    }
+
+    @Test fun interruptedOnboardingResumesAtName() {
+        assertEquals("name", OnboardingNavigation.resumeStep)
     }
 }

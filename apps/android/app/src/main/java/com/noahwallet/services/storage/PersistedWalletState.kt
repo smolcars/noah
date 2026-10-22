@@ -16,6 +16,8 @@ data class PersistedWalletState(
     companion object {
         const val key = "wallet-storage"
         const val version = 0
+        /** Seed and database open Home unless a readable store explicitly says onboarding is unfinished. */
+        fun onboarded(databaseExists: Boolean, wallet: () -> PersistedWalletState?) = databaseExists && wallet()?.isInitialized != false
     }
 }
 

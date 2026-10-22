@@ -155,8 +155,9 @@ class AppServices private constructor(private val context: Context) {
     private val startup = Mutex()
     private var started = false
 
-    fun isOnboarded(): Boolean = WalletDataLocation(context.filesDir, variant).databaseExists && SettingsStorage(context)
-        .persistedState<PersistedWalletState>(PersistedWalletState.key)?.isInitialized != false
+    fun isOnboarded(): Boolean = PersistedWalletState.onboarded(WalletDataLocation(context.filesDir, variant).databaseExists) {
+        SettingsStorage(context).persistedState<PersistedWalletState>(PersistedWalletState.key)
+    }
 
     internal suspend fun backgroundWalletEligible(): Boolean = withContext(Dispatchers.IO) {
         try { requireBackgroundWallet(); true }
