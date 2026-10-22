@@ -46,18 +46,21 @@ struct BoardArkView: View {
 
 /// Foreground confirmation once per confirmed deposit; funding is persisted before showing review.
 struct AutoBoardingService: View {
+    /// Where the outcome shows; nil draws it here as a card.
+    var message: Binding<String?>?
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var phase
     @State private var plan: OnchainQuote?
     @State private var generation = UUID()
-    @State private var message: String?
+    @State private var ownMessage: String?
+    init(message: Binding<String?>? = nil) { self.message = message }
     @State private var review = AutoBoardReview()
     @State private var checking = false
     @State private var busy = false
     var body: some View {
         VStack(spacing: 0) {
-            if let message {
-                NoahCard { Text(LocalizedStringKey(message)).font(NoahFont.callout) }
+            if message == nil, let ownMessage {
+                NoahCard { Text(LocalizedStringKey(ownMessage)).font(NoahFont.callout) }
             }
         }
         .task(id: app.summaryRevision) { await check() }
@@ -89,7 +92,7 @@ struct AutoBoardingService: View {
                                 !app.isWalletSuspended, phase == .active,
                                 PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
                             else { throw OnchainFailure.unavailable }
-                            message = try await app.session.executeOnchain(quote, funding: review.fundingFor(quote))
+                            report(try await app.session.executeOnchain(quote, funding: review.fundingFor(quote)))
                             // Retain the receipt independently of admission for a later board.
                             await app.refresh()
                         } catch {
@@ -97,9 +100,8 @@ struct AutoBoardingService: View {
                             try? await review.failedConfirm(quote, changed: (failure as? OnchainFailure) == .changed) {
                                 try await app.session.abandonUnsubmittedAutoBoard(quote)
                             }
-                            message =
-                                (error as? OnchainFailure)?.errorDescription
-                                ?? OnchainFailure.uncertain.errorDescription
+                            report((error as? OnchainFailure)?.errorDescription
+                                ?? OnchainFailure.uncertain.errorDescription)
                         }
                     }
                 }, cancelTitle: "No, turn off",
@@ -109,7 +111,7 @@ struct AutoBoardingService: View {
                     do {
                         try SettingsStorage.shared.setPersistedState(
                             state, key: PersistedTransactionState.key, version: PersistedTransactionState.version)
-                    } catch { message = "Couldn't save auto-board preference." }
+                    } catch { report("Couldn't save auto-board preference.") }
                 })
         }
     }
@@ -135,10 +137,13 @@ struct AutoBoardingService: View {
                 present: { plan = $0 })
         } catch {
             if token == generation, !Task.isCancelled {
-                message = (error as? OnchainFailure)?.errorDescription
-                    ?? "Unable to prepare boarding. Use Settings → Board to Ark to try again."
+                report((error as? OnchainFailure)?.errorDescription
+                    ?? "Unable to prepare boarding. Use Settings → Board to Ark to try again.")
             }
         }
+    }
+    private func report(_ text: String?) {
+        if let message { message.wrappedValue = text } else { ownMessage = text }
     }
     private func invalidate() {
         generation = UUID()

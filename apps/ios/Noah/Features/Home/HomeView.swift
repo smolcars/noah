@@ -40,6 +40,8 @@ struct HomeView: View {
     @State private var entrancePlayed = false
     @State private var qrRevealed = false
     @State private var folding = false
+    /// Automatic boarding's outcome, shown under the nudge.
+    @State private var autoBoardMessage: String?
     let isActive: Bool
     let onScan: (String) -> Void
     let onOpenHistory: () -> Void
@@ -87,6 +89,11 @@ struct HomeView: View {
         }
         .animation(NoahTokens.Motion.travel(reduceMotion), value: window.wide ? sheet : nil)
         .animation(NoahTokens.Motion.travel(reduceMotion), value: window.wide ? renew.quote?.id : nil)
+        // The one automatic-boarding host: outside the compact and wide layouts, so a pose
+        // change never rebuilds it (and its claimed deposit review) mid-flow.
+        .background {
+            if !model.isWalletSuspended { AutoBoardingService(message: $autoBoardMessage) }
+        }
         .onboardingWindow($window)
         .onChange(of: window.wide) { _, wide in if wide { restoreOffset = scrollY } }
         .onboardingHaptics(haptics)
@@ -215,6 +222,17 @@ struct HomeView: View {
                           action: { act(nudge) }, dismiss: { dismiss(nudge) })
         }
         .modifier(appear(4))
+        if let autoBoardMessage {
+            Text(LocalizedStringKey(autoBoardMessage))
+                .noahText(HomeText.footnote)
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 12).padding(.horizontal, 16)
+                .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.top, 12)
+                .accessibilityIdentifier("home-auto-board-message")
+        }
     }
 
     private var fiat: some View {
