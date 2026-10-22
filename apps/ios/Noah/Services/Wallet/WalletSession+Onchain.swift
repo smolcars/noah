@@ -408,7 +408,7 @@ extension WalletSession {
     /// the tip meanwhile, and runs the eligibility check inside the journal's single on-chain
     /// operation, immediately before submitting with nothing awaited in between: every VTXO
     /// must still be in the expiring set at this threshold and tip, spendable and unexpired.
-    /// Otherwise nothing is submitted and the review has changed.
+    /// Otherwise, or if either can't be read, nothing is submitted and the review has changed.
     static func submitRenewal(
         _ quote: OnchainQuote, threshold: UInt32, journal: OnchainOperationJournal, flight: WalletSync,
         requote: @escaping @Sendable () async throws -> OnchainQuote,
@@ -422,8 +422,12 @@ extension WalletSession {
             let fresh = try await requote()
             guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
             let receipt = try await journal.perform(quote) {
-                // The expiring set first, then the tip it's judged against.
-                let current = HomeRenewal.select(try await expiring(threshold), tip: try await tip())
+                // The expiring set first, then the tip it's judged against. Nothing has been submitted
+                // if either read fails, so that refuses like a changed set and the attempt is dropped;
+                // only the submission itself can leave an uncertain one.
+                let current: HomeRenewal?
+                do { current = HomeRenewal.select(try await expiring(threshold), tip: try await tip()) }
+                catch { throw OnchainFailure.changed }
                 guard HomeRenewal.allEligible(quote.ids, in: current) else { throw OnchainFailure.changed }
                 return try await refresh(quote.ids)
             }

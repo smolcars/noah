@@ -15,6 +15,10 @@ struct RenewSubmissionTests {
         func set(_ new: Value) { value.withLock { $0 = new } }
     }
 
+    /// A wallet read the eligibility check makes before submitting.
+    enum Read: Sendable { case expiring, tip }
+    struct ReadFailed: Error {}
+
     static let quote = OnchainQuote(action: .refresh, walletID: "wallet", ids: ["a"], amount: 20_000, fee: 0,
                                     chainFee: 0, confirmed: 0)
     static let coin = HomeRenewal.Coin(id: "a", sats: 20_000, expiryHeight: 1_010, spendable: true)
@@ -26,10 +30,18 @@ struct RenewSubmissionTests {
     }
 
     private func submit(_ journal: OnchainOperationJournal, flight: WalletSync, tip: Shared<UInt32>,
-                        coins: [HomeRenewal.Coin] = [coin], submitted: Shared<Int>) async throws -> String {
+                        coins: [HomeRenewal.Coin] = [coin], failing: Read? = nil, submitted: Shared<Int>) async throws -> String {
         try await WalletSession.submitRenewal(
             Self.quote, threshold: 144, journal: journal, flight: flight,
-            requote: { Self.quote }, expiring: { _ in coins }, tip: { tip.current },
+            requote: { Self.quote },
+            expiring: { _ in
+                if failing == .expiring { throw ReadFailed() }
+                return coins
+            },
+            tip: {
+                if failing == .tip { throw ReadFailed() }
+                return tip.current
+            },
             refresh: { _ in
                 submitted.set(submitted.current + 1)
                 return OnchainReceipt(message: "submitted")
@@ -82,5 +94,21 @@ struct RenewSubmissionTests {
         }
         #expect(submitted.current == 0)
         #expect(try await journal.loadAll().isEmpty)
+    }
+
+    @Test(arguments: [Read.expiring, .tip])
+    func aFailedReadSubmitsNothingAndLeavesNothingBehind(read: Read) async throws {
+        let (journal, directory) = try journal()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let flight = WalletSync()
+        let submitted = Shared(0)
+        await #expect(throws: OnchainFailure.changed) {
+            try await submit(journal, flight: flight, tip: Shared<UInt32>(1_000), failing: read, submitted: submitted)
+        }
+        #expect(submitted.current == 0)
+        #expect(try await journal.loadAll().isEmpty)
+        // No uncertain attempt is left to block the next Renew of the same VTXOs as busy.
+        let message = try await submit(journal, flight: flight, tip: Shared<UInt32>(1_000), submitted: submitted)
+        #expect(message == "submitted" && submitted.current == 1)
     }
 }
