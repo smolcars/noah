@@ -18,7 +18,8 @@ import kotlin.math.roundToInt
  * them, and where the reader is in either layout's terms ([anchor], saved too, so a layout recreated straight
  * into the other one can place it without ever having laid out the first). The anchor follows the settled
  * layout's scrolling; switching between one column and two panes puts the same place at the top of the other:
- * Recent's row k is the activity list's row k, and above the rows the balance column's offset carries over.
+ * Recent's row k is the activity list's row k, the same share of the way into Fresh's card, and above the rows
+ * or the card, the balance column's offset carries over.
  */
 @Stable
 class HomeScroll internal constructor(val compact: ScrollState, val leading: ScrollState, val list: LazyListState, val card: ScrollState,
@@ -28,6 +29,8 @@ class HomeScroll internal constructor(val compact: ScrollState, val leading: Scr
         data class Above(val offset: Int) : Anchor
         /** Activity row [row] at the top, [offset] px into it. */
         data class Row(val row: Int, val offset: Int) : Anchor
+        /** Fresh's get-paid card at the top, [fraction] of the way into it (its size differs between layouts). */
+        data class Card(val fraction: Float) : Anchor
     }
     var anchor by anchor
         internal set
@@ -44,42 +47,77 @@ class HomeScroll internal constructor(val compact: ScrollState, val leading: Scr
         rowHeight = firstRow.size.height
     }
 
+    /** The trailing pane's scrolled content, to place the card in it. Layout only, never state. */
+    internal var paneContent: LayoutCoordinates? = null
+    /** Where Fresh's card sits (top and height, px) in the one column and in the trailing pane; null until measured. */
+    internal var compactCard by mutableStateOf<Pair<Int, Int>?>(null)
+    internal var paneCard by mutableStateOf<Pair<Int, Int>?>(null)
+
+    internal fun measureCard(card: LayoutCoordinates, wide: Boolean) {
+        val column = (if (wide) paneContent else content)?.takeIf { it.isAttached && card.isAttached } ?: return
+        val placed = column.localPositionOf(card, Offset.Zero).y.roundToInt() to card.size.height
+        if (wide) paneCard = placed else compactCard = placed
+    }
+
+    /** How far into the card a scroll offset is, when it's past the card's top. */
+    private fun into(card: Pair<Int, Int>?, y: Int): Anchor.Card? =
+        card?.takeIf { (top, height) -> height > 0 && y > top }?.let { (top, height) -> Anchor.Card(((y - top).toFloat() / height).coerceIn(0f, 1f)) }
+
     /** Where the one column is now. */
-    internal fun compactAnchor(): Anchor {
+    internal fun compactAnchor(state: HomeRules.State): Anchor {
         val y = compact.value
-        if (recentTop < 0 || rowHeight <= 0 || y <= recentTop) return Anchor.Above(y)
+        if (state == HomeRules.State.fresh) return into(compactCard, y) ?: Anchor.Above(y)
+        if (state != HomeRules.State.everyday || recentTop < 0 || rowHeight <= 0 || y <= recentTop) return Anchor.Above(y)
         val row = ((y - recentTop) / rowHeight).coerceAtMost(Recent.rows - 1)
         return Anchor.Row(row, y - recentTop - row * rowHeight)
     }
 
-    /** Where the two panes are now: the activity list's row at the top, or else the balance pane's offset. */
-    internal fun panesAnchor(items: ActivityItems): Anchor =
-        items.rowAt(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset)?.let { (row, offset) -> Anchor.Row(row, offset) }
-            ?: Anchor.Above(leading.value)
+    /** Where the two panes are now: the activity list's row or the card at the top, or else the balance pane's offset. */
+    internal fun panesAnchor(state: HomeRules.State, items: ActivityItems): Anchor = when (state) {
+        HomeRules.State.fresh -> into(paneCard, card.value)
+        HomeRules.State.everyday -> items.rowAt(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset)?.let { (row, offset) -> Anchor.Row(row, offset) }
+        else -> null
+    } ?: Anchor.Above(leading.value)
 
     /** One column → two panes. [items] is the activity list's layout (see [ActivityItems]). */
     internal suspend fun toPanes(items: ActivityItems) {
         when (val at = anchor) {
             is Anchor.Row -> list.scrollToItem(items.indexOfRow(at.row) ?: 0, at.offset)
-            is Anchor.Above -> { list.scrollToItem(0); leading.scrollTo(at.offset) }
+            is Anchor.Card -> placed { paneCard }?.let { (top, height) -> card.scrollTo(top + (at.fraction * height).roundToInt()) }
+            is Anchor.Above -> { list.scrollToItem(0); card.scrollTo(0); leading.scrollTo(at.offset) }
         }
     }
 
-    /** Two panes → one column. Waits (briefly) for the column to lay Recent out before placing a row. */
+    /** Two panes → one column. Waits (briefly) for the column to lay Recent or the card out before placing it. */
     internal suspend fun toCompact() {
         when (val at = anchor) {
             is Anchor.Above -> compact.scrollTo(at.offset)
-            is Anchor.Row -> {
-                if (withTimeoutOrNull(2_000) { snapshotFlow { recentTop to rowHeight }.first { it.first >= 0 && it.second > 0 } } == null) return
-                compact.scrollTo(if (at.row < Recent.rows) recentTop + at.row * rowHeight + at.offset else Int.MAX_VALUE)
+            is Anchor.Row -> placed { (recentTop to rowHeight).takeIf { it.first >= 0 && it.second > 0 } }?.let { (top, height) ->
+                compact.scrollTo(if (at.row < Recent.rows) top + at.row * height + at.offset else Int.MAX_VALUE)
             }
+            is Anchor.Card -> placed { compactCard }?.let { (top, height) -> compact.scrollTo(top + (at.fraction * height).roundToInt()) }
         }
     }
+
+    /** A layout measurement once the new layout has made it, or null after two seconds without. */
+    private suspend fun <T : Any> placed(measured: () -> T?): T? = withTimeoutOrNull(2_000) { snapshotFlow(measured).first { it != null } }
 }
 
-private val anchorSaver = Saver<HomeScroll.Anchor, List<Int>>(
-    save = { when (it) { is HomeScroll.Anchor.Above -> listOf(0, it.offset); is HomeScroll.Anchor.Row -> listOf(1, it.row, it.offset) } },
-    restore = { if (it[0] == 1) HomeScroll.Anchor.Row(it[1], it[2]) else HomeScroll.Anchor.Above(it[1]) },
+private val anchorSaver = Saver<HomeScroll.Anchor, List<Any>>(
+    save = {
+        when (it) {
+            is HomeScroll.Anchor.Above -> listOf(0, it.offset)
+            is HomeScroll.Anchor.Row -> listOf(1, it.row, it.offset)
+            is HomeScroll.Anchor.Card -> listOf(2, it.fraction)
+        }
+    },
+    restore = {
+        when (it[0] as Int) {
+            1 -> HomeScroll.Anchor.Row(it[1] as Int, it[2] as Int)
+            2 -> HomeScroll.Anchor.Card(it[1] as Float)
+            else -> HomeScroll.Anchor.Above(it[1] as Int)
+        }
+    },
 )
 
 @Composable

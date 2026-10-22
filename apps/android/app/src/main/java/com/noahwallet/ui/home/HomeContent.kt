@@ -174,7 +174,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     @Composable fun Primary(wide: Boolean) {
         when (state) {
             HomeRules.State.fresh -> GetPaidCard(ui, payment, paymentElapsed, wide, onCopy = copy, onShare = share, onProfile = actions.profile,
-                modifier = Modifier.rise(entered, 220 + after, 14f, reduceMotion))
+                modifier = Modifier.onGloballyPositioned { homeScroll.measureCard(it, wide) }.rise(entered, 220 + after, 14f, reduceMotion))
             HomeRules.State.everyday -> if (!wide) Box(Modifier.rise(entered, 220 + after, 14f, reduceMotion).rise(revealed, 0, 12f, reduceMotion)) {
                 Recent(ui, entered, memory, actions, onFirstRow = homeScroll::measureRecent)
             }
@@ -193,13 +193,14 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
         ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { it.second.size }, ui.rows.isEmpty())
     }
     val currentItems by rememberUpdatedState(items)
+    val currentState by rememberUpdatedState(state)
     LaunchedEffect(paned, lastPaned) {
         if (paned != lastPaned) {
             if (paned) homeScroll.toPanes(currentItems) else homeScroll.toCompact()
             lastPaned = paned
             return@LaunchedEffect
         }
-        snapshotFlow { if (paned) homeScroll.panesAnchor(currentItems) else homeScroll.compactAnchor() }.collect { homeScroll.anchor = it }
+        snapshotFlow { if (paned) homeScroll.panesAnchor(currentState, currentItems) else homeScroll.compactAnchor(currentState) }.collect { homeScroll.anchor = it }
     }
     when (pose) {
         OnboardingPose.Compact -> {
@@ -538,7 +539,7 @@ private fun TrailingPane(ui: HomeUi, state: HomeRules.State, entered: Long, reve
     when (state) {
         HomeRules.State.fresh -> BoxWithConstraints(Modifier.fillMaxSize()) {
             val height = maxHeight
-            Column(Modifier.fillMaxSize().verticalScroll(scroll.card), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.fillMaxSize().verticalScroll(scroll.card).onGloballyPositioned { scroll.paneContent = it }, horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.heightIn(min = height).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(horizontal = 32.dp, vertical = 28.dp),
                     contentAlignment = Alignment.Center) { card() }
             }

@@ -10,6 +10,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -34,7 +35,9 @@ class HomePoseScrollTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private enum class Posture(val size: DpSize) {
-        Closed(DpSize(400.dp, 420.dp)), Open(DpSize(820.dp, 660.dp)), Book(DpSize(820.dp, 660.dp)), Tabletop(DpSize(660.dp, 660.dp))
+        Closed(DpSize(400.dp, 420.dp)), Open(DpSize(820.dp, 660.dp)), Book(DpSize(820.dp, 660.dp)), Tabletop(DpSize(660.dp, 660.dp)),
+        /** Open, but short enough that Fresh's card scrolls in its pane. */
+        OpenShort(DpSize(820.dp, 420.dp))
     }
 
     // Twelve payments to distinct people, a few a day, so Recent and the grouped list both show distinct titles.
@@ -56,7 +59,7 @@ class HomePoseScrollTest {
     private fun top(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().positionInRoot.y
 
     /** Home at [posture]'s size and fold, as the window shows it. */
-    @Composable private fun Host(posture: Posture, memory: HomeMemory) {
+    @Composable private fun Host(posture: Posture, memory: HomeMemory, home: HomeUi = ui) {
         val density = LocalDensity.current
         var origin by remember { mutableStateOf(Offset.Zero) }
         val size = posture.size
@@ -70,7 +73,7 @@ class HomePoseScrollTest {
             }
         }
         CompositionLocalProvider(LocalFoldingFeatures provides listOfNotNull(hinge)) {
-            Box(Modifier.size(size).onGloballyPositioned { origin = it.positionInWindow() }) { HomePreviewHost(ui, memory) }
+            Box(Modifier.size(size).onGloballyPositioned { origin = it.positionInWindow() }.testTag("home-window")) { HomePreviewHost(home, memory) }
         }
     }
     private fun assumeLargeWindow() {
@@ -115,6 +118,44 @@ class HomePoseScrollTest {
         // And back to one column.
         pose(Posture.Closed)
         assertEquals("closed again keeps the row at the top", start, topRow(top("home-scroll"), 5))
+    }
+
+    /** [text]'s box lies inside Home's window (so on screen, scrolled into view), with its top below [below] px. */
+    private fun onScreen(text: String, below: Float = 0f): Boolean {
+        val window = compose.onNodeWithTag("home-window").fetchSemanticsNode()
+        val node = compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode()
+        return node.positionInRoot.y >= window.positionInRoot.y + below && node.positionInRoot.y + node.size.height <= window.positionInRoot.y + window.size.height
+    }
+
+    @Test fun theFreshCardKeepsItsPlaceRecreatedIntoEitherLayout() {
+        assumeLargeWindow()
+        compose.mainClock.autoAdvance = false
+        val restoration = StateRestorationTester(compose)
+        val fresh = HomeFixtures.ui("fresh", now = now, backedUp = false)
+        var posture = Posture.OpenShort
+        val memory = HomeMemory().apply { enteredAt = 0L }
+        restoration.setContent { NoahTheme { Host(remember { posture }, memory, fresh) } }
+        fun recreateAs(next: Posture) {
+            posture = next
+            restoration.recreate()
+            settle()
+        }
+        settle()
+        // Two panes: Copy and Share start below the card's pane; scroll that pane (the right half) down to them.
+        assertFalse("the card overflows its pane", onScreen("Copy"))
+        for (i in 0 until 3) {
+            if (onScreen("Copy")) break
+            compose.onNodeWithTag("home-window").performTouchInput { swipe(Offset(width * .75f, bottom * .9f), Offset(width * .75f, bottom * .2f), 600) }
+            settle()
+        }
+        assertTrue("scrolled to Copy", onScreen("Copy"))
+        // Closing the fold recreates Home as one column: the card's place carries over, not the balance pane's.
+        recreateAs(Posture.Closed)
+        assertTrue("closed, Copy is still in view", onScreen("Copy", below = with(compose.density) { 64.dp.toPx() }))
+        assertTrue("Share too", onScreen("Share", below = with(compose.density) { 64.dp.toPx() }))
+        // And opening it again puts the card's pane back at Copy and Share.
+        recreateAs(Posture.OpenShort)
+        assertTrue("open again, Copy is still in view", onScreen("Copy"))
     }
 
     @Test fun recreatedStraightIntoTheOtherLayoutTheTopRowStaysOnTop() {
