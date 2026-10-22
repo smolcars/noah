@@ -390,15 +390,15 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 | A final recurring outcome followed by `pending` or `uncertain` | It stays final. |
 | The payment fakes | Background code never pays, and submission never pays before `prepared` is durable. |
 
-## Open questions
+## Decisions (user, 2026-10-22)
 
-1. Is 60 s right for every send, including recurring ones? Should large amounts get longer?
-2. Is raw APNs (a .p8 key and a new sender) worth it, only to mark a force-quit app's activity "Finished · open Noah"?
-3. Should the server ping devices that registered "waiting on a block" (no txid) on each new block? Recommended: no; the server stays out of on-chain.
-4. Should incoming on-chain payments start a Live Activity or notification automatically, or only while Receive is open?
-5. Live Activities stay amount-free whatever the hide-balance setting: iOS can keep an ended activity's last content for up to 4 h, where Noah can't change it. Is an activity that shows progress but no amount useful enough to ship at all, or should iOS rely on the in-app result and result notifications? Recommended: ship it; it answers "is my payment through?" at a glance.
-6. When Live Activities are off, should results arrive as ordinary notifications ("Sent ₿X")? Recommended: yes.
-7. While a Lightning send is pending, should Send stay locked, with the override parking it? Recommended: yes. Allowing other sends freely invites paying the same merchant twice.
-8. Bark change 2 blocks `wait: false`; changes 1 and 3 have conservative fallbacks. Should change 2 go into a Noah fork if upstream hasn't merged it by phase 2? Recommended: all three upstream, forking change 2 only then.
-9. Until bark change 3, is "ask for a new invoice" acceptable when re-paying a failed BOLT11 invoice? Recommended: yes.
-10. Should Android use high-priority pushes when a visible update is certain, for faster results in Doze? Recommended: no, normal everywhere.
+1. **`retry_for`:** the new bark-bolt-ffi (0.6, in progress) exposes it. Noah passes an explicit value on every Lightning send, starting at 60 s (today's server default), and can tune it later.
+2. **Raw APNs:** explained to the user (Expo can't send Live Activity pushes). Pending their call; recommended later.
+3. **Server pings on new blocks:** no.
+4. **Automatic on-chain progress:** explained (detected only when a wallet sync sees an unconfirmed incoming transaction; no server-side address watching). Pending their OK on: start an ordinary notification when any sync sees one, and a Live Activity only when Noah is open.
+5. **Amount-free Live Activities:** yes, ship them.
+6. **Result notifications when Live Activities are off:** yes.
+7. **Send stays locked while a Lightning send is pending,** with the override parking it: yes.
+8. **Bark changes:** explained. Pending their OK on: all three upstream, and fork change 2 only if upstream hasn't merged it by phase 2.
+9. **"Ask for a new invoice" when re-paying a failed BOLT11 invoice** until bark change 3: explained. Pending their OK.
+10. **Push priority:** normal for every push this design adds. The existing high-priority server wake pushes (maintenance refresh) stay as they are.
