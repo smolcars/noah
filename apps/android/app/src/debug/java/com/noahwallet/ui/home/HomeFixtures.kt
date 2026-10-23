@@ -60,7 +60,9 @@ object HomeFixtures {
     fun ui(state: String, hidden: Boolean = false, now: Date = Date(), variant: String = "regtest", newRows: Set<String> = emptySet(),
            backedUp: Boolean = false, emailPrompt: Boolean = true, address: String = HomeFixtures.address): HomeUi {
         val locale = Locale.US
-        val rows = when (state) { "everyday" -> everydayRows(now); "busy" -> busyRows(now); else -> emptyList() }
+        // In history's own order, as the wallet's records come (pending on-chain first, then newest): unsorted, a row
+        // 18 hours old after a 27-hour-old one splits "Today" in two after 18:00.
+        val rows = HistoryRules.sorted(when (state) { "everyday" -> everydayRows(now); "busy" -> busyRows(now); else -> emptyList() })
         val wallet = when (state) {
             "fresh", "fresh-no-address" -> balance(0u)
             "everyday" -> balance(142_742u, onchainConfirmed = 10_000u)
