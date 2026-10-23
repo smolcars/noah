@@ -168,14 +168,20 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         fun historyLinks(context: android.content.Context, settings: com.noahwallet.services.storage.SettingsStorage): List<com.noahwallet.history.HistoryMapping.RecurringLink> {
             val location = com.noahwallet.services.storage.WalletDataLocation(context.filesDir, com.noahwallet.BuildConfig.APP_VARIANT)
             val schedules = RecurringStore(settings).load().schedules
-            return shared(File(location.directory, "noah-recurring-journal.json")).load().values.mapNotNull { entry ->
-                val terminal = entry.terminal?.takeIf { it.paid } ?: return@mapNotNull null
-                val schedule = schedules[entry.scheduleID] ?: entry.policy ?: return@mapNotNull null
-                val receipt = terminal.attempt.alreadyPaid ?: terminal.attempt.receipt
-                com.noahwallet.history.HistoryMapping.RecurringLink(
-                    com.noahwallet.history.HistoryTransaction.Recurring(entry.scheduleID, schedule.label, schedule.interval),
-                    receipt?.movementID, receipt?.paymentHash ?: terminal.attempt.paymentHash)
-            }
+            return shared(File(location.directory, "noah-recurring-journal.json")).load().values.mapNotNull { historyLink(it, schedules[it.scheduleID]) }
+        }
+        /**
+         * The payment an occurrence made itself: a succeeded submission whose receipt is proven for that attempt. Never an
+         * already-paid outcome, whose receipt names a payment made before the occurrence (perhaps by hand).
+         */
+        internal fun historyLink(entry: Entry, schedule: RecurringPayment?): com.noahwallet.history.HistoryMapping.RecurringLink? {
+            val terminal = entry.terminal?.takeIf { it.outcome == Outcome.succeeded } ?: return null
+            val attempt = terminal.attempt
+            if (attempt.alreadyPaid != null || attempt.recurringOccurrenceKey?.let { it != entry.key } == true) return null
+            val receipt = attempt.receipt?.takeIf { !it.isUnresolved && it.isProven(attempt.payment, attempt.paymentHash) } ?: return null
+            val policy = schedule ?: entry.policy ?: return null
+            return com.noahwallet.history.HistoryMapping.RecurringLink(
+                com.noahwallet.history.HistoryTransaction.Recurring(entry.scheduleID, policy.label, policy.interval), receipt.movementID, receipt.paymentHash)
         }
         private val journals = mutableMapOf<String, RecurringJournal>()
         /** One monitor and migration owner per canonical file, retained across all entry points. */
