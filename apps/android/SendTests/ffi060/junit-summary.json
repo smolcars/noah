@@ -1,0 +1,18 @@
+{
+  "command": "nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebugAndroidTest'",
+  "result": "BUILD SUCCESSFUL in 2m 21s",
+  "suites": 179,
+  "tests": 3818,
+  "skipped": 0,
+  "failures": 0,
+  "errors": 0,
+  "sendSuites": 19,
+  "sendTests": 588,
+  "new": {
+    "SendMovementIdentityTest": 5,
+    "SendLightningTest": 8,
+    "DebugJSONTest": 4,
+    "WalletValuesTest": 4,
+    "ArkInfoEndpointTest": 2
+  }
+}

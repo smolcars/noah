@@ -1,0 +1,138 @@
+{
+  "emulator": {
+    "avd": "noah-ffi-phone",
+    "serial": "emulator-5592",
+    "image": "android-35 google_apis arm64-v8a"
+  },
+  "stack": {
+    "name": "noah-bark08",
+    "arkServer": "http://10.0.2.2:13535",
+    "bitcoind": "http://10.0.2.2:28443",
+    "server": "http://10.0.2.2:13000",
+    "blocksMined": [
+      884,
+      885
+    ]
+  },
+  "build": {
+    "apkSha256": "826d7c0ec72b2bd2fb4fdda6c7614d3b50d0a4d070d133caefee02c204af3bba",
+    "arm64LibSha256": "9aff8630a0fb102e20f2cf97ea221045ad8c1be8a54033265299ac4edc8d2815",
+    "gradle": "-PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443 -PnoahRegtestServerURL=http://10.0.2.2:13000"
+  },
+  "stages": {
+    "create": {
+      "fingerprint": "5b25b077",
+      "arkServer": "http://10.0.2.2:13535",
+      "serverPubkey": "0289bfa4ddef855ad9a5f78f6a95f22e20311bce5476ff8c233213e49781e35d9f"
+    },
+    "receive": {
+      "arkSpendable": 29840,
+      "onchainConfirmed": 200000,
+      "lightningReceiveMovementID": 1,
+      "lightningReceiveFee": 160
+    },
+    "ark": {
+      "movementID": 2,
+      "journalMovementID": 2,
+      "peerSendMovementID": 2,
+      "spendable": 24840,
+      "retryForSecs45ProbePaid": true
+    },
+    "ln-send": {
+      "movementID": 4,
+      "fee": 80
+    },
+    "ln-fail": {
+      "movementID": 5,
+      "spendableBefore": 19760,
+      "spendableAfter": 19760,
+      "seconds": 5
+    },
+    "offboard": {
+      "txid": "b40b623c5044ad66f74deedec808fc0c9448a61b47f174bdecd8ed9be6237d32",
+      "movementID": 6,
+      "amount": 10000,
+      "fee": 2580
+    },
+    "offboard-confirmed": {
+      "movementID": 6,
+      "height": 885
+    },
+    "reopen": {
+      "movements": 6,
+      "spendable": 7180,
+      "onchainConfirmed": 200000,
+      "debugInfoFields": [
+        "mailboxId",
+        "network",
+        "vtxoXpub"
+      ]
+    }
+  },
+  "captaind": {
+    "ln-send retry_for": "60s (10 xpay span fields, 4 Some(60s))",
+    "probe retry_for": "45s (10 span fields, 4 Some(45s))"
+  },
+  "core": {
+    "fundTxid": "201bf21fae79fd43d5634b9ffa1b3456934e0cb19350dd6cd14c350aaaa442a7",
+    "fundSats": 200000,
+    "offboardMempool": {
+      "vsize": 185,
+      "feeSats": 1853,
+      "receivedSats": 10000
+    },
+    "offboardConfirmedHeight": 885
+  },
+  "ui": {
+    "home": "207,180 sats; the 8,000-sat Ark row labelled from its repeat metadata",
+    "debugScreen": "Get Debug Info listed after Get Ark Info; Result showed mailboxId, network regtest, vtxoXpub; 0 xpub/mailbox hits in the app log files and 95,748 logcat lines"
+  },
+  "upgrade": {
+    "from": "0.5.0 build (f42f175d + regtest overrides), arm64 lib d41fc91c…",
+    "to": "0.6.0 build above, adb install -r, same signer fac61745…",
+    "baseline": {
+      "fingerprint": "c73094bd",
+      "spendable": 4797,
+      "movements": [
+        {
+          "id": 1,
+          "status": "successful",
+          "subsystem": "bark.lightning_receive",
+          "kind": "receive",
+          "intended": 10000,
+          "effective": 9880,
+          "fee": 120
+        },
+        {
+          "id": 2,
+          "status": "successful",
+          "subsystem": "bark.arkoor",
+          "kind": "send",
+          "intended": -3000,
+          "effective": -3000,
+          "fee": 0
+        },
+        {
+          "id": 3,
+          "status": "successful",
+          "subsystem": "bark.lightning_send",
+          "kind": "send",
+          "intended": -2000,
+          "effective": -2083,
+          "fee": 83
+        }
+      ],
+      "schemaSha256": "ce93766121dd517f6e706cc83de027ff19b2a7a3ae5d24dd2718b68a240ee887",
+      "migration": 42
+    },
+    "verify": {
+      "fingerprint": "c73094bd",
+      "movements": 3,
+      "spendable": 4797,
+      "schemaSha256": "ce93766121dd517f6e706cc83de027ff19b2a7a3ae5d24dd2718b68a240ee887",
+      "migration": 42
+    },
+    "upgradedHome": "₿ 4,797 with the same three rows"
+  },
+  "deviceCompatibility": "CrossPlatformBackupTest + WalletDatabaseDeviceTest on the 0.6.0 build: 8 passed, 1 opt-in skipped (restoresIOSServiceExport opened the iOS 0.5.0-era export: fingerprint, movement count and balance details)"
+}

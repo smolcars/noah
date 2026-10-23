@@ -1,5 +1,161 @@
 # Android native Send (M3) verification
 
+## bark-bolt-ffi 0.6.0 adoption (2026-10-22)
+
+Base `f42f175d`. Android pins **`io.github.niteshbalusu11:bark-bolt-ffi-android:0.6.0`**
+(Bark 0.8.0, `lib-0.8.0` `959a489f`, tag `b5aed0bb`). The AAR (`4e6582c8…`) and POM
+(`80920813…`) match the release `SHA256SUMS`, and Gradle's verification metadata
+pins both. Every LOAD segment of the arm64-v8a, armeabi-v7a and x86_64
+`libbark_bolt_ffi.so` is `0x4000` ([artifact verification](ffi060/artifact-verification.txt)).
+The built APK carries the AAR's arm64 library byte for byte.
+
+- **Lightning options.** Invoice and offer sends pass
+  `LightningSendOptions(wait = true, retryForSecs = 60)` (`SendLightningSubmission.options`):
+  60 s is today's server default, set explicitly; `wait = false` stays for the
+  async-payments phase. `checkLightningPayment(hash, wait = false)` is unchanged.
+  Android has no `payLightningAddress` / `payLnurl` caller (LNURL resolves to an
+  invoice first), so nothing else passed `wait`.
+- **Movement identity (FFI 16).** `sendArkoorPayment` returns the payment's movement
+  id and `sendOnchain` / `offboardVtxos` return `OffboardResult { txid, movementId }`.
+  The Send receipt stores the id, so the Send journal and the recurring journal
+  (which keeps the whole `SendAttempt`) carry it across restarts, and the Send
+  result's `SendSuccessDetails` links the exact History row. Offboard receipts fill
+  the actual amount/fee only when the returned id and txid agree. Repeat-payment
+  metadata goes on that exact id with `updateHistoryMetadata` (or on the
+  hash-bound Lightning movement), never on a destination/amount match; movements
+  that predate the attempt (an inherited checkpoint) are untouched.
+- **Old journals.** `movementID` was already an optional receipt field, so journals
+  written before 0.6.0 decode unchanged: offboards still bind by txid alone and Ark
+  attempts without a receipt still show candidates. A missing id never means
+  "not sent"; the crash window between Bark recording a payment and Noah saving
+  its receipt stays uncertain (FFI 19).
+- **Errors.** `BarkErrorCode` keeps 0–12 and adds `INVALID_PAYMENT_REQUEST` (13),
+  raised only by the new payment-request APIs. Every Android mapping is an
+  allowlist with a conservative default (`SendOnchainSubmission.notSubmitted`,
+  `boardFailure`, `OnchainSubmission.preBroadcast`, the exit-estimate fallback), and
+  the existing tests iterate `BarkErrorCode.entries`, so code 13 is covered with no
+  mapping change.
+- **Debug info.** Settings › Debug Screen › "Get Debug Info" shows `debugInfo()`'s
+  network, mailbox id and VTXO xpub in the Result row, which copies only when
+  tapped. Nothing logs it; Sentry attaches no screenshots, view hierarchy or replay.
+  The label reuses the existing es/ja/ko/sv translations (0 untranslated).
+- **Regtest endpoints.** `-PnoahRegtestArkURL` / `-PnoahRegtestBitcoindURL` replace
+  the host's `:3535` / `:18443`. Only the regtest flavor sets `REGTEST_ARK_URL` /
+  `REGTEST_BITCOIND_URL` (empty otherwise, validated like the server URL), and only
+  the regtest branch of `WalletConfiguration.base` / `ArkInfoEndpoints` reads them.
+  With both flags passed, mainnet and signet debug/release BuildConfig stay empty
+  ([evidence](ffi060/regtest-overrides.txt)). For `noah-bark08`:
+  `-PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443
+  -PnoahRegtestServerURL=http://10.0.2.2:13000`.
+
+**No SQLite migration.** `bark/src/persist/sqlite/migrations` is identical between
+`bfbe6b7` (0.5.0's Bark) and `lib-0.8.0`; the newest is still `m0042`.
+
+**Tests.** Targeted Send run: 587 tests / 19 suites; debug/localization/settings
+14; endpoints/privacy 16; the new recurring regression 5 (all `SendMovementIdentityTest`).
+Full run once, no exclusions:
+
+```sh
+nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebugAndroidTest'
+```
+
+**3,818 tests / 179 suites, zero failures, errors or skips**; instrumentation APK
+assembled (2m 21s) ([JUnit totals](ffi060/junit-summary.json)). New:
+`SendMovementIdentityTest` (returned id survives restart for Ark / offboard /
+`sendOnchain` without reconciliation; metadata only on the exact new id; offboard id
+and txid must agree; pre-0.6.0 journals keep txid and candidate matching; a recurring
+Ark id survives restart without the Send journal), the explicit 60 s options,
+`debugInfo` JSON, and override defaults / mainnet-signet isolation.
+
+**Live checks on `noah-bark08`** (owned AVD `noah-ffi-phone`, API 35 arm64,
+emulator-5592; opt-in `Ffi060LiveTest`, `-e noahFfi060 <stage> -e owner ffi060-disposable`;
+the host acted between stages only through `docker exec` and mined blocks 884 and 885):
+
+| Stage | Result |
+| --- | --- |
+| `create` | Wallet `5b25b077` against `10.0.2.2:13535` |
+| `receive` | Core paid 200,000 sats on-chain (confirmed in 884). LND paid a 30,000-sat invoice: one `bark.lightning_receive`, 29,840 spendable (server fee 160) |
+| `ark` | 8,000 sats to a throwaway in-process peer: receipt and journal carry movement 2 (`bark.arkoor` send to that address); repeat metadata only on 2. The peer paid 3,000 back and it arrived as an arkoor receive. The peer then paid a 1,000-sat LND invoice with `retryForSecs = 45`: captaind logged `retry_for: 45s`, so the SDK forwards the option |
+| `ln-send` | 5,000-sat LND invoice settled through the production controller: proven receipt, movement 4, fee 80; captaind's xpay span shows `retry_for: 60s` |
+| `ln-fail` | LND hold invoice held, then cancelled: Send ended Failed, movement 5 `failed`, spendable 19,760 before and after, nothing pending |
+| `offboard` | `sendOnchain` 10,000 sats to Core: txid `b40b623c…` and movement 6 journaled; `bark.offboard` `send_onchain` with that txid; amount 10,000, fee 2,580; in mempool (Core: vsize 185, fee 1,853) |
+| `offboard-confirmed` | After block 885 a fresh controller resolved the journal to Confirmed at 885 with the same id and txid |
+| `reopen` | Close/reopen: same fingerprint, 6 movements, 7,180 spendable; `debugInfo()` returned regtest, mailbox id and xpub; the exported app log has no xpub |
+
+The app UI then opened on Home (207,180 sats; the 8,000-sat row labelled from its
+repeat metadata). The Debug screen listed "Get Debug Info" after "Get Ark Info" and
+its Result showed the three fields; no screenshot of it was kept, and the app log
+files and logcat (95,748 lines) had no xpub or mailbox id.
+[Live summary](ffi060/live-summary.json).
+
+**In-place upgrade.** A scratch copy of `f42f175d` (0.5.0, arm64 library from the
+verified 0.5.0 AAR) plus only the regtest-override commit and
+`Ffi060UpgradeLiveTest` (APIs both SDKs share) created wallet `c73094bd` on
+`noah-bark08`, received 10,000 sats over Lightning, sent 3,000 Ark and 2,000
+Lightning: 3 movements, 4,797 spendable. Installing the 0.6.0 APK over it with
+`adb install -r` (same signer) opened it through `openExisting` with the same
+fingerprint, every movement's id/status/kind/amounts/fee and the same balance,
+before and after a sync. Bark's `migrations` stayed at 42 and the `sqlite_master`
+schema hash (`ce937661…`) was identical before and after. Home showed ₿ 4,797 and
+the three rows.
+
+**Existing compatibility tests on the 0.6.0 build.** `CrossPlatformBackupTest` and
+`WalletDatabaseDeviceTest` on the same emulator: 8 passed, 1 opt-in generator
+skipped. `restoresIOSServiceExport` restored the committed iOS export (a
+bark-bolt-ffi 0.5.0 database) through the production restorer and opened it with
+the expected fingerprint, movement count and balance; the read-only preflight
+cases (missing, empty, foreign, wrong network, WAL without index, corrupt) still
+refuse without touching files. The JVM run covers the RN-migrated MMKV/store
+fixtures. The funded RN → native runner (`UpgradeTests/run.sh`) was not rerun: it
+needs an RN regtest build and funds through the default `scripts` stack, which is
+pre-0.8. Its last funded Android run already ran on 0.5.0's Bark, whose client
+SQLite schema 0.6.0 leaves unchanged.
+
+Observed, unrelated: Home showed "Backup failed" for both disposable wallets. The
+0.6.0 snapshot succeeded (the app reached `POST /v0/backup/v2/upload`), and
+`noah-bark08`'s server answered 500 there, as it already had at 02:53Z before this
+run.
+
+**Invoice retry (observed, not fixed).** On the upgraded wallet, through the real
+Send UI, the same 1,000-sat BOLT11 invoice was paid with the LND–CLN link held
+down, then again with it up. The failure showed "Payment failed · ₿1,000 is back
+in your wallet" and left no History row. Bark 0.8 reused the failed movement
+(same id and `createdAt`) for the retry, which paid once (LND settled 1,000;
+balance −1,079), but Send showed **"Invoice already paid"** with "Actual fee ₿0":
+the attempt's snapshot already held that movement id, so
+`SendReconciliation.lightning` returns `AlreadyPaid`. History shows one
+Successful −1,000 row dated at the first attempt, with "Ark fee ₿0" (the reused
+movement's fee field stays 0 while its effective change is −1,079). A retry that
+failed again showed "Payment failed" correctly, and the third try again read
+"Invoice already paid". No double payment. [Evidence](ffi060/invoice-retry.json).
+
+The LND–CLN link was held down only during the three failing attempts, with
+repeated `lncli disconnect` calls (CLN redials within ~2 s); no channel was closed
+and no lifecycle command was run. Those calls raised CLN's redial backoff to 256 s,
+so a later single disconnect by another session on the stack (03:37:59Z) took
+about four minutes to heal on its own; the peer and channel `170x1x0` were back
+and stable at 03:42Z.
+
+This run's liquidity changes were reversed: LND's outbound was returned to its
+starting 46,530 sats with CLN payments after the receive stages, and the two
+retried 1,000-sat payments were sent back to CLN afterwards. Another session paid
+20,000 sats out of LND at 03:34:19Z, which is not reversed here. The owned
+emulator, its AVD, the scratch 0.5.0 copy, APK copies, the temporary invoice-retry
+probe and host-side scratch were deleted afterwards.
+
+**Not adopted yet** (after the Send/Receive redesign, with a parity review):
+`parsePaymentRequest` would sit beside `SendDestination.parse`
+(`send/SendDestination.kt:20`): the recipient step in `SendModel`, the
+`quoteResolved` guard in `SdkSendWallet.kt`, and `RecurringRecipient.resolve`.
+`sendPayment` could replace only the final per-method SDK call inside
+`SdkSendWallet.payInternal`, keeping the checkpoint/journal guards and prepared BDK
+sends, with `PaymentResult.ark` / `.onchain` mapping to today's receipt fields.
+`estimatePaymentFee(s)` would replace the per-method estimators in
+`SdkSendWallet.estimateFee` / `quoteResolved`. `bip321Uri` would back
+`ReceiveRequest.uri()` and `SdkHandles.receiveRequest` / `receiveInvoice`
+(`WalletSession.kt`), keeping RN's receive rules and cancelling abandoned invoices
+with `cancelLightningReceive`.
+
 ## Recurring occurrence handoff (2026-10-20)
 
 Base `7e88fdd8`. A recurring terminal receipt is now copied into its occurrence's
