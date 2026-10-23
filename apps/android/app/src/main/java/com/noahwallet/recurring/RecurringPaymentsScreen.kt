@@ -22,6 +22,10 @@ import java.util.Date
 
 internal fun recurringDate(at: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(at))
 internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(at))
+/** The schedules to show: just [focus] when Activity opened it and it still exists, else all of them. */
+internal fun focusedSchedules(schedules: List<RecurringPayment>, focus: String?): List<RecurringPayment> =
+    schedules.filter { it.id == focus }.ifEmpty { schedules }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun RecurringPaymentsScreen(app: AppModel) {
     val context = LocalContext.current
@@ -36,6 +40,9 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
     var overrideStep by remember { mutableIntStateOf(0) }
     var review by remember { mutableStateOf<RecurringExecutor.Review?>(null) }
     var actionError by remember { mutableStateOf<String?>(null) }
+    // Activity's Repeats › opens one schedule; "Show all" returns to the list.
+    var focus by rememberSaveable { mutableStateOf(app.recurringSchedule.also { app.recurringSchedule = null }) }
+    val shown = focusedSchedules(executor.schedules, focus)
     fun act(work: suspend () -> Unit) { actionError = null; scope.launch { try { work() } catch (e: Exception) { actionError = e.message ?: "Couldn't update recurring payments. Try again." } } }
     LaunchedEffect(Unit) { executor.reload(); runtime.executeInForeground() }
     BackHandler(editor) { editor = false }
@@ -44,7 +51,8 @@ internal fun recurringDay(at: Long): String = DateFormat.getDateInstance(DateFor
         Text(tr("Automatic payments from your Ark balance. Lightning fees must fit both the quoted fee and the server's worst-case fee limit. Ark payments must have no fee. Other payments need manual approval. Keep notifications enabled."), color = MaterialTheme.colorScheme.onSurfaceVariant)
         NoahButton("New recurring payment", !app.isWalletSuspended, modifier = Modifier.testTag("recurring-new-button")) { editingID = null; editor = true }
         if (executor.schedules.isEmpty()) Text(tr("No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an Ark address, Lightning address or BOLT12 offer."))
-        executor.schedules.forEach { s ->
+        if (shown.size < executor.schedules.size) TextButton({ focus = null }, Modifier.testTag("recurring-show-all")) { Text(tr("Show all")) }
+        shown.forEach { s ->
             HorizontalDivider(Modifier.padding(top = 12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(s.label, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)

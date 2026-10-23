@@ -77,7 +77,7 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
             try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))); true }
             catch (_: android.content.ActivityNotFoundException) { false }
         },
-        recurring = { onSettings(SettingsDestination.Recurring) },
+        recurring = { id -> app.recurringSchedule = id; onSettings(SettingsDestination.Recurring) },
         exits = { onSettings(SettingsDestination.Exits) },
         coin = { id -> app.vtxoDetail = id; onSettings(SettingsDestination.Vtxos) },
         barHidden = barHidden,
