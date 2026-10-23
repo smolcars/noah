@@ -98,14 +98,18 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
     /// that synced in meanwhile is news, to any of your addresses; an unconfirmed payment to
     /// this request's fresh address is news even if a sync elsewhere fetched it first. An
     /// already-confirmed transaction is never news.
-    /// A transaction spending any of `spent` (the inputs of deposits already announced)
-    /// replaces one of them (RBF) and is never a new arrival.
-    func look(known: Set<String>?, announced: Set<String>, spent: Set<SendTransaction.Input> = []) -> (arrivals: [Transaction], known: Set<String>) {
+    /// A transaction spending any of `spent` (the inputs of deposits already announced, and of
+    /// their replacements) replaces one of them (RBF) and is never a new arrival. The `spent`
+    /// returned adds its inputs and the arrivals', so a replacement of a replacement isn't either.
+    func look(known: Set<String>?, announced: Set<String>, spent: Set<SendTransaction.Input> = [])
+        -> (arrivals: [Transaction], known: Set<String>, spent: Set<SendTransaction.Input>) {
         let unseenHere = Set(incoming.filter { $0.toAddress > 0 && $0.confirmedHeight == nil }.map(\.txid))
         let first = (before ?? Set(incoming.map(\.txid))).subtracting(unseenHere)
         let seen = (known ?? first).union(announced)
+        let spent = incoming.filter { !$0.inputs.isDisjoint(with: spent) }.reduce(spent) { $0.union($1.inputs) }
         let fresh = incoming.filter { !seen.contains($0.txid) && $0.confirmedHeight == nil && $0.inputs.isDisjoint(with: spent) }
-        return (fresh.filter { $0.toAddress > 0 } + fresh.filter { $0.toAddress == 0 }, seen.union(incoming.map(\.txid)))
+        let arrivals = fresh.filter { $0.toAddress > 0 } + fresh.filter { $0.toAddress == 0 }
+        return (arrivals, seen.union(incoming.map(\.txid)), arrivals.reduce(spent) { $0.union($1.inputs) })
     }
 
     /// A followed transaction in this check, or the one that replaced it (spending any of

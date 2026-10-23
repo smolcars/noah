@@ -655,6 +655,37 @@ struct ReceiveFormatTests {
         #expect(other.look(known: look.known, announced: announced, spent: spent).arrivals.map(\.txid) == ["C"])
     }
 
+    /// B takes the card from A. A2 spends A's coin and one more and is held back as A's
+    /// replacement; A3 then spends only that new coin. A2's inputs were kept, so A3 is a
+    /// replacement too, not new money. A chain of three replacements stays quiet the same way.
+    @Test func aReplacementOfAReplacementIsNotAnnouncedAgain() {
+        typealias Input = SendTransaction.Input
+        var known: Set<String>? = [], announced: Set<String> = [], spent: Set<Input> = []
+        // One check of Receive's watch, with nothing followed (the card has moved on).
+        func check(_ incoming: [ReceiveChainSnapshot.Transaction]) -> [String] {
+            let look = ReceiveChainSnapshot(tip: 100, incoming: incoming).look(known: known, announced: announced, spent: spent)
+            known = look.known
+            spent = look.spent
+            announced.formUnion(look.arrivals.map(\.txid))
+            return look.arrivals.map(\.txid)
+        }
+        func deposit(_ txid: String, _ inputs: Set<Input>) -> ReceiveChainSnapshot.Transaction {
+            .init(txid: txid, toAddress: 5_000, received: 5_000, confirmedHeight: nil, inputs: inputs)
+        }
+        let x = Input(txid: "x", vout: 0), y = Input(txid: "y", vout: 0), b = deposit("B", [Input(txid: "fundB", vout: 0)])
+        #expect(check([deposit("A", [x]), b]) == ["A", "B"])
+        #expect(check([deposit("A2", [x, y]), b]).isEmpty)
+        #expect(check([deposit("A3", [y]), b]).isEmpty)
+        // A chain of three: D, then D2, D3 and D4, each spending only the coin the one before added.
+        let d = (0..<4).map { Input(txid: "d\($0)", vout: 0) }
+        #expect(check([deposit("D", [d[0]]), b]) == ["D"])
+        #expect(check([deposit("D2", [d[0], d[1]]), b]).isEmpty)
+        #expect(check([deposit("D3", [d[1], d[2]]), b]).isEmpty)
+        #expect(check([deposit("D4", [d[2], d[3]]), b]).isEmpty)
+        // A deposit spending other coins still arrives.
+        #expect(check([deposit("D4", [d[2], d[3]]), b, deposit("C", [Input(txid: "fundC", vout: 0)])]) == ["C"])
+    }
+
     /// The followed deposit disappears and a new one pays the same address without spending
     /// any of its inputs: no replacement is assumed. The old wait ends and the new deposit
     /// arrives as usual. Without recorded inputs nothing can replace it either.
