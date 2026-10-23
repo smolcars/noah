@@ -27,11 +27,14 @@ class HistoryModel(private val dependencies: Dependencies) {
         val changes: () -> Flow<String>, val blockTime: suspend (String) -> Date?,
         val price: suspend (Long, String) -> Double?, val currentPrice: suspend (String) -> Double? = { null },
         val warn: (String) -> Unit = {},
+        /** Recurring payments the journal recorded as paid, to name the rows they made. */
+        val recurring: suspend () -> List<HistoryMapping.RecurringLink> = { emptyList() },
     ) {
         companion object {
             fun live(session: WalletSession, client: HttpClient, variant: String,
                 suspended: () -> Boolean, warn: (String) -> Unit,
-                esploraEndpoint: () -> String? = { WalletConfiguration.base(variant).esplora }): Dependencies {
+                esploraEndpoint: () -> String? = { WalletConfiguration.base(variant).esplora },
+                recurring: suspend () -> List<HistoryMapping.RecurringLink> = { emptyList() }): Dependencies {
                 val explorer = OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).build()
                 fun available() { if (suspended()) throw AppServices.WalletSuspended() }
                 return Dependencies(
@@ -64,7 +67,7 @@ class HistoryModel(private val dependencies: Dependencies) {
                     price = { timestamp, currency -> V0HistoricalPriceClient(client)
                         .historicalFiatPrice(HistoricalFiatPricePayload(currency, timestamp)).value().rate },
                     currentPrice = { currency -> V0PricesClient(client).fiatPrices(JsonObject(emptyMap())).value().rates[currency] },
-                    warn = warn,
+                    warn = warn, recurring = recurring,
                 )
             }
         }
@@ -124,7 +127,8 @@ class HistoryModel(private val dependencies: Dependencies) {
         isRefreshing = true
         try {
             if (sync) dependencies.sync()
-            val latest = dependencies.load()
+            // A recurring journal that can't be read just leaves its payments as ordinary sends.
+            val latest = HistoryMapping.joinRecurring(dependencies.load(), optional { dependencies.recurring() } ?: emptyList())
             currentCoroutineContext().ensureActive()
             if (request != generation) return
             transactions = HistoryRules.unified(latest); isLoading = false; error = null

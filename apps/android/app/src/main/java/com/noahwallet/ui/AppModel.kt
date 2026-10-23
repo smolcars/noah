@@ -137,6 +137,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         warn = com.noahwallet.services.logging.AppLog(application, "history")::w,
         esploraEndpoint = { WalletConfiguration.effective(BuildConfig.APP_VARIANT,
             EsploraSettings(settings).selection(BuildConfig.APP_VARIANT).endpoint).esplora },
+        recurring = { withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringJournal.historyLinks(application, settings) } },
     ))
     var recurringNotification by mutableStateOf(false)
     var autoBoardSuccessBanner by mutableStateOf<Pair<Long, Long>?>(null)

@@ -25,8 +25,9 @@ class HomeRowsTest {
     }
 
     @Test fun withoutACounterpartyRowsKeepTodaysLabelAndARailGlyph() {
+        // An invoice without a readable description reads as what happened, on the Lightning rail.
         val bolt = HomeRow.of(row("Bolt11", "incoming", "lnbcrt1invoice", kind = "lightning-receive"), "noahwallet.io")
-        assertEquals("Lightning", bolt.title); assertNull("kind not repeated", bolt.kind)
+        assertEquals("Received", bolt.title); assertEquals("Lightning", bolt.kind)
         assertEquals(HomeRow.Avatar.Lightning, bolt.avatar); assertEquals("+", bolt.sign); assertNull(bolt.counterparty)
         val ark = HomeRow.of(row("Arkoor", "outgoing", "tark1qexample"), "noahwallet.io")
         assertEquals("Ark", ark.title); assertEquals(HomeRow.Avatar.Sent, ark.avatar)
@@ -52,7 +53,7 @@ class HomeRowsTest {
         assertTrue(failed.failed); assertEquals("Failed", failed.state)
         val canceled = HomeRow.of(row("Bolt11", "outgoing", status = "canceled", effective = 0), null)
         assertTrue(canceled.canceled); assertFalse(canceled.failed); assertEquals("Canceled", canceled.state)
-        assertEquals("Canceled Lightning", canceled.title)
+        assertEquals("Sent", canceled.title)
     }
 
     @Test fun nothingLeftYourWalletNeedsExplicitZeroDeltas() {

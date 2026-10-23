@@ -161,6 +161,22 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         validate(state); persist(state)
     }
     companion object {
+        /**
+         * Each schedule's last paid occurrence, by the movement or payment hash its receipt names, with the schedule's
+         * name and interval: Activity's recurring rows. Read-only; the journal keeps one attempt per schedule.
+         */
+        fun historyLinks(context: android.content.Context, settings: com.noahwallet.services.storage.SettingsStorage): List<com.noahwallet.history.HistoryMapping.RecurringLink> {
+            val location = com.noahwallet.services.storage.WalletDataLocation(context.filesDir, com.noahwallet.BuildConfig.APP_VARIANT)
+            val schedules = RecurringStore(settings).load().schedules
+            return shared(File(location.directory, "noah-recurring-journal.json")).load().values.mapNotNull { entry ->
+                val terminal = entry.terminal?.takeIf { it.paid } ?: return@mapNotNull null
+                val schedule = schedules[entry.scheduleID] ?: entry.policy ?: return@mapNotNull null
+                val receipt = terminal.attempt.alreadyPaid ?: terminal.attempt.receipt
+                com.noahwallet.history.HistoryMapping.RecurringLink(
+                    com.noahwallet.history.HistoryTransaction.Recurring(entry.scheduleID, schedule.label, schedule.interval),
+                    receipt?.movementID, receipt?.paymentHash ?: terminal.attempt.paymentHash)
+            }
+        }
         private val journals = mutableMapOf<String, RecurringJournal>()
         /** One monitor and migration owner per canonical file, retained across all entry points. */
         fun shared(file: File, binding: RecurringStore.Binding? = null): RecurringJournal =

@@ -11,12 +11,13 @@ object HistoryMapping {
     private val kinds = mapOf("bark.board:board" to "onboard", "bark.offboard:offboard" to "offboard",
         "bark.round:offboard" to "offboard", "bark.offboard:send_onchain" to "send-onchain",
         "bark.round:send_onchain" to "send-onchain", "bark.arkoor:receive" to "arkoor-receive",
-        "bark.exit:start" to "exit", "bark.lightning_receive:receive" to "lightning-receive")
+        "bark.exit:start" to "exit", "bark.lightning_receive:receive" to "lightning-receive", "bark.round:refresh" to "refresh")
     private fun subsystemID(m: Movement): String? = "${m.subsystemName.lowercase(Locale.ROOT)}:${m.subsystemKind.lowercase(Locale.ROOT)}"
         .takeIf { it in kinds || it in listOf("bark.arkoor:send", "bark.lightning_send:send") }
     fun isFailedOrCanceled(status: String) = status in listOf("failed", "canceled")
+    /** Every movement that changed or meant to change the balance, failed ones included; free renewals stay out. */
     fun include(m: Movement) = kinds[subsystemID(m)] in listOf("onboard", "offboard") ||
-        (m.status != "failed" && (m.intendedBalanceSats != 0L || m.effectiveBalanceSats != 0L))
+        m.intendedBalanceSats != 0L || m.effectiveBalanceSats != 0L
     private fun sum(destinations: List<MovementDestination>) = destinations.sumOf { it.amountSats.toLong() }
     fun boardAmount(m: Movement) = listOf(abs(m.intendedBalanceSats), abs(m.effectiveBalanceSats),
         sum(m.sentToAddresses), sum(m.receivedOnAddresses)).firstOrNull { it > 0 } ?: 0L
@@ -45,7 +46,7 @@ object HistoryMapping {
             metadata.repeatPayment != null || first?.methodType == "lightning-address" -> "Lnurl"
             kind == "lightning-receive" -> "Bolt11"
             destinations.any { it.paymentMethod.methodType == "bitcoin" } -> "Onchain"
-            kind == "arkoor-receive" || subsystem == "bark.arkoor:send" -> "Arkoor"
+            kind == "arkoor-receive" || kind == "refresh" || subsystem == "bark.arkoor:send" -> "Arkoor"
             subsystem == "bark.lightning_send:send" -> "Bolt11"
             kind in listOf("onboard", "offboard", "send-onchain", "exit") -> "Onchain"
             outgoing && destinations.isNotEmpty() -> "Arkoor"
@@ -62,6 +63,16 @@ object HistoryMapping {
             inputVtxos = m.inputVtxoIds, outputVtxos = m.outputVtxoIds, exitedVtxos = m.exitedVtxoIds, repeatPayment = repeat,
             preimage = metadata.paymentPreimage?.takeIf { m.status == "successful" && it.isNotEmpty() })
     }
+    /** A recurring payment the journal recorded as paid, by the movement or payment hash its receipt names. */
+    data class RecurringLink(val recurring: HistoryTransaction.Recurring, val movementId: UInt?, val paymentHash: String?)
+
+    /** Joins outgoing rows to the recurring payments they paid; rows that match none stay ordinary sends. */
+    fun joinRecurring(rows: List<HistoryTransaction>, links: List<RecurringLink>): List<HistoryTransaction> =
+        if (links.isEmpty()) rows else rows.map { row ->
+            val link = links.firstOrNull { link -> row.direction == "outgoing" &&
+                (link.movementId != null && link.movementId == row.movementId || link.paymentHash != null && link.paymentHash == row.paymentHash) }
+            if (link == null) row else row.copy(recurring = link.recurring)
+        }
     private fun destination(d: MovementDestination) = HistoryTransaction.Destination(d.paymentMethod.value, d.amountSats.toLong(), d.paymentMethod.methodType)
     fun transaction(chain: WalletTransaction, blockTime: Date? = null) = HistoryTransaction(
         "onchain-wallet-${chain.txid}", "Onchain", abs(chain.balanceChangeSats), HistoryRules.isoDate(blockTime ?: Date(0)),

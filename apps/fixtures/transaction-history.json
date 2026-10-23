@@ -1671,7 +1671,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -1948,7 +1948,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -2210,7 +2210,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -2775,7 +2775,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -3059,7 +3059,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -3336,7 +3336,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -3598,7 +3598,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -3872,7 +3872,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -4132,7 +4132,7 @@
         }
       },
       "expected": {
-        "included": false,
+        "included": true,
         "transaction": {
           "id": "movement-7",
           "txid": "movement-7",
@@ -4472,11 +4472,14 @@
           "date": "2026-07-15T12:00:00.000Z",
           "sortTimestamp": 1784116800000,
           "direction": "incoming",
-          "type": "Onchain",
+          "type": "Arkoor",
           "source": "ark",
           "destination": "",
           "movementId": 7,
           "movementStatus": "successful",
+          "movementKind": "refresh",
+          "subsystemName": "bark.round",
+          "subsystemKind": "refresh",
           "metadataJson": "{}",
           "intendedBalanceSat": 0,
           "effectiveBalanceSat": 0,

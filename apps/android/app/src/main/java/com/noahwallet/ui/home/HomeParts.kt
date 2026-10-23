@@ -262,6 +262,8 @@ internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean) {
                 HomeRow.Avatar.Chain -> Icon(painterResource(HomeIcons.chain), null, Modifier.size(20.dp), tint = palette.foreground)
                 HomeRow.Avatar.Received -> Icon(painterResource(HomeIcons.receive), null, Modifier.size(20.dp), tint = palette.foreground)
                 HomeRow.Avatar.Sent -> Icon(painterResource(HomeIcons.send), null, Modifier.size(20.dp), tint = palette.foreground)
+                HomeRow.Avatar.Recurring -> Icon(painterResource(HomeIcons.repeat), null, Modifier.size(20.dp), tint = palette.foreground)
+                HomeRow.Avatar.Renewal -> Icon(painterResource(HomeIcons.renew), null, Modifier.size(20.dp), tint = palette.foreground)
             }
         }
         if (row.pending) Canvas(Modifier.requiredSize(48.dp).align(Alignment.Center).graphicsLayer { rotationZ = turn }) {
@@ -294,6 +296,7 @@ internal fun rowSubtitle(row: HomeRow, locale: java.util.Locale, now: java.util.
     val kind = row.kind?.let { tr(it) }
     val state = row.state?.let { tr(it) }
     return when {
+        row.refunded -> (state!! + " " + tr("· back in your wallet")) to true
         row.failed || row.canceled -> (state!! + if (row.unchanged) " " + tr("· nothing left your wallet") else "") to true
         state != null -> listOfNotNull(state, kind).joinToString(" · ") to false
         else -> listOfNotNull(kind, time).joinToString(" · ") to false

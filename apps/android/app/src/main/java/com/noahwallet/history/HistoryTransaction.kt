@@ -20,10 +20,29 @@ data class HistoryTransaction(
     val inputVtxos: List<String>? = null, val outputVtxos: List<String>? = null, val exitedVtxos: List<String>? = null,
     val balanceChangeSat: Long? = null, val hasOnchainFee: Boolean? = null, val hasConfirmation: Boolean? = null,
     val confirmationHeight: UInt? = null, val confirmationHash: String? = null, val repeatPayment: RepeatPayment? = null,
-    val preimage: String? = null,
+    val preimage: String? = null, val recurring: Recurring? = null,
 ) {
     @Serializable data class Destination(val destination: String, val amount_sat: Long, val paymentMethod: String? = null)
     @Serializable data class Accounting(val direction: String, val amount: Long)
+    /** The recurring schedule this payment ran for, from the recurring journal (see [HistoryMapping.joinRecurring]). */
+    @Serializable data class Recurring(val scheduleID: String, val label: String, val interval: com.noahwallet.recurring.RecurringInterval)
+    private fun method(type: String) = (receivedOn.orEmpty() + sentTo.orEmpty()).firstOrNull { it.paymentMethod == type }?.destination
+    /** The BOLT11 invoice or BOLT12 offer bark stored as this payment's destination. */
+    val invoice get() = method("invoice")
+    val offer get() = method("offer")
+    /** Decoded from the stored BOLT11 invoice, else the hash bark recorded in the metadata. */
+    val paymentHash: String? get() = invoice?.let { com.noahwallet.send.PaymentEncoding.invoice(it)?.hash }
+        ?: metadataJson?.let { runCatching { (kotlinx.serialization.json.Json.parseToJsonElement(it) as? kotlinx.serialization.json.JsonObject)?.string("payment_hash") }.getOrNull() }
+    /** What the payee wrote in the offer or invoice; null when there's none. */
+    val description: String? get() = offer?.let(com.noahwallet.send.PaymentEncoding::offerDescription)
+        ?: invoice?.let { com.noahwallet.send.PaymentEncoding.invoice(it)?.description }
+    /** A Lightning send that failed after leaving the wallet and whose coins bark revoked back (SendProgressRules.refund). */
+    val isRefunded get() = movementStatus == "failed" && subsystemName == "bark.lightning_send" &&
+        !outputVtxos.isNullOrEmpty() && exitedVtxos.isNullOrEmpty()
+    /** A round refresh that paid a fee; free ones never reach history. */
+    val isRenewal get() = movementKind == "refresh"
+    /** Rows today's CSV export includes: the newly shown failed payments moved nothing, so they stay out. */
+    val exported get() = movementStatus != "failed" || movementKind in listOf("onboard", "offboard")
     val isCanceled get() = movementStatus == "canceled"
     val isInternalTransfer get() = movementKind == "onboard"
     val canRepeat get() = direction == "outgoing" && movementStatus == "successful" && repeatPayment != null

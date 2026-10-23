@@ -21,4 +21,5 @@ internal object HomeIcons {
     val chain = R.drawable.ic_home_chain
     val chevron = R.drawable.ic_home_chevron
     val close = R.drawable.ic_home_close
+    val repeat = R.drawable.ic_activity_repeat
 }

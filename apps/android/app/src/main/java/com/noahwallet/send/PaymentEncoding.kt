@@ -84,7 +84,8 @@ object PaymentEncoding {
         return if (decoded[0].toInt() and 255 in listOf(0, 111)) byteArrayOf(0x76, 0xa9.toByte(), 0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x88.toByte(), 0xac.toByte())
         else byteArrayOf(0xa9.toByte(), 0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x87.toByte())
     }
-    data class Invoice(val network: String, val sats: BigDecimal?, val hash: String, val expires: Long, val descriptionHash: String?)
+    data class Invoice(val network: String, val sats: BigDecimal?, val hash: String, val expires: Long, val descriptionHash: String?,
+        val description: String? = null)
     fun invoice(value: String): Invoice? {
         val decoded = bech32(value) ?: return null
         if (decoded.isM || decoded.words.size < 111) return null
@@ -97,18 +98,44 @@ object PaymentEncoding {
             amount = digits.toBigDecimalOrNull()?.multiply(if (suffix) mapOf('m' to "100000", 'u' to "100", 'n' to "0.1", 'p' to "0.0001").getValue(unit).toBigDecimal() else BigDecimal(100000000)) ?: return null
         }
         val payload = decoded.words.dropLast(104)
-        var index = 7; var hash: String? = null; var descriptionHash: String? = null; var expiry = 3600L
+        var index = 7; var hash: String? = null; var descriptionHash: String? = null; var expiry = 3600L; var description: String? = null
         while (index + 3 <= payload.size) {
             val tag = payload[index]; val count = payload[index + 1] * 32 + payload[index + 2]; index += 3
             if (index + count > payload.size) return null
             val data = payload.subList(index, index + count); index += count
             if (tag == 1 || tag == 23) bytes(data)?.takeIf { it.size == 32 }?.let { if (tag == 1) hash = hex(it) else descriptionHash = hex(it) }
             if (tag == 6) { if (data.size > 12) return null; expiry = data.fold(0L) { acc, x -> acc * 32 + x } }
+            if (tag == 13) description = utf8(data)
         }
         if (hash == null || index != payload.size) return null
         val timestamp = payload.take(7).fold(0L) { acc, x -> acc * 32 + x }
-        return Invoice(mapOf("lnbc" to "mainnet", "lntb" to "testnet", "lntbs" to "signet", "lnbcrt" to "regtest").getValue(networkPrefix), amount, hash!!, timestamp + expiry, descriptionHash)
+        return Invoice(mapOf("lnbc" to "mainnet", "lntb" to "testnet", "lntbs" to "signet", "lnbcrt" to "regtest").getValue(networkPrefix), amount, hash!!, timestamp + expiry, descriptionHash, description)
     }
+    /** A BOLT12 offer's `offer_description` (TLV 10): bech32 words without a checksum, `+` joins split parts. */
+    fun offerDescription(offer: String): String? {
+        val value = offer.replace(Regex("\\+\\s*"), "").lowercase()
+        if (!value.startsWith("lno1")) return null
+        val words = value.drop(4).map { alphabet.indexOf(it) }.takeIf { it.none { word -> word < 0 } } ?: return null
+        val tlv = bytes(words) ?: return null
+        var index = 0
+        fun bigSize(): Long? {
+            val first = tlv.getOrNull(index++)?.toInt()?.and(255) ?: return null
+            val width = when (first) { 0xfd -> 2; 0xfe -> 4; 0xff -> 8; else -> return first.toLong() }
+            if (index + width > tlv.size) return null
+            return (0 until width).fold(0L) { acc, i -> (acc shl 8) or (tlv[index + i].toLong() and 255) }.also { index += width }
+        }
+        while (index < tlv.size) {
+            val type = bigSize() ?: return null; val length = bigSize() ?: return null
+            if (length < 0 || length > tlv.size - index) return null
+            if (type == 10L) return utf8(tlv.copyOfRange(index, index + length.toInt()))
+            index += length.toInt()
+        }
+        return null
+    }
+    private fun utf8(words: List<Int>) = bytes(words)?.let(::utf8)
+    private fun utf8(data: ByteArray): String? = runCatching {
+        Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(data)).toString()
+    }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
     fun sha256(bytes: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(bytes)
     fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
 }
