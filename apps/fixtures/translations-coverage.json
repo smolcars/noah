@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1537,
-  "sourceKeys": 1545,
+  "catalogEntries": 1538,
+  "sourceKeys": 1546,
   "coverage": {
     "ios": {
       "used": [
@@ -2030,6 +2030,7 @@
         "Refresh Server",
         "Refresh VTXO",
         "Refresh VTXOs",
+        "Refresh activity",
         "Refresh app logs",
         "Refresh fee",
         "Refresh payment status",
@@ -2310,7 +2311,6 @@
         "Transaction size",
         "Transactions",
         "Transfer",
-        "Transferred",
         "Try again",
         "Turn on notifications",
         "Type",

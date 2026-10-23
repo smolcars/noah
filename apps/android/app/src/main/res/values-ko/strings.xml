@@ -999,6 +999,7 @@
   <string name="gt_81efe61214483139">"서버 갱신"</string>
   <string name="gt_abc9793f7de5bd33">"VTXO 새로고침"</string>
   <string name="gt_12e9814ebb03b5ec">"VTXO 새로고침"</string>
+  <string name="gt_4a7fda6546a2ec0b">"활동 새로고침"</string>
   <string name="gt_a6d23a9a6e2f9501">"앱 로그 새로고침"</string>
   <string name="gt_5b987d1a4ee6d349">"갱신 수수료"</string>
   <string name="gt_ffc1364cefebd7a2">"네트워크 상태 새로 고침"</string>

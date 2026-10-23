@@ -35881,6 +35881,42 @@
         }
       }
     },
+    "Refresh activity": {
+      "comment": "GT gt_4a7fda6546a2ec0b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh activity"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar actividad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティビティを更新"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활동 새로고침"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uppdatera aktivitet"
+          }
+        }
+      }
+    },
     "Refresh app logs": {
       "comment": "GT gt_a6d23a9a6e2f9501; arguments: none",
       "extractionState": "manual",

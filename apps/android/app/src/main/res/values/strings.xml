@@ -999,6 +999,7 @@
   <string name="gt_81efe61214483139">"Refresh Server"</string>
   <string name="gt_abc9793f7de5bd33">"Refresh VTXO"</string>
   <string name="gt_12e9814ebb03b5ec">"Refresh VTXOs"</string>
+  <string name="gt_4a7fda6546a2ec0b">"Refresh activity"</string>
   <string name="gt_a6d23a9a6e2f9501">"Refresh app logs"</string>
   <string name="gt_5b987d1a4ee6d349">"Refresh fee"</string>
   <string name="gt_ffc1364cefebd7a2">"Refresh network status"</string>

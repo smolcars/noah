@@ -507,7 +507,8 @@ private fun ActivityMenu(open: Boolean, filter: HistoryFilter, onDismiss: () -> 
         HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.hairline)
         DropdownMenuItem({ Text(tr("Export CSV"), style = ActivityType.menu) }, onExport, colors = colors, leadingIcon = { Spacer(Modifier.size(18.dp)) },
             trailingIcon = { Icon(painterResource(R.drawable.ic_activity_share), null, Modifier.size(20.dp)) })
-        DropdownMenuItem({ Text(tr("Refresh"), style = ActivityType.menu) }, onRefresh, colors = colors, leadingIcon = { Spacer(Modifier.size(18.dp)) },
+        // Its own string: the shared "Refresh" reads as "renew" in es, sv and ko.
+        DropdownMenuItem({ Text(tr("Refresh activity"), style = ActivityType.menu) }, onRefresh, colors = colors, leadingIcon = { Spacer(Modifier.size(18.dp)) },
             trailingIcon = { Icon(painterResource(R.drawable.ic_activity_refresh), null, Modifier.size(20.dp)) })
     }
 }
