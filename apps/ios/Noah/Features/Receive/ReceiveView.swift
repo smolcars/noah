@@ -213,8 +213,9 @@ struct ReceiveView: View {
                 .foregroundStyle(phase.done ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
                 .frame(maxWidth: .infinity, minHeight: 20)
                 .id(phase.text)
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)))
+                .transition(.asymmetric(insertion: reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)), removal: .identity))
                 .animation(NoahTokens.Motion.travel(reduceMotion), value: phase.text)
+                .accessibilityHidden(phase.text.isEmpty)
                 .accessibilityIdentifier("receive-phase")
         }
     }
@@ -343,9 +344,11 @@ struct ReceiveView: View {
         let wait = arrival.settledAt - arrival.elapsed(Date())
         if wait > 0 { do { try await Task.sleep(for: .seconds(wait)) } catch { return } }
         guard self.arrival?.id == arrival.id else { return }
-        self.arrival = nil
+        // Regenerate before clearing the arrival: clearing it ends this task.
         format = ReceiveFormat.after(amountChange: false, from: format)
         if isActive && fixture == nil { await model.start() }
+        guard self.arrival?.id == arrival.id else { return }
+        self.arrival = nil
     }
 
     private var chainKey: String? {
