@@ -1,5 +1,6 @@
 package com.noahwallet.ui
 
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,5 +41,49 @@ class ReceiveContentTest {
         compose.runOnIdle { ui = ui.copy(saving = true, invoiceError = null) }
         compose.runOnIdle { ui = ui.copy(saving = false, request = ReceiveFixtures.withAmount, format = ReceiveFormat.request) }
         compose.onAllNodesWithTag("receive-amount-submit").assertCountEquals(0)
+    }
+
+    @Test fun aNewArrivalClosesOpenSheetsBeforeItPlays() {
+        var ui by mutableStateOf(ReceiveFixtures.ui("address").copy(listening = false))
+        compose.mainClock.autoAdvance = false
+        compose.setContent { NoahTheme { ReceivePreviewHost(ui) } }
+        compose.mainClock.advanceTimeBy(500)
+        fun arrive() {
+            compose.runOnUiThread { ui = ui.copy(arrival = ReceiveArrival(ReceiveArrival.Rail.ark, 2_100, SystemClock.elapsedRealtime())) }
+            compose.mainClock.advanceTimeBy(16)
+        }
+        // Ways to pay you: a sheet on a compact screen only (wide and tabletop list the formats beside the card).
+        if (compose.onAllNodesWithTag("receive-formats").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithTag("receive-formats").performClick()
+            compose.mainClock.advanceTimeBy(600)
+            compose.onNodeWithText("Ways to pay you").assertExists()
+            arrive()
+            compose.onAllNodesWithText("Ways to pay you").assertCountEquals(0)
+            compose.runOnUiThread { ui = ui.copy(arrival = null) }
+            compose.mainClock.advanceTimeBy(500)
+        }
+        compose.onNodeWithTag("receive-amount-button").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithTag("receive-amount-submit").assertExists()
+        arrive()
+        compose.onAllNodesWithTag("receive-amount-submit").assertCountEquals(0)
+        // A sheet opened while that arrival plays stays open: the arrival isn't new.
+        compose.onNodeWithTag("receive-amount-button").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithTag("receive-amount-submit").assertExists()
+    }
+
+    @Test fun aRestoredArrivalLeavesARestoredSheetOpen() {
+        val ui = ReceiveFixtures.ui("address").copy(listening = false, arrival = ReceiveFixtures.arrival(ReceiveArrival.Rail.onchain, 20_000))
+        val restoration = StateRestorationTester(compose)
+        compose.mainClock.autoAdvance = false
+        restoration.setContent { NoahTheme { ReceivePreviewHost(ui) } }
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithTag("receive-amount-button").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithTag("receive-amount-submit").assertExists()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithTag("receive-amount-submit").assertExists()
     }
 }

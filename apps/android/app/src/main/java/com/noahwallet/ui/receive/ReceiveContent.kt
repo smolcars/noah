@@ -263,11 +263,19 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
             }
         }
     }
-    if (sheet == "formats" && !paned) TonalSheet({ sheet = null }) {
+    // An arrival plays on the card, so a new one closes any open sheet in the frame it starts; one already playing
+    // when the screen is restored keeps its sheet.
+    var presented by rememberSaveable { mutableStateOf(ui.arrival?.startedAt) }
+    val arriving = ui.arrival != null && ui.arrival.startedAt != presented
+    LaunchedEffect(ui.arrival?.startedAt) {
+        if (ui.arrival != null && ui.arrival.startedAt != presented) sheet = null
+        presented = ui.arrival?.startedAt
+    }
+    if (sheet == "formats" && !paned && !arriving) TonalSheet({ sheet = null }) {
         Text(tr("Ways to pay you"), Modifier.padding(bottom = 4.dp).semantics { heading() }, style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)), color = palette.foreground)
         FormatList(ui, rows, onSelect = { select(it, true) }, onCopy = ::copy)
     }
-    if (sheet == "amount" && ui.request != null) TonalSheet({ if (!ui.saving) sheet = null }) {
+    if (sheet == "amount" && ui.request != null && !arriving) TonalSheet({ if (!ui.saving) sheet = null }) {
         ReceiveAmountSheet(ui, onDone = { sats, note ->
             when {
                 sats == 0L && ui.amount == null -> sheet = null
