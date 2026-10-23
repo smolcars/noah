@@ -12,9 +12,17 @@ legacy secrets. Fresh creation derives key 0 before server registration.
 Onboarding includes the beta warning, secure recovery phrase, emergency email and
 Lightning identity. Restore accepts a private 12-word recovery phrase or uses the
 securely stored phrase after wallet data loss; see [restore verification](RestoreTests/README.md).
-Home uses the full wallet balance and RN-compatible unit/privacy settings. Receive
-supports BIP-321 QR, amount/note editing, fiat, copy/share and Ark/Lightning completion.
+Home uses the full wallet balance and RN-compatible unit/privacy settings. Send and
+Receive follow [the redesign](../../docs/native-rewrite/design/send-receive.md) on top of
+the unchanged `SendModel`/`SendController` and receive request: hold to send, a motion
+stage that advances only as the controller reaches each milestone, and a Receive card that
+defaults to the Lightning address, with every format, amount requests and arrivals.
 Notification permission and the existing push layer run after onboarding.
+
+Send and Receive have an opt-in fixture gallery (no wallet is used):
+`adb shell am instrument -w -e class com.noahwallet.ui.SendReceiveGalleryTest -e noahSRShots <label> com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner`,
+then pull `files/sr-shots/<label>` with `run-as`. `SendHoldTest`, `SendReceiveFoldTest` and
+`ReceiveQRTest` run unconditionally.
 
 ## Build and install
 
