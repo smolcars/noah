@@ -11,6 +11,9 @@ class SendLightningTest {
     private suspend fun submit(state: LightningSendStatus, movements: List<Movement> = emptyList(), checkpoint: SendCheckpoint? = null,
         quote: SendQuote = FakeSendWallet.quote.copy(fee = 83, total = 1083), check: suspend (String) -> LightningSendStatus = { LightningSendStatus.Unknown }, pay: suspend () -> LightningSendStatus): LightningSendStatus =
         SendLightningSubmission.submit(payment(), state, movements, checkpoint, quote, check, pay)
+    @Test fun sendsWaitWithAnExplicitSixtySecondServerRetry() {
+        assertEquals(LightningSendOptions(wait = true, retryForSecs = 60u), SendLightningSubmission.options)
+    }
     @Test fun checkpointNeverFallsThroughToPay() = runBlocking {
         var pays = 0
         for (amount in listOf(1000L, 2000L)) {

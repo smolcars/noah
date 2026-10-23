@@ -36,6 +36,9 @@ import kotlinx.serialization.Serializable
     }
 }
 object SendLightningSubmission {
+    /** Every send waits for its outcome (wait = false is a later phase, see async-payments.md).
+     *  60 s is today's server default, set explicitly; the server caps it (5 min by default). */
+    val options = LightningSendOptions(wait = true, retryForSecs = 60u)
     suspend fun offer(pending: List<LightningSend>, pay: suspend () -> LightningSendStatus): LightningSendStatus {
         requireSend(pending.isEmpty(), SendFailure.Reason.lightningInProgress)
         return pay()

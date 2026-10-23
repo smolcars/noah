@@ -127,9 +127,9 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 val state = pending.firstOrNull()?.let { LightningSendStatus.InProgress(it) } ?: wallet.lightningSendState(decoded.hash)
                 SendLightningSubmission.submit(resolved, state, wallet.history(), snapshot.checkpoint, quote,
                     check = { beforeSubmit?.invoke(); wallet.checkLightningPayment(it, false) },
-                    pay = { beforeSubmit?.invoke(); wallet.payLightningInvoice(invoice, if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), true) })
+                    pay = { beforeSubmit?.invoke(); wallet.payLightningInvoice(invoice, if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), SendLightningSubmission.options) })
             }
-            "offer" -> SendLightningSubmission.offer(wallet.pendingLightningSends()) { beforeSubmit?.invoke(); wallet.payLightningOffer(payment.destination, payment.amount.toULong(), true) }
+            "offer" -> SendLightningSubmission.offer(wallet.pendingLightningSends()) { beforeSubmit?.invoke(); wallet.payLightningOffer(payment.destination, payment.amount.toULong(), SendLightningSubmission.options) }
             "onchain" -> {
                 if (payment.source == SendSource.onchain) {
                     val prepared = quote.prepared ?: throw SendNotSubmitted(SendFailure.Reason.feeChanged)
@@ -141,7 +141,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                         val ids = wallet.spendableVtxos().map { it.id }.toSet()
                         if (quote.vtxoIDs.isNullOrEmpty() || ids != quote.vtxoIDs.toSet()) throw SendNotSubmitted(SendFailure.Reason.fundsChanged)
                         wallet.offboardVtxos(quote.vtxoIDs, payment.destination).txid
-                    } else wallet.sendOnchain(payment.destination, payment.amount.toULong())
+                    } else wallet.sendOnchain(payment.destination, payment.amount.toULong()).txid
                     receipt = SendReceipt(if (payment.max) 0 else quote.amount, txid = txid, amountIsPending = payment.max, proof = SendReceipt.Proof.submitReturnedTxid)
                     runCatching { wallet.history() }.getOrNull()?.let { receipt = SendReconciliation.offboardReceipt(receipt, payment, it) }
                 }
