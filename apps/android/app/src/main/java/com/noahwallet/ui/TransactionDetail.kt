@@ -3,6 +3,7 @@ package com.noahwallet.ui
 import com.noahwallet.ui.WalletModalBottomSheet
 
 import com.noahwallet.localization.tr
+import com.noahwallet.localization.trPlural
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -27,9 +28,20 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.*
 import com.noahwallet.history.*
 
+/** What Home's sheet says a payment did and what it paid: Activity's shared status and fee rules, so a failed send never reads "Sent". */
+internal data class PaymentSummary(val status: String, val tone: com.noahwallet.ui.activity.ActivityRules.Tone,
+                                   val fees: List<com.noahwallet.ui.activity.ActivityRules.FeeLine>)
+internal fun paymentSummary(row: HistoryTransaction, ownDomain: String?): PaymentSummary {
+    val activity = com.noahwallet.ui.activity.ActivityRules.Row(row, com.noahwallet.ui.home.HomeRow.of(row, ownDomain))
+    val (status, tone) = com.noahwallet.ui.activity.ActivityRules.status(activity)
+    return PaymentSummary(status, tone, com.noahwallet.ui.activity.ActivityRules.fees(row, activity.home))
+}
+
 @Composable
 internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: (RepeatPayment) -> Unit, onClose: () -> Unit) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val domain = app.server.state.lightningAddress?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }
+    val summary = remember(row, domain) { paymentSummary(row, domain) }
     var technical by rememberSaveable(row.id) { mutableStateOf(false) }
     var explorerError by remember(row.id) { mutableStateOf(false) }
     val context = LocalContext.current
@@ -42,7 +54,8 @@ internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat:
         }
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(painterResource(transactionIcon(row)), null, Modifier.size(36.dp), tint = transactionColor(row))
-            Text(tr(when (row.accounting.direction) { "Transfer" -> "Transferred"; "None" -> "Canceled"; "Outgoing" -> "Sent"; else -> "Received" }))
+            Text(if (row.isRenewal) trPlural(summary.status, row.inputVtxos.orEmpty().size.coerceAtLeast(1)) else tr(summary.status),
+                color = if (summary.tone == com.noahwallet.ui.activity.ActivityRules.Tone.failed) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Unspecified)
             Text(tr(BitcoinAmount.format(row.amount, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
             Text(tr(row.btcPrice?.let { FiatCurrency.display(row.amount, it, app.preferredCurrency, locale) } ?: "Historical value unavailable"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -61,8 +74,14 @@ internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat:
             }
             if (repeat.comment.isNotEmpty()) DetailValue("Message", repeat.comment)
         }
-        AmountDetail("Ark fee", row.offchainFeeSat, app.amountUnit)
-        if (row.hasOnchainFee == true) AmountDetail("Onchain fee", row.onchainFeeSat, app.amountUnit)
+        summary.fees.forEach { line ->
+            DetailValue(line.label, when (val value = line.value) {
+                is com.noahwallet.ui.activity.ActivityRules.FeeValue.Sats -> BitcoinAmount.format(value.sats, app.amountUnit, locale)
+                is com.noahwallet.ui.activity.ActivityRules.FeeValue.UpTo -> tr("Up to {amount}", BitcoinAmount.format(value.sats, app.amountUnit, locale))
+                com.noahwallet.ui.activity.ActivityRules.FeeValue.Free -> tr("Free")
+                com.noahwallet.ui.activity.ActivityRules.FeeValue.None -> tr("None")
+            })
+        }
         TextButton({ technical = !technical }, Modifier.fillMaxWidth().semantics { stateDescription = if (technical) "Expanded" else "Collapsed" }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) {
             Text(tr(if (technical) "Hide technical details" else "Technical details"))
         }
