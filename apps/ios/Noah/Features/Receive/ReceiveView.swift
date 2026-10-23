@@ -120,10 +120,15 @@ struct ReceiveView: View {
             Task { await app.refresh() }
         }
         .onChange(of: model.baseError) { _, error in if error != nil { sheet = nil; paneSheet = false } }
-        .onChange(of: model.request?.amountSat) { old, new in
-            guard arrival == nil, model.request != nil else { return }
-            let next = ReceiveFormat.after(amountChange: new != nil, from: format)
-            if next != format || (old == nil) != (new == nil) { show(next, haptic: false) }
+        .onChange(of: model.request) { old, new in
+            guard arrival == nil, let new else { return }
+            if let old, old.arkAddress == new.arkAddress, old.onchainAddress == new.onchainAddress {
+                // The same request with a new amount, or with it removed.
+                if old.amountSat != new.amountSat { show(ReceiveFormat.after(amountChange: new.amountSat != nil), haptic: false) }
+            } else {
+                // A fresh request (on returning to Receive): keep only a format it can show.
+                format = ReceiveFormat.reconciled(format, hasAmount: new.amountSat != nil)
+            }
         }
         .task(id: arrival?.id) { await playArrival() }
         .task {
@@ -345,7 +350,7 @@ struct ReceiveView: View {
         if wait > 0 { do { try await Task.sleep(for: .seconds(wait)) } catch { return } }
         guard self.arrival?.id == arrival.id else { return }
         // Regenerate before clearing the arrival: clearing it ends this task.
-        format = ReceiveFormat.after(amountChange: false, from: format)
+        format = ReceiveFormat.reconciled(format, hasAmount: false)
         if isActive && fixture == nil { await model.start() }
         guard self.arrival?.id == arrival.id else { return }
         self.arrival = nil

@@ -57,10 +57,14 @@ enum ReceiveFormat: String, CaseIterable, Identifiable, Sendable {
     /// The inverted amount band grows under the request and the invoice once an amount exists.
     func showsBand(hasAmount: Bool) -> Bool { hasAmount && (self == .request || self == .invoice) }
 
-    /// The format to show after the amount changes: an amount shows the unified request;
-    /// clearing it returns from the request or invoice to the Lightning address.
-    static func after(amountChange hasAmount: Bool, from current: Self) -> Self {
-        if hasAmount { return .request }
-        return current == .request || current == .invoice ? .lightningAddress : current
+    /// The format to show after you change the amount: an amount shows the unified request;
+    /// removing it returns to the Lightning address, whatever was showing.
+    static func after(amountChange hasAmount: Bool) -> Self { hasAmount ? .request : .lightningAddress }
+
+    /// The format to keep for a fresh request (on returning to Receive, or after a payment):
+    /// without an amount, the request and invoice return to the Lightning address; the
+    /// addresses stay.
+    static func reconciled(_ current: Self, hasAmount: Bool) -> Self {
+        !hasAmount && (current == .request || current == .invoice) ? .lightningAddress : current
     }
 }
