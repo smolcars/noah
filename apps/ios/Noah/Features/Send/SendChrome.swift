@@ -72,14 +72,31 @@ struct SendAvatar: View {
 struct SendDetailRow<Value: View>: View {
     let label: LocalizedStringKey
     var last = false
+    /// Too long for one line, the label sits above the value and both wrap rather than truncate.
+    var wraps = false
     @ViewBuilder let value: Value
 
     var body: some View {
-        HStack(spacing: 12) {
-            Text(label).noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
-                .lineLimit(1)
+        let title = Text(label).noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
+        let line = HStack(spacing: 12) {
+            title.lineLimit(1)
             Spacer(minLength: 8)
             value.foregroundStyle(NoahTokens.Colors.foreground).lineLimit(1)
+        }
+        Group {
+            if wraps {
+                ViewThatFits(in: .horizontal) {
+                    line
+                    VStack(alignment: .leading, spacing: 2) {
+                        title
+                        value.foregroundStyle(NoahTokens.Colors.foreground)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 10)
+                }
+            } else {
+                line
+            }
         }
         .frame(minHeight: 48)
         .overlay(alignment: .bottom) {
@@ -97,8 +114,8 @@ extension SendDetailRow where Value == AnyView {
         }
     }
 
-    init(_ label: LocalizedStringKey, text: String, verbatim: Bool = false, glyph: String? = nil, last: Bool = false) {
-        self.init(label: label, last: last) {
+    init(_ label: LocalizedStringKey, text: String, verbatim: Bool = false, glyph: String? = nil, last: Bool = false, wraps: Bool = false) {
+        self.init(label: label, last: last, wraps: wraps) {
             AnyView(HStack(spacing: 6) {
                 if let glyph { Image(systemName: glyph).font(.system(size: 14, weight: .medium)) }
                 Group { if verbatim { Text(verbatim: text) } else { Text(LocalizedStringKey(text)) } }

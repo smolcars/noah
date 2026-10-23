@@ -81,8 +81,8 @@ struct SendConfirmation: View {
             .frame(maxWidth: isWide ? OnboardingLayout.paneContentWidth + 68 : nil)
             .frame(maxWidth: .infinity, maxHeight: isWide ? .infinity : nil, alignment: .top)
             VStack(alignment: .leading, spacing: 0) {
-                // Wide: rows and Hold to send sit at the bottom of the trailing pane (prototype `#vReview .R`).
-                if isWide { Spacer(minLength: 66) }
+                // Wide: rows and Hold to send sit at the bottom of the trailing pane (prototype `#vReview .R`),
+                // and the rows scroll when large text makes them taller than the pane.
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         rows.padding(.top, isWide ? 0 : 24)
@@ -93,8 +93,9 @@ struct SendConfirmation: View {
                     }
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .fixedSize(horizontal: false, vertical: isWide)
-                .frame(maxHeight: isWide ? nil : .infinity)
+                .defaultScrollAnchor(isWide ? .bottom : nil, for: .alignment)
+                .frame(maxHeight: .infinity)
+                .padding(.top, isWide ? 66 : 0)
                 SendHoldButton(amount: format(quote.amount), enabled: !controller.locked) {
                     (gate ?? ownGate).confirm(generation: controller.generation) {
                         if let confirm { confirm() } else { controller.submit(payment, quote: quote) }
@@ -120,7 +121,7 @@ struct SendConfirmation: View {
                 SendDetailRow("From", text: source.label)
             }
             SendDetailRow("Arrives", text: Self.arrives(rail, required: WalletConfiguration.base(for: .current).roundTxRequiredConfirmations,
-                                                        locale: locale.identifier), verbatim: true)
+                                                        locale: locale.identifier), verbatim: true, wraps: true)
             if quote.fee == 0 && rail == .ark {
                 SendDetailRow(estimated ? "Estimated fee" : "Fee", text: "Free")
             } else {

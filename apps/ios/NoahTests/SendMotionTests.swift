@@ -442,6 +442,37 @@ struct SendMotionTests {
         }
     }
 
+    /// The Arrives row never cuts its value off on an SE-width phone (a 335-pt review column):
+    /// too long for one line (Swedish at xxxLarge, every language at accessibility sizes), its label
+    /// and value stack and wrap. A row that fits keeps its one line.
+    @Test func arrivesStaysReadableAtEveryTextSize() {
+        func size(_ view: some View, width: CGFloat, _ locale: String, _ type: DynamicTypeSize) -> CGSize {
+            UIHostingController(rootView: view.environment(\.locale, Locale(identifier: locale)).environment(\.dynamicTypeSize, type))
+                .sizeThatFits(in: CGSize(width: width, height: 10_000))
+        }
+        let column: CGFloat = 335
+        var stacked = 0
+        for locale in LegacyLocale.supported {
+            let rows = [SendMotion.Rail.ark, .lightning, .onchainWallet].map { SendConfirmation.arrives($0, required: 2, locale: locale) }
+                + [1, 2].map { SendConfirmation.arrives(.onchainSwap, required: $0, locale: locale) }
+            for type in DynamicTypeSize.allCases {
+                for text in rows {
+                    let row = size(SendDetailRow("Arrives", text: text, verbatim: true, wraps: true), width: column, locale, type)
+                    let line = size(SendDetailRow("Arrives", text: text, verbatim: true).fixedSize(), width: 10_000, locale, type)
+                    if line.width <= column {
+                        #expect(row.height == line.height, "\(locale) \(type) \(text)")
+                        continue
+                    }
+                    stacked += 1
+                    let label = size(Text("Arrives").noahText(NoahTokens.Typography.body), width: column, locale, type)
+                    let value = size(Text(verbatim: text).noahText(NoahTokens.Typography.label), width: column, locale, type)
+                    #expect(row.height >= label.height + value.height, "\(locale) \(type) \(text)")
+                }
+            }
+        }
+        #expect(stacked > 0)
+    }
+
     /// The ticks land at 25, 50 and 75% of the 0.8 s hold, so completion never cuts the last one.
     @Test func holdTicksAtAQuarterHalfAndThreeQuarters() {
         let expected = [0.25, 0.5, 0.75].map { $0 * SendHoldButton.duration }
