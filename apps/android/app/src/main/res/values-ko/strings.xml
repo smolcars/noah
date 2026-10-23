@@ -93,6 +93,7 @@
   <string name="gt_72c7f155f1532f44">"도착"</string>
   <string name="gt_f5d2fa6426c30863">"온체인 잔액으로 %1$s sats와 수수료를 충당하고 온체인에 최소 5,000 sats를 남길 수 있을 때 Ark 입금을 제안합니다. 입금 전에 정확한 수수료와 남겨 둘 금액을 확인하세요."</string>
   <string name="gt_0c2d9eae6632bce6">"온체인 자금으로 %1$s sats, 수수료, 예비 자금 5,000 sats를 충당할 수 있으면 입금 여부를 묻습니다."</string>
+  <string name="gt_e3c03bb0dee641c5">"%1$s 요청"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"3자 이상"</string>
   <string name="gt_4c9ce17646b28614">"감사 불가"</string>
   <string name="gt_c8271c0bafb7c1eb">"지갑을 사용하려면 인증해 주세요"</string>

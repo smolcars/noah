@@ -3313,6 +3313,42 @@
         }
       }
     },
+    "Asks for {amount}": {
+      "comment": "GT gt_e3c03bb0dee641c5; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asks for %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pide %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ の請求"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 요청"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begär %1$@"
+          }
+        }
+      }
+    },
     "At least 3 characters": {
       "comment": "GT gt_2bb9a4e3a6cb73a9; arguments: none",
       "extractionState": "manual",

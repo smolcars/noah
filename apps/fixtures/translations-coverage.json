@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1478,
-  "sourceKeys": 1481,
+  "catalogEntries": 1479,
+  "sourceKeys": 1482,
   "coverage": {
     "ios": {
       "used": [
@@ -83,6 +83,7 @@
         "Arkoor",
         "Arrives",
         "Ask to board to Ark when onchain balance can cover {nativeValue1} sats plus fees while leaving at least 5,000 sats onchain. Confirm the exact fees and reserve before boarding.",
+        "Asks for {amount}",
         "At least 3 characters",
         "Authenticate to access your wallet",
         "Authenticate to disable biometrics",

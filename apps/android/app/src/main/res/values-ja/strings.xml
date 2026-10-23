@@ -93,6 +93,7 @@
   <string name="gt_72c7f155f1532f44">"着金"</string>
   <string name="gt_f5d2fa6426c30863">"オンチェーン残高で%1$s satsと手数料をまかない、さらにオンチェーンに5,000 sats以上を残せる場合に、Arkに入金するか確認します。Arkへの入金前に、正確な手数料と残しておく金額を確認してください。"</string>
   <string name="gt_0c2d9eae6632bce6">"オンチェーン資金で%1$s sats、手数料、予備資金5,000 satsをまかなえる場合に、Arkへの入金を提案します。"</string>
+  <string name="gt_e3c03bb0dee641c5">"%1$s の請求"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"3文字以上"</string>
   <string name="gt_4c9ce17646b28614">"監査を利用できません"</string>
   <string name="gt_c8271c0bafb7c1eb">"認証してウォレットにアクセスしてください"</string>

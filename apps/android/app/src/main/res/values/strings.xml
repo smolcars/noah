@@ -93,6 +93,7 @@
   <string name="gt_72c7f155f1532f44">"Arrives"</string>
   <string name="gt_f5d2fa6426c30863">"Ask to board to Ark when onchain balance can cover %1$s sats plus fees while leaving at least 5,000 sats onchain. Confirm the exact fees and reserve before boarding."</string>
   <string name="gt_0c2d9eae6632bce6">"Ask to board when onchain funds cover %1$s sats, fees, and a 5,000 sats reserve."</string>
+  <string name="gt_e3c03bb0dee641c5">"Asks for %1$s"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"At least 3 characters"</string>
   <string name="gt_4c9ce17646b28614">"Audit unavailable"</string>
   <string name="gt_c8271c0bafb7c1eb">"Authenticate to access your wallet"</string>

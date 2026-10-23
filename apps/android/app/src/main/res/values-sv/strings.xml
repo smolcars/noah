@@ -93,6 +93,7 @@
   <string name="gt_72c7f155f1532f44">"Kommer fram"</string>
   <string name="gt_f5d2fa6426c30863">"Be om att sätta in till Ark när saldot på blockkedjan täcker %1$s sats plus avgifter och minst 5,000 sats kan lämnas kvar på blockkedjan. Bekräfta de exakta avgifterna och reservbeloppet före insättningen."</string>
   <string name="gt_0c2d9eae6632bce6">"Fråga om insättning när medlen på blockkedjan täcker %1$s sats, avgifter och en reserv på 5 000 sats."</string>
+  <string name="gt_e3c03bb0dee641c5">"Begär %1$s"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"Minst 3 tecken"</string>
   <string name="gt_4c9ce17646b28614">"Granskning inte tillgänglig"</string>
   <string name="gt_c8271c0bafb7c1eb">"Verifiera din identitet för att komma åt din plånbok"</string>

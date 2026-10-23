@@ -93,6 +93,7 @@
   <string name="gt_72c7f155f1532f44">"Llega"</string>
   <string name="gt_f5d2fa6426c30863">"Solicitar un depósito en Ark cuando el saldo en cadena permita cubrir %1$s sats más las comisiones y dejar al menos 5,000 sats en cadena. Confirma las comisiones exactas y la reserva antes de depositar."</string>
   <string name="gt_0c2d9eae6632bce6">"Preguntar si deseas depositar cuando los fondos en cadena cubran %1$s sats, las comisiones y una reserva de 5000 sats."</string>
+  <string name="gt_e3c03bb0dee641c5">"Pide %1$s"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"Al menos 3 caracteres"</string>
   <string name="gt_4c9ce17646b28614">"Auditoría no disponible"</string>
   <string name="gt_c8271c0bafb7c1eb">"Autentícate para acceder a tu billetera"</string>
