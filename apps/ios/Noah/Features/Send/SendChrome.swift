@@ -216,6 +216,7 @@ private struct KeypadKey: View {
         .disabled(key.isEmpty)
         .opacity(key.isEmpty ? 0 : 1)
         .accessibilityLabel(Text(LocalizedStringKey(key == "⌫" ? "Delete digit" : key)))
+        .accessibilityHidden(key.isEmpty)
         .accessibilityIdentifier("send-key-\(key)")
     }
 }

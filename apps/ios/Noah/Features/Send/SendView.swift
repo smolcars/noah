@@ -44,7 +44,8 @@ struct SendView: View {
     @State private var shake = 0
     /// An amount typed before an invoice set its own (for the review's note).
     @State private var typedAmount: UInt64?
-    @State private var forward = true
+    /// The screen before this one, for the slide's direction.
+    @State private var lastScreen = SendScreen.amount
     @State private var railFees: [SendRail: UInt64] = [:]
     @FocusState private var focus: Field?
     private enum Field { case recipient, note }
@@ -71,7 +72,7 @@ struct SendView: View {
             screenView
                 .id(screen)
                 .transition(reduceMotion ? .opacity : .asymmetric(
-                    insertion: .opacity.combined(with: .offset(x: forward ? 28 : -28)), removal: .opacity))
+                    insertion: .opacity.combined(with: .offset(x: screen >= lastScreen ? 28 : -28)), removal: .opacity))
         }
         .animation(NoahTokens.Motion.travel(reduceMotion), value: screen)
         .toolbar(.hidden, for: .navigationBar)
@@ -99,7 +100,7 @@ struct SendView: View {
             model.onchainBalance = summary?.balance.onchain.confirmed ?? 0
             model.onchainTotal = summary?.balance.onchain.total ?? 0
         }
-        .onChange(of: screen) { old, new in forward = new >= old }
+        .onChange(of: screen) { _, new in lastScreen = new }
         .onChange(of: model.stage) { _, _ in focus = nil }
         .onChange(of: model.controller.state) { _, state in if state != .ready { focus = nil } }
         .onChange(of: scenePhase) { _, phase in if phase != .active { cancelReview() } }
@@ -466,7 +467,11 @@ struct SendView: View {
         let suggestions = model.suggestions.filter { $0.lowercased() != typed.lowercased() }
         let recents = SendRecent.matching(SendRecent.from(history.transactions, ownDomain: ownDomain, limit: 12), query: typed)
             .filter { $0.destination.lowercased() != typed.lowercased() && !suggestions.contains($0.destination) }
-        let primary = parsed.error == nil ? typeName(parsed.destinationType, destination: typed) : nil
+        // An invoice already says what it is; its line says what it asks for (prototype `REC.inv`).
+        let asks = parsed.destinationType == "lightning" ? parsed.amount.map {
+            L10n.text("Asks for {amount}", format(NSDecimalNumber(decimal: $0).uint64Value), locale: locale.identifier)
+        } : nil
+        let primary = parsed.error == nil ? asks ?? typeName(parsed.destinationType, destination: typed) : nil
         VStack(spacing: 0) {
             if let primary {
                 resultRow(label: recipientLabel, type: primary, busy: model.busy || model.resolvingRecipient,

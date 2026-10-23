@@ -42,7 +42,9 @@ struct SendOutcomeView: View {
     private var outcome: SendMotion.Outcome {
         SendMotion.outcome(state: controller.state, attempt: attempt, checking: controller.checking, refund: refund)
     }
-    private var kind: SendResultKind { SendResultKind.of(state: controller.state, outcome: outcome, slow: slow) }
+    /// A status check never takes a shown result back to "Sending".
+    private var shownOutcome: SendMotion.Outcome { outcome == .inFlight && motion.outcome != .inFlight ? motion.outcome : outcome }
+    private var kind: SendResultKind { SendResultKind.of(state: controller.state, outcome: shownOutcome, slow: slow) }
     private var receipt: SendReceipt? {
         switch controller.state {
         case .succeeded(let receipt), .alreadyPaid(let receipt): receipt
@@ -201,8 +203,10 @@ struct SendOutcomeView: View {
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, minHeight: 20)
                 .id(text)
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)))
+                // The new line rises in; the old one gives way at once (prototype `setPhase`).
+                .transition(.asymmetric(insertion: reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)), removal: .identity))
                 .animation(NoahTokens.Motion.travel(reduceMotion), value: text)
+                .accessibilityHidden(text.isEmpty)
                 .accessibilityIdentifier("send-phase")
         }
     }
@@ -356,7 +360,11 @@ struct SendOutcomeView: View {
         } else if receipt.amountIsPending == true {
             SendDetailRow("Fee", text: "Actual fee pending")
         } else if let quote = attempt?.quote {
-            SendDetailRow(quote.approximate ? "Estimated fee" : "Fee", number: format(quote.fee))
+            if quote.fee == 0 && rail == .ark {
+                SendDetailRow("Fee", text: "Free")
+            } else {
+                SendDetailRow(quote.approximate ? "Estimated fee" : "Fee", number: format(quote.fee))
+            }
         }
     }
 
@@ -534,10 +542,11 @@ struct SendOutcomeView: View {
         }
     }
 
-    private var resultKey: String { "\(rail)-\(outcome)-\(motion.submittedAt?.timeIntervalSince1970 ?? 0)-\(motion.outcomeAt?.timeIntervalSince1970 ?? 0)" }
+    private var resultKey: String { "\(rail)-\(shownOutcome)-\(motion.submittedAt?.timeIntervalSince1970 ?? 0)-\(motion.outcomeAt?.timeIntervalSince1970 ?? 0)" }
 
     /// The result appears when the motion reaches it; Lightning that's still paying after about 10 s shows its pending result.
     private func revealResult() async {
+        let outcome = shownOutcome
         let outcomeAt = motion.since(motion.outcomeAt) ?? .infinity
         let at: Double? = switch outcome {
         case .inFlight: rail == .lightning ? SendMotion.payingStart + SendMotion.stillPayingAfter : nil
