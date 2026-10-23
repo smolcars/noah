@@ -27,7 +27,7 @@
 4. **iOS:** an amount-free Live Activity started at hold-to-send, updated whenever the app runs. No `BGContinuedProcessingTask`. Raw APNs Live Activity pushes are optional, last.
 5. **Android:** a `shortService` foreground service for up to 2 minutes, with an ongoing notification (Android 16 `ProgressStyle` Live Update, with a fallback below). Pushes and WorkManager finish slower sends.
 6. **On-chain:** the block row outside the app, refreshed when the app gets time. No long-running work.
-7. **bark:** three small fixes. Fix 2 (drivers reload under the send's lock and finish interrupted settlement) blocks `wait: false`. Until fixes 1 and 3 land, Noah shows "Still sending" or asks for a new invoice rather than guess.
+7. **bark:** three small fixes. Fix 2 (drivers reload under the send's lock and finish interrupted settlement) blocks `wait: false`. Until fixes 1 and 3 land, Noah shows "Still sending", or a cautious failure for a retried invoice, rather than guess.
 
 ## What happens today
 
@@ -105,7 +105,11 @@ Authority is in memory, per process. The authority lock is short: it guards thes
 
 **Live authority wins in recovery.** Every recovery decision about an attempt without a terminal outcome is taken under the authority lock. If this process still holds live authority for the attempt, at any stage (`admitting`, `prepared` but not yet paying, or paying), recovery decides nothing: the submit task owns it and requests a tick when it ends. Recovery applies the stage rules below only when no live authority exists: in a new process, or after the lifecycle revoked it under that lock. Revocation and the decision happen under the same lock, so a revoked task can never mark itself paying afterwards.
 
-**Reused hashes.** Noah doesn't start an attempt on a payment hash that already has a finished bark movement; it asks for a new invoice. Bark 0.8 would reuse that movement, so no evidence could tell the attempts apart. LNURL, Lightning addresses and offers fetch a fresh invoice each time, so this only affects re-paying a pasted BOLT11 invoice. Resuming the user's own reviewed checkpoint stays allowed.
+**Reused hashes (retrying a failed invoice).** The user may retry the same BOLT11 invoice after a failure; a new invoice for the same destination usually fails the same way, so Noah never asks for one (user decision, 2026-10-22). Until bark change 3, bark reuses the hash's finished movement for the new attempt, so movement status can't tell the attempts apart. Noah therefore binds a retry by its own `attemptID`, the payment hash and the checkpoint created after the attempt began, never by the old movement:
+- **Success:** the paid record for the hash, which a failed first attempt never wrote, plus the attempt's checkpoint ending. Shows Sent.
+- **Failure:** the attempt's checkpoint ending with no paid record. Shows "Payment didn't go through" without "back in your wallet", unless the refund outputs can be tied to this attempt.
+- **Never** "already paid" because of the old failed movement.
+LNURL, Lightning addresses and offers fetch a fresh invoice each time and aren't affected. Resuming the user's own reviewed checkpoint stays allowed.
 
 **Evidence.** Each tick reads bark for the bound attempt only:
 
@@ -287,7 +291,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 | --- | --- | --- |
 | 2. Drive only the current checkpoint, and finish interrupted settlement | Yes: Noah doesn't ship `wait: false` (phase 2) without it | A stale driver can bring a checkpoint back after the send ended. A refunded send then reads "Still sending" indefinitely, keeping Send locked, and a paid one stays in bark's pending sends. `wait: false` adds many drivers, so the race becomes likely. A reload that stops at the paid record would strand interrupted settlement: the movement never becomes `Successful`, so Noah never shows Paid. |
 | 1. Late success after revoking starts | No | A late success shows Stuck: slow, but never a false refund. |
-| 3. One movement per attempt | No | Re-paying a failed BOLT11 invoice needs a new invoice. |
+| 3. One movement per attempt | No | A retried invoice's failure shows without "back in your wallet". |
 
 1. **Late success after revoking starts.**
    - In `RevocableHtlcs` and `RevocationStuck`, check the payment status before asking to revoke. On a valid preimage, settle as `PaymentInitiated` does: paid record, HTLCs spent, movement `Successful`.
@@ -308,7 +312,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
    - Tests: mailbox settlement while a driver holds a stale copy brings no checkpoint back. Interrupt settlement after each write (paid record, HTLCs spent, movement `Successful`, locks released), then drive through each caller: settlement finishes once, no checkpoint remains, and the movement is `Successful` with one update.
 **If upstream is slow, an alternative to forking change 2: one driver.** Today Noah opens the wallet with bark's daemon (`runDaemon: true`), whose always-on mailbox stream settles or drives a send (`B/bark/src/mailbox.rs:625-650`) alongside Noah's own pay, check and sync calls; that concurrency is what change 2 makes safe. Noah could instead make its coordinator the only caller that drives Lightning sends, processing mailbox messages, checks and syncs in one serialized queue, with the daemon's own mailbox handling off. The mailbox alone can't be the source of truth: refunds and the near-expiry revocation of a stuck send are driven by bark's checks and sync, not by a mailbox message. Interrupted settlement is then finished by the next sync, as today. Cost: Noah takes over the daemon's mailbox loop, and the FFI must let the daemon run without its mailbox processing (or Noah runs without the daemon). Decide only if change 2 isn't merged upstream by phase 2.
 
-3. **One movement per attempt.** When a send action ends, unlink its movement (`action_id = NULL`), so a new attempt on the same hash gets its own movement. Noah can then drop its "new invoice" rule.
+3. **One movement per attempt.** When a send action ends, unlink its movement (`action_id = NULL`), so a new attempt on the same hash gets its own movement. Noah's retry outcomes are then exact.
 
 ## FFI changes (bark-bolt-ffi on bark 0.8.0)
 
@@ -359,7 +363,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 - **iOS pushes are discretionary** (Apple suggests "two or three per hour") and skip force-quit apps, so "Open Noah to check" will be common on iOS.
 - **Stuck HTLCs** can stay pending for about 43 h, or longer while revocation is refused: beyond the 8 h activity and the Android service. Then only Noah shows them.
 - **Before bark change 1,** a late success stays Stuck, and its HTLCs count as locked.
-- **Before bark change 3,** re-paying a failed BOLT11 invoice needs a new invoice.
+- **Before bark change 3,** a retried invoice's failure can't claim "back in your wallet".
 - **Existing tests.** `wait: false`, `pending` and the `admitting` recovery change today's "may have been sent" and recurring semantics.
 - **Many concurrent sends** mean many activities, against an unspecified system limit. Fall back to notifications.
 - **Intermediaries learn timing.** Expo, Apple, Google and UnifiedPush distributors learn that a send finished at time T. Noah's server already reads the mailbox.
@@ -402,5 +406,5 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 6. **Result notifications when Live Activities are off:** yes.
 7. **Send stays locked while a Lightning send is pending,** with the override parking it: yes.
 8. **Bark changes:** send all three upstream. Change 2 is open as [ark-bitcoin/bark!2663](https://gitlab.com/ark-bitcoin/bark/-/merge_requests/2663) (2026-10-22; it also makes bark's daemon sync drive pending Lightning sends); changes 1 and 3 follow as separate small MRs. Change 2 blocks only `wait: false` background payments (phase 2), not today's app or the Send/Receive redesign; fork it only if upstream hasn't merged it by then.
-9. **"Ask for a new invoice" when re-paying a failed BOLT11 invoice** until bark change 3: explained. Pending their OK.
+9. **Retrying a failed invoice:** allowed, never "ask for a new invoice" (the same destination usually fails again). Until bark change 3, Noah binds the retry by attempt and paid record and shows a cautious failure; change 3 goes upstream as its own small MR.
 10. **Push priority:** normal for every push this design adds. The existing high-priority server wake pushes (maintenance refresh) stay as they are.
