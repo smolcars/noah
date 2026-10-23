@@ -187,6 +187,16 @@ class SendLightningRetryTest {
         assertEquals("checking status never pays", 1, bark.calls)
     }
 
+    @Test fun aResumedRetryCheckpointShowsItsOwnFee() {
+        val checkpoint = SendCheckpoint(LightningSend(hash, emptyList(), 1u, invoice(), 1000u, 79u, 5u, false))
+        val paid = LightningSendStatus.Paid(hash, "proof")
+        // The reused movement's fee field says 0; its effective balance took exactly this checkpoint's fee.
+        assertEquals(79L, checkpoint.receipt(paid, listOf(reused("successful", -1079, longAgo)), payment, quote).fee)
+        // A fee field that agrees is kept, and without that evidence the reading is today's.
+        assertEquals(79L, checkpoint.receipt(paid, listOf(reused("successful", -1079, longAgo, fee = 79u)), payment, quote).fee)
+        assertEquals(0L, checkpoint.receipt(paid, listOf(reused("successful", -1000, longAgo)), payment, quote).fee)
+    }
+
     @Test fun theReusedMovementMustMatchTheAmountAndShowARealFee() {
         val snapshot = SendSnapshot(setOf(5u), invoicePaid = false)
         // An amountless invoice retried for another amount: bark keeps the first attempt's destination amount.

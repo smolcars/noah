@@ -29,8 +29,12 @@ import kotlinx.serialization.Serializable
     }
     fun receipt(status: LightningSendStatus, movements: List<Movement>, payment: SendPayment, quote: SendQuote): SendReceipt {
         requireSend(status is LightningSendStatus.Paid && status.paymentHash == paymentHash && status.preimage.isNotEmpty(), SendFailure.Reason.unresolved)
-        val resolution = SendReconciliation.lightning(movements.filter { SendReconciliation.isLightning(it, paymentHash) }, paymentHash, payment.amount, SendSnapshot())
-        val receipt = (resolution as? SendResolution.Paid)?.receipt ?: throw SendFailure(SendFailure.Reason.unresolved)
+        val bound = movements.filter { SendReconciliation.isLightning(it, paymentHash) }
+        val resolution = SendReconciliation.lightning(bound, paymentHash, payment.amount, SendSnapshot())
+        var receipt = (resolution as? SendResolution.Paid)?.receipt ?: throw SendFailure(SendFailure.Reason.unresolved)
+        // A retried invoice's reused movement keeps its first attempt's fee field; its effective balance took this checkpoint's fee.
+        if (receipt.fee != fee && runCatching { Math.subtractExact(Math.negateExact(bound.single().effectiveBalanceSats), receipt.amount) }.getOrNull() == fee)
+            receipt = receipt.copy(fee = fee)
         requireSend(receipt.isProven(payment, paymentHash) && receipt.fee != null && receipt.fee <= quote.fee && receipt.amount <= quote.total - receipt.fee, SendFailure.Reason.unresolved)
         return receipt
     }
