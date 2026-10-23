@@ -128,13 +128,13 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     }
 
     // The motion follows the controller: each milestone is recorded when the wallet actually reaches it.
-    var refund by remember(controller.attempt?.startedAt) { mutableStateOf<Boolean?>(null) }
+    var refund by remember(controller.attempt?.startedAt) { mutableStateOf<SendRefund?>(null) }
     LaunchedEffect(controller.state, controller.attempt?.startedAt) {
         val attempt = controller.attempt
         refund = when {
             controller.state != SendController.State.failed -> null
-            attempt?.payment?.method !in SendProgressRules.lightningMethods -> false
-            else -> runCatching { SendProgressRules.refundRecorded(controller.state, attempt, app.session.movements()) }.getOrDefault(false)
+            attempt?.payment?.method !in SendProgressRules.lightningMethods -> SendRefund.none
+            else -> runCatching { SendProgressRules.refund(controller.state, attempt, app.session.movements()) }.getOrDefault(SendRefund.none)
         }
     }
     // One State across recompositions: the refund state above is replaced whenever the attempt changes.

@@ -42865,6 +42865,42 @@
         }
       }
     },
+    "That payment didn’t go through.": {
+      "comment": "GT gt_9a17fe4427faafa5; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That payment didn’t go through."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ese pago no se completó."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その支払いは完了しませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제가 완료되지 않았어요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betalningen gick inte igenom."
+          }
+        }
+      }
+    },
     "The Esplora endpoint cannot include a query string or fragment.": {
       "comment": "GT gt_19fe068bbdba00e6; arguments: none",
       "extractionState": "manual",

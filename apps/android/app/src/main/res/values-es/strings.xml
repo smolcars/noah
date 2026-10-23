@@ -1193,6 +1193,7 @@
   <string name="gt_2034ce6155036f8a">"Gracias"</string>
   <string name="gt_2e48454ee6ef8e0a">"Ese código no funcionó. Inténtalo de nuevo."</string>
   <string name="gt_b3a72229e9eb3cc3">"Ese pago no se completó"</string>
+  <string name="gt_9a17fe4427faafa5">"Ese pago no se completó."</string>
   <string name="gt_19fe068bbdba00e6">"El punto de acceso de Esplora no puede incluir una cadena de consulta ni un fragmento."</string>
   <string name="gt_0ac08a81559f95ee">"El punto de acceso de Esplora no puede incluir credenciales."</string>
   <string name="gt_96100ca2d23b8821">"El punto de acceso de Esplora corresponde a otra red Bitcoin."</string>

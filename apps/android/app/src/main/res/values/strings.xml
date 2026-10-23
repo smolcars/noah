@@ -1193,6 +1193,7 @@
   <string name="gt_2034ce6155036f8a">"Thank You"</string>
   <string name="gt_2e48454ee6ef8e0a">"That code didn’t work. Try again."</string>
   <string name="gt_b3a72229e9eb3cc3">"That payment didn’t go through"</string>
+  <string name="gt_9a17fe4427faafa5">"That payment didn’t go through."</string>
   <string name="gt_19fe068bbdba00e6">"The Esplora endpoint cannot include a query string or fragment."</string>
   <string name="gt_0ac08a81559f95ee">"The Esplora endpoint cannot include credentials."</string>
   <string name="gt_96100ca2d23b8821">"The Esplora endpoint is for a different Bitcoin network."</string>

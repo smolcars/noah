@@ -39,6 +39,33 @@ object SendReconciliation {
         if (actual != amount) return SendResolution.Uncertain
         return if (movement.status in listOf("failed", "canceled")) SendResolution.Failed else SendResolution.Uncertain
     }
+    /**
+     * This attempt's outcome from its hash's movement. Retrying a failed invoice, bark 0.8 reuses the hash's finished
+     * movement (async-payments.md, "Reused hashes"), so a movement already in the snapshot is never read by its status
+     * alone. Success is this attempt's when bark had no paid record before it ([SendSnapshot.invoicePaid]; journals
+     * without it go by whether the movement completed after [startedAt]), and its fee is what the movement's effective
+     * balance took beyond the amount: the fee field keeps the first attempt's. Failure needs the movement to have
+     * completed after [startedAt]; until then the attempt may still be running.
+     */
+    fun lightningAttempt(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, startedAt: Long?): SendResolution {
+        val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
+        if (movement.id !in snapshot.movementIDs) return lightning(candidates, hash, amount, snapshot)
+        val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
+        val completedSince = startedAt?.let { start -> movement.completedAt?.let { HistoryRules.parseDate(it) }?.time?.let { it > start } }
+        if (movement.status == "successful" && actual > 0) {
+            val receipt = SendReceipt(actual, paymentHash = hash, movementID = movement.id, fee = movement.offchainFeeSats.toLong(), proof = SendReceipt.Proof.actualMovement)
+            return when (snapshot.invoicePaid ?: completedSince?.not()) {
+                true -> SendResolution.AlreadyPaid(receipt)
+                false -> {
+                    val fee = runCatching { Math.subtractExact(Math.negateExact(movement.effectiveBalanceSats), actual) }.getOrNull()
+                    if (actual == amount && fee != null && fee >= 0) SendResolution.Paid(receipt.copy(fee = fee)) else SendResolution.Uncertain
+                }
+                null -> SendResolution.Uncertain
+            }
+        }
+        if (actual != amount || movement.status !in listOf("failed", "canceled")) return SendResolution.Uncertain
+        return if (completedSince == true) SendResolution.Failed else SendResolution.Uncertain
+    }
     fun ark(attempt: SendAttempt, movements: List<Movement>): SendResolution {
         val payment = attempt.payment
         if (payment.source == SendSource.onchain) return SendResolution.Uncertain
@@ -47,7 +74,7 @@ object SendReconciliation {
             matches(it, payment, hash) && (hash != null || it.id !in attempt.snapshot.movementIDs &&
                 (HistoryRules.parseDate(it.createdAt)?.time ?: Long.MIN_VALUE) >= attempt.startedAt)
         }
-        return if (hash != null) lightning(candidates, hash, payment.amount, attempt.snapshot) else SendResolution.Candidates(candidates.map { it.id })
+        return if (hash != null) lightningAttempt(candidates, hash, payment.amount, attempt.snapshot, attempt.startedAt) else SendResolution.Candidates(candidates.map { it.id })
     }
     /** SDK 0.6.0 also returns the movement id, which must agree with the txid; journals saved before it bind by txid alone. */
     fun offboardReceipt(receipt: SendReceipt, payment: SendPayment, movements: List<Movement>): SendReceipt {

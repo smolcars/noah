@@ -138,8 +138,9 @@ class SendReceiveGalleryTest {
         ended("send-result-chain-confirmed-2", SendFixtures.Outcome.chainConfirmed, chainPayment, SendFixtures.env(tip = 921_347),
             SendQuote(50_000, 420, 50_420, approximate = true, walletIdentity = SendFixtures.owner))
         ended("send-result-pending", SendFixtures.Outcome.pending, lnPayment, quote = SendQuote(2_500, 12, 2_512, walletIdentity = SendFixtures.owner))
-        ended("send-result-refunded", SendFixtures.Outcome.refunded, lnPayment, SendFixtures.env(refund = true))
-        ended("send-result-failed-no-refund", SendFixtures.Outcome.refunded, lnPayment, SendFixtures.env(refund = false))
+        ended("send-result-refunded", SendFixtures.Outcome.refunded, lnPayment, SendFixtures.env(refund = SendRefund.recorded))
+        ended("send-result-failed-no-refund", SendFixtures.Outcome.refunded, lnPayment, SendFixtures.env(refund = SendRefund.none))
+        ended("send-result-failed-retry", SendFixtures.Outcome.refunded, SendPayment(SendFixtures.invoice, "lightning", 5_000), SendFixtures.env(refund = SendRefund.untied))
         ended("send-result-not-sent", SendFixtures.Outcome.notSent, arkPayment)
         ended("send-result-already-paid", SendFixtures.Outcome.alreadyPaid, lnPayment)
         ended("send-result-unknown", SendFixtures.Outcome.unknown, arkPayment)

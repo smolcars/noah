@@ -68,8 +68,8 @@ class SendEnv(
     /** The chain source's tip, and how many confirmations an on-chain send via Ark waits for. */
     val tip: Long? = null,
     val chainNeeded: Long = 1,
-    /** Whether the wallet recorded a refund for a failed Lightning send; null until read. */
-    val refund: Boolean? = null,
+    /** What the wallet recorded coming back from a failed Lightning send; null until read. */
+    val refund: SendRefund? = null,
     /** Today's per-rail estimates for the method cards, display only. */
     val estimates: Map<SendRail, Long> = emptyMap(),
     val variant: String = "regtest",
@@ -100,15 +100,21 @@ internal fun SendModel.step(): SendStep = when {
 }
 
 /** What the result area says for the controller's state. Lines and titles keep today's wording for edge states. */
-enum class SendEnding { sending, arkSent, lightningSent, chainSent, pending, refunded, notSent, alreadyPaid, unknown, unavailable;
+enum class SendEnding { sending, arkSent, lightningSent, chainSent, pending, refunded, failed, notSent, alreadyPaid, unknown, unavailable;
     companion object {
-        fun of(state: SendController.State, attempt: SendAttempt?, refund: Boolean?, stillPaying: Boolean): SendEnding? {
+        /** [failed]: Lightning failed, but a retried invoice's refund can't be tied to this attempt. */
+        fun of(state: SendController.State, attempt: SendAttempt?, refund: SendRefund?, stillPaying: Boolean): SendEnding? {
             val route = attempt?.payment?.let(SendRoute::of)
             return when (state) {
                 SendController.State.ready -> null
                 SendController.State.submitting -> if (stillPaying) pending else sending
                 SendController.State.succeeded -> when (route) { SendRoute.ark -> arkSent; SendRoute.lightning -> lightningSent; null -> unknown; else -> chainSent }
-                SendController.State.failed -> if (refund == true && route == SendRoute.lightning) refunded else notSent
+                SendController.State.failed -> when {
+                    route != SendRoute.lightning -> notSent
+                    refund == SendRefund.recorded -> refunded
+                    refund == SendRefund.untied -> failed
+                    else -> notSent
+                }
                 SendController.State.alreadyPaid -> alreadyPaid
                 SendController.State.uncertain -> if (route == SendRoute.lightning && attempt?.existingLightning != null) pending else unknown
                 SendController.State.storageBlocked -> unavailable
@@ -673,7 +679,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     }, bottom = {
         Spacer(Modifier.height(16.dp))
         val doneShown = resultShown && ending in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent, SendEnding.refunded,
-            SendEnding.notSent, SendEnding.alreadyPaid, SendEnding.pending)
+            SendEnding.failed, SendEnding.notSent, SendEnding.alreadyPaid, SendEnding.pending)
         // Today's broadcast retry can't be acknowledged, and the phone hides the tab bar: Leave goes back with the
         // attempt and the send lock exactly as they are.
         if (doneShown && receipt?.broadcastRetryPending == true) SendPill(tr("Leave"),
@@ -707,7 +713,7 @@ private fun resultTitle(ending: SendEnding, amount: Long, receipt: SendReceipt?,
     SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent ->
         if (receipt?.amountIsPending == true || receipt?.broadcastRetryPending == true) tr("Payment submitted") else tr("Sent {amount}", formatted(amount, env))
     SendEnding.pending -> tr("Still sending {amount}", formatted(amount, env))
-    SendEnding.refunded -> tr("Payment failed")
+    SendEnding.refunded, SendEnding.failed -> tr("Payment failed")
     SendEnding.notSent -> tr("Payment not sent")
     SendEnding.alreadyPaid -> tr("Invoice already paid")
     SendEnding.unknown -> tr("Payment may have been sent")
@@ -743,6 +749,8 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
         // Only a person or address can be "reached"; an invoice just gets the refund line.
         SendEnding.refunded -> if (who.initial != null) tr("{amount} is back in your wallet. Lightning couldn’t reach {name}.", formatted(amount, env), who.name)
             else tr("{amount} is back in your wallet.", formatted(amount, env))
+        // A retried invoice: bark's records can't say this attempt's coins came back, so no "back in your wallet".
+        SendEnding.failed -> tr("That payment didn’t go through.")
         SendEnding.unknown -> tr(SendReceipt.uncertainMessage)
         else -> null
     }
@@ -758,7 +766,7 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
                 val fee = receipt?.fee ?: attempt?.quote?.fee ?: 0
                 rows += { d -> ValueRow(tr("Fee"), if (fee == 0L) tr("Free") else formatted(fee, env), number = fee != 0L, divider = d) }
             }
-            SendEnding.notSent, SendEnding.unavailable -> Unit
+            SendEnding.failed, SendEnding.notSent, SendEnding.unavailable -> Unit
             else -> receipt?.let { r ->
                 when {
                     r.fee != null -> rows += { d -> ValueRow(tr(if (ending == SendEnding.lightningSent || ending == SendEnding.chainSent) "Fee" else "Actual fee"), formatted(r.fee, env), number = true, divider = d) }

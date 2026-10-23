@@ -82,7 +82,7 @@ object SendFixtures {
         HistoryTransaction(id, type, 1_000, com.noahwallet.history.HistoryRules.isoDate(java.util.Date(now.time - minutes * 60_000)), "outgoing",
             source = "ark", destination = destination, movementStatus = "successful")
 
-    fun env(tip: Long? = 921_345, refund: Boolean? = null, estimates: Map<SendRail, Long> = mapOf(SendRail.ark to 0L, SendRail.lightning to 12L, SendRail.onchain to 420L),
+    fun env(tip: Long? = 921_345, refund: SendRefund? = null, estimates: Map<SendRail, Long> = mapOf(SendRail.ark to 0L, SendRail.lightning to 12L, SendRail.onchain to 420L),
             chainNeeded: Long = 2) = SendEnv(BitcoinAmountUnit.bip177, Locale.US, "regtest", domain, history(), tip = tip, chainNeeded = chainNeeded,
         refund = refund, estimates = estimates)
 

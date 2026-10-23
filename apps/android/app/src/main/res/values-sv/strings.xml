@@ -1193,6 +1193,7 @@
   <string name="gt_2034ce6155036f8a">"Tack"</string>
   <string name="gt_2e48454ee6ef8e0a">"Koden fungerade inte. Försök igen."</string>
   <string name="gt_b3a72229e9eb3cc3">"Betalningen gick inte igenom"</string>
+  <string name="gt_9a17fe4427faafa5">"Betalningen gick inte igenom."</string>
   <string name="gt_19fe068bbdba00e6">"Esplora-slutpunkten får inte innehålla en frågesträng eller ett fragment."</string>
   <string name="gt_0ac08a81559f95ee">"Esplora-slutpunkten får inte innehålla inloggningsuppgifter."</string>
   <string name="gt_96100ca2d23b8821">"Esplora-slutpunkten är avsedd för ett annat Bitcoin-nätverk."</string>

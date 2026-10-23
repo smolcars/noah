@@ -1193,6 +1193,7 @@
   <string name="gt_2034ce6155036f8a">"ありがとうございます"</string>
   <string name="gt_2e48454ee6ef8e0a">"このコードは使えませんでした。もう一度お試しください。"</string>
   <string name="gt_b3a72229e9eb3cc3">"その支払いは完了しませんでした"</string>
+  <string name="gt_9a17fe4427faafa5">"その支払いは完了しませんでした。"</string>
   <string name="gt_19fe068bbdba00e6">"Esploraエンドポイントにクエリ文字列やフラグメントは含められません。"</string>
   <string name="gt_0ac08a81559f95ee">"Esploraエンドポイントに認証情報は含められません。"</string>
   <string name="gt_96100ca2d23b8821">"Esploraエンドポイントが別のBitcoinネットワーク用です。"</string>

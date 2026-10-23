@@ -147,14 +147,24 @@ internal object SendTimeline {
     }
 }
 
+/** What a failed Lightning send's records show came back to the wallet. */
+enum class SendRefund {
+    /** bark recorded the revocation's coins on this attempt's own movement: "back in your wallet". */
+    recorded,
+    /** Nothing came back: the send failed before leaving the wallet, or its coins went to an exit. */
+    none,
+    /** A retried invoice: bark reused the hash's earlier movement, so what came back can't be tied to this attempt. */
+    untied,
+}
+
 /** Reading the controller: which milestone its current state proves, if any. */
 internal object SendProgressRules {
     /**
      * [finished]: the submission's job has returned, so an uncertain state is its answer rather than the
-     * moment between a failed call and its reconciliation. [refund]: whether the wallet's records show the
-     * revocation; null until they've been read, so a refund can't be missed by deciding too early.
+     * moment between a failed call and its reconciliation. [refund]: what the wallet's records show came
+     * back; null until they've been read, so a refund can't be missed by deciding too early.
      */
-    fun milestone(state: SendController.State, attempt: SendAttempt?, finished: Boolean, refund: Boolean?): SendMilestone? = when (state) {
+    fun milestone(state: SendController.State, attempt: SendAttempt?, finished: Boolean, refund: SendRefund?): SendMilestone? = when (state) {
         SendController.State.ready -> null
         SendController.State.submitting -> if (attempt != null && !attempt.inspectionPending) SendMilestone.paying else SendMilestone.submitted
         SendController.State.succeeded -> when {
@@ -164,8 +174,8 @@ internal object SendProgressRules {
             else -> SendMilestone.sent
         }
         SendController.State.failed -> when (refund) {
-            true -> SendMilestone.refunded
-            false -> SendMilestone.stopped.takeIf { finished }
+            SendRefund.recorded -> SendMilestone.refunded
+            SendRefund.none, SendRefund.untied -> SendMilestone.stopped.takeIf { finished }
             null -> null
         }
         SendController.State.uncertain -> when {
@@ -181,16 +191,18 @@ internal object SendProgressRules {
     /**
      * bark finishes a Lightning send that failed after leaving the wallet as failed, with the revocation's
      * coins as its outputs: that is the refund. A send that failed before leaving has no outputs, and one
-     * pushed to unilateral exit lists exited coins instead; neither is "back in your wallet".
+     * pushed to unilateral exit lists exited coins instead; neither is "back in your wallet". A retried
+     * invoice reuses the hash's movement from before the attempt, whose outputs include the earlier
+     * attempts' coins, so nothing there can be tied to this one (async-payments.md, "Reused hashes").
      */
-    fun refundRecorded(state: SendController.State, attempt: SendAttempt?, movements: List<Movement>): Boolean {
-        if (state != SendController.State.failed || attempt == null || attempt.receipt != null || attempt.payment.method !in lightningMethods) return false
-        val hash = attempt.paymentHash ?: return false
-        return movements.any { movement ->
-            movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.status == "failed" &&
-                movement.outputVtxoIds.isNotEmpty() && movement.exitedVtxoIds.isEmpty() &&
-                (movement.paymentHash ?: paymentHash(movement.metadataJson)) == hash
+    fun refund(state: SendController.State, attempt: SendAttempt?, movements: List<Movement>): SendRefund {
+        if (state != SendController.State.failed || attempt == null || attempt.receipt != null || attempt.payment.method !in lightningMethods) return SendRefund.none
+        val hash = attempt.paymentHash ?: return SendRefund.none
+        val sends = movements.filter { movement ->
+            movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && (movement.paymentHash ?: paymentHash(movement.metadataJson)) == hash
         }
+        if (sends.any { it.id in attempt.snapshot.movementIDs }) return SendRefund.untied
+        return if (sends.any { it.status == "failed" && it.outputVtxoIds.isNotEmpty() && it.exitedVtxoIds.isEmpty() }) SendRefund.recorded else SendRefund.none
     }
 
     private fun paymentHash(metadata: String?): String? = metadata?.let {

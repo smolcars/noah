@@ -1193,6 +1193,7 @@
   <string name="gt_2034ce6155036f8a">"감사합니다"</string>
   <string name="gt_2e48454ee6ef8e0a">"코드가 맞지 않습니다. 다시 시도하세요."</string>
   <string name="gt_b3a72229e9eb3cc3">"결제가 완료되지 않았어요"</string>
+  <string name="gt_9a17fe4427faafa5">"결제가 완료되지 않았어요."</string>
   <string name="gt_19fe068bbdba00e6">"Esplora 엔드포인트에는 쿼리 문자열이나 프래그먼트를 포함할 수 없습니다."</string>
   <string name="gt_0ac08a81559f95ee">"Esplora 엔드포인트에는 인증 정보를 포함할 수 없습니다."</string>
   <string name="gt_96100ca2d23b8821">"Esplora 엔드포인트가 다른 Bitcoin 네트워크용입니다."</string>

@@ -52,8 +52,12 @@ import kotlinx.serialization.json.*
         null -> false
     }
 }
+/** [invoicePaid]: whether bark had a paid record for the invoice's hash before this attempt was submitted. A failed
+ *  attempt never writes one, so it tells a retried invoice's own success from one paid before. Null without an
+ *  invoice hash, and in journals from before it was recorded. */
 @Serializable data class SendSnapshot(val movementIDs: Set<UInt> = emptySet(), val bdkTxids: Set<String>? = null,
-    val resolvedInvoice: String? = null, val walletIdentity: SendIdentity? = null, val checkpoint: SendCheckpoint? = null)
+    val resolvedInvoice: String? = null, val walletIdentity: SendIdentity? = null, val checkpoint: SendCheckpoint? = null,
+    val invoicePaid: Boolean? = null)
 @Serializable data class SendAttempt(val recurringAttemptID: String? = null, val walletIdentity: SendIdentity? = null, val inspectionPending: Boolean = false,
     val recurringOccurrenceKey: String? = null,
     val safetyVersion: Int = 2, val broadcastingTxid: String? = null, val payment: SendPayment,

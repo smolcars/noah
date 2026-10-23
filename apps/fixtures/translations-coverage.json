@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1494,
-  "sourceKeys": 1497,
+  "catalogEntries": 1495,
+  "sourceKeys": 1498,
   "coverage": {
     "ios": {
       "used": [
@@ -2131,6 +2131,7 @@
         "Thank You",
         "That code didn’t work. Try again.",
         "That payment didn’t go through",
+        "That payment didn’t go through.",
         "The Esplora endpoint cannot include a query string or fragment.",
         "The Esplora endpoint cannot include credentials.",
         "The Esplora endpoint is for a different Bitcoin network.",

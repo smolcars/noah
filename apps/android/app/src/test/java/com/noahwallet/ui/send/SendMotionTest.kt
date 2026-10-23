@@ -122,31 +122,49 @@ class SendMotionTest {
         assertTrue(SendHaptics.between(started, 60_000, 60_000).isEmpty())
     }
 
-    private fun lightning(state: SendController.State = SendController.State.failed) =
-        SendAttempt(payment = SendPayment("lnbcrt1invoice", "lightning", 1_000), paymentHash = "hash", failed = state == SendController.State.failed)
+    private fun lightning(state: SendController.State = SendController.State.failed, before: Set<UInt> = setOf(1u, 2u)) =
+        SendAttempt(payment = SendPayment("lnbcrt1invoice", "lightning", 1_000), paymentHash = "hash", failed = state == SendController.State.failed,
+            snapshot = SendSnapshot(before, invoicePaid = false))
     private fun movement(status: String = "failed", outputs: List<String> = listOf("refund:0"), exited: List<String> = emptyList(),
-                         hash: String? = "hash", subsystem: String = "bark.lightning_send") =
-        Movement(7u, status, subsystem, "send", "{}", -1_000, 0, 0u, emptyList(), emptyList(), listOf("htlc:0"), outputs, exited,
+                         hash: String? = "hash", subsystem: String = "bark.lightning_send", id: UInt = 7u) =
+        Movement(id, status, subsystem, "send", "{}", -1_000, 0, 0u, emptyList(), emptyList(), listOf("htlc:0"), outputs, exited,
             "now", "now", null, hash, null, null)
 
     @Test fun backInYourWalletNeedsARecordedRefund() {
         val failed = SendController.State.failed
-        assertTrue(SendProgressRules.refundRecorded(failed, lightning(), listOf(movement())))
+        assertEquals(SendRefund.recorded, SendProgressRules.refund(failed, lightning(), listOf(movement())))
         // Failed before leaving the wallet: no revocation outputs.
-        assertFalse(SendProgressRules.refundRecorded(failed, lightning(), listOf(movement(outputs = emptyList()))))
+        assertEquals(SendRefund.none, SendProgressRules.refund(failed, lightning(), listOf(movement(outputs = emptyList()))))
         // Revocation failed and the coins went to unilateral exit.
-        assertFalse(SendProgressRules.refundRecorded(failed, lightning(), listOf(movement(outputs = emptyList(), exited = listOf("htlc:0")))))
+        assertEquals(SendRefund.none, SendProgressRules.refund(failed, lightning(), listOf(movement(outputs = emptyList(), exited = listOf("htlc:0")))))
         // Another payment's record, a pending one, or no record at all.
-        assertFalse(SendProgressRules.refundRecorded(failed, lightning(), listOf(movement(hash = "other"))))
-        assertFalse(SendProgressRules.refundRecorded(failed, lightning(), listOf(movement(status = "pending"))))
-        assertFalse(SendProgressRules.refundRecorded(failed, lightning(), emptyList()))
+        assertEquals(SendRefund.none, SendProgressRules.refund(failed, lightning(), listOf(movement(hash = "other"))))
+        assertEquals(SendRefund.none, SendProgressRules.refund(failed, lightning(), listOf(movement(status = "pending"))))
+        assertEquals(SendRefund.none, SendProgressRules.refund(failed, lightning(), emptyList()))
         // Not a failure, or not Lightning.
-        assertFalse(SendProgressRules.refundRecorded(SendController.State.uncertain, lightning(), listOf(movement())))
-        assertFalse(SendProgressRules.refundRecorded(failed, SendAttempt(payment = SendPayment("tark1x", "ark", 1_000), paymentHash = "hash", failed = true), listOf(movement())))
+        assertEquals(SendRefund.none, SendProgressRules.refund(SendController.State.uncertain, lightning(), listOf(movement())))
+        assertEquals(SendRefund.none, SendProgressRules.refund(failed, SendAttempt(payment = SendPayment("tark1x", "ark", 1_000), paymentHash = "hash", failed = true), listOf(movement())))
         // The ending: "Payment failed … back in your wallet" only with the evidence.
-        assertEquals(SendEnding.refunded, SendEnding.of(failed, lightning(), true, false))
-        assertEquals(SendEnding.notSent, SendEnding.of(failed, lightning(), false, false))
+        assertEquals(SendEnding.refunded, SendEnding.of(failed, lightning(), SendRefund.recorded, false))
+        assertEquals(SendEnding.notSent, SendEnding.of(failed, lightning(), SendRefund.none, false))
         assertEquals(SendEnding.notSent, SendEnding.of(failed, lightning(), null, false))
+    }
+
+    @Test fun aRetriedInvoicesFailureIsNeverBackInYourWallet() {
+        val failed = SendController.State.failed
+        // bark reused the hash's movement from the failed first attempt: its outputs hold that attempt's refund, not this one's.
+        val reused = movement(id = 2u, outputs = listOf("change:0", "refund:0"))
+        assertEquals(SendRefund.untied, SendProgressRules.refund(failed, lightning(), listOf(reused)))
+        assertEquals(SendRefund.untied, SendProgressRules.refund(failed, lightning(), listOf(reused.copy(outputVtxoIds = emptyList()))))
+        // The first attempt's own movement wasn't in its snapshot: its refund is recorded.
+        assertEquals(SendRefund.recorded, SendProgressRules.refund(failed, lightning(before = setOf(1u)), listOf(reused)))
+        // "Payment failed · That payment didn’t go through", and the motion stops without the way back.
+        assertEquals(SendEnding.failed, SendEnding.of(failed, lightning(), SendRefund.untied, false))
+        assertEquals(SendMilestone.stopped, SendProgressRules.milestone(failed, lightning(), true, SendRefund.untied))
+        assertNull(SendProgressRules.milestone(failed, lightning(), false, SendRefund.untied))
+        assertEquals(mapOf(SendMilestone.submitted to 0L, SendMilestone.stopped to 0L), staticMilestones(SendEnding.failed))
+        // Off Lightning it's today's "Payment not sent".
+        assertEquals(SendEnding.notSent, SendEnding.of(failed, SendAttempt(payment = SendPayment("tark1x", "ark", 1_000), failed = true), SendRefund.untied, false))
     }
 
     @Test fun milestonesComeOnlyFromTheControllersState() {
@@ -165,8 +183,8 @@ class SendMotionTest {
         assertEquals(SendMilestone.pending, SendProgressRules.milestone(SendController.State.uncertain, existing, true, null))
         // A failure waits for the refund evidence before it can end the motion.
         assertNull(SendProgressRules.milestone(SendController.State.failed, lightning(), true, null))
-        assertEquals(SendMilestone.refunded, SendProgressRules.milestone(SendController.State.failed, lightning(), true, true))
-        assertEquals(SendMilestone.stopped, SendProgressRules.milestone(SendController.State.failed, lightning(), true, false))
+        assertEquals(SendMilestone.refunded, SendProgressRules.milestone(SendController.State.failed, lightning(), true, SendRefund.recorded))
+        assertEquals(SendMilestone.stopped, SendProgressRules.milestone(SendController.State.failed, lightning(), true, SendRefund.none))
         // An on-chain success needs its transaction for the block row.
         val chain = SendAttempt(payment = SendPayment("bcrt1q", "onchain", 5_000, SendSource.onchain), receipt = SendReceipt(5_000, txid = "ab"))
         assertEquals(SendMilestone.sent, SendProgressRules.milestone(SendController.State.succeeded, chain, true, null))
