@@ -98,11 +98,13 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
     /// that synced in meanwhile is news, to any of your addresses; an unconfirmed payment to
     /// this request's fresh address is news even if a sync elsewhere fetched it first. An
     /// already-confirmed transaction is never news.
-    func look(known: Set<String>?, announced: Set<String>) -> (arrivals: [Transaction], known: Set<String>) {
+    /// A transaction spending any of `spent` (the inputs of deposits already announced)
+    /// replaces one of them (RBF) and is never a new arrival.
+    func look(known: Set<String>?, announced: Set<String>, spent: Set<SendTransaction.Input> = []) -> (arrivals: [Transaction], known: Set<String>) {
         let unseenHere = Set(incoming.filter { $0.toAddress > 0 && $0.confirmedHeight == nil }.map(\.txid))
         let first = (before ?? Set(incoming.map(\.txid))).subtracting(unseenHere)
         let seen = (known ?? first).union(announced)
-        let fresh = incoming.filter { !seen.contains($0.txid) && $0.confirmedHeight == nil }
+        let fresh = incoming.filter { !seen.contains($0.txid) && $0.confirmedHeight == nil && $0.inputs.isDisjoint(with: spent) }
         return (fresh.filter { $0.toAddress > 0 } + fresh.filter { $0.toAddress == 0 }, seen.union(incoming.map(\.txid)))
     }
 

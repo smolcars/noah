@@ -29,6 +29,9 @@ struct ReceiveView: View {
     @State private var played: Set<String> = []
     /// On-chain transactions already announced, so a restarted watch doesn't announce them again.
     @State private var announced: Set<String> = []
+    /// The inputs of every deposit announced while Receive is open, so a replacement of any of
+    /// them (not only the one showing) is never announced as another deposit.
+    @State private var announcedSpends: Set<SendTransaction.Input> = []
     /// The compact sheet an on-chain arrival set aside, to bring back once the card is home.
     @State private var interrupted: Sheet?
     /// What the card showed when a payment arrived; the request is used up by then.
@@ -443,9 +446,10 @@ struct ReceiveView: View {
                 if followed.ended && arrival == nil { resumeSheet() }
                 // A replacement is the same deposit, not another arrival.
                 announced.formUnion(followed.txids)
-                let look = snapshot.look(known: known, announced: announced)
+                let look = snapshot.look(known: known, announced: announced, spent: announcedSpends)
                 for transaction in look.arrivals {
                     announced.insert(transaction.txid)
+                    announcedSpends.formUnion(transaction.inputs)
                     announce(ReceiveArrival(rail: .onchain, sats: transaction.arrivingSats, start: Date(),
                                             txid: transaction.txid, inputs: transaction.inputs))
                 }

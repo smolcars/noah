@@ -514,6 +514,41 @@ struct ReceiveFormatTests {
         #expect(!still.confirmed && !still.ended && other.current?.txid == "a" && other.current?.confirmedHeight == nil)
     }
 
+    /// Deposits A and B arrive and the card moves on to B; then A is fee-bumped. A's
+    /// replacement spends A's inputs, so it's not announced as another deposit.
+    @Test func aReplacedEarlierDepositIsNotAnnouncedAgain() {
+        let start = Date()
+        let a: Set<SendTransaction.Input> = [.init(txid: "fundA", vout: 0)], b: Set<SendTransaction.Input> = [.init(txid: "fundB", vout: 1)]
+        let first = ReceiveChainSnapshot(tip: 100, incoming: [
+            .init(txid: "A", toAddress: 5_000, received: 5_000, confirmedHeight: nil, inputs: a),
+            .init(txid: "B", toAddress: 7_000, received: 7_000, confirmedHeight: nil, inputs: b),
+        ])
+        var queue = ReceiveArrivalQueue(), announced: Set<String> = [], spent: Set<SendTransaction.Input> = []
+        let look = first.look(known: [], announced: announced, spent: spent)
+        #expect(look.arrivals.map(\.txid) == ["A", "B"])
+        for transaction in look.arrivals {
+            announced.insert(transaction.txid)
+            spent.formUnion(transaction.inputs)
+            queue.announce(ReceiveArrival(rail: .onchain, sats: transaction.arrivingSats, start: start, txid: transaction.txid,
+                                          inputs: transaction.inputs), at: start)
+        }
+        queue.finish(at: start.addingTimeInterval(10))
+        #expect(queue.current?.txid == "B" && queue.waiting.isEmpty)
+        let bumped = ReceiveChainSnapshot(tip: 100, incoming: [
+            .init(txid: "A2", toAddress: 5_000, received: 5_000, confirmedHeight: nil, inputs: a.union([.init(txid: "fee", vout: 0)])),
+            .init(txid: "B", toAddress: 7_000, received: 7_000, confirmedHeight: nil, inputs: b),
+        ])
+        let followed = queue.follow(bumped)
+        announced.formUnion(followed.txids)
+        #expect(!followed.ended && queue.current?.txid == "B")
+        #expect(bumped.look(known: look.known, announced: announced, spent: spent).arrivals.isEmpty)
+        // Tracking only the current and waiting arrivals, A2 would have arrived again.
+        #expect(bumped.look(known: look.known, announced: announced).arrivals.map(\.txid) == ["A2"])
+        // A deposit spending other coins still arrives.
+        let other = ReceiveChainSnapshot(tip: 100, incoming: bumped.incoming + [.init(txid: "C", toAddress: 1, received: 1, confirmedHeight: nil, inputs: [.init(txid: "fundC", vout: 0)])])
+        #expect(other.look(known: look.known, announced: announced, spent: spent).arrivals.map(\.txid) == ["C"])
+    }
+
     /// The followed deposit disappears and a new one pays the same address without spending
     /// any of its inputs: no replacement is assumed. The old wait ends and the new deposit
     /// arrives as usual. Without recorded inputs nothing can replace it either.
