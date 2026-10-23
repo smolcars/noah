@@ -58,6 +58,32 @@ apps/ios/UpgradeTests/run.sh <dedicated-simulator-udid> /path/to/Noah-Regtest.ap
 
 It wipes that simulator's Noah regtest app, creates a wallet in the RN app with the RN Maestro onboarding flows, installs the native build over it, and runs `UpgradeCompatibilityTests` inside the upgraded app's sandbox (seed, MMKV, wallet DB, opening the DB with bark-bolt-ffi).
 
+## Activity (2026-10-23)
+
+The Activity tab follows [`docs/native-rewrite/design/activity.md`](../../docs/native-rewrite/design/activity.md).
+
+- **Code:** `Features/History`:
+  - `TransactionsView`: the list and the wide panes;
+  - `TransactionDetailView`: the detail, its coin view and the block row;
+  - `ActivityRules` / `ActivityDetailRules`: pure list and detail rules;
+  - `ActivityExport`: the export sheet and the share presenter.
+- **Shared with Home:** `HistoryMapping`'s Data changes and `HomeActivityRow`. Home's "new" set (`HomeActivityTracker`) now lives in `WalletTabs`, so both tabs read the same one.
+- **Wide windows** (the iPhone Duo open, iPad, landscape) draw each pane's own bar. The system bar would move its buttons to the Duo's side column, across the fold. So search there is a field in the leading pane rather than `.searchable`.
+- **Lazy list caveat:** don't put `onScrollVisibilityChange` on rows inside the list's `LazyVStack`. It left rows that moved from Pending to a day drawn with their old record. The new dot's 1.4 s runs as a row `.task` instead.
+- **Fixtures:** `NoahTests/ActivityShotTests` (opt-in, `TEST_RUNNER_NOAH_ACT_SHOTS=1`). Write a state to the app's `Documents/act-shot`, as with the Send/Receive shots. States: `everyday`, `busy`, `empty`, `loading`, `error`, `suspended`, `filter`, `filter-empty`, `search`, `csv`, `confirm`, `detail-<id>[-details]`.
+- **Tests:**
+  - `ActivityMappingTests`: Data;
+  - `ActivityListTests`: grouping, search, filter, CSV, hidden amounts, the shared dot;
+  - `ActivityDetailTests`: status, fees, txid evidence, Share receipt;
+  - `ActivityRecurringJoinTests`: the recurring journal side of the join.
+- **Live on `noah-bark08`:**
+  - an on-chain deposit and a Max on-chain send, each from "Waiting for block N" through its confirmation;
+  - a Lightning receive (fee ₿110), a Lightning send titled by its invoice description, and a Lightning send that failed with LND disconnected from CLN, refunded as "Refunded · back in your wallet";
+  - a spent coin loaded by ID;
+  - a CSV of 4 payments, the refunded row excluded.
+
+  Regtest's offboards need one confirmation, so "· 1 of 2" was covered by unit tests only.
+
 ## Direct native backup compatibility (2026-10-20)
 
 Base `5a19f992`. `NoahTests/CrossPlatformBackupTests.swift` exports through the

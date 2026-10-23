@@ -92,7 +92,12 @@ struct ActivityExportSheet: View {
 enum ActivityShare {
     /// A private copy under its own folder, removed once the share sheet closes.
     nonisolated static func writeCSV(_ csv: HistoryCSV) throws -> URL {
-        let folder = FileManager.default.temporaryDirectory.appending(path: "history-export-\(UUID().uuidString)")
+        let temporary = FileManager.default.temporaryDirectory
+        // A share sheet that closed without its completion leaves its copy behind; one export is shared at a time.
+        for old in (try? FileManager.default.contentsOfDirectory(atPath: temporary.path)) ?? [] where old.hasPrefix("history-export-") {
+            try? FileManager.default.removeItem(at: temporary.appending(path: old))
+        }
+        let folder = temporary.appending(path: "history-export-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let file = folder.appending(path: ActivityExportSheet.fileName)
         try Data(csv.content.utf8).write(to: file, options: [.atomic, .completeFileProtection])
