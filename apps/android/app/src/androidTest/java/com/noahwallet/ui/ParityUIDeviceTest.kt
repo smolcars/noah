@@ -1,6 +1,7 @@
 package com.noahwallet.ui
 
 import android.Manifest
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -51,6 +52,13 @@ class ParityUIDeviceTest {
         return null
     }
     private fun text(value: String) = find(automation.rootInActiveWindow, value)
+    /** A node by its Compose test tag, which the app exposes to accessibility as the resource id. */
+    private fun tagged(tag: String, node: AccessibilityNodeInfo? = automation.rootInActiveWindow): AccessibilityNodeInfo? {
+        if (node == null) return null
+        if (node.viewIdResourceName == tag) return node
+        for (i in 0 until node.childCount) tagged(tag, node.getChild(i))?.let { return it }
+        return null
+    }
     private fun click(value: String) {
         waitFor("Public control appears: $value") { text(value) != null }
         var target = text(value)
@@ -259,7 +267,11 @@ class ParityUIDeviceTest {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Receive request", request))
             }
             click("Paste")
-            waitFor("Recipient-first Send route reaches amount entry") { text("send-amount") != null || text("Next") != null }
+            // Amount entry itself, not To: the amount and its keypad are on screen and the recipient field isn't.
+            automation.serviceInfo = automation.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS }
+            waitFor("Recipient-first Send route reaches amount entry") {
+                tagged("send-amount") != null && tagged("send-key-1") != null && tagged("send-recipient") == null
+            }
             shot("qr-send-route")
             // No amount is entered and no payment is submitted.
         } finally { instrumentation.runOnMainSync { activity.finish() } }
