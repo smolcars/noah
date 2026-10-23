@@ -10,14 +10,14 @@ import Foundation
 
     static func observe(wait: () -> Duration = { .zero }, tip: () async -> Void = {}, check: () async -> Void,
                         sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) async {
-        var due = wait()
         while !Task.isCancelled {
-            if due > .zero { do { try await sleep(due) } catch { return } }
+            // Asked again after waiting: the entry check may have run meanwhile.
+            let due = wait()
+            if due > .zero { do { try await sleep(due) } catch { return }; continue }
             await tip()
             await check()
             // A check that recorded nothing still waits a full interval.
-            due = wait()
-            if due == .zero { due = .seconds(interval) }
+            if wait() == .zero { do { try await sleep(.seconds(interval)) } catch { return } }
         }
     }
 }

@@ -60,9 +60,8 @@ struct SendView: View {
         self.onLeave = onLeave
     }
 
-    private var receiptRefreshID: String? {
-        isActive && scenePhase == .active && !app.isWalletSuspended ? model.controller.attempt?.receipt?.txid : nil
-    }
+    private var visible: Bool { isActive && scenePhase == .active && !app.isWalletSuspended }
+    private var receiptRefreshID: String? { visible ? model.controller.attempt?.receipt?.txid : nil }
     private var screen: SendScreen { SendScreen.of(model) }
     private var wide: Bool { window.wide }
     private var ownDomain: String { LightningIdentity.domain(for: .current) }
@@ -92,6 +91,11 @@ struct SendView: View {
             if let response = try? await AppServices.shared.client.fiatPrices(.init(body: .json(.init()))).ok.body.json {
                 model.btcPrice = response.rates.additionalProperties[app.preferredCurrency]
             }
+        }
+        .task(id: visible) {
+            // Arriving at Send checks a payment still to settle, on the 30 s clock it shares.
+            guard visible else { return }
+            await model.entryStatusCheck()
         }
         .task(id: receiptRefreshID) {
             guard receiptRefreshID != nil else { return }

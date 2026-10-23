@@ -57,6 +57,36 @@ import Testing
         })
         #expect(events.isEmpty && sleeps == [.seconds(20)])
     }
+    /// An uncertain Lightning payment has no txid, so no periodic check: an entry check
+    /// skipped inside the 30 s window still runs once the window passes.
+    @Test func aSkippedEntryCheckRunsOnceTheWindowPasses() async throws {
+        let checks = RecurringExecutorTests.Locked(0)
+        let storage = SendPaymentTests.Storage()
+        storage.attempt = .init(payment: SendPayment(destination: SendReceiveShotTests.invoice, method: "lightning", amount: 1_500),
+                                snapshot: .init(movementIDs: []))
+        let controller = SendPaymentController(dependencies: .init(
+            prepare: { _, _ in SendSnapshot(movementIDs: []) }, pay: { _, _, _ in SendReceipt(amount: 1_500) },
+            reconcile: { _ in checks.withLock { $0 += 1 }; return .uncertain },
+            read: { storage.attempt }, write: { try storage.write($0) }))
+        #expect(controller.state == .uncertain && controller.attempt?.receipt?.txid == nil)
+        let model = SendModel(controller: controller)
+        let start = Date()
+        await model.automaticStatusCheck(at: start)
+        #expect(checks.withLock { $0 } == 1)
+        // Back at Send 10 s later: nothing now, then the check once the window has passed.
+        var now = start.addingTimeInterval(10)
+        var slept: [Duration] = []
+        await model.entryStatusCheck(now: { now }, sleep: { duration in
+            slept.append(duration)
+            now += Double(duration.components.seconds) + 0.01
+        })
+        #expect(slept == [.seconds(20)])
+        #expect(checks.withLock { $0 } == 2 && model.lastAutomaticCheck == now)
+        // Once due, it checks at once.
+        now += 31
+        await model.entryStatusCheck(now: { now }, sleep: { _ in Issue.record("Due checks don't wait") })
+        #expect(checks.withLock { $0 } == 3)
+    }
     @Test func sendsEntryAndPeriodicStatusChecksShareOneClock() async {
         let storage = SendPaymentTests.Storage()
         storage.attempt = .init(payment: SendPaymentTests().payment, snapshot: .init(movementIDs: []))

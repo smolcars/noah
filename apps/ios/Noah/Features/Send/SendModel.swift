@@ -120,6 +120,18 @@ import Observation
         return remaining > 0 ? .seconds(remaining) : .zero
     }
 
+    /// The entry check on the shared clock: now when it's due, otherwise once the 30 s window
+    /// passes, so a skipped check is late, never lost (an uncertain Lightning or Ark payment
+    /// has no periodic check to make it up).
+    func entryStatusCheck(now: () -> Date = Date.init,
+                          sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) async {
+        let wait = untilAutomaticCheck(at: now())
+        if wait > .zero { do { try await sleep(wait) } catch { return } }
+        // The periodic check may have run meanwhile.
+        guard untilAutomaticCheck(at: now()) == .zero else { return }
+        await automaticStatusCheck(at: now())
+    }
+
     /// Today's status check, run automatically; recorded when there's an attempt to check.
     func automaticStatusCheck(at now: Date = Date()) async {
         if controller.attempt != nil || controller.state == .storageBlocked { lastAutomaticCheck = now }
