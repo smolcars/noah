@@ -591,15 +591,16 @@ struct SendView: View {
     private func railSubtitle(_ rail: SendRail) -> String {
         let language = locale.identifier
         guard model.availability[rail.rawValue] == true else { return L10n.text("Insufficient funds for this payment method.", locale: language) }
-        let fee = railFees[rail]
+        // Today's estimates, marked as such; a rail without one (still loading or failed) shows only its speed.
+        let fee = railFees[rail].map { "≈ " + format($0) }
         switch rail {
         case .ark:
-            return (fee ?? 0) == 0 ? L10n.text("Instant · free", locale: language)
-                : L10n.text("Instant · {fee} fee", format(fee ?? 0), locale: language)
+            guard let fee else { return L10n.text("Instantly", locale: language) }
+            return railFees[rail] == 0 ? L10n.text("Instant · free", locale: language) : L10n.text("Instant · {fee} fee", fee, locale: language)
         case .lightning:
-            return fee.map { L10n.text("Seconds · {fee} fee", format($0), locale: language) } ?? L10n.text("In seconds", locale: language)
+            return fee.map { L10n.text("Seconds · {fee} fee", $0, locale: language) } ?? L10n.text("In seconds", locale: language)
         case .onchain:
-            return fee.map { L10n.text("About 20 min · {fee} fee", format($0), locale: language) } ?? L10n.text("In about 20 minutes", locale: language)
+            return fee.map { L10n.text("About 20 min · {fee} fee", $0, locale: language) } ?? L10n.text("In about 20 minutes", locale: language)
         }
     }
 
