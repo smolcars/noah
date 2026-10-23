@@ -14,6 +14,20 @@ class HistoryModelTest {
     private fun dependencies(rows: List<HistoryTransaction> = listOf(row())) = HistoryModel.Dependencies(
         load = { rows }, sync = {}, changes = { emptyFlow() }, blockTime = { null }, price = { _, _ -> 100000.0 })
 
+    @Test fun everyCompletedReadMovesTheRevisionEvenWhenNothingChanged() = runBlocking {
+        val model = HistoryModel(dependencies())
+        model.refresh("USD"); model.awaitEnrichment()
+        val first = model.revision
+        val before = model.transactions
+        model.refresh("USD", sync = true); model.awaitEnrichment()
+        assertEquals(before, model.transactions)
+        assertEquals(first + 1, model.revision)
+        // A failed read doesn't count.
+        val failing = HistoryModel(dependencies().copy(load = { error("offline") }))
+        failing.refresh("USD")
+        assertEquals(0L, failing.revision)
+    }
+
     @Test fun closedAndSuspendedWalletsClearHistory() = runBlocking {
         for (failure in listOf(WalletSession.SessionError(), AppServices.WalletSuspended())) {
             var closed = false

@@ -107,6 +107,8 @@ data class ActivityUi(
     val confirmedAt: Map<String, Long> = emptyMap(),
     /** Confirmations an Ark-funded on-chain send needs (the wallet's `roundTxRequiredConfirmations`). */
     val chainNeeded: Long = 2,
+    /** Moves on every completed history read, so an open block row re-reads its chain status then too. */
+    val revision: Long = 0,
     val now: Date = Date(),
 )
 
@@ -123,7 +125,7 @@ class ActivityActions(
     val barHidden: (Boolean) -> Unit = {},
     /** A row has been seen (its dot faded or it was opened): Home's "new" set drops it too. */
     val seen: (String) -> Unit = {},
-    /** The payment shown in the detail: read its chain status once, for the block row. */
+    /** The payment shown in the detail: read its chain status, for the block row, as it opens and on each history read. */
     val shown: (HistoryTransaction) -> Unit = {},
 )
 
@@ -181,7 +183,9 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
     val selected = rows.firstOrNull { it.id == state.selected }
     // A payment that's gone from the wallet's records (a wallet reset) closes; a loading list keeps the selection.
     LaunchedEffect(selected == null, ui.loading) { if (state.selected != null && selected == null && !ui.loading && ui.records.isNotEmpty()) state.selected = null }
-    LaunchedEffect(selected?.record) { selected?.record?.let(actions.shown) }
+    // A pending offboard's record doesn't change at its first confirmation; history reads still come (wallet events,
+    // pull to refresh, resume), so the block row re-reads the chain then. No polling.
+    LaunchedEffect(selected?.record, ui.revision) { selected?.record?.let(actions.shown) }
     val compact = pose == OnboardingPose.Compact
     DisposableEffect(compact && state.selected != null) {
         actions.barHidden(compact && state.selected != null)

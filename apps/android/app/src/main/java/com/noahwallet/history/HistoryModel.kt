@@ -76,6 +76,8 @@ class HistoryModel(private val dependencies: Dependencies) {
     var isLoading by mutableStateOf(true); private set
     var isRefreshing by mutableStateOf(false); private set
     var error by mutableStateOf<String?>(null); private set
+    /** Counts completed reads of the wallet's history (wallet events, pull to refresh, resume), even when nothing changed. */
+    var revision by mutableLongStateOf(0L); private set
     private val blockTimes = mutableMapOf<String, Date>()
     private val prices = linkedMapOf<String, Double>()
     private var generation = 0L
@@ -131,7 +133,7 @@ class HistoryModel(private val dependencies: Dependencies) {
             val latest = HistoryMapping.joinRecurring(dependencies.load(), optional { dependencies.recurring() } ?: emptyList())
             currentCoroutineContext().ensureActive()
             if (request != generation) return
-            transactions = HistoryRules.unified(latest); isLoading = false; error = null
+            transactions = HistoryRules.unified(latest); isLoading = false; error = null; revision++
             // One worker bounds optional requests; it never blocks the wallet event consumer.
             enrichment = CoroutineScope(currentCoroutineContext()).launch {
                 enrichmentLock.withLock { enrich(latest, currency, request) }

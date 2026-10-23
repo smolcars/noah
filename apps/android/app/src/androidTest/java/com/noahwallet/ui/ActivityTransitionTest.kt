@@ -90,6 +90,24 @@ class ActivityTransitionTest {
         compose.onNodeWithTag("activity-search-field").assertIsDisplayed()
     }
 
+    @Test fun eachHistoryReadReReadsTheOpenPaymentsChainStatus() {
+        val reads = mutableListOf<String>()
+        var ui by mutableStateOf(ActivityFixtures.ui("busy"))
+        compose.setContent {
+            NoahTheme {
+                state = rememberActivityState()
+                remember { state.open("movement-103") }
+                ActivityPreviewHost(ui, state, ActivityActions(shown = { reads += it.id }))
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(listOf("movement-103"), reads)
+        // The pending offboard's record is unchanged at its first confirmation; the next history read still re-reads.
+        compose.runOnUiThread { ui = ui.copy(revision = ui.revision + 1) }
+        compose.waitForIdle()
+        assertEquals(listOf("movement-103", "movement-103"), reads)
+    }
+
     private fun assumePhone() = org.junit.Assume.assumeTrue("phone layout only",
         compose.onAllNodesWithTag("activity-detail-pane").fetchSemanticsNodes().isEmpty())
 }

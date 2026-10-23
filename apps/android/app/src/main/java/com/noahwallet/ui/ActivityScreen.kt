@@ -59,7 +59,7 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
         locale = Locale.forLanguageTag(app.localeIdentifier), hidden = app.hidden,
         ownDomain = app.server.state.lightningAddress?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }, variant = BuildConfig.APP_VARIANT,
         currency = currency, price = price, newRows = ActivityRules.newRows(rows, seen), tip = tip, confirmedAt = confirmedAt.toMap(),
-        chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(), now = Date(),
+        chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(), revision = history.revision, now = Date(),
     )
     val actions = ActivityActions(
         refresh = {
