@@ -90,6 +90,14 @@ class ReceiveFormatsTest {
         assertNull(ReceiveArrivals.viaAddress(listOf(succeeded, completeAtOpen), settled + "f", emptySet(), emptySet()))
     }
 
+    @Test fun anArrivalTakesAFreeCardOrOneShowingADeposit() {
+        // The deposit's block row carries on separately, so a later payment can take its card; an Ark or Lightning one plays out first.
+        assertTrue(ReceiveArrivals.takesCard(null))
+        assertTrue(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.onchain, 5_000, 0, "tx")))
+        assertFalse(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.ark, 5_000, 0)))
+        assertFalse(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.lightning, 5_000, 0)))
+    }
+
     @Test fun arrivalsFlipThenReturn() {
         for (rail in ReceiveArrival.Rail.entries) for (reduce in listOf(false, true)) {
             val flip = ReceiveTimeline.flipAt(rail, reduce)

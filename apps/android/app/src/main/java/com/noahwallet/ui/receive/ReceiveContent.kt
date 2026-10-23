@@ -72,6 +72,8 @@ data class ReceiveUi(
     val saving: Boolean = false,
     val invoiceError: String? = null,
     val arrival: ReceiveArrival? = null,
+    /** The on-chain arrival whose confirmation the block row follows; it outlives that arrival's presentation. */
+    val chain: ReceiveArrival? = arrival?.takeIf { it.rail == ReceiveArrival.Rail.onchain },
     val tip: Long? = null,
     val confirmedAt: Long? = null,
     /** The wallet can receive here: the listening light circles the card. */
@@ -169,7 +171,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
         while (true) { value = android.os.SystemClock.elapsedRealtime() - started; if (value > 6_000) break; delay(100) }
     }
     val phase = ui.arrival?.let { ReceiveTimeline.phase(it.rail, now, reduceMotion) }
-    val chainPhase = ui.arrival?.takeIf { it.rail == ReceiveArrival.Rail.onchain && phase == null }?.let { _ ->
+    val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ ->
         val tip = ui.tip
         val format = java.text.NumberFormat.getIntegerInstance(ui.locale)
         when {
@@ -189,7 +191,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     }
     val under = @Composable {
         PhaseText(line, done, Modifier.padding(top = 14.dp).width(cardWidth))
-        ReceiveBlockRow(ui.arrival, ui.tip, ui.confirmedAt, cardWidth, Modifier.padding(top = 8.dp))
+        ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.padding(top = 8.dp))
     }
     val pills = @Composable { modifier: Modifier ->
         Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -251,7 +253,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
             Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(horizontal = 20.dp, vertical = 12.dp), contentAlignment = Alignment.TopCenter) {
                 Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize()) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                        ReceiveBlockRow(ui.arrival, ui.tip, ui.confirmedAt, cardWidth, Modifier.align(Alignment.CenterHorizontally))
+                        ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.align(Alignment.CenterHorizontally))
                         list()
                         ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
                         problem(Modifier.fillMaxWidth().padding(top = 12.dp))

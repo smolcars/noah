@@ -49,6 +49,9 @@ data class ReceiveArrival(val rail: Rail, val sats: Long, val startedAt: Long, v
 }
 
 internal object ReceiveArrivals {
+    /** A new arrival takes the card when it's free or showing an on-chain arrival, whose block row carries on separately. */
+    fun takesCard(current: ReceiveArrival?): Boolean = current == null || current.rail == ReceiveArrival.Rail.onchain
+
     /**
      * A new unconfirmed incoming on-chain transaction for this request: paying its Bitcoin address, or, if no output
      * can be tied to it, any new unconfirmed incoming on-chain transaction. [known] holds the transactions seen when

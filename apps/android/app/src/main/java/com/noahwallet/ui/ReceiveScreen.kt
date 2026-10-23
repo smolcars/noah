@@ -64,6 +64,8 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     var request by rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
     var format by rememberSaveable { mutableStateOf(ReceiveFormat.lightningAddress) }
     var arrival by rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
+    // The on-chain arrival whose confirmation the block row follows, after its presentation has ended.
+    var chain by rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
     // History rows already seen when Receive appeared, the receipts already complete (announced ones join them),
     // and this screen's own Ark addresses and invoices.
     var known by rememberSaveable { mutableStateOf<List<String>?>(null) }
@@ -104,7 +106,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
             try {
                 when (val event = app.session.receiveCompletion(current)) {
                     is ReceiveCompletion.Received -> {
-                        if (arrival == null || arrival?.rail == ReceiveArrival.Rail.onchain) arrival = ReceiveArrival(when (event.rail) {
+                        if (ReceiveArrivals.takesCard(arrival)) arrival = ReceiveArrival(when (event.rail) {
                             ReceiveCompletion.Rail.ark -> ReceiveArrival.Rail.ark; ReceiveCompletion.Rail.lightning -> ReceiveArrival.Rail.lightning
                         }, event.sats, SystemClock.elapsedRealtime())
                         app.refresh(); return@LaunchedEffect
@@ -122,11 +124,13 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
             delay(1000)
         }
     }
-    // After the card flips back, a fresh request: the invoice is paid and addresses aren't reused.
+    // Once the card has flipped back the arrival is done. Ark and Lightning get a fresh request (the invoice is paid
+    // and addresses aren't reused); an on-chain arrival keeps it, and its block row carries on through [chain].
     LaunchedEffect(arrival) {
-        val current = arrival?.takeIf { it.rail != ReceiveArrival.Rail.onchain } ?: return@LaunchedEffect
+        val current = arrival ?: return@LaunchedEffect
         delay((ReceiveTimeline.end(current.rail, reduceMotion) - (SystemClock.elapsedRealtime() - current.startedAt)).coerceAtLeast(0))
-        arrival = null; format = ReceiveFormats.afterAmount(format, false); request = null
+        arrival = null
+        if (current.rail != ReceiveArrival.Rail.onchain) { format = ReceiveFormats.afterAmount(format, false); request = null }
     }
     // On-chain arrivals and payments to your Lightning address, from the wallet's records.
     val rows = app.history.transactions
@@ -136,12 +140,15 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
         val baseline = seen.toSet()
         ReceiveArrivals.onchain(rows, baseline, request?.onchainAddress) { address, hex -> runCatching { SendTransaction.amount(address, hex) }.getOrNull() }?.let { (row, sats) ->
             known = seen + row.id
-            if (arrival == null || arrival?.rail == ReceiveArrival.Rail.onchain) arrival = ReceiveArrival(ReceiveArrival.Rail.onchain, sats, SystemClock.elapsedRealtime(), row.txid)
+            val next = ReceiveArrival(ReceiveArrival.Rail.onchain, sats, SystemClock.elapsedRealtime(), row.txid)
+            chain = next
+            if (ReceiveArrivals.takesCard(arrival)) arrival = next
             return@LaunchedEffect
         }
-        ReceiveArrivals.viaAddress(rows, settled.toSet(), ownArk.toSet(), ownHashes.toSet())?.let { row ->
+        // While another Ark or Lightning arrival plays, a payment to your address waits its turn (it ends with a new request).
+        ReceiveArrivals.viaAddress(rows, settled.toSet(), ownArk.toSet(), ownHashes.toSet())?.takeIf { ReceiveArrivals.takesCard(arrival) }?.let { row ->
             settled = settled + row.id
-            if (arrival == null) arrival = ReceiveArrival(if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark,
+            arrival = ReceiveArrival(if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark,
                 row.amount, SystemClock.elapsedRealtime())
             app.refresh()
         }
@@ -157,11 +164,11 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
             }
         }
     }
-    val confirmedAt = arrival?.txid?.let { txid -> rows.firstOrNull { it.txid == txid && it.source == "onchain-wallet" } }
+    val confirmedAt = chain?.txid?.let { txid -> rows.firstOrNull { it.txid == txid && it.source == "onchain-wallet" } }
         ?.takeIf { it.hasConfirmation == true }?.confirmationHeight?.toLong()
     val address = app.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
     val ui = ReceiveUi(request, address, format, app.amountUnit, locale, price, currency, error = error, saving = saving, invoiceError = invoiceError,
-        arrival = arrival, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current }, confirmedAt = confirmedAt,
+        arrival = arrival, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current }, confirmedAt = confirmedAt,
         listening = app.session.isOpen && !app.isWalletSuspended && error == null && (format == ReceiveFormat.lightningAddress && address != null || request != null))
     val actions = ReceiveActions(
         select = { format = it },
@@ -173,7 +180,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
                     try {
                         val next = app.session.receiveInvoice(current, sats, note)
                         // A payment may complete while the invoice is being generated.
-                        if (request == current && (arrival == null || arrival?.rail == ReceiveArrival.Rail.onchain)) { request = next; format = ReceiveFormats.afterAmount(format, true) }
+                        if (request == current && ReceiveArrivals.takesCard(arrival)) { request = next; format = ReceiveFormats.afterAmount(format, true) }
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (_: Exception) { invoiceError = "Could not generate a Lightning invoice. Please try again."; app.error = invoiceError }
                     finally { saving = false }

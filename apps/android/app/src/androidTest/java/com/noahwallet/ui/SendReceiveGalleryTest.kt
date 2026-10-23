@@ -168,5 +168,7 @@ class SendReceiveGalleryTest {
             receive(name, ReceiveFixtures.ui("address", ReceiveFixtures.arrival(rail, at - 2_600)), wait = 2_100)
         }
         receive("receive-chain-confirmed", ReceiveFixtures.ui("address", ReceiveFixtures.arrival(chain, 6_000), confirmedAt = 921_345))
+        // A payment to your address after an on-chain arrival: it takes the card while the block row keeps following the deposit.
+        receive("receive-ark-over-chain", ReceiveFixtures.ui("address", ReceiveFixtures.arrival(ark, 1_000 - 2_600)).copy(chain = ReceiveFixtures.arrival(chain, 20_000)), wait = 2_100)
     }
 }
