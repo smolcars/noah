@@ -108,12 +108,12 @@ struct ActivityShotTests {
         renew.inputVtxos = (0..<3).map { hex("m7in\($0)") + ":\($0)" }
         renew.chainAnchor = hex("m7anchor") + ":0"
         renew.sentTo = []
+        // Bark 0.8 records an offboard's one committed fee as the Ark fee.
         var onchain = movement("m8", "Onchain", 53_000, "outgoing", at(7, 10, 47), to: address, kind: "send-onchain",
-                               subsystem: "bark.offboard:send_onchain", fee: 150)
+                               subsystem: "bark.offboard:send_onchain", fee: 2_550)
         onchain.sentTo = [.init(destination: address, amount_sat: 53_000, paymentMethod: "bitcoin")]
         onchain.txid = hex("m8tx")
-        onchain.onchainFeeSat = 420
-        onchain.metadataJson = #"{"offboard_txid":"\#(hex("m8tx"))","onchain_fee_sat":420}"#
+        onchain.metadataJson = #"{"offboard_txid":"\#(hex("m8tx"))"}"#
         let received = movement("m9", "Arkoor", 21_000, "incoming", at(9, 19, 15), kind: "arkoor-receive", subsystem: "bark.arkoor:receive")
         var board = movement("m10", "Onchain", 140_000, "incoming", at(11, 15, 40), kind: "onboard", subsystem: "bark.board:board")
         board.onchainFeeSat = 310
@@ -149,7 +149,7 @@ struct ActivityShotTests {
 
     static var busy: [HistoryTransaction] {
         let at = HomeShotTests.at
-        var arriving = HomeShotTests.row("onchain-wallet-\(hex("p1"))", "Onchain", 100_000, "incoming", "1970-01-01T00:00:00.000Z", status: nil)
+        var arriving = HomeShotTests.row("onchain-wallet-p1", "Onchain", 100_000, "incoming", "1970-01-01T00:00:00.000Z", status: nil)
         arriving.source = "onchain-wallet"
         arriving.txid = hex("p1")
         arriving.hasConfirmation = false
@@ -159,11 +159,10 @@ struct ActivityShotTests {
                                subsystem: "bark.lightning_send:send", fee: 15)
         sending.paymentHash = hex("p2hash")
         var swap = movement("p3", "Onchain", 40_000, "outgoing", at(0, 9, 2), to: address, status: "pending", kind: "send-onchain",
-                            subsystem: "bark.offboard:send_onchain", fee: 150)
+                            subsystem: "bark.offboard:send_onchain", fee: 2_550)
         swap.sentTo = [.init(destination: address, amount_sat: 40_000, paymentMethod: "bitcoin")]
         swap.txid = hex("p3tx")
-        swap.onchainFeeSat = 420
-        swap.metadataJson = #"{"offboard_txid":"\#(hex("p3tx"))","onchain_fee_sat":420}"#
+        swap.metadataJson = #"{"offboard_txid":"\#(hex("p3tx"))"}"#
         var round = movement("p4", "Onchain", 30_000, "outgoing", at(0, 8, 50), to: address, status: "pending", kind: "offboard",
                              subsystem: "bark.round:offboard", fee: 150)
         round.sentTo = [.init(destination: address, amount_sat: 30_000, paymentMethod: "bitcoin")]

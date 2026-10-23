@@ -292,7 +292,6 @@
   <string name="gt_3664cca676c6d7bd">"라이트닝 주소 복사"</string>
   <string name="gt_fbf381be9230f1e7">"시드 문구 복사"</string>
   <string name="gt_97aa37b889c4ee5f">"주소 복사: %1$s"</string>
-  <string name="gt_8754e80cb407a0c3">"수신 주소 복사"</string>
   <string name="gt_df377616065c56fa">"지원 문의 메시지 복사"</string>
   <string name="gt_5d9172fe6bc675da">"거래 ID 복사"</string>
   <string name="gt_63ba394601c5c4aa">"%1$s 복사"</string>
@@ -873,6 +872,7 @@
   <string name="gt_6be6caff13df7c0f">"엔드포인트를 변경하기 전에 지갑을 여세요."</string>
   <string name="gt_f4ce6b8f22a13fe1">"브라우저에서 %1$s 열기"</string>
   <string name="gt_557d3ad870771176">"내장 BTC Map 여는 중…"</string>
+  <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
   <string name="gt_f893fab7e39f5540">"그렇지 않으면 Android가 Noah를 일시 중지해 결제가 도착하지 않을 수 있습니다."</string>
   <string name="gt_3619cf0b90923a4b">"송신"</string>
   <string name="gt_5830129e672b39a9">"출력 VTXO"</string>
@@ -1330,7 +1330,6 @@
   <string name="gt_321e1df45aa6a9a3">"거래 크기"</string>
   <string name="gt_3e5136fd4b11c0dd">"거래"</string>
   <string name="gt_dde8bef78cbb7206">"이체"</string>
-  <string name="gt_950abf62a77396f0">"이체됨"</string>
   <string name="gt_d8b8392e2c542950">"다시 시도"</string>
   <string name="gt_92dfd3632baeb6d4">"알림 켜기"</string>
   <string name="gt_baaddf70fb5d432b">"유형"</string>
@@ -1516,6 +1515,7 @@
     <item quantity="other">"%1$s곳%2$s"</item>
   </plurals>
   <string name="gt_31ba1bfe057bd412">"%1$s 입금 예정"</string>
+  <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
   <string name="gt_05421802af3d82be">"%1$s 사용 가능"</string>
   <string name="gt_07af0226de4cedc3">"Ark에서 %1$s 사용 가능"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s이 지갑으로 돌아왔어요."</string>

@@ -292,7 +292,6 @@
   <string name="gt_3664cca676c6d7bd">"Kopiera Lightning-adress"</string>
   <string name="gt_fbf381be9230f1e7">"Kopiera återställningsfras"</string>
   <string name="gt_97aa37b889c4ee5f">"Kopiera adress: %1$s"</string>
-  <string name="gt_8754e80cb407a0c3">"Kopiera mottagaradress"</string>
   <string name="gt_df377616065c56fa">"Kopiera supportmeddelande"</string>
   <string name="gt_5d9172fe6bc675da">"Kopiera transaktions-ID"</string>
   <string name="gt_63ba394601c5c4aa">"Kopiera %1$s"</string>
@@ -873,6 +872,7 @@
   <string name="gt_6be6caff13df7c0f">"Öppna din plånbok innan du ändrar slutpunkten."</string>
   <string name="gt_f4ce6b8f22a13fe1">"Öppna %1$s i webbläsaren"</string>
   <string name="gt_557d3ad870771176">"Öppnar den medföljande versionen av BTC Map…"</string>
+  <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
   <string name="gt_f893fab7e39f5540">"Annars kan Android pausa Noah, och betalningar kan sluta komma fram."</string>
   <string name="gt_3619cf0b90923a4b">"Utgående"</string>
   <string name="gt_5830129e672b39a9">"Utgående VTXO:er"</string>
@@ -1330,7 +1330,6 @@
   <string name="gt_321e1df45aa6a9a3">"Transaktionsstorlek"</string>
   <string name="gt_3e5136fd4b11c0dd">"Transaktioner"</string>
   <string name="gt_dde8bef78cbb7206">"Överföring"</string>
-  <string name="gt_950abf62a77396f0">"Överfört"</string>
   <string name="gt_d8b8392e2c542950">"Försök igen"</string>
   <string name="gt_92dfd3632baeb6d4">"Slå på aviseringar"</string>
   <string name="gt_baaddf70fb5d432b">"Typ"</string>
@@ -1516,6 +1515,7 @@
     <item quantity="other">"%1$s platser%2$s"</item>
   </plurals>
   <string name="gt_31ba1bfe057bd412">"%1$s på väg"</string>
+  <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
   <string name="gt_05421802af3d82be">"%1$s tillgängligt"</string>
   <string name="gt_07af0226de4cedc3">"%1$s tillgängligt i Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s är tillbaka i din plånbok."</string>

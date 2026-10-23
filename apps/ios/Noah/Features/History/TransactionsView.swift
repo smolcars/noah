@@ -6,14 +6,14 @@ import SwiftUI
 /// pane has its own navigation bar, so nothing crosses the fold. Selection, search, filter,
 /// scroll position and the Details expansion live here, so a pose change keeps them.
 struct TransactionsView: View {
-    enum Route: Hashable { case payment(String), coin(String), exits, recurring }
+    enum Route: Hashable { case payment(String) }
 
     @Environment(AppModel.self) private var app
     @Environment(HistoryModel.self) private var history
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.activityFixture) private var fixture
-    @State private var path: [Route] = []
-    @State private var detailPath: [Route] = []
+    @State private var path = NavigationPath()
+    @State private var detailPath = NavigationPath()
     @State private var selectedID: String?
     @State private var filter = HistoryFilter.all
     @State private var query = ""
@@ -40,7 +40,11 @@ struct TransactionsView: View {
         }
         .onboardingWindow($window)
         .onChange(of: window.wide) { _, wide in layoutChanged(toWide: wide) }
+        // Back (or a swipe) on the phone closes the payment.
+        .onChange(of: path.isEmpty) { _, empty in if empty && !window.wide { selectedID = nil } }
         .onboardingHaptics(haptics)
+        // The phone's tab bar hides while a payment is open.
+        .preference(key: ActivityHidesTabBar.self, value: !window.wide && !path.isEmpty)
         .task {
             guard let fixture else { return }
             filter = fixture.filter
@@ -48,7 +52,7 @@ struct TransactionsView: View {
             detailsOpen = fixture.detailsOpen
             if let id = fixture.selectedID {
                 selectedID = id
-                if !window.wide { path = [.payment(id)] }
+                if !window.wide { path.append(Route.payment(id)) }
             }
             exporting = fixture.exporting
             if fixture.query != nil {
@@ -67,7 +71,7 @@ struct TransactionsView: View {
     private var compactStack: some View {
         NavigationStack(path: $path) {
             list(wide: false)
-                .navigationDestination(for: Route.self) { route in destination(route, wide: false) }
+                .navigationDestination(for: Route.self) { route in destination(route) }
         }
     }
 
@@ -85,7 +89,6 @@ struct TransactionsView: View {
                         ActivitySelectPrompt().toolbar(.hidden, for: .navigationBar)
                     }
                 }
-                .navigationDestination(for: Route.self) { route in destination(route, wide: true) }
             }
             .frame(maxWidth: .infinity)
             .accessibilityIdentifier("history-detail-pane")
@@ -107,26 +110,19 @@ struct TransactionsView: View {
                          onSelect: select, onExport: openExport, onReceive: onReceive)
     }
 
-    @ViewBuilder private func destination(_ route: Route, wide: Bool) -> some View {
+    @ViewBuilder private func destination(_ route: Route) -> some View {
         switch route {
         case .payment(let id):
             if let transaction = history.transactions.first(where: { $0.id == id }) {
-                detail(transaction, wide: wide)
+                detail(transaction, wide: false)
                     .navigationTransition(.zoom(sourceID: id, in: zoom))
-                    .toolbar(.hidden, for: .tabBar)
             }
-        case .coin(let id):
-            let model = OnchainModel()
-            VtxoDetailView(id: id, model: model).modifier(OnchainScreen(model: model))
-        case .exits:
-            UnilateralExitView()
-        case .recurring:
-            RecurringPaymentsView()
         }
     }
 
     private func detail(_ transaction: HistoryTransaction, wide: Bool) -> some View {
-        TransactionDetailView(transaction: transaction, onRepeatPayment: repeatPayment, onClose: close)
+        TransactionDetailView(transaction: transaction, wide: wide, closable: wide, detailsOpen: $detailsOpen,
+                              onRepeatPayment: repeatPayment, onClose: close)
     }
 
     // MARK: Actions
@@ -135,45 +131,42 @@ struct TransactionsView: View {
         haptics.play(.light)
         if window.wide {
             withAnimation(NoahTokens.Motion.travel(reduceMotion)) {
-                detailPath = []
+                detailPath = NavigationPath()
                 detailsOpen = false
                 selectedID = transaction.id
             }
         } else {
             detailsOpen = false
             selectedID = transaction.id
-            path = [.payment(transaction.id)]
+            path = NavigationPath([Route.payment(transaction.id)])
         }
     }
 
     private func close() {
         haptics.play(.light)
         if window.wide {
-            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { selectedID = nil; detailPath = [] }
+            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { selectedID = nil; detailPath = NavigationPath() }
         } else {
-            path = []
+            path = NavigationPath()
             selectedID = nil
         }
     }
 
-    /// A pose change moves an open payment between the push and the trailing pane.
+    /// A pose change moves an open payment between the push and the trailing pane; links
+    /// opened from it (coin details and the like) close.
     private func layoutChanged(toWide wide: Bool) {
         if wide {
-            if case .payment(let id) = path.first {
-                selectedID = id
-                detailPath = Array(path.dropFirst())
-            }
-            path = []
+            path = NavigationPath()
         } else {
-            if let selectedID, selected != nil { path = [.payment(selectedID)] + detailPath }
-            detailPath = []
+            detailPath = NavigationPath()
+            if let selectedID, selected != nil { path = NavigationPath([Route.payment(selectedID)]) }
         }
         if exporting && !wide { exporting = false; Task { exporting = true } }
     }
 
     private func repeatPayment(_ details: RepeatPayment) {
-        path = []
-        detailPath = []
+        path = NavigationPath()
+        detailPath = NavigationPath()
         selectedID = nil
         onRepeatPayment(details)
     }
@@ -191,6 +184,11 @@ struct TransactionsView: View {
         ActivityExportSheet(transactions: history.transactions.filter(filter.includes), filter: filter,
                             currency: app.preferredCurrency, onClose: closeExport)
     }
+}
+
+struct ActivityHidesTabBar: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
 
 /// Screenshot fixtures: the state Activity opens in.

@@ -10477,42 +10477,6 @@
         }
       }
     },
-    "Copy destination": {
-      "comment": "GT gt_8754e80cb407a0c3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy destination"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copiar destino"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送金先をコピー"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수신 주소 복사"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kopiera mottagaradress"
-          }
-        }
-      }
-    },
     "Copy support message": {
       "comment": "GT gt_df377616065c56fa; arguments: none",
       "extractionState": "manual",
@@ -31345,6 +31309,42 @@
         }
       }
     },
+    "Opens coin details": {
+      "comment": "GT gt_eb4bbb3d312d0b21; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens coin details"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens coin details"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens coin details"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens coin details"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens coin details"
+          }
+        }
+      }
+    },
     "Otherwise Android may pause Noah, and payments could stop arriving.": {
       "comment": "GT gt_f893fab7e39f5540; arguments: none",
       "extractionState": "manual",
@@ -47749,42 +47749,6 @@
         }
       }
     },
-    "Transferred": {
-      "comment": "GT gt_950abf62a77396f0; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transferred"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transferido"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移動済み"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이체됨"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Överfört"
-          }
-        }
-      }
-    },
     "Try again": {
       "comment": "GT gt_d8b8392e2c542950; arguments: none",
       "extractionState": "manual",
@@ -54345,6 +54309,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ på väg"
+          }
+        }
+      }
+    },
+    "{amount} at the time": {
+      "comment": "GT gt_0632ba4767ab1888; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at the time"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at the time"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at the time"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at the time"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at the time"
           }
         }
       }

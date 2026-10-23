@@ -1,153 +1,567 @@
 import SwiftUI
 
+/// A payment's detail (activity.md, "Detail"): the header, the rows that apply, Details with
+/// everything today's technical section shows, and Pay again. Activity pushes it on phones and
+/// shows it in the trailing pane on wide windows; Home opens it as a sheet.
 struct TransactionDetailView: View {
+    /// Links out of the detail, resolved here so Home's sheet and both Activity stacks work alike.
+    enum Link: Hashable { case coin(String), exits, recurring }
+
     @Environment(\.locale) private var locale
     @Environment(AppModel.self) private var app
+    @Environment(HistoryModel.self) private var history
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let transaction: HistoryTransaction
+    var wide = false
+    /// × in the bar (wide panes and Home's sheets); a phone push has Back instead.
+    var closable = true
     let onRepeatPayment: (RepeatPayment) -> Void
     let onClose: () -> Void
-    @State private var showTechnicalDetails = false
+    /// Activity keeps Details open across pose changes; Home's sheet keeps its own.
+    private let externalDetails: Binding<Bool>?
+    @State private var localDetails = false
+    @State private var price: Double?
+    @State private var chainTip: UInt32?
+    @State private var chainStatus: ChainTransactionStatus?
+    @State private var copied: String?
+    @State private var toast: HomeToast?
+    @State private var shareAnchor: CGRect?
+    @State private var haptics = OnboardingHaptics()
+
+    init(transaction: HistoryTransaction, wide: Bool = false, closable: Bool = true, detailsOpen: Binding<Bool>? = nil,
+         onRepeatPayment: @escaping (RepeatPayment) -> Void, onClose: @escaping () -> Void) {
+        self.transaction = transaction
+        self.wide = wide
+        self.closable = closable
+        self.onRepeatPayment = onRepeatPayment
+        self.onClose = onClose
+        externalDetails = detailsOpen
+    }
+
+    private var detailsOpen: Bool {
+        get { externalDetails?.wrappedValue ?? localDetails }
+        nonmutating set {
+            if let externalDetails { externalDetails.wrappedValue = newValue } else { localDetails = newValue }
+        }
+    }
+
+    private var ownDomain: String {
+        app.server.state.lightningAddress?.split(separator: "@").last.map(String.init) ?? LightningIdentity.domain(for: app.variant)
+    }
+    private var row: HomeActivityRow { HomeActivityRow(transaction, ownDomain: ownDomain) }
+    private var detail: ActivityDetail { ActivityDetail(transaction, ownDomain: ownDomain) }
+    private var language: String { locale.identifier }
+    private var hidden: Bool { app.isBalanceHidden }
+    private var payAgain: RepeatPayment? { transaction.canRepeat ? transaction.repeatPayment : nil }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                HStack {
-                    Text("Payment details").font(NoahFont.headline)
-                    Spacer()
-                    Button("Close payment details", systemImage: "xmark", action: onClose)
-                        .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
-                        .glassButtonStyle()
-                }
-                VStack(spacing: 12) {
-                    Image(systemName: transaction.symbol).font(.largeTitle).foregroundStyle(transaction.amountColor)
-                    Text(receiptAction).font(NoahFont.callout).foregroundStyle(NoahColor.mutedForeground)
-                    Text(BitcoinAmount.format(sats: transaction.amount, unit: app.amountUnit, locale: locale))
-                        .font(NoahFont.inter(36, .bold, relativeTo: .largeTitle))
-                        .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
-                    if let price = transaction.btcPrice {
-                        Text(FiatCurrency.display(sats: transaction.amount, btcPrice: price, currency: app.preferredCurrency, locale: locale))
-                            .foregroundStyle(NoahColor.mutedForeground)
-                    } else {
-                        Text("Historical value unavailable").font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                    }
-                    Text(LocalizedStringKey(transaction.receiptStatus)).font(NoahFont.callout)
-                    if let destination = transaction.destination, !destination.isEmpty {
-                        Text(destination).font(NoahFont.callout).multilineTextAlignment(.center)
-                            .lineLimit(2).truncationMode(.middle).textSelection(.enabled)
-                        Button("Copy destination", systemImage: "doc.on.doc") { copy(destination) }
-                            .glassButtonStyle()
-                    }
-                    if transaction.canRepeat, let details = transaction.repeatPayment {
-                        Button("Repeat payment", systemImage: "arrow.clockwise") { onRepeatPayment(details) }
-                            .glassButtonStyle(prominent: true)
-                            .accessibilityIdentifier("repeat-payment-button")
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    VStack(spacing: 0) { mainRows }.padding(.top, 24)
+                    detailsToggle(proxy)
+                    if detailsOpen {
+                        VStack(alignment: .leading, spacing: 0) { detailRows }
+                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
                     }
                 }
-                VStack(spacing: 0) {
-                    detail("Date", transaction.formattedDate)
-                    detail("Route", transaction.type == "Lnurl" ? "Lightning address" : transaction.displayLabel)
-                    if let repeatPayment = transaction.repeatPayment {
-                        if repeatPayment.amountMode == "FIAT", let currency = repeatPayment.fiatCurrency,
-                           let amount = Double(repeatPayment.amountInput) {
-                            detail("Entered as", FiatCurrency.format(amount, currency: currency, locale: locale))
-                        }
-                        if !repeatPayment.comment.isEmpty { detail("Message", repeatPayment.comment) }
-                    }
-                    amountDetail("Ark fee", transaction.offchainFeeSat)
-                    if transaction.hasOnchainFee == true { amountDetail("Onchain fee", transaction.onchainFeeSat) }
-                }
-                DisclosureGroup("Technical details", isExpanded: $showTechnicalDetails) {
-                    VStack(spacing: 0) {
-                        detail("Payment ID", transaction.id, copyable: true)
-                        if let txid = transaction.txid { detail("Transaction ID", txid, copyable: true) }
-                        if let preimage = transaction.preimage {
-                            detail("Preimage", preimage, copyable: true)
-                                .accessibilityIdentifier("transaction-detail-preimage")
-                        }
-                        if let url = transaction.explorerURL(variant: app.variant) {
-                            Link(destination: url) { Label("View in explorer", systemImage: "arrow.up.right.square") }
-                                .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
-                        }
-                        if let received = transaction.receivedOn, received.count == 1, let first = received.first, !first.destination.isEmpty {
-                            detail("Invoice", first.destination, copyable: true)
-                        }
-                        if transaction.source == "onchain-wallet" || transaction.balanceChangeSat != nil {
-                            detail("Chain status", transaction.hasConfirmation == true ? "Confirmed" : "Unconfirmed")
-                            amountDetail("Balance change", transaction.balanceChangeSat)
-                            if let height = transaction.confirmationHeight { detail("Block height", String(height)) }
-                            if let hash = transaction.confirmationHash { detail("Block hash", hash, copyable: true) }
-                            if let hex = transaction.txHex { detail("Raw transaction", hex, copyable: true) }
-                        }
-                        if let kind = transaction.movementKindLabel { detail("Movement type", kind) }
-                        if let id = transaction.movementId { detail("Movement ID", String(id), copyable: true) }
-                        if let name = transaction.subsystemName { detail("Subsystem", "\(name) (\(transaction.subsystemKind ?? ""))") }
-                        amountDetail("Intended balance change", transaction.intendedBalanceSat)
-                        amountDetail("Effective balance change", transaction.effectiveBalanceSat)
-                        if let anchor = transaction.chainAnchor { detail("Chain anchor", anchor, copyable: true) }
-                        if let metadata = transaction.metadataJson, !metadata.isEmpty { detail("Metadata", metadata, copyable: true) }
-                        destinations("Sent to", transaction.sentTo)
-                        destinations("Received on", transaction.receivedOn)
-                        vtxos("Input VTXOs", transaction.inputVtxos)
-                        vtxos("Output VTXOs", transaction.outputVtxos)
-                        vtxos("Exited VTXOs", transaction.exitedVtxos)
-                    }
-                }
-                .font(NoahFont.callout)
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .padding(.leading, wide ? 36 : NoahTokens.Space.screen).padding(.trailing, wide ? 32 : NoahTokens.Space.screen)
+                .padding(.top, wide ? 18 : 8)
+                .padding(.bottom, payAgain == nil ? 60 : 130)
+                .frame(maxWidth: 640, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(24)
-            .frame(maxWidth: 680)
-            .frame(maxWidth: .infinity)
         }
-        .background(NoahColor.background.ignoresSafeArea())
-        .foregroundStyle(NoahColor.foreground)
+        .background(NoahTokens.Colors.background.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) { if let payAgain { payAgainBar(payAgain) } }
+        .overlay(alignment: .top) { toastLayer }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbar }
+        .tint(NoahTokens.Colors.foreground)
+        .navigationDestination(for: Link.self, destination: destination)
+        .task(id: "\(transaction.id):\(transaction.isPending)") { await load() }
+        .onboardingHaptics(haptics)
+        .accessibilityIdentifier("transaction-detail")
     }
 
-    private var receiptAction: LocalizedStringKey {
-        switch transaction.accounting.direction {
-        case "Transfer": "Transferred"
-        case "None": "Canceled"
-        case "Outgoing": "Sent"
-        default: "Received"
+    // MARK: Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HomeAvatar(avatar: row.avatar, pending: row.status.isPending, failed: row.status.isFailure, isNew: false, size: 60)
+                .padding(.top, 6)
+            Text(verbatim: row.amount(unit: app.amountUnit, hidden: hidden, locale: locale))
+                .noahText(ActivityDetailText.amount)
+                .monospacedDigit()
+                .strikethrough(detail.unsuccessful, pattern: .solid)
+                .foregroundStyle(detail.unsuccessful ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                .lineLimit(1).minimumScaleFactor(0.5)
+                .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(transaction.amount)))
+                .padding(.top, 18)
+                .accessibilityIdentifier("transaction-detail-amount")
+            HStack(spacing: 8) {
+                if detail.tone == .pending { ActivityOrangePulse() }
+                Text(verbatim: statusText).noahText(NoahTokens.Typography.label)
+                    .foregroundStyle(detail.tone == .failure ? NoahTokens.Colors.failure
+                                     : detail.tone == .muted ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+            }
+            .padding(.top, 12)
+            .accessibilityIdentifier("transaction-detail-status")
+            if let fiat {
+                Text(verbatim: fiat).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
+            }
+            if let txid = detail.blockTxid { blockRow(txid) }
         }
     }
 
-    private func detail(_ label: String, _ value: String, copyable: Bool = false) -> some View {
-        NoahDetailRow(label: label, value: value, copyable: copyable)
+    private var statusText: String {
+        if detail.status == "Renewed {n} coins", let coins = detail.renewedCoins {
+            return L10n.plural("Renewed {n} coins", count: coins, locale: language)
+        }
+        return L10n.text(detail.status, locale: language)
     }
 
-    @ViewBuilder private func amountDetail(_ label: String, _ amount: Int64?) -> some View {
-        if let amount { detail(label, BitcoinAmount.format(sats: amount, unit: app.amountUnit, locale: locale)) }
+    /// The historical price for settled rows, the current one for today's and pending rows.
+    private var fiat: String? {
+        guard !detail.unsuccessful else { return nil }
+        if hidden { return HomeModel.hiddenFiat(currency: app.preferredCurrency) }
+        let today = transaction.timestamp.map { Calendar.current.isDateInToday($0) } ?? true
+        if !transaction.isPending, !today, transaction.dateLabel == nil, let historical = transaction.btcPrice {
+            let amount = FiatCurrency.display(sats: transaction.amount, btcPrice: historical, currency: app.preferredCurrency, locale: locale)
+            return L10n.text("{amount} at the time", amount, locale: language)
+        }
+        guard let price = price ?? transaction.btcPrice else { return nil }
+        return FiatCurrency.display(sats: transaction.amount, btcPrice: price, currency: app.preferredCurrency, locale: locale)
     }
+
+    @ViewBuilder private func blockRow(_ txid: String) -> some View {
+        let confirmed: UInt32? = if case .confirmed(let height) = chainStatus { height } else { transaction.confirmationHeight }
+        let required = ActivityDetail.requiredConfirmations(transaction)
+        ActivityBlockRow(tip: chainTip, confirmedHeight: confirmed)
+            .frame(width: 204, height: 62)
+            .padding(.leading, -8)
+            .padding(.top, 20)
+        if let phase = phaseLine(confirmed: confirmed, required: required) {
+            Text(verbatim: phase).noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.muted)
+                .padding(.top, 4)
+                .accessibilityIdentifier("transaction-detail-phase")
+        }
+    }
+
+    private func phaseLine(confirmed: UInt32?, required: Int) -> String? {
+        if let confirmed {
+            let line = L10n.text("Confirmed in block {height}", confirmed.formatted(.number.locale(locale)), locale: language)
+            guard required > 1 else { return line }
+            let count = min(SendMotion.confirmations(height: confirmed, tip: chainTip), required)
+            return line + " · " + L10n.text("{n} of {total}", count, required, locale: language)
+        }
+        return chainTip.map { L10n.text("Waiting for block {height}", ($0 + 1).formatted(.number.locale(locale)), locale: language) }
+    }
+
+    // MARK: Rows
+
+    @ViewBuilder private var mainRows: some View {
+        if let to = detail.to {
+            line("To", to, mono: detail.toIsAddress, copy: to, id: "transaction-detail-to")
+        }
+        line("Via", L10n.text(detail.rail.title, locale: language), glyph: detail.rail.symbol)
+        fees
+        if let total = detail.total { line("Total", money(total), numeric: true) }
+        line("Date", dateText)
+        if let height = confirmedBlock { line("Confirmed", L10n.text("Block {height}", height.formatted(.number.locale(locale)), locale: language)) }
+        if let entered = enteredAs { line("Entered as", hidden ? "••••" : entered) }
+        if let note = detail.note { line("Note", note, wraps: true) }
+        if let recurring = transaction.recurring {
+            link(.recurring, "Repeats", L10n.text(recurring.interval.description, locale: language))
+        }
+        if transaction.movementKind == "exit" { link(.exits, "Progress", L10n.text("Exit details", locale: language)) }
+        if let proof = detail.proof {
+            line("Proof of payment", proof, mono: true, copy: proof, id: "transaction-detail-preimage")
+        }
+        if let txid = detail.chainTxid {
+            line("Transaction ID", txid, mono: true, copy: txid, explorer: transaction.explorerURL(variant: app.variant), last: true)
+        }
+    }
+
+    @ViewBuilder private var fees: some View {
+        switch detail.fee {
+        case .free: line("Fee", L10n.text("Free", locale: language))
+        case .nothing: line("Fee", L10n.text("None", locale: language))
+        case .upTo(let sats): line("Fee", L10n.text("Up to {amount}", money(sats), locale: language), numeric: true)
+        case .amount(let sats): line("Fee", money(sats), numeric: true)
+        case .network(let sats): line("Network fee", money(sats), numeric: true)
+        case .split(let ark, let network):
+            line("Ark fee", money(ark), numeric: true)
+            line("Network fee", money(network), numeric: true)
+        case nil: EmptyView()
+        }
+    }
+
+    private var confirmedBlock: UInt32? {
+        guard !transaction.isPending, transaction.hasConfirmation == true else { return nil }
+        return transaction.confirmationHeight
+    }
+
+    private var enteredAs: String? {
+        guard let payment = transaction.repeatPayment, payment.amountMode == "FIAT", let currency = payment.fiatCurrency,
+              let amount = Double(payment.amountInput) else { return nil }
+        return FiatCurrency.format(amount, currency: currency, locale: locale)
+    }
+
+    private var dateText: String {
+        if let label = transaction.dateLabel { return L10n.text(label, locale: language) }
+        guard let date = transaction.timestamp, date.timeIntervalSince1970 > 0 else { return L10n.text("Unconfirmed", locale: language) }
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        formatter.doesRelativeDateFormatting = true
+        return formatter.string(from: date)
+    }
+
+    // MARK: Details
+
+    private func detailsToggle(_ proxy: ScrollViewProxy) -> some View {
+        Button {
+            haptics.play(.selection)
+            withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft)) { detailsOpen.toggle() }
+            if detailsOpen {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(120))
+                    withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft)) { proxy.scrollTo("details", anchor: .top) }
+                }
+            }
+        } label: {
+            HStack {
+                Text("Details").noahText(NoahTokens.Typography.label)
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 15, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                    .rotationEffect(.degrees(detailsOpen ? 90 : 0))
+            }
+            .frame(height: 48)
+            .contentShape(Rectangle())
+            .overlay(alignment: .top) { HomeHairline() }
+            .overlay(alignment: .bottom) { HomeHairline() }
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 18)
+        .id("details")
+        .accessibilityValue(Text(detailsOpen ? "Expanded" : "Collapsed"))
+        .accessibilityIdentifier("transaction-detail-details")
+    }
+
+    @ViewBuilder private var detailRows: some View {
+        if let hash = transaction.paymentHash { small("Payment hash", hash, mono: true, copy: hash) }
+        if transaction.direction == "incoming", let preimage = transaction.preimage {
+            small("Preimage", preimage, mono: true, copy: preimage)
+        }
+        if let received = transaction.receivedOn, received.count == 1, let invoice = received.first?.destination,
+           PaymentEncoding.invoice(invoice) != nil {
+            small("Invoice", invoice, mono: true, copy: invoice)
+        }
+        if let offer = transaction.sentTo?.first(where: { $0.paymentMethod == "offer" })?.destination {
+            small("Offer", offer, mono: true, copy: offer)
+        }
+        destinations("Sent to", transaction.sentTo)
+        destinations("Received on", transaction.receivedOn)
+        small("Payment ID", transaction.id, mono: true, copy: transaction.id)
+        if detail.chainTxid == nil, let txid = transaction.txid, !txid.isEmpty, txid != transaction.id {
+            small("Transaction ID", txid, mono: true, copy: txid)
+        }
+        if let id = transaction.movementId { small("Movement ID", String(id), copy: String(id)) }
+        if let kind = transaction.movementKindLabel { small("Movement type", L10n.text(kind, locale: language)) }
+        if let name = transaction.subsystemName { small("Subsystem", "\(name) (\(transaction.subsystemKind ?? ""))", mono: true) }
+        if let intended = transaction.intendedBalanceSat { small("Intended balance change", signed(intended), numeric: true) }
+        if let effective = transaction.effectiveBalanceSat { small("Effective balance change", signed(effective), numeric: true) }
+        if let anchor = transaction.chainAnchor, anchor != transaction.txid, anchor.split(separator: ":").first.map(String.init) != transaction.txid {
+            small("Chain anchor", anchor, mono: true, copy: anchor)
+        }
+        if transaction.source == "onchain-wallet" || transaction.balanceChangeSat != nil {
+            small("Chain status", L10n.text(transaction.hasConfirmation == true ? "Confirmed" : "Unconfirmed", locale: language))
+            if let change = transaction.balanceChangeSat { small("Balance change", signed(change), numeric: true) }
+            if let height = transaction.confirmationHeight { small("Block height", height.formatted(.number.locale(locale))) }
+            if let hash = transaction.confirmationHash { small("Block hash", hash, mono: true, copy: hash) }
+            if let hex = transaction.txHex { small("Raw transaction", hex, mono: true, copy: hex) }
+        }
+        coins("Spent coins", transaction.inputVtxos)
+        coins("New coins", transaction.outputVtxos)
+        coins("Exited coins", transaction.exitedVtxos)
+        if let metadata = transaction.metadataJson, !metadata.isEmpty, metadata != "{}" {
+            section("Metadata")
+            small("JSON", metadata, mono: true, copy: metadata)
+        }
+    }
+
+    /// Multi-destination payments keep "destination · amount".
     @ViewBuilder private func destinations(_ label: String, _ values: [HistoryTransaction.Destination]?) -> some View {
         if let values, !values.isEmpty {
-            detail(label, values.map { "\($0.destination) · \(BitcoinAmount.format(sats: $0.amount_sat, unit: app.amountUnit, locale: locale))" }.joined(separator: "\n"), copyable: true)
+            let text = values.count == 1 ? values[0].destination
+                : values.map { "\($0.destination) · \(money($0.amount_sat))" }.joined(separator: "\n")
+            small(label, text, mono: true, copy: values.count == 1 ? values[0].destination : text, wraps: values.count > 1)
         }
     }
-    @ViewBuilder private func vtxos(_ label: String, _ values: [String]?) -> some View {
-        if let values, !values.isEmpty { detail(label, values.joined(separator: "\n"), copyable: true) }
+
+    @ViewBuilder private func coins(_ title: String, _ ids: [String]?) -> some View {
+        if let ids, !ids.isEmpty {
+            section(title)
+            ForEach(Array(ids.enumerated()), id: \.offset) { index, id in
+                NavigationLink(value: Link.coin(id)) {
+                    DetailLine(label: L10n.text("Coin {n}", index + 1, locale: language), value: id, compact: true, mono: true, chevron: true)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Opens coin details"))
+            }
+        }
     }
-    private func copy(_ value: String) {
+
+    private func section(_ title: String) -> some View {
+        Text(LocalizedStringKey(title)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+            .padding(.top, 18)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    // MARK: Row building
+
+    private func line(_ label: String, _ value: String, mono: Bool = false, numeric: Bool = false, glyph: String? = nil,
+                      copy: String? = nil, explorer: URL? = nil, wraps: Bool = false, id: String = "", last: Bool = false) -> some View {
+        DetailLine(label: L10n.text(label, locale: language), value: value, mono: mono, numeric: numeric, glyph: glyph,
+                   wraps: wraps, copied: copy != nil && copied == label, onCopy: copy.map { value in { self.copy(value, label) } },
+                   explorer: explorer, hairline: !last)
+            .accessibilityIdentifier(id)
+    }
+
+    private func small(_ label: String, _ value: String, mono: Bool = false, numeric: Bool = false, copy: String? = nil,
+                       wraps: Bool = false) -> some View {
+        DetailLine(label: L10n.text(label, locale: language), value: value, compact: true, mono: mono, numeric: numeric,
+                   wraps: wraps, copied: copy != nil && copied == label, onCopy: copy.map { value in { self.copy(value, label) } })
+    }
+
+    private func link(_ link: Link, _ label: String, _ value: String) -> some View {
+        NavigationLink(value: link) {
+            DetailLine(label: L10n.text(label, locale: language), value: value, chevron: true)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func money(_ sats: Int64) -> String {
+        hidden ? "₿••••" : BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale)
+    }
+
+    private func signed(_ sats: Int64) -> String {
+        sats == 0 ? money(0) : (sats < 0 ? "−" : "+") + money(abs(sats))
+    }
+
+    // MARK: Chrome
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button("Share", systemImage: "square.and.arrow.up", action: share)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { shareAnchor = $0 }
+                .accessibilityIdentifier("transaction-detail-share")
+            if closable {
+                Button("Close", systemImage: "xmark", action: onClose)
+                    .accessibilityIdentifier("transaction-detail-close")
+            }
+        }
+    }
+
+    private func payAgainBar(_ details: RepeatPayment) -> some View {
+        Button { haptics.play(.light); onRepeatPayment(details) } label: {
+            Text("Pay again").frame(maxWidth: .infinity)
+        }
+        .buttonStyle(HomePillStyle(height: 56, font: NoahTokens.Typography.button))
+        .padding(.horizontal, wide ? 32 : NoahTokens.Space.screen)
+        .padding(.top, 24).padding(.bottom, wide ? 16 : 8)
+        .background {
+            LinearGradient(colors: [NoahTokens.Colors.background.opacity(0), NoahTokens.Colors.background],
+                           startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.46))
+                .ignoresSafeArea()
+        }
+        .accessibilityIdentifier("repeat-payment-button")
+    }
+
+    private var toastLayer: some View {
+        VStack {
+            if let toast {
+                HomeToastView(text: toast.text).id(toast.id).transition(.homeToast(reduceMotion))
+            }
+        }
+        .padding(.top, 8)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: toast)
+        .allowsHitTesting(false)
+    }
+
+    @ViewBuilder private func destination(_ link: Link) -> some View {
+        switch link {
+        case .coin(let id):
+            let model = OnchainModel()
+            VtxoDetailView(id: id, model: model).modifier(OnchainScreen(model: model))
+        case .exits: UnilateralExitView()
+        case .recurring: RecurringPaymentsView()
+        }
+    }
+
+    // MARK: Actions
+
+    private func load() async {
+        let today = transaction.timestamp.map { Calendar.current.isDateInToday($0) } ?? true
+        if transaction.isPending || today || transaction.btcPrice == nil {
+            price = await history.currentPrice(currency: app.preferredCurrency)
+        }
+        guard let txid = detail.blockTxid else { return }
+        let state = await history.chainState(txid: transaction.source == "onchain-wallet" ? nil : txid)
+        chainTip = state.tip
+        chainStatus = state.status
+    }
+
+    /// Local-only with a two-minute expiry, as before.
+    private func copy(_ value: String, _ label: String) {
         UIPasteboard.general.setItems([[UIPasteboard.typeAutomatic: value]], options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)])
+        haptics.play(.success)
+        withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy)) { copied = label }
+        toast = HomeToast(text: "Copied")
+        Task {
+            try? await Task.sleep(for: .seconds(1.2))
+            if copied == label { withAnimation(NoahTokens.Motion.travel(reduceMotion)) { copied = nil } }
+            try? await Task.sleep(for: .seconds(0.5))
+            toast = nil
+        }
+    }
+
+    private func share() {
+        haptics.play(.light)
+        // The receipt is the user's to share; it is never logged.
+        let text = ActivityDetail.receipt(transaction, ownDomain: ownDomain, unit: app.amountUnit, locale: locale, date: dateText)
+        ActivityShare.present([text], anchor: wide ? shareAnchor : nil)
     }
 }
 
-private extension HistoryTransaction {
-    var symbol: String {
-        if movementKind == "onboard" { return "arrow.right.to.line" }
-        if movementKind == "offboard" { return "arrow.left.to.line" }
-        switch type {
-        case "Bolt11", "Lnurl": return "bolt"
-        case "Arkoor": return "sailboat"
-        default: return "cube"
+enum ActivityDetailText {
+    static let amount = NoahTokens.TextStyle(size: 46, lineHeight: nil, weight: .semibold, display: true, tracking: -0.025, textStyle: .largeTitle)
+    static let mono = Font.system(size: 14.5, weight: .regular, design: .monospaced)
+    static let monoSmall = Font.system(size: 13.5, weight: .regular, design: .monospaced)
+}
+
+/// One row of the table: a muted label, then the value with its glyph, copy, explorer or chevron.
+private struct DetailLine: View {
+    let label: String
+    let value: String
+    var compact = false
+    var mono = false
+    var numeric = false
+    var glyph: String?
+    var wraps = false
+    var chevron = false
+    var copied = false
+    var onCopy: (() -> Void)?
+    var explorer: URL?
+    var hairline = true
+
+    var body: some View {
+        HStack(alignment: wraps ? .firstTextBaseline : .center, spacing: 18) {
+            Text(verbatim: label)
+                .noahText(compact ? NoahTokens.Typography.sub : NoahTokens.Typography.body)
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .fixedSize()
+            Spacer(minLength: 0)
+            HStack(spacing: 8) {
+                if let glyph { Image(systemName: glyph).font(.system(size: 14, weight: .medium)) }
+                valueText
+                if let onCopy {
+                    Button(action: onCopy) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 15, weight: copied ? .semibold : .regular))
+                            .contentTransition(.symbolEffect(.replace))
+                            .frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .padding(.trailing, -6)
+                    .accessibilityLabel(Text(L10n.text("Copy {label}", label)))
+                }
+                if let explorer {
+                    SwiftUI.Link(destination: explorer) {
+                        Image(systemName: "arrow.up.right.square").font(.system(size: 15)).frame(width: 30, height: 30)
+                    }
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .padding(.trailing, -6)
+                    .accessibilityLabel(Text("View in explorer"))
+                }
+                if chevron {
+                    Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                }
+            }
+            .layoutPriority(1)
+        }
+        .frame(minHeight: compact ? 44 : 48)
+        .padding(.vertical, wraps ? 10 : 0)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) { if hairline { HomeHairline() } }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private var valueText: some View {
+        let text = Text(verbatim: value)
+        if mono {
+            text.font(compact ? ActivityDetailText.monoSmall : ActivityDetailText.mono)
+                .lineLimit(wraps ? nil : 1).truncationMode(.middle)
+                .textSelection(.enabled)
+                .multilineTextAlignment(.trailing)
+        } else {
+            text.noahText(numeric ? HomeText.amount : compact ? NoahTokens.Typography.control : NoahTokens.Typography.label)
+                .monospacedDigit()
+                .lineLimit(wraps ? nil : 1).truncationMode(.middle)
+                .multilineTextAlignment(.trailing)
+                .textSelection(.enabled)
         }
     }
-    var amountColor: Color {
-        if isCanceled { return NoahColor.mutedForeground }
-        let light: UInt32 = isInternalTransfer ? 0x945200 : direction == "outgoing" ? 0xB42318 : 0x137A36
-        let dark: UInt32 = isInternalTransfer ? 0xFDBA74 : direction == "outgoing" ? 0xFF8080 : 0x4ADE80
-        return Color(uiColor: UIColor { UIColor(hex: $0.userInterfaceStyle == .dark ? dark : light) })
+}
+
+/// The orange dot that pulses beside a pending status line; still under Reduce Motion.
+private struct ActivityOrangePulse: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                Circle().fill(NoahTokens.Colors.orange)
+            } else {
+                Circle().fill(NoahTokens.Colors.orange)
+                    .phaseAnimator([false, true]) { dot, dim in
+                        dot.opacity(dim ? 0.25 : 1).scaleEffect(dim ? 0.7 : 1)
+                    } animation: { _ in .easeInOut(duration: 0.8) }
+            }
+        }
+        .frame(width: 7, height: 7)
+        .accessibilityHidden(true)
     }
-    var formattedDate: String {
-        confirmationLabel ?? timestamp?.formatted(date: .abbreviated, time: .shortened) ?? date
+}
+
+/// Send's block row for a pending on-chain payment: your transaction waits in "next", then
+/// its block fills. Data from today's chain status only.
+private struct ActivityBlockRow: View {
+    let tip: UInt32?
+    let confirmedHeight: UInt32?
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.locale) private var locale
+    @State private var start = Date()
+
+    var body: some View {
+        TimelineView(.animation(paused: reduceMotion || scenePhase != .active || confirmedHeight != nil)) { timeline in
+            Canvas { context, size in
+                let row = ChainBlockRow(x0: 0, y: 0, size: 38, tip: tip, confirmedHeight: confirmedHeight, heldAt: 0,
+                                        confirmedAt: confirmedHeight == nil ? nil : -10, blinking: true,
+                                        nextLabel: L10n.text("next", locale: locale.identifier), locale: locale)
+                row.draw(MotionCanvas(context: context, size: size, viewBox: CGRect(x: -8, y: 0, width: 204, height: 62),
+                                      colors: .theme(colorScheme)),
+                         time: MotionTime(t: timeline.date.timeIntervalSince(start), reduceMotion: reduceMotion), opacity: 1, dot: true)
+            }
+        }
+        .accessibilityHidden(true)
     }
 }

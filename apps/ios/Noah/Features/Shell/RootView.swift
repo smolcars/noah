@@ -115,6 +115,7 @@ struct WalletTabs: View {
     @State private var history: HistoryModel
     /// Home's in-memory "new" set; Activity shares it.
     @State private var tracker = HomeActivityTracker()
+    @State private var activityHidesBar = false
     /// Home's and Receive's models; screenshot fixtures pass fakes for these and Send's.
     private let home: HomeModel?
     private let receive: ReceiveModel?
@@ -152,7 +153,8 @@ struct WalletTabs: View {
             }
             SwiftUI.Tab(Tab.history.title, systemImage: Tab.history.symbol, value: .history) {
                 TransactionsView(onReceive: { selection = .receive }, onRepeatPayment: repeatPayment)
-                    .modifier(WideTabContent(wide: window.wide, padsForBar: false))
+                    .onPreferenceChange(ActivityHidesTabBar.self) { activityHidesBar = $0 }
+                    .modifier(WideTabContent(wide: window.wide, padsForBar: false, barHidden: activityHidesBar))
             }
         }
         .overlay(alignment: .bottomLeading) {
