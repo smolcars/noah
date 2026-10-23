@@ -45,7 +45,7 @@ enum SendRecipientService {
         } else if let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl",
             let bytes = PaymentEncoding.bytes(decoded.words)
         {
-            endpoint = URLComponents(string: String(decoding: bytes, as: UTF8.self))
+            endpoint = SendDestination.urlText(String(decoding: bytes, as: UTF8.self)).flatMap(URLComponents.init(string:))
             // As Android's HttpUrl requests it: dot segments resolved.
             if let path = endpoint?.percentEncodedPath { endpoint?.percentEncodedPath = SendDestination.removingDotSegments(path) }
         }

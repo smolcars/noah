@@ -1835,6 +1835,84 @@
       }
     },
     {
+      "name": "row 18 lnurlp: encoded dot-dot after a non-ASCII segment (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/é/%2e%2e/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot after a non-ASCII segment (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/é/%2e%2e/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot after a non-ASCII segment (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/é/%2e%2e/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: encoded dot-dot after a non-ASCII segment (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0cw5j7ffjv5jnyef0wpshjw8ednj",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: encoded dot-dot after a non-ASCII segment (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0cw5j7ffjv5jnyef0wpshjw8ednj",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: encoded dot-dot after a non-ASCII segment (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0cw5j7ffjv5jnyef0wpshjw8ednj",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
       "name": "row 18 lnurlp: onion needs http (mainnet)",
       "input": {
         "destination": "lnurlp://abc.onion/pay",

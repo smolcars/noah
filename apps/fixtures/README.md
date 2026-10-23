@@ -26,7 +26,7 @@ two board receipt totals (reviewed fee fallback and actual fee). Both platforms 
 that table; lookup failures are transient display state and never durable evidence.
 These two fixtures are hand-specified from the RN Home rules and the cutover decisions.
 
-Send inputs bark accepts and RN refused: `send-destination-native.json` (264 cases) is
+Send inputs bark accepts and RN refused: `send-destination-native.json` (270 cases) is
 native-only and hand-specified from bark 0.8 (`959a489f`) and the decision recorded in
 `docs/native-rewrite/ffi-phase-b.md` (rows 5, 16, 18 and 19). It covers Lightning
 addresses by bark's rule (long TLDs, `+` tags, internationalised domains, a leading `₿`

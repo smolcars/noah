@@ -19,10 +19,8 @@ struct SendDestination: Equatable, Sendable {
     private static func lud17(_ value: String) -> String? {
         guard value.lowercased().hasPrefix("lnurlp://") else { return nil }
         let rest = value.dropFirst(9)
-        // Like Android's HttpUrl: a backslash before the query separates path segments, and extra slashes are refused.
-        let query = rest.firstIndex(where: { $0 == "?" || $0 == "#" }) ?? rest.endIndex
-        guard !rest.hasPrefix("/"), !rest.hasPrefix("\\"),
-              let url = URLComponents(string: "https://" + rest[..<query].replacingOccurrences(of: "\\", with: "/") + rest[query...]),
+        // Like Android's HttpUrl, extra slashes are refused.
+        guard !rest.hasPrefix("/"), !rest.hasPrefix("\\"), let url = urlText("https://" + rest).flatMap(URLComponents.init(string:)),
               (url.user ?? "").isEmpty, (url.password ?? "").isEmpty, url.port.map({ (1...65535).contains($0) }) ?? true,
               let host = url.encodedHost.flatMap(Self.host), host.range(of: #"\.onion\.*$"#, options: .regularExpression) == nil
         else { return nil }
@@ -33,6 +31,13 @@ struct SendDestination: Equatable, Sendable {
         else { return nil }
         let lnurl = PaymentEncoding.encodeBech32("lnurl", Array(canonical.utf8))
         return lnurl.count <= 1023 ? lnurl : nil
+    }
+    /// A URL as Android's HttpUrl reads it, for Foundation to parse: a backslash before the query separates path segments,
+    /// and what a URL can't hold (non-ASCII too) is escaped while existing `%XX` stay, which Foundation alone escapes again.
+    static func urlText(_ text: String) -> String? {
+        let query = text.firstIndex(where: { $0 == "?" || $0 == "#" }) ?? text.endIndex
+        return (text[..<query].replacingOccurrences(of: "\\", with: "/") + text[query...])
+            .addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "!"..."~").subtracting(CharacterSet(charactersIn: "\"<>\\^`{|}")))
     }
     /// The path Android's HttpUrl requests: `.` and `..` segments, also percent-encoded in either case (`%2e`, `.%2e`,
     /// `%2e.`, `%2e%2e`), are resolved, and an escaped slash (`%2f`) stays inside its segment. `path` is percent-encoded.

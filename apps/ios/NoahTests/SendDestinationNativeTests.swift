@@ -39,7 +39,7 @@ struct SendDestinationNativeTests {
 
     @Test func matchesNativeVectors() async throws {
         let cases = try Fixtures.load("send-destination-native", input: Input.self, expected: Expected.self)
-        #expect(cases.count == 264)
+        #expect(cases.count == 270)
         for fixture in cases {
             let (input, expected) = (fixture.input, fixture.expected)
             let actual = SendDestination.parse(input.destination, network: input.network)
