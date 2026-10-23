@@ -100,6 +100,33 @@ struct WalletSyncTests {
         #expect(calls.withLock { $0 } == 1)
     }
 
+    /// A partial pass stalls; full requests queued behind it while holding their caller's
+    /// gates withdraw promptly once cancelled or revoked, without running.
+    @Test func aQueuedFullSyncWithdrawsWhenCancelledOrRevoked() async throws {
+        let flight = WalletSync(), gate = RecurringReservationTests.Gate()
+        let partial = Task { try await flight.serialized { await gate.wait() } }
+        while !(await gate.entered) { await Task.yield() }
+        let ran = RecurringExecutorTests.Locked(false), held = RecurringExecutorTests.Locked(0)
+        func request() async throws {
+            held.withLock { $0 += 1 }
+            defer { held.withLock { $0 -= 1 } }
+            try await flight.run([{ ran.withLock { $0 = true } }])
+        }
+        let cancelled = Task { try await request() }
+        let budget = RecurringSubmissionBudget()
+        let revoked = Task { try await RecurringSubmissionBudget.$current.withValue(budget) { try await request() } }
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(held.withLock { $0 } == 2)
+        let start = ContinuousClock.now
+        cancelled.cancel()
+        budget.revoke()
+        await #expect(throws: CancellationError.self) { try await cancelled.value }
+        await #expect(throws: CancellationError.self) { try await revoked.value }
+        #expect(ContinuousClock.now - start < .milliseconds(500))
+        #expect(held.withLock { $0 } == 0 && !ran.withLock { $0 })
+        await gate.release(); try await partial.value
+    }
+
     @Test func foregroundRevocationStopsBeforeAnotherStageButDrainsAdmittedWork() async throws {
         let flight = WalletSync(), gate = RecurringReservationTests.Gate(), budget = RecurringSubmissionBudget()
         let claimed = RecurringExecutorTests.Locked(false)

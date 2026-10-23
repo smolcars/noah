@@ -7,9 +7,18 @@ actor WalletSync {
     private var full = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
+    /// How often a full pass waiting behind a partial one re-checks its admission.
+    static let recheck: Duration = .milliseconds(50)
+
     func run(_ stages: [@Sendable () async throws -> Void]) async throws {
         // An overlapping full pass covers this one; a partial pass doesn't, so wait it out.
-        while running && !full { await withCheckedContinuation { waiters.append($0) } }
+        // Waiting, it withdraws once its admission ends (cancellation, a revoked budget or an
+        // expired deadline), releasing its caller's gates; started work still settles natively.
+        while running && !full {
+            try await ForegroundExecution.checkActive()
+            try BackgroundExecution.checkActive()
+            try await Task.sleep(for: Self.recheck)
+        }
         guard !running else { return }
         running = true
         full = true
