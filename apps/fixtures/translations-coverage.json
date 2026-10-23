@@ -77,6 +77,8 @@
         "Ark server",
         "Ark server info is unavailable. Pull to refresh.",
         "Ark signs it back to you",
+        "Ark swaps your coins for an on-chain payment, then it needs one confirmation.",
+        "Ark swaps your coins for an on-chain payment, then it needs {count} confirmations.",
         "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.",
         "Ark's published Lightning fees for this amount can reach {nativeValue1} sats, above your automatic limit of {nativeValue2} sats. Review it to pay manually.",
         "ArkInfo unavailable; using the published Lightning fee schedule",

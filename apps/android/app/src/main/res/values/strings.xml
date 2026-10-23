@@ -86,6 +86,8 @@
   <string name="gt_af094d458523f61f">"Ark server info is unavailable. Try refreshing."</string>
   <string name="gt_521cb154a1b3a593">"Ark server, wallet, and explorer configuration"</string>
   <string name="gt_d2047b1c7d8dd813">"Ark signs it back to you"</string>
+  <string name="gt_21ce893ff1c236c8">"Ark swaps your coins for an on-chain payment, then it needs one confirmation."</string>
+  <string name="gt_93fa68c9e6c98f0b">"Ark swaps your coins for an on-chain payment, then it needs %1$s confirmations."</string>
   <string name="gt_1a5b92522bb6c9c8">"Ark\'s published Lightning fees for this amount can reach %1$s sats, above your automatic limit of %2$s sats. Review it to pay manually."</string>
   <string name="gt_325d3644954c9188">"Ark\'s published Lightning fees for this amount can reach %1$s sats, above your automatic limit of %2$s sats. Review it to pay manually."</string>
   <string name="gt_fd1aab50cfb65421">"ArkInfo unavailable; using the published Lightning fee schedule"</string>

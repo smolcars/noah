@@ -86,6 +86,8 @@
   <string name="gt_af094d458523f61f">"Ark 서버 정보를 확인할 수 없습니다. 새로고침해 보세요."</string>
   <string name="gt_521cb154a1b3a593">"Ark 서버, 지갑 및 탐색기 설정"</string>
   <string name="gt_d2047b1c7d8dd813">"Ark가 서명해 돌려줘요"</string>
+  <string name="gt_21ce893ff1c236c8">"Ark가 코인을 온체인 결제로 교환한 뒤 확인이 1번 필요해요."</string>
+  <string name="gt_93fa68c9e6c98f0b">"Ark가 코인을 온체인 결제로 교환한 뒤 확인이 %1$s번 필요해요."</string>
   <string name="gt_1a5b92522bb6c9c8">"이 금액에 대해 Ark가 공개한 Lightning 수수료는 최대 %1$s sats로, 자동 결제 수수료 한도인 %2$s sats를 초과할 수 있습니다. 확인 후 직접 결제하세요."</string>
   <string name="gt_325d3644954c9188">"이 금액에 대해 Ark가 공개한 Lightning 수수료는 최대 %1$s sats로, 자동 결제 수수료 한도인 %2$s sats를 초과할 수 있습니다. 검토 후 수동으로 결제하세요."</string>
   <string name="gt_fd1aab50cfb65421">"ArkInfo 이용 불가 · 공개된 Lightning 수수료표 사용 중"</string>

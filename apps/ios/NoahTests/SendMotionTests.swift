@@ -326,6 +326,23 @@ struct SendMotionTests {
         #expect(SendView.typedAmount(model, keeping: typed) == 2_500)
     }
 
+    /// An Ark-funded on-chain review notes the round's confirmations, from today's setting.
+    @Test func anArkFundedOnchainReviewNotesItsConfirmations() {
+        #expect(WalletConfiguration.base(for: .mainnet).roundTxRequiredConfirmations == 2)
+        #expect(SendConfirmation.confirmationNote(rail: .onchainSwap, required: 2, locale: "en")
+                == "Ark swaps your coins for an on-chain payment, then it needs 2 confirmations.")
+        #expect(SendConfirmation.confirmationNote(rail: .onchainSwap, required: 1, locale: "en")
+                == "Ark swaps your coins for an on-chain payment, then it needs one confirmation.")
+        for rail in [SendMotion.Rail.ark, .lightning, .onchainWallet] {
+            #expect(SendConfirmation.confirmationNote(rail: rail, required: 2, locale: "en") == nil)
+        }
+        let english = SendConfirmation.confirmationNote(rail: .onchainSwap, required: 2, locale: "en")
+        for language in ["es", "ja", "ko", "sv"] {
+            let note = SendConfirmation.confirmationNote(rail: .onchainSwap, required: 2, locale: language)
+            #expect(note != english && note?.contains("2") == true, "\(language)")
+        }
+    }
+
     /// A first finger presses, a second lands 500 ms later and the first lifts at 600 ms:
     /// no single finger held for 0.8 s, so the hold can't confirm until every finger lifts.
     @Test func aSecondFingerCancelsTheHold() {

@@ -141,6 +141,15 @@ struct SendConfirmation: View {
         }
         if quote.recipientIsEstimated { return L10n.text(SendQuote.recipientEstimateExplanation, locale: language) }
         if quote.approximate { return L10n.text(SendQuote.feeEstimateExplanation, locale: language) }
-        return nil
+        return Self.confirmationNote(rail: rail, required: WalletConfiguration.base(for: .current).roundTxRequiredConfirmations,
+                                     locale: language)
+    }
+
+    /// An Ark-funded on-chain send waits for the round's confirmations (today's setting).
+    static func confirmationNote(rail: SendMotion.Rail, required: UInt32, locale: String) -> String? {
+        guard rail == .onchainSwap else { return nil }
+        return required <= 1
+            ? L10n.text("Ark swaps your coins for an on-chain payment, then it needs one confirmation.", locale: locale)
+            : L10n.text("Ark swaps your coins for an on-chain payment, then it needs {count} confirmations.", Int(required), locale: locale)
     }
 }

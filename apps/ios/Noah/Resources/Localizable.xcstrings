@@ -3061,6 +3061,78 @@
         }
       }
     },
+    "Ark swaps your coins for an on-chain payment, then it needs one confirmation.": {
+      "comment": "GT gt_21ce893ff1c236c8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark swaps your coins for an on-chain payment, then it needs one confirmation."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark cambia tus monedas por un pago en cadena y luego necesita una confirmación."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkがあなたのコインをオンチェーンの支払いに交換し、その後1回の承認が必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark가 코인을 온체인 결제로 교환한 뒤 확인이 1번 필요해요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark byter dina mynt mot en betalning på blockkedjan, sedan behövs en bekräftelse."
+          }
+        }
+      }
+    },
+    "Ark swaps your coins for an on-chain payment, then it needs {count} confirmations.": {
+      "comment": "GT gt_93fa68c9e6c98f0b; arguments: count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark swaps your coins for an on-chain payment, then it needs %1$@ confirmations."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark cambia tus monedas por un pago en cadena y luego necesita %1$@ confirmaciones."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkがあなたのコインをオンチェーンの支払いに交換し、その後%1$@回の承認が必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark가 코인을 온체인 결제로 교환한 뒤 확인이 %1$@번 필요해요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark byter dina mynt mot en betalning på blockkedjan, sedan behövs %1$@ bekräftelser."
+          }
+        }
+      }
+    },
     "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.": {
       "comment": "GT gt_1a5b92522bb6c9c8; arguments: fee, cap",
       "extractionState": "manual",
