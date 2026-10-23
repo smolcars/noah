@@ -1140,18 +1140,10 @@
         "· nothing left your wallet"
       ],
       "untranslated": {
-        "es": [
-          "gt_74871a4c5c4bbd05"
-        ],
-        "ja": [
-          "gt_74871a4c5c4bbd05"
-        ],
-        "ko": [
-          "gt_74871a4c5c4bbd05"
-        ],
-        "sv": [
-          "gt_74871a4c5c4bbd05"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     },
     "android": {

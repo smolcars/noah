@@ -19298,25 +19298,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Get Debug Info"
+            "value": "Obtener información de depuración"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Get Debug Info"
+            "value": "デバッグ情報を取得"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Get Debug Info"
+            "value": "디버그 정보 가져오기"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Get Debug Info"
+            "value": "Hämta felsökningsinformation"
           }
         }
       }
