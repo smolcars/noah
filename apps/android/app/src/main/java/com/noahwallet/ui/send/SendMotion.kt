@@ -50,7 +50,9 @@ enum class SendPhase { appear, split, sign, deliver, finale, lock, hold, pay, ke
 @Serializable
 data class SendMotion(val route: SendRoute, val startedAt: Long, val reached: Map<SendMilestone, Long> = mapOf(SendMilestone.submitted to 0L)) {
     fun reach(milestone: SendMilestone, at: Long): SendMotion = if (milestone in reached) this else copy(reached = reached + (milestone to at))
-    val ending: SendMilestone? get() = listOf(SendMilestone.sent, SendMilestone.refunded, SendMilestone.stopped).filter { it in reached }.minByOrNull { reached.getValue(it) }
+    /** A stop is provisional: a later Check status that proves the payment sent or refunded plays that ending instead. */
+    val ending: SendMilestone? get() = listOf(SendMilestone.sent, SendMilestone.refunded).filter { it in reached }.minByOrNull { reached.getValue(it) }
+        ?: SendMilestone.stopped.takeIf { it in reached }
 }
 
 /**

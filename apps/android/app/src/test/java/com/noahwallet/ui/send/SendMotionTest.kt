@@ -61,6 +61,24 @@ class SendMotionTest {
         assertEquals(SendPhase.stop, phases(SendMotion(SendRoute.ark, 0).reach(SendMilestone.refunded, 100)).last())
     }
 
+    @Test fun aProvenOutcomeRevivesAStoppedMotion() {
+        // An uncertain answer stops the motion; a later Check status that proves the payment plays its ending.
+        val stopped = SendMotion(SendRoute.ark, 0).reach(SendMilestone.paying, 200).reach(SendMilestone.stopped, 3_000)
+        assertEquals(SendMilestone.stopped, stopped.ending)
+        assertEquals(SendPhase.stop, phases(stopped).last())
+        val sent = stopped.reach(SendMilestone.sent, 20_000)
+        assertEquals(SendMilestone.sent, sent.ending)
+        val starts = SendTimeline.started(sent, 60_000).associate { it.phase to it.start }
+        assertFalse(SendPhase.stop in starts)
+        assertEquals(20_000L, starts[SendPhase.deliver]); assertEquals(20_350L, starts[SendPhase.finale])
+        assertTrue(SendTimeline.resultShown(sent, 60_000))
+        // A refund proven later plays the way back.
+        val refunded = SendMotion(SendRoute.lightning, 0).reach(SendMilestone.paying, 100).reach(SendMilestone.stopped, 3_000).reach(SendMilestone.refunded, 15_000)
+        assertEquals(SendPhase.back, phases(refunded).last())
+        // A proven ending is never replaced by a later stop.
+        assertEquals(SendMilestone.sent, SendMotion(SendRoute.ark, 0).reach(SendMilestone.sent, 100).reach(SendMilestone.stopped, 200).ending)
+    }
+
     @Test fun stillPayingAfterTenSecondsOrWhenReportedPending() {
         val paying = SendMotion(SendRoute.lightning, 0).reach(SendMilestone.paying, 100)
         assertFalse(SendTimeline.stillPaying(paying, 9_999))
