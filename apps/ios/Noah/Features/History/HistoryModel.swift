@@ -11,6 +11,12 @@ final class HistoryModel {
         var blockTime: @Sendable (String) async throws -> Date?
         var price: @Sendable (Int64, String) async throws -> Double?
         var currentPrice: @Sendable (String) async throws -> Double? = { _ in nil }
+        /// Settled recurring occurrences to join by movement ID or payment hash.
+        var recurring: @Sendable () async -> [HistoryMapping.RecurringLink] = { [] }
+        /// The wallet's chain tip and one transaction's status: read when a pending
+        /// on-chain detail opens, never polled.
+        var chainTip: @Sendable () async throws -> UInt32? = { nil }
+        var chainStatus: @Sendable (String) async throws -> ChainTransactionStatus? = { _ in nil }
 
         static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
             Self(
@@ -51,7 +57,10 @@ final class HistoryModel {
                     let response = try await client.fiatPrices(body: .json(.init())).ok.body.json
                     guard let rate = response.rates.additionalProperties[currency], rate.isFinite, rate > 0 else { return nil }
                     return rate
-                })
+                },
+                recurring: { await RecurringExecutor.shared.historyLinks() },
+                chainTip: { try await session.chainTip() },
+                chainStatus: { try await session.chainTransactionStatus($0) })
         }
     }
 
@@ -65,8 +74,28 @@ final class HistoryModel {
     private var priceKeys: [String] = []
     private var generation = UUID()
     private var enrichment: Task<Void, Never>?
+    /// The last recurring join, applied at once so rows don't flicker on each refresh.
+    private var recurringLinks: [HistoryMapping.RecurringLink] = []
+    private var quote: (currency: String, price: Double, at: Date)?
 
     func awaitEnrichment() async { await enrichment?.value }
+
+    /// The current price for today's and pending rows, cached for five minutes as on Home.
+    func currentPrice(currency: String) async -> Double? {
+        if let quote, quote.currency == currency, Date().timeIntervalSince(quote.at) < 300 { return quote.price }
+        guard let price = try? await dependencies.currentPrice(currency), price.isFinite, price > 0 else {
+            return quote?.currency == currency ? quote?.price : nil
+        }
+        quote = (currency, price, Date())
+        return price
+    }
+
+    /// One read of the chain tip and, when there's a txid, its status (Send's block row data).
+    func chainState(txid: String?) async -> (tip: UInt32?, status: ChainTransactionStatus?) {
+        let tip = try? await dependencies.chainTip()
+        guard let txid else { return (tip ?? nil, nil) }
+        return (tip ?? nil, (try? await dependencies.chainStatus(txid)) ?? nil)
+    }
     private let log = AppLog("history")
 
     init(dependencies: Dependencies) { self.dependencies = dependencies }
@@ -110,7 +139,7 @@ final class HistoryModel {
         }
         do {
             if sync { try await dependencies.sync() }
-            let latest = try await dependencies.load()
+            let latest = HistoryMapping.joinRecurring(try await dependencies.load(), links: recurringLinks)
             guard self.generation == generation, !Task.isCancelled else { return }
             // Publish wallet data before optional network enrichment finishes.
             transactions = Self.unified(latest)
@@ -142,6 +171,14 @@ final class HistoryModel {
             transactions = Self.unified(latest)
             dirty = false
             await Task.yield()
+        }
+        let links = await dependencies.recurring()
+        guard !Task.isCancelled, self.generation == generation else { return }
+        if links != recurringLinks {
+            recurringLinks = links
+            latest = HistoryMapping.joinRecurring(latest.map { var row = $0; row.recurring = nil; return row }, links: links)
+            dirty = true
+            await publish()
         }
         for index in latest.indices {
             if Task.isCancelled || self.generation != generation { return }

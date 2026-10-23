@@ -37,6 +37,12 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var confirmationHash: String?
     var repeatPayment: RepeatPayment?
     var preimage: String?
+    /// The SDK's, or decoded from the stored BOLT11 invoice.
+    var paymentHash: String?
+    /// The description stored in the invoice or offer.
+    var paymentDescription: String?
+    /// The schedule this send paid, joined from the recurring journal.
+    var recurring: Recurring?
 
     struct Destination: Codable, Equatable, Sendable {
         var destination: String
@@ -44,7 +50,23 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
         var paymentMethod: String?
     }
 
+    struct Recurring: Codable, Equatable, Sendable {
+        var scheduleID: String
+        var name: String
+        var interval: RecurringInterval
+    }
+
     var isCanceled: Bool { movementStatus == "canceled" }
+    var isFailed: Bool { movementStatus == "failed" }
+    /// A failed Lightning send whose locked coins the server signed back: bark records the
+    /// revocation's new coins as produced. One whose coins went to a unilateral exit isn't.
+    var isRefunded: Bool {
+        isFailed && subsystemName == "bark.lightning_send" && outputVtxos?.isEmpty == false && exitedVtxos?.isEmpty != false
+    }
+    var isRenewal: Bool { movementKind == "refresh" }
+    var isPending: Bool { movementStatus == "pending" || (source == "onchain-wallet" && hasConfirmation != true) }
+    /// Bark records an Ark-funded on-chain send's txid once its transaction is broadcast.
+    var broadcastTxid: String? { HistoryMetadata.parse(metadataJson ?? "").offboardTxid }
     var isInternalTransfer: Bool { movementKind == "onboard" }
     var canRepeat: Bool { direction == "outgoing" && movementStatus == "successful" && repeatPayment != nil }
     var displayLabel: String {
@@ -56,6 +78,7 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
         case "onboard": "Board"
         case "offboard": "Offboard"
         case "exit": "Ark Exit"
+        case "refresh": "Renewed"
         default:
             switch type {
             case "Bolt11", "Lnurl": "Lightning"
@@ -85,6 +108,7 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
         case "send-onchain": "Onchain Send"
         case "exit": "Ark Exit"
         case "lightning-receive": "Lightning Receive"
+        case "refresh": "Refresh"
         default: movementKind
         }
     }

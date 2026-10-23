@@ -210,7 +210,7 @@ struct HomeRulesTests {
         let own = "noahwallet.io"
         var noah = Self.row(type: "Lnurl", direction: "outgoing", destination: "Maya@NoahWallet.io")
         var row = HomeActivityRow(noah, ownDomain: own)
-        #expect(row.title == "maya" && row.titleIsAddress && row.kind == .noahUser && row.avatar == .initial("m"))
+        #expect(row.title == "maya" && row.titleIsVerbatim && row.kind == .noahUser && row.avatar == .initial("m"))
         #expect(row.sign == "−" && row.status == .done)
 
         noah.destination = "lucas@ln.tips"
@@ -218,8 +218,9 @@ struct HomeRulesTests {
         #expect(row.title == "lucas@ln.tips" && row.kind == .lightning && row.avatar == .initial("l"))
 
         // An invoice or Ark address names nobody; incoming records hold our own receiving method.
+        // Without a stored description an invoice row reads "Sent" (activity.md, Data 4).
         row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", destination: "lnbcrt1invoice"), ownDomain: own)
-        #expect(row.title == "Lightning" && !row.titleIsAddress && row.kind == nil && row.avatar == .lightning)
+        #expect(row.title == "Sent" && !row.titleIsVerbatim && row.kind == .lightning && row.avatar == .lightning)
         row = HomeActivityRow(Self.row(type: "Lnurl", destination: "maya@noahwallet.io"), ownDomain: own)
         #expect(row.title == "Lightning" && row.avatar == .lightning && row.sign == "+")
         row = HomeActivityRow(Self.row(), ownDomain: own)
@@ -250,10 +251,10 @@ struct HomeRulesTests {
         #expect(row.status == .failed(nothingLeft: true) && row.status.isUnsuccessful && row.title == "Offboard")
         row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: -4_200), ownDomain: own)
         #expect(row.status == .failed(nothingLeft: false))
-        // Canceled keeps the base label: the subtitle carries the status.
+        // Canceled keeps the title: the subtitle carries the status.
         row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "canceled", effective: 0, offchainFee: 0),
                               ownDomain: own)
-        #expect(row.status == .canceled(nothingLeft: true) && row.title == "Lightning")
+        #expect(row.status == .canceled(nothingLeft: true) && row.title == "Sent")
     }
 
     @Test func nothingLeftNeedsAZeroForEveryDelta() {
@@ -269,6 +270,14 @@ struct HomeRulesTests {
         #expect(!nothingLeft(row))
         row = failed
         row.offchainFeeSat = nil
+        #expect(!nothingLeft(row))
+        // A failed movement that produced and exited no coins charged nothing, whatever fee it planned.
+        row = failed
+        row.offchainFeeSat = 12
+        row.outputVtxos = []
+        row.exitedVtxos = []
+        #expect(nothingLeft(row))
+        row.outputVtxos = ["change:0"]
         #expect(!nothingLeft(row))
         row = failed
         row.effectiveBalanceSat = nil

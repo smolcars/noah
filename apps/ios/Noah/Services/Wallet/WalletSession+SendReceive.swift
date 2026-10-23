@@ -10,6 +10,11 @@ extension WalletSession {
         try await withOpenWallet { try await $0.onchain.tipHeight() }
     }
 
+    /// One status read for an Ark-funded on-chain send's transaction (Activity's block row).
+    func chainTransactionStatus(_ txid: String) async throws -> ChainTransactionStatus {
+        try await withOpenWallet { .init(try await $0.wallet.transactionStatus(txid: txid)) }
+    }
+
     /// What history records coming back from a failed Lightning send (see `SendRefundEvidence`). `before` is the
     /// attempt's snapshot of movement ids.
     func lightningSendRefund(paymentHash: String, before: Set<UInt32>) async throws -> SendRefund {

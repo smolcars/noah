@@ -87,7 +87,7 @@ enum PaymentEncoding {
         let hash = Array(decoded.dropFirst())
         return [0,111].contains(decoded[0]) ? [0x76,0xa9,0x14] + hash + [0x88,0xac] : [0xa9,0x14] + hash + [0x87]
     }
-    struct Invoice { let network: String; let sats: Decimal?; let hash: String?; let expires: Date; let descriptionHash: String? }
+    struct Invoice { let network: String; let sats: Decimal?; let hash: String?; let expires: Date; let descriptionHash: String?; var description: String? = nil }
     static func invoice(_ value: String) -> Invoice? {
         guard let decoded = bech32(value), !decoded.isM, decoded.words.count >= 111,
               let networkPrefix = ["lnbcrt", "lntbs", "lnbc", "lntb"].first(where: { decoded.prefix.hasPrefix($0) }) else { return nil }
@@ -102,17 +102,42 @@ enum PaymentEncoding {
             amount = value * (suffix ? factors[unit]! : 100000000)
         }
         let payload = Array(decoded.words.dropLast(104))
-        var index = 7, hash: String?, descriptionHash: String?, expiry: UInt64 = 3600
+        var index = 7, hash: String?, descriptionHash: String?, description: String?, expiry: UInt64 = 3600
         while index + 3 <= payload.count {
             let tag = payload[index], count = Int(payload[index+1]) * 32 + Int(payload[index+2]); index += 3
             guard index + count <= payload.count else { return nil }
             let data = Array(payload[index..<(index+count)]); index += count
             if tag == 1, let raw = bytes(data), raw.count == 32 { hash = raw.map { String(format:"%02x",$0) }.joined() }
             if tag == 23, let raw = bytes(data), raw.count == 32 { descriptionHash = raw.map { String(format:"%02x",$0) }.joined() }
+            if tag == 13, let raw = bytes(data) { description = String(bytes: raw, encoding: .utf8) }
             if tag == 6 { guard data.count <= 12 else { return nil }; expiry = data.reduce(0) { $0 * 32 + UInt64($1) } }
         }
         guard hash != nil, index == payload.count else { return nil }
         let timestamp = payload.prefix(7).reduce(UInt64(0)) { $0 * 32 + UInt64($1) }
-        return Invoice(network: ["lnbc":"mainnet","lntb":"testnet","lntbs":"signet","lnbcrt":"regtest"][networkPrefix]!, sats: amount, hash: hash, expires: Date(timeIntervalSince1970: Double(timestamp) + Double(expiry)), descriptionHash: descriptionHash)
+        return Invoice(network: ["lnbc":"mainnet","lntb":"testnet","lntbs":"signet","lnbcrt":"regtest"][networkPrefix]!, sats: amount, hash: hash, expires: Date(timeIntervalSince1970: Double(timestamp) + Double(expiry)), descriptionHash: descriptionHash, description: description)
+    }
+    /// A BOLT12 offer's `offer_description` (TLV 10). Offers are bech32 without a checksum.
+    static func offerDescription(_ offer: String) -> String? {
+        let value = offer.replacingOccurrences(of: "\\+\\s*", with: "", options: .regularExpression).lowercased()
+        guard value.hasPrefix("lno1") else { return nil }
+        let words = value.dropFirst(4).compactMap { alphabet.firstIndex(of: $0).map(UInt8.init) }
+        guard words.count == value.count - 4, let stream = bytes(words) else { return nil }
+        var index = 0
+        func bigSize() -> UInt64? {
+            guard index < stream.count else { return nil }
+            let first = stream[index]; index += 1
+            let width = first == 0xff ? 8 : first == 0xfe ? 4 : first == 0xfd ? 2 : 0
+            guard width > 0 else { return UInt64(first) }
+            guard index + width <= stream.count else { return nil }
+            defer { index += width }
+            return stream[index..<(index + width)].reduce(0) { $0 << 8 | UInt64($1) }
+        }
+        while index < stream.count {
+            guard let type = bigSize(), let length = bigSize(), length <= UInt64(stream.count - index) else { return nil }
+            let end = index + Int(length)
+            if type == 10 { return String(bytes: stream[index..<end], encoding: .utf8) }
+            index = end
+        }
+        return nil
     }
 }

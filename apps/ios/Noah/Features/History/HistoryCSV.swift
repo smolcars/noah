@@ -5,7 +5,14 @@ import UniformTypeIdentifiers
 struct HistoryCSV: Transferable, Sendable {
     let content: String
 
+    /// Exactly today's export: failed movements other than boards and offboards moved no
+    /// money and were never exported, so the newly shown failed and refunded rows stay out.
+    static func exports(_ transaction: HistoryTransaction) -> Bool {
+        !transaction.isFailed || ["onboard", "offboard"].contains(transaction.movementKind)
+    }
+
     init(transactions: [HistoryTransaction], currency: String) {
+        let transactions = transactions.filter(Self.exports)
         let header = ["Payment ID", "Date", "Type", "Status", "Direction", "Amount (sats)",
                       L10n.text("BTC Price ({currency})", currency), "Transaction ID", "Destination"]
         let rows = transactions.map { transaction in

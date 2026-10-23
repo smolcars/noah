@@ -147,36 +147,47 @@ enum HomeStatusLine: Equatable {
     }
 }
 
-/// How a history record reads on Home (prototype `rowHtml` / `avatar`). Only
-/// data the record already holds: no invented names.
+/// How a history record reads on Home and Activity (prototype `rowHtml` / `avatar`).
+/// Only data the record already holds: no invented names.
 struct HomeActivityRow: Equatable {
     enum Avatar: Equatable {
         /// People and addresses: the lowercase initial.
         case initial(String)
-        case lightning, chain, incoming, outgoing
+        case lightning, chain, recurring, renewal, incoming, outgoing
     }
 
     /// How it moved; localized by the row view.
-    enum Kind: Equatable { case noahUser, lightning, onchain, ark }
+    enum Kind: Equatable { case noahUser, lightning, onchain, ark, recurring }
 
     enum Status: Equatable {
         case done
         case sending, confirming
+        /// An Ark-funded on-chain send waiting for its round, and an exit in progress.
+        case inRound, exiting
         case failed(nothingLeft: Bool)
+        /// A failed Lightning send whose coins came back.
+        case refunded
         case canceled(nothingLeft: Bool)
 
-        var isPending: Bool { self == .sending || self == .confirming }
+        var isPending: Bool { [.sending, .confirming, .inRound, .exiting].contains(self) }
         var isUnsuccessful: Bool {
             switch self {
-            case .failed, .canceled: true
+            case .failed, .refunded, .canceled: true
+            default: false
+            }
+        }
+        /// The red badge: failed and refunded, not canceled.
+        var isFailure: Bool {
+            switch self {
+            case .failed, .refunded: true
             default: false
             }
         }
     }
 
-    /// Verbatim when it's an address, otherwise a source string to localize.
+    /// Shown as is (an address, a schedule's name or a stored description), otherwise a source string to localize.
     let title: String
-    let titleIsAddress: Bool
+    let titleIsVerbatim: Bool
     /// Nil when the title already says it.
     let kind: Kind?
     let avatar: Avatar
@@ -198,14 +209,30 @@ struct HomeActivityRow: Equatable {
 
         let kindLabel: Kind? = noahUser ? .noahUser : lightning ? .lightning : onchain ? .onchain
             : transaction.type == "Arkoor" ? .ark : nil
-        if let address, let parts {
+        if let recurring = transaction.recurring {
+            title = recurring.name
+            titleIsVerbatim = true
+            kind = .recurring
+            avatar = .recurring
+        } else if let address, let parts {
             title = noahUser ? parts[0] : address
-            titleIsAddress = true
+            titleIsVerbatim = true
             kind = kindLabel
             avatar = .initial(String(parts[0].prefix(1)).lowercased())
+        } else if transaction.isRenewal {
+            title = transaction.baseLabel
+            titleIsVerbatim = false
+            kind = .ark
+            avatar = .renewal
+        } else if transaction.type == "Bolt11" {
+            // Invoices and offers carry their own description (activity.md, Data 4).
+            title = transaction.paymentDescription ?? (outgoing ? "Sent" : "Received")
+            titleIsVerbatim = transaction.paymentDescription != nil
+            kind = .lightning
+            avatar = .lightning
         } else {
             title = transaction.baseLabel
-            titleIsAddress = false
+            titleIsVerbatim = false
             // Board, Offboard and Ark Exit name the operation, so the subtitle says how it moved.
             kind = ["onboard", "offboard", "exit"].contains(transaction.movementKind) ? kindLabel : nil
             avatar = lightning ? .lightning : onchain ? .chain : outgoing ? .outgoing : .incoming
@@ -213,9 +240,13 @@ struct HomeActivityRow: Equatable {
 
         let nothingLeft = Self.leftNothing(transaction)
         switch transaction.movementStatus {
-        case "failed": status = .failed(nothingLeft: nothingLeft)
+        case "failed": status = transaction.isRefunded ? .refunded : .failed(nothingLeft: nothingLeft)
         case "canceled": status = .canceled(nothingLeft: nothingLeft)
-        case "pending": status = outgoing ? .sending : .confirming
+        case "pending":
+            if transaction.movementKind == "exit" { status = .exiting }
+            else if ["offboard", "send-onchain"].contains(transaction.movementKind) {
+                status = transaction.broadcastTxid == nil ? .inRound : .confirming
+            } else { status = outgoing ? .sending : .confirming }
         default:
             status = transaction.source == "onchain-wallet" && transaction.hasConfirmation != true
                 ? (outgoing ? .sending : .confirming) : .done
@@ -228,8 +259,14 @@ struct HomeActivityRow: Equatable {
     /// carry: the wallet's balance change and the Ark fee and, for on-chain operations,
     /// the on-chain change and fee. Other records may carry no on-chain values, but any
     /// they carry must be zero. Anything unknown means we can't say.
+    /// A failed movement that produced and exited no coins charged nothing: bark 0.8 zeroes
+    /// a Lightning send's balance change when it fails before locking coins, but keeps
+    /// the fee it planned. Coins sent to an exit left the spendable balance.
     static func leftNothing(_ transaction: HistoryTransaction) -> Bool {
-        guard transaction.effectiveBalanceSat == 0, transaction.offchainFeeSat == 0 else { return false }
+        let unspent = transaction.isFailed && transaction.offchainFeeSat != nil
+            && transaction.outputVtxos?.isEmpty == true && transaction.exitedVtxos?.isEmpty == true
+        guard transaction.effectiveBalanceSat == 0, transaction.offchainFeeSat == 0 || unspent,
+              transaction.exitedVtxos?.isEmpty != false else { return false }
         let onchain = transaction.type == "Onchain"
             || ["onboard", "offboard", "send-onchain", "exit"].contains(transaction.movementKind)
         return onchain

@@ -73,6 +73,23 @@ import Observation
         } catch is NoWallet { schedules = []; syncPending = false }
         catch { self.error = error.localizedDescription }
     }
+    /// This wallet's settled occurrences, for Activity's recurring rows. The journal keeps
+    /// each schedule's latest occurrence, so earlier ones read as ordinary sends.
+    func historyLinks() async -> [HistoryMapping.RecurringLink] {
+        let read = try? await d.mutation.withLock { @MainActor [self] () throws -> [HistoryMapping.RecurringLink] in
+            let owner = try readAdmission()
+            let schedules = try d.store.load().schedules
+            return try d.journal.load().values.compactMap { entry in
+                guard entry.binding == owner, let terminal = entry.terminal, let schedule = schedules[entry.scheduleID] else { return nil }
+                let receipt = terminal.attempt.receipt ?? terminal.attempt.alreadyPaid
+                let hash = receipt?.paymentHash ?? terminal.attempt.paymentHash
+                guard receipt?.movementID != nil || hash != nil else { return nil }
+                return .init(schedule: .init(scheduleID: schedule.id, name: schedule.label, interval: schedule.interval),
+                             movementID: receipt?.movementID, paymentHash: hash)
+            }
+        }
+        return read ?? []
+    }
     /// Join triggers. Settlement outlives the caller; new submissions respect its deadline.
     func execute(manual: Bool = false, approval: Review? = nil) async {
         while true {

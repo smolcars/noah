@@ -7,6 +7,7 @@ enum HomeText {
     static let strong = NoahTokens.TextStyle(size: 15, lineHeight: 20, weight: .semibold, display: false, tracking: 0, textStyle: .subheadline)
     static let amount = NoahTokens.TextStyle(size: 17, lineHeight: nil, weight: .medium, display: true, tracking: 0, textStyle: .body)
     static let initial = NoahTokens.TextStyle(size: 17, lineHeight: nil, weight: .semibold, display: true, tracking: 0, textStyle: .body)
+    static let initialLarge = NoahTokens.TextStyle(size: 24, lineHeight: nil, weight: .semibold, display: true, tracking: 0, textStyle: .title2)
     static let chipInitial = NoahTokens.TextStyle(size: 14, lineHeight: nil, weight: .semibold, display: true, tracking: 0, textStyle: .subheadline)
     static let tucked = NoahTokens.TextStyle(size: 17, lineHeight: nil, weight: .semibold, display: true, tracking: -0.02, textStyle: .headline)
     static let received = NoahTokens.TextStyle(size: 30, lineHeight: nil, weight: .semibold, display: true, tracking: -0.02, textStyle: .title1)

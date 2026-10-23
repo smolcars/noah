@@ -14,11 +14,10 @@ struct HomeActivityRowView: View {
     var body: some View {
         let row = HomeActivityRow(transaction, ownDomain: ownDomain)
         HStack(spacing: 14) {
-            HomeAvatar(avatar: row.avatar, pending: row.status.isPending,
-                       failed: { if case .failed = row.status { true } else { false } }(), isNew: isNew)
+            HomeAvatar(avatar: row.avatar, pending: row.status.isPending, failed: row.status.isFailure, isNew: isNew)
             VStack(alignment: .leading, spacing: 0) {
                 Group {
-                    if row.titleIsAddress { Text(verbatim: row.title) } else { Text(LocalizedStringKey(row.title)) }
+                    if row.titleIsVerbatim { Text(verbatim: row.title) } else { Text(LocalizedStringKey(row.title)) }
                 }
                 .noahText(NoahTokens.Typography.body)
                 .foregroundStyle(NoahTokens.Colors.foreground)
@@ -49,15 +48,19 @@ struct HomeActivityRowView: View {
         case .lightning: L10n.text("Lightning", locale: language)
         case .onchain: L10n.text("On-chain", locale: language)
         case .ark: L10n.text("Ark", locale: language)
+        case .recurring: L10n.text("Recurring", locale: language)
         case nil: nil
         }
         func joined(_ parts: String?...) -> String { parts.compactMap { $0 }.joined(separator: " · ") }
         let nothingLeft = " " + L10n.text("· nothing left your wallet", locale: language)
         switch row.status {
         case .failed(let none): return L10n.text("Failed", locale: language) + (none ? nothingLeft : "")
+        case .refunded: return L10n.text("Refunded · back in your wallet", locale: language)
         case .canceled(let none): return L10n.text("Canceled", locale: language) + (none ? nothingLeft : "")
         case .sending: return joined(L10n.text("Sending", locale: language), kind)
         case .confirming: return joined(L10n.text("Confirming", locale: language), kind)
+        case .inRound: return L10n.text("In a round", locale: language)
+        case .exiting: return L10n.text("Exiting", locale: language)
         case .done: return joined(kind, time)
         }
     }
@@ -73,53 +76,70 @@ struct HomeActivityRowView: View {
 }
 
 /// 42-pt circle on the soft surface: an initial for people and addresses, an icon otherwise.
-private struct HomeAvatar: View {
+/// The payment detail's header uses it at 60 pt.
+struct HomeAvatar: View {
     let avatar: HomeActivityRow.Avatar
     let pending: Bool
     let failed: Bool
     let isNew: Bool
+    var size: CGFloat = 42
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var scale: CGFloat { size / 42 }
 
     var body: some View {
         ZStack {
             Circle().fill(NoahTokens.Colors.soft)
             switch avatar {
-            case .initial(let letter): Text(verbatim: letter).noahText(HomeText.initial)
-            case .lightning: Image(systemName: "bolt").font(.system(size: 17, weight: .medium))
-            case .chain: Image(systemName: "link").font(.system(size: 16, weight: .medium))
-            case .incoming: Image(systemName: "arrow.down").font(.system(size: 16, weight: .medium))
-            case .outgoing: Image(systemName: "arrow.up").font(.system(size: 16, weight: .medium))
+            case .initial(let letter):
+                Text(verbatim: letter).noahText(size > 42 ? HomeText.initialLarge : HomeText.initial)
+            case .lightning: icon("bolt", 17)
+            case .chain: icon("link", 16)
+            case .recurring: icon("repeat", 16)
+            case .renewal: icon("clock.arrow.circlepath", 16)
+            case .incoming: icon("arrow.down", 16)
+            case .outgoing: icon("arrow.up", 16)
             }
         }
         .foregroundStyle(NoahTokens.Colors.foreground)
-        .frame(width: 42, height: 42)
+        .frame(width: size, height: size)
         .overlay {
             if pending {
                 // A dashed ring turning once every 8 s; still under Reduce Motion.
                 TimelineView(.animation(paused: reduceMotion)) { timeline in
                     Circle()
-                        .strokeBorder(NoahTokens.Colors.muted, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                        .strokeBorder(NoahTokens.Colors.muted, style: StrokeStyle(lineWidth: size > 42 ? 2 : 1.5, dash: [4, 3]))
                         .rotationEffect(.degrees(reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
                             .truncatingRemainder(dividingBy: 8) / 8 * 360))
                 }
-                .padding(-3)
+                .padding(size > 42 ? -4 : -3)
             }
         }
         .overlay(alignment: .bottomTrailing) {
             if failed {
+                let badge: CGFloat = size > 42 ? 22 : 17
                 Text(verbatim: "!")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: size > 42 ? 13 : 11, weight: .bold))
                     .foregroundStyle(.white)
-                    .frame(width: 17, height: 17)
+                    .frame(width: badge, height: badge)
                     .background(NoahTokens.Colors.failure, in: Circle())
                     .background(Circle().stroke(NoahTokens.Colors.background, lineWidth: 4))
-                    .offset(x: 3, y: 3)
+                    .offset(x: size > 42 ? 2 : 3, y: size > 42 ? 2 : 3)
             }
         }
         .overlay(alignment: .topTrailing) {
-            if isNew { HomeNewDot().offset(x: 1, y: -1) }
+            if isNew {
+                HomeNewDot().offset(x: 1, y: -1)
+                    // It shrinks away once seen (prototype `fadeDot`).
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.01).combined(with: .opacity))
+            }
         }
+        .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft), value: isNew)
         .accessibilityHidden(true)
+    }
+
+    private func icon(_ name: String, _ points: CGFloat) -> some View {
+        Image(systemName: name).font(.system(size: points * (size > 42 ? 27.0 / 20 : 1), weight: .medium))
     }
 }
 

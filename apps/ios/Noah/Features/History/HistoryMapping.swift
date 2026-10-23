@@ -9,7 +9,7 @@ enum HistoryMapping {
         "bark.offboard:offboard": "offboard", "bark.round:offboard": "offboard",
         "bark.offboard:send_onchain": "send-onchain", "bark.round:send_onchain": "send-onchain",
         "bark.arkoor:receive": "arkoor-receive", "bark.exit:start": "exit",
-        "bark.lightning_receive:receive": "lightning-receive",
+        "bark.lightning_receive:receive": "lightning-receive", "bark.round:refresh": "refresh",
     ]
     static func subsystemID(_ movement: Movement) -> String? {
         let id = "\(movement.subsystemName.lowercased()):\(movement.subsystemKind.lowercased())"
@@ -18,10 +18,12 @@ enum HistoryMapping {
 
     static func isFailedOrCanceled(_ status: String) -> Bool { ["failed", "canceled"].contains(status) }
 
+    /// Failed movements show too (activity.md, Data 1). Free renewals and other
+    /// maintenance that changes nothing stay hidden; fee-paying renewals show.
     static func include(_ movement: Movement) -> Bool {
         let kind = subsystemID(movement).flatMap { kinds[$0] }
         if ["onboard", "offboard"].contains(kind) { return true }
-        return movement.status != "failed" && (movement.intendedBalanceSats != 0 || movement.effectiveBalanceSats != 0)
+        return movement.intendedBalanceSats != 0 || movement.effectiveBalanceSats != 0
     }
 
     static func boardAmount(_ movement: Movement) -> Int64 {
@@ -67,12 +69,18 @@ enum HistoryMapping {
         if metadata.repeatPayment != nil || first?.methodType == "lightning-address" { type = "Lnurl" }
         else if kind == "lightning-receive" { type = "Bolt11" }
         else if destinations.contains(where: { $0.paymentMethod.methodType == "bitcoin" }) { type = "Onchain" }
-        else if kind == "arkoor-receive" || subsystem == "bark.arkoor:send" { type = "Arkoor" }
+        else if kind == "arkoor-receive" || kind == "refresh" || subsystem == "bark.arkoor:send" { type = "Arkoor" }
         else if subsystem == "bark.lightning_send:send" { type = "Bolt11" }
         else if ["onboard", "offboard", "send-onchain", "exit"].contains(kind) { type = "Onchain" }
         else { type = outgoing && !destinations.isEmpty ? "Arkoor" : "Onchain" }
         // Nitro's `time.created_at` corresponds to the SDK's `createdAt`.
         let date = HistoryRules.parseDate(movement.createdAt) ?? now
+        let methods = movement.receivedOnAddresses + movement.sentToAddresses
+        let invoice = ([movement.lightningInvoice].compactMap { $0 } + methods.map(\.paymentMethod.value))
+            .lazy.compactMap(PaymentEncoding.invoice).first
+        let offer = movement.lightningOffer ?? methods.first { $0.paymentMethod.methodType == "offer" }?.paymentMethod.value
+        let description = (invoice?.description ?? offer.flatMap(PaymentEncoding.offerDescription))?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         return HistoryTransaction(
             id: "movement-\(movement.id)", type: type, amount: amount, date: HistoryRules.isoDate(date),
             direction: outgoing ? "outgoing" : "incoming", sortTimestamp: date.timeIntervalSince1970 * 1000,
@@ -87,7 +95,31 @@ enum HistoryMapping {
             sentTo: movement.sentToAddresses.map(destination), receivedOn: movement.receivedOnAddresses.map(destination),
             inputVtxos: movement.inputVtxoIds, outputVtxos: movement.outputVtxoIds, exitedVtxos: movement.exitedVtxoIds,
             repeatPayment: repeatPayment,
-            preimage: movement.status == "successful" ? metadata.paymentPreimage.flatMap { $0.isEmpty ? nil : $0 } : nil)
+            preimage: movement.status == "successful" ? metadata.paymentPreimage.flatMap { $0.isEmpty ? nil : $0 } : nil,
+            paymentHash: movement.paymentHash ?? invoice?.hash,
+            paymentDescription: description?.isEmpty == false ? description : nil)
+    }
+
+    /// Recurring sends the journal can tie to a movement, by its ID or payment hash.
+    struct RecurringLink: Equatable, Sendable {
+        var schedule: HistoryTransaction.Recurring
+        var movementID: UInt32?
+        var paymentHash: String?
+    }
+
+    /// Without a match the row stays an ordinary send.
+    static func joinRecurring(_ rows: [HistoryTransaction], links: [RecurringLink]) -> [HistoryTransaction] {
+        guard !links.isEmpty else { return rows }
+        return rows.map { row in
+            guard row.direction == "outgoing", row.source == "ark",
+                  let link = links.first(where: { link in
+                      (link.movementID != nil && link.movementID == row.movementId)
+                          || (link.paymentHash != nil && link.paymentHash == row.paymentHash)
+                  }) else { return row }
+            var row = row
+            row.recurring = link.schedule
+            return row
+        }
     }
 
     private static func destination(_ value: MovementDestination) -> HistoryTransaction.Destination {
