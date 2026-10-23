@@ -622,7 +622,8 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val motion = live ?: SendMotion(route, 0, staticMilestones(ending))
     val started = SendTimeline.started(motion, elapsed, reduceMotion)
     // Haptics fire once per moment, only while the motion is live.
-    LaunchedEffect(started.size, live) {
+    // Checked every 100 ms, so moments inside a phase (the signatures, the key) land on time.
+    LaunchedEffect(elapsed / 100, live) {
         if (live == null) return@LaunchedEffect
         for (event in SendHaptics.between(started, presentation.hapticsAt, elapsed)) when (event) {
             SendHaptics.Kind.light -> haptics.light(); SendHaptics.Kind.success -> haptics.success(); SendHaptics.Kind.error -> haptics.error()
@@ -636,6 +637,14 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val needed = if (route == SendRoute.chainArk) env.chainNeeded else 1
     val format = remember(env.locale) { java.text.NumberFormat.getIntegerInstance(env.locale) }
     val line = SendPhaseLines.of(motion, elapsed, reduceMotion, formatted(amount, env), tip, confirmedAt, needed) { format.format(it) }
+    // A block confirming while you watch: light, and success once it has all its confirmations.
+    var seenConfirmations by remember(attempt?.startedAt) { mutableStateOf<Long?>(null) }
+    val confirmations = if (tip != null) BlockRow.confirmations(tip, confirmedAt) else 0
+    LaunchedEffect(confirmations) {
+        val before = seenConfirmations
+        seenConfirmations = confirmations
+        if (before != null && confirmations > before && live != null) { if (confirmations >= needed) haptics.success() else haptics.light() }
+    }
     val resultShown = live == null || SendTimeline.resultShown(motion, elapsed, reduceMotion)
     val title = if (!resultShown || ending == null || ending == SendEnding.sending) tr("Sending {amount}", formatted(amount, env)) else resultTitle(ending, amount, receipt, env)
     val stageHeight: Dp = if (pose is OnboardingPose.Wide) 330.dp else if (pose is OnboardingPose.Tabletop) 200.dp else 270.dp

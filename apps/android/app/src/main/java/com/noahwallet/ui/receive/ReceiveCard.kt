@@ -88,6 +88,16 @@ internal object ReceiveTimeline {
         }
     }
 
+    /** Haptics between [since] and [now]: light on the delivery and the unlock, success on the flip. True is success. */
+    fun haptics(rail: ReceiveArrival.Rail, since: Long, now: Long, reduceMotion: Boolean): List<Boolean> {
+        val moments = when (rail) {
+            ReceiveArrival.Rail.ark -> listOf(760L to false)
+            ReceiveArrival.Rail.lightning -> listOf(850L to false, 2_070L to false)
+            ReceiveArrival.Rail.onchain -> emptyList()
+        }.map { (at, success) -> pace(at, reduceMotion) to success } + (flipAt(rail, reduceMotion) to true)
+        return moments.filter { (at, _) -> at > since && at <= now }.sortedBy { it.first }.map { it.second }
+    }
+
     /** The card's turn (degrees) at [t]: bouncy to the back, a hold, snappy home. */
     fun turn(rail: ReceiveArrival.Rail, t: Long, reduceMotion: Boolean): Float {
         val flip = flipAt(rail, reduceMotion)
@@ -122,8 +132,22 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
             if (value > ReceiveTimeline.end(arrival.rail, reduceMotion) + 200) break
         }
     }
-    val turn = arrival?.let { ReceiveTimeline.turn(it.rail, elapsed, reduceMotion) } ?: 0f
-    val showBack = turn % 360f in 90f..270f
+    val turn = if (reduceMotion) 0f else arrival?.let { ReceiveTimeline.turn(it.rail, elapsed, false) } ?: 0f
+    // Reduce Motion: no turn; the back fades in for 180 ms and out again.
+    val backFade = if (!reduceMotion || arrival == null) 0f else {
+        val flip = ReceiveTimeline.flipAt(arrival.rail, true)
+        val back = ReceiveTimeline.backAt(arrival.rail, true)
+        if (elapsed < back) ((elapsed - flip) / 180f).coerceIn(0f, 1f) else (1 - (elapsed - back) / 180f).coerceIn(0f, 1f)
+    }
+    val showBack = if (reduceMotion) backFade > 0f else turn % 360f in 90f..270f
+    val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
+    // The prototype's arrival haptics; restored with the screen so a pose change never repeats one.
+    var hapticsAt by androidx.compose.runtime.saveable.rememberSaveable(arrival?.startedAt) { mutableLongStateOf(if (elapsed > 300) elapsed else -1) }
+    LaunchedEffect(arrival?.startedAt, elapsed / 100) {
+        val rail = arrival?.rail ?: return@LaunchedEffect
+        for (kind in ReceiveTimeline.haptics(rail, hapticsAt, elapsed, reduceMotion)) if (kind) haptics.success() else haptics.light()
+        hapticsAt = elapsed
+    }
     val density = LocalDensity.current
     Box(modifier.width(width), contentAlignment = Alignment.TopCenter) {
         Box(Modifier.fillMaxWidth().graphicsLayer {
@@ -137,7 +161,7 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
                 .then(if (onTap != null && !showBack) Modifier.clickable(role = Role.Button, onClickLabel = tr("Ways to pay you"), onClick = onTap) else Modifier)
                 .testTag("receive-card")) {
                 // The front stays in layout (it sizes the card); the back draws over it, turned to face you.
-                Column(Modifier.fillMaxWidth().graphicsLayer { alpha = if (reduceMotion) (if (showBack) 0f else 1f) else if (showBack) 0f else 1f }
+                Column(Modifier.fillMaxWidth().graphicsLayer { alpha = if (reduceMotion) 1 - backFade else if (showBack) 0f else 1f }
                     .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = if (face.band != null) 0.dp else 18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     when {
@@ -160,7 +184,7 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
                     face.band?.let { (sats, fiat) -> Band(sats, fiat) }
                 }
                 if (showBack && arrival != null) Back(arrival, amount ?: "", elapsed - ReceiveTimeline.flipAt(arrival.rail, reduceMotion),
-                    Modifier.matchParentSize().graphicsLayer { rotationY = 180f })
+                    Modifier.matchParentSize().graphicsLayer { if (reduceMotion) alpha = backFade else rotationY = 180f })
             }
             if (arrival != null && arrival.rail != ReceiveArrival.Rail.onchain && !showBack) ArrivalOverlay(arrival.rail, elapsed, qrSide, Modifier.matchParentSize())
         }
@@ -325,6 +349,9 @@ internal fun ReceiveBlockRow(arrival: ReceiveArrival?, tip: Long?, confirmedAt: 
         }
     }
     val visible = arrival?.rail == ReceiveArrival.Rail.onchain && shownTip != null
+    val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
+    var wasConfirmed by remember(arrival?.startedAt) { mutableStateOf(confirmedAt != null) }
+    LaunchedEffect(confirmedAt) { if (confirmedAt != null && !wasConfirmed) { wasConfirmed = true; haptics.light() } }
     val fade = if (visible) step(elapsed, 0, SpringCurve.soft, reduceMotion = reduceMotion).coerceIn(0f, 1f) else 0f
     val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium, fontSize = with(density) { (10.5f / (density.density * fontScale)).sp })
     val next = remember(nextLabel, density) { measurer.measure(nextLabel, style) }
