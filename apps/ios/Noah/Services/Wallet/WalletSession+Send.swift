@@ -132,8 +132,8 @@ extension WalletSession {
             switch payment.method {
             case "ark":
                 try await checkSubmission()
-                try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
-                // SDK 0.3.0 returns Void on success; persist that result, never infer it from history candidates.
+                _ = try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
+                // Persist the SDK's success result, never infer it from history candidates.
                 receipt.proof = .submitReturnedArkSuccess
             case "lightning", "lnurl":
                 var resolved = payment
@@ -152,13 +152,13 @@ extension WalletSession {
                     check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) }) {
                         try await checkSubmission()
                         return try await handles.wallet.payLightningInvoice(
-                            invoice: invoice, amountSats: fixed ? nil : payment.amount, wait: true)
+                            invoice: invoice, amountSats: fixed ? nil : payment.amount, options: SendLightningSubmission.options)
                     }
             case "offer":
                 lightning = try await SendLightningSubmission.offer(pending: try await handles.wallet.pendingLightningSends()) {
                     try await checkSubmission()
                     return try await handles.wallet.payLightningOffer(
-                        offer: payment.destination, amountSats: payment.amount, wait: true)
+                        offer: payment.destination, amountSats: payment.amount, options: SendLightningSubmission.options)
                 }
             case "onchain":
                 if payment.source == .onchain {
@@ -187,7 +187,7 @@ extension WalletSession {
                             vtxoIds: quote.vtxoIDs!, bitcoinAddress: payment.destination).txid
                     } else {
                         try await checkSubmission()
-                        receipt.txid = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount)
+                        receipt.txid = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount).txid
                     }
                 }
             default: throw SendFailure.invalid
@@ -350,6 +350,9 @@ enum SendOnchainSubmission {
 
 /// The pinned Bark resumes checkpoints without checking the newly supplied amount.
 enum SendLightningSubmission {
+    /// Every send waits for its outcome (wait: false is a later phase, see async-payments.md).
+    /// 60 s is today's server default, set explicitly; the server caps it (5 min by default).
+    static let options = LightningSendOptions(wait: true, retryForSecs: 60)
     static func offer(pending: [LightningSend], pay: @Sendable () async throws -> LightningSendStatus) async throws -> LightningSendStatus {
         // The SDK resolves offers internally, so their hash cannot be inspected before Bark resumes a checkpoint.
         guard pending.isEmpty else { throw SendFailure.lightningInProgress }

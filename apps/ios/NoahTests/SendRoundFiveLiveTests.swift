@@ -32,7 +32,7 @@ struct SendRoundFiveLiveTests {
         let payment = try payment()
         let hash = try #require(PaymentEncoding.invoice(payment.destination)?.hash)
         // Simulate an inherited pre-Noah checkpoint; exactly one creating call, never retry.
-        _ = try await session.withOpenWallet { try await $0.wallet.payLightningInvoice(invoice: payment.destination, amountSats: nil, wait: false) }
+        _ = try await session.withOpenWallet { try await $0.wallet.payLightningInvoice(invoice: payment.destination, amountSats: nil, options: .init(wait: false, retryForSecs: 60)) }
         try await wait {
             try await session.withOpenWallet {
                 if case .inProgress = try await $0.wallet.lightningSendState(paymentHash: hash) { return true }

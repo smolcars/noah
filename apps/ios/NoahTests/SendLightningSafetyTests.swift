@@ -15,6 +15,9 @@ import Testing
         let invoice = try #require(fixtures.first { PaymentEncoding.invoice($0.input.destination) != nil })
         return .init(destination: invoice.input.destination, method: "lightning", amount: 1000)
     }
+    @Test func sendsWaitWithAnExplicitSixtySecondServerRetry() {
+        #expect(SendLightningSubmission.options == LightningSendOptions(wait: true, retryForSecs: 60))
+    }
     @Test(arguments: [UInt64(1000), 2000])
     func existingCheckpointNeverCallsPay(amount: UInt64) async throws {
         let payment = try payment()
