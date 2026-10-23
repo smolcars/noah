@@ -231,7 +231,6 @@
   <string name="gt_0a84829094f5cfed">"Underordnad transaktion"</string>
   <string name="gt_a06126f70960de59">"Välj ett Lightning-användarnamn. Om du vill kan du koppla en offentlig Nostr-nyckel till adressen så att den även fungerar som en NIP-05-identifierare."</string>
   <string name="gt_ec1ad72325f469f2">"Välj ett saldo med tillräckliga medel."</string>
-  <string name="gt_254c556585bc895f">"Välj en betalning för att se detaljerna."</string>
   <string name="gt_3b5a71ad765370b3">"Välj saldo"</string>
   <string name="gt_bbde37fcd9feb0f6">"Välj hur bitcoinbelopp ska visas."</string>
   <string name="gt_3c23f7c4e7718d4f">"Välj betalningsmetod"</string>
@@ -522,7 +521,6 @@
   <string name="gt_031a8f0f659df890">"Misslyckad"</string>
   <string name="gt_650e662ff450d76b">"Kunde inte kontrollera appversionen. Appen får fortsätta."</string>
   <string name="gt_0e64d6a1c553e225">"Kunde inte hämta loggar."</string>
-  <string name="gt_d7982e9989d58c53">"Det gick inte att läsa in transaktioner"</string>
   <string name="gt_584cd4e5161a0b9d">"Det gick inte att registrera plånboken på servern. Försök igen."</string>
   <string name="gt_0aac4e26d6649873">"Kunde inte spara att e-postfrågan avvisats"</string>
   <string name="gt_3b81a18b3127cb14">"Det gick inte att skicka verifieringskoden. Försök igen."</string>
@@ -584,6 +582,7 @@
   <string name="gt_920ac8601c18daac">"Dölj plånbokens saldo"</string>
   <string name="gt_31f47a7b7c67fe38">"API för historiska priser"</string>
   <string name="gt_f622cc11b8240847">"Historiskt värde saknas"</string>
+  <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"Det gick inte att läsa historiken"</string>
   <string name="gt_5013616d3cb50e40">"Håll in för att skicka"</string>
   <string name="gt_3a78695388b38b5c">"Hem"</string>
@@ -790,7 +789,6 @@
   <string name="gt_6a8f8f4a6309d592">"Inga återkommande betalningar ännu. Schemalägg betalningar för hyra, prenumerationer, fickpengar eller donationer till en Ark-adress, en Lightning-adress eller ett BOLT12-erbjudande."</string>
   <string name="gt_459617bcef74ad21">"Ingen förnyelseomgång behövdes."</string>
   <string name="gt_0ce6b8df87b210a5">"Inget skärmlås"</string>
-  <string name="gt_f75dda0d2e0613e9">"Inga transaktioner än"</string>
   <string name="gt_f57ecc027388ea64">"Ingen användbar säkerhetskopia hittades för den här återställningsfrasen. Kontrollera orden och försök igen."</string>
   <string name="gt_c638d16576dfe156">"Inga giltiga betalningsmetoder hittades"</string>
   <string name="gt_57c8529db3e2719a">"Nej, stäng av"</string>
@@ -1006,7 +1004,6 @@
   <string name="gt_5dbbba5210b8e6c2">"Uppdatera betalningsstatus"</string>
   <string name="gt_dea03b1eaff62e66">"Förnyelse skickad till delegerad omgång %1$s."</string>
   <string name="gt_d0ee4bf8239e4c01">"Förnya den här VTXO:n så att den förblir tillgänglig."</string>
-  <string name="gt_53e0085365bf37ce">"Uppdatera transaktionshistoriken"</string>
   <string name="gt_c903490c78f12f8f">"Förnya %1$s VTXO:er"</string>
   <string name="gt_117f6a7cf0372277">"Återbetald"</string>
   <string name="gt_3de658e662e84920">"Återbetald · tillbaka i din plånbok"</string>
@@ -1125,7 +1122,6 @@
   <string name="gt_0834cfb81fbae767">"Välj VTXO:er"</string>
   <string name="gt_65f9b19c0365a914">"Välj en VTXO för att se detaljerna"</string>
   <string name="gt_0bdc583e8496eb4a">"Välj en betalning"</string>
-  <string name="gt_023441a6788206f5">"Välj en transaktion"</string>
   <string name="gt_ba6afbdcb15d6321">"Välj alla valbara VTXO:er"</string>
   <string name="gt_a81bdedbd0dccc7d">"Välj de som snart löper ut"</string>
   <string name="gt_70f58736b63e2c9e">"Välj synliga"</string>
@@ -1331,7 +1327,6 @@
   <string name="gt_857d95d67fba62e3">"Totalt uttag från plånboken på blockkedjan"</string>
   <string name="gt_c273ea40b157fd8a">"Bevakas"</string>
   <string name="gt_be8c6227042336e7">"Transaktions-ID"</string>
-  <string name="gt_45e8220bd0af421e">"Transaktionsfilter"</string>
   <string name="gt_321e1df45aa6a9a3">"Transaktionsstorlek"</string>
   <string name="gt_3e5136fd4b11c0dd">"Transaktioner"</string>
   <string name="gt_dde8bef78cbb7206">"Överföring"</string>
@@ -1483,7 +1478,6 @@
   <string name="gt_d6b59de9fddcf2df">"Din e-postadress har verifierats."</string>
   <string name="gt_460464d863bb054a">"Din krypterade säkerhetskopia av databasen har exporterats."</string>
   <string name="gt_0d9a2c325358aee0">"Dina synpunkter har skickats till Noah-teamet."</string>
-  <string name="gt_5a4dc83c4c46cd47">"Dina betalningar visas här."</string>
   <string name="gt_d9a846242ed7a22f">"Din återställningsfras är fortfarande säkert lagrad på den här enheten. Använd den för att återställa plånboken från säkerhetskopian."</string>
   <string name="gt_fda0b967abcc3d16">"Din plånbok har säkerhetskopierats."</string>
   <string name="gt_50720c8f08138a5e">"Din plånbok är för närvarande avstängd. Alla plånboksfunktioner är inaktiverade."</string>

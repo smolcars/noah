@@ -231,7 +231,6 @@
   <string name="gt_0a84829094f5cfed">"Transacción hija"</string>
   <string name="gt_a06126f70960de59">"Elige un nombre de usuario para Lightning. Si quieres, puedes vincular una clave pública de Nostr para que la misma dirección también funcione como identificador NIP-05."</string>
   <string name="gt_ec1ad72325f469f2">"Elige un saldo con fondos suficientes."</string>
-  <string name="gt_254c556585bc895f">"Elige un pago para ver sus detalles."</string>
   <string name="gt_3b5a71ad765370b3">"Elegir saldo"</string>
   <string name="gt_bbde37fcd9feb0f6">"Elige cómo se muestran los importes en bitcoin."</string>
   <string name="gt_3c23f7c4e7718d4f">"Elegir método de pago"</string>
@@ -522,7 +521,6 @@
   <string name="gt_031a8f0f659df890">"Fallido"</string>
   <string name="gt_650e662ff450d76b">"No se pudo comprobar la versión de la aplicación; se permitirá que siga funcionando"</string>
   <string name="gt_0e64d6a1c553e225">"No se pudieron obtener los registros."</string>
-  <string name="gt_d7982e9989d58c53">"No se pudieron cargar las transacciones"</string>
   <string name="gt_584cd4e5161a0b9d">"No se pudo completar el registro en el servidor. Inténtalo de nuevo."</string>
   <string name="gt_0aac4e26d6649873">"No se pudo guardar que se descartó el aviso de correo electrónico"</string>
   <string name="gt_3b81a18b3127cb14">"No se pudo enviar el código de verificación. Inténtalo de nuevo."</string>
@@ -584,6 +582,7 @@
   <string name="gt_920ac8601c18daac">"Ocultar saldo de la billetera"</string>
   <string name="gt_31f47a7b7c67fe38">"API de precios históricos"</string>
   <string name="gt_f622cc11b8240847">"Valor histórico no disponible"</string>
+  <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"No se pudo leer el historial"</string>
   <string name="gt_5013616d3cb50e40">"Mantén pulsado para enviar"</string>
   <string name="gt_3a78695388b38b5c">"Inicio"</string>
@@ -790,7 +789,6 @@
   <string name="gt_6a8f8f4a6309d592">"Aún no hay pagos recurrentes. Programa pagos de alquiler, suscripciones, asignaciones o donaciones a una dirección de Ark, una dirección de Lightning o una oferta BOLT12."</string>
   <string name="gt_459617bcef74ad21">"No fue necesaria ninguna ronda de renovación."</string>
   <string name="gt_0ce6b8df87b210a5">"Sin bloqueo de pantalla"</string>
-  <string name="gt_f75dda0d2e0613e9">"Aún no hay transacciones"</string>
   <string name="gt_f57ecc027388ea64">"No se encontró ninguna copia de seguridad válida para esta frase de recuperación. Revisa las palabras e inténtalo de nuevo."</string>
   <string name="gt_c638d16576dfe156">"No se encontraron métodos de pago válidos"</string>
   <string name="gt_57c8529db3e2719a">"No, desactivar"</string>
@@ -1006,7 +1004,6 @@
   <string name="gt_5dbbba5210b8e6c2">"Actualizar estado del pago"</string>
   <string name="gt_dea03b1eaff62e66">"Renovación enviada a la ronda delegada %1$s."</string>
   <string name="gt_d0ee4bf8239e4c01">"Renueva este VTXO para mantenerlo disponible."</string>
-  <string name="gt_53e0085365bf37ce">"Actualizar historial de transacciones"</string>
   <string name="gt_c903490c78f12f8f">"Renovar %1$s VTXO"</string>
   <string name="gt_117f6a7cf0372277">"Reembolsado"</string>
   <string name="gt_3de658e662e84920">"Reembolsado · de vuelta en tu billetera"</string>
@@ -1125,7 +1122,6 @@
   <string name="gt_0834cfb81fbae767">"Seleccionar VTXOs"</string>
   <string name="gt_65f9b19c0365a914">"Selecciona un VTXO para ver sus detalles"</string>
   <string name="gt_0bdc583e8496eb4a">"Selecciona un pago"</string>
-  <string name="gt_023441a6788206f5">"Selecciona una transacción"</string>
   <string name="gt_ba6afbdcb15d6321">"Seleccionar todos los VTXO aptos"</string>
   <string name="gt_a81bdedbd0dccc7d">"Seleccionar los próximos a vencer"</string>
   <string name="gt_70f58736b63e2c9e">"Seleccionar los visibles"</string>
@@ -1331,7 +1327,6 @@
   <string name="gt_857d95d67fba62e3">"Total que sale de la billetera en cadena"</string>
   <string name="gt_c273ea40b157fd8a">"En seguimiento"</string>
   <string name="gt_be8c6227042336e7">"ID de transacción"</string>
-  <string name="gt_45e8220bd0af421e">"Filtro de transacciones"</string>
   <string name="gt_321e1df45aa6a9a3">"Tamaño de la transacción"</string>
   <string name="gt_3e5136fd4b11c0dd">"Transacciones"</string>
   <string name="gt_dde8bef78cbb7206">"Transferencia"</string>
@@ -1483,7 +1478,6 @@
   <string name="gt_d6b59de9fddcf2df">"Tu correo electrónico se ha verificado correctamente."</string>
   <string name="gt_460464d863bb054a">"Se ha exportado la copia de seguridad cifrada de tu base de datos."</string>
   <string name="gt_0d9a2c325358aee0">"Tus comentarios se han enviado al equipo de Noah."</string>
-  <string name="gt_5a4dc83c4c46cd47">"Tus pagos aparecerán aquí."</string>
   <string name="gt_d9a846242ed7a22f">"Tu frase de recuperación sigue guardada de forma segura en este dispositivo. Úsala para restaurar tu billetera desde su copia de seguridad."</string>
   <string name="gt_fda0b967abcc3d16">"La copia de seguridad de tu billetera se ha creado correctamente."</string>
   <string name="gt_50720c8f08138a5e">"Tu billetera está suspendida. Todas sus operaciones están deshabilitadas."</string>

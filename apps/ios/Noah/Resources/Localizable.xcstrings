@@ -8281,42 +8281,6 @@
         }
       }
     },
-    "Choose a payment to see its details.": {
-      "comment": "GT gt_254c556585bc895f; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a payment to see its details."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elige un pago para ver sus detalles."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払いを選択すると詳細を確認できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결제를 선택하면 상세 내용을 볼 수 있습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Välj en betalning för att se detaljerna."
-          }
-        }
-      }
-    },
     "Choose balance": {
       "comment": "GT gt_3b5a71ad765370b3; arguments: none",
       "extractionState": "manual",
@@ -18709,42 +18673,6 @@
         }
       }
     },
-    "Failed to load transactions": {
-      "comment": "GT gt_d7982e9989d58c53; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to load transactions"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudieron cargar las transacciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取引を読み込めませんでした"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "거래 내역을 불러오지 못했습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det gick inte att läsa in transaktioner"
-          }
-        }
-      }
-    },
     "Failed to register with server. Please try again.": {
       "comment": "GT gt_584cd4e5161a0b9d; arguments: none",
       "extractionState": "manual",
@@ -20937,6 +20865,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Historiskt värde saknas"
+          }
+        }
+      }
+    },
+    "History export failed": {
+      "comment": "GT gt_7f1929550de947a7; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History export failed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History export failed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History export failed"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History export failed"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History export failed"
           }
         }
       }
@@ -28353,42 +28317,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inget skärmlås"
-          }
-        }
-      }
-    },
-    "No transactions yet": {
-      "comment": "GT gt_f75dda0d2e0613e9; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No transactions yet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aún no hay transacciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "まだ取引はありません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 거래 내역이 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inga transaktioner än"
           }
         }
       }
@@ -36133,42 +36061,6 @@
         }
       }
     },
-    "Refresh transaction history": {
-      "comment": "GT gt_53e0085365bf37ce; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Refresh transaction history"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actualizar historial de transacciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取引履歴を更新"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "거래 내역 새로고침"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uppdatera transaktionshistoriken"
-          }
-        }
-      }
-    },
     "Refresh {nativeValue1} VTXOs": {
       "comment": "GT gt_c903490c78f12f8f; arguments: nativeValue1",
       "extractionState": "manual",
@@ -40365,42 +40257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Välj en betalning"
-          }
-        }
-      }
-    },
-    "Select a transaction": {
-      "comment": "GT gt_023441a6788206f5; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select a transaction"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecciona una transacción"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取引を選択"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "거래 선택"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Välj en transaktion"
           }
         }
       }
@@ -47785,42 +47641,6 @@
         }
       }
     },
-    "Transaction filter": {
-      "comment": "GT gt_45e8220bd0af421e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transaction filter"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtro de transacciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "トランザクションの絞り込み"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "거래 필터"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transaktionsfilter"
-          }
-        }
-      }
-    },
     "Transaction size": {
       "comment": "GT gt_321e1df45aa6a9a3; arguments: none",
       "extractionState": "manual",
@@ -53253,42 +53073,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dina synpunkter har skickats till Noah-teamet."
-          }
-        }
-      }
-    },
-    "Your payments will appear here.": {
-      "comment": "GT gt_5a4dc83c4c46cd47; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your payments will appear here."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus pagos aparecerán aquí."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払いはここに表示されます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결제 내역이 여기에 표시됩니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dina betalningar visas här."
           }
         }
       }

@@ -231,7 +231,6 @@
   <string name="gt_0a84829094f5cfed">"하위 거래"</string>
   <string name="gt_a06126f70960de59">"Lightning 사용자 이름을 정하세요. 원하면 Nostr 공개 키를 연결해 같은 주소를 NIP-05 식별자로도 사용할 수 있습니다."</string>
   <string name="gt_ec1ad72325f469f2">"결제 금액을 충당할 수 있는 잔액을 선택하세요."</string>
-  <string name="gt_254c556585bc895f">"결제를 선택하면 상세 내용을 볼 수 있습니다."</string>
   <string name="gt_3b5a71ad765370b3">"잔액 선택"</string>
   <string name="gt_bbde37fcd9feb0f6">"Bitcoin 금액의 표시 방식을 선택하세요."</string>
   <string name="gt_3c23f7c4e7718d4f">"결제 방식 선택"</string>
@@ -522,7 +521,6 @@
   <string name="gt_031a8f0f659df890">"실패"</string>
   <string name="gt_650e662ff450d76b">"앱 버전을 확인하지 못했지만 앱을 계속 실행합니다"</string>
   <string name="gt_0e64d6a1c553e225">"로그를 가져오지 못했습니다."</string>
-  <string name="gt_d7982e9989d58c53">"거래 내역을 불러오지 못했습니다"</string>
   <string name="gt_584cd4e5161a0b9d">"서버에 등록하지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_0aac4e26d6649873">"이메일 안내를 닫은 상태를 저장하지 못했습니다"</string>
   <string name="gt_3b81a18b3127cb14">"인증 코드를 보내지 못했습니다. 다시 시도해 주세요."</string>
@@ -584,6 +582,7 @@
   <string name="gt_920ac8601c18daac">"지갑 잔액 숨기기"</string>
   <string name="gt_31f47a7b7c67fe38">"과거 가격 API"</string>
   <string name="gt_f622cc11b8240847">"과거 가치를 확인할 수 없습니다"</string>
+  <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"내역 불러오기 실패"</string>
   <string name="gt_5013616d3cb50e40">"길게 눌러 보내기"</string>
   <string name="gt_3a78695388b38b5c">"홈"</string>
@@ -790,7 +789,6 @@
   <string name="gt_6a8f8f4a6309d592">"아직 정기 결제가 없습니다. Ark 주소, 라이트닝 주소 또는 BOLT12 오퍼로 월세, 구독료, 용돈, 기부금을 정기적으로 보내도록 예약하세요."</string>
   <string name="gt_459617bcef74ad21">"갱신 라운드가 필요하지 않았습니다."</string>
   <string name="gt_0ce6b8df87b210a5">"화면 잠금 없음"</string>
-  <string name="gt_f75dda0d2e0613e9">"아직 거래 내역이 없습니다"</string>
   <string name="gt_f57ecc027388ea64">"이 복구 문구에 해당하는 사용 가능한 백업을 찾지 못했습니다. 단어를 확인하고 다시 시도하세요."</string>
   <string name="gt_c638d16576dfe156">"유효한 결제 수단을 찾을 수 없습니다"</string>
   <string name="gt_57c8529db3e2719a">"아니요, 끄기"</string>
@@ -1006,7 +1004,6 @@
   <string name="gt_5dbbba5210b8e6c2">"결제 상태 새로고침"</string>
   <string name="gt_dea03b1eaff62e66">"위임된 라운드 %1$s에 갱신 요청을 제출했습니다."</string>
   <string name="gt_d0ee4bf8239e4c01">"이 VTXO를 계속 사용할 수 있도록 갱신하세요."</string>
-  <string name="gt_53e0085365bf37ce">"거래 내역 새로고침"</string>
   <string name="gt_c903490c78f12f8f">"VTXO %1$s개 갱신"</string>
   <string name="gt_117f6a7cf0372277">"환불됨"</string>
   <string name="gt_3de658e662e84920">"환불됨 · 지갑으로 돌아왔어요"</string>
@@ -1125,7 +1122,6 @@
   <string name="gt_0834cfb81fbae767">"VTXO 선택"</string>
   <string name="gt_65f9b19c0365a914">"VTXO를 선택해 상세 정보를 확인하세요"</string>
   <string name="gt_0bdc583e8496eb4a">"결제를 선택하세요"</string>
-  <string name="gt_023441a6788206f5">"거래 선택"</string>
   <string name="gt_ba6afbdcb15d6321">"조건에 맞는 모든 VTXO 선택"</string>
   <string name="gt_a81bdedbd0dccc7d">"만료 임박 항목 선택"</string>
   <string name="gt_70f58736b63e2c9e">"표시된 항목 선택"</string>
@@ -1331,7 +1327,6 @@
   <string name="gt_857d95d67fba62e3">"온체인 지갑에서 출금되는 총액"</string>
   <string name="gt_c273ea40b157fd8a">"추적 중"</string>
   <string name="gt_be8c6227042336e7">"거래 ID"</string>
-  <string name="gt_45e8220bd0af421e">"거래 필터"</string>
   <string name="gt_321e1df45aa6a9a3">"거래 크기"</string>
   <string name="gt_3e5136fd4b11c0dd">"거래"</string>
   <string name="gt_dde8bef78cbb7206">"이체"</string>
@@ -1483,7 +1478,6 @@
   <string name="gt_d6b59de9fddcf2df">"이메일 인증이 완료되었습니다."</string>
   <string name="gt_460464d863bb054a">"암호화된 데이터베이스 백업을 내보냈습니다."</string>
   <string name="gt_0d9a2c325358aee0">"의견이 Noah 팀에 전달되었습니다."</string>
-  <string name="gt_5a4dc83c4c46cd47">"결제 내역이 여기에 표시됩니다."</string>
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
   <string name="gt_fda0b967abcc3d16">"지갑이 안전하게 백업되었습니다."</string>
   <string name="gt_50720c8f08138a5e">"현재 지갑 사용이 중지되어 있습니다. 모든 지갑 기능을 사용할 수 없습니다."</string>

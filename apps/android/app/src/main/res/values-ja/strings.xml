@@ -231,7 +231,6 @@
   <string name="gt_0a84829094f5cfed">"子取引"</string>
   <string name="gt_a06126f70960de59">"Lightningのユーザー名を設定してください。Nostrの公開鍵を紐づけることもできます。紐づけると、同じアドレスをNIP-05識別子としても使えます。"</string>
   <string name="gt_ec1ad72325f469f2">"支払いに十分な残高を選択してください。"</string>
-  <string name="gt_254c556585bc895f">"支払いを選択すると詳細を確認できます。"</string>
   <string name="gt_3b5a71ad765370b3">"残高を選択"</string>
   <string name="gt_bbde37fcd9feb0f6">"Bitcoinの金額の表示方法を選びます。"</string>
   <string name="gt_3c23f7c4e7718d4f">"支払い方法を選択"</string>
@@ -522,7 +521,6 @@
   <string name="gt_031a8f0f659df890">"失敗"</string>
   <string name="gt_650e662ff450d76b">"アプリのバージョンを確認できませんでしたが、そのまま続行します"</string>
   <string name="gt_0e64d6a1c553e225">"ログを取得できませんでした。"</string>
-  <string name="gt_d7982e9989d58c53">"取引を読み込めませんでした"</string>
   <string name="gt_584cd4e5161a0b9d">"サーバーへの登録に失敗しました。もう一度お試しください。"</string>
   <string name="gt_0aac4e26d6649873">"メール案内を閉じたことを保存できませんでした"</string>
   <string name="gt_3b81a18b3127cb14">"確認コードの送信に失敗しました。もう一度お試しください。"</string>
@@ -584,6 +582,7 @@
   <string name="gt_920ac8601c18daac">"ウォレット残高を非表示"</string>
   <string name="gt_31f47a7b7c67fe38">"過去の価格API"</string>
   <string name="gt_f622cc11b8240847">"過去の評価額を取得できません"</string>
+  <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"履歴の読み込みに失敗しました"</string>
   <string name="gt_5013616d3cb50e40">"長押しで送金"</string>
   <string name="gt_3a78695388b38b5c">"ホーム"</string>
@@ -790,7 +789,6 @@
   <string name="gt_6a8f8f4a6309d592">"定期支払いはまだありません。Arkアドレス、ライトニングアドレス、BOLT12オファー宛てに、家賃、定期購読料、お小遣い、寄付などの支払いを予約できます。"</string>
   <string name="gt_459617bcef74ad21">"更新ラウンドは不要でした。"</string>
   <string name="gt_0ce6b8df87b210a5">"画面ロックなし"</string>
-  <string name="gt_f75dda0d2e0613e9">"まだ取引はありません"</string>
   <string name="gt_f57ecc027388ea64">"この復元フレーズで使えるバックアップが見つかりませんでした。単語を確認して、もう一度お試しください。"</string>
   <string name="gt_c638d16576dfe156">"有効な支払い方法が見つかりません"</string>
   <string name="gt_57c8529db3e2719a">"いいえ、無効にする"</string>
@@ -1006,7 +1004,6 @@
   <string name="gt_5dbbba5210b8e6c2">"支払い状況を更新"</string>
   <string name="gt_dea03b1eaff62e66">"委任ラウンド %1$s に更新を送信しました。"</string>
   <string name="gt_d0ee4bf8239e4c01">"このVTXOを引き続き利用するには、更新してください。"</string>
-  <string name="gt_53e0085365bf37ce">"取引履歴を更新"</string>
   <string name="gt_c903490c78f12f8f">"%1$s個のVTXOを更新"</string>
   <string name="gt_117f6a7cf0372277">"返金済み"</string>
   <string name="gt_3de658e662e84920">"返金済み · ウォレットに戻りました"</string>
@@ -1125,7 +1122,6 @@
   <string name="gt_0834cfb81fbae767">"VTXOを選択"</string>
   <string name="gt_65f9b19c0365a914">"VTXOを選択すると詳細が表示されます"</string>
   <string name="gt_0bdc583e8496eb4a">"支払いを選択してください"</string>
-  <string name="gt_023441a6788206f5">"取引を選択"</string>
   <string name="gt_ba6afbdcb15d6321">"対象のVTXOをすべて選択"</string>
   <string name="gt_a81bdedbd0dccc7d">"まもなく期限切れになるものを選択"</string>
   <string name="gt_70f58736b63e2c9e">"表示中のものを選択"</string>
@@ -1331,7 +1327,6 @@
   <string name="gt_857d95d67fba62e3">"オンチェーンウォレットからの出金合計"</string>
   <string name="gt_c273ea40b157fd8a">"追跡中"</string>
   <string name="gt_be8c6227042336e7">"取引ID"</string>
-  <string name="gt_45e8220bd0af421e">"トランザクションの絞り込み"</string>
   <string name="gt_321e1df45aa6a9a3">"トランザクションのサイズ"</string>
   <string name="gt_3e5136fd4b11c0dd">"トランザクション"</string>
   <string name="gt_dde8bef78cbb7206">"資金移動"</string>
@@ -1483,7 +1478,6 @@
   <string name="gt_d6b59de9fddcf2df">"メールアドレスの確認が完了しました。"</string>
   <string name="gt_460464d863bb054a">"暗号化されたデータベースのバックアップをエクスポートしました。"</string>
   <string name="gt_0d9a2c325358aee0">"ご意見をNoahチームに送信しました。"</string>
-  <string name="gt_5a4dc83c4c46cd47">"支払いはここに表示されます。"</string>
   <string name="gt_d9a846242ed7a22f">"復元フレーズは引き続きこの端末に安全に保存されています。このフレーズを使って、バックアップからウォレットを復元してください。"</string>
   <string name="gt_fda0b967abcc3d16">"ウォレットのバックアップが正常に完了しました。"</string>
   <string name="gt_50720c8f08138a5e">"ウォレットは現在停止中です。すべてのウォレット操作が無効になっています。"</string>

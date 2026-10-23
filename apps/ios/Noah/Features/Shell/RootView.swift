@@ -113,6 +113,8 @@ struct WalletTabs: View {
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
     @State private var history: HistoryModel
+    /// Home's in-memory "new" set; Activity shares it.
+    @State private var tracker = HomeActivityTracker()
     /// Home's and Receive's models; screenshot fixtures pass fakes for these and Send's.
     private let home: HomeModel?
     private let receive: ReceiveModel?
@@ -149,8 +151,8 @@ struct WalletTabs: View {
                     .modifier(WideTabContent(wide: window.wide, padsForBar: false, barHidden: send.hidesTabBar))
             }
             SwiftUI.Tab(Tab.history.title, systemImage: Tab.history.symbol, value: .history) {
-                NavigationStack { TransactionsView(onRepeatPayment: repeatPayment) }
-                    .modifier(WideTabContent(wide: window.wide))
+                TransactionsView(onReceive: { selection = .receive }, onRepeatPayment: repeatPayment)
+                    .modifier(WideTabContent(wide: window.wide, padsForBar: false))
             }
         }
         .overlay(alignment: .bottomLeading) {
@@ -169,6 +171,7 @@ struct WalletTabs: View {
             Button("OK", role: .cancel) {}
         } message: { Text("Finish the current payment before scanning another request.") }
         .environment(history)
+        .environment(tracker)
         .sheet(isPresented: $recurringRoute.presented) {
             NavigationStack {
                 RecurringPaymentsView()

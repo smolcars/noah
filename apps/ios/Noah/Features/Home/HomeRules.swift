@@ -259,6 +259,11 @@ struct HomeActivityRow: Equatable {
     /// carry: the wallet's balance change and the Ark fee and, for on-chain operations,
     /// the on-chain change and fee. Other records may carry no on-chain values, but any
     /// they carry must be zero. Anything unknown means we can't say.
+    /// The signed amount, or dots while amounts are hidden (Home's persisted flag).
+    func amount(unit: BitcoinAmountUnit, hidden: Bool, locale: Locale) -> String {
+        hidden ? "••••" : sign + BitcoinAmount.format(sats: sats, unit: unit, locale: locale)
+    }
+
     /// A failed movement that produced and exited no coins charged nothing: bark 0.8 zeroes
     /// a Lightning send's balance change when it fails before locking coins, but keeps
     /// the fee it planned. Coins sent to an exit left the spendable balance.
@@ -398,6 +403,18 @@ final class HomeActivityTracker {
             return UInt64(record.amount)
         }
         return balanceSats > armedSats ? balanceSats - armedSats : nil
+    }
+
+    /// Activity's dots: the same "new" set, kept while Home is away (activity.md, "New dot").
+    func unseen(_ transactions: [HistoryTransaction]) -> Set<String> {
+        guard let baseline else { return [] }
+        return Set(transactions.filter { !baseline.contains($0.id) && HomeActivityRow.isNewEligible($0) }.map(\.id))
+    }
+
+    /// A row Activity showed for a moment counts as seen on Home too.
+    func markSeen(_ id: String) {
+        baseline?.insert(id)
+        newIDs.remove(id)
     }
 
     /// The card has folded away; Recent takes its place.

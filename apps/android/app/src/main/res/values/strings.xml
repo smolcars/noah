@@ -231,7 +231,6 @@
   <string name="gt_0a84829094f5cfed">"Child transaction"</string>
   <string name="gt_a06126f70960de59">"Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier."</string>
   <string name="gt_ec1ad72325f469f2">"Choose a balance with sufficient funds."</string>
-  <string name="gt_254c556585bc895f">"Choose a payment to see its details."</string>
   <string name="gt_3b5a71ad765370b3">"Choose balance"</string>
   <string name="gt_bbde37fcd9feb0f6">"Choose how bitcoin amounts are displayed."</string>
   <string name="gt_3c23f7c4e7718d4f">"Choose payment method"</string>
@@ -522,7 +521,6 @@
   <string name="gt_031a8f0f659df890">"Failed"</string>
   <string name="gt_650e662ff450d76b">"Failed to check app version, allowing app to continue"</string>
   <string name="gt_0e64d6a1c553e225">"Failed to fetch logs."</string>
-  <string name="gt_d7982e9989d58c53">"Failed to load transactions"</string>
   <string name="gt_584cd4e5161a0b9d">"Failed to register with server. Please try again."</string>
   <string name="gt_0aac4e26d6649873">"Failed to save email prompt dismissal"</string>
   <string name="gt_3b81a18b3127cb14">"Failed to send verification code. Please try again."</string>
@@ -584,6 +582,7 @@
   <string name="gt_920ac8601c18daac">"Hide wallet balance"</string>
   <string name="gt_31f47a7b7c67fe38">"Historical price API"</string>
   <string name="gt_f622cc11b8240847">"Historical value unavailable"</string>
+  <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"History read failed"</string>
   <string name="gt_5013616d3cb50e40">"Hold to send"</string>
   <string name="gt_3a78695388b38b5c">"Home"</string>
@@ -790,7 +789,6 @@
   <string name="gt_6a8f8f4a6309d592">"No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an Ark address, Lightning address or BOLT12 offer."</string>
   <string name="gt_459617bcef74ad21">"No refresh round was needed."</string>
   <string name="gt_0ce6b8df87b210a5">"No screen lock"</string>
-  <string name="gt_f75dda0d2e0613e9">"No transactions yet"</string>
   <string name="gt_f57ecc027388ea64">"No usable backup was found for this recovery phrase. Check the words and try again."</string>
   <string name="gt_c638d16576dfe156">"No valid payment methods found"</string>
   <string name="gt_57c8529db3e2719a">"No, turn off"</string>
@@ -1006,7 +1004,6 @@
   <string name="gt_5dbbba5210b8e6c2">"Refresh payment status"</string>
   <string name="gt_dea03b1eaff62e66">"Refresh submitted to delegated round %1$s."</string>
   <string name="gt_d0ee4bf8239e4c01">"Refresh this VTXO to keep it available."</string>
-  <string name="gt_53e0085365bf37ce">"Refresh transaction history"</string>
   <string name="gt_c903490c78f12f8f">"Refresh %1$s VTXOs"</string>
   <string name="gt_117f6a7cf0372277">"Refunded"</string>
   <string name="gt_3de658e662e84920">"Refunded · back in your wallet"</string>
@@ -1125,7 +1122,6 @@
   <string name="gt_0834cfb81fbae767">"Select VTXOs"</string>
   <string name="gt_65f9b19c0365a914">"Select a VTXO to see its details"</string>
   <string name="gt_0bdc583e8496eb4a">"Select a payment"</string>
-  <string name="gt_023441a6788206f5">"Select a transaction"</string>
   <string name="gt_ba6afbdcb15d6321">"Select all eligible VTXOs"</string>
   <string name="gt_a81bdedbd0dccc7d">"Select expiring"</string>
   <string name="gt_70f58736b63e2c9e">"Select visible"</string>
@@ -1331,7 +1327,6 @@
   <string name="gt_857d95d67fba62e3">"Total leaving onchain wallet"</string>
   <string name="gt_c273ea40b157fd8a">"Tracked"</string>
   <string name="gt_be8c6227042336e7">"Transaction ID"</string>
-  <string name="gt_45e8220bd0af421e">"Transaction filter"</string>
   <string name="gt_321e1df45aa6a9a3">"Transaction size"</string>
   <string name="gt_3e5136fd4b11c0dd">"Transactions"</string>
   <string name="gt_dde8bef78cbb7206">"Transfer"</string>
@@ -1483,7 +1478,6 @@
   <string name="gt_d6b59de9fddcf2df">"Your email has been verified successfully."</string>
   <string name="gt_460464d863bb054a">"Your encrypted database backup was exported."</string>
   <string name="gt_0d9a2c325358aee0">"Your feedback was sent to the Noah team."</string>
-  <string name="gt_5a4dc83c4c46cd47">"Your payments will appear here."</string>
   <string name="gt_d9a846242ed7a22f">"Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."</string>
   <string name="gt_fda0b967abcc3d16">"Your wallet has been backed up successfully."</string>
   <string name="gt_50720c8f08138a5e">"Your wallet is currently suspended. All wallet operations are disabled."</string>

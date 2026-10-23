@@ -22,7 +22,8 @@ struct HomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.homeFixture) private var fixture
     @State private var home: HomeModel
-    @State private var tracker = HomeActivityTracker()
+    /// The "new" set, shared with Activity.
+    @Environment(HomeActivityTracker.self) private var tracker
     /// The foreground catch-up (`AppModel.CatchUp.finished`) history has been reloaded for.
     @State private var historyCatchUp = 0
     @State private var renew = OnchainModel(dependencies: .renew())

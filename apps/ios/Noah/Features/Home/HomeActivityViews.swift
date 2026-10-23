@@ -28,7 +28,7 @@ struct HomeActivityRowView: View {
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Text(verbatim: hidden ? "••••" : row.sign + BitcoinAmount.format(sats: row.sats, unit: unit, locale: locale))
+            Text(verbatim: row.amount(unit: unit, hidden: hidden, locale: locale))
                 .noahText(HomeText.amount)
                 .monospacedDigit()
                 .strikethrough(row.status.isUnsuccessful)

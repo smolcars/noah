@@ -61,7 +61,7 @@ struct AdaptivePresentationTests {
                     try await SendPaymentTests.waitUntil { controller.state != .ready && controller.state != .submitting }
                     view = AnyView(NavigationStack { SendOutcomeView(controller: controller, done: {}, onLeave: {}) })
                 case "history":
-                    view = AnyView(NavigationStack { TransactionsView(onRepeatPayment: { _ in }) })
+                    view = AnyView(TransactionsView(onRepeatPayment: { _ in }))
                 case "transaction":
                     view = AnyView(NavigationStack { TransactionDetailView(transaction: transaction, onRepeatPayment: { _ in }, onClose: {}) })
                 case "board-review":

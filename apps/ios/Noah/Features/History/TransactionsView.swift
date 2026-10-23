@@ -1,165 +1,721 @@
 import SwiftUI
 
+/// Activity (docs/native-rewrite/design/activity.md). Phones push a payment's detail with a
+/// zoom out of its row; wide windows (the iPhone Duo open, iPad, landscape) keep the list in
+/// the leading pane and the detail in the trailing one, split at the window's centre. Each
+/// pane has its own navigation bar, so nothing crosses the fold. Selection, search, filter,
+/// scroll position and the Details expansion live here, so a pose change keeps them.
 struct TransactionsView: View {
+    enum Route: Hashable { case payment(String), coin(String), exits, recurring }
+
     @Environment(AppModel.self) private var app
     @Environment(HistoryModel.self) private var history
-    @State private var filter = HistoryFilter.all
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.activityFixture) private var fixture
+    @State private var path: [Route] = []
+    @State private var detailPath: [Route] = []
     @State private var selectedID: String?
-    @State private var showSheet = false
-    @State private var wideLayout = false
-    @ScaledMetric(relativeTo: .body) private var minimumPaneWidth: CGFloat = 260
+    @State private var filter = HistoryFilter.all
+    @State private var query = ""
+    @State private var searching = false
+    @State private var scrollAnchor: String?
+    @State private var detailsOpen = false
+    @State private var exporting = false
+    @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
+    @State private var haptics = OnboardingHaptics()
+    @Namespace private var zoom
+    let onReceive: () -> Void
     let onRepeatPayment: (RepeatPayment) -> Void
 
-    private var filtered: [HistoryTransaction] { history.transactions.filter(filter.includes) }
+    init(onReceive: @escaping () -> Void = {}, onRepeatPayment: @escaping (RepeatPayment) -> Void) {
+        self.onReceive = onReceive
+        self.onRepeatPayment = onRepeatPayment
+    }
+
     private var selected: HistoryTransaction? { history.transactions.first { $0.id == selectedID } }
 
     var body: some View {
-        GeometryReader { geometry in
-            let expanded = AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth)
-            HStack(spacing: 0) {
-                VStack(spacing: 16) {
-                    Picker("Transaction filter", selection: $filter) {
-                        ForEach(HistoryFilter.allCases) { Text(LocalizedStringKey($0.rawValue)).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("transaction-filter")
-                    .padding(.horizontal, 20)
+        Group {
+            if window.wide { widePanes } else { compactStack }
+        }
+        .onboardingWindow($window)
+        .onChange(of: window.wide) { _, wide in layoutChanged(toWide: wide) }
+        .onboardingHaptics(haptics)
+        .task {
+            guard let fixture else { return }
+            filter = fixture.filter
+            query = fixture.query ?? ""
+            detailsOpen = fixture.detailsOpen
+            if let id = fixture.selectedID {
+                selectedID = id
+                if !window.wide { path = [.payment(id)] }
+            }
+            exporting = fixture.exporting
+            if fixture.query != nil {
+                // The search field opens once the bar is on screen.
+                try? await Task.sleep(for: .milliseconds(400))
+                searching = true
+            }
+        }
+        .sheet(isPresented: Binding(get: { exporting && !window.wide }, set: { if !window.wide { exporting = $0 } })) {
+            exportSheet.presentationDetents([.height(330)]).presentationDragIndicator(.hidden)
+        }
+    }
 
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            if history.isLoading {
-                                ProgressView("Loading transactions").padding(40)
-                            } else if let error = history.error {
-                                ContentUnavailableView {
-                                    Label("Failed to load transactions", systemImage: "exclamationmark.triangle")
-                                } description: { Text(LocalizedStringKey(error)) } actions: {
-                                    Button("Retry") { Task { await history.refresh(currency: app.preferredCurrency) } }
-                                }
-                            } else if filtered.isEmpty {
-                                ContentUnavailableView("No transactions yet", systemImage: "clock.arrow.circlepath",
-                                                       description: Text("Your payments will appear here."))
-                            } else {
-                                ForEach(filtered) { transaction in
-                                    Button { selectedID = transaction.id; showSheet = true } label: {
-                                        TransactionRow(transaction: transaction, unit: app.amountUnit)
-                                            .padding(.horizontal, 20).padding(.vertical, 16)
-                                            .background(selectedID == transaction.id && expanded ? NoahColor.card : Color.clear)
-                                    }
-                                    .buttonStyle(.plain)
-                                    Divider().padding(.leading, 64)
-                                }
-                            }
-                        }
-                    }
-                    .refreshable { await history.refresh(currency: app.preferredCurrency, sync: true) }
-                }
-                .padding(.top, 12)
-                .frame(maxWidth: .infinity)
-                if expanded {
-                    Divider()
-                    Group {
-                        if let selected {
-                            TransactionDetailView(transaction: selected, onRepeatPayment: repeatPayment, onClose: { selectedID = nil })
-                        } else {
-                            ContentUnavailableView("Select a transaction", systemImage: "doc.text.magnifyingglass",
-                                                   description: Text("Choose a payment to see its details."))
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityIdentifier("history-detail-pane")
-                }
+    // MARK: Layouts
+
+    private var compactStack: some View {
+        NavigationStack(path: $path) {
+            list(wide: false)
+                .navigationDestination(for: Route.self) { route in destination(route, wide: false) }
+        }
+    }
+
+    private var widePanes: some View {
+        HStack(spacing: 0) {
+            NavigationStack {
+                list(wide: true).safeAreaPadding(.bottom, 90)
             }
-            .readableWidth(AdaptiveLayout.pairedWidth)
-            .onChange(of: expanded, initial: true) { _, value in wideLayout = value }
-            // Selection survives the system dismissing the phone sheet during rotation.
-            .sheet(isPresented: Binding(get: { !wideLayout && showSheet && selected != nil }, set: { if !wideLayout { showSheet = $0 } })) {
-                if let selected {
-                    NavigationStack {
-                        TransactionDetailView(transaction: selected, onRepeatPayment: repeatPayment, onClose: { selectedID = nil })
+            .frame(width: max(0, window.size.width / 2 - window.insets.leading))
+            NavigationStack(path: $detailPath) {
+                Group {
+                    if let selected {
+                        detail(selected, wide: true)
+                    } else {
+                        ActivitySelectPrompt().toolbar(.hidden, for: .navigationBar)
                     }
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                }
+                .navigationDestination(for: Route.self) { route in destination(route, wide: true) }
+            }
+            .frame(maxWidth: .infinity)
+            .accessibilityIdentifier("history-detail-pane")
+        }
+        .overlay(alignment: .bottomTrailing) {
+            // Sheets stay in the trailing pane, clear of the fold.
+            if exporting {
+                HomePaneSheet(width: max(0, window.size.width / 2 - window.insets.trailing), onDismiss: closeExport) {
+                    exportSheet
                 }
             }
         }
-        .background(NoahColor.background.ignoresSafeArea())
-        .navigationTitle("Transactions")
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("Refresh transaction history", systemImage: "arrow.clockwise") {
-                    Task { await history.refresh(currency: app.preferredCurrency, sync: true) }
-                }
-                .disabled(history.isRefreshing)
-                ShareLink(item: HistoryCSV(transactions: filtered, currency: app.preferredCurrency),
-                          preview: SharePreview("Noah Wallet Transaction Export")) {
-                    Label("Export transactions", systemImage: "square.and.arrow.up")
-                }
-                .disabled(history.isRefreshing)
-                .accessibilityIdentifier("transactions-share-button")
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: exporting)
+    }
+
+    private func list(wide: Bool) -> some View {
+        ActivityListPane(filter: $filter, query: $query, searching: $searching, scrollAnchor: $scrollAnchor,
+                         wide: wide, selectedID: wide ? selectedID : nil, zoom: zoom,
+                         onSelect: select, onExport: openExport, onReceive: onReceive)
+    }
+
+    @ViewBuilder private func destination(_ route: Route, wide: Bool) -> some View {
+        switch route {
+        case .payment(let id):
+            if let transaction = history.transactions.first(where: { $0.id == id }) {
+                detail(transaction, wide: wide)
+                    .navigationTransition(.zoom(sourceID: id, in: zoom))
+                    .toolbar(.hidden, for: .tabBar)
             }
+        case .coin(let id):
+            let model = OnchainModel()
+            VtxoDetailView(id: id, model: model).modifier(OnchainScreen(model: model))
+        case .exits:
+            UnilateralExitView()
+        case .recurring:
+            RecurringPaymentsView()
         }
+    }
+
+    private func detail(_ transaction: HistoryTransaction, wide: Bool) -> some View {
+        TransactionDetailView(transaction: transaction, onRepeatPayment: repeatPayment, onClose: close)
+    }
+
+    // MARK: Actions
+
+    private func select(_ transaction: HistoryTransaction) {
+        haptics.play(.light)
+        if window.wide {
+            withAnimation(NoahTokens.Motion.travel(reduceMotion)) {
+                detailPath = []
+                detailsOpen = false
+                selectedID = transaction.id
+            }
+        } else {
+            detailsOpen = false
+            selectedID = transaction.id
+            path = [.payment(transaction.id)]
+        }
+    }
+
+    private func close() {
+        haptics.play(.light)
+        if window.wide {
+            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { selectedID = nil; detailPath = [] }
+        } else {
+            path = []
+            selectedID = nil
+        }
+    }
+
+    /// A pose change moves an open payment between the push and the trailing pane.
+    private func layoutChanged(toWide wide: Bool) {
+        if wide {
+            if case .payment(let id) = path.first {
+                selectedID = id
+                detailPath = Array(path.dropFirst())
+            }
+            path = []
+        } else {
+            if let selectedID, selected != nil { path = [.payment(selectedID)] + detailPath }
+            detailPath = []
+        }
+        if exporting && !wide { exporting = false; Task { exporting = true } }
     }
 
     private func repeatPayment(_ details: RepeatPayment) {
+        path = []
+        detailPath = []
         selectedID = nil
         onRepeatPayment(details)
     }
+
+    private func openExport() {
+        haptics.play(.light)
+        withAnimation(NoahTokens.Motion.travel(reduceMotion)) { exporting = true }
+    }
+
+    private func closeExport() {
+        withAnimation(NoahTokens.Motion.travel(reduceMotion)) { exporting = false }
+    }
+
+    private var exportSheet: some View {
+        ActivityExportSheet(transactions: history.transactions.filter(filter.includes), filter: filter,
+                            currency: app.preferredCurrency, onClose: closeExport)
+    }
 }
 
-struct TransactionRow: View {
+/// Screenshot fixtures: the state Activity opens in.
+struct ActivityFixture {
+    var selectedID: String?
+    var filter = HistoryFilter.all
+    var query: String?
+    var exporting = false
+    var detailsOpen = false
+}
+
+extension EnvironmentValues {
+    @Entry var activityFixture: ActivityFixture?
+}
+
+/// The list itself: header, states and rows. The same view sits in the phone's stack and in
+/// the wide leading pane.
+private struct ActivityListPane: View {
+    @Environment(AppModel.self) private var app
+    @Environment(HistoryModel.self) private var history
+    @Environment(HomeActivityTracker.self) private var tracker: HomeActivityTracker?
     @Environment(\.locale) private var locale
-    let transaction: HistoryTransaction
-    let unit: BitcoinAmountUnit
-    var recent = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Binding var filter: HistoryFilter
+    @Binding var query: String
+    @Binding var searching: Bool
+    @Binding var scrollAnchor: String?
+    let wide: Bool
+    let selectedID: String?
+    let zoom: Namespace.ID
+    let onSelect: (HistoryTransaction) -> Void
+    let onExport: () -> Void
+    let onReceive: () -> Void
+    @State private var tucked = false
+    @State private var haptics = OnboardingHaptics()
+    @State private var refreshing = false
+
+    private var ownDomain: String {
+        app.server.state.lightningAddress?.split(separator: "@").last.map(String.init) ?? LightningIdentity.domain(for: app.variant)
+    }
+
+    private var filtered: [HistoryTransaction] { history.transactions.filter(filter.includes) }
+
+    private var visible: [HistoryTransaction] {
+        let language = locale.identifier
+        return filtered.filter { transaction in
+            guard !query.isEmpty else { return true }
+            let row = HomeActivityRow(transaction, ownDomain: ownDomain)
+            let title = row.titleIsVerbatim ? row.title : L10n.text(row.title, locale: language)
+            return ActivityList.matches(transaction, query: query, words: [title, row.title] + ActivityList.kindWords(row, locale: language))
+        }
+    }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            Image(systemName: transaction.symbol)
-                .font(.title3).frame(width: 28)
-                .foregroundStyle(transaction.amountColor)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(LocalizedStringKey(transaction.displayLabel)).font(NoahFont.headline)
-                Text(recent ? transaction.recentDate : transaction.formattedDate).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                if !wide && !searching { largeTitle.padding(.horizontal, NoahTokens.Space.screen) }
+                content
             }
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 5) {
-                Text(transaction.signedAmount(unit: unit, locale: locale))
-                    .font(NoahFont.headline).monospacedDigit().foregroundStyle(transaction.amountColor)
-                if !recent, let status = transaction.statusLabel {
-                    Text(LocalizedStringKey(status)).font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+            .scrollTargetLayout()
+            .padding(.bottom, 32)
+        }
+        .scrollPosition(id: $scrollAnchor, anchor: .top)
+        .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 42 } action: { _, value in
+            tucked = value
+        }
+        .refreshable { await refresh() }
+        .background(NoahTokens.Colors.background.ignoresSafeArea())
+        .navigationTitle("Activity")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbar }
+        .modifier(ActivitySearch(query: $query, searching: $searching))
+        .tint(NoahTokens.Colors.foreground)
+        .onboardingHaptics(haptics)
+    }
+
+    // MARK: Header
+
+    private var largeTitle: some View {
+        HStack(spacing: 10) {
+            Text("Activity").noahText(ActivityText.largeTitle).accessibilityAddTraits(.isHeader)
+            chip
+        }
+        .frame(height: 46, alignment: .leading)
+        .padding(.bottom, 2)
+    }
+
+    @ViewBuilder private var chip: some View {
+        if filter != .all {
+            Button { setFilter(.all) } label: {
+                HStack(spacing: 4) {
+                    Text(LocalizedStringKey(filter.title)).noahText(ActivityText.chip)
+                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                }
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .padding(.leading, 12).padding(.trailing, 9)
+                .frame(height: 30)
+                .glassCompat(in: Capsule(), interactive: true)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(LocalizedStringKey(filter.title)))
+            .accessibilityHint(Text("Clear filter"))
+            .accessibilityIdentifier("activity-filter-chip")
+            .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
+        }
+    }
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        if wide {
+            ToolbarItem(placement: .topBarLeading) {
+                HStack(spacing: 10) {
+                    Text("Activity").noahText(ActivityText.wideTitle).fixedSize()
+                    chip
+                }
+                .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: filter)
+            }
+            .sharedBackgroundVisibilityIfAvailable(.hidden)
+        } else {
+            ToolbarItem(placement: .principal) {
+                Text("Activity").noahText(NoahTokens.Typography.button).opacity(tucked && !searching ? 1 : 0)
+                    .animation(NoahTokens.Motion.travel(reduceMotion), value: tucked)
+                    .accessibilityHidden(!tucked)
+            }
+        }
+        ActivitySearchButton()
+        ToolbarItem(placement: .topBarTrailing) { menu }
+    }
+
+    private var menu: some View {
+        Menu {
+            Picker(selection: Binding(get: { filter }, set: setFilter)) {
+                ForEach(HistoryFilter.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
+            } label: { Text("Filter") }
+            .pickerStyle(.inline)
+            Section {
+                Button("Export CSV", systemImage: "square.and.arrow.up", action: onExport)
+                    .disabled(history.isLoading || history.error != nil)
+                    .accessibilityIdentifier("activity-export")
+                Button("Refresh", systemImage: "arrow.clockwise") { Task { await refresh(scrollToTop: true) } }
+                    .disabled(refreshing)
+                    .accessibilityIdentifier("activity-refresh")
+            }
+        } label: {
+            Label("More", systemImage: "ellipsis")
+        }
+        .accessibilityIdentifier("activity-menu")
+    }
+
+    // MARK: Content
+
+    @ViewBuilder private var content: some View {
+        if app.isWalletSuspended {
+            ActivityErrorView(message: "Your wallet is suspended. Resume it to view transactions.") { Task { await refresh() } }
+        } else if history.isLoading {
+            ActivitySkeleton().padding(.horizontal, NoahTokens.Space.screen)
+        } else if let error = history.error {
+            ActivityErrorView(message: error) { Task { await refresh() } }
+        } else if history.transactions.isEmpty {
+            ActivityEmptyView(onReceive: onReceive)
+        } else if visible.isEmpty {
+            if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+                ActivityNoneView(text: "No matches", action: nil)
+            } else {
+                ActivityNoneView(text: filter.emptyTitle) { setFilter(.all) }
+            }
+        } else {
+            rows
+        }
+    }
+
+    private var rows: some View {
+        let unseen = tracker?.unseen(history.transactions) ?? []
+        let groups = ActivityList.groups(visible, now: Date())
+        return ForEach(groups) { group in
+            Section {
+                ForEach(Array(group.transactions.enumerated()), id: \.element.id) { index, transaction in
+                    let next = index + 1 < group.transactions.count ? group.transactions[index + 1].id : nil
+                    ActivityRowButton(transaction: transaction, ownDomain: ownDomain, unit: app.amountUnit,
+                                      hidden: app.isBalanceHidden, isNew: unseen.contains(transaction.id),
+                                      selected: transaction.id == selectedID,
+                                      hairline: next != nil && transaction.id != selectedID && next != selectedID,
+                                      zoom: wide ? nil : zoom) { onSelect(transaction) }
+                        .onScrollVisibilityChange(threshold: 0.9) { shown in
+                            guard shown, unseen.contains(transaction.id) else { return }
+                            // The dot shrinks away once the row has been on screen for a moment.
+                            Task {
+                                try? await Task.sleep(for: .seconds(1.4))
+                                tracker?.markSeen(transaction.id)
+                            }
+                        }
+                }
+            } header: {
+                ActivityDayHeader(title: title(group.title), first: group.id == groups.first?.id)
+            }
+        }
+        .padding(.horizontal, NoahTokens.Space.screen)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: visible.map(\.id))
+    }
+
+    private func title(_ title: ActivityList.Group.Title) -> String {
+        let language = locale.identifier
+        switch title {
+        case .pending: return L10n.text("Pending", locale: language)
+        case .day(.today): return L10n.text("Today", locale: language)
+        case .day(.yesterday): return L10n.text("Yesterday", locale: language)
+        case .day(.date(let date)):
+            return Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year)
+                ? date.formatted(.dateTime.month(.abbreviated).day().locale(locale))
+                : date.formatted(.dateTime.year().month(.abbreviated).day().locale(locale))
+        }
+    }
+
+    // MARK: Actions
+
+    private func setFilter(_ value: HistoryFilter) {
+        guard value != filter else { return }
+        haptics.play(.selection)
+        withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy)) { filter = value }
+    }
+
+    /// Today's refresh and sync.
+    private func refresh(scrollToTop: Bool = false) async {
+        guard !refreshing else { return }
+        refreshing = true
+        defer { refreshing = false }
+        haptics.play(.light)
+        if scrollToTop {
+            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { scrollAnchor = history.transactions.first?.id }
+        }
+        await history.refresh(currency: app.preferredCurrency, sync: true)
+    }
+}
+
+extension ActivityList {
+    /// The kind and status words a row shows, for search.
+    static func kindWords(_ row: HomeActivityRow, locale: String) -> [String] {
+        let kind: String? = switch row.kind {
+        case .noahUser: "Noah user"
+        case .lightning: "Lightning"
+        case .onchain: "On-chain"
+        case .ark: "Ark"
+        case .recurring: "Recurring"
+        case nil: nil
+        }
+        let status: String? = switch row.status {
+        case .failed: "Failed"
+        case .refunded: "Refunded · back in your wallet"
+        case .canceled: "Canceled"
+        case .sending: "Sending"
+        case .confirming: "Confirming"
+        case .inRound: "In a round"
+        case .exiting: "Exiting"
+        case .done: nil
+        }
+        return [kind, status].compactMap { $0 }.flatMap { [$0, L10n.text($0, locale: locale)] }
+    }
+}
+
+enum ActivityText {
+    static let largeTitle = NoahTokens.TextStyle(size: 34, lineHeight: 40, weight: .semibold, display: false, tracking: -0.02, textStyle: .largeTitle)
+    static let wideTitle = NoahTokens.TextStyle(size: 28, lineHeight: 34, weight: .semibold, display: false, tracking: -0.015, textStyle: .title1)
+    static let chip = NoahTokens.TextStyle(size: 13, lineHeight: 18, weight: .semibold, display: false, tracking: 0, textStyle: .footnote)
+    static let stateTitle = NoahTokens.TextStyle(size: 20, lineHeight: 26, weight: .semibold, display: false, tracking: 0, textStyle: .title3)
+    static let emptyTitle = NoahTokens.TextStyle(size: 22, lineHeight: 28, weight: .semibold, display: false, tracking: -0.01, textStyle: .title2)
+}
+
+/// Home's row, with the wide pane's soft selection and the zoom's source rectangle.
+private struct ActivityRowButton: View {
+    let transaction: HistoryTransaction
+    let ownDomain: String
+    let unit: BitcoinAmountUnit
+    let hidden: Bool
+    let isNew: Bool
+    let selected: Bool
+    let hairline: Bool
+    let zoom: Namespace.ID?
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HomeActivityRowView(transaction: transaction, ownDomain: ownDomain, unit: unit, hidden: hidden,
+                                isNew: isNew, grouped: true)
+                .background {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(NoahTokens.Colors.soft)
+                        .padding(.vertical, 3).padding(.horizontal, -12)
+                        .opacity(selected ? 1 : 0)
+                }
+        }
+        .buttonStyle(ActivityRowPressStyle())
+        .overlay(alignment: .bottom) {
+            if hairline { HomeHairline().padding(.leading, 56) }
+        }
+        .modifier(ZoomSource(id: transaction.id, namespace: zoom))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier("activity-row-\(transaction.id)")
+    }
+}
+
+private struct ZoomSource: ViewModifier {
+    let id: String
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedTransitionSource(id: id, in: namespace) {
+                $0.background(NoahTokens.Colors.background).clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        } else {
+            content
+        }
+    }
+}
+
+/// The prototype's `.rw:active`: the soft rounded surface while pressed.
+private struct ActivityRowPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(NoahTokens.Colors.soft)
+                    .padding(.vertical, 3).padding(.horizontal, -12)
+                    .opacity(configuration.isPressed ? 0.7 : 0)
+            }
+            .contentShape(Rectangle())
+    }
+}
+
+private struct ActivityDayHeader: View {
+    let title: String
+    let first: Bool
+
+    var body: some View {
+        Text(verbatim: title)
+            .noahText(HomeText.section)
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, first ? 8 : 14).padding(.bottom, 4)
+            .padding(.horizontal, NoahTokens.Space.screen)
+            .background(NoahTokens.Colors.background)
+            .padding(.horizontal, -NoahTokens.Space.screen)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// Nine pulsing skeleton rows; still under Reduce Motion.
+private struct ActivitySkeleton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private static let widths: [(CGFloat, CGFloat)] = [(0.58, 0.30), (0.44, 0.36), (0.66, 0.26), (0.50, 0.40), (0.38, 0.32),
+                                                      (0.62, 0.28), (0.47, 0.34), (0.55, 0.24), (0.41, 0.38)]
+
+    var body: some View {
+        TimelineView(.animation(paused: reduceMotion)) { timeline in
+            VStack(spacing: 0) {
+                ForEach(Self.widths.indices, id: \.self) { index in
+                    row(Self.widths[index])
+                        .opacity(reduceMotion ? 1 : pulse(timeline.date, delay: Double(index) * 0.08))
                 }
             }
         }
-        .foregroundStyle(NoahColor.foreground)
-        .accessibilityElement(children: .combine)
-        .contentShape(Rectangle())
+        .padding(.top, 8)
+        .accessibilityElement()
+        .accessibilityLabel(Text("Loading transactions"))
+    }
+
+    /// 1.2 s each way between full and 45%, eased (prototype `skp`).
+    private func pulse(_ date: Date, delay: Double) -> Double {
+        let phase = (date.timeIntervalSinceReferenceDate - delay).truncatingRemainder(dividingBy: 2.4) / 1.2
+        let t = phase < 1 ? phase : 2 - phase
+        return 1 - 0.55 * (0.5 - 0.5 * cos(.pi * t))
+    }
+
+    private func row(_ widths: (CGFloat, CGFloat)) -> some View {
+        HStack(spacing: 14) {
+            Circle().fill(NoahTokens.Colors.soft).frame(width: 42, height: 42)
+            GeometryReader { proxy in
+                VStack(alignment: .leading, spacing: 8) {
+                    Capsule().fill(NoahTokens.Colors.soft).frame(width: proxy.size.width * widths.0, height: 12)
+                    Capsule().fill(NoahTokens.Colors.soft).frame(width: proxy.size.width * widths.1, height: 12)
+                }
+                .frame(maxHeight: .infinity, alignment: .center)
+            }
+            Capsule().fill(NoahTokens.Colors.soft).frame(width: 64, height: 14)
+        }
+        .frame(height: 66)
     }
 }
 
-extension HistoryTransaction {
-    var symbol: String {
-        if movementKind == "onboard" { return "arrow.right.to.line" }
-        if movementKind == "offboard" { return "arrow.left.to.line" }
-        switch type {
-        case "Bolt11", "Lnurl": return "bolt"
-        case "Arkoor": return "sailboat"
-        default: return "cube"
+/// Ghost rows showing the three avatar kinds, "No activity yet" and Receive.
+private struct ActivityEmptyView: View {
+    let onReceive: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                ghost(avatar: AnyView(Text(verbatim: "a").noahText(HomeText.initial)), widths: (0.62, 0.34)).opacity(1)
+                ghost(avatar: AnyView(Image(systemName: "bolt").font(.system(size: 17, weight: .medium))), widths: (0.48, 0.40)).opacity(0.72)
+                ghost(avatar: AnyView(Image(systemName: "link").font(.system(size: 16, weight: .medium))), widths: (0.56, 0.28)).opacity(0.44)
+            }
+            .frame(maxWidth: 300)
+            .accessibilityHidden(true)
+            Text("No activity yet").noahText(ActivityText.emptyTitle)
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .padding(.top, 30).padding(.bottom, 18)
+            Button("Receive", action: onReceive)
+                .buttonStyle(HomePillStyle(height: 40))
+                .accessibilityIdentifier("activity-empty-receive")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 44)
+        .padding(.horizontal, NoahTokens.Space.screen)
+    }
+
+    private func ghost(avatar: AnyView, widths: (CGFloat, CGFloat)) -> some View {
+        HStack(spacing: 14) {
+            avatar
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .frame(width: 42, height: 42)
+                .overlay(Circle().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1.5))
+            GeometryReader { proxy in
+                VStack(alignment: .leading, spacing: 7) {
+                    Capsule().fill(NoahTokens.Colors.soft).frame(width: proxy.size.width * widths.0, height: 10)
+                    Capsule().fill(NoahTokens.Colors.soft).frame(width: proxy.size.width * widths.1, height: 10)
+                }
+                .frame(maxHeight: .infinity, alignment: .center)
+            }
+            Capsule().fill(NoahTokens.Colors.soft).frame(width: 54, height: 12)
+        }
+        .frame(height: 60)
+    }
+}
+
+/// "Couldn't load activity", today's message and "Try again".
+private struct ActivityErrorView: View {
+    let message: String
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text("Couldn't load activity").noahText(ActivityText.stateTitle)
+            Text(LocalizedStringKey(message)).noahText(NoahTokens.Typography.sub)
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 270)
+                .padding(.bottom, 16)
+            Button("Try again", action: retry)
+                .buttonStyle(HomePillStyle(prominent: false, height: 40))
+                .accessibilityIdentifier("activity-retry")
+        }
+        .foregroundStyle(NoahTokens.Colors.foreground)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 120)
+        .padding(.horizontal, NoahTokens.Space.screen)
+    }
+}
+
+/// "No matches", or a filter's empty state with "Show all".
+private struct ActivityNoneView: View {
+    let text: String
+    let action: (() -> Void)?
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(LocalizedStringKey(text)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+            if let action {
+                Button("Show all", action: action)
+                    .noahText(HomeText.strong)
+                    .foregroundStyle(NoahTokens.Colors.foreground)
+                    .frame(minHeight: NoahTokens.Size.hitTarget)
+                    .accessibilityIdentifier("activity-show-all")
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 56)
+    }
+}
+
+/// The wide trailing pane before a payment is chosen.
+struct ActivitySelectPrompt: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "list.bullet").font(.system(size: 22, weight: .medium))
+                .frame(width: 56, height: 56)
+                .background(NoahTokens.Colors.soft, in: Circle())
+            Text("Select a payment").noahText(NoahTokens.Typography.control)
+        }
+        .foregroundStyle(NoahTokens.Colors.muted)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(NoahTokens.Colors.background.ignoresSafeArea())
+    }
+}
+
+/// `.searchable`: on iOS 26 a search button beside ⋯ that opens the field over the bar.
+private struct ActivitySearch: ViewModifier {
+    @Binding var query: String
+    @Binding var searching: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content
+                .searchable(text: $query, isPresented: $searching, placement: .toolbar, prompt: Text("Search"))
+                .searchToolbarBehavior(.minimize)
+        } else {
+            content.searchable(text: $query, isPresented: $searching, placement: .navigationBarDrawer(displayMode: .automatic),
+                               prompt: Text("Search"))
         }
     }
-    var amountColor: Color {
-        if isCanceled { return NoahColor.mutedForeground }
-        let light: UInt32 = isInternalTransfer ? 0x945200 : direction == "outgoing" ? 0xB42318 : 0x137A36
-        let dark: UInt32 = isInternalTransfer ? 0xFDBA74 : direction == "outgoing" ? 0xFF8080 : 0x4ADE80
-        return Color(uiColor: UIColor { UIColor(hex: $0.userInterfaceStyle == .dark ? dark : light) })
+}
+
+/// Where iOS 26 puts the minimized search field: top right, before ⋯.
+private struct ActivitySearchButton: ToolbarContent {
+    var body: some ToolbarContent {
+        if #available(iOS 26, *) {
+            DefaultToolbarItem(kind: .search, placement: .topBarTrailing)
+        }
     }
-    var recentDate: String {
-        confirmationLabel ?? timestamp?.formatted(.dateTime.month(.abbreviated).day()) ?? date
-    }
-    var formattedDate: String {
-        confirmationLabel ?? timestamp?.formatted(date: .abbreviated, time: .shortened) ?? date
-    }
-    func signedAmount(unit: BitcoinAmountUnit, locale: Locale = .current) -> String {
-        let prefix = isCanceled || isInternalTransfer ? "" : direction == "outgoing" ? "−" : "+"
-        return prefix + BitcoinAmount.format(sats: amount, unit: unit, locale: locale)
+}
+
+private extension ToolbarContent {
+    @ToolbarContentBuilder
+    func sharedBackgroundVisibilityIfAvailable(_ visibility: Visibility) -> some ToolbarContent {
+        if #available(iOS 26, *) {
+            sharedBackgroundVisibility(visibility)
+        } else {
+            self
+        }
     }
 }

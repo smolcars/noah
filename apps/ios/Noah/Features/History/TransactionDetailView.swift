@@ -130,3 +130,24 @@ struct TransactionDetailView: View {
         UIPasteboard.general.setItems([[UIPasteboard.typeAutomatic: value]], options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)])
     }
 }
+
+private extension HistoryTransaction {
+    var symbol: String {
+        if movementKind == "onboard" { return "arrow.right.to.line" }
+        if movementKind == "offboard" { return "arrow.left.to.line" }
+        switch type {
+        case "Bolt11", "Lnurl": return "bolt"
+        case "Arkoor": return "sailboat"
+        default: return "cube"
+        }
+    }
+    var amountColor: Color {
+        if isCanceled { return NoahColor.mutedForeground }
+        let light: UInt32 = isInternalTransfer ? 0x945200 : direction == "outgoing" ? 0xB42318 : 0x137A36
+        let dark: UInt32 = isInternalTransfer ? 0xFDBA74 : direction == "outgoing" ? 0xFF8080 : 0x4ADE80
+        return Color(uiColor: UIColor { UIColor(hex: $0.userInterfaceStyle == .dark ? dark : light) })
+    }
+    var formattedDate: String {
+        confirmationLabel ?? timestamp?.formatted(date: .abbreviated, time: .shortened) ?? date
+    }
+}
