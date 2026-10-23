@@ -178,7 +178,8 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
                 }
             }
         },
-        removeAmount = { request?.let { request = ReceiveRequest(it.arkAddress, it.onchainAddress) }; format = ReceiveFormats.afterAmount(format, false) },
+        // Clearing the amount returns to your Lightning address, whichever format was showing.
+        removeAmount = { request?.let { request = ReceiveRequest(it.arkAddress, it.onchainAddress) }; format = ReceiveFormat.lightningAddress },
         retry = { error = null; retry++ },
         profile = onProfile,
     )
