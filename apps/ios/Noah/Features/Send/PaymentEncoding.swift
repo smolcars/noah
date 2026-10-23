@@ -14,6 +14,24 @@ enum PaymentEncoding {
               prefix.utf8.allSatisfy({ (33...126).contains($0) }) else { return nil }
         let words = encoded.compactMap { alphabet.firstIndex(of: $0).map(UInt8.init) }
         guard words.count == encoded.count else { return nil }
+        let check = polymod(prefix, words)
+        guard check == 1 || check == 0x2bc830a3 else { return nil }
+        return Bech32(prefix: prefix, words: Array(words.dropLast(6)), isM: check != 1)
+    }
+    /// Bech32 (not bech32m), lowercase: how an `lnurl1…` carries its URL.
+    static func encodeBech32(_ prefix: String, _ data: [UInt8]) -> String {
+        var words: [UInt8] = [], accumulator = 0, bits = 0
+        for byte in data {
+            accumulator = (accumulator << 8) | Int(byte)
+            bits += 8
+            while bits >= 5 { bits -= 5; words.append(UInt8((accumulator >> bits) & 31)) }
+            accumulator &= (1 << bits) - 1
+        }
+        if bits > 0 { words.append(UInt8((accumulator << (5 - bits)) & 31)) }
+        let check = polymod(prefix, words + [UInt8](repeating: 0, count: 6)) ^ 1
+        return prefix + "1" + String((words + (0..<6).map { UInt8((check >> (5 * (5 - $0))) & 31) }).map { alphabet[Int($0)] })
+    }
+    private static func polymod(_ prefix: String, _ words: [UInt8]) -> UInt32 {
         let expanded = prefix.utf8.map { $0 >> 5 } + [0] + prefix.utf8.map { $0 & 31 }
         let generators: [UInt32] = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]
         var check: UInt32 = 1
@@ -22,8 +40,7 @@ enum PaymentEncoding {
             check = ((check & 0x1ffffff) << 5) ^ UInt32(word)
             for i in 0..<5 where (top >> i) & 1 != 0 { check ^= generators[i] }
         }
-        guard check == 1 || check == 0x2bc830a3 else { return nil }
-        return Bech32(prefix: prefix, words: Array(words.dropLast(6)), isM: check != 1)
+        return check
     }
     static func bytes(_ words: [UInt8]) -> [UInt8]? {
         var accumulator: UInt32 = 0, bits = 0, output: [UInt8] = []

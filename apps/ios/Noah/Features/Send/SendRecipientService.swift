@@ -14,11 +14,15 @@ enum SendRecipientService {
     typealias Fetch = @Sendable (URLRequest) async throws -> (Data, URLResponse)
     static func resolve(_ destination: String, session: WalletSession = .shared,
                         fetch: Fetch = { try await URLSession.shared.data(for: $0) }) async throws -> SendRecipientRoute {
+        let value = SendDestination.cleaned(destination).lowercased()
         var endpoint: URLComponents?
-        if SendDestination.isLightningAddress(destination) {
-            let parts = destination.lowercased().split(separator: "@")
-            endpoint = URLComponents(string: "https://\(parts[1])/.well-known/lnurlp/\(parts[0])")
-        } else if let decoded = PaymentEncoding.bech32(destination), decoded.prefix == "lnurl",
+        if SendDestination.isLightningAddress(value), let at = value.unicodeScalars.lastIndex(of: "@") {
+            // The name is one path segment, whatever it contains; a domain that isn't a host fails here.
+            if let host = SendDestination.host(String(value.unicodeScalars[value.unicodeScalars.index(after: at)...])),
+               let name = String(value.unicodeScalars[..<at]).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(["/"])) {
+                endpoint = URLComponents(string: "https://\(host)/.well-known/lnurlp/\(name)")
+            }
+        } else if let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl",
             let bytes = PaymentEncoding.bytes(decoded.words)
         {
             endpoint = URLComponents(string: String(decoding: bytes, as: UTF8.self))
@@ -47,7 +51,7 @@ enum SendRecipientService {
         var ark: String?
         if let address = decoded.ark, (try? await session.validateSendArkAddress(address)) == true { ark = address }
         return SendRecipientRoute(
-            destination: SendDestination.cleaned(destination).lowercased(), minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
+            destination: value, minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
             commentAllowed: max(0, decoded.commentAllowed ?? 0), arkAddress: ark,
             callback: callback, metadata: decoded.metadata)
     }

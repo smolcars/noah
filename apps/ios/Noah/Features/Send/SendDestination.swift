@@ -9,10 +9,88 @@ struct SendDestination: Equatable, Sendable {
 
     static func cleaned(_ value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.lowercased().hasPrefix("lightning:") ? String(trimmed.dropFirst(10)) : trimmed
+        if let lnurl = lud17(trimmed) { return lnurl }
+        let payload = trimmed.lowercased().hasPrefix("lightning:") ? String(trimmed.dropFirst(10)) : trimmed
+        let address = String(payload.unicodeScalars.drop(while: { $0 == "₿" }))
+        return address != payload && isLightningAddress(address) ? address : payload
     }
+    /// LUD-17 `lnurlp://` mapped to HTTPS as Bark maps it, then carried as the `lnurl1…` it stands for, so its URL keeps
+    /// its case through Send's lowercased keys. A `.onion` host would need cleartext, so it stays unmapped (refused).
+    private static func lud17(_ value: String) -> String? {
+        guard value.lowercased().hasPrefix("lnurlp://") else { return nil }
+        let rest = value.dropFirst(9)
+        // Like Android's HttpUrl: a backslash before the query separates path segments, and extra slashes are refused.
+        let query = rest.firstIndex(where: { $0 == "?" || $0 == "#" }) ?? rest.endIndex
+        guard !rest.hasPrefix("/"), !rest.hasPrefix("\\"),
+              let url = URLComponents(string: "https://" + rest[..<query].replacingOccurrences(of: "\\", with: "/") + rest[query...]),
+              (url.user ?? "").isEmpty, (url.password ?? "").isEmpty, url.port.map({ (1...65535).contains($0) }) ?? true,
+              let host = url.encodedHost.flatMap(Self.host), host.range(of: #"\.onion\.*$"#, options: .regularExpression) == nil
+        else { return nil }
+        let port = url.port.map { $0 == 443 ? "" : ":\($0)" } ?? ""
+        let path = url.percentEncodedPath.isEmpty ? "/" : url.percentEncodedPath
+        guard let canonical = URL(string: "https://\(host)\(port)\(path)" + (url.percentEncodedQuery.map { "?" + $0 } ?? "")
+                                  + (url.percentEncodedFragment.map { "#" + $0 } ?? ""))?.standardized.absoluteString
+        else { return nil }
+        let lnurl = PaymentEncoding.encodeBech32("lnurl", Array(canonical.utf8))
+        return lnurl.count <= 1023 ? lnurl : nil
+    }
+    /// The host Android's HttpUrl requests: percent-decoded, IDNA and lower case, labels of 1–63 characters, and an IP
+    /// literal only for IPv6 (no zone). Nil for anything else.
+    static func host(_ value: String) -> String? {
+        var components = URLComponents()
+        components.host = value.removingPercentEncoding ?? value
+        guard let host = components.encodedHost?.lowercased(), (1...253).contains(host.count) else { return nil }
+        if host.hasPrefix("[") {
+            var address = in6_addr()
+            return host.hasSuffix("]") && !host.contains("%") && inet_pton(AF_INET6, String(host.dropFirst().dropLast()), &address) == 1
+                ? host : nil
+        }
+        let labels = (host.hasSuffix(".") ? host.dropLast() : host[...]).split(separator: ".", omittingEmptySubsequences: false)
+        guard labels.allSatisfy({ (1...63).contains($0.count) }),
+              host.unicodeScalars.allSatisfy({ (0x21..<0x7f).contains($0.value) && !"#%/:?@[\\]".unicodeScalars.contains($0) })
+        else { return nil }
+        return host
+    }
+    /// Bark's rule: lnurl-rs 0.10's `LightningAddress` is email_address 0.2.5 with default options, so quoted local parts
+    /// and domain literals count too. Lengths are UTF-8 bytes and characters are code points, as in Rust. Resolution stays
+    /// HTTPS-only.
     static func isLightningAddress(_ value: String) -> Bool {
-        value.lowercased().range(of: "^[a-z0-9._-]+@[a-z0-9.-]+\\.[a-z]{2,4}$", options: .regularExpression) != nil
+        let scalars = Array(value.unicodeScalars)
+        guard let at = scalars.lastIndex(of: "@") else { return false }
+        let local = scalars[..<at], domain = scalars[(at + 1)...]
+        func size(_ text: ArraySlice<Unicode.Scalar>) -> Int { text.reduce(0) { $0 + UTF8.width($1) } }
+        // Rust's char::is_alphanumeric: Alphabetic, or a number of any kind.
+        func alphanumeric(_ c: Unicode.Scalar) -> Bool {
+            c.properties.isAlphabetic || [.decimalNumber, .letterNumber, .otherNumber].contains(c.properties.generalCategory)
+        }
+        func atom(_ text: ArraySlice<Unicode.Scalar>) -> Bool {
+            !text.isEmpty && text.allSatisfy { $0.value >= 0x80 || alphanumeric($0) || "!#$%&'*+-/=?^_`{|}~".unicodeScalars.contains($0) }
+        }
+        func quoted(_ text: ArraySlice<Unicode.Scalar>) -> Bool {
+            var index = text.startIndex
+            while index < text.endIndex {
+                let c = text[index].value
+                index += 1
+                if c == 0x5c {
+                    guard index < text.endIndex, (0x21...0x7e).contains(text[index].value) else { return false }
+                    index += 1
+                } else if !(c == 0x20 || c == 0x09 || c == 0x21 || (0x23...0x5b).contains(c) || (0x5d...0x7e).contains(c) || c >= 0x80) {
+                    return false
+                }
+            }
+            return true
+        }
+        let localValid = !local.isEmpty && size(local) <= 64 && (local.first == "\"" && local.last == "\""
+            ? local.count > 2 && quoted(local.dropFirst().dropLast())
+            : local.split(separator: ".", omittingEmptySubsequences: false).allSatisfy(atom))
+        guard localValid, !domain.isEmpty, size(domain) <= 254 else { return false }
+        if domain.first == "[" && domain.last == "]" {
+            return domain.dropFirst().dropLast().allSatisfy { (0x21...0x5a).contains($0.value) || (0x5e...0x7e).contains($0.value) }
+        }
+        return domain.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { label in
+            guard let first = label.first, let last = label.last else { return false }
+            return alphanumeric(first) && alphanumeric(last) && size(label) <= 63 && atom(label)
+        }
     }
     static func offer(_ value: String) -> Bool {
         let chunks = value.components(separatedBy: "+")
@@ -47,7 +125,12 @@ struct SendDestination: Equatable, Sendable {
         // Raw LNURL-pay links are supported by the FFI, in addition to RN's LUD-16 input.
         if let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl", !decoded.isM,
            let bytes = PaymentEncoding.bytes(decoded.words), let url = URL(string: String(decoding: bytes, as: UTF8.self)), url.scheme == "https", url.host != nil {
-            return Self(destinationType: "lnurl")
+            // LNURL-auth logs in rather than pays: refuse it here instead of at the fetch. The query is read decoded, as the
+            // LNURL client reads it, so encoding or case can't hide `tag=login`.
+            let login = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains {
+                $0.name.lowercased() == "tag" && $0.value?.lowercased() == "login"
+            } == true
+            return login ? Self(error: .lnurlAuth) : Self(destinationType: "lnurl")
         }
         return Self()
     }
@@ -97,7 +180,8 @@ struct SendDestination: Equatable, Sendable {
                 let pair = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
                 guard let key = pair.first.flatMap({ String($0).removingPercentEncoding }),
                       let decoded = (pair.count > 1 ? String(pair[1]) : "").removingPercentEncoding else { return Self(error: .invalidURI) }
-                let lower = key.lowercased()
+                // BIP-321 `req-` parameters must be understood or refused; Send understands these two.
+                let lower = ["req-ark", "req-amount"].contains(key.lowercased()) ? String(key.lowercased().dropFirst(4)) : key.lowercased()
                 if ["amount", "label", "message"].contains(lower), !seen.insert(lower).inserted {
                     errors.append(.duplicateParameter(lower)); invalid = true; continue
                 }
@@ -129,6 +213,7 @@ indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
     case subSatoshiInvoice, invalidOffer, invalidBitcoinAddress, invalidURI, invalidAmount, noPaymentMethods
     case duplicateParameter(String), addressNetworkMismatch(String), unknownRequiredParameter(String)
     case invalidMethods([SendDestinationError])
+    case lnurlAuth
 
     var errorDescription: String? { message() }
     func message(locale: String = LegacyLocale.resolved()) -> String {
@@ -145,6 +230,7 @@ indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
         case .addressNetworkMismatch(let key): L10n.text("Address network mismatch for {parameter} parameter", key, locale: locale)
         case .unknownRequiredParameter(let key): L10n.text("Unknown required parameter: {key}", key, locale: locale)
         case .invalidMethods(let errors): errors.map { $0.message(locale: locale) }.joined(separator: ", ")
+        case .lnurlAuth: L10n.text("This is a login link, not a payment request", locale: locale)
         }
     }
 }

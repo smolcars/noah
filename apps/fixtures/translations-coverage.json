@@ -1009,6 +1009,7 @@
         "This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status.",
         "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.",
         "This invoice was already paid: {amount}",
+        "This is a login link, not a payment request",
         "This is how people pay you.",
         "This legacy payment has no wallet identity. Check your history and recipient before discarding it.",
         "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast.",
