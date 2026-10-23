@@ -163,6 +163,7 @@ import Testing
         let snapshot = SendSnapshot(movementIDs: [1], walletIdentity: identity, checkpoint: checkpoint)
         var actual = SendSafetyTests().movement("lightning", amount: 1000, hash: checkpoint.paymentHash)
         actual.offchainFeeSats = 83
+        actual.effectiveBalanceSats = -1083
         let movement = actual
         func make() -> SendPaymentController {
             SendPaymentController(dependencies: .init(
@@ -225,6 +226,7 @@ import Testing
         var status = LightningSendStatus.paid(paymentHash: checkpoint.paymentHash, preimage: "proof")
         var movement = SendSafetyTests().movement("lightning", amount: 1000, hash: checkpoint.paymentHash)
         movement.offchainFeeSats = 83
+        movement.effectiveBalanceSats = -1083
         var movements = [movement]
         switch kind {
         case "unknown": status = .unknown
@@ -232,7 +234,7 @@ import Testing
         case "wrongHash": status = .paid(paymentHash: "wrong", preimage: "proof")
         case "missingMovement": movements = []
         case "wrongAmount": movements[0] = SendSafetyTests().movement("lightning", amount: 2000, hash: checkpoint.paymentHash)
-        case "wrongFee": movements[0].offchainFeeSats = 101
+        case "wrongFee": movements[0].offchainFeeSats = 101; movements[0].effectiveBalanceSats = -1101
         case "failed": movements[0].status = "failed"
         case "ambiguous": movements.append(movement)
         default: break

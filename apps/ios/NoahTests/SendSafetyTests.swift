@@ -229,11 +229,15 @@ import Testing
         let saved = try roundTrip(attempt("lightning"))
         let unrelated = movement("lightning", status: status, hash: "other-hash")
         #expect(SendReconciliation.ark(saved, movements: [unrelated]) == .uncertain)
-        // A pre-existing successful hash is already paid, not a new success.
+        // A pre-existing successful hash is already paid, not a new success. This journal predates the paid flag, so a
+        // reused movement is read by when it completed; a failure counts once it finished after the attempt started.
         var matchingMovement = movement("lightning", status: status, id: 1, hash: "invoice-hash")
         if ["failed", "canceled"].contains(status) {
             matchingMovement.intendedBalanceSats = 0
             matchingMovement.effectiveBalanceSats = 0
+            matchingMovement.completedAt = HistoryRules.isoDate(start.addingTimeInterval(60))
+        } else if status == "successful" {
+            matchingMovement.completedAt = HistoryRules.isoDate(start.addingTimeInterval(-60))
         }
         let matched = matchingMovement
         let storage = SendPaymentTests.Storage()
@@ -246,7 +250,7 @@ import Testing
         if status == "successful" {
             #expect(
                 subject.state
-                    == .alreadyPaid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 0, proof: .actualMovement))
+                    == .alreadyPaid(.init(amount: 0, paymentHash: "invoice-hash", movementID: 1, proof: .actualMovement))
             )
         } else if status == "pending" {
             #expect(subject.state == .uncertain)
@@ -255,17 +259,20 @@ import Testing
         }
     }
 
-    @Test func reusedAmountlessInvoiceShowsActualAmountAndFeeAcrossRestart() async throws {
+    @Test func reusedAmountlessInvoiceShowsNoAmountOrFeeAcrossRestart() async throws {
         var saved = attempt("lightning")
         saved.payment.amount = 2000
         var old = movement("lightning", id: 1, amount: 1000, hash: "invoice-hash")
         old.offchainFeeSats = 83
+        old.effectiveBalanceSats = -1083
+        old.completedAt = HistoryRules.isoDate(start.addingTimeInterval(-60))
         let matched = old
         let storage = SendPaymentTests.Storage()
         storage.attempt = saved
         let subject = controller(storage) { SendReconciliation.ark($0, movements: [matched]) }
         await subject.checkStatus()
-        let receipt = SendReceipt(amount: 1000, paymentHash: "invoice-hash", movementID: 1, fee: 83, proof: .actualMovement)
+        // bark's reused movement can't say which attempt's amount and fee it holds.
+        let receipt = SendReceipt(amount: 0, paymentHash: "invoice-hash", movementID: 1, proof: .actualMovement)
         #expect(subject.state == .alreadyPaid(receipt))
         #expect(subject.attempt?.receipt == nil)
         storage.attempt = try roundTrip(#require(storage.attempt))
@@ -286,6 +293,7 @@ import Testing
     @Test func newInvoiceSuccessUsesMovementAmountAndFee() {
         var paid = movement("lightning", hash: "invoice-hash")
         paid.offchainFeeSats = 83
+        paid.effectiveBalanceSats = -1083
         #expect(SendReconciliation.ark(attempt("lightning"), movements: [paid])
                 == .paid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 2, fee: 83, proof: .actualMovement)))
     }

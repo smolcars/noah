@@ -66,7 +66,8 @@ enum SendReconciliation {
             return true
         }
         if let hash {
-            return lightning(candidates, hash: hash, amount: payment.amount, snapshot: attempt.snapshot)
+            return lightningAttempt(candidates, hash: hash, amount: payment.amount, snapshot: attempt.snapshot,
+                                    startedAt: attempt.startedAt, fixed: fixesAmount(attempt.snapshot.resolvedInvoice ?? payment.destination))
         }
         return .candidates(
             candidates.map {
@@ -78,22 +79,26 @@ enum SendReconciliation {
             })
     }
 
-    static func lightning(_ candidates: [Movement], hash: String, amount: UInt64, snapshot: SendSnapshot)
+    /// What a successful send's effective balance took beyond `actual`. A retried invoice's reused movement keeps its
+    /// first attempt's fee field, so this is its fee; nil when bark's numbers can't give one.
+    static func lightningFee(_ movement: Movement, actual: UInt64) -> UInt64? {
+        let (spent, overflow) = Int64(0).subtractingReportingOverflow(movement.effectiveBalanceSats)
+        guard !overflow, spent >= 0, UInt64(spent) >= actual else { return nil }
+        return UInt64(spent) - actual
+    }
+
+    /// Whether `invoice` sets its own amount, so every attempt on its hash sent that amount.
+    static func fixesAmount(_ invoice: String?) -> Bool {
+        invoice.flatMap { PaymentEncoding.invoice($0)?.sats.map { $0 > 0 } } ?? false
+    }
+
+    static func lightning(_ candidates: [Movement], hash: String, amount: UInt64, snapshot: SendSnapshot, fixed: Bool)
         -> SendPaymentController.Resolution
     {
-        guard candidates.count == 1, let movement = candidates.first,
-              movement.subsystemName == "bark.lightning_send", movement.subsystemKind == "send",
-              movement.paymentHash == hash else { return .uncertain }
-        var actual: UInt64 = 0
-        for destination in movement.sentToAddresses {
-            let (sum, overflow) = actual.addingReportingOverflow(destination.amountSats)
-            guard !overflow else { return .uncertain }
-            actual = sum
-        }
+        guard let (movement, actual) = sent(candidates, hash: hash) else { return .uncertain }
         if movement.status == "successful", actual > 0 {
-            let receipt = SendReceipt(amount: actual, paymentHash: hash, movementID: movement.id,
-                                      fee: movement.offchainFeeSats, proof: .actualMovement)
-            if snapshot.movementIDs.contains(movement.id) { return .alreadyPaid(receipt) }
+            let receipt = receipt(movement, actual: actual, hash: hash)
+            if snapshot.movementIDs.contains(movement.id) { return alreadyPaid(receipt, fixed: fixed) }
             guard actual == amount else { return .uncertain }
             return .paid(receipt)
         }
@@ -101,6 +106,61 @@ enum SendReconciliation {
         guard actual == amount else { return .uncertain }
         if ["failed", "canceled"].contains(movement.status) { return .failed }
         return .uncertain
+    }
+
+    /// This attempt's outcome from its hash's movement. Retrying a failed invoice, bark 0.8 reuses the hash's finished
+    /// movement (async-payments.md, "Reused hashes"), so a movement already in the snapshot is never read by its status
+    /// alone. Success is this attempt's when bark had no paid record before it (`SendSnapshot.invoicePaid`; journals
+    /// without it go by whether the movement completed after `startedAt`), with the fee its effective balance took
+    /// beyond the amount: the fee field keeps the first attempt's. Failure needs the movement to have completed after
+    /// `startedAt`; until then the attempt may still be running.
+    static func lightningAttempt(_ candidates: [Movement], hash: String, amount: UInt64, snapshot: SendSnapshot,
+                                 startedAt: Date?, fixed: Bool) -> SendPaymentController.Resolution
+    {
+        guard let (movement, actual) = sent(candidates, hash: hash) else { return .uncertain }
+        guard snapshot.movementIDs.contains(movement.id) else {
+            return lightning(candidates, hash: hash, amount: amount, snapshot: snapshot, fixed: fixed)
+        }
+        let completedSince = startedAt.flatMap { start in movement.completedAt.flatMap(timestamp).map { $0 > start } }
+        if movement.status == "successful", actual > 0 {
+            let receipt = receipt(movement, actual: actual, hash: hash)
+            switch snapshot.invoicePaid ?? completedSince.map(!) {
+            case true?: return alreadyPaid(receipt, fixed: fixed)
+            case false?: return actual == amount && lightningFee(movement, actual: actual) != nil ? .paid(receipt) : .uncertain
+            case nil: return .uncertain
+            }
+        }
+        guard actual == amount, ["failed", "canceled"].contains(movement.status) else { return .uncertain }
+        return completedSince == true ? .failed : .uncertain
+    }
+
+    /// The hash's one Lightning send movement and what it sent, if its amounts add up.
+    private static func sent(_ candidates: [Movement], hash: String) -> (Movement, UInt64)? {
+        guard candidates.count == 1, let movement = candidates.first,
+              movement.subsystemName == "bark.lightning_send", movement.subsystemKind == "send",
+              movement.paymentHash == hash else { return nil }
+        var actual: UInt64 = 0
+        for destination in movement.sentToAddresses {
+            let (sum, overflow) = actual.addingReportingOverflow(destination.amountSats)
+            guard !overflow else { return nil }
+            actual = sum
+        }
+        return (movement, actual)
+    }
+
+    private static func receipt(_ movement: Movement, actual: UInt64, hash: String) -> SendReceipt {
+        SendReceipt(amount: actual, paymentHash: hash, movementID: movement.id,
+                    fee: lightningFee(movement, actual: actual) ?? movement.offchainFeeSats, proof: .actualMovement)
+    }
+
+    /// An invoice without its own amount may have been paid by a retry for another amount, and bark's reused movement
+    /// keeps the first attempt's numbers: nothing on it proves what was sent or paid in fees, so the receipt shows neither.
+    private static func alreadyPaid(_ receipt: SendReceipt, fixed: Bool) -> SendPaymentController.Resolution {
+        guard !fixed else { return .alreadyPaid(receipt) }
+        var unproven = receipt
+        unproven.amount = 0
+        unproven.fee = nil
+        return .alreadyPaid(unproven)
     }
 
     /// The SDK-returned txid binds the result; destination/time-only candidates remain unproven.

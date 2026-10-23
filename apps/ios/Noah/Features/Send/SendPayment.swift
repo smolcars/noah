@@ -83,8 +83,10 @@ struct SendReceipt: Codable, Equatable, Sendable {
                 && (payment.max || amount == payment.amount)
         case .actualMovement:
             return ["lightning", "offer", "lnurl"].contains(payment.method)
-                && txid == nil && paymentHash?.isEmpty == false && movementID != nil && fee != nil
-                && amount > 0 && (alreadyPaid || amount == payment.amount)
+                && txid == nil && paymentHash?.isEmpty == false && movementID != nil
+                // An amountless invoice's already-paid receipt has no numbers it can prove (SendReconciliation.alreadyPaid).
+                && (fee != nil && amount > 0 || alreadyPaid && fee == nil && amount == 0)
+                && (alreadyPaid || amount == payment.amount)
                 && (payment.method != "lightning" || paymentHash == (knownHash ?? PaymentEncoding.invoice(payment.destination)?.hash))
         case nil: return false
         }
@@ -101,6 +103,10 @@ struct SendSnapshot: Codable, Sendable {
     var resolvedInvoice: String?
     var walletIdentity: SendWalletIdentity?
     var checkpoint: SendLightningCheckpoint?
+    /// Whether bark had a paid record for the invoice's hash before this attempt was submitted. A failed attempt never
+    /// writes one, so it tells a retried invoice's own success from one paid before. Nil without an invoice hash, and
+    /// in journals from before it was recorded.
+    var invoicePaid: Bool?
 }
 enum SendFailure: LocalizedError {
     case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, fundsChanged, constructionFailed, lightningInProgress, recurringStopped

@@ -97,9 +97,11 @@ extension WalletSession {
             let resolved = invoice ?? (payment.method == "lightning" ? payment.destination : "")
             guard quote.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             var checkpoint = quote.checkpoint
+            var invoicePaid: Bool?
             if let hash = PaymentEncoding.invoice(resolved)?.hash {
                 checkpoint = SendLightningCheckpoint.prepared(reviewed: quote,
                     inspected: try await handles.wallet.lightningSendState(paymentHash: hash))
+                invoicePaid = try await handles.wallet.isInvoicePaid(paymentHash: hash)
             }
             if payment.method == "onchain", payment.source == .onchain {
                 guard quote.prepared != nil else { throw SendFailure.feeChanged }
@@ -114,7 +116,7 @@ extension WalletSession {
             }
             return SendSnapshot(movementIDs: Set(try await handles.wallet.history().map(\.id)),
                                 bdkTxids: Set(try await handles.onchain.transactions().map(\.txid)), resolvedInvoice: invoice,
-                                walletIdentity: try await Self.sendIdentity(handles), checkpoint: checkpoint)
+                                walletIdentity: try await Self.sendIdentity(handles), checkpoint: checkpoint, invoicePaid: invoicePaid)
         }
     }
     func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: @escaping @Sendable () throws -> Void = {}) async throws -> SendReceipt {
@@ -205,7 +207,8 @@ extension WalletSession {
                 if let checkpoint = snapshot.checkpoint {
                     receipt = try checkpoint.receipt(status: lightning, movements: movements, payment: payment, quote: quote)
                 } else {
-                    switch SendReconciliation.lightning(movements, hash: hash, amount: payment.amount, snapshot: snapshot) {
+                    switch SendReconciliation.lightningAttempt(movements, hash: hash, amount: payment.amount, snapshot: snapshot, startedAt: nil,
+                                                               fixed: SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?? payment.destination)) {
                     case .paid(let actual): receipt = actual
                     case .alreadyPaid(let actual): throw SendAlreadyPaid(receipt: actual)
                     default: throw SendFailure.unresolved
@@ -367,6 +370,7 @@ enum SendLightningSubmission {
             return try await checkpoint.advance(invoice: payment.destination, payment: payment, quote: quote, state: state, check: check)
         }
         guard let hash = PaymentEncoding.invoice(payment.destination)?.hash else { throw SendFailure.invalid }
+        let fixed = SendReconciliation.fixesAmount(payment.destination)
         let matching = movements.filter {
             $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash
         }
@@ -376,14 +380,14 @@ enum SendLightningSubmission {
         case .paid:
             let snapshot = SendSnapshot(movementIDs: Set(matching.map(\.id)))
             guard case .alreadyPaid(let receipt) = SendReconciliation.lightning(
-                matching, hash: hash, amount: payment.amount, snapshot: snapshot)
+                matching, hash: hash, amount: payment.amount, snapshot: snapshot, fixed: fixed)
             else { throw SendFailure.unresolved }
             throw SendAlreadyPaid(receipt: receipt)
         case .unknown:
             // Unknown or pending movement evidence cannot authorize resuming a payment.
             if !matching.isEmpty {
                 let snapshot = SendSnapshot(movementIDs: Set(matching.map(\.id)))
-                switch SendReconciliation.lightning(matching, hash: hash, amount: payment.amount, snapshot: snapshot) {
+                switch SendReconciliation.lightning(matching, hash: hash, amount: payment.amount, snapshot: snapshot, fixed: fixed) {
                 case .alreadyPaid(let receipt): throw SendAlreadyPaid(receipt: receipt)
                 case .failed: break
                 default: throw SendFailure.unresolved

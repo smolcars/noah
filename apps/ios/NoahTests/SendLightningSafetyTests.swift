@@ -47,19 +47,33 @@ import Testing
         }
         #expect(await payer.calls == 0)
     }
-    @Test func paidInvoiceUsesActualMovementWithoutCallingPay() async throws {
+    @Test func paidInvoiceShowsOnlyProvableNumbersWithoutCallingPay() async throws {
         let payment = try payment()
         let hash = try #require(PaymentEncoding.invoice(payment.destination)?.hash)
         var movement = SendSafetyTests().movement("lightning", amount: 2000, hash: hash)
         movement.offchainFeeSats = 83
+        movement.effectiveBalanceSats = -2083
         let payer = Payer()
+        // An amountless invoice: the movement can't say which attempt's amount and fee it holds.
         do {
             _ = try await SendLightningSubmission.submit(payment: payment, state: .paid(paymentHash: hash, preimage: "proof"), movements: [movement]) {
                 await payer.pay()
             }
             Issue.record("Paid invoices must not reach payment")
         } catch let error as SendAlreadyPaid {
-            #expect(error.receipt.amount == 2000 && error.receipt.fee == 83)
+            #expect(error.receipt.amount == 0 && error.receipt.fee == nil)
+        }
+        // An invoice with its own amount: the movement's amount and the fee its effective balance took.
+        let fixed = SendPayment(destination: try SendLnurlSafetyTests().invoice(), method: "lightning", amount: 1000)
+        movement.sentToAddresses[0].amountSats = 1000
+        movement.effectiveBalanceSats = -1083
+        do {
+            _ = try await SendLightningSubmission.submit(payment: fixed, state: .paid(paymentHash: hash, preimage: "proof"), movements: [movement]) {
+                await payer.pay()
+            }
+            Issue.record("Paid invoices must not reach payment")
+        } catch let error as SendAlreadyPaid {
+            #expect(error.receipt.amount == 1000 && error.receipt.fee == 83)
         }
         #expect(await payer.calls == 0)
     }

@@ -352,7 +352,8 @@ struct SendOutcomeView: View {
                 ? "Submission stopped before a transaction could be recorded. Review the amount and fee before trying again."
                 : "Wallet history confirms this payment failed or was canceled.", locale: language)
         case .alreadyPaid:
-            guard case .alreadyPaid(let receipt) = controller.state else { return nil }
+            // An amountless invoice's receipt has no amount it can prove (SendReconciliation.alreadyPaid).
+            guard case .alreadyPaid(let receipt) = controller.state, receipt.amount > 0 else { return nil }
             return L10n.text("This invoice was already paid: {amount}", format(receipt.amount), locale: language)
         case .uncertain: return L10n.text(SendReceipt.uncertainMessage, locale: language)
         case .unavailable:
