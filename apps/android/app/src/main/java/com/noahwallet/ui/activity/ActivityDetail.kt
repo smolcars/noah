@@ -210,7 +210,7 @@ private fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, locale
     val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium, fontSize = with(density) { (11f / (density.density * fontScale)).sp })
     val next = tr("next")
     val nextLabel = remember(next, style) { measurer.measure(next, style) }
-    Canvas(Modifier.padding(top = 20.dp).size(188.dp, 62.dp).clearAndSetSemantics { }.testTag("activity-block-row")) {
+    Canvas(Modifier.padding(top = 20.dp).size(188.dp, 62.dp).testTag("activity-block-row").clearAndSetSemantics { }) {
         val tipShown = slidTip ?: return@Canvas
         scale(density.density, density.density, Offset.Zero) {
             blockStrip(0f, 0f, 38f, tipShown, confirmedAt, 1f, slide, pop, BlockRow.blink(elapsed, confirmedAt == null, reduceMotion), palette,

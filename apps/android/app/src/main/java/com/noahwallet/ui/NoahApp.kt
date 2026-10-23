@@ -72,14 +72,14 @@ fun NoahApp(model: AppModel) {
         model.repeatPayment = it
         showSend()
     }
-    // Home, Send and Receive split the whole window at a fold themselves; every other screen, and Home's map and
-    // email flows, keep one pane.
+    // Home, Send, Receive and Activity split the whole window at a fold themselves; every other screen, and Home's
+    // map and email flows, keep one pane.
     var homeOverlay by rememberSaveable { mutableStateOf<String?>(null) }
     var sendBarHidden by remember { mutableStateOf(false) }
     var activityBarHidden by remember { mutableStateOf(false) }
     val homeVisible = backStack.last() == Destination.Home && (selectedTab == Destination.Home || model.isWalletSuspended)
     val homeOwnsWindow = homeVisible && homeOverlay == null ||
-        !model.isWalletSuspended && selectedTab in listOf(Destination.Send, Destination.Receive)
+        !model.isWalletSuspended && selectedTab in listOf(Destination.Send, Destination.Receive, Destination.History)
     val chrome = LocalWindowChrome.current
     val palette = com.noahwallet.ui.onboarding.noahPalette()
     DisposableEffect(homeOwnsWindow, palette) {
