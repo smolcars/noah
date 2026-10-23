@@ -18,7 +18,10 @@ struct ReceiveView: View {
     @State private var btcPrice: Double?
     @State private var format: ReceiveFormat = .lightningAddress
     @State private var sheet: Sheet?
-    @State private var paneSheet = false
+    /// The amount editor is open: a sheet when compact, the trailing pane when wide. One
+    /// intent and one draft for both, so folding or unfolding mid-edit keeps them.
+    @State private var editing = false
+    @State private var draft: ReceiveAmountDraft?
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @State private var haptics = OnboardingHaptics()
     @State private var tilt = 0
@@ -85,14 +88,14 @@ struct ReceiveView: View {
                     .transition(.homeToast(reduceMotion))
                     .id(toast.id)
             }
-            if wide && paneSheet, let request = model.request {
-                HomePaneSheet(width: window.size.width / 2 - window.insets.trailing, onDismiss: { paneSheet = false }) {
-                    ReceiveAmountSheet(request: request, model: model, btcPrice: btcPrice, onDone: amountDone)
+            if wide && editing, let draft {
+                HomePaneSheet(width: window.size.width / 2 - window.insets.trailing, onDismiss: cancelAmount) {
+                    ReceiveAmountSheet(draft: draft, model: model, btcPrice: btcPrice, onDone: amountDone)
                         .frame(height: min(600, window.size.height - 130))
                 }
             }
         }
-        .animation(NoahTokens.Motion.travel(reduceMotion), value: paneSheet)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: wide && editing)
         .animation(NoahTokens.Motion.travel(reduceMotion), value: toast)
         .toolbar(.hidden, for: .navigationBar)
         .onboardingWindow($window)
@@ -105,7 +108,8 @@ struct ReceiveView: View {
             } else {
                 model.stop()
                 sheet = nil
-                paneSheet = false
+                editing = false
+                draft = nil
                 arrival = nil
             }
         }
@@ -114,13 +118,15 @@ struct ReceiveView: View {
         .onChange(of: model.receivedSats) { _, sats in
             guard let sats else { return }
             sheet = nil
-            paneSheet = false
+            editing = false
             played = []
             arrival = ReceiveArrival(rail: model.receivedRail == .lightning ? .lightning : .ark, sats: sats, start: Date())
             Task { await app.refresh() }
         }
-        .onChange(of: model.baseError) { _, error in if error != nil { sheet = nil; paneSheet = false } }
+        .onChange(of: model.baseError) { _, error in if error != nil { sheet = nil; editing = false } }
         .onChange(of: model.request) { old, new in
+            // A draft belongs to its request.
+            if let draft, draft.request != new { self.draft = nil; editing = false }
             guard arrival == nil, let new else { return }
             if let old, old.arkAddress == new.arkAddress, old.onchainAddress == new.onchainAddress {
                 // The same request with a new amount, or with it removed.
@@ -143,11 +149,16 @@ struct ReceiveView: View {
             }
         }
         .task(id: chainKey) { await watchChain() }
-        .sheet(item: Binding(get: { wide ? nil : sheet }, set: { if !wide { sheet = $0 } })) { sheet in
+        .sheet(item: Binding(get: { wide ? nil : editing ? .amount : sheet }, set: { next in
+            // Folding away a sheet isn't closing it; the pane takes over.
+            guard !wide, next == nil else { return }
+            if editing { cancelAmount() }
+            sheet = nil
+        })) { sheet in
             switch sheet {
             case .amount:
-                if let request = model.request {
-                    ReceiveAmountSheet(request: request, model: model, btcPrice: btcPrice, onDone: amountDone)
+                if let draft {
+                    ReceiveAmountSheet(draft: draft, model: model, btcPrice: btcPrice, onDone: amountDone)
                         .presentationDetents([.large])
                 }
             case .formats:
@@ -291,8 +302,12 @@ struct ReceiveView: View {
     // MARK: Actions
 
     private func openAmount() {
+        guard let request = model.request else { return }
         haptics.play(.light)
-        if wide { paneSheet = true } else { sheet = .amount }
+        // The same request resumes its draft (one an on-chain arrival set aside).
+        if draft?.request != request { draft = ReceiveAmountDraft(request: request) }
+        sheet = nil
+        editing = true
     }
 
     /// Shows a format on the card; an invoice before an amount opens the amount sheet instead.
@@ -329,9 +344,15 @@ struct ReceiveView: View {
     }
 
     private func amountDone(_ saved: Bool) {
-        sheet = nil
-        paneSheet = false
+        editing = false
+        draft = nil
         if saved { haptics.play(.success) }
+    }
+
+    /// Swiped or tapped away: the edit is dropped.
+    private func cancelAmount() {
+        editing = false
+        draft = nil
     }
 
     // MARK: Arrivals

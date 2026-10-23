@@ -1,32 +1,42 @@
 import SwiftUI
 
+/// The amount being edited, kept by Receive outside both editors (the compact sheet and
+/// the wide pane), so folding or unfolding mid-edit, or an on-chain arrival, keeps it.
+@MainActor @Observable final class ReceiveAmountDraft {
+    /// The request it edits; a new request starts a new draft.
+    let request: ReceiveRequest
+    /// Canonical: digits and at most one ".".
+    var amount: String
+    var description: String
+    var useFiat = false
+    var noteOpen: Bool
+
+    init(request: ReceiveRequest) {
+        self.request = request
+        amount = request.amountSat.map(String.init) ?? ""
+        description = request.description
+        noteOpen = !request.description.isEmpty
+    }
+}
+
 /// Add amount (send-receive.md): the same keypad as Send plus an "Add a note" chip (today's
 /// invoice description). Done runs today's invoice creation; clearing the amount returns
 /// to the Lightning address.
 struct ReceiveAmountSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.locale) private var locale
-    let request: ReceiveRequest
+    @Bindable var draft: ReceiveAmountDraft
     @Bindable var model: ReceiveModel
     let btcPrice: Double?
     /// Called when the sheet should close; true once an invoice for a new amount exists.
     let onDone: (Bool) -> Void
-    @State private var amount: String
-    @State private var description: String
-    @State private var useFiat = false
-    @State private var noteOpen: Bool
     @State private var haptics = OnboardingHaptics()
     @FocusState private var noteFocused: Bool
 
-    init(request: ReceiveRequest, model: ReceiveModel, btcPrice: Double?, onDone: @escaping (Bool) -> Void) {
-        self.request = request
-        self.model = model
-        self.btcPrice = btcPrice
-        self.onDone = onDone
-        _amount = State(initialValue: request.amountSat.map(String.init) ?? "")
-        _description = State(initialValue: request.description)
-        _noteOpen = State(initialValue: !request.description.isEmpty)
-    }
+    private var request: ReceiveRequest { draft.request }
+    private var amount: String { draft.amount }
+    private var description: String { draft.description }
+    private var useFiat: Bool { draft.useFiat }
 
     private var parsed: Int64? { Self.sats(amount, fiat: useFiat, btcPrice: btcPrice) }
     private var sats: Int64 { parsed ?? 0 }
@@ -88,7 +98,7 @@ struct ReceiveAmountSheet: View {
                 }
                 Spacer(minLength: 8)
                 if !noteFocused {
-                    SendKeypad(amount: $amount, decimal: useFiat, keyHeight: min(60, max(40, (proxy.size.height - 330) / 4 - 2))) { _ in
+                    SendKeypad(amount: $draft.amount, decimal: useFiat, keyHeight: min(60, max(40, (proxy.size.height - 330) / 4 - 2))) { _ in
                         haptics.play(.selection)
                     }
                 }
@@ -119,8 +129,8 @@ struct ReceiveAmountSheet: View {
 
     /// "Add a note": a chip that opens into today's description field.
     @ViewBuilder private var note: some View {
-        if noteOpen {
-            TextField("Description", text: $description, axis: .vertical)
+        if draft.noteOpen {
+            TextField("Description", text: $draft.description, axis: .vertical)
                 .noahText(NoahTokens.Typography.body)
                 .lineLimit(1...3)
                 .focused($noteFocused)
@@ -130,7 +140,7 @@ struct ReceiveAmountSheet: View {
         } else {
             Button("Add a note") {
                 haptics.play(.light)
-                noteOpen = true
+                draft.noteOpen = true
                 noteFocused = true
             }
             .buttonStyle(SendChipStyle())
@@ -167,7 +177,7 @@ struct ReceiveAmountSheet: View {
         haptics.play(.selection)
         let sats = sats
         // Canonical either way: satsToFiat always writes ".".
-        amount = sats == 0 ? "" : useFiat ? String(sats) : FiatCurrency.satsToFiat(sats, btcPrice: btcPrice, currency: app.preferredCurrency)
-        useFiat.toggle()
+        draft.amount = sats == 0 ? "" : useFiat ? String(sats) : FiatCurrency.satsToFiat(sats, btcPrice: btcPrice, currency: app.preferredCurrency)
+        draft.useFiat.toggle()
     }
 }
