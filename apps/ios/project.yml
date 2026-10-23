@@ -103,6 +103,8 @@ targets:
         NoahSentryDSN: "$(NOAH_SENTRY_DSN)"
         NoahRegtestHost: "$(NOAH_REGTEST_HOST)"
         NoahRegtestServerURL: "$(NOAH_REGTEST_SERVER_URL)"
+        NoahRegtestArkURL: "$(NOAH_REGTEST_ARK_URL)"
+        NoahRegtestBitcoindURL: "$(NOAH_REGTEST_BITCOIND_URL)"
         NSLocalNetworkUsageDescription: "$(NOAH_DISPLAY_NAME) uses your local network only to reach a development server on your computer."
         CADisableMinimumFrameDurationOnPhone: true
         CFBundleDevelopmentRegion: "$(DEVELOPMENT_LANGUAGE)"

@@ -16,3 +16,8 @@ NOAH_WIDGET_KIND = NoahWidgetRegtest
 // NOAH_REGTEST_HOST=<lan-ip> NOAH_REGTEST_SERVER_URL=<url> to xcodebuild.
 NOAH_REGTEST_HOST = localhost
 NOAH_REGTEST_SERVER_URL =
+// Optional Ark server / bitcoind URLs replacing the host's :3535 / :18443, e.g. for a
+// second stack on other ports. Pass them to xcodebuild (an xcconfig value can't hold "//"):
+// NOAH_REGTEST_ARK_URL=http://127.0.0.1:13535 NOAH_REGTEST_BITCOIND_URL=http://127.0.0.1:28443
+NOAH_REGTEST_ARK_URL =
+NOAH_REGTEST_BITCOIND_URL =

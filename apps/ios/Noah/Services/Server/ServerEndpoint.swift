@@ -27,6 +27,8 @@ enum ServerEndpoint {
 /// stack on a developer's machine: `xcodebuild NOAH_REGTEST_HOST=192.168.x.y
 /// NOAH_REGTEST_SERVER_URL=http://192.168.x.y:3000`. Mirrors RN's
 /// EXPO_PUBLIC_REGTEST_URL / EXPO_PUBLIC_REGTEST_SERVER_URL and Android's -PnoahRegtestHost.
+/// `NOAH_REGTEST_ARK_URL` / `NOAH_REGTEST_BITCOIND_URL` replace the host's default
+/// :3535 / :18443 endpoints, e.g. for a second stack on other ports. Only regtest reads them.
 enum RegtestHost {
     static func host(info: [String: Any]? = Bundle.main.infoDictionary) -> String {
         nonEmpty(info?["NoahRegtestHost"]) ?? "localhost"
@@ -34,6 +36,14 @@ enum RegtestHost {
 
     static func serverURL(info: [String: Any]? = Bundle.main.infoDictionary) -> URL? {
         nonEmpty(info?["NoahRegtestServerURL"]).flatMap(URL.init(string:))
+    }
+
+    static func arkURL(info: [String: Any]? = Bundle.main.infoDictionary) -> String? {
+        nonEmpty(info?["NoahRegtestArkURL"])
+    }
+
+    static func bitcoindURL(info: [String: Any]? = Bundle.main.infoDictionary) -> String? {
+        nonEmpty(info?["NoahRegtestBitcoindURL"])
     }
 
     private static func nonEmpty(_ value: Any?) -> String? {

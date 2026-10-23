@@ -65,6 +65,10 @@
 	<string>$(NOAH_APP_GROUP)</string>
 	<key>NoahAppVariant</key>
 	<string>$(NOAH_APP_VARIANT)</string>
+	<key>NoahRegtestArkURL</key>
+	<string>$(NOAH_REGTEST_ARK_URL)</string>
+	<key>NoahRegtestBitcoindURL</key>
+	<string>$(NOAH_REGTEST_BITCOIND_URL)</string>
 	<key>NoahRegtestHost</key>
 	<string>$(NOAH_REGTEST_HOST)</string>
 	<key>NoahRegtestServerURL</key>

@@ -41,4 +41,27 @@ struct WalletConfigurationTests {
         #expect(ServerEndpoint.baseURL(for: .mainnet, environment: [:], info: ["NoahRegtestServerURL": "http://192.168.6.67:3000"])
             == URL(string: "https://noahwallet.io"))
     }
+
+    @Test func regtestArkAndBitcoindURLsCanTargetAnotherStack() {
+        let info: [String: Any] = ["NoahRegtestArkURL": " http://127.0.0.1:13535 ", "NoahRegtestBitcoindURL": "http://127.0.0.1:28443"]
+        let other = WalletConfiguration.base(for: .regtest, regtestHost: "192.168.6.67",
+                                             regtestArkURL: RegtestHost.arkURL(info: info), regtestBitcoindURL: RegtestHost.bitcoindURL(info: info))
+        #expect(other.arkServer == "http://127.0.0.1:13535")
+        #expect(other.bitcoind == "http://127.0.0.1:28443")
+        #expect(ArkInfoEndpoints.blockHeight(variant: .regtest, esploraOverride: nil, regtestBitcoindURL: "http://127.0.0.1:28443")
+            == "http://127.0.0.1:28443")
+        // Unset build settings expand to "", which must keep the host's default ports.
+        for unset in [["NoahRegtestArkURL": "", "NoahRegtestBitcoindURL": " "], [:]] as [[String: Any]] {
+            #expect(RegtestHost.arkURL(info: unset) == nil && RegtestHost.bitcoindURL(info: unset) == nil)
+        }
+        let defaults = WalletConfiguration.base(for: .regtest, regtestHost: "192.168.6.67", regtestArkURL: nil, regtestBitcoindURL: nil)
+        #expect(defaults.arkServer == "http://192.168.6.67:3535" && defaults.bitcoind == "http://192.168.6.67:18443")
+        // Mainnet and signet never read them.
+        for variant in [AppVariant.mainnet, .signet] {
+            #expect(WalletConfiguration.base(for: variant, regtestArkURL: "http://192.0.2.1:1", regtestBitcoindURL: "http://192.0.2.1:2")
+                == WalletConfiguration.base(for: variant, regtestArkURL: nil, regtestBitcoindURL: nil))
+            #expect(ArkInfoEndpoints.blockHeight(variant: variant, esploraOverride: nil, regtestBitcoindURL: "http://192.0.2.1:2")
+                == ArkInfoEndpoints.blockHeight(variant: variant, esploraOverride: nil, regtestBitcoindURL: nil))
+        }
+    }
 }
