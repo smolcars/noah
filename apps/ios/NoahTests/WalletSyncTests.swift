@@ -88,6 +88,18 @@ struct WalletSyncTests {
         #expect(reconciled.withLock { $0 })
     }
 
+    @Test func fullSyncWaitsForAPartialPassInsteadOfDropping() async throws {
+        let flight = WalletSync(), gate = RecurringReservationTests.Gate()
+        let calls = RecurringExecutorTests.Locked(0)
+        let partial = Task { try await flight.serialized { await gate.wait() } }
+        while !(await gate.entered) { await Task.yield() }
+        let full = Task { try await flight.run([{ calls.withLock { $0 += 1 } }]) }
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(calls.withLock { $0 } == 0)
+        await gate.release(); try await partial.value; try await full.value
+        #expect(calls.withLock { $0 } == 1)
+    }
+
     @Test func foregroundRevocationStopsBeforeAnotherStageButDrainsAdmittedWork() async throws {
         let flight = WalletSync(), gate = RecurringReservationTests.Gate(), budget = RecurringSubmissionBudget()
         let claimed = RecurringExecutorTests.Locked(false)

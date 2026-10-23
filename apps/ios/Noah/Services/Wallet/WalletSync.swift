@@ -3,11 +3,16 @@ import Foundation
 /// Drop overlapping ticks; attempt every independent RN sync stage unless admission is revoked.
 actor WalletSync {
     private var running = false
+    /// Whether the running pass is a full sync. A partial `serialized` pass doesn't stand in for one.
+    private var full = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
     func run(_ stages: [@Sendable () async throws -> Void]) async throws {
+        // An overlapping full pass covers this one; a partial pass doesn't, so wait it out.
+        while running && !full { await withCheckedContinuation { waiters.append($0) } }
         guard !running else { return }
         running = true
+        full = true
         defer { release() }
         try await Self.attemptAll(stages)
     }
@@ -23,6 +28,7 @@ actor WalletSync {
 
     private func release() {
         running = false
+        full = false
         let pending = waiters
         waiters = []
         pending.forEach { $0.resume() }
