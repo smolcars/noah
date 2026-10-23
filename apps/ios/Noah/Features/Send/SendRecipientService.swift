@@ -12,8 +12,28 @@ struct SendRecipientRoute: Sendable {
 }
 enum SendRecipientService {
     typealias Fetch = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    /// LNURL's HTTP client, as Android's: no redirects (a 3xx fails the lookup), nothing cached, 20 s in total, and at most
+    /// 64 KiB read, refused from `Content-Length` before the body or as soon as the stream passes it.
+    static func fetch(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForResource = 20
+        let session = URLSession(configuration: configuration, delegate: RefuseRedirects(), delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+        let (bytes, response) = try await session.bytes(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200, response.expectedContentLength <= 65536 else { throw SendFailure.invalid }
+        var data = Data()
+        for try await byte in bytes {
+            guard data.count < 65536 else { throw SendFailure.invalid }
+            data.append(byte)
+        }
+        return (data, response)
+    }
+    private final class RefuseRedirects: NSObject, URLSessionTaskDelegate, Sendable {
+        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest) async -> URLRequest? { nil }
+    }
     static func resolve(_ destination: String, session: WalletSession = .shared,
-                        fetch: Fetch = { try await URLSession.shared.data(for: $0) }) async throws -> SendRecipientRoute {
+                        fetch: Fetch = fetch) async throws -> SendRecipientRoute {
         let value = SendDestination.cleaned(destination).lowercased()
         var endpoint: URLComponents?
         if SendDestination.isLightningAddress(value), let at = value.unicodeScalars.lastIndex(of: "@") {
@@ -57,7 +77,7 @@ enum SendRecipientService {
     }
     /// Resolve without paying: Bark's payLnurl/payLightningAddress can resume an old checkpoint.
     static func invoice(_ payment: SendPayment, session: WalletSession = .shared,
-                        fetch: Fetch = { try await URLSession.shared.data(for: $0) }) async throws -> String {
+                        fetch: Fetch = fetch) async throws -> String {
         let route = try await resolve(payment.destination, session: session, fetch: fetch)
         let (msat, overflow) = payment.amount.multipliedReportingOverflow(by: 1000)
         guard !overflow, msat >= route.minMsat, msat <= route.maxMsat,

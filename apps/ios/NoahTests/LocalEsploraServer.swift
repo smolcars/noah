@@ -3,11 +3,15 @@ import Network
 
 /// Loopback only. Tests own every connection and cancel them before returning.
 final class LocalEsploraServer: @unchecked Sendable {
-    enum Reply { case silent, drip, oversized, notFound }
+    /// `raw`: exactly these bytes, then close the connection or leave it open.
+    enum Reply { case silent, drip, oversized, notFound, raw(String, close: Bool) }
     private let listener: NWListener
     private let queue = DispatchQueue(label: "test.esplora-server")
     private let lock = NSLock()
     private var connections: [NWConnection] = []
+    private var received: [String] = []
+    /// The request line of each connection, in arrival order.
+    var requests: [String] { lock.withLock { received } }
     private(set) var port: UInt16 = 0
 
     init(_ reply: Reply) throws {
@@ -24,8 +28,12 @@ final class LocalEsploraServer: @unchecked Sendable {
             connection.start(queue: queue)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] request, _, _, _ in
                 guard let self else { return }
+                let line = String(decoding: request ?? Data(), as: UTF8.self).components(separatedBy: "\r\n")[0]
+                lock.withLock { received.append(line) }
                 switch reply {
                 case .silent: break
+                case .raw(let response, let close):
+                    connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in if close { connection.cancel() } })
                 case .notFound:
                     let genesis = "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"
                     let response = String(decoding: request ?? Data(), as: UTF8.self).contains("GET /block-height/0 ")
