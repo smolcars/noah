@@ -310,6 +310,22 @@ struct SendMotionTests {
         }
     }
 
+    /// 2,500 typed, then a scan straight from Amount brings an invoice for another amount:
+    /// the amount is kept before the import, so the review notes the invoice's amount.
+    @Test func scanningFromAmountKeepsTheInvoiceAmountNote() async {
+        let model = SendModel(controller: SendPaymentTests().make(.init(), .init()))
+        model.amount = "2500"
+        #expect(model.stage == .amount && model.sats == 2_500)
+        // What the scan now captures before importing (only Next used to).
+        let typed = SendView.typedAmount(model, keeping: nil)
+        await model.importRecipient(SendReceiveShotTests.invoice)
+        #expect(model.parsed.amount != nil && model.parsed.amount != 2_500)
+        #expect(SendView.showsInvoiceNote(typed: typed, fixed: model.parsed.amount))
+        #expect(!SendView.showsInvoiceNote(typed: nil, fixed: model.parsed.amount))
+        // Captured again once the invoice set the amount, the typed one is kept.
+        #expect(SendView.typedAmount(model, keeping: typed) == 2_500)
+    }
+
     /// A first finger presses, a second lands 500 ms later and the first lifts at 600 ms:
     /// no single finger held for 0.8 s, so the hold can't confirm until every finger lifts.
     @Test func aSecondFingerCancelsTheHold() {

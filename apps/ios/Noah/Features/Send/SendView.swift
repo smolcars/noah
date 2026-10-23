@@ -118,6 +118,7 @@ struct SendView: View {
         .fullScreenCover(isPresented: $scanner) {
             SendScanner { value in
                 scanner = false
+                captureTypedAmount()
                 Task { await model.importRecipient(value) }
             }
         }
@@ -301,7 +302,7 @@ struct SendView: View {
                     }
                     Button {
                         haptics.play(.light)
-                        typedAmount = model.parsed.amount == nil ? model.sats : typedAmount
+                        captureTypedAmount()
                         Task { await model.continueStage() }
                     } label: {
                         Text("Next").frame(maxWidth: .infinity)
@@ -410,6 +411,7 @@ struct SendView: View {
             PasteButton(payloadType: String.self) { values in
                 guard let value = values.first else { return }
                 focus = nil
+                captureTypedAmount()
                 Task { await model.importRecipient(value) }
             }
             .labelStyle(.titleOnly)
@@ -540,7 +542,22 @@ struct SendView: View {
 
     private func acceptRecipient() {
         focus = nil
+        captureTypedAmount()
         Task { await model.continueStage() }
+    }
+
+    /// Keeps the amount you typed for the review's invoice note. Taken on every way to a
+    /// recipient (Next, a scan, a paste or a tapped result), before one can set its own amount.
+    private func captureTypedAmount() { typedAmount = Self.typedAmount(model, keeping: typedAmount) }
+
+    static func typedAmount(_ model: SendModel, keeping previous: UInt64?) -> UInt64? {
+        model.parsed.amount == nil ? model.sats : previous
+    }
+
+    /// Whether the review notes that the invoice sets a different amount from the one you typed.
+    static func showsInvoiceNote(typed: UInt64?, fixed: Decimal?) -> Bool {
+        guard let fixed, let typed, typed > 0 else { return false }
+        return Decimal(typed) != fixed
     }
 
     private func loadSuggestions() async {
@@ -719,7 +736,7 @@ struct SendView: View {
 
     /// "The invoice sets the amount to ₿X" when you had typed a different amount first.
     private var invoiceNote: String? {
-        guard let fixed = model.parsed.amount, let typedAmount, typedAmount > 0, Decimal(typedAmount) != fixed else { return nil }
+        guard Self.showsInvoiceNote(typed: typedAmount, fixed: model.parsed.amount) else { return nil }
         return L10n.text("The invoice sets the amount to {amount}", format(model.sats), locale: locale.identifier)
     }
 
