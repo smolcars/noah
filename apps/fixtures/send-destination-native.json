@@ -1838,6 +1838,396 @@
       }
     },
     {
+      "name": "row 19 LNURL-auth: encoded name, lnurlp (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?%74ag=login&k1=00",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded name, lnurlp (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?%74ag=login&k1=00",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded name, lnurlp (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/login?%74ag=login&k1=00",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded name, lnurl1 (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8ujnwdrpvu7kcmm8d9hzv6e385crqjj975f",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded name, lnurl1 (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8ujnwdrpvu7kcmm8d9hzv6e385crqjj975f",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded name, lnurl1 (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8ujnwdrpvu7kcmm8d9hzv6e385crqjj975f",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded value, lnurlp (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?tag=%6Cogin&k1=00",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded value, lnurlp (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?tag=%6Cogin&k1=00",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded value, lnurlp (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/login?tag=%6Cogin&k1=00",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded value, lnurl1 (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeeay5myxmm8d9hzv6e385crqh9sqtz",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded value, lnurl1 (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeeay5myxmm8d9hzv6e385crqh9sqtz",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: encoded value, lnurl1 (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeeay5myxmm8d9hzv6e385crqh9sqtz",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case, lnurlp (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?TAG=LOGIN&k1=00",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case, lnurlp (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?TAG=LOGIN&k1=00",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case, lnurlp (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/login?TAG=LOGIN&k1=00",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case, lnurl1 (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a2yz3eaf385wj2wye4nz0fsxqfj2pm4",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case, lnurl1 (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a2yz3eaf385wj2wye4nz0fsxqfj2pm4",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case, lnurl1 (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a2yz3eaf385wj2wye4nz0fsxqfj2pm4",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 pay link with user=login, lnurlp (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/pay?user=login",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?user=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with user=login, lnurlp (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/pay?user=login",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?user=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with user=login, lnurlp (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/pay?user=login",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?user=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with user=login, lnurl1 (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m4wdjhy0tvdankjmsvjh3ta",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?user=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with user=login, lnurl1 (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m4wdjhy0tvdankjmsvjh3ta",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?user=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with user=login, lnurl1 (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m4wdjhy0tvdankjmsvjh3ta",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?user=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with action=login beside tag=payRequest, lnurlp (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/pay?tag=payRequest&action=login",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest&action=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with action=login beside tag=payRequest, lnurlp (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/pay?tag=payRequest&action=login",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest&action=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with action=login beside tag=payRequest, lnurlp (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/pay?tag=payRequest&action=login",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest&action=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with action=login beside tag=payRequest, lnurl1 (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m5v9nn6urp09fx2ut4v4ehgfnpvd6xjmmw84kx7emfdcqe5xxv",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest&action=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with action=login beside tag=payRequest, lnurl1 (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m5v9nn6urp09fx2ut4v4ehgfnpvd6xjmmw84kx7emfdcqe5xxv",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest&action=login"
+      }
+    },
+    {
+      "name": "row 19 pay link with action=login beside tag=payRequest, lnurl1 (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m5v9nn6urp09fx2ut4v4ehgfnpvd6xjmmw84kx7emfdcqe5xxv",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest&action=login"
+      }
+    },
+    {
       "name": "row 19 tag=login only as a substring (mainnet)",
       "input": {
         "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0mcw3skw0tvdankjmsxwy4hl",

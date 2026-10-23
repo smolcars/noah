@@ -80,10 +80,13 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
                     return if (matches(actual, network, "ark")) SendDestination("ark") else mismatch(actual, network)
                 }
                 if (decoded.prefix == "lnurl" && !decoded.isM) {
-                    val url = PaymentEncoding.bytes(decoded.words)?.toString(Charsets.UTF_8)?.let { runCatching { URI(it) }.getOrNull() }
-                    // LNURL-auth logs in rather than pays: refuse it here instead of at the fetch.
-                    if (url?.scheme == "https" && url.host != null) return if (url.rawQuery?.split('&')?.contains("tag=login") == true)
-                        SendDestination(error = SendDestinationError.LnurlAuth) else SendDestination("lnurl")
+                    val text = PaymentEncoding.bytes(decoded.words)?.toString(Charsets.UTF_8)
+                    val url = text?.let { runCatching { URI(it) }.getOrNull() }
+                    // LNURL-auth logs in rather than pays: refuse it here instead of at the fetch. The query is read decoded,
+                    // as the LNURL client's HttpUrl reads it, so encoding or case can't hide `tag=login`.
+                    val login = text?.toHttpUrlOrNull()?.let { query -> (0 until query.querySize).any {
+                        query.queryParameterName(it).equals("tag", true) && query.queryParameterValue(it).equals("login", true) } } == true
+                    if (url?.scheme == "https" && url.host != null) return if (login) SendDestination(error = SendDestinationError.LnurlAuth) else SendDestination("lnurl")
                 }
             }
             return SendDestination()
