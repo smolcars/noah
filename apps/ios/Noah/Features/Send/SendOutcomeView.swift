@@ -446,19 +446,16 @@ struct SendOutcomeView: View {
 
     @ViewBuilder private var actions: some View {
         VStack(spacing: 10) {
-            switch kind {
-            case .sending: EmptyView()
-            case .stillSending:
-                if controller.state == .uncertain { checkButton }
-                if resultShown || controller.state == .uncertain {
-                    pill("Done", id: "send-success-done") { onLeave() }
+            ForEach(Self.actions(kind: kind, uncertain: controller.state == .uncertain, resultShown: resultShown), id: \.self) { action in
+                switch action {
+                case .check: checkButton
+                case .acknowledge: pill("Done", id: "send-success-done", action: acknowledge)
+                case .newPayment: pill("Start a new payment", id: "send-new-payment", action: acknowledge)
+                case .retry: pill("Retry", id: "send-retry") { Task { await controller.checkStatus() } }
+                // Leaving keeps the attempt and the send lock exactly as they are.
+                case .leave: pill("Done", id: "send-success-done") { onLeave() }
+                case .close: pill("Close", id: "send-leave", prominent: false) { onLeave() }
                 }
-            case .sent, .refunded, .alreadyPaid:
-                if resultShown || kind == .alreadyPaid { pill("Done", id: "send-success-done", action: acknowledge) }
-            case .failed: pill("Start a new payment", id: "send-new-payment", action: acknowledge)
-            case .uncertain: checkButton
-            case .unavailable: pill("Retry", id: "send-retry") { Task { await controller.checkStatus() } }
-            case .awaitingBroadcast: checkButton
             }
             if controller.canOverride {
                 Button("I've checked my history, start a new payment", role: .destructive) { confirmOverride = true }
@@ -486,9 +483,29 @@ struct SendOutcomeView: View {
         .accessibilityIdentifier("send-check-status")
     }
 
-    private func pill(_ title: LocalizedStringKey, id: String, action: @escaping () -> Void) -> some View {
+    /// What a result offers, in order.
+    enum Action: Hashable {
+        case check, acknowledge, newPayment, retry
+        /// Leave Send through `onLeave`; nothing is resolved, cleared or resubmitted.
+        case leave, close
+    }
+
+    /// Unresolved results (may have been sent, status unavailable, awaiting broadcast) have no
+    /// Done, and the tab bar is hidden there, so they offer Close.
+    static func actions(kind: SendResultKind, uncertain: Bool, resultShown: Bool) -> [Action] {
+        switch kind {
+        case .sending: return []
+        case .stillSending: return (uncertain ? [.check] : []) + (resultShown || uncertain ? [.leave] : [])
+        case .sent, .refunded, .alreadyPaid: return resultShown || kind == .alreadyPaid ? [.acknowledge] : []
+        case .failed: return [.newPayment]
+        case .uncertain, .awaitingBroadcast: return [.check, .close]
+        case .unavailable: return [.retry, .close]
+        }
+    }
+
+    private func pill(_ title: LocalizedStringKey, id: String, prominent: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: action) { Text(title).frame(maxWidth: .infinity) }
-            .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
+            .buttonStyle(HomePillStyle(prominent: prominent, height: 52, font: NoahTokens.Typography.button))
             .accessibilityIdentifier(id)
             .transition(.opacity)
     }

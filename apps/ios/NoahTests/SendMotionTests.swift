@@ -269,6 +269,47 @@ struct SendMotionTests {
         #expect(await gate.calls == 1)
     }
 
+    /// Unresolved results hide the tab bar, so each offers Close. Leaving keeps the attempt, its
+    /// state and the send lock exactly as they were.
+    @Test func unresolvedResultsOfferAWayOutThatKeepsThePayment() async throws {
+        var receipt = SendReceipt(amount: 50_000, txid: String(repeating: "cd", count: 32), status: .submitted, fee: 420, proof: .preparedTxid)
+        receipt.broadcastRetryPending = true
+        var quote = SendQuote(amount: 50_000, fee: 420, total: 50_420, feeRate: 2)
+        quote.prepared = try JSONDecoder().decode(SendPreparedTransaction.self, from: Data(
+            #"{"id":"fixture","txid":"\#(String(repeating: "cd", count: 32))","vsize":141,"inputCount":1,"createdAt":\#(Date().timeIntervalSinceReferenceDate)}"#.utf8))
+        let wallet = SendPayment(destination: SendReceiveShotTests.bitcoin, method: "onchain", amount: 50_000, source: .onchain)
+        func controller(_ result: Result<SendReceipt, Error>?, read: (() throws -> Attempt?)? = nil) -> SendPaymentController {
+            let storage = SendPaymentTests.Storage()
+            return SendPaymentController(dependencies: .init(
+                prepare: { _, _ in .init(movementIDs: []) }, pay: { _, _, _ in try result!.get() },
+                reconcile: { _ in .uncertain }, read: read ?? { storage.attempt }, write: { try storage.write($0) }))
+        }
+        struct Unreadable: Error {}
+        let uncertain = controller(.failure(URLError(.timedOut)))
+        uncertain.submit(Self.ark, quote: SendQuote(amount: 2_500, fee: 0, total: 2_500))
+        let broadcast = controller(.success(receipt))
+        broadcast.submit(wallet, quote: quote)
+        let blocked = controller(nil, read: { throw Unreadable() })
+        try await SendPaymentTests.waitUntil { uncertain.state == .uncertain && !uncertain.checking && broadcast.state != .submitting }
+        for (subject, kind) in [(uncertain, SendResultKind.uncertain), (blocked, .unavailable), (broadcast, .awaitingBroadcast)] {
+            #expect(SendResultKind.of(state: subject.state, outcome: .stopped, slow: false) == kind)
+            for shown in [false, true] {
+                #expect(SendOutcomeView.actions(kind: kind, uncertain: subject.state == .uncertain, resultShown: shown).last == .close, "\(kind)")
+            }
+            // Close is onLeave: Send's tab changes, and Send's own clean-up on leaving refuses a locked payment.
+            let model = SendModel(controller: subject)
+            let before = (subject.state, subject.attempt?.payment, subject.attempt?.receipt, subject.generation, model.stage)
+            model.reset()
+            model.discardReview()
+            #expect(subject.locked && subject.state == before.0 && subject.generation == before.3 && model.stage == before.4)
+            #expect(subject.attempt?.payment == before.1 && subject.attempt?.receipt == before.2)
+        }
+        // Results that resolve or already leave don't offer Close.
+        for kind in [SendResultKind.sent, .refunded, .failed, .alreadyPaid, .stillSending, .sending] {
+            #expect(!SendOutcomeView.actions(kind: kind, uncertain: false, resultShown: true).contains(.close))
+        }
+    }
+
     /// A first finger presses, a second lands 500 ms later and the first lifts at 600 ms:
     /// no single finger held for 0.8 s, so the hold can't confirm until every finger lifts.
     @Test func aSecondFingerCancelsTheHold() {
