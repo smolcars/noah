@@ -115,7 +115,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         requireSend(snapshot.walletIdentity == identity(), SendFailure.Reason.unresolved)
         var receipt = SendReceipt(quote.amount)
         val lightning: LightningSendStatus? = when (payment.method) {
-            "ark" -> { beforeSubmit?.invoke(); wallet.sendArkoorPayment(payment.destination, payment.amount.toULong()); receipt = receipt.copy(proof = SendReceipt.Proof.submitReturnedArkSuccess); null }
+            // Persist the SDK's success result and the payment's movement id, never infer them from history candidates.
+            "ark" -> { beforeSubmit?.invoke(); receipt = receipt.copy(movementID = wallet.sendArkoorPayment(payment.destination, payment.amount.toULong()), proof = SendReceipt.Proof.submitReturnedArkSuccess); null }
             "lightning", "lnurl" -> {
                 val invoice = if (payment.method == "lnurl") snapshot.resolvedInvoice ?: throw SendFailure(SendFailure.Reason.invalid) else payment.destination
                 if (payment.method == "lnurl") SendRecipientService.validateInvoice(invoice, payment.amount, network)
@@ -137,12 +138,13 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                     try { receipt = SendOnchainSubmission.receipt(onchain.broadcastPrepared(prepared.id), quote) }
                     catch (failure: Exception) { SendOnchainSubmission.notSubmitted(failure)?.let { throw SendNotSubmitted(it) }; throw failure }
                 } else {
-                    val txid = if (payment.max) {
+                    val result = if (payment.max) {
                         val ids = wallet.spendableVtxos().map { it.id }.toSet()
                         if (quote.vtxoIDs.isNullOrEmpty() || ids != quote.vtxoIDs.toSet()) throw SendNotSubmitted(SendFailure.Reason.fundsChanged)
-                        wallet.offboardVtxos(quote.vtxoIDs, payment.destination).txid
-                    } else wallet.sendOnchain(payment.destination, payment.amount.toULong()).txid
-                    receipt = SendReceipt(if (payment.max) 0 else quote.amount, txid = txid, amountIsPending = payment.max, proof = SendReceipt.Proof.submitReturnedTxid)
+                        wallet.offboardVtxos(quote.vtxoIDs, payment.destination)
+                    } else wallet.sendOnchain(payment.destination, payment.amount.toULong())
+                    receipt = SendReceipt(if (payment.max) 0 else quote.amount, txid = result.txid, movementID = result.movementId,
+                        amountIsPending = payment.max, proof = SendReceipt.Proof.submitReturnedTxid)
                     runCatching { wallet.history() }.getOrNull()?.let { receipt = SendReconciliation.offboardReceipt(receipt, payment, it) }
                 }
                 null
@@ -160,11 +162,9 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 else -> throw SendFailure(SendFailure.Reason.unresolved)
             }
         }
-        if (payment.repeatMetadata != null) {
-            try {
-                val movement = wallet.history().firstOrNull { it.id !in snapshot.movementIDs && SendReconciliation.matches(it, payment, receipt.paymentHash) }
-                if (movement != null) { wallet.updateHistoryMetadata(movement.id, payment.repeatMetadata); receipt = receipt.copy(movementID = movement.id) }
-            } catch (_: Exception) { warn("Payment succeeded; repeat metadata could not be saved") }
+        // Metadata failure is never a payment failure and must never enable resubmission.
+        if (payment.repeatMetadata != null) SendReconciliation.metadataMovementID(receipt, snapshot)?.let { id ->
+            try { wallet.updateHistoryMetadata(id, payment.repeatMetadata) } catch (_: Exception) { warn("Payment succeeded; repeat metadata could not be saved") }
         }
         return receipt
     }

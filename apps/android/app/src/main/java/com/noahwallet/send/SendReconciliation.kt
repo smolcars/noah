@@ -6,7 +6,13 @@ import kotlinx.serialization.json.*
 import com.noahwallet.history.HistoryRules
 import com.noahwallet.services.wallet.ChainStatus
 
+/** Receipts bind their movement exactly: SDK 0.6.0 returns it for Ark sends and offboards, and a
+ *  BOLT11 hash binds Lightning. Weak history correlation remains only for attempts with no result,
+ *  e.g. a crash before the receipt was saved (FFI item 19's pre-ID window). */
 object SendReconciliation {
+    /** The exact movement for history metadata, never a destination/amount/time match.
+     *  Movements that predate the attempt (an inherited Lightning checkpoint) are left untouched. */
+    fun metadataMovementID(receipt: SendReceipt, snapshot: SendSnapshot): UInt? = receipt.movementID?.takeIf { it !in snapshot.movementIDs }
     fun isLightning(movement: Movement, hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
     fun matches(movement: Movement, payment: SendPayment, hash: String?): Boolean {
         if (payment.source == SendSource.onchain) return false
@@ -43,10 +49,11 @@ object SendReconciliation {
         }
         return if (hash != null) lightning(candidates, hash, payment.amount, attempt.snapshot) else SendResolution.Candidates(candidates.map { it.id })
     }
+    /** SDK 0.6.0 also returns the movement id, which must agree with the txid; journals saved before it bind by txid alone. */
     fun offboardReceipt(receipt: SendReceipt, payment: SendPayment, movements: List<Movement>): SendReceipt {
         if (receipt.proof != SendReceipt.Proof.submitReturnedTxid || receipt.txid == null) return receipt
         val matches = movements.filter {
-            it.subsystemName == "bark.offboard" && it.subsystemKind == (if (payment.max) "offboard" else "send_onchain") &&
+            (receipt.movementID == null || it.id == receipt.movementID) && it.subsystemName == "bark.offboard" && it.subsystemKind == (if (payment.max) "offboard" else "send_onchain") &&
                 runCatching { Json.parseToJsonElement(it.metadataJson).jsonObject["offboard_txid"]?.jsonPrimitive?.content }.getOrNull() == receipt.txid
         }
         val movement = matches.singleOrNull() ?: return receipt
