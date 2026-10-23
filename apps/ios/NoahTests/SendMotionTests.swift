@@ -308,6 +308,21 @@ struct ReceiveFormatTests {
         }
     }
 
+    /// Fiat amounts stay canonical whatever the locale's separator, so the keypad's "." never
+    /// makes "2,80." (not an amount, which used to read as zero and remove the amount).
+    @Test func receiveAmountsStayCanonicalAndOnlyAnEmptyAmountClears() {
+        var amount = FiatCurrency.satsToFiat(2_800, btcPrice: 100_000, currency: "EUR")
+        #expect(amount == "2.80")
+        SendKeypad.apply(".", to: &amount)
+        SendKeypad.apply("5", to: &amount)
+        #expect(amount == "2.805")
+        #expect(ReceiveAmountSheet.sats(amount, fiat: true, btcPrice: 100_000) == 2_805)
+        #expect(ReceiveAmountSheet.sats("2,80.", fiat: true, btcPrice: 100_000) == nil)
+        #expect(ReceiveAmountSheet.sats("1.5", fiat: true, btcPrice: nil) == nil)
+        #expect(ReceiveAmountSheet.sats("", fiat: true, btcPrice: 100_000) == 0)
+        #expect(ReceiveAmountSheet.sats("1500", fiat: false, btcPrice: nil) == 1_500)
+    }
+
     @Test func onchainArrivalPrefersThisRequestsAddress() {
         let snapshot = ReceiveChainSnapshot(tip: 100, incoming: [
             .init(txid: "old", toAddress: 5, received: 5, confirmedHeight: nil),

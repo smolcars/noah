@@ -28,13 +28,13 @@ struct ReceiveAmountSheet: View {
         _noteOpen = State(initialValue: !request.description.isEmpty)
     }
 
-    private var sats: Int64 {
-        let normalized = amount.replacingOccurrences(of: locale.decimalSeparator ?? ".", with: ".")
-        if useFiat, let btcPrice { return FiatCurrency.fiatToSats(Double(normalized) ?? .nan, btcPrice: btcPrice) }
-        return Int64(normalized) ?? 0
+    private var parsed: Int64? { Self.sats(amount, fiat: useFiat, btcPrice: btcPrice) }
+    private var sats: Int64 { parsed ?? 0 }
+    /// Only an emptied amount removes it; text that isn't a valid amount can't be saved.
+    private var cleared: Bool { amount.isEmpty }
+    private var valid: Bool {
+        cleared || parsed.map { (try? ReceiveRequest.validate(amountSat: $0, description: description)) != nil } == true
     }
-    private var cleared: Bool { sats == 0 }
-    private var valid: Bool { cleared || (try? ReceiveRequest.validate(amountSat: sats, description: description)) != nil }
     private var noteTooLong: Bool { description.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count > 639 }
 
     private var display: (text: String, empty: Bool) {
@@ -43,7 +43,8 @@ struct ReceiveAmountSheet: View {
             formatter.numberStyle = .currency
             formatter.currencyCode = app.preferredCurrency
             formatter.locale = locale
-            return ((formatter.currencySymbol ?? "") + (amount.isEmpty ? "0" : amount), amount.isEmpty)
+            let shown = amount.replacingOccurrences(of: ".", with: locale.decimalSeparator ?? ".")
+            return ((formatter.currencySymbol ?? "") + (amount.isEmpty ? "0" : shown), amount.isEmpty)
         }
         return (BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale), amount.isEmpty)
     }
@@ -144,6 +145,7 @@ struct ReceiveAmountSheet: View {
             onDone(false)
             return
         }
+        guard valid, let sats = parsed else { return }
         if sats == request.amountSat && description.trimmingCharacters(in: .whitespacesAndNewlines) == request.description {
             onDone(false)
             return
@@ -151,13 +153,21 @@ struct ReceiveAmountSheet: View {
         Task { if await model.save(amountSat: sats, description: description) { onDone(true) } }
     }
 
+    /// The typed amount in sats; nil when the text isn't an amount. The text stays canonical
+    /// (digits and at most one "."); only the display uses the locale's separator.
+    static func sats(_ amount: String, fiat: Bool, btcPrice: Double?) -> Int64? {
+        guard !amount.isEmpty else { return 0 }
+        guard fiat else { return Int64(amount) }
+        guard let btcPrice, let value = Double(amount), value.isFinite else { return nil }
+        return FiatCurrency.fiatToSats(value, btcPrice: btcPrice)
+    }
+
     private func toggleCurrency() {
         guard let btcPrice else { return }
         haptics.play(.selection)
         let sats = sats
-        amount = useFiat ? (sats == 0 ? "" : String(sats))
-            : FiatCurrency.satsToFiat(sats, btcPrice: btcPrice, currency: app.preferredCurrency)
-                .replacingOccurrences(of: ".", with: locale.decimalSeparator ?? ".")
+        // Canonical either way: satsToFiat always writes ".".
+        amount = sats == 0 ? "" : useFiat ? String(sats) : FiatCurrency.satsToFiat(sats, btcPrice: btcPrice, currency: app.preferredCurrency)
         useFiat.toggle()
     }
 }
