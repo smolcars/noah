@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1493,
-  "sourceKeys": 1496,
+  "catalogEntries": 1494,
+  "sourceKeys": 1497,
   "coverage": {
     "ios": {
       "used": [
@@ -1672,6 +1672,7 @@
         "Last backup {nativeValue1}",
         "Last scanned",
         "Latest height: {nativeValue1}",
+        "Leave",
         "Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key.",
         "Left",
         "Legacy Android callback",

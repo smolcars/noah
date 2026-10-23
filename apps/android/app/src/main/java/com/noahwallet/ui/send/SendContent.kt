@@ -79,7 +79,7 @@ class SendActions(
     val scan: () -> Unit = {},
     /** Done on an ended payment: today's acknowledge, then back to Amount. */
     val done: () -> Unit = {},
-    /** Leave while Lightning is still paying; the payment carries on. */
+    /** Leave while Lightning is still paying or a broadcast is still retrying; the payment carries on. */
     val leave: () -> Unit = {},
     val checkStatus: () -> Unit = {},
     val startOver: () -> Unit = {},
@@ -674,8 +674,13 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         Spacer(Modifier.height(16.dp))
         val doneShown = resultShown && ending in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent, SendEnding.refunded,
             SendEnding.notSent, SendEnding.alreadyPaid, SendEnding.pending)
-        if (doneShown) SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) },
-            enabled = receipt?.broadcastRetryPending != true && !controller.checking) {
+        // Today's broadcast retry can't be acknowledged, and the phone hides the tab bar: Leave goes back with the
+        // attempt and the send lock exactly as they are.
+        if (doneShown && receipt?.broadcastRetryPending == true) SendPill(tr("Leave"),
+            Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }) {
+            haptics.light(); actions.leave()
+        } else if (doneShown) SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) },
+            enabled = !controller.checking) {
             haptics.light(); if (ending == SendEnding.pending) actions.leave() else actions.done()
         }
     })

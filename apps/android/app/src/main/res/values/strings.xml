@@ -642,6 +642,7 @@
   <string name="gt_5d4d9e0843a458e5">"Last scanned"</string>
   <string name="gt_4d7b2bf37878962a">"Latest height"</string>
   <string name="gt_b9249da7761d28ae">"Latest height: %1$s"</string>
+  <string name="gt_fc6e4a408d56be96">"Leave"</string>
   <string name="gt_fa9a7513e80f546f">"Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key."</string>
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
   <string name="gt_68dc9d6d2e2e87ef">"Legacy Android callback"</string>

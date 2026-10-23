@@ -23029,6 +23029,42 @@
         }
       }
     },
+    "Leave": {
+      "comment": "GT gt_fc6e4a408d56be96; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salir"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나가기"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lämna"
+          }
+        }
+      }
+    },
     "Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key.": {
       "comment": "GT gt_fa9a7513e80f546f; arguments: none",
       "extractionState": "manual",

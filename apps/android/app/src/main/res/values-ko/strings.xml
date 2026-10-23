@@ -642,6 +642,7 @@
   <string name="gt_5d4d9e0843a458e5">"마지막 스캔"</string>
   <string name="gt_4d7b2bf37878962a">"최신 블록 높이"</string>
   <string name="gt_b9249da7761d28ae">"최신 블록 높이: %1$s"</string>
+  <string name="gt_fc6e4a408d56be96">"나가기"</string>
   <string name="gt_fa9a7513e80f546f">"NIP-05 없이 Lightning을 사용하려면 이 칸을 비워 두세요. npub 공개 키만 사용할 수 있습니다. nsec 개인 키는 절대 붙여넣지 마세요."</string>
   <string name="gt_58eb9032e3bb83f0">"왼쪽"</string>
   <string name="gt_68dc9d6d2e2e87ef">"레거시 Android 콜백"</string>
