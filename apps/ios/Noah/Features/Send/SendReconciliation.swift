@@ -8,8 +8,17 @@ struct SendCandidate: Codable, Equatable, Sendable, Identifiable {
     var createdAt: String
 }
 
-/// FFI item 16 will replace weak history correlation with durable operation identity.
+/// Receipts bind their movement exactly: SDK 0.6.0 returns it for Ark sends and offboards, and a
+/// BOLT11 hash binds Lightning. Weak history correlation remains only for attempts with no result,
+/// e.g. a crash before the receipt was saved (FFI item 19's pre-ID window).
 enum SendReconciliation {
+    /// The exact movement for history metadata, never a destination/amount/time match.
+    /// Movements that predate the attempt (an inherited Lightning checkpoint) are left untouched.
+    static func metadataMovementID(_ receipt: SendReceipt, snapshot: SendSnapshot) -> UInt32? {
+        guard let id = receipt.movementID, !snapshot.movementIDs.contains(id) else { return nil }
+        return id
+    }
+
     static func matches(_ movement: Movement, payment: SendPayment, hash: String?) -> Bool {
         guard payment.source != .onchain else { return false }
         let subsystem = movement.subsystemName.lowercased()
@@ -95,11 +104,13 @@ enum SendReconciliation {
     }
 
     /// The SDK-returned txid binds the result; destination/time-only candidates remain unproven.
+    /// SDK 0.6.0 also returns the movement id, which must agree; journals saved before it bind by txid alone.
     static func offboardReceipt(_ receipt: SendReceipt, payment: SendPayment, movements: [Movement]) -> SendReceipt {
         guard receipt.proof == .submitReturnedTxid, let txid = receipt.txid else { return receipt }
         struct Metadata: Decodable { var offboard_txid: String; var offboard_tx: String }
         let matches = movements.filter {
-            $0.subsystemName == "bark.offboard" && $0.subsystemKind == (payment.max ? "offboard" : "send_onchain")
+            (receipt.movementID == nil || $0.id == receipt.movementID)
+                && $0.subsystemName == "bark.offboard" && $0.subsystemKind == (payment.max ? "offboard" : "send_onchain")
                 && (try? JSONDecoder().decode(Metadata.self, from: Data($0.metadataJson.utf8)))?.offboard_txid == txid
         }
         guard matches.count == 1, let movement = matches.first,

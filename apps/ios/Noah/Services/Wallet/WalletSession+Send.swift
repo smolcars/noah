@@ -132,8 +132,8 @@ extension WalletSession {
             switch payment.method {
             case "ark":
                 try await checkSubmission()
-                _ = try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
-                // Persist the SDK's success result, never infer it from history candidates.
+                // Persist the SDK's success result and the payment's movement id, never infer them from history candidates.
+                receipt.movementID = try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
                 receipt.proof = .submitReturnedArkSuccess
             case "lightning", "lnurl":
                 var resolved = payment
@@ -183,11 +183,14 @@ extension WalletSession {
                         do { try SendMaxValidation.offchain(currentIDs: current, reviewedIDs: quote.vtxoIDs) }
                         catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
                         try await checkSubmission()
-                        receipt.txid = try await handles.wallet.offboardVtxos(
-                            vtxoIds: quote.vtxoIDs!, bitcoinAddress: payment.destination).txid
+                        let result = try await handles.wallet.offboardVtxos(vtxoIds: quote.vtxoIDs!, bitcoinAddress: payment.destination)
+                        receipt.txid = result.txid
+                        receipt.movementID = result.movementId
                     } else {
                         try await checkSubmission()
-                        receipt.txid = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount).txid
+                        let result = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount)
+                        receipt.txid = result.txid
+                        receipt.movementID = result.movementId
                     }
                 }
             default: throw SendFailure.invalid
@@ -226,14 +229,8 @@ extension WalletSession {
                 receipt.fee = tx.onchainFeeSats
             }
             // Metadata failure is never a payment failure and must never enable resubmission.
-            if let patch = payment.repeatMetadata, let history = try? await handles.wallet.history(),
-                let movement = history.first(where: {
-                    !snapshot.movementIDs.contains($0.id)
-                        && SendReconciliation.matches($0, payment: payment, hash: receipt.paymentHash)
-                })
-            {
-                receipt.movementID = movement.id
-                do { try await handles.wallet.updateHistoryMetadata(movementId: movement.id, patchJson: patch) } catch {
+            if let patch = payment.repeatMetadata, let id = SendReconciliation.metadataMovementID(receipt, snapshot: snapshot) {
+                do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) } catch {
                     AppLog("send").w("Payment succeeded; repeat metadata could not be saved")
                 }
             }
@@ -291,7 +288,8 @@ extension WalletSession {
             }
             try await flight.serialized { try await handles.wallet.sync() }
             let resolution = SendReconciliation.ark(attempt, movements: try await handles.wallet.history())
-            if case .paid(let receipt) = resolution, let id = receipt.movementID, let patch = attempt.payment.repeatMetadata {
+            if case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
+               let id = SendReconciliation.metadataMovementID(receipt, snapshot: attempt.snapshot) {
                 do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
                 catch { AppLog("send").w("Reconciled payment; repeat metadata could not be saved") }
             }
