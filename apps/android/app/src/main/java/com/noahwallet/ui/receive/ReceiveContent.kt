@@ -216,7 +216,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
                 Box(Modifier.padding(top = 12.dp)) { card() }
                 under()
                 pills(Modifier.width(cardWidth).padding(top = 18.dp))
-                ui.invoiceError?.let { Text(it, Modifier.padding(top = 12.dp).width(cardWidth), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }
+                ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp).width(cardWidth), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }
                 problem(Modifier.padding(top = 12.dp).width(cardWidth))
             }
             HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
@@ -232,7 +232,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                         Text(tr("Show"), Modifier.padding(bottom = 8.dp).semantics { heading() }, style = SendType.section, color = palette.muted)
                         list()
-                        ui.invoiceError?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
+                        ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
                         problem(Modifier.fillMaxWidth().padding(top = 12.dp))
                     }
                     pills(Modifier.fillMaxWidth().padding(top = 16.dp))
@@ -253,7 +253,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                         ReceiveBlockRow(ui.arrival, ui.tip, ui.confirmedAt, cardWidth, Modifier.align(Alignment.CenterHorizontally))
                         list()
-                        ui.invoiceError?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
+                        ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
                         problem(Modifier.fillMaxWidth().padding(top = 12.dp))
                     }
                     pills(Modifier.fillMaxWidth().padding(top = 12.dp))
@@ -390,7 +390,7 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
                 decorationBox = { inner -> Box { if (note.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted); inner() } })
         }
         if (note.trim().length > 639) Text(tr("Note must be 639 characters or fewer."), style = SendType.small, color = palette.failure)
-        ui.invoiceError?.let { Text(it, Modifier.padding(top = 6.dp), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }
+        ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 6.dp), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }
     }
     val keypad = @Composable { modifier: Modifier ->
         SendKeypad(fiat, !ui.saving, modifier, keyHeight = if (sideBySide) 52.dp else 56.dp) { key -> amount = keypadInput(amount, key, fiat) }
