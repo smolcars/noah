@@ -158,7 +158,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             val hash = (lightning as LightningSendStatus.Paid).paymentHash
             val movements = wallet.history().filter { SendReconciliation.isLightning(it, hash) }
             receipt = if (snapshot.checkpoint != null) snapshot.checkpoint.receipt(lightning, movements, payment, quote)
-            else when (val result = SendReconciliation.lightningAttempt(movements, hash, payment.amount, snapshot, null)) {
+            else when (val result = SendReconciliation.lightningAttempt(movements, hash, payment.amount, snapshot, null,
+                SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?: payment.destination))) {
                 is SendResolution.Paid -> result.receipt
                 is SendResolution.AlreadyPaid -> throw SendAlreadyPaid(result.receipt)
                 else -> throw SendFailure(SendFailure.Reason.unresolved)

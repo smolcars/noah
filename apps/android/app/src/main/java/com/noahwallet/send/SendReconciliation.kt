@@ -34,12 +34,18 @@ object SendReconciliation {
         runCatching { Math.subtractExact(Math.negateExact(movement.effectiveBalanceSats), actual) }.getOrNull()?.takeIf { it >= 0 }
     private fun receipt(movement: Movement, actual: Long, hash: String) = SendReceipt(actual, paymentHash = hash, movementID = movement.id,
         fee = lightningFee(movement, actual) ?: movement.offchainFeeSats.toLong(), proof = SendReceipt.Proof.actualMovement)
-    fun lightning(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot): SendResolution {
+    /** Whether [invoice] sets its own amount, so every attempt on its hash sent that amount. */
+    fun fixesAmount(invoice: String?) = (invoice?.let(PaymentEncoding::invoice)?.sats?.signum() ?: 0) > 0
+    /** A reused movement (its fee field and effective balance disagree) of an invoice without its own amount keeps the
+     *  first attempt's amount, so it can't say what the paying attempt sent or paid in fees: the receipt shows neither. */
+    private fun alreadyPaid(receipt: SendReceipt, movement: Movement, fixed: Boolean) = SendResolution.AlreadyPaid(
+        if (fixed || lightningFee(movement, receipt.amount) == movement.offchainFeeSats.toLong()) receipt else receipt.copy(amount = 0, fee = null))
+    fun lightning(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, fixed: Boolean): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
         val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
-            if (movement.id in snapshot.movementIDs) return SendResolution.AlreadyPaid(receipt)
+            if (movement.id in snapshot.movementIDs) return alreadyPaid(receipt, movement, fixed)
             return if (actual == amount) SendResolution.Paid(receipt) else SendResolution.Uncertain
         }
         if (actual != amount) return SendResolution.Uncertain
@@ -53,15 +59,15 @@ object SendReconciliation {
      * balance took beyond the amount: the fee field keeps the first attempt's. Failure needs the movement to have
      * completed after [startedAt]; until then the attempt may still be running.
      */
-    fun lightningAttempt(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, startedAt: Long?): SendResolution {
+    fun lightningAttempt(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, startedAt: Long?, fixed: Boolean): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
-        if (movement.id !in snapshot.movementIDs) return lightning(candidates, hash, amount, snapshot)
+        if (movement.id !in snapshot.movementIDs) return lightning(candidates, hash, amount, snapshot, fixed)
         val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
         val completedSince = startedAt?.let { start -> movement.completedAt?.let { HistoryRules.parseDate(it) }?.time?.let { it > start } }
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
             return when (snapshot.invoicePaid ?: completedSince?.not()) {
-                true -> SendResolution.AlreadyPaid(receipt)
+                true -> alreadyPaid(receipt, movement, fixed)
                 false -> if (actual == amount && lightningFee(movement, actual) != null) SendResolution.Paid(receipt) else SendResolution.Uncertain
                 null -> SendResolution.Uncertain
             }
@@ -77,7 +83,8 @@ object SendReconciliation {
             matches(it, payment, hash) && (hash != null || it.id !in attempt.snapshot.movementIDs &&
                 (HistoryRules.parseDate(it.createdAt)?.time ?: Long.MIN_VALUE) >= attempt.startedAt)
         }
-        return if (hash != null) lightningAttempt(candidates, hash, payment.amount, attempt.snapshot, attempt.startedAt) else SendResolution.Candidates(candidates.map { it.id })
+        return if (hash != null) lightningAttempt(candidates, hash, payment.amount, attempt.snapshot, attempt.startedAt,
+            fixesAmount(attempt.snapshot.resolvedInvoice ?: payment.destination)) else SendResolution.Candidates(candidates.map { it.id })
     }
     /** SDK 0.6.0 also returns the movement id, which must agree with the txid; journals saved before it bind by txid alone. */
     fun offboardReceipt(receipt: SendReceipt, payment: SendPayment, movements: List<Movement>): SendReceipt {

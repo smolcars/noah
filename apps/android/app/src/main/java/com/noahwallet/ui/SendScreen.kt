@@ -249,7 +249,7 @@ internal fun keypadInput(amount: String, key: String?, decimal: Boolean): String
         if (controller.state == SendController.State.submitting) CircularProgressIndicator()
         if (controller.state == SendController.State.succeeded) Text("✓", style = MaterialTheme.typography.displaySmall, color = Color(0xFF22C55E))
         receipt?.let {
-            Text(tr(if (it.amountIsPending) "Recipient amount pending" else "${it.amount} sats"), style = MaterialTheme.typography.displaySmall)
+            if (it.amount > 0 || it.amountIsPending) Text(tr(if (it.amountIsPending) "Recipient amount pending" else "${it.amount} sats"), style = MaterialTheme.typography.displaySmall)
             if (controller.state == SendController.State.succeeded && !it.amountIsPending && btcPrice != null && btcPrice.isFinite() && btcPrice > 0) {
                 Text("≈ " + FiatCurrency.display(it.amount, btcPrice, app?.preferredCurrency ?: "USD", locale), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

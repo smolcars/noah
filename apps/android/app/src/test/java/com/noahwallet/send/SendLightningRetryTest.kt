@@ -23,8 +23,8 @@ class SendLightningRetryTest {
     private val longAgo = System.currentTimeMillis() - 3_600_000
 
     /** The hash's one movement, as bark keeps it across attempts. */
-    private fun reused(status: String, effective: Long, completedAt: Long?, fee: ULong = 0u, outputs: List<String> = listOf("change:0", "refund:0")) =
-        movement(status = status, id = 5u).copy(effectiveBalanceSats = effective, offchainFeeSats = fee, outputVtxoIds = outputs,
+    private fun reused(status: String, effective: Long, completedAt: Long?, fee: ULong = 0u, outputs: List<String> = listOf("change:0", "refund:0"), amount: Long = 1000) =
+        movement(status = status, id = 5u, amount = amount).copy(effectiveBalanceSats = effective, offchainFeeSats = fee, outputVtxoIds = outputs,
             completedAt = completedAt?.let { HistoryRules.isoDate(Date(it)) })
 
     /**
@@ -44,7 +44,7 @@ class SendLightningRetryTest {
         override suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt {
             val status = SendLightningSubmission.submit(payment, state, movements, snapshot.checkpoint, quote, check = { state }) { calls++; onPay(); state }
             requireSend(status is LightningSendStatus.Paid, SendFailure.Reason.unresolved)
-            return when (val result = SendReconciliation.lightningAttempt(movements, hash, payment.amount, snapshot, null)) {
+            return when (val result = SendReconciliation.lightningAttempt(movements, hash, payment.amount, snapshot, null, SendReconciliation.fixesAmount(payment.destination))) {
                 is SendResolution.Paid -> result.receipt
                 is SendResolution.AlreadyPaid -> throw SendAlreadyPaid(result.receipt)
                 else -> throw SendFailure(SendFailure.Reason.unresolved)
@@ -65,9 +65,9 @@ class SendLightningRetryTest {
         fun pays() { onPay = { finish("successful", -1079) } }
     }
 
-    private suspend fun CoroutineScope.send(bark: Bark, journal: TestJournal = TestJournal()): SendController {
+    private suspend fun CoroutineScope.send(bark: Bark, journal: TestJournal = TestJournal(), paying: SendPayment = payment): SendController {
         val subject = controller(bark, journal, this)
-        subject.submit(payment, quote)!!.await()
+        subject.submit(paying, quote)!!.await()
         return subject
     }
 
@@ -127,24 +127,49 @@ class SendLightningRetryTest {
         assertEquals(0, bark.calls)
         // Bound by the paid record from before the attempt, even with the movement completing afterwards.
         val later = reused("successful", -1083, System.currentTimeMillis() + 1_000, fee = 83u)
-        assertTrue(SendReconciliation.lightningAttempt(listOf(later), hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo) is SendResolution.AlreadyPaid)
+        assertTrue(SendReconciliation.lightningAttempt(listOf(later), hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo, false) is SendResolution.AlreadyPaid)
     }
 
-    @Test fun anInvoicePaidByARetryIsAlreadyPaidWithTheRetrysFee() = runBlocking {
+    @Test fun aFixedAmountInvoicePaidByARetryIsAlreadyPaidWithTheRetrysFee() = runBlocking {
+        // Every attempt on an invoice with its own amount sent that amount, so the effective balance gives the fee.
+        val fixed = SendPayment(decoderInvoice("10u"), "lightning", 1000)
+        assertEquals(hash, PaymentEncoding.invoice(fixed.destination)!!.hash)
         val bark = Bark().apply { movement = reused("failed", 0, longAgo); pays() }
-        val subject = send(bark)
+        val subject = send(bark, paying = fixed)
         assertEquals(SendController.State.succeeded, subject.state)
         subject.acknowledge(); assertFalse(subject.locked)
         // The same invoice again: the pre-pay guard blocks it, with the fee bark's effective balance took, not the fee field's 0.
         bark.onPay = { error("never pays twice") }
-        subject.submit(payment, quote)!!.await()
+        subject.submit(fixed, quote)!!.await()
         assertEquals(SendController.State.alreadyPaid, subject.state)
-        assertEquals(79L, subject.attempt!!.alreadyPaid!!.fee)
+        assertEquals(79L, subject.attempt!!.alreadyPaid!!.fee); assertEquals(1000L, subject.attempt!!.alreadyPaid!!.amount)
         assertEquals(0uL, bark.movement!!.offchainFeeSats)
         assertEquals(1, bark.calls)
         // Reconciliation reads it the same way.
-        val resolution = SendReconciliation.lightningAttempt(bark.movements, hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo)
+        val resolution = SendReconciliation.lightningAttempt(bark.movements, hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo, true)
         assertEquals(79L, (resolution as SendResolution.AlreadyPaid).receipt.fee)
+    }
+
+    @Test fun anAmountlessInvoiceRetriedForAnotherAmountShowsNeitherAmountNorFee() = runBlocking {
+        // Failed at the first amount, paid at the other plus 79: bark's reused movement keeps the first amount and fee field.
+        for ((first, effective) in listOf(1000L to -2079L, 2000L to -1079L)) {
+            val bark = Bark().apply { movement = reused("successful", effective, longAgo, amount = first); paid = true; onPay = { error("never pays twice") } }
+            val journal = TestJournal()
+            // The pre-pay guard still blocks it as already paid, without an amount or fee it can't prove.
+            val subject = send(bark, journal)
+            assertEquals("first=$first", SendController.State.alreadyPaid, subject.state)
+            val receipt = subject.attempt!!.alreadyPaid!!
+            assertNull(receipt.fee); assertEquals(0L, receipt.amount)
+            assertEquals(0, bark.calls)
+            assertEquals(SendEnding.alreadyPaid, SendEnding.of(subject.state, subject.attempt, null, false))
+            // And after a restart.
+            val restarted = controller(bark, journal, this); restarted.reloadForWalletChange()
+            assertEquals(SendController.State.alreadyPaid, restarted.state)
+            // Reconciliation reads it the same way.
+            val resolution = SendReconciliation.lightningAttempt(bark.movements, hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo, false)
+            val reconciled = (resolution as SendResolution.AlreadyPaid).receipt
+            assertNull(reconciled.fee); assertEquals(0L, reconciled.amount)
+        }
     }
 
     @Test fun aJournalFromBeforeThePaidFlagGoesByTheMovementsCompletion() = runBlocking {
@@ -217,13 +242,13 @@ class SendLightningRetryTest {
     @Test fun theReusedMovementMustMatchTheAmountAndShowARealFee() {
         val snapshot = SendSnapshot(setOf(5u), invoicePaid = false)
         // An amountless invoice retried for another amount: bark keeps the first attempt's destination amount.
-        assertEquals(SendResolution.Uncertain, SendReconciliation.lightningAttempt(listOf(reused("successful", -2079, longAgo)), hash, 2000, snapshot, null))
+        assertEquals(SendResolution.Uncertain, SendReconciliation.lightningAttempt(listOf(reused("successful", -2079, longAgo)), hash, 2000, snapshot, null, false))
         // An effective balance that doesn't cover the amount can't give a fee.
-        assertEquals(SendResolution.Uncertain, SendReconciliation.lightningAttempt(listOf(reused("successful", -900, longAgo)), hash, 1000, snapshot, null))
+        assertEquals(SendResolution.Uncertain, SendReconciliation.lightningAttempt(listOf(reused("successful", -900, longAgo)), hash, 1000, snapshot, null, false))
         // A movement made by this attempt keeps today's reading, fee field included.
         val fresh = reused("successful", -1083, longAgo, fee = 83u)
-        assertEquals(83L, (SendReconciliation.lightningAttempt(listOf(fresh), hash, 1000, SendSnapshot(invoicePaid = false), null) as SendResolution.Paid).receipt.fee)
+        assertEquals(83L, (SendReconciliation.lightningAttempt(listOf(fresh), hash, 1000, SendSnapshot(invoicePaid = false), null, false) as SendResolution.Paid).receipt.fee)
         // A still-pending reused movement is nothing yet.
-        assertEquals(SendResolution.Uncertain, SendReconciliation.lightningAttempt(listOf(reused("pending", -1079, null)), hash, 1000, snapshot, longAgo))
+        assertEquals(SendResolution.Uncertain, SendReconciliation.lightningAttempt(listOf(reused("pending", -1079, null)), hash, 1000, snapshot, longAgo, false))
     }
 }

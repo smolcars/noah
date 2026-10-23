@@ -30,7 +30,7 @@ import kotlinx.serialization.Serializable
     fun receipt(status: LightningSendStatus, movements: List<Movement>, payment: SendPayment, quote: SendQuote): SendReceipt {
         requireSend(status is LightningSendStatus.Paid && status.paymentHash == paymentHash && status.preimage.isNotEmpty(), SendFailure.Reason.unresolved)
         val bound = movements.filter { SendReconciliation.isLightning(it, paymentHash) }
-        val resolution = SendReconciliation.lightning(bound, paymentHash, payment.amount, SendSnapshot())
+        val resolution = SendReconciliation.lightning(bound, paymentHash, payment.amount, SendSnapshot(), SendReconciliation.fixesAmount(invoice))
         val receipt = (resolution as? SendResolution.Paid)?.receipt ?: throw SendFailure(SendFailure.Reason.unresolved)
         requireSend(receipt.isProven(payment, paymentHash) && receipt.fee != null && receipt.fee <= quote.fee && receipt.amount <= quote.total - receipt.fee, SendFailure.Reason.unresolved)
         return receipt
@@ -50,14 +50,15 @@ object SendLightningSubmission {
         if (checkpoint != null) return checkpoint.advance(payment, quote, state, check)
         val hash = PaymentEncoding.invoice(payment.destination)?.hash ?: throw SendFailure(SendFailure.Reason.invalid)
         val matching = movements.filter { SendReconciliation.isLightning(it, hash) }
+        val fixed = SendReconciliation.fixesAmount(payment.destination)
         when (state) {
             is LightningSendStatus.InProgress -> throw SendExistingLightning(SendLightningProgress(state.send.amountSats.toLong(), state.send.feeSats.toLong()))
             is LightningSendStatus.Paid -> {
-                val resolution = SendReconciliation.lightning(matching, hash, payment.amount, SendSnapshot(matching.map { it.id }.toSet()))
+                val resolution = SendReconciliation.lightning(matching, hash, payment.amount, SendSnapshot(matching.map { it.id }.toSet()), fixed)
                 throw SendAlreadyPaid((resolution as? SendResolution.AlreadyPaid)?.receipt ?: throw SendFailure(SendFailure.Reason.unresolved))
             }
             LightningSendStatus.Unknown -> if (matching.isNotEmpty()) {
-                when (val result = SendReconciliation.lightning(matching, hash, payment.amount, SendSnapshot(matching.map { it.id }.toSet()))) {
+                when (val result = SendReconciliation.lightning(matching, hash, payment.amount, SendSnapshot(matching.map { it.id }.toSet()), fixed)) {
                     is SendResolution.AlreadyPaid -> throw SendAlreadyPaid(result.receipt)
                     SendResolution.Failed -> Unit
                     else -> throw SendFailure(SendFailure.Reason.unresolved)
