@@ -367,7 +367,8 @@ private struct ActivityListPane: View {
                 Button("Export CSV", systemImage: "square.and.arrow.up", action: onExport)
                     .disabled(history.isLoading || history.error != nil)
                     .accessibilityIdentifier("activity-export")
-                Button("Refresh", systemImage: "arrow.clockwise") { Task { await refresh(scrollToTop: true) } }
+                // Its own string: the shared "Refresh" reads as "renew" in some languages.
+                Button("Refresh activity", systemImage: "arrow.clockwise") { Task { await refresh(scrollToTop: true) } }
                     .disabled(refreshing)
                     .accessibilityIdentifier("activity-refresh")
             }
@@ -411,22 +412,13 @@ private struct ActivityListPane: View {
                                       hidden: app.isBalanceHidden, isNew: unseen.contains(transaction.id),
                                       selected: transaction.id == selectedID,
                                       hairline: next != nil && transaction.id != selectedID && next != selectedID,
-                                      zoom: wide ? nil : zoom) { onSelect(transaction) }
-                        .onScrollVisibilityChange(threshold: 0.9) { shown in
-                            guard shown, unseen.contains(transaction.id) else { return }
-                            // The dot shrinks away once the row has been on screen for a moment.
-                            Task {
-                                try? await Task.sleep(for: .seconds(1.4))
-                                tracker?.markSeen(transaction.id)
-                            }
-                        }
+                                      zoom: wide ? nil : zoom, onSeen: { tracker?.markSeen(transaction.id) }) { onSelect(transaction) }
+                        .padding(.horizontal, pad)
                 }
             } header: {
                 ActivityDayHeader(title: title(group.title), first: group.id == groups.first?.id, pad: pad)
             }
         }
-        .padding(.horizontal, pad)
-        .animation(NoahTokens.Motion.travel(reduceMotion), value: visible.map(\.id))
     }
 
     private func title(_ title: ActivityList.Group.Title) -> String {
@@ -457,7 +449,8 @@ private struct ActivityListPane: View {
         defer { refreshing = false }
         haptics.play(.light)
         if scrollToTop {
-            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { scrollAnchor = history.transactions.first?.id }
+            let first = ActivityList.groups(visible, now: Date()).first?.transactions.first?.id
+            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { scrollAnchor = first }
         }
         await history.refresh(currency: app.preferredCurrency, sync: true)
     }
@@ -506,6 +499,7 @@ private struct ActivityRowButton: View {
     let selected: Bool
     let hairline: Bool
     let zoom: Namespace.ID?
+    let onSeen: () -> Void
     let action: () -> Void
 
     var body: some View {
@@ -524,6 +518,14 @@ private struct ActivityRowButton: View {
             if hairline { HomeHairline().padding(.leading, 56) }
         }
         .modifier(ZoomSource(id: transaction.id, namespace: zoom))
+        // The dot shrinks away once the row has been on screen for a moment (cancelled if it
+        // scrolls away first). Not `onScrollVisibilityChange`: in the lazy list it left rows
+        // showing stale records.
+        .task(id: isNew) {
+            guard isNew else { return }
+            do { try await Task.sleep(for: .seconds(1.4)) } catch { return }
+            onSeen()
+        }
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("activity-row-\(transaction.id)")
     }
@@ -571,7 +573,6 @@ private struct ActivityDayHeader: View {
             .padding(.top, first ? 8 : 14).padding(.bottom, 4)
             .padding(.horizontal, pad)
             .background(NoahTokens.Colors.background)
-            .padding(.horizontal, -pad)
             .accessibilityAddTraits(.isHeader)
     }
 }

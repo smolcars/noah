@@ -81,30 +81,49 @@ struct ActivityDetail: Equatable {
             toIsAddress = false
         }
 
-        let arkFee = transaction.offchainFeeSat ?? 0
+        let settledLightningSend = outgoing && lightning && transaction.subsystemName == "bark.lightning_send"
+            && transaction.movementStatus == "successful"
+        // A settled Lightning send's fee comes from its balance change; nil when nothing proves it.
+        let arkFee: Int64? = walletRow ? nil : settledLightningSend ? Self.lightningSendFee(transaction) : transaction.offchainFeeSat
         let networkFee = (walletRow ? (transaction.hasOnchainFee == true ? transaction.onchainFeeSat : nil) : transaction.onchainFeeSat) ?? 0
         if unsuccessful { fee = .nothing }
-        else if row.status == .sending && lightning { fee = .upTo(arkFee) }
+        else if row.status == .sending && lightning { fee = .upTo(transaction.offchainFeeSat ?? 0) }
         else if transaction.isRenewal { fee = .amount(transaction.amount) }
-        else if arkFee > 0 && networkFee > 0 { fee = .split(ark: arkFee, network: networkFee) }
-        else if networkFee > 0 && (outgoing || transaction.isInternalTransfer) { fee = .network(networkFee) }
-        else if outgoing { fee = arkFee > 0 ? .amount(arkFee) : .free }
-        else { fee = arkFee > 0 ? .amount(arkFee) : nil }
+        else if let arkFee, arkFee > 0, networkFee > 0 { fee = .split(ark: arkFee, network: networkFee) }
+        else if networkFee > 0 { fee = .network(networkFee) }
+        else if let arkFee, arkFee > 0 { fee = .amount(arkFee) }
+        // "Free" only for a send whose Ark or Lightning zero is proven; receives show a recorded fee only.
+        else if arkFee == 0 && outgoing { fee = .free }
+        else { fee = nil }
 
-        // The balance change is the movement's own total; BDK's already includes its fee.
-        if outgoing && !unsuccessful && !transaction.isRenewal && !walletRow && arkFee + networkFee > 0 {
+        // The total follows the fee. A movement's balance change is its own total; BDK's already includes its fee.
+        let fees = (arkFee ?? 0) + networkFee
+        if outgoing && !unsuccessful && !transaction.isRenewal && !walletRow, fees > 0, arkFee != nil || networkFee > 0 {
             let spent = transaction.effectiveBalanceSat.map { -$0 } ?? 0
-            total = spent > transaction.amount ? spent : transaction.amount + arkFee + networkFee
+            total = settledLightningSend ? transaction.amount + fees : spent > transaction.amount ? spent : transaction.amount + fees
         } else {
             total = nil
         }
 
         proof = outgoing && lightning && transaction.movementStatus == "successful" ? transaction.preimage : nil
-        chainTxid = transaction.explorerURL(variant: .mainnet) != nil ? transaction.txid?.split(separator: ":").first.map(String.init) : nil
+        // Only a transaction the record names; never a coin ID's parent.
+        chainTxid = rail == .onchain ? transaction.chainTxid : nil
         let broadcast = row.status == .confirming && ["offboard", "send-onchain"].contains(transaction.movementKind)
         blockTxid = walletRow && row.status.isPending ? transaction.txid : broadcast ? transaction.broadcastTxid : nil
         let comment = transaction.repeatPayment?.comment ?? ""
         note = !comment.isEmpty ? comment : row.title == transaction.paymentDescription ? nil : transaction.paymentDescription
+    }
+
+    /// What a settled Lightning send's balance change took beyond what it sent (`SendReconciliation.lightningFee`):
+    /// a retried invoice's reused movement keeps its first attempt's fee field. An amountless invoice may have
+    /// been paid by a retry for another amount, so its numbers prove nothing, as Send's already-paid receipts.
+    static func lightningSendFee(_ transaction: HistoryTransaction) -> Int64? {
+        let sent = transaction.sentTo ?? []
+        if let invoice = sent.first(where: { PaymentEncoding.invoice($0.destination) != nil })?.destination,
+           !SendReconciliation.fixesAmount(invoice) { return nil }
+        let actual = sent.reduce(Int64(0)) { $0 + $1.amount_sat }
+        guard let effective = transaction.effectiveBalanceSat, effective <= 0, -effective >= actual, actual > 0 else { return nil }
+        return -effective - actual
     }
 
     /// Confirmations an Ark-funded on-chain send waits for; a wallet send needs one.

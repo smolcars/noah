@@ -5,7 +5,16 @@ struct RecurringPaymentsView: View {
     @Environment(\.locale) private var locale
 
     @State private var executor: RecurringExecutor
-    init(executor: RecurringExecutor = .shared) { _executor = State(initialValue: executor) }
+    /// Activity's Repeats › opens one schedule; the full list when it's gone.
+    private let scheduleID: String?
+    init(executor: RecurringExecutor = .shared, scheduleID: String? = nil) {
+        _executor = State(initialValue: executor)
+        self.scheduleID = scheduleID
+    }
+    private var schedules: [RecurringPayment] {
+        let only = executor.schedules.filter { $0.id == scheduleID }
+        return only.isEmpty ? executor.schedules : only
+    }
     @State private var cancelling: RecurringPayment?
     @State private var overriding: RecurringPayment?
     @State private var review: RecurringExecutor.Review?
@@ -14,7 +23,7 @@ struct RecurringPaymentsView: View {
     @State private var editingID: String?
     var body: some View {
         GeometryReader { geometry in
-            let expanded = !executor.schedules.isEmpty && AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth)
+            let expanded = schedules.count > 1 && AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth)
             HStack(alignment: .top, spacing: 0) {
                 List {
                     Section {
@@ -23,13 +32,13 @@ struct RecurringPaymentsView: View {
                         NavigationLink("New recurring payment") { RecurringPaymentEditorView(executor: executor) }
                             .accessibilityIdentifier("recurring-new-button")
                     }
-                    if executor.schedules.isEmpty {
+                    if schedules.isEmpty {
                         Section {
                             Text("No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an Ark address, Lightning address or BOLT12 offer.")
                                 .foregroundStyle(NoahColor.mutedForeground)
                         }
                     }
-                    ForEach(Array(executor.schedules.enumerated()).filter { !expanded || $0.offset.isMultiple(of: 2) }.map(\.element)) { schedule in
+                    ForEach(Array(schedules.enumerated()).filter { !expanded || $0.offset.isMultiple(of: 2) }.map(\.element)) { schedule in
                         scheduleSection(schedule)
                     }
                     if executor.schedules.contains(where: { $0.status == "active" }) {
@@ -44,7 +53,7 @@ struct RecurringPaymentsView: View {
                 }
                 if expanded {
                     List {
-                        ForEach(Array(executor.schedules.enumerated()).filter { !$0.offset.isMultiple(of: 2) }.map(\.element)) { schedule in
+                        ForEach(Array(schedules.enumerated()).filter { !$0.offset.isMultiple(of: 2) }.map(\.element)) { schedule in
                             scheduleSection(schedule)
                         }
                     }

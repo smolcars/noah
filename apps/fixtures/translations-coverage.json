@@ -794,6 +794,7 @@
         "Refresh Server",
         "Refresh VTXO",
         "Refresh VTXOs",
+        "Refresh activity",
         "Refresh fee",
         "Refresh network status",
         "Refresh submitted to delegated round {nativeValue1}.",

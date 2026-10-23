@@ -67,6 +67,13 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var isPending: Bool { movementStatus == "pending" || (source == "onchain-wallet" && hasConfirmation != true) }
     /// Bark records an Ark-funded on-chain send's txid once its transaction is broadcast.
     var broadcastTxid: String? { HistoryMetadata.parse(metadataJson ?? "").offboardTxid }
+    /// The on-chain transaction the record itself names: the wallet's own, an offboard's broadcast or a board's
+    /// anchor. Never derived from a coin ID: `txid` falls back to one (as today's CSV does), whose parent
+    /// transaction isn't this payment's.
+    var chainTxid: String? {
+        let named = source == "onchain-wallet" ? txid : broadcastTxid ?? chainAnchor.flatMap { $0.split(separator: ":").first.map(String.init) }
+        return named.flatMap { $0.isEmpty ? nil : $0 }
+    }
     var isInternalTransfer: Bool { movementKind == "onboard" }
     var canRepeat: Bool { direction == "outgoing" && movementStatus == "successful" && repeatPayment != nil }
     var displayLabel: String {
@@ -127,8 +134,12 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     func explorerURL(variant: AppVariant) -> URL? {
         guard type == "Onchain" || source == "onchain-wallet" || balanceChangeSat != nil,
               let txid = txid?.split(separator: ":").first, !txid.isEmpty else { return nil }
+        return Self.explorerURL(txid: String(txid), variant: variant)
+    }
+
+    static func explorerURL(txid: String, variant: AppVariant) -> URL? {
         let base = variant == .mainnet ? "https://mempool.space/tx/" : "https://mempool.space/signet/tx/"
-        return URL(string: base)?.appendingPathComponent(String(txid))
+        return URL(string: base)?.appendingPathComponent(txid)
     }
 }
 

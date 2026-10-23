@@ -10,6 +10,7 @@ struct ActivityMappingTests {
     static let coffeeHash = "9b7895829611f90ceb05d5911c4f4b0ad74fbc5c633f21422ed299ff80e5b1c3"
     static let blankInvoice = "lnbcrt15u1p4dh5n4pp5hnz4qzuau25lzfqguj3pnj26tsx3vr2l70ezl8tl2mur9u7m9glsdqqcqzzsxqyz5vqsp52x9dh5jexyvvkvmvyla8uyk3nlmdp8lvs3xzyzg4t7ak25dkzq3q9qxpqysgqhnz7hmsp7wvretnmpedj59kp7curf4y4msy2lurk458m62smxmpjmgh7pn9gslyuqzs5mmfhqwpmzs0szyr4s948xrm4qsfer9jv7lcq8khane"
     static let blankHash = "bcc5500b9de2a9f12408e4a219c95a5c0d160d5ff3f22f9d7f56f832f3db2a3f"
+    static let amountlessInvoice = "lnbcrt1p4dhmzdpp5w9va38sfcqxrfa2ttyfcwntlkeg6r7urjkux63064yt2wmtrleksdqqcqzzsxqyz5vqsp57culhw0h3twrhmqpnpsh7xjrxg7k57fnmcksaqrkpeqctr83kk9s9qxpqysgq5j5ng3pc7zpd48p2g8aja4z4yfrw7zm27qj0wcc0z95jqr2qjsf4rswuynluqg7xnqrwk8g8csrn27zsx9lt4z29al7exjc93jr3hasqxqqm2z"
     static let offer = "lno1qgsqvgnwgcg35z6ee2h3yczraddm72xrfua9uve2rlrm9deu7xyfzrcgqve94gq2pafkzar0wd5xjgznw3shg6t0dctzzqmlgvmm4ya4lfjfyga8uqffr66xe7z00w6d2yjca7pcx39fefwmms"
 
     static func movement(_ subsystem: String, _ kind: String, id: UInt32 = 7, status: String = "successful",
@@ -146,5 +147,29 @@ struct ActivityMappingTests {
         let json = try #require(String(data: JSONEncoder().encode(row), encoding: .utf8))
         #expect(!json.contains("paymentHash") && !json.contains("paymentDescription") && !json.contains("recurring"))
         #expect(HomeActivityRow(row, ownDomain: "x").title == "Ark")
+    }
+}
+
+/// The recurring journal side of the join (`RecurringExecutor.historyLinks`).
+@MainActor
+struct ActivityRecurringJoinTests {
+    @Test func anOccurrencesOwnSuccessJoins() async throws {
+        let h = try RecurringExecutorTests.Harness(); let schedule = try h.add(); h.arkMovementID = 42
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        await h.executor.execute()
+        let links = await h.executor.historyLinks()
+        #expect(links.map(\.movementID) == [42])
+        #expect(links.first?.schedule == .init(scheduleID: schedule.id, name: schedule.label, interval: schedule.interval))
+    }
+
+    /// An "already paid" outcome can name an earlier manual payment: it must not read as recurring.
+    @Test func alreadyPaidOutcomesDoNotJoin() async throws {
+        let h = try RecurringExecutorTests.Harness(); let schedule = try h.add(); h.ambiguous = true
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        await h.executor.execute()
+        h.resolution = .alreadyPaid(.init(amount: schedule.amountSat, movementID: 7, proof: .submitReturnedArkSuccess))
+        await h.executor.checkStatus(schedule.id)
+        #expect(try h.journal.load()[schedule.id]?.terminal?.outcome == .alreadyPaid)
+        #expect(await h.executor.historyLinks().isEmpty)
     }
 }

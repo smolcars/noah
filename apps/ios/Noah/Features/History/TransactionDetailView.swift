@@ -5,7 +5,12 @@ import SwiftUI
 /// shows it in the trailing pane on wide windows; Home opens it as a sheet.
 struct TransactionDetailView: View {
     /// Links out of the detail, resolved here so Home's sheet and both Activity stacks work alike.
-    enum Link: Hashable { case coin(String), exits, recurring }
+    enum Link: Hashable {
+        /// A coin and the Details section it was listed in.
+        case coin(String, role: String)
+        case exits
+        case recurring(String)
+    }
 
     @Environment(\.locale) private var locale
     @Environment(AppModel.self) private var app
@@ -82,7 +87,8 @@ struct TransactionDetailView: View {
         .modifier(DetailChrome(wide: wide, bar: AnyView(paneBar)) { toolbar })
         .tint(NoahTokens.Colors.foreground)
         .navigationDestination(for: Link.self, destination: destination)
-        .task(id: "\(transaction.id):\(transaction.isPending)") { await load() }
+        // Each completed history read re-reads the block row's chain status, as wallet events arrive.
+        .task(id: "\(transaction.id):\(history.revision)") { await load() }
         .onboardingHaptics(haptics)
         .accessibilityIdentifier("transaction-detail")
     }
@@ -179,14 +185,14 @@ struct TransactionDetailView: View {
         if let entered = enteredAs { line("Entered as", hidden ? "••••" : entered) }
         if let note = detail.note { line("Note", note, wraps: true) }
         if let recurring = transaction.recurring {
-            link(.recurring, "Repeats", L10n.text(recurring.interval.description, locale: language))
+            link(.recurring(recurring.scheduleID), "Repeats", L10n.text(recurring.interval.description, locale: language))
         }
         if transaction.movementKind == "exit" { link(.exits, "Progress", L10n.text("Exit details", locale: language)) }
         if let proof = detail.proof {
             line("Proof of payment", proof, mono: true, copy: proof, id: "transaction-detail-preimage")
         }
         if let txid = detail.chainTxid {
-            line("Transaction ID", txid, mono: true, copy: txid, explorer: transaction.explorerURL(variant: app.variant), last: true)
+            line("Transaction ID", txid, mono: true, copy: txid, explorer: HistoryTransaction.explorerURL(txid: txid, variant: app.variant), last: true)
         }
     }
 
@@ -272,9 +278,6 @@ struct TransactionDetailView: View {
         destinations("Sent to", transaction.sentTo)
         destinations("Received on", transaction.receivedOn)
         small("Payment ID", transaction.id, mono: true, copy: transaction.id)
-        if detail.chainTxid == nil, let txid = transaction.txid, !txid.isEmpty, txid != transaction.id {
-            small("Transaction ID", txid, mono: true, copy: txid)
-        }
         if let id = transaction.movementId { small("Movement ID", String(id), copy: String(id)) }
         if let kind = transaction.movementKindLabel { small("Movement type", L10n.text(kind, locale: language)) }
         if let name = transaction.subsystemName { small("Subsystem", "\(name) (\(transaction.subsystemKind ?? ""))", mono: true) }
@@ -312,7 +315,7 @@ struct TransactionDetailView: View {
         if let ids, !ids.isEmpty {
             section(title)
             ForEach(Array(ids.enumerated()), id: \.offset) { index, id in
-                NavigationLink(value: Link.coin(id)) {
+                NavigationLink(value: Link.coin(id, role: title)) {
                     DetailLine(label: L10n.text("Coin {n}", index + 1, locale: language), value: id, compact: true, mono: true, chevron: true)
                 }
                 .buttonStyle(.plain)
@@ -421,11 +424,9 @@ struct TransactionDetailView: View {
 
     @ViewBuilder private func destination(_ link: Link) -> some View {
         switch link {
-        case .coin(let id):
-            let model = OnchainModel()
-            VtxoDetailView(id: id, model: model).modifier(OnchainScreen(model: model))
+        case .coin(let id, let role): ActivityCoinView(id: id, role: role)
         case .exits: UnilateralExitView()
-        case .recurring: RecurringPaymentsView()
+        case .recurring(let id): RecurringPaymentsView(scheduleID: id)
         }
     }
 
@@ -557,6 +558,54 @@ private struct DetailLine: View {
                 .multilineTextAlignment(.trailing)
                 .textSelection(.enabled)
         }
+    }
+}
+
+/// A coin from a payment's Details, loaded by ID so spent coins open too (Settings' VTXO screen lists
+/// only the wallet's current ones). When bark can't load it, what the payment records.
+private struct ActivityCoinView: View {
+    let id: String
+    /// "Spent coins", "New coins" or "Exited coins".
+    let role: String
+    @Environment(HistoryModel.self) private var history
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
+    @State private var coin: VtxoModel?
+    @State private var loaded = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(LocalizedStringKey(role)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+                    .padding(.bottom, 6)
+                line("VTXO ID", id, mono: true)
+                if let coin {
+                    line("Amount", app.isBalanceHidden ? "₿••••" : BitcoinAmount.format(sats: Int64(clamping: coin.amount), unit: app.amountUnit, locale: locale),
+                         numeric: true)
+                    line("State", L10n.text(coin.state, locale: locale.identifier))
+                    line("Expiry Height", coin.expiry.formatted(.number.locale(locale)))
+                    line("Point", coin.point, mono: true)
+                    line("Anchor Point", coin.anchorPoint, mono: true)
+                } else if !loaded {
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, 24)
+                }
+            }
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .padding(.horizontal, NoahTokens.Space.screen).padding(.top, 8).padding(.bottom, 40)
+        }
+        .background(NoahTokens.Colors.background.ignoresSafeArea())
+        .navigationTitle("VTXO Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: id) {
+            coin = await history.coin(id)
+            loaded = true
+        }
+    }
+
+    private func line(_ label: String, _ value: String, mono: Bool = false, numeric: Bool = false) -> some View {
+        DetailLine(label: L10n.text(label, locale: locale.identifier), value: value, mono: mono, numeric: numeric, wraps: mono,
+                   onCopy: mono ? { UIPasteboard.general.setItems([[UIPasteboard.typeAutomatic: value]],
+                                                                 options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)]) } : nil)
     }
 }
 

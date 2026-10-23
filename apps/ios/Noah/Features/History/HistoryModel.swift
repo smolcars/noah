@@ -17,6 +17,8 @@ final class HistoryModel {
         /// on-chain detail opens, never polled.
         var chainTip: @Sendable () async throws -> UInt32? = { nil }
         var chainStatus: @Sendable (String) async throws -> ChainTransactionStatus? = { _ in nil }
+        /// One coin by ID, spent ones included.
+        var coin: @Sendable (String) async throws -> VtxoModel? = { _ in nil }
 
         static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
             Self(
@@ -60,7 +62,8 @@ final class HistoryModel {
                 },
                 recurring: { await RecurringExecutor.shared.historyLinks() },
                 chainTip: { try await session.chainTip() },
-                chainStatus: { try await session.chainTransactionStatus($0) })
+                chainStatus: { try await session.chainTransactionStatus($0) },
+                coin: { try await session.vtxo($0) })
         }
     }
 
@@ -68,6 +71,8 @@ final class HistoryModel {
     private(set) var isLoading = true
     private(set) var isRefreshing = false
     private(set) var error: String?
+    /// Counts completed history reads, so an open detail re-reads its chain status with them (no polling).
+    private(set) var revision = 0
     private let dependencies: Dependencies
     private var blockTimes: [String: Date] = [:]
     private var prices: [String: Double] = [:]
@@ -89,6 +94,8 @@ final class HistoryModel {
         quote = (currency, price, Date())
         return price
     }
+
+    func coin(_ id: String) async -> VtxoModel? { (try? await dependencies.coin(id)) ?? nil }
 
     /// One read of the chain tip and, when there's a txid, its status (Send's block row data).
     func chainState(txid: String?) async -> (tip: UInt32?, status: ChainTransactionStatus?) {
@@ -145,6 +152,7 @@ final class HistoryModel {
             transactions = Self.unified(latest)
             isLoading = false
             error = nil
+            revision += 1
             // One worker bounds optional requests without holding up wallet observation.
             enrichment = Task {
                 await previous?.value

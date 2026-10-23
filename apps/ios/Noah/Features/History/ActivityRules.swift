@@ -2,7 +2,7 @@ import Foundation
 
 /// The Activity tab's list rules (docs/native-rewrite/design/activity.md, "List").
 enum ActivityList {
-    struct Group: Identifiable, Equatable {
+    struct Group: Identifiable {
         enum Title: Equatable { case pending, day(HomeActivityDay.Title) }
         let id: String
         let title: Title

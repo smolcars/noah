@@ -80,12 +80,17 @@ import Observation
             let owner = try readAdmission()
             let schedules = try d.store.load().schedules
             return try d.journal.load().values.compactMap { entry in
-                guard entry.binding == owner, let terminal = entry.terminal, let schedule = schedules[entry.scheduleID] else { return nil }
-                let receipt = terminal.attempt.receipt ?? terminal.attempt.alreadyPaid
-                let hash = receipt?.paymentHash ?? terminal.attempt.paymentHash
-                guard receipt?.movementID != nil || hash != nil else { return nil }
+                // Only this occurrence's own proven submission: an "already paid" outcome can name an earlier
+                // manual payment, which must not read as recurring.
+                guard entry.binding == owner, let terminal = entry.terminal, terminal.outcome == .succeeded,
+                      terminal.attempt.alreadyPaid == nil, terminal.attempt.recurringOccurrenceKey == entry.key,
+                      let receipt = terminal.attempt.receipt,
+                      receipt.isProven(for: terminal.attempt.payment, knownHash: terminal.attempt.paymentHash),
+                      let schedule = schedules[entry.scheduleID] else { return nil }
+                let hash = receipt.paymentHash ?? terminal.attempt.paymentHash
+                guard receipt.movementID != nil || hash != nil else { return nil }
                 return .init(schedule: .init(scheduleID: schedule.id, name: schedule.label, interval: schedule.interval),
-                             movementID: receipt?.movementID, paymentHash: hash)
+                             movementID: receipt.movementID, paymentHash: hash)
             }
         }
         return read ?? []

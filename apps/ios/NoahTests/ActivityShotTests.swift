@@ -203,7 +203,7 @@ struct ActivityShotTests {
         }
         let app = AppModel(settings: settings)
         let rows = Rows()
-        rows.value = name == "empty" ? [] : name.contains("busy") || name.hasPrefix("detail-p") || name.hasPrefix("detail-f")
+        rows.value = name == "empty" ? [] : name.contains("busy") || name == "confirm" || name.hasPrefix("detail-p") || name.hasPrefix("detail-f")
             ? Self.busy : Self.everyday
         let failing = name == "error"
         let history = HistoryModel(dependencies: .init(
@@ -241,6 +241,23 @@ struct ActivityShotTests {
             .environment(\.activityFixture, activity)
             .environment(\.locale, Locale(identifier: app.localeIdentifier))
             .environment(\.scenePhase, .active)
-        return (AnyView(view), root)
+        guard name == "confirm" else { return (AnyView(view), root) }
+        // A pending deposit confirms while Activity is on screen.
+        let confirming = view.task {
+            try? await Task.sleep(for: .seconds(2.5))
+            rows.value = rows.value.map { row in
+                guard row.id == "onchain-wallet-p1" else { return row }
+                var row = row
+                row.hasConfirmation = true
+                row.confirmationHeight = Self.tip + 1
+                // With a block time it sorts to the top of Today, on screen.
+                row.date = HistoryRules.isoDate(Date())
+                row.sortTimestamp = Date().timeIntervalSince1970 * 1000
+                row.dateLabel = nil
+                return row
+            }
+            await history.refresh(currency: app.preferredCurrency)
+        }
+        return (AnyView(confirming), root)
     }
 }

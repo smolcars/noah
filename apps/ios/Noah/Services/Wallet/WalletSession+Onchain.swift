@@ -24,6 +24,13 @@ extension WalletSession {
         }
     }
 
+    /// One coin by ID, spent ones included (Activity's coin links).
+    func vtxo(_ id: String) async throws -> VtxoModel {
+        try await withOpenWallet { handles in
+            Self.vtxoModel(try await handles.wallet.getVtxoById(vtxoId: id), tip: try await handles.onchain.tipHeight(), expiring: [])
+        }
+    }
+
     func exitDetail(_ id: String) async throws -> ExitModel? {
         try await withOpenWallet { handles in
             try await handles.wallet.getExitStatus(vtxoId: id, includeHistory: true, includeTransactions: false)

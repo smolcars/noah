@@ -116,6 +116,67 @@ struct ActivityDetailTests {
         #expect(ActivityDetail.requiredConfirmations(Self.onchainSend(), variant: .mainnet) == 2)
     }
 
+    @Test func settledLightningFeesComeFromTheBalanceChange() {
+        // A retried fixed-amount invoice keeps its first attempt's fee field (50); the balance change says 12.
+        var fixed = Self.lightningSend(to: ActivityMappingTests.coffeeInvoice, fee: 12)
+        fixed.type = "Bolt11"
+        fixed.sentTo = [.init(destination: ActivityMappingTests.coffeeInvoice, amount_sat: 4_200, paymentMethod: "invoice")]
+        fixed.amount = 4_200
+        fixed.effectiveBalanceSat = -4_212
+        fixed.offchainFeeSat = 50
+        var detail = ActivityDetail(fixed, ownDomain: Self.own)
+        #expect(detail.fee == .amount(12) && detail.total == 4_212)
+        // An amountless invoice's numbers prove nothing: no Fee and no Total, never "Free".
+        var amountless = fixed
+        amountless.sentTo = [.init(destination: ActivityMappingTests.amountlessInvoice, amount_sat: 4_200, paymentMethod: "invoice")]
+        #expect(!SendReconciliation.fixesAmount(ActivityMappingTests.amountlessInvoice))
+        detail = ActivityDetail(amountless, ownDomain: Self.own)
+        #expect(detail.fee == nil && detail.total == nil)
+        // A proven zero is free.
+        var zero = Self.lightningSend(fee: 0)
+        zero.offchainFeeSat = 7
+        #expect(ActivityDetail(zero, ownDomain: Self.own).fee == .free)
+    }
+
+    @Test func receivesShowARecordedFeeButNeverFree() {
+        var receive = Self.lightningReceive()
+        receive.offchainFeeSat = 104
+        #expect(ActivityDetail(receive, ownDomain: Self.own).fee == .amount(104))
+        receive.offchainFeeSat = 0
+        #expect(ActivityDetail(receive, ownDomain: Self.own).fee == nil)
+        #expect(ActivityDetail(receive, ownDomain: Self.own).total == nil)
+    }
+
+    @Test func aCoinIDIsNeverATransactionID() {
+        // Before an offboard's transaction exists, today's txid falls back to an input coin's ID.
+        var offboard = Self.onchainSend(status: "pending", broadcast: false)
+        offboard.txid = String(repeating: "ef", count: 32) + ":1"
+        offboard.inputVtxos = [offboard.txid!]
+        #expect(offboard.chainTxid == nil)
+        let detail = ActivityDetail(offboard, ownDomain: Self.own)
+        #expect(detail.chainTxid == nil && detail.blockTxid == nil)
+        let receipt = ActivityDetail.receipt(offboard, ownDomain: Self.own, unit: .bip177, locale: Locale(identifier: "en"), date: "Today")
+        #expect(!receipt.contains("Transaction ID") && !receipt.contains("efef"))
+        // A board names its transaction through its anchor; the wallet's rows through their own txid.
+        var board = HomeRulesTests.row(type: "Onchain", kind: "onboard")
+        board.chainAnchor = Self.txid + ":0"
+        #expect(board.chainTxid == Self.txid)
+        var wallet = HomeRulesTests.deposit("onchain-wallet-a", 1_000, confirmed: true)
+        wallet.txid = Self.txid
+        #expect(wallet.chainTxid == Self.txid)
+    }
+
+    @Test func invoiceBearingLightningAddressSendsKeepTheirRecipient() {
+        // Send pays a Lightning address through an invoice and records the address in its repeat metadata.
+        var send = Self.lightningSend(to: ActivityMappingTests.coffeeInvoice)
+        send.sentTo = [.init(destination: ActivityMappingTests.coffeeInvoice, amount_sat: 4_842, paymentMethod: "invoice")]
+        send.repeatPayment = RepeatPayment(destination: "lucas@ln.tips", comment: "", amountMode: "SATS", amountInput: "4842")
+        send.paymentDescription = "Coffee Collective"
+        #expect(ActivityDetail(send, ownDomain: Self.own).to == "lucas@ln.tips")
+        let row = HomeActivityRow(send, ownDomain: Self.own)
+        #expect(row.title == "lucas@ln.tips" && row.avatar == .initial("l"))
+    }
+
     @Test func shareReceiptsCarryOnlyTheReceiptFields() {
         let english = Locale(identifier: "en")
         let send = ActivityDetail.receipt(Self.lightningSend(), ownDomain: Self.own, unit: .bip177, locale: english, date: "Yesterday at 6:05 PM")
