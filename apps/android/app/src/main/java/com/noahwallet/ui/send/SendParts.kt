@@ -5,7 +5,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -30,6 +29,9 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -279,7 +281,8 @@ internal const val HoldMillis = 800L
 
 /**
  * Hold to send: holding 0.8 s traces an orange stroke around the pill (your signature), with ticks at
- * 25/50/75 % and a heavy one on completion; letting go early, or a pose change, rewinds it. [onConfirm] runs once per gesture.
+ * 25/50/75 % and a heavy one on completion; letting go early, a second finger or a pose change rewinds it. [onConfirm] runs
+ * once per gesture.
  * TalkBack and Switch Access get a "Send ₿X" action that asks for confirmation instead of holding.
  */
 @Composable
@@ -312,7 +315,7 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
         // A pose change moves the pill under the finger, so it restarts the gesture: hold again in the new pose.
         .pointerInput(LocalPose.current) {
             awaitEachGesture {
-                awaitFirstDown(requireUnconsumed = false)
+                val finger = awaitFirstDown(requireUnconsumed = false).id
                 if (!currentEnabled) return@awaitEachGesture
                 var fired = false
                 val hold = scope.launch {
@@ -333,7 +336,7 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
                     progress.snapTo(1f)
                     if (currentEnabled) { fired = true; haptics.heavy(); currentConfirm() }
                 }
-                try { waitForUpOrCancellation() } finally {
+                try { holdUntilReleased(finger) } finally {
                     if (!fired && hold.isActive) {
                         hold.cancel()
                         scope.launch { launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }; progress.animateTo(0f, tween(260, easing = LinearOutSlowInEasing)) }
@@ -355,6 +358,19 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
         title = { Text(action) },
         confirmButton = { TextButton({ confirming = false; if (currentEnabled) { haptics.heavy(); currentConfirm() } }, Modifier.testTag("send-hold-confirm")) { Text(tr("Send")) } },
         dismissButton = { TextButton({ confirming = false }) { Text(tr("Cancel")) } })
+}
+
+/**
+ * Waits while the finger that started a hold keeps holding: it ends when that finger lifts, is consumed or leaves the
+ * pill, or when a second finger lands, so overlapping fingers can't add up to one 0.8 s hold.
+ */
+private suspend fun AwaitPointerEventScope.holdUntilReleased(finger: PointerId) {
+    while (true) {
+        val changes = awaitPointerEvent().changes
+        if (changes.any { it.id != finger && it.pressed }) return
+        val change = changes.firstOrNull { it.id == finger } ?: return
+        if (!change.pressed || change.isConsumed || change.isOutOfBounds(size, extendedTouchPadding)) return
+    }
 }
 
 /** A stadium from the top-left end of its top edge, clockwise, as the prototype's SVG rect strokes it. */

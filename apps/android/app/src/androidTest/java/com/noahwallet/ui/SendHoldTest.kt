@@ -2,6 +2,7 @@ package com.noahwallet.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -62,6 +63,34 @@ class SendHoldTest {
         compose.runOnIdle { assertEquals(1, wallet.calls) }
         wallet.gate.complete(Unit)
         compose.waitUntil(5_000) { presentation.model.controller.state == SendController.State.succeeded }
+    }
+
+    @Test fun overlappingFingersNeverAddUpToAHold() {
+        review()
+        // A presses, B joins at 500 ms and A lifts at 600 ms: no one finger held for 0.8 s, so nothing is sent.
+        compose.onNodeWithTag("send-hold").performTouchInput { down(0, center) }
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithTag("send-hold").performTouchInput { down(1, center + Offset(40f, 0f)) }
+        compose.mainClock.advanceTimeBy(100)
+        compose.onRoot().performTouchInput { up(0) }
+        compose.mainClock.advanceTimeBy(700)
+        compose.onRoot().performTouchInput { up(1) }
+        compose.mainClock.advanceTimeBy(300)
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals(0, wallet.calls); assertFalse(presentation.model.controller.locked) }
+        // A second finger landing ends the hold, even with the first one kept down past 0.8 s.
+        compose.onNodeWithTag("send-hold").performTouchInput { down(0, center) }
+        compose.mainClock.advanceTimeBy(300)
+        compose.onNodeWithTag("send-hold").performTouchInput { down(1, center + Offset(40f, 0f)) }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onRoot().performTouchInput { up(1); up(0) }
+        compose.mainClock.advanceTimeBy(300)
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals(0, wallet.calls); assertFalse(presentation.model.controller.locked) }
+        // One finger held for the full 0.8 s still sends, once.
+        hold(1_000)
+        compose.waitUntil(5_000) { wallet.calls == 1 }
+        compose.runOnIdle { assertTrue(presentation.model.controller.locked) }
     }
 
     @Test fun accessibilityAsksForConfirmationThenSendsOnce() {
