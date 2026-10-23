@@ -95,9 +95,11 @@ struct SendView: View {
         }
         .task(id: receiptRefreshID) {
             guard receiptRefreshID != nil else { return }
-            await SendReceiptRefresh.observe(tip: {
+            // The block row's tip on returning, without waiting for the next check.
+            if chainTip == nil, let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled { chainTip = next }
+            await SendReceiptRefresh.observe(wait: { model.untilAutomaticCheck() }, tip: {
                 if let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled { chainTip = next }
-            }, check: { await model.controller.checkStatus() })
+            }, check: { await model.automaticStatusCheck() })
         }
         .onChange(of: app.summary) { _, summary in
             model.arkBalance = summary?.balance.ark.spendable ?? 0

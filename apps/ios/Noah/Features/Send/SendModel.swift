@@ -37,6 +37,10 @@ import Observation
     var route: SendRecipientRoute?
     var source: SendSource?
     var pendingLightningHashes: Set<String> = []
+    /// When Send last checked a payment's status by itself, on entry or every 30 s while a
+    /// receipt shows. Both share it, so leaving and returning to Send doesn't add a check;
+    /// "Check payment status" stays immediate.
+    private(set) var lastAutomaticCheck: Date?
     var arkBalance: UInt64 = 0
     var onchainBalance: UInt64 = 0
     var onchainTotal: UInt64 = 0
@@ -106,6 +110,19 @@ import Observation
             onchainTotal = summary?.balance.onchain.total ?? 0
         } catch { self.error = "Unable to read available balances." }
         pendingLightningHashes = (try? await session.pendingSendLightningHashes()) ?? []
+        if untilAutomaticCheck() == .zero { await automaticStatusCheck() }
+    }
+
+    /// How long until the next automatic status check is due.
+    func untilAutomaticCheck(at now: Date = Date()) -> Duration {
+        guard let last = lastAutomaticCheck else { return .zero }
+        let remaining = SendReceiptRefresh.interval - now.timeIntervalSince(last)
+        return remaining > 0 ? .seconds(remaining) : .zero
+    }
+
+    /// Today's status check, run automatically; recorded when there's an attempt to check.
+    func automaticStatusCheck(at now: Date = Date()) async {
+        if controller.attempt != nil || controller.state == .storageBlocked { lastAutomaticCheck = now }
         await controller.checkStatus()
     }
     func maxSend() {
