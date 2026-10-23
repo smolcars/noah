@@ -154,6 +154,17 @@ class ActivityRulesTest {
         assertEquals(emptyList<ActivityRules.FeeLine>() to null, fees(record("c", Date(), type = "Onchain", source = "onchain-wallet", confirmed = true)))
     }
 
+    @Test fun receivesShowTheFeeTheyPaid() {
+        val received = record("rx", Date(), type = "Bolt11", direction = "incoming", amount = 5_000)
+            .copy(subsystemName = "bark.lightning_receive", effectiveBalanceSat = 4_950, offchainFeeSat = 50)
+        val home = rows(received).single().home
+        assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(50))), ActivityRules.fees(received, home))
+        assertNull("no total on receives", ActivityRules.total(received, home))
+        // Nothing paid: no Fee row ("Free" is for sends).
+        val free = received.copy(offchainFeeSat = 0)
+        assertEquals(emptyList<ActivityRules.FeeLine>(), ActivityRules.fees(free, rows(free).single().home))
+    }
+
     @Test fun onlyRecordedOnChainTransactionsAreNamed() {
         val coin = "ef".repeat(32)
         // An offboard still waiting for its transaction: its txid falls back to a spent coin's ID, which names that
