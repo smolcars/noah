@@ -131,6 +131,7 @@ class SendReceiveGalleryTest {
         ended("send-result-ark", SendFixtures.Outcome.arkSent, arkPayment)
         ended("send-result-lightning", SendFixtures.Outcome.lightningSent, lnPayment, quote = SendQuote(2_500, 12, 2_512, walletIdentity = SendFixtures.owner))
         ended("send-result-chain", SendFixtures.Outcome.chainSent, chainPayment, quote = SendQuote(50_000, 420, 50_420, approximate = true, walletIdentity = SendFixtures.owner))
+        ended("send-result-chain-broadcast-pending", SendFixtures.Outcome.broadcastPending, chainPayment, quote = SendQuote(50_000, 420, 50_420, approximate = true, walletIdentity = SendFixtures.owner))
         ended("send-result-chain-confirmed", SendFixtures.Outcome.chainConfirmed, chainPayment, SendFixtures.env(tip = 921_346),
             SendQuote(50_000, 420, 50_420, approximate = true, walletIdentity = SendFixtures.owner))
         ended("send-result-chain-confirmed-2", SendFixtures.Outcome.chainConfirmed, chainPayment, SendFixtures.env(tip = 921_347),

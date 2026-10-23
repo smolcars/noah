@@ -626,7 +626,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         }
     }
     val ending = SendEnding.of(controller.state, attempt, env.refund, live?.let { SendTimeline.stillPaying(it, elapsed, reduceMotion) } ?: false)
-    val motion = live ?: SendMotion(route, 0, staticMilestones(ending))
+    val motion = live ?: SendMotion(route, 0, staticMilestones(ending, receipt?.broadcastRetryPending == true))
     val started = SendTimeline.started(motion, elapsed, reduceMotion)
     // Haptics fire once per moment, only while the motion is live.
     // Checked every 100 ms, so moments inside a phase (the signatures, the key) land on time.
@@ -680,11 +680,14 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     })
 }
 
-/** The milestones that give an ending's final frame when no motion is running (opened later, or a fixture). */
-internal fun staticMilestones(ending: SendEnding?): Map<SendMilestone, Long> = buildMap {
+/**
+ * The milestones that give an ending's final frame when no motion is running (opened later, or a fixture).
+ * [broadcastPending]: today's broadcast retry, which shows no network progress until the broadcast succeeds.
+ */
+internal fun staticMilestones(ending: SendEnding?, broadcastPending: Boolean = false): Map<SendMilestone, Long> = buildMap {
     put(SendMilestone.submitted, 0L)
     when (ending) {
-        SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent -> put(SendMilestone.sent, 0L)
+        SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent -> put(if (broadcastPending) SendMilestone.stopped else SendMilestone.sent, 0L)
         SendEnding.refunded -> put(SendMilestone.refunded, 0L)
         SendEnding.pending -> { put(SendMilestone.paying, 0L); put(SendMilestone.pending, 0L) }
         SendEnding.sending -> put(SendMilestone.paying, 0L)
@@ -696,7 +699,7 @@ internal fun staticMilestones(ending: SendEnding?): Map<SendMilestone, Long> = b
 private fun resultTitle(ending: SendEnding, amount: Long, receipt: SendReceipt?, env: SendEnv): String = when (ending) {
     SendEnding.sending -> tr("Sending {amount}", formatted(amount, env))
     SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent ->
-        if (receipt?.amountIsPending == true) tr("Payment submitted") else tr("Sent {amount}", formatted(amount, env))
+        if (receipt?.amountIsPending == true || receipt?.broadcastRetryPending == true) tr("Payment submitted") else tr("Sent {amount}", formatted(amount, env))
     SendEnding.pending -> tr("Still sending {amount}", formatted(amount, env))
     SendEnding.refunded -> tr("Payment failed")
     SendEnding.notSent -> tr("Payment not sent")

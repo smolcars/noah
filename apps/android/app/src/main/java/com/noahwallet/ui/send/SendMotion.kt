@@ -155,7 +155,12 @@ internal object SendProgressRules {
     fun milestone(state: SendController.State, attempt: SendAttempt?, finished: Boolean, refund: Boolean?): SendMilestone? = when (state) {
         SendController.State.ready -> null
         SendController.State.submitting -> if (attempt != null && !attempt.inspectionPending) SendMilestone.paying else SendMilestone.submitted
-        SendController.State.succeeded -> if (attempt?.payment?.method == "onchain" && attempt.receipt?.txid == null) SendMilestone.stopped else SendMilestone.sent
+        SendController.State.succeeded -> when {
+            attempt?.payment?.method == "onchain" && attempt.receipt?.txid == null -> SendMilestone.stopped
+            // Today's broadcast retry: submitted but not yet on the network. The network motion waits for the broadcast.
+            attempt?.receipt?.broadcastRetryPending == true -> SendMilestone.stopped
+            else -> SendMilestone.sent
+        }
         SendController.State.failed -> when (refund) {
             true -> SendMilestone.refunded
             false -> SendMilestone.stopped.takeIf { finished }

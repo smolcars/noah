@@ -154,6 +154,15 @@ class SendMotionTest {
         val chain = SendAttempt(payment = SendPayment("bcrt1q", "onchain", 5_000, SendSource.onchain), receipt = SendReceipt(5_000, txid = "ab"))
         assertEquals(SendMilestone.sent, SendProgressRules.milestone(SendController.State.succeeded, chain, true, null))
         assertEquals(SendMilestone.stopped, SendProgressRules.milestone(SendController.State.succeeded, chain.copy(receipt = SendReceipt(5_000)), true, null))
+        // A failed broadcast (today's retry) isn't on the network yet: no network motion until the broadcast succeeds.
+        val retrying = chain.copy(receipt = SendReceipt(5_000, txid = "ab", broadcastRetryPending = true))
+        assertEquals(SendMilestone.stopped, SendProgressRules.milestone(SendController.State.succeeded, retrying, true, null))
+        val stopped = SendMotion(SendRoute.chainWallet, 0).reach(SendMilestone.stopped, 1_000)
+        assertTrue(phases(stopped).none { it == SendPhase.drop || it == SendPhase.waiting })
+        assertTrue(SendTimeline.resultShown(stopped, 60_000))
+        val broadcast = stopped.reach(SendProgressRules.milestone(SendController.State.succeeded, chain, true, null)!!, 30_000)
+        assertEquals(SendPhase.waiting, phases(broadcast).last())
+        assertEquals(mapOf(SendMilestone.submitted to 0L, SendMilestone.stopped to 0L), staticMilestones(SendEnding.chainSent, broadcastPending = true))
         assertEquals(SendMilestone.stopped, SendProgressRules.milestone(SendController.State.storageBlocked, journaled, true, null))
     }
 

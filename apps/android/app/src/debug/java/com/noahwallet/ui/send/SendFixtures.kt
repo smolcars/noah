@@ -28,7 +28,7 @@ object SendFixtures {
     val owner = SendIdentity("fixture", "regtest")
 
     /** How a fixture submission ends. */
-    enum class Outcome { arkSent, lightningSent, chainSent, chainConfirmed, pending, refunded, notSent, alreadyPaid, unknown, never }
+    enum class Outcome { arkSent, lightningSent, chainSent, chainConfirmed, broadcastPending, pending, refunded, notSent, alreadyPaid, unknown, never }
 
     /** A fake wallet: quotes [quote], and pays by ending as [outcome] once [gate] opens. */
     class Wallet(var outcome: Outcome = Outcome.never, var quote: SendQuote = SendQuote(500, 0, 500, walletIdentity = owner)) : SendWallet {
@@ -45,6 +45,7 @@ object SendFixtures {
                 Outcome.arkSent -> SendReceipt(payment.amount, proof = SendReceipt.Proof.submitReturnedArkSuccess)
                 Outcome.lightningSent -> SendReceipt(payment.amount, paymentHash = "hash", movementID = 9u, fee = 4, proof = SendReceipt.Proof.actualMovement)
                 Outcome.chainSent, Outcome.chainConfirmed -> SendReceipt(payment.amount, txid = "f".repeat(64), fee = 420, proof = SendReceipt.Proof.submitReturnedTxid)
+                Outcome.broadcastPending -> SendReceipt(payment.amount, txid = "f".repeat(64), fee = 420, proof = SendReceipt.Proof.submitReturnedTxid, broadcastRetryPending = true)
                 Outcome.pending -> throw SendExistingLightning(SendLightningProgress(payment.amount, 12))
                 Outcome.notSent -> throw SendNotSubmitted(SendFailure.Reason.fundsChanged)
                 Outcome.alreadyPaid -> throw SendAlreadyPaid(SendReceipt(payment.amount, paymentHash = "hash", movementID = 9u, fee = 4, proof = SendReceipt.Proof.actualMovement))
