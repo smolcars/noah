@@ -49,7 +49,7 @@ enum SendRecipientService {
             // As Android's HttpUrl requests it: dot segments resolved.
             if let path = endpoint?.percentEncodedPath { endpoint?.percentEncodedPath = SendDestination.removingDotSegments(path) }
         }
-        guard endpoint?.scheme == "https", endpoint?.host != nil else { throw SendFailure.invalid }
+        guard endpoint.map(SendDestination.allowsLnurl) == true else { throw SendFailure.invalid }
         if let key = try? await session.sendArkServerKey() {
             let items = endpoint?.queryItems ?? []
             endpoint?.queryItems = items + [URLQueryItem(name: "ark", value: key)]
@@ -67,7 +67,8 @@ enum SendRecipientService {
         }
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
         let decoded = try JSONDecoder().decode(Response.self, from: data)
-        guard decoded.tag == "payRequest", let callback = URL(string: decoded.callback), callback.scheme == "https", callback.host != nil,
+        guard decoded.tag == "payRequest", let callback = URL(string: decoded.callback),
+            URLComponents(url: callback, resolvingAgainstBaseURL: false).map(SendDestination.allowsLnurl) == true,
             decoded.minSendable <= decoded.maxSendable
         else { throw SendFailure.invalid }
         var ark: String?

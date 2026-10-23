@@ -977,6 +977,84 @@
       }
     },
     {
+      "name": "row 16 address: onion domain needs cleartext (mainnet)",
+      "input": {
+        "destination": "alice@abc.onion",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: onion domain needs cleartext (signet)",
+      "input": {
+        "destination": "alice@abc.onion",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: onion domain needs cleartext (regtest)",
+      "input": {
+        "destination": "alice@abc.onion",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: upper-case onion domain with a trailing dot (mainnet)",
+      "input": {
+        "destination": "alice@ABC.ONION.",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: upper-case onion domain with a trailing dot (signet)",
+      "input": {
+        "destination": "alice@ABC.ONION.",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: upper-case onion domain with a trailing dot (regtest)",
+      "input": {
+        "destination": "alice@ABC.ONION.",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
       "name": "row 18 lnurlp (mainnet)",
       "input": {
         "destination": "lnurlp://example.com/.well-known/lnurlp/alice",
@@ -3074,6 +3152,84 @@
         "valid": false,
         "destinationType": null,
         "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 https onion LNURL (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7ctzvvhx7mnfdahz7urp0yjq479z",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 17 https onion LNURL (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7ctzvvhx7mnfdahz7urp0yjq479z",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 17 https onion LNURL (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7ctzvvhx7mnfdahz7urp0yjq479z",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 17 https LNURL with userinfo (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7atnv4er5urpwde5qetcv9khqmr99e3k7mf0wpshj36k2sv",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 17 https LNURL with userinfo (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7atnv4er5urpwde5qetcv9khqmr99e3k7mf0wpshj36k2sv",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 17 https LNURL with userinfo (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7atnv4er5urpwde5qetcv9khqmr99e3k7mf0wpshj36k2sv",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "url": null
       }
     },
     {

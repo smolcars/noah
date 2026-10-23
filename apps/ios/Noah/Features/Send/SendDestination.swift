@@ -21,8 +21,7 @@ struct SendDestination: Equatable, Sendable {
         let rest = value.dropFirst(9)
         // Like Android's HttpUrl, extra slashes are refused.
         guard !rest.hasPrefix("/"), !rest.hasPrefix("\\"), let url = urlText("https://" + rest).flatMap(URLComponents.init(string:)),
-              (url.user ?? "").isEmpty, (url.password ?? "").isEmpty, url.port.map({ (1...65535).contains($0) }) ?? true,
-              let host = url.encodedHost.flatMap(Self.host), host.range(of: #"\.onion\.*$"#, options: .regularExpression) == nil
+              allowsLnurl(url), url.port.map({ (1...65535).contains($0) }) ?? true, let host = url.encodedHost.flatMap(Self.host)
         else { return nil }
         let port = url.port.map { $0 == 443 ? "" : ":\($0)" } ?? ""
         let path = removingDotSegments(url.percentEncodedPath)
@@ -32,6 +31,15 @@ struct SendDestination: Equatable, Sendable {
         let lnurl = PaymentEncoding.encodeBech32("lnurl", Array(canonical.utf8))
         return lnurl.count <= 1023 ? lnurl : nil
     }
+    /// What Noah's LNURL client may request: HTTPS, no userinfo, and a host Android's HttpUrl accepts that isn't `.onion`
+    /// (that would need cleartext). Checked right before every request, and when parsing, so such a link is no destination.
+    static func allowsLnurl(_ url: URLComponents) -> Bool {
+        guard url.scheme == "https", (url.user ?? "").isEmpty, (url.password ?? "").isEmpty,
+              let host = url.encodedHost.flatMap(Self.host) else { return false }
+        return !isOnion(host)
+    }
+    /// A host normalised by `host(_:)` that ends in `.onion`, a trailing dot included.
+    static func isOnion(_ host: String) -> Bool { host.range(of: #"\.onion\.*$"#, options: .regularExpression) != nil }
     /// A URL as Android's HttpUrl reads it, for Foundation to parse: a backslash before the query separates path segments,
     /// and what a URL can't hold (non-ASCII too) is escaped while existing `%XX` stay, which Foundation alone escapes again.
     static func urlText(_ text: String) -> String? {
@@ -129,7 +137,11 @@ struct SendDestination: Equatable, Sendable {
     static func parse(_ value: String, network: String = AppVariant.current.rawValue) -> Self {
         if value.lowercased().hasPrefix("bitcoin:") { return uri(value, network: network) }
         let value = cleaned(value)
-        if isLightningAddress(value) { return Self(destinationType: "lnurl") }
+        if isLightningAddress(value), let at = value.unicodeScalars.lastIndex(of: "@") {
+            // Like an `lnurlp://` one, a `.onion` domain would need cleartext, so it is no destination.
+            let domain = String(value.unicodeScalars[value.unicodeScalars.index(after: at)...])
+            return host(domain).map(isOnion) == true ? Self() : Self(destinationType: "lnurl")
+        }
         if let invoice = PaymentEncoding.invoice(value) {
             guard matches(invoice.network, network, type: "lightning") else { return mismatch(invoice.network, network) }
             if let amount = invoice.sats, amount > 0, amount < 1 {
@@ -147,10 +159,11 @@ struct SendDestination: Equatable, Sendable {
         }
         // Raw LNURL-pay links are supported by the FFI, in addition to RN's LUD-16 input.
         if let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl", !decoded.isM,
-           let bytes = PaymentEncoding.bytes(decoded.words), let url = URL(string: String(decoding: bytes, as: UTF8.self)), url.scheme == "https", url.host != nil {
+           let bytes = PaymentEncoding.bytes(decoded.words),
+           let url = urlText(String(decoding: bytes, as: UTF8.self)).flatMap(URLComponents.init(string:)), allowsLnurl(url) {
             // LNURL-auth logs in rather than pays: refuse it here instead of at the fetch. The query is read decoded, as the
             // LNURL client reads it, so encoding or case can't hide `tag=login`.
-            let login = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains {
+            let login = url.queryItems?.contains {
                 $0.name.lowercased() == "tag" && $0.value?.lowercased() == "login"
             } == true
             return login ? Self(error: .lnurlAuth) : Self(destinationType: "lnurl")

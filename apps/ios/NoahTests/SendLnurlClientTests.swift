@@ -39,6 +39,21 @@ struct SendLnurlClientTests {
         #expect(server.requests == [lookup])
     }
 
+    @Test(.timeLimit(.minutes(1))) func aCallbackOnAnOnionHostOrWithUserinfoIsNeverRequested() async throws {
+        for callback in ["https://abc.onion/cb", "https://ABC.ONION./cb", "https://user:pass@example.com/cb", "https://user@example.com/cb"] {
+            let body = #"{"tag":"payRequest","callback":"\#(callback)","minSendable":1000,"maxSendable":2000}"#
+            let server = try LocalEsploraServer(.raw(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)",
+                close: true))
+            defer { server.stop() }
+            await #expect(throws: SendFailure.invalid, "\(callback)") {
+                try await SendRecipientService.invoice(.init(destination: "alice@example.com", method: "lnurl", amount: 1),
+                                                       session: WalletSession(variant: .regtest), fetch: loopback(server))
+            }
+            #expect(server.requests == [lookup], "\(callback)")
+        }
+    }
+
     @Test(.timeLimit(.minutes(1))) func aRedirectFailsTheLookupWithoutASecondRequest() async throws {
         let server = try LocalEsploraServer(.raw(
             "HTTP/1.1 302 Found\r\nLocation: /elsewhere\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", close: true))
