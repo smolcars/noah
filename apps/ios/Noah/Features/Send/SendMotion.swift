@@ -134,6 +134,21 @@ enum SendMotion {
     /// When the ending starts, in seconds from submission.
     static func endingStart(rail: Rail, outcomeAt: Double) -> Double { max(outcomeAt, rail.endingStart) }
 
+    /// Every moment the phase can change, in seconds from submission, so the phase line
+    /// redraws only then. Extra moments are harmless; a missing one would leave it stale.
+    static func phaseBoundaries(rail: Rail, outcomeAt: Double, confirmedAt: Double? = nil) -> [Double] {
+        var times = [0.42, 1.15, 1.7, payingStart, payingStart + stillPayingAfter]
+        guard outcomeAt.isFinite else { return times + (confirmedAt.map { [$0] } ?? []) }
+        let ending = endingStart(rail: rail, outcomeAt: outcomeAt)
+        times += [outcomeAt, max(outcomeAt, payingStart)] + [0, 0.35, 0.6, 0.65, 1.15, 1.2].map { ending + $0 }
+        if let confirmedAt { times += [confirmedAt, max(ending + 0.6, confirmedAt)] }
+        return times
+    }
+
+    /// Under Reduce Motion the in-flight stage holds still after this (its last fade), in
+    /// seconds from submission; nothing loops.
+    static let reducedInFlightEnd = 2.6
+
     /// When the result appears, in seconds from submission: once the motion reaches its last phase.
     static func resultAt(rail: Rail, outcome: Outcome, outcomeAt: Double) -> Double? {
         let ending = endingStart(rail: rail, outcomeAt: outcomeAt)

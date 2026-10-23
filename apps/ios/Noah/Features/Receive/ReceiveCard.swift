@@ -50,6 +50,15 @@ struct ReceiveArrival: Equatable, Identifiable {
         }
     }
 
+    /// Every moment the phase line can change, in seconds from the start.
+    var phaseBoundaries: [Double] {
+        switch rail {
+        case .ark: []
+        case .lightning: [0.85, 1.65, 2.5, flipAt + 1.6]
+        case .onchain: [0.9] + (confirmedAt.map { [elapsed($0)] } ?? [])
+        }
+    }
+
     /// The rail line on the card's back.
     func railLine(locale: String) -> (glyph: String, text: String) {
         switch rail {
@@ -156,10 +165,12 @@ struct ReceiveCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    /// The arrival whose flip is home: nothing on the card moves any more.
+    @State private var settled: UUID?
 
     var body: some View {
         let still = reduceMotion
-        return TimelineView(.animation(paused: arrival == nil || scenePhase != .active)) { timeline in
+        return TimelineView(.animation(paused: arrival == nil || settled == arrival?.id || scenePhase != .active)) { timeline in
             let t = arrival?.elapsed(timeline.date) ?? 0
             let angle = arrival?.angle(at: t) ?? 0
             let backShown = arrival.map { reduceMotion ? t >= $0.flipAt && t < $0.flipBackAt : cos(angle * .pi / 180) < 0 } ?? false
@@ -201,6 +212,12 @@ struct ReceiveCard: View {
         }
         .background {
             if listening && !reduceMotion && arrival == nil { ListeningLight() }
+        }
+        .task(id: arrival?.id) {
+            guard let arrival else { return }
+            let wait = arrival.settledAt - arrival.elapsed(Date())
+            if wait > 0 { do { try await Task.sleep(for: .seconds(wait)) } catch { return } }
+            settled = arrival.id
         }
         .accessibilityElement(children: .combine)
     }
@@ -405,27 +422,49 @@ struct ReceiveBlockRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @State private var settled: String?
+
+    /// When the row stops changing, in seconds from the arrival; nil while "next" blinks.
+    static func settleTime(_ arrival: ReceiveArrival, reduceMotion: Bool) -> Double? {
+        if let confirmedAt = arrival.confirmedAt { return arrival.elapsed(confirmedAt) + 1.5 }
+        return reduceMotion ? 1.2 : nil
+    }
+
+    private var settleKey: String { "\(arrival.id)-\(arrival.txid ?? "")-\(arrival.confirmedAt?.timeIntervalSince1970 ?? 0)-\(reduceMotion)" }
 
     var body: some View {
-        TimelineView(.animation(paused: scenePhase != .active || (reduceMotion && arrival.confirmedAt != nil))) { timeline in
+        TimelineView(.animation(paused: scenePhase != .active || settled == settleKey)) { timeline in
             let t = arrival.elapsed(timeline.date)
             Canvas { context, size in
-                let canvas = MotionCanvas(context: context, size: size, viewBox: CGRect(x: 0, y: 0, width: 300, height: 58),
-                                          colors: .theme(colorScheme))
-                let time = MotionTime(t: t, reduceMotion: reduceMotion)
-                let row = ChainBlockRow(x0: 72, y: 6, size: 30, tip: tip, confirmedHeight: arrival.confirmedHeight,
-                                        heldAt: 0.7, confirmedAt: arrival.confirmedAt.map { $0.timeIntervalSince(arrival.start) },
-                                        blinking: t >= 0.9, nextLabel: L10n.text("next", locale: locale.identifier), locale: locale)
-                row.draw(canvas, time: time, opacity: time.o(0, .soft), dot: true)
-                // Your transaction drops into the "next" block.
-                if t < 0.7 {
-                    let drop = time.p(0.2, .bouncy)
-                    var dot = canvas
-                    dot.context.opacity *= time.o(0.2, .bouncy)
-                    dot.fill(dot.circle(row.slot.x, row.slot.y - 40 * (1 - drop), 6), dot.colors.orange)
-                }
+                Self.draw(MotionCanvas(context: context, size: size, viewBox: CGRect(x: 0, y: 0, width: 300, height: 58),
+                                       colors: .theme(colorScheme)),
+                          arrival: arrival, tip: tip, time: MotionTime(t: t, reduceMotion: reduceMotion),
+                          nextLabel: L10n.text("next", locale: locale.identifier), locale: locale)
             }
         }
+        .task(id: settleKey) {
+            // Stop redrawing once nothing moves; a confirmation wakes it.
+            let key = settleKey
+            guard let end = Self.settleTime(arrival, reduceMotion: reduceMotion) else { return }
+            let wait = end - arrival.elapsed(Date())
+            if wait > 0 { do { try await Task.sleep(for: .seconds(wait)) } catch { return } }
+            settled = key
+        }
         .accessibilityHidden(true)
+    }
+
+    static func draw(_ canvas: MotionCanvas, arrival: ReceiveArrival, tip: UInt32?, time: MotionTime, nextLabel: String, locale: Locale) {
+        let t = time.t
+        let row = ChainBlockRow(x0: 72, y: 6, size: 30, tip: tip, confirmedHeight: arrival.confirmedHeight,
+                                heldAt: 0.7, confirmedAt: arrival.confirmedAt.map { $0.timeIntervalSince(arrival.start) },
+                                blinking: t >= 0.9, nextLabel: nextLabel, locale: locale)
+        row.draw(canvas, time: time, opacity: time.o(0, .soft), dot: true)
+        // Your transaction drops into the "next" block.
+        if t < 0.7 {
+            let drop = time.p(0.2, .bouncy)
+            var dot = canvas
+            dot.context.opacity *= time.o(0.2, .bouncy)
+            dot.fill(dot.circle(row.slot.x, row.slot.y - 40 * (1 - drop), 6), dot.colors.orange)
+        }
     }
 }

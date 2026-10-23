@@ -119,6 +119,8 @@ struct SendStagePainter {
 
     /// When the frame stops changing, in seconds from submission; nil while something loops.
     static func settleTime(_ state: State, reduceMotion: Bool) -> Double? {
+        // Reduce Motion keeps no loops: in flight (or still paying), the stage holds after its fades.
+        if reduceMotion, state.outcome == .inFlight || state.outcome == .pending { return SendMotion.reducedInFlightEnd }
         guard let outcomeAt = state.outcomeAt else { return nil }
         let ending = SendMotion.endingStart(rail: state.rail, outcomeAt: outcomeAt)
         switch state.outcome {

@@ -7,7 +7,6 @@ import SwiftUI
 struct SendOutcomeView: View {
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.sendReceiveFixture) private var fixture
     @Bindable var controller: SendPaymentController
     var btcPrice: Double? = nil
@@ -195,8 +194,15 @@ struct SendOutcomeView: View {
         return min(270, max(150, height * (resultShown && height < 760 ? 0.22 : 0.32)))
     }
 
+    /// Redraws at the phase's boundaries only, never on a running clock.
     private var phaseLine: some View {
-        TimelineView(.animation(minimumInterval: 0.1, paused: scenePhase != .active)) { timeline in
+        let outcomeAt = motion.since(motion.outcomeAt) ?? .infinity, confirmedAt = motion.since(motion.confirmedAt)
+        let now = Date()
+        let boundaries = motion.submittedAt.map { start in
+            SendMotion.phaseBoundaries(rail: rail, outcomeAt: outcomeAt, confirmedAt: confirmedAt)
+                .map { start.addingTimeInterval($0 + 0.01) }.filter { $0 > now }.sorted()
+        } ?? []
+        return TimelineView(.explicit([now] + boundaries)) { timeline in
             let t = motion.elapsed(timeline.date)
             let phase = SendMotion.phase(rail: rail, outcome: motion.outcome, outcomeAt: motion.since(motion.outcomeAt) ?? .infinity,
                                          confirmedAt: motion.since(motion.confirmedAt), at: t)

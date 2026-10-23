@@ -121,6 +121,52 @@ struct SendMotionTests {
         #expect(!live.shouldPlay("split", at: 0.42))
     }
 
+    /// The phase line redraws only at its boundaries, so every change of phase falls on one.
+    @Test(arguments: [SendMotion.Rail.ark, .lightning, .onchainSwap, .onchainWallet])
+    func everyPhaseChangeFallsOnABoundary(rail: SendMotion.Rail) {
+        for outcome in [SendMotion.Outcome.inFlight, .succeeded, .refunded, .pending, .stopped] {
+            for seen in [0.5, 2.0, 7.3] {
+                let outcomeAt = outcome == .inFlight ? Double.infinity : seen
+                let confirmedAt: Double? = rail.isOnchain ? 20.4 : nil
+                let boundaries = SendMotion.phaseBoundaries(rail: rail, outcomeAt: outcomeAt, confirmedAt: confirmedAt)
+                var last = SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, confirmedAt: confirmedAt, at: 0)
+                for t in stride(from: 0.0, through: 40, by: 0.005) {
+                    let phase = SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, confirmedAt: confirmedAt, at: t)
+                    guard phase != last else { continue }
+                    last = phase
+                    #expect(boundaries.contains { $0 <= t + 1e-9 && t - $0 < 0.006 }, "\(outcome) after \(seen) s changes at \(t)")
+                }
+            }
+        }
+    }
+
+    /// Under Reduce Motion nothing loops: once settled, in flight or still paying, the stage
+    /// draws the same frame, so its clock can stop.
+    @Test(arguments: [SendMotion.Rail.ark, .lightning, .onchainSwap, .onchainWallet])
+    func aReducedMotionStageHoldsStillOnceSettled(rail: SendMotion.Rail) throws {
+        let label = SendRecipientLabel(name: "maya", nameIsVerbatim: true, avatar: .initial("m"))
+        for (outcome, outcomeAt) in [(SendMotion.Outcome.inFlight, nil), (.pending, 3.0)] {
+            let state = SendStagePainter.State(rail: rail, outcome: outcome, submittedAt: nil, outcomeAt: outcomeAt,
+                                               confirmedAt: nil, confirmedHeight: nil, tip: 100, recipient: label)
+            let end = try #require(SendStagePainter.settleTime(state, reduceMotion: true))
+            #expect(SendStagePainter.settleTime(state, reduceMotion: false) == nil)
+            #expect(try Self.frame(state, at: end) == Self.frame(state, at: end + 17.3), "\(outcome)")
+            // The frames are real: the first fade differs from the settled frame.
+            #expect(try Self.frame(state, at: 0.05) != Self.frame(state, at: end))
+        }
+    }
+
+    static func frame(_ state: SendStagePainter.State, at t: Double) throws -> Data {
+        let view = Canvas { context, size in
+            var painter = SendStagePainter(
+                canvas: MotionCanvas(context: context, size: size, viewBox: CGRect(x: 20, y: 10, width: 320, height: 230), colors: .theme(.light)),
+                state: state, reduceMotion: true, nextLabel: "next", locale: Locale(identifier: "en"))
+            painter.draw(at: t)
+        }
+        .frame(width: 320, height: 230)
+        return try #require(ImageRenderer(content: view).uiImage?.pngData())
+    }
+
     /// A saved attempt seen after relaunch: its ending has already played, so nothing
     /// replays and no haptic in its computed schedule fires (including the late Lightning finale).
     @Test(arguments: [SendMotion.Rail.ark, .lightning, .onchainSwap, .onchainWallet])
@@ -402,6 +448,52 @@ struct ReceiveFormatTests {
         other.announce(ReceiveArrival(rail: .onchain, sats: 100_000, start: Date(), txid: "a", inputs: spent))
         let unrelated = ReceiveChainSnapshot(tip: 101, incoming: [.init(txid: "c", toAddress: 0, received: 7, confirmedHeight: 101, inputs: [.init(txid: "x", vout: 0)])])
         #expect(!other.follow(unrelated).confirmed && other.current?.txid == "a" && other.current?.confirmedHeight == nil)
+    }
+
+    /// Receive's phase line redraws only at its boundaries, so every change falls on one.
+    @Test func everyReceivePhaseChangeFallsOnABoundary() {
+        let start = Date(), english = Locale(identifier: "en")
+        for rail in [ReceiveArrival.Rail.ark, .lightning, .onchain] {
+            var arrival = ReceiveArrival(rail: rail, sats: 1_500, start: start, txid: "tx")
+            if rail == .onchain {
+                arrival.confirmedHeight = 101
+                arrival.confirmedAt = start.addingTimeInterval(12.3)
+            }
+            var last = arrival.phase(at: 0, tip: 100, locale: english).text
+            for t in stride(from: 0.0, through: 30, by: 0.005) {
+                let text = arrival.phase(at: t, tip: 100, locale: english).text
+                guard text != last else { continue }
+                last = text
+                #expect(arrival.phaseBoundaries.contains { $0 <= t + 1e-9 && t - $0 < 0.006 }, "\(rail) changes at \(t)")
+            }
+        }
+    }
+
+    /// The block row's clock stops once nothing moves: after the drop under Reduce Motion,
+    /// and after a confirmation either way. Only the waiting "next" block blinks.
+    @Test func theBlockRowHoldsStillOnceSettled() throws {
+        let start = Date()
+        var arrival = ReceiveArrival(rail: .onchain, sats: 100_000, start: start, txid: "tx")
+        #expect(ReceiveBlockRow.settleTime(arrival, reduceMotion: false) == nil)
+        let waiting = try #require(ReceiveBlockRow.settleTime(arrival, reduceMotion: true))
+        #expect(try Self.row(arrival, at: waiting, reduceMotion: true) == Self.row(arrival, at: waiting + 13.7, reduceMotion: true))
+        #expect(try Self.row(arrival, at: 0.05, reduceMotion: true) != Self.row(arrival, at: waiting, reduceMotion: true))
+        arrival.confirmedHeight = 101
+        arrival.confirmedAt = start.addingTimeInterval(20)
+        for reduceMotion in [false, true] {
+            let end = try #require(ReceiveBlockRow.settleTime(arrival, reduceMotion: reduceMotion))
+            #expect(try Self.row(arrival, at: end, reduceMotion: reduceMotion) == Self.row(arrival, at: end + 13.7, reduceMotion: reduceMotion))
+        }
+    }
+
+    static func row(_ arrival: ReceiveArrival, at t: Double, reduceMotion: Bool) throws -> Data {
+        let view = Canvas { context, size in
+            ReceiveBlockRow.draw(MotionCanvas(context: context, size: size, viewBox: CGRect(x: 0, y: 0, width: 300, height: 58), colors: .theme(.light)),
+                                 arrival: arrival, tip: 101, time: MotionTime(t: t, reduceMotion: reduceMotion), nextLabel: "next",
+                                 locale: Locale(identifier: "en"))
+        }
+        .frame(width: 300, height: 58)
+        return try #require(ImageRenderer(content: view).uiImage?.pngData())
     }
 
     @Test func arrivalsFlipOnlyAfterTheirPhasesAndPlayEachHapticOnce() {

@@ -226,8 +226,13 @@ struct ReceiveView: View {
         .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: shown.bandAmount)
     }
 
+    /// Redraws at the phase's boundaries only, never on a running clock.
     private var phaseLine: some View {
-        TimelineView(.animation(minimumInterval: 0.1, paused: arrival == nil || scenePhase != .active)) { timeline in
+        let now = Date()
+        let boundaries = arrival.map { arrival in
+            arrival.phaseBoundaries.map { arrival.start.addingTimeInterval($0 + 0.01) }.filter { $0 > now }.sorted()
+        } ?? []
+        return TimelineView(.explicit([now] + boundaries)) { timeline in
             let phase: (text: String, done: Bool) = arrival.map { $0.phase(at: $0.elapsed(timeline.date), tip: tip, locale: locale) } ?? ("", false)
             Text(verbatim: phase.text)
                 .noahText(NoahTokens.Typography.control)
