@@ -4,7 +4,8 @@ import SwiftUI
 /// black pill, with haptic ticks at 25/50/75% and a heavy one at the end, then confirms
 /// exactly as today's confirm button did. Letting go early rewinds the stroke. VoiceOver
 /// and Switch Control get a "Send ₿X" action with a system confirmation instead. It
-/// confirms at most once; the payment controller also refuses a second submission.
+/// confirms at most once; the payment controller also refuses a second submission. Only a
+/// single finger held for the whole 0.8 s confirms: a second finger cancels the hold.
 struct SendHoldButton: View {
     /// The formatted amount, for the accessibility action and its confirmation.
     let amount: String
@@ -18,6 +19,7 @@ struct SendHoldButton: View {
     @State private var fired = false
     @State private var ticks: Task<Void, Never>?
     @State private var confirming = false
+    @State private var press = SendHoldPress()
     @State private var haptics = OnboardingHaptics()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
@@ -45,6 +47,14 @@ struct SendHoldButton: View {
             .onLongPressGesture(minimumDuration: Self.duration, maximumDistance: 40, perform: complete) { down in
                 down ? begin() : release()
             }
+            // Counts the fingers on the pill, which the long press doesn't report.
+            .simultaneousGesture(SpatialEventGesture()
+                .onChanged { events in
+                    let spoiled = press.spoiled
+                    press.touches(events.filter { $0.phase == .active }.count)
+                    if press.spoiled && !spoiled { release() }
+                }
+                .onEnded { _ in press.touches(0) })
             .allowsHitTesting(enabled && !fired)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: actionTitle))
@@ -62,7 +72,7 @@ struct SendHoldButton: View {
     }
 
     private func begin() {
-        guard enabled, !fired else { return }
+        guard enabled, !fired, !press.spoiled else { return }
         pressing = true
         withAnimation(.linear(duration: Self.duration)) { progress = 1 }
         ticks?.cancel()
@@ -82,6 +92,7 @@ struct SendHoldButton: View {
     }
 
     private func complete() {
+        guard !press.spoiled else { release(); return }
         ticks?.cancel()
         progress = 1
         fire()
@@ -92,6 +103,16 @@ struct SendHoldButton: View {
         fired = true
         haptics.play(.heavy)
         onConfirm()
+    }
+}
+
+/// One press of Hold to send. It may confirm only while a single finger has held it
+/// throughout: a second finger at any point spoils it until every finger lifts.
+struct SendHoldPress: Equatable {
+    private(set) var spoiled = false
+
+    mutating func touches(_ active: Int) {
+        if active > 1 { spoiled = true } else if active == 0 { spoiled = false }
     }
 }
 

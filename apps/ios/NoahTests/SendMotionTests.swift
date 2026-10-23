@@ -223,6 +223,20 @@ struct SendMotionTests {
         #expect(await gate.calls == 1)
     }
 
+    /// A first finger presses, a second lands 500 ms later and the first lifts at 600 ms:
+    /// no single finger held for 0.8 s, so the hold can't confirm until every finger lifts.
+    @Test func aSecondFingerCancelsTheHold() {
+        var press = SendHoldPress()
+        press.touches(1)
+        #expect(!press.spoiled)
+        press.touches(2)
+        press.touches(1)
+        #expect(press.spoiled)
+        press.touches(0)
+        press.touches(1)
+        #expect(!press.spoiled)
+    }
+
     @Test func aRefusedReservationLetsYouHoldAgain() {
         let hold = SendHoldGate()
         var submitted = 0
