@@ -6,6 +6,10 @@ enum DebugJSON {
     static func ark(_ info: ArkInfo?) throws -> String { try format(info.map { value($0) as Any } ?? NSNull()) }
     static func decoded(_ vtxo: Vtxo) throws -> String { try format(value(vtxo)) }
     static func imported(_ ids: [String]) throws -> String { try format(ids) }
+    /// The VTXO xpub reveals every VTXO public key of the wallet: display only, never log.
+    static func debugInfo(_ info: DebugInfo) throws -> String {
+        try format(["network": String(describing: info.network), "mailboxId": info.mailboxId, "vtxoXpub": info.vtxoXpub])
+    }
     static func format(_ value: Any) throws -> String {
         let data = try JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys, .fragmentsAllowed, .withoutEscapingSlashes])
         return String(decoding: data, as: UTF8.self)

@@ -3,7 +3,7 @@ import SwiftUI
 
 struct DebugView: View {
     enum Action: String, CaseIterable {
-        case ark = "Get Ark Info", push = "Get Push Token", refresh = "Refresh Server"
+        case ark = "Get Ark Info", debugInfo = "Get Debug Info", push = "Get Push Token", refresh = "Refresh Server"
         case maintenance = "Maintenance", maintenanceRefresh = "Maintenance Refresh", delegated = "Maintenance Delegated"
         case offboard = "Offboard All", decode = "Decode VTXO Hex", importVtxo = "Import VTXO"
         case drop = "Drop VTXO", unlock = "Unlock VTXO"
@@ -63,6 +63,8 @@ struct DebugView: View {
                 result = try await WalletSession.shared.withOpenWallet { handles in
                     switch action {
                     case .ark: return try DebugJSON.ark(try await handles.wallet.arkInfo())
+                    // Shown only here for support; the xpub must never reach logs or Sentry.
+                    case .debugInfo: return try DebugJSON.debugInfo(try await handles.wallet.debugInfo())
                     case .refresh: try await handles.wallet.refreshServer()
                     case .maintenance: try await handles.wallet.maintenance()
                     case .maintenanceRefresh: return try await handles.wallet.maintenanceRefresh() ?? "Maintenance refresh completed"
