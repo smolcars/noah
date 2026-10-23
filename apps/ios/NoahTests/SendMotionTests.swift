@@ -446,8 +446,39 @@ struct ReceiveFormatTests {
         // An unrelated confirmed deposit is not a replacement.
         var other = ReceiveArrivalQueue()
         other.announce(ReceiveArrival(rail: .onchain, sats: 100_000, start: Date(), txid: "a", inputs: spent))
-        let unrelated = ReceiveChainSnapshot(tip: 101, incoming: [.init(txid: "c", toAddress: 0, received: 7, confirmedHeight: 101, inputs: [.init(txid: "x", vout: 0)])])
-        #expect(!other.follow(unrelated).confirmed && other.current?.txid == "a" && other.current?.confirmedHeight == nil)
+        let unrelated = ReceiveChainSnapshot(tip: 101, incoming: [
+            .init(txid: "a", toAddress: 100_000, received: 100_000, confirmedHeight: nil, inputs: spent),
+            .init(txid: "c", toAddress: 0, received: 7, confirmedHeight: 101, inputs: [.init(txid: "x", vout: 0)]),
+        ])
+        let still = other.follow(unrelated)
+        #expect(!still.confirmed && !still.ended && other.current?.txid == "a" && other.current?.confirmedHeight == nil)
+    }
+
+    /// The followed deposit disappears and a new one pays the same address without spending
+    /// any of its inputs: no replacement is assumed. The old wait ends and the new deposit
+    /// arrives as usual. Without recorded inputs nothing can replace it either.
+    @Test func aNewDepositIsNeverAssumedToReplaceAGoneOne() {
+        for spent in [Set([SendTransaction.Input(txid: "funding", vout: 1)]), []] {
+            var queue = ReceiveArrivalQueue()
+            queue.announce(ReceiveArrival(rail: .onchain, sats: 100_000, start: Date(), txid: "a", inputs: spent))
+            let snapshot = ReceiveChainSnapshot(tip: 101, incoming: [
+                .init(txid: "b", toAddress: 100_000, received: 100_000, confirmedHeight: nil, inputs: [.init(txid: "other", vout: 0)]),
+            ])
+            let followed = queue.follow(snapshot)
+            #expect(followed.ended && !followed.confirmed && followed.txids.isEmpty && queue.current == nil)
+            #expect(snapshot.look(known: ["a"], announced: Set(["a"]).union(followed.txids)).arrivals.map(\.txid) == ["b"])
+        }
+        // A waiting arrival that's gone leaves the queue; the next one plays.
+        var queue = ReceiveArrivalQueue()
+        let start = Date()
+        queue.announce(ReceiveArrival(rail: .onchain, sats: 1, start: start, txid: "a"), at: start)
+        queue.announce(ReceiveArrival(rail: .onchain, sats: 2, start: start, txid: "gone"), at: start)
+        queue.announce(ReceiveArrival(rail: .onchain, sats: 3, start: start, txid: "c"), at: start)
+        let both = ReceiveChainSnapshot(tip: 101, incoming: [
+            .init(txid: "a", toAddress: 1, received: 1, confirmedHeight: nil), .init(txid: "c", toAddress: 3, received: 3, confirmedHeight: nil),
+        ])
+        let followed = queue.follow(both, at: start)
+        #expect(!followed.ended && queue.current?.txid == "a" && queue.waiting.map(\.txid) == ["c"])
     }
 
     /// Receive's phase line redraws only at its boundaries, so every change falls on one.

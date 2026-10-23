@@ -75,11 +75,16 @@ struct ReceiveArrival: Equatable, Identifiable {
         return 180 + 180 * min(1, MotionTime.spring(t - flipBackAt, .snappy))
     }
 
+    /// What a new check says about an on-chain arrival.
+    enum Followed: Equatable { case unchanged, confirmed, gone }
+
     /// Follows an on-chain arrival in a new check: its confirmation, or the replacement that
-    /// took its place (RBF), even one already confirmed, so it never waits for a block that
-    /// won't include it. True when it just confirmed.
-    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> Bool {
-        guard rail == .onchain, let txid, let seen = snapshot.follow(txid: txid, inputs: inputs) else { return false }
+    /// took its place (RBF, a transaction spending one of its inputs), even one already
+    /// confirmed, so it never waits for a block that won't include it. Gone with nothing
+    /// spending its inputs, its wait ends; a new deposit is never assumed to replace it.
+    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> Followed {
+        guard rail == .onchain, let txid else { return .unchanged }
+        guard let seen = snapshot.follow(txid: txid, inputs: inputs) else { return .gone }
         if seen.txid != txid {
             self.txid = seen.txid
             inputs = seen.inputs
@@ -87,10 +92,10 @@ struct ReceiveArrival: Equatable, Identifiable {
             confirmedHeight = nil
             confirmedAt = nil
         }
-        guard confirmedHeight == nil, let height = seen.confirmedHeight else { return false }
+        guard confirmedHeight == nil, let height = seen.confirmedHeight else { return .unchanged }
         confirmedHeight = height
         confirmedAt = date
-        return true
+        return .confirmed
     }
 
     /// Every haptic of the arrival (prototype `hap` calls), by key.
@@ -122,12 +127,25 @@ struct ReceiveArrivalQueue: Equatable {
         return false
     }
 
-    /// Follows the on-chain arrivals (playing or waiting) in a new check. Returns whether the
-    /// playing one just confirmed, and the transactions followed now, replacements included.
-    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> (confirmed: Bool, txids: Set<String>) {
-        let confirmed = current?.follow(snapshot, at: date) ?? false
-        for index in waiting.indices { _ = waiting[index].follow(snapshot, at: date) }
-        return (confirmed, Set(([current] + waiting).compactMap { $0?.txid }))
+    /// Follows the on-chain arrivals (playing or waiting) in a new check; one that's gone
+    /// ends, and the next starts. Returns whether the playing one just confirmed or ended, and
+    /// the transactions followed now, replacements included.
+    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> (confirmed: Bool, ended: Bool, txids: Set<String>) {
+        for index in waiting.indices.reversed() where waiting[index].follow(snapshot, at: date) == .gone {
+            waiting.remove(at: index)
+        }
+        var confirmed = false, ended = false
+        if var playing = current {
+            switch playing.follow(snapshot, at: date) {
+            case .unchanged: current = playing
+            case .confirmed: current = playing; confirmed = true
+            case .gone:
+                ended = true
+                current = nil
+                if !waiting.isEmpty { start(waiting.removeFirst(), at: date) }
+            }
+        }
+        return (confirmed, ended, Set(([current] + waiting).compactMap { $0?.txid }))
     }
 
     mutating func clear() {

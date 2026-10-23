@@ -395,7 +395,11 @@ struct ReceiveView: View {
             if isActive && fixture == nil { await model.start() }
             guard self.arrival?.id == arrival.id else { return }
         }
-        if arrivals.finish() { return }
+        if !arrivals.finish() { resumeSheet() }
+    }
+
+    /// The compact sheet an on-chain arrival set aside comes back, with its draft.
+    private func resumeSheet() {
         guard let resume = interrupted else { return }
         interrupted = nil
         guard !editing, sheet == nil else { return }
@@ -435,6 +439,7 @@ struct ReceiveView: View {
                 tip = snapshot.tip
                 let followed = arrivals.follow(snapshot)
                 if followed.confirmed { haptics.play(.light) }
+                if followed.ended && arrival == nil { resumeSheet() }
                 // A replacement is the same deposit, not another arrival.
                 announced.formUnion(followed.txids)
                 let look = snapshot.look(known: known, announced: announced)
