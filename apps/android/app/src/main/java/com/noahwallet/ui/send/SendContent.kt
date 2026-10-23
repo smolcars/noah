@@ -473,11 +473,12 @@ private fun NoteField(value: String, onValue: (String) -> Unit, limit: Int, enab
 
 private fun railIcon(rail: SendRail) = when (rail) { SendRail.ark -> SendIcons.ark; SendRail.lightning -> HomeIcons.lightning; SendRail.onchain -> HomeIcons.chain }
 
+/** A card's line: the SDK's fee estimate, labelled as one; without an estimate, just the timing (never a zero fee). */
 @Composable
 private fun railLine(rail: SendRail, fee: Long?, env: SendEnv): String = when (rail) {
-    SendRail.ark -> if (fee == null || fee == 0L) tr("Instant · free") else tr("Instant · {fee} fee", formatted(fee, env))
-    SendRail.lightning -> fee?.let { tr("Seconds · {fee} fee", formatted(it, env)) } ?: tr("In seconds")
-    SendRail.onchain -> fee?.let { tr("About 20 min · {fee} fee", formatted(it, env)) } ?: tr("In about 20 minutes")
+    SendRail.ark -> when (fee) { null -> tr("Instantly"); 0L -> tr("Instant · free"); else -> tr("Instant · {fee} estimated fee", formatted(fee, env)) }
+    SendRail.lightning -> fee?.let { tr("Seconds · {fee} estimated fee", formatted(it, env)) } ?: tr("In seconds")
+    SendRail.onchain -> fee?.let { tr("About 20 min · {fee} estimated fee", formatted(it, env)) } ?: tr("In about 20 minutes")
 }
 
 @Composable

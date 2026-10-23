@@ -67,6 +67,7 @@ class SendReceiveGalleryTest {
         send("send-to-no-matches") { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient("zzz") }
         send("send-to-error") { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"); it.model.continueStage() }
         send("send-method") { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient(SendFixtures.request()); it.model.continueStage() }
+        send("send-method-no-estimates", env = SendFixtures.env(estimates = emptyMap())) { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient(SendFixtures.request()); it.model.continueStage() }
         send("send-method-unavailable") { it.model.arkBalance = 8_000; it.model.amount = "9000"; it.model.continueStage(); it.model.setRecipient(SendFixtures.request()); it.model.continueStage() }
         send("send-balance") { it.model.amount = "5000"; it.model.continueStage(); it.model.setRecipient(SendFixtures.onchain); it.model.continueStage() }
         send("send-review-ark") { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient(SendFixtures.ark); it.model.continueStage() }

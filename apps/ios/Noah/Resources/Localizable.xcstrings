@@ -397,38 +397,38 @@
         }
       }
     },
-    "About 20 min · {fee} fee": {
-      "comment": "GT gt_388e5f8e82667507; arguments: fee",
+    "About 20 min · {fee} estimated fee": {
+      "comment": "GT gt_d58fd353bb1b174f; arguments: fee",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "About 20 min · %1$@ fee"
+            "value": "About 20 min · %1$@ estimated fee"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unos 20 min · comisión de %1$@"
+            "value": "Unos 20 min · comisión estimada de %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "約20分 · 手数料 %1$@"
+            "value": "約20分 · 推定手数料 %1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "약 20분 · 수수료 %1$@"
+            "value": "약 20분 · 예상 수수료 %1$@"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cirka 20 min · %1$@ i avgift"
+            "value": "Cirka 20 min · uppskattad avgift %1$@"
           }
         }
       }
@@ -21373,38 +21373,38 @@
         }
       }
     },
-    "Instant · {fee} fee": {
-      "comment": "GT gt_121639f0d7604797; arguments: fee",
+    "Instant · {fee} estimated fee": {
+      "comment": "GT gt_bb3e30521a8bd6d0; arguments: fee",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instant · %1$@ fee"
+            "value": "Instant · %1$@ estimated fee"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instantáneo · comisión de %1$@"
+            "value": "Instantáneo · comisión estimada de %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "即時 · 手数料 %1$@"
+            "value": "即時 · 推定手数料 %1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "즉시 · 수수료 %1$@"
+            "value": "즉시 · 예상 수수료 %1$@"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Direkt · %1$@ i avgift"
+            "value": "Direkt · uppskattad avgift %1$@"
           }
         }
       }
@@ -38689,38 +38689,38 @@
         }
       }
     },
-    "Seconds · {fee} fee": {
-      "comment": "GT gt_fa0e0b90eef384a2; arguments: fee",
+    "Seconds · {fee} estimated fee": {
+      "comment": "GT gt_d15f6395fe6e788c; arguments: fee",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seconds · %1$@ fee"
+            "value": "Seconds · %1$@ estimated fee"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Segundos · comisión de %1$@"
+            "value": "Segundos · comisión estimada de %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "数秒 · 手数料 %1$@"
+            "value": "数秒 · 推定手数料 %1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "몇 초 · 수수료 %1$@"
+            "value": "몇 초 · 예상 수수료 %1$@"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sekunder · %1$@ i avgift"
+            "value": "Sekunder · uppskattad avgift %1$@"
           }
         }
       }

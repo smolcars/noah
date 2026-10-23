@@ -12,7 +12,7 @@
   <string name="gt_f6a7e36fc225654b">"En betalning till %1$s avbröts. Kontrollera historiken och återuppta sedan betalningen."</string>
   <string name="gt_ffc027edcc0ef3f2">"Bankomat"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
-  <string name="gt_388e5f8e82667507">"Cirka 20 min · %1$s i avgift"</string>
+  <string name="gt_d58fd353bb1b174f">"Cirka 20 min · uppskattad avgift %1$s"</string>
   <string name="gt_7e1b0d5641f2640c">"Konto"</string>
   <string name="gt_df717e92d8745fc7">"Bekräfta att du har sett den aktuella betalningen innan du godkänner den igen."</string>
   <string name="gt_64cff1319d2fd2cb">"Åtgärd"</string>
@@ -596,7 +596,7 @@
   <string name="gt_b24147c47f1ae370">"Installerar plånbok…"</string>
   <string name="gt_ddd409663e0a1d7b">"Direkt och gratis från Ark-plånböcker"</string>
   <string name="gt_cf9ea7f321c15e4b">"Direkt · gratis"</string>
-  <string name="gt_121639f0d7604797">"Direkt · %1$s i avgift"</string>
+  <string name="gt_bb3e30521a8bd6d0">"Direkt · uppskattad avgift %1$s"</string>
   <string name="gt_136f8bedf0a24121">"Direkt"</string>
   <string name="gt_9464444aff9626f4">"Otillräckliga medel för den här betalningsmetoden."</string>
   <string name="gt_a6d18ab67af6c522">"Avsedd saldoförändring"</string>
@@ -1077,7 +1077,7 @@
   <string name="gt_7b0dbf8127b72ef3">"Skärmbilden får vara högst 5 MB."</string>
   <string name="gt_a451c45fca000d8c">"Skärmbilden måste vara en JPEG- eller PNG-bild."</string>
   <string name="gt_08cf22a9053129c5">"Sök efter platser eller städer"</string>
-  <string name="gt_fa0e0b90eef384a2">"Sekunder · %1$s i avgift"</string>
+  <string name="gt_d15f6395fe6e788c">"Sekunder · uppskattad avgift %1$s"</string>
   <string name="gt_26a08e3cf397b095">"Den säkra filen kan inte läsas"</string>
   <string name="gt_6e5835bc30b172d3">"Säker nyckel inte tillgänglig"</string>
   <string name="gt_60e65c7b7c95778d">"Säker lagring inte tillgänglig"</string>

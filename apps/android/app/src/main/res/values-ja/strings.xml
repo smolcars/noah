@@ -12,7 +12,7 @@
   <string name="gt_f6a7e36fc225654b">"%1$sへの支払いが中断されました。履歴を確認してから再開してください。"</string>
   <string name="gt_ffc027edcc0ef3f2">"ATM"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
-  <string name="gt_388e5f8e82667507">"約20分 · 手数料 %1$s"</string>
+  <string name="gt_d58fd353bb1b174f">"約20分 · 推定手数料 %1$s"</string>
   <string name="gt_7e1b0d5641f2640c">"アカウント"</string>
   <string name="gt_df717e92d8745fc7">"再度承認する前に、現在の支払いを確認してください。"</string>
   <string name="gt_64cff1319d2fd2cb">"操作"</string>
@@ -596,7 +596,7 @@
   <string name="gt_b24147c47f1ae370">"ウォレットをインストール中…"</string>
   <string name="gt_ddd409663e0a1d7b">"Arkウォレットから即時・無料"</string>
   <string name="gt_cf9ea7f321c15e4b">"即時 · 無料"</string>
-  <string name="gt_121639f0d7604797">"即時 · 手数料 %1$s"</string>
+  <string name="gt_bb3e30521a8bd6d0">"即時 · 推定手数料 %1$s"</string>
   <string name="gt_136f8bedf0a24121">"すぐに"</string>
   <string name="gt_9464444aff9626f4">"この支払い方法では残高が不足しています。"</string>
   <string name="gt_a6d18ab67af6c522">"予定される残高の変動"</string>
@@ -1077,7 +1077,7 @@
   <string name="gt_7b0dbf8127b72ef3">"スクリーンショットは5 MB以下にしてください。"</string>
   <string name="gt_a451c45fca000d8c">"スクリーンショットはJPEGまたはPNG形式にしてください。"</string>
   <string name="gt_08cf22a9053129c5">"施設や都市を検索"</string>
-  <string name="gt_fa0e0b90eef384a2">"数秒 · 手数料 %1$s"</string>
+  <string name="gt_d15f6395fe6e788c">"数秒 · 推定手数料 %1$s"</string>
   <string name="gt_26a08e3cf397b095">"保護されたファイルを読み取れません"</string>
   <string name="gt_6e5835bc30b172d3">"安全に保管された鍵を利用できません"</string>
   <string name="gt_60e65c7b7c95778d">"安全なストレージを利用できません"</string>

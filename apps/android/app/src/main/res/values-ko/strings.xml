@@ -12,7 +12,7 @@
   <string name="gt_f6a7e36fc225654b">"%1$s에게 보내던 결제가 중단되었습니다. 내역을 확인한 후 재개하세요."</string>
   <string name="gt_ffc027edcc0ef3f2">"ATM"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
-  <string name="gt_388e5f8e82667507">"약 20분 · 수수료 %1$s"</string>
+  <string name="gt_d58fd353bb1b174f">"약 20분 · 예상 수수료 %1$s"</string>
   <string name="gt_7e1b0d5641f2640c">"계정"</string>
   <string name="gt_df717e92d8745fc7">"다시 승인하기 전에 현재 결제를 확인하세요."</string>
   <string name="gt_64cff1319d2fd2cb">"작업"</string>
@@ -596,7 +596,7 @@
   <string name="gt_b24147c47f1ae370">"지갑 설치 중…"</string>
   <string name="gt_ddd409663e0a1d7b">"Ark 지갑에서 즉시, 무료로"</string>
   <string name="gt_cf9ea7f321c15e4b">"즉시 · 무료"</string>
-  <string name="gt_121639f0d7604797">"즉시 · 수수료 %1$s"</string>
+  <string name="gt_bb3e30521a8bd6d0">"즉시 · 예상 수수료 %1$s"</string>
   <string name="gt_136f8bedf0a24121">"즉시"</string>
   <string name="gt_9464444aff9626f4">"이 결제 수단으로 결제하기에는 잔액이 부족합니다."</string>
   <string name="gt_a6d18ab67af6c522">"예정된 잔액 변동"</string>
@@ -1077,7 +1077,7 @@
   <string name="gt_7b0dbf8127b72ef3">"스크린샷 용량은 5 MB 이하여야 합니다."</string>
   <string name="gt_a451c45fca000d8c">"스크린샷은 JPEG 또는 PNG 이미지여야 합니다."</string>
   <string name="gt_08cf22a9053129c5">"장소 또는 도시 검색"</string>
-  <string name="gt_fa0e0b90eef384a2">"몇 초 · 수수료 %1$s"</string>
+  <string name="gt_d15f6395fe6e788c">"몇 초 · 예상 수수료 %1$s"</string>
   <string name="gt_26a08e3cf397b095">"보안 파일을 읽을 수 없음"</string>
   <string name="gt_6e5835bc30b172d3">"보안 키를 사용할 수 없습니다"</string>
   <string name="gt_60e65c7b7c95778d">"보안 저장소 사용 불가"</string>

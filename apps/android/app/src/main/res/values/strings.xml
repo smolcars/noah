@@ -12,7 +12,7 @@
   <string name="gt_f6a7e36fc225654b">"A payment to %1$s was interrupted. Check your history, then resume it."</string>
   <string name="gt_ffc027edcc0ef3f2">"ATM"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
-  <string name="gt_388e5f8e82667507">"About 20 min · %1$s fee"</string>
+  <string name="gt_d58fd353bb1b174f">"About 20 min · %1$s estimated fee"</string>
   <string name="gt_7e1b0d5641f2640c">"Account"</string>
   <string name="gt_df717e92d8745fc7">"Acknowledge the current payment before approving it again."</string>
   <string name="gt_64cff1319d2fd2cb">"Action"</string>
@@ -596,7 +596,7 @@
   <string name="gt_b24147c47f1ae370">"Installing wallet…"</string>
   <string name="gt_ddd409663e0a1d7b">"Instant and free from Ark wallets"</string>
   <string name="gt_cf9ea7f321c15e4b">"Instant · free"</string>
-  <string name="gt_121639f0d7604797">"Instant · %1$s fee"</string>
+  <string name="gt_bb3e30521a8bd6d0">"Instant · %1$s estimated fee"</string>
   <string name="gt_136f8bedf0a24121">"Instantly"</string>
   <string name="gt_9464444aff9626f4">"Insufficient funds for this payment method."</string>
   <string name="gt_a6d18ab67af6c522">"Intended balance change"</string>
@@ -1077,7 +1077,7 @@
   <string name="gt_7b0dbf8127b72ef3">"Screenshot must be 5 MB or smaller."</string>
   <string name="gt_a451c45fca000d8c">"Screenshot must be a JPEG or PNG image."</string>
   <string name="gt_08cf22a9053129c5">"Search places or cities"</string>
-  <string name="gt_fa0e0b90eef384a2">"Seconds · %1$s fee"</string>
+  <string name="gt_d15f6395fe6e788c">"Seconds · %1$s estimated fee"</string>
   <string name="gt_26a08e3cf397b095">"Secure file unreadable"</string>
   <string name="gt_6e5835bc30b172d3">"Secure key unavailable"</string>
   <string name="gt_60e65c7b7c95778d">"Secure storage unavailable"</string>
