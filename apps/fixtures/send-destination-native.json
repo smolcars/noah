@@ -1250,6 +1250,591 @@
       }
     },
     {
+      "name": "row 18 lnurlp: encoded dot-dot resolved (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e%2e/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot resolved (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e%2e/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot resolved (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e%2e/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: upper-case encoded dot-dot resolved (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2E%2E/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: upper-case encoded dot-dot resolved (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2E%2E/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: upper-case encoded dot-dot resolved (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2E%2E/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: dot then encoded dot resolved (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/.%2e/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: dot then encoded dot resolved (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/.%2e/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: dot then encoded dot resolved (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/.%2e/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot then dot resolved (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2E./pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot then dot resolved (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2E./pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot then dot resolved (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2E./pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot dropped (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot dropped (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot dropped (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: plain dot segments resolved (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/./b/../pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: plain dot segments resolved (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/./b/../pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: plain dot segments resolved (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/./b/../pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot between backslashes (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com\\a\\%2e%2e\\pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot between backslashes (signet)",
+      "input": {
+        "destination": "lnurlp://example.com\\a\\%2e%2e\\pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot between backslashes (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com\\a\\%2e%2e\\pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot stops at the root (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/%2e%2e/%2e%2e/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot stops at the root (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/%2e%2e/%2e%2e/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: encoded dot-dot stops at the root (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/%2e%2e/%2e%2e/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: trailing encoded dot-dot keeps the slash (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/b/%2e%2e",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: trailing encoded dot-dot keeps the slash (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/b/%2e%2e",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: trailing encoded dot-dot keeps the slash (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/b/%2e%2e",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a/"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: query keeps its dot segments (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e%2e/pay?next=/x/%2e%2e/y",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?next=/x/%2e%2e/y"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: query keeps its dot segments (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e%2e/pay?next=/x/%2e%2e/y",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?next=/x/%2e%2e/y"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: query keeps its dot segments (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a/%2e%2e/pay?next=/x/%2e%2e/y",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?next=/x/%2e%2e/y"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: escaped slash stays in its segment (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a%2f%2e%2e%2fpay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2f%2e%2e%2fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: escaped slash stays in its segment (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a%2f%2e%2e%2fpay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2f%2e%2e%2fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: escaped slash stays in its segment (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a%2f%2e%2e%2fpay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2f%2e%2e%2fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: upper-case escaped slash stays in its segment (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/a%2F..%2Fpay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2F..%2Fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: upper-case escaped slash stays in its segment (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/a%2F..%2Fpay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2F..%2Fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: upper-case escaped slash stays in its segment (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/a%2F..%2Fpay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2F..%2Fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: encoded dot-dot resolved (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyhj2vn9y5ex2tmsv9uscnacyt",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: encoded dot-dot resolved (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyhj2vn9y5ex2tmsv9uscnacyt",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: encoded dot-dot resolved (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyhj2vn9y5ex2tmsv9uscnacyt",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: dot then upper-case encoded dot resolved (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyhjuffjg5hhqctear8e6c",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: dot then upper-case encoded dot resolved (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyhjuffjg5hhqctear8e6c",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: dot then upper-case encoded dot resolved (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyhjuffjg5hhqctear8e6c",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: escaped slash stays in its segment (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyjnye39xfjj2vn9y5exvurp0y40szaa",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2f%2e%2e%2fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: escaped slash stays in its segment (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyjnye39xfjj2vn9y5exvurp0y40szaa",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2f%2e%2e%2fpay"
+      }
+    },
+    {
+      "name": "row 18 lnurl1 twin: escaped slash stays in its segment (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0vyjnye39xfjj2vn9y5exvurp0y40szaa",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/a%2f%2e%2e%2fpay"
+      }
+    },
+    {
       "name": "row 18 lnurlp: onion needs http (mainnet)",
       "input": {
         "destination": "lnurlp://abc.onion/pay",

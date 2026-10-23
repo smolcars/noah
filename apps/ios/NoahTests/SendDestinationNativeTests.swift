@@ -39,7 +39,7 @@ struct SendDestinationNativeTests {
 
     @Test func matchesNativeVectors() async throws {
         let cases = try Fixtures.load("send-destination-native", input: Input.self, expected: Expected.self)
-        #expect(cases.count == 219)
+        #expect(cases.count == 264)
         for fixture in cases {
             let (input, expected) = (fixture.input, fixture.expected)
             let actual = SendDestination.parse(input.destination, network: input.network)
@@ -59,6 +59,14 @@ struct SendDestinationNativeTests {
             #expect(await requests.urls.first?.absoluteString == url, "\(fixture.name)")
             #expect((route != nil) == (url != nil), "\(fixture.name)")
         }
+    }
+
+    @Test func resolvesDotSegmentsAsOkHttpDoes() {
+        // OkHttp HttpUrl's push/pop: the path keeps its trailing slash, never climbs above the root, and only exact dot
+        // segments count. The shared vectors cover the links Send sees.
+        let paths = [("", "/"), ("/", "/"), ("/a/..", "/"), ("/..", "/"), ("/a/../b/", "/b/"), ("/./", "/"), ("/a//b", "/a//b"),
+                     ("/a/%2E", "/a/"), ("/a/.../b", "/a/.../b"), ("/a/%2e%2e%2e/b", "/a/%2e%2e%2e/b")]
+        for (path, expected) in paths { #expect(SendDestination.removingDotSegments(path) == expected, "\(path)") }
     }
 
     @Test func encodesAnLnurlAsLnurlRsDoes() throws {

@@ -26,17 +26,18 @@ two board receipt totals (reviewed fee fallback and actual fee). Both platforms 
 that table; lookup failures are transient display state and never durable evidence.
 These two fixtures are hand-specified from the RN Home rules and the cutover decisions.
 
-Send inputs bark accepts and RN refused: `send-destination-native.json` (219 cases) is
+Send inputs bark accepts and RN refused: `send-destination-native.json` (264 cases) is
 native-only and hand-specified from bark 0.8 (`959a489f`) and the decision recorded in
 `docs/native-rewrite/ffi-phase-b.md` (rows 5, 16, 18 and 19). It covers Lightning
 addresses by bark's rule (long TLDs, `+` tags, internationalised domains, a leading `₿`
-that is stripped), LUD-17 `lnurlp://` (HTTPS only; `.onion` stays refused), BIP-321
-`req-ark` / `req-amount`, and LNURL-auth refused at parse time. Bounds, network checks,
-HTTPS-only LNURL and typed errors stay as they are. Its shape is `send-utils`, plus `url`
-for `lnurl` results: the HTTPS endpoint resolution requests first, or null when resolution
-refuses before any request. `error` is the English message. The RN-generated
-`send-utils.json` and `send-amount-safety.json` have no vectors for these inputs and pass
-unchanged, so no RN vector is overridden.
+that is stripped), LUD-17 `lnurlp://` (HTTPS only; `.onion` stays refused), dot segments
+in `lnurlp://` and `lnurl1` paths (plain or percent-encoded, resolved as OkHttp resolves
+them; `%2f` stays), BIP-321 `req-ark` / `req-amount`, and LNURL-auth refused at parse
+time. Bounds, network checks, HTTPS-only LNURL and typed errors stay as they are. Its
+shape is `send-utils`, plus `url` for `lnurl` results: the HTTPS endpoint resolution
+requests first, or null when resolution refuses before any request. `error` is the
+English message. The RN-generated `send-utils.json` and `send-amount-safety.json` have no
+vectors for these inputs and pass unchanged, so no RN vector is overridden.
 
 M6 boarding/exits: run `bun --tsconfig-override client/tsconfig.json
 apps/fixtures/tools/generate-exits.ts` from the repository root. The generator imports

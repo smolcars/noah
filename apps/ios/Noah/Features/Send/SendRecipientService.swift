@@ -46,6 +46,8 @@ enum SendRecipientService {
             let bytes = PaymentEncoding.bytes(decoded.words)
         {
             endpoint = URLComponents(string: String(decoding: bytes, as: UTF8.self))
+            // As Android's HttpUrl requests it: dot segments resolved.
+            if let path = endpoint?.percentEncodedPath { endpoint?.percentEncodedPath = SendDestination.removingDotSegments(path) }
         }
         guard endpoint?.scheme == "https", endpoint?.host != nil else { throw SendFailure.invalid }
         if let key = try? await session.sendArkServerKey() {

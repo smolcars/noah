@@ -27,12 +27,30 @@ struct SendDestination: Equatable, Sendable {
               let host = url.encodedHost.flatMap(Self.host), host.range(of: #"\.onion\.*$"#, options: .regularExpression) == nil
         else { return nil }
         let port = url.port.map { $0 == 443 ? "" : ":\($0)" } ?? ""
-        let path = url.percentEncodedPath.isEmpty ? "/" : url.percentEncodedPath
+        let path = removingDotSegments(url.percentEncodedPath)
         guard let canonical = URL(string: "https://\(host)\(port)\(path)" + (url.percentEncodedQuery.map { "?" + $0 } ?? "")
-                                  + (url.percentEncodedFragment.map { "#" + $0 } ?? ""))?.standardized.absoluteString
+                                  + (url.percentEncodedFragment.map { "#" + $0 } ?? ""))?.absoluteString
         else { return nil }
         let lnurl = PaymentEncoding.encodeBech32("lnurl", Array(canonical.utf8))
         return lnurl.count <= 1023 ? lnurl : nil
+    }
+    /// The path Android's HttpUrl requests: `.` and `..` segments, also percent-encoded in either case (`%2e`, `.%2e`,
+    /// `%2e.`, `%2e%2e`), are resolved, and an escaped slash (`%2f`) stays inside its segment. `path` is percent-encoded.
+    static func removingDotSegments(_ path: String) -> String {
+        var segments = [""]
+        let parts = path.dropFirst().split(separator: "/", omittingEmptySubsequences: false)
+        for (index, part) in parts.enumerated() {
+            switch part.lowercased() {
+            case ".", "%2e": continue
+            case "..", "%2e.", ".%2e", "%2e%2e":
+                // The path still ends in `/`: the emptied previous segment, or a new empty one.
+                if segments.removeLast().isEmpty && !segments.isEmpty { segments[segments.count - 1] = "" } else { segments.append("") }
+            default:
+                if segments[segments.count - 1].isEmpty { segments[segments.count - 1] = String(part) } else { segments.append(String(part)) }
+                if index < parts.count - 1 { segments.append("") }
+            }
+        }
+        return "/" + segments.joined(separator: "/")
     }
     /// The host Android's HttpUrl requests: percent-decoded, IDNA and lower case, labels of 1–63 characters, and an IP
     /// literal only for IPv6 (no zone). Nil for anything else.
