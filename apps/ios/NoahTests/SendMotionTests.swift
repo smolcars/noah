@@ -121,6 +121,28 @@ struct SendMotionTests {
         #expect(!live.shouldPlay("split", at: 0.42))
     }
 
+    /// A saved attempt seen after relaunch: its ending has already played, so nothing
+    /// replays and no haptic in its computed schedule fires (including the late Lightning finale).
+    @Test(arguments: [SendMotion.Rail.ark, .lightning, .onchainSwap, .onchainWallet])
+    func aRestoredSuccessKeepsItsWholeHapticScheduleSilent(rail: SendMotion.Rail) {
+        let clock = SendMotionClock(), now = Date()
+        clock.observe(.succeeded, at: now)
+        if rail.isOnchain { clock.confirm(height: 101, at: now) }
+        let t = clock.elapsed(now), outcomeAt = clock.since(clock.outcomeAt) ?? .infinity
+        let schedule = SendMotion.haptics(rail: rail, outcome: .succeeded, outcomeAt: outcomeAt, confirmations: rail.isOnchain ? 1 : 0,
+                                          confirmedAt: clock.since(clock.confirmedAt))
+        #expect(schedule.contains { $0.kind == .success })
+        #expect(schedule.allSatisfy { $0.at <= t && !clock.shouldPlay($0.key, at: $0.at) })
+        #expect((SendMotion.resultAt(rail: rail, outcome: .succeeded, outcomeAt: outcomeAt) ?? .infinity) <= t)
+        let end: SendMotion.Phase = switch rail { case .ark: .delivered; case .lightning: .paid; default: .confirmed }
+        #expect(SendMotion.phase(rail: rail, outcome: .succeeded, outcomeAt: outcomeAt, confirmedAt: clock.since(clock.confirmedAt), at: t) == end)
+        // A confirmation that arrives later is news, and plays.
+        let later = SendMotionClock()
+        later.observe(.succeeded, at: now)
+        later.confirm(height: 101, at: now.addingTimeInterval(30))
+        #expect((later.since(later.confirmedAt) ?? 0) > 61)
+    }
+
     // MARK: Refund evidence
 
     static func send(status: String, hash: String = "hash", outputs: [String] = ["v1"], exited: [String] = [],

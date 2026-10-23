@@ -236,7 +236,7 @@ enum SendResultKind: Equatable, Sendable {
 
     /// An outcome the view derived from the controller. A status check never takes a
     /// shown outcome back to in-flight. An outcome seen without a stage (a saved attempt
-    /// after relaunch) shows its end state at once, silently.
+    /// after relaunch) shows its end state at once, silently: it dates from submission.
     func observe(_ next: SendMotion.Outcome, at date: Date = Date()) {
         if submittedAt == nil {
             submittedAt = next == .inFlight ? date : date.addingTimeInterval(-Self.restoredAge)
@@ -244,14 +244,17 @@ enum SendResultKind: Equatable, Sendable {
         }
         guard next != outcome, !(next == .inFlight && outcome != .inFlight) else { return }
         outcome = next
-        outcomeAt = date
+        outcomeAt = restoring(date) ? submittedAt : date
     }
 
     func confirm(height: UInt32?, at date: Date = Date()) {
         guard height != confirmedHeight else { return }
         confirmedHeight = height
-        confirmedAt = height == nil ? nil : date
+        confirmedAt = height == nil ? nil : restoring(date) ? submittedAt : date
     }
+
+    /// Whether `date` falls in a restored stage's first moment, when what it sees was already so.
+    private func restoring(_ date: Date) -> Bool { silentUntil > 0 && elapsed(date) < silentUntil }
 
     func reset() {
         submittedAt = nil
