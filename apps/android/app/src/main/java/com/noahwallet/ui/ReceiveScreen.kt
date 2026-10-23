@@ -64,8 +64,10 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     var request by rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
     var format by rememberSaveable { mutableStateOf(ReceiveFormat.lightningAddress) }
     var arrival by rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
-    // History rows already seen when Receive appeared, and this screen's own Ark addresses and invoices.
+    // History rows already seen when Receive appeared, the receipts already complete (announced ones join them),
+    // and this screen's own Ark addresses and invoices.
     var known by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    var settled by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var ownArk by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var ownHashes by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -130,15 +132,15 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     val rows = app.history.transactions
     LaunchedEffect(rows, request, app.history.isLoading) {
         if (app.history.isLoading) return@LaunchedEffect
-        val seen = known ?: run { known = rows.map { it.id }; return@LaunchedEffect }
+        val seen = known ?: run { known = rows.map { it.id }; settled = ReceiveArrivals.settled(rows); return@LaunchedEffect }
         val baseline = seen.toSet()
         ReceiveArrivals.onchain(rows, baseline, request?.onchainAddress) { address, hex -> runCatching { SendTransaction.amount(address, hex) }.getOrNull() }?.let { (row, sats) ->
             known = seen + row.id
             if (arrival == null || arrival?.rail == ReceiveArrival.Rail.onchain) arrival = ReceiveArrival(ReceiveArrival.Rail.onchain, sats, SystemClock.elapsedRealtime(), row.txid)
             return@LaunchedEffect
         }
-        ReceiveArrivals.viaAddress(rows, baseline, ownArk.toSet(), ownHashes.toSet())?.let { row ->
-            known = seen + row.id
+        ReceiveArrivals.viaAddress(rows, settled.toSet(), ownArk.toSet(), ownHashes.toSet())?.let { row ->
+            settled = settled + row.id
             if (arrival == null) arrival = ReceiveArrival(if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark,
                 row.amount, SystemClock.elapsedRealtime())
             app.refresh()

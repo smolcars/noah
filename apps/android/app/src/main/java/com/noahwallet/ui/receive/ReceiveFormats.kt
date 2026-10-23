@@ -61,14 +61,18 @@ internal object ReceiveArrivals {
         return paying ?: fresh.firstOrNull()?.let { it to (it.balanceChangeSat ?: it.amount) }
     }
 
+    /** The receipts already complete when Receive appeared: a pending one isn't, so its later success is announced. */
+    fun settled(rows: List<HistoryTransaction>): List<String> = rows.filter { it.movementStatus == "successful" }.map { it.id }
+
     /**
      * Ark and Lightning payments that arrive through your Lightning address rather than this screen's own
-     * requests: bark records them as new successful receives. Receives to this screen's own Ark addresses
-     * ([ownArk]) or invoices ([ownHashes]) come through today's completion instead, so they're never announced twice.
+     * requests: bark records them as successful receives that weren't [settled] already, including one that was
+     * still pending when Receive appeared. Receives to this screen's own Ark addresses ([ownArk]) or invoices
+     * ([ownHashes]) come through today's completion instead, so they're never announced twice.
      */
-    fun viaAddress(rows: List<HistoryTransaction>, known: Set<String>, ownArk: Set<String>, ownHashes: Set<String>): HistoryTransaction? =
+    fun viaAddress(rows: List<HistoryTransaction>, settled: Set<String>, ownArk: Set<String>, ownHashes: Set<String>): HistoryTransaction? =
         rows.firstOrNull { row ->
-            row.id !in known && row.direction == "incoming" && row.movementStatus == "successful" && row.amount > 0 &&
+            row.id !in settled && row.direction == "incoming" && row.movementStatus == "successful" && row.amount > 0 &&
                 row.movementKind in setOf("arkoor-receive", "lightning-receive") &&
                 row.receivedOn.orEmpty().none { it.destination in ownArk } && paymentHash(row.metadataJson) !in ownHashes
         }

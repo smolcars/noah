@@ -79,6 +79,15 @@ class ReceiveFormatsTest {
         assertNull(ReceiveArrivals.viaAddress(listOf(receive("c", "lightning-receive", metadata = """{"payment_hash":"hash"}""")), emptySet(), emptySet(), setOf("hash")))
         assertNull(ReceiveArrivals.viaAddress(listOf(receive("d", "lightning-receive", status = "pending")), emptySet(), emptySet(), emptySet()))
         assertNotNull(ReceiveArrivals.viaAddress(listOf(receive("e", "arkoor-receive", "tark1qstatic")), emptySet(), setOf("tark1qpayme"), emptySet()))
+        // A payment still pending when Receive appeared is announced once it succeeds; one already complete never is.
+        val pendingAtOpen = receive("f", "lightning-receive", status = "pending")
+        val completeAtOpen = receive("g", "lightning-receive")
+        val settled = ReceiveArrivals.settled(listOf(pendingAtOpen, completeAtOpen)).toSet()
+        assertEquals(setOf("g"), settled)
+        assertNull(ReceiveArrivals.viaAddress(listOf(pendingAtOpen, completeAtOpen), settled, emptySet(), emptySet()))
+        val succeeded = receive("f", "lightning-receive")
+        assertEquals(succeeded, ReceiveArrivals.viaAddress(listOf(succeeded, completeAtOpen), settled, emptySet(), emptySet()))
+        assertNull(ReceiveArrivals.viaAddress(listOf(succeeded, completeAtOpen), settled + "f", emptySet(), emptySet()))
     }
 
     @Test fun arrivalsFlipThenReturn() {
