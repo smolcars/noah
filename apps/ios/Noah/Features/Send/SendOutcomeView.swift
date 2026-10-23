@@ -104,7 +104,8 @@ struct SendOutcomeView: View {
             }
         }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
-        .background { if wide == nil { Color.clear.onboardingWindow($window) } }
+        // Measured even inside Send, which decides wide: short windows size the stage and header.
+        .background { Color.clear.onboardingWindow($window) }
         .onboardingHaptics(haptics)
         .onChange(of: outcome, initial: true) { _, next in motion.observe(next) }
         .onChange(of: confirmedHeight, initial: true) { _, height in motion.confirm(height: height) }
@@ -154,11 +155,12 @@ struct SendOutcomeView: View {
 
     private var leading: some View {
         VStack(spacing: 0) {
-            Color.clear.frame(height: isWide ? 22 : NoahTokens.Size.hitTarget + 4)
+            // Short windows (the Duo closed) give the result the room.
+            Color.clear.frame(height: isWide ? 22 : isShort ? 8 : NoahTokens.Size.hitTarget + 4)
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: title)
                     .noahText(SendText.big).foregroundStyle(NoahTokens.Colors.foreground)
-                    .lineLimit(2).minimumScaleFactor(0.5)
+                    .lineLimit(isShort ? 1 : 2).minimumScaleFactor(0.5)
                     .contentTransition(.opacity)
                     .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: title)
                     .accessibilityIdentifier(kind == .sent ? "send-success" : "send-outcome-title")
@@ -182,6 +184,8 @@ struct SendOutcomeView: View {
             }
         }
     }
+
+    private var isShort: Bool { !isWide && window.size.height > 0 && window.size.height < 760 }
 
     private var stageHeight: CGFloat {
         if isWide { return 330 }
