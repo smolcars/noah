@@ -348,7 +348,8 @@ private fun ActivityList(ui: ActivityUi, actions: ActivityActions, state: Activi
             else -> {
                 var order = 0
                 for ((group, items) in groups) {
-                    stickyHeader(key = "h-" + groupKey(group)) {
+                    // Keyed by its first payment too: records out of order can't repeat a day's key and crash the list.
+                    stickyHeader(key = "h-" + groupKey(group) + "-" + items.first().id) {
                         Text(groupLabel(group, ui), Modifier.fillMaxWidth().background(palette.background)
                             .padding(start = 24.dp, end = 24.dp, top = if (order == 0) 8.dp else 14.dp, bottom = 4.dp).semantics { heading() },
                             style = HomeType.header, color = palette.muted)
