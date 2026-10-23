@@ -1248,6 +1248,7 @@
   <string name="gt_f2faa6b386bacbee">"この退出はもう取り消せません。最終トランザクションがすでにブロードキャストされている可能性があります。状態を更新してください。"</string>
   <string name="gt_5ed0c20bff01c0ca">"この請求書は支払い済みです。今回分の支払いは再送していません。再開する前に受取人を確認してください。"</string>
   <string name="gt_acec76ba83ee20ef">"この請求書は支払い済みです: %1$s"</string>
+  <string name="gt_285f2d035fb443e8">"これはログイン用のリンクで、支払いリクエストではありません"</string>
   <string name="gt_e299e88d58a6c570">"この名前で支払いを受け取れます。"</string>
   <string name="gt_766460156a897a88">"この旧形式の支払いにはウォレットの識別情報がありません。破棄する前に履歴と受取人を確認してください。"</string>
   <string name="gt_bfbb491d06ec6963">"このリンクを開けませんでした。"</string>

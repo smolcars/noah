@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1481,
-  "sourceKeys": 1484,
+  "catalogEntries": 1482,
+  "sourceKeys": 1485,
   "coverage": {
     "ios": {
       "used": [
@@ -2234,6 +2234,7 @@
         "This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs.",
         "This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status.",
         "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.",
+        "This is a login link, not a payment request",
         "This is how people pay you.",
         "This legacy payment has no wallet identity. Check your history and recipient before discarding it.",
         "This link could not be opened.",

@@ -1248,6 +1248,7 @@
   <string name="gt_f2faa6b386bacbee">"Esta salida ya no se puede cancelar. Es posible que su transacción final ya se haya difundido. Actualiza su estado."</string>
   <string name="gt_5ed0c20bff01c0ca">"Esta solicitud de pago ya está pagada. Este pago programado no se volvió a enviar. Comprueba el destinatario antes de reanudar."</string>
   <string name="gt_acec76ba83ee20ef">"Esta factura ya se pagó: %1$s"</string>
+  <string name="gt_285f2d035fb443e8">"Este es un enlace de inicio de sesión, no una solicitud de pago"</string>
   <string name="gt_e299e88d58a6c570">"Así es como te pagarán."</string>
   <string name="gt_766460156a897a88">"Este pago heredado no tiene una identidad de billetera asociada. Comprueba tu historial y el destinatario antes de descartarlo."</string>
   <string name="gt_bfbb491d06ec6963">"No se pudo abrir este enlace."</string>

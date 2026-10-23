@@ -235,6 +235,7 @@
   "gt_27a251cdef4e1650": "Choose the fiat currency used for balances and payment amounts.",
   "gt_280918c59094fc48": "Finding your bitcoin",
   "gt_283b7f6696239f99": "Edit recurring payment",
+  "gt_285f2d035fb443e8": "This is a login link, not a payment request",
   "gt_286a3af7348e8312": "Sending...",
   "gt_286c0deecb39be99": "Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.",
   "gt_2872df3893a9447d": "MXN",

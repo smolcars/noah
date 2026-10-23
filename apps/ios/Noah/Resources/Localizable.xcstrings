@@ -44845,6 +44845,42 @@
         }
       }
     },
+    "This is a login link, not a payment request": {
+      "comment": "GT gt_285f2d035fb443e8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is a login link, not a payment request"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este es un enlace de inicio de sesión, no una solicitud de pago"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これはログイン用のリンクで、支払いリクエストではありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 링크이며 결제 요청이 아닙니다"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det här är en inloggningslänk, inte en betalningsbegäran"
+          }
+        }
+      }
+    },
     "This is how people pay you.": {
       "comment": "GT gt_e299e88d58a6c570; arguments: none",
       "extractionState": "manual",

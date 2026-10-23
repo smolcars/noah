@@ -1,0 +1,2398 @@
+{
+  "description": "Native-only SendDestination vectors for inputs bark 0.8 (959a489f) accepts and RN refused: ffi-phase-b.md rows 5, 16, 18 and 19, with rows 3, 9 and 17 kept. Same shape as send-utils, plus `url` for lnurl: the HTTPS endpoint resolution requests first (null: resolution refuses before any request). `error` is the English message. Hand-specified; shared by Android and iOS.",
+  "cases": [
+    {
+      "name": "row 16 address: long TLD (mainnet)",
+      "input": {
+        "destination": "alice@example.photography",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.photography/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: long TLD (signet)",
+      "input": {
+        "destination": "alice@example.photography",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.photography/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: long TLD (regtest)",
+      "input": {
+        "destination": "alice@example.photography",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.photography/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: + tag (mainnet)",
+      "input": {
+        "destination": "alice+tip@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice+tip"
+      }
+    },
+    {
+      "name": "row 16 address: + tag (signet)",
+      "input": {
+        "destination": "alice+tip@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice+tip"
+      }
+    },
+    {
+      "name": "row 16 address: + tag (regtest)",
+      "input": {
+        "destination": "alice+tip@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice+tip"
+      }
+    },
+    {
+      "name": "row 16 address: upper case (mainnet)",
+      "input": {
+        "destination": "ALICE+TIP@EXAMPLE.PHOTOGRAPHY",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.photography/.well-known/lnurlp/alice+tip"
+      }
+    },
+    {
+      "name": "row 16 address: upper case (signet)",
+      "input": {
+        "destination": "ALICE+TIP@EXAMPLE.PHOTOGRAPHY",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.photography/.well-known/lnurlp/alice+tip"
+      }
+    },
+    {
+      "name": "row 16 address: upper case (regtest)",
+      "input": {
+        "destination": "ALICE+TIP@EXAMPLE.PHOTOGRAPHY",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.photography/.well-known/lnurlp/alice+tip"
+      }
+    },
+    {
+      "name": "row 16 address: single-label domain (mainnet)",
+      "input": {
+        "destination": "alice@localhost",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://localhost/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: single-label domain (signet)",
+      "input": {
+        "destination": "alice@localhost",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://localhost/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: single-label domain (regtest)",
+      "input": {
+        "destination": "alice@localhost",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://localhost/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: internationalised domain (mainnet)",
+      "input": {
+        "destination": "alice@exämple.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://xn--exmple-cua.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: internationalised domain (signet)",
+      "input": {
+        "destination": "alice@exämple.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://xn--exmple-cua.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: internationalised domain (regtest)",
+      "input": {
+        "destination": "alice@exämple.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://xn--exmple-cua.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: punycode domain (mainnet)",
+      "input": {
+        "destination": "alice@xn--exmple-cua.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://xn--exmple-cua.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: punycode domain (signet)",
+      "input": {
+        "destination": "alice@xn--exmple-cua.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://xn--exmple-cua.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: punycode domain (regtest)",
+      "input": {
+        "destination": "alice@xn--exmple-cua.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://xn--exmple-cua.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: leading bitcoin sign stripped (mainnet)",
+      "input": {
+        "destination": "₿alice@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: leading bitcoin sign stripped (signet)",
+      "input": {
+        "destination": "₿alice@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: leading bitcoin sign stripped (regtest)",
+      "input": {
+        "destination": "₿alice@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: lightning: and bitcoin sign (mainnet)",
+      "input": {
+        "destination": "lightning:₿Alice@Example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: lightning: and bitcoin sign (signet)",
+      "input": {
+        "destination": "lightning:₿Alice@Example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: lightning: and bitcoin sign (regtest)",
+      "input": {
+        "destination": "lightning:₿Alice@Example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 16 address: 64-byte name (mainnet)",
+      "input": {
+        "destination": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "row 16 address: 64-byte name (signet)",
+      "input": {
+        "destination": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "row 16 address: 64-byte name (regtest)",
+      "input": {
+        "destination": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "row 16 address: quoted name is one path segment (mainnet)",
+      "input": {
+        "destination": "\"alice smith\"@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/%22alice%20smith%22"
+      }
+    },
+    {
+      "name": "row 16 address: quoted name is one path segment (signet)",
+      "input": {
+        "destination": "\"alice smith\"@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/%22alice%20smith%22"
+      }
+    },
+    {
+      "name": "row 16 address: quoted name is one path segment (regtest)",
+      "input": {
+        "destination": "\"alice smith\"@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/%22alice%20smith%22"
+      }
+    },
+    {
+      "name": "row 16 address: / ? # in name stay in its segment (mainnet)",
+      "input": {
+        "destination": "a/b?c#d@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/a%2Fb%3Fc%23d"
+      }
+    },
+    {
+      "name": "row 16 address: / ? # in name stay in its segment (signet)",
+      "input": {
+        "destination": "a/b?c#d@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/a%2Fb%3Fc%23d"
+      }
+    },
+    {
+      "name": "row 16 address: / ? # in name stay in its segment (regtest)",
+      "input": {
+        "destination": "a/b?c#d@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/a%2Fb%3Fc%23d"
+      }
+    },
+    {
+      "name": "row 16 address: empty atoms around a slash (mainnet)",
+      "input": {
+        "destination": "a/../b@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty atoms around a slash (signet)",
+      "input": {
+        "destination": "a/../b@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty atoms around a slash (regtest)",
+      "input": {
+        "destination": "a/../b@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: domain literal, unresolvable (mainnet)",
+      "input": {
+        "destination": "alice@[127.0.0.1]",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: domain literal, unresolvable (signet)",
+      "input": {
+        "destination": "alice@[127.0.0.1]",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: domain literal, unresolvable (regtest)",
+      "input": {
+        "destination": "alice@[127.0.0.1]",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: path in domain, unresolvable (mainnet)",
+      "input": {
+        "destination": "alice@example.com/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: path in domain, unresolvable (signet)",
+      "input": {
+        "destination": "alice@example.com/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: path in domain, unresolvable (regtest)",
+      "input": {
+        "destination": "alice@example.com/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": null
+      }
+    },
+    {
+      "name": "row 16 address: empty domain (mainnet)",
+      "input": {
+        "destination": "alice@",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty domain (signet)",
+      "input": {
+        "destination": "alice@",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty domain (regtest)",
+      "input": {
+        "destination": "alice@",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty name (mainnet)",
+      "input": {
+        "destination": "@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty name (signet)",
+      "input": {
+        "destination": "@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty name (regtest)",
+      "input": {
+        "destination": "@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty label (mainnet)",
+      "input": {
+        "destination": "alice@example..com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty label (signet)",
+      "input": {
+        "destination": "alice@example..com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty label (regtest)",
+      "input": {
+        "destination": "alice@example..com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: trailing dot (mainnet)",
+      "input": {
+        "destination": "alice@example.com.",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: trailing dot (signet)",
+      "input": {
+        "destination": "alice@example.com.",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: trailing dot (regtest)",
+      "input": {
+        "destination": "alice@example.com.",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: label starts with hyphen (mainnet)",
+      "input": {
+        "destination": "alice@-example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: label starts with hyphen (signet)",
+      "input": {
+        "destination": "alice@-example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: label starts with hyphen (regtest)",
+      "input": {
+        "destination": "alice@-example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: label ends with hyphen (mainnet)",
+      "input": {
+        "destination": "alice@example-.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: label ends with hyphen (signet)",
+      "input": {
+        "destination": "alice@example-.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: label ends with hyphen (regtest)",
+      "input": {
+        "destination": "alice@example-.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: 64-byte label (mainnet)",
+      "input": {
+        "destination": "alice@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: 64-byte label (signet)",
+      "input": {
+        "destination": "alice@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: 64-byte label (regtest)",
+      "input": {
+        "destination": "alice@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: 65-byte name (mainnet)",
+      "input": {
+        "destination": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: 65-byte name (signet)",
+      "input": {
+        "destination": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: 65-byte name (regtest)",
+      "input": {
+        "destination": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: space in name (mainnet)",
+      "input": {
+        "destination": "al ice@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: space in name (signet)",
+      "input": {
+        "destination": "al ice@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: space in name (regtest)",
+      "input": {
+        "destination": "al ice@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty name atom (mainnet)",
+      "input": {
+        "destination": "alice..bob@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty name atom (signet)",
+      "input": {
+        "destination": "alice..bob@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: empty name atom (regtest)",
+      "input": {
+        "destination": "alice..bob@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: parenthesis in name (mainnet)",
+      "input": {
+        "destination": "alice(x)@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: parenthesis in name (signet)",
+      "input": {
+        "destination": "alice(x)@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: parenthesis in name (regtest)",
+      "input": {
+        "destination": "alice(x)@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: unbalanced quote (mainnet)",
+      "input": {
+        "destination": "\"alice@example.com",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: unbalanced quote (signet)",
+      "input": {
+        "destination": "\"alice@example.com",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 16 address: unbalanced quote (regtest)",
+      "input": {
+        "destination": "\"alice@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/.well-known/lnurlp/alice",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 18 lnurlp (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/.well-known/lnurlp/alice",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 18 lnurlp (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/.well-known/lnurlp/alice",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/.well-known/lnurlp/alice"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: case kept outside the host (mainnet)",
+      "input": {
+        "destination": "LNURLP://Example.COM/Pay/AbC?Q=Z",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/Pay/AbC?Q=Z"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: case kept outside the host (signet)",
+      "input": {
+        "destination": "LNURLP://Example.COM/Pay/AbC?Q=Z",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/Pay/AbC?Q=Z"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: case kept outside the host (regtest)",
+      "input": {
+        "destination": "LNURLP://Example.COM/Pay/AbC?Q=Z",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/Pay/AbC?Q=Z"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: port and query (mainnet)",
+      "input": {
+        "destination": "lnurlp://1.2.3.4:8080/p?amount=1",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://1.2.3.4:8080/p?amount=1"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: port and query (signet)",
+      "input": {
+        "destination": "lnurlp://1.2.3.4:8080/p?amount=1",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://1.2.3.4:8080/p?amount=1"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: port and query (regtest)",
+      "input": {
+        "destination": "lnurlp://1.2.3.4:8080/p?amount=1",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://1.2.3.4:8080/p?amount=1"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: default port dropped (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com:443/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: default port dropped (signet)",
+      "input": {
+        "destination": "lnurlp://example.com:443/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: default port dropped (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com:443/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: backslash is a path separator (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com\\x.onion/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/x.onion/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: backslash is a path separator (signet)",
+      "input": {
+        "destination": "lnurlp://example.com\\x.onion/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/x.onion/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: backslash is a path separator (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com\\x.onion/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/x.onion/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: surrounding whitespace (mainnet)",
+      "input": {
+        "destination": "  lnurlp://example.com/pay\n",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: surrounding whitespace (signet)",
+      "input": {
+        "destination": "  lnurlp://example.com/pay\n",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: surrounding whitespace (regtest)",
+      "input": {
+        "destination": "  lnurlp://example.com/pay\n",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: longest bech32 fits (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: longest bech32 fits (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: longest bech32 fits (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "row 18 lnurlp: onion needs http (mainnet)",
+      "input": {
+        "destination": "lnurlp://abc.onion/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: onion needs http (signet)",
+      "input": {
+        "destination": "lnurlp://abc.onion/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: onion needs http (regtest)",
+      "input": {
+        "destination": "lnurlp://abc.onion/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: onion with port (mainnet)",
+      "input": {
+        "destination": "lnurlp://ABC.ONION:443/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: onion with port (signet)",
+      "input": {
+        "destination": "lnurlp://ABC.ONION:443/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: onion with port (regtest)",
+      "input": {
+        "destination": "lnurlp://ABC.ONION:443/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: fully qualified onion (mainnet)",
+      "input": {
+        "destination": "lnurlp://abc.onion./pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: fully qualified onion (signet)",
+      "input": {
+        "destination": "lnurlp://abc.onion./pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: fully qualified onion (regtest)",
+      "input": {
+        "destination": "lnurlp://abc.onion./pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: userinfo (mainnet)",
+      "input": {
+        "destination": "lnurlp://user@example.com/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: userinfo (signet)",
+      "input": {
+        "destination": "lnurlp://user@example.com/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: userinfo (regtest)",
+      "input": {
+        "destination": "lnurlp://user@example.com/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: userinfo disguising an onion (mainnet)",
+      "input": {
+        "destination": "lnurlp://x.onion:pw@example.com/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: userinfo disguising an onion (signet)",
+      "input": {
+        "destination": "lnurlp://x.onion:pw@example.com/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: userinfo disguising an onion (regtest)",
+      "input": {
+        "destination": "lnurlp://x.onion:pw@example.com/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: extra slash (mainnet)",
+      "input": {
+        "destination": "lnurlp:///example.com/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: extra slash (signet)",
+      "input": {
+        "destination": "lnurlp:///example.com/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: extra slash (regtest)",
+      "input": {
+        "destination": "lnurlp:///example.com/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: leading backslash (mainnet)",
+      "input": {
+        "destination": "lnurlp://\\example.com/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: leading backslash (signet)",
+      "input": {
+        "destination": "lnurlp://\\example.com/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: leading backslash (regtest)",
+      "input": {
+        "destination": "lnurlp://\\example.com/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: malformed host (mainnet)",
+      "input": {
+        "destination": "lnurlp://foo bar/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: malformed host (signet)",
+      "input": {
+        "destination": "lnurlp://foo bar/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: malformed host (regtest)",
+      "input": {
+        "destination": "lnurlp://foo bar/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: malformed IPv6 (mainnet)",
+      "input": {
+        "destination": "lnurlp://[/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: malformed IPv6 (signet)",
+      "input": {
+        "destination": "lnurlp://[/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: malformed IPv6 (regtest)",
+      "input": {
+        "destination": "lnurlp://[/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: too long for bech32 (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: too long for bech32 (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: too long for bech32 (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: inside lightning: (mainnet)",
+      "input": {
+        "destination": "lightning:lnurlp://example.com/pay",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: inside lightning: (signet)",
+      "input": {
+        "destination": "lightning:lnurlp://example.com/pay",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlp: inside lightning: (regtest)",
+      "input": {
+        "destination": "lightning:lnurlp://example.com/pay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlw is not a payment (mainnet)",
+      "input": {
+        "destination": "lnurlw://example.com/withdraw",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlw is not a payment (signet)",
+      "input": {
+        "destination": "lnurlw://example.com/withdraw",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 18 lnurlw is not a payment (regtest)",
+      "input": {
+        "destination": "lnurlw://example.com/withdraw",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case (mainnet)",
+      "input": {
+        "destination": "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF0D3HKW6TW8A6XZEEAD3HKW6TWYE4NZ0FSXQNXZCM5D9HKU0TVDANKJMSV8VE5H",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case (signet)",
+      "input": {
+        "destination": "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF0D3HKW6TW8A6XZEEAD3HKW6TWYE4NZ0FSXQNXZCM5D9HKU0TVDANKJMSV8VE5H",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: upper case (regtest)",
+      "input": {
+        "destination": "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF0D3HKW6TW8A6XZEEAD3HKW6TWYE4NZ0FSXQNXZCM5D9HKU0TVDANKJMSV8VE5H",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: lightning: (mainnet)",
+      "input": {
+        "destination": "lightning:lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: lightning: (signet)",
+      "input": {
+        "destination": "lightning:lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: lightning: (regtest)",
+      "input": {
+        "destination": "lightning:lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: lnurlp (mainnet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?k1=00&tag=login",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: lnurlp (signet)",
+      "input": {
+        "destination": "lnurlp://example.com/login?k1=00&tag=login",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 LNURL-auth: lnurlp (regtest)",
+      "input": {
+        "destination": "lnurlp://example.com/login?k1=00&tag=login",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "row 19 tag=login only as a substring (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0mcw3skw0tvdankjmsxwy4hl",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?xtag=login"
+      }
+    },
+    {
+      "name": "row 19 tag=login only as a substring (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0mcw3skw0tvdankjmsxwy4hl",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?xtag=login"
+      }
+    },
+    {
+      "name": "row 19 tag=login only as a substring (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0mcw3skw0tvdankjmsxwy4hl",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?xtag=login"
+      }
+    },
+    {
+      "name": "row 19 pay LNURL (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m5v9nn6urp09fx2ut4v4ehghd5ul0",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest"
+      }
+    },
+    {
+      "name": "row 19 pay LNURL (signet)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m5v9nn6urp09fx2ut4v4ehghd5ul0",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest"
+      }
+    },
+    {
+      "name": "row 19 pay LNURL (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0wpshj0m5v9nn6urp09fx2ut4v4ehghd5ul0",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "lnurl",
+        "isAmountEditable": true,
+        "url": "https://example.com/pay?tag=payRequest"
+      }
+    },
+    {
+      "name": "row 17 http LNURL (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhk27rpd4cxcefwvdhk6tmsv9ushv9n5v",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http LNURL (signet)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhk27rpd4cxcefwvdhk6tmsv9ushv9n5v",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http LNURL (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhk27rpd4cxcefwvdhk6tmsv9ushv9n5v",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http onion LNURL (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhkzcnr9ehku6t0dchhqcten0vu8x",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http onion LNURL (signet)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhkzcnr9ehku6t0dchhqcten0vu8x",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http onion LNURL (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhkzcnr9ehku6t0dchhqcten0vu8x",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http LNURL-auth (mainnet)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhk27rpd4cxcefwvdhk6tmvdankjm3lw3skw0tvdankjm3xdvcn6vpsyy37ve",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http LNURL-auth (signet)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhk27rpd4cxcefwvdhk6tmvdankjm3lw3skw0tvdankjm3xdvcn6vpsyy37ve",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 17 http LNURL-auth (regtest)",
+      "input": {
+        "destination": "lnurl1dp68gup69uhk27rpd4cxcefwvdhk6tmvdankjm3lw3skw0tvdankjm3xdvcn6vpsyy37ve",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true
+      }
+    },
+    {
+      "name": "row 5 req-ark (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-ark=ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "onchainAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          "arkAddress": "ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy"
+        }
+      }
+    },
+    {
+      "name": "row 5 req-amount (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-amount=0.001",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": false,
+        "bip321": {
+          "onchainAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+        },
+        "amount": 100000
+      }
+    },
+    {
+      "name": "row 5 upper-case req- keys (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?REQ-AMOUNT=0.001&REQ-ARK=ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": false,
+        "bip321": {
+          "onchainAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          "arkAddress": "ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy"
+        },
+        "amount": 100000
+      }
+    },
+    {
+      "name": "row 5 req-ark without an address (mainnet)",
+      "input": {
+        "destination": "bitcoin:?req-ark=ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "arkAddress": "ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy"
+        }
+      }
+    },
+    {
+      "name": "row 5 req-ark and req-amount (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?req-ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd&req-amount=0.0001",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": false,
+        "bip321": {
+          "onchainAddress": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+          "arkAddress": "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
+        },
+        "amount": 10000
+      }
+    },
+    {
+      "name": "row 5 req-ark and req-amount (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?req-ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd&req-amount=0.0001",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": false,
+        "bip321": {
+          "onchainAddress": "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22",
+          "arkAddress": "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
+        },
+        "amount": 10000
+      }
+    },
+    {
+      "name": "row 5 amount and req-amount (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.001&req-amount=0.001",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Multiple amount parameters not allowed"
+      }
+    },
+    {
+      "name": "row 3 req-amount above 21M BTC (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-amount=21000001",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 req-amount negative (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-amount=-1",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 req-amount not a number (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-amount=abc",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 other req- stays refused (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-lightning=x",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Unknown required parameter: req-lightning"
+      }
+    },
+    {
+      "name": "row 5 req-lno stays refused (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?REQ-LNO=x",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Unknown required parameter: REQ-LNO"
+      }
+    },
+    {
+      "name": "row 5 amount and req-amount (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.001&req-amount=0.001",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Multiple amount parameters not allowed"
+      }
+    },
+    {
+      "name": "row 3 req-amount above 21M BTC (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?req-amount=21000001",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 req-amount negative (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?req-amount=-1",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 req-amount not a number (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?req-amount=abc",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 other req- stays refused (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?req-lightning=x",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Unknown required parameter: req-lightning"
+      }
+    },
+    {
+      "name": "row 5 req-lno stays refused (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?REQ-LNO=x",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Unknown required parameter: REQ-LNO"
+      }
+    },
+    {
+      "name": "row 5 amount and req-amount (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.001&req-amount=0.001",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Multiple amount parameters not allowed"
+      }
+    },
+    {
+      "name": "row 3 req-amount above 21M BTC (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?req-amount=21000001",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 req-amount negative (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?req-amount=-1",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 req-amount not a number (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?req-amount=abc",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Invalid amount format"
+      }
+    },
+    {
+      "name": "row 5 other req- stays refused (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?req-lightning=x",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Unknown required parameter: req-lightning"
+      }
+    },
+    {
+      "name": "row 5 req-lno stays refused (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?REQ-LNO=x",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Unknown required parameter: REQ-LNO"
+      }
+    },
+    {
+      "name": "row 9 req-ark on another network (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?req-ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Network mismatch: expected mainnet, got testnet"
+      }
+    },
+    {
+      "name": "row 9 req-ark on another network (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?req-ark=ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Network mismatch: expected regtest, got mainnet"
+      }
+    },
+    {
+      "name": "row 9 req-ark on another network (signet)",
+      "input": {
+        "destination": "bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?req-ark=ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Network mismatch: expected signet, got mainnet"
+      }
+    }
+  ]
+}

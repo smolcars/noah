@@ -18,7 +18,9 @@ class SendRecipientService(private val network: String, private val warn: (Strin
     suspend fun resolve(destination: String): SendRecipientRoute {
         val value = SendDestination.cleaned(destination).lowercase()
         val endpoint = if (SendDestination.isLightningAddress(value)) {
-            val parts = value.split('@'); "https://${parts[1]}/.well-known/lnurlp/${parts[0]}".toHttpUrlOrNull()
+            // The name is one path segment, whatever it contains; a domain that isn't a host fails here.
+            val at = value.lastIndexOf('@')
+            runCatching { HttpUrl.Builder().scheme("https").host(value.substring(at + 1)).addPathSegments(".well-known/lnurlp").addPathSegment(value.substring(0, at)).build() }.getOrNull()
         } else PaymentEncoding.bech32(value)?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8)?.toHttpUrlOrNull() }
         requireSend(endpoint?.isHttps == true)
         val request = endpoint!!.newBuilder().apply { runCatching { arkServerKey() }.getOrNull()?.let { addQueryParameter("ark", it) } }.build()

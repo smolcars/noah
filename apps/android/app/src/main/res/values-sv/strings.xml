@@ -1248,6 +1248,7 @@
   <string name="gt_f2faa6b386bacbee">"Det här nöduttaget kan inte längre avbrytas. Dess slutliga transaktion kan redan ha sänts. Uppdatera statusen."</string>
   <string name="gt_5ed0c20bff01c0ca">"Den här betalningsbegäran är redan betald. Betalningen för det här tillfället skickades inte igen. Kontrollera mottagaren innan du återupptar."</string>
   <string name="gt_acec76ba83ee20ef">"Den här fakturan är redan betald: %1$s"</string>
+  <string name="gt_285f2d035fb443e8">"Det här är en inloggningslänk, inte en betalningsbegäran"</string>
   <string name="gt_e299e88d58a6c570">"Så här betalar folk dig."</string>
   <string name="gt_766460156a897a88">"Den här äldre betalningen saknar plånboksidentitet. Kontrollera din historik och mottagaren innan du tar bort den."</string>
   <string name="gt_bfbb491d06ec6963">"Den här länken kunde inte öppnas."</string>

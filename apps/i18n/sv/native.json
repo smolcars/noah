@@ -241,6 +241,7 @@
   "gt_27a251cdef4e1650": "Välj fiatvaluta för saldon och betalningsbelopp.",
   "gt_280918c59094fc48": "Letar efter din bitcoin",
   "gt_283b7f6696239f99": "Redigera återkommande betalning",
+  "gt_285f2d035fb443e8": "Det här är en inloggningslänk, inte en betalningsbegäran",
   "gt_286a3af7348e8312": "Skickar...",
   "gt_286c0deecb39be99": "Noah skickar den här betalningen automatiskt från ditt Ark-saldo. Betalningen får bara skickas till den här mottagaren och med det här beloppet. Du kan pausa eller avsluta den när som helst.",
   "gt_2872df3893a9447d": "MXN",

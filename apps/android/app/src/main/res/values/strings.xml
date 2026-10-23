@@ -1248,6 +1248,7 @@
   <string name="gt_f2faa6b386bacbee">"This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."</string>
   <string name="gt_5ed0c20bff01c0ca">"This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming."</string>
   <string name="gt_acec76ba83ee20ef">"This invoice was already paid: %1$s"</string>
+  <string name="gt_285f2d035fb443e8">"This is a login link, not a payment request"</string>
   <string name="gt_e299e88d58a6c570">"This is how people pay you."</string>
   <string name="gt_766460156a897a88">"This legacy payment has no wallet identity. Check your history and recipient before discarding it."</string>
   <string name="gt_bfbb491d06ec6963">"This link could not be opened."</string>

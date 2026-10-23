@@ -16,6 +16,23 @@ object PaymentEncoding {
         if (encoded.length !in 6..8000 || prefix.any { it.code !in 33..126 }) return null
         val words = encoded.map { alphabet.indexOf(it) }
         if (words.any { it < 0 }) return null
+        val check = polymod(prefix, words)
+        if (check != 1 && check != 0x2bc830a3) return null
+        return Bech32(prefix, words.dropLast(6), check != 1)
+    }
+    /** Bech32 (not bech32m), lowercase: how an `lnurl1…` carries its URL. */
+    fun encodeBech32(prefix: String, data: ByteArray): String {
+        val words = ArrayList<Int>(); var accumulator = 0; var bits = 0
+        for (byte in data) {
+            accumulator = (accumulator shl 8) or (byte.toInt() and 255); bits += 8
+            while (bits >= 5) { bits -= 5; words.add((accumulator shr bits) and 31) }
+            accumulator = accumulator and ((1 shl bits) - 1)
+        }
+        if (bits > 0) words.add((accumulator shl (5 - bits)) and 31)
+        val check = polymod(prefix, words + List(6) { 0 }) xor 1
+        return prefix + "1" + (words + List(6) { (check shr (5 * (5 - it))) and 31 }).joinToString("") { alphabet[it].toString() }
+    }
+    private fun polymod(prefix: String, words: List<Int>): Int {
         var check = 1
         val generators = intArrayOf(0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3)
         for (word in prefix.map { it.code shr 5 } + 0 + prefix.map { it.code and 31 } + words) {
@@ -23,8 +40,7 @@ object PaymentEncoding {
             check = ((check and 0x1ffffff) shl 5) xor word
             for (i in 0..4) if ((top shr i) and 1 != 0) check = check xor generators[i]
         }
-        if (check != 1 && check != 0x2bc830a3) return null
-        return Bech32(prefix, words.dropLast(6), check != 1)
+        return check
     }
     fun bytes(words: List<Int>): ByteArray? {
         var accumulator = 0; var bits = 0; val output = ArrayList<Byte>()

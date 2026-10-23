@@ -1,5 +1,6 @@
 package com.noahwallet.send
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.math.BigDecimal
 import java.net.URI
 import java.net.URLDecoder
@@ -8,8 +9,53 @@ import java.net.URLDecoder
 data class SendDestination(val destinationType: String? = null, val amount: BigDecimal? = null,
     val isAmountEditable: Boolean = true, val error: SendDestinationError? = null, val bip321: Map<String, String>? = null) {
     companion object {
-        fun cleaned(value: String) = value.trim().let { if (it.startsWith("lightning:", true)) it.drop(10) else it }
-        fun isLightningAddress(value: String) = Regex("^[a-z0-9._-]+@[a-z0-9.-]+\\.[a-z]{2,4}$").matches(value.lowercase())
+        fun cleaned(value: String): String {
+            val trimmed = value.trim()
+            lud17(trimmed)?.let { return it }
+            val payload = if (trimmed.startsWith("lightning:", true)) trimmed.drop(10) else trimmed
+            val address = payload.trimStart('₿')
+            return if (address != payload && isLightningAddress(address)) address else payload
+        }
+        /** LUD-17 `lnurlp://` mapped to HTTPS as bark maps it, then carried as the `lnurl1…` it stands for, so its URL keeps
+         *  its case through Send's lowercased keys. A `.onion` host would need cleartext, so it stays unmapped (refused). */
+        private fun lud17(value: String): String? {
+            if (!value.startsWith("lnurlp://", true)) return null
+            val rest = value.drop(9)
+            val url = if (rest.startsWith('/') || rest.startsWith('\\')) null else "https://$rest".toHttpUrlOrNull()
+            if (url == null || url.username.isNotEmpty() || url.password.isNotEmpty() || url.host.trimEnd('.').endsWith(".onion")) return null
+            return PaymentEncoding.encodeBech32("lnurl", url.toString().toByteArray()).takeIf { it.length <= 1023 }
+        }
+        /** bark's rule: lnurl-rs 0.10's `LightningAddress` is email_address 0.2.5 with default options, so quoted local parts
+         *  and domain literals count too. Lengths are UTF-8 bytes, as in Rust. Resolution stays HTTPS-only. */
+        fun isLightningAddress(value: String): Boolean {
+            val at = value.lastIndexOf('@')
+            if (at < 0) return false
+            val local = value.substring(0, at); val domain = value.substring(at + 1)
+            fun size(text: String) = text.toByteArray(Charsets.UTF_8).size
+            // Rust's char::is_alphanumeric: Alphabetic, or a number of any kind.
+            fun alphanumeric(c: Int) = Character.isAlphabetic(c) || Character.isDigit(c) || Character.getType(c) == Character.OTHER_NUMBER.toInt()
+            fun atom(text: String) = text.isNotEmpty() && text.codePoints().allMatch { it >= 0x80 || alphanumeric(it) || it.toChar() in "!#$%&'*+-/=?^_`{|}~" }
+            fun quoted(text: String): Boolean {
+                val chars = text.codePoints().toArray(); var i = 0
+                while (i < chars.size) {
+                    val c = chars[i++]
+                    if (c == '\\'.code) { if (i == chars.size || chars[i++] !in 0x21..0x7e) return false }
+                    else if (!(c == 0x20 || c == 0x09 || c == 0x21 || c in 0x23..0x5b || c in 0x5d..0x7e || c >= 0x80)) return false
+                }
+                return true
+            }
+            val localValid = when {
+                local.isEmpty() || size(local) > 64 -> false
+                local.startsWith('"') && local.endsWith('"') -> local.length > 2 && quoted(local.substring(1, local.length - 1))
+                else -> local.split('.').all(::atom)
+            }
+            return localValid && when {
+                domain.isEmpty() || size(domain) > 254 -> false
+                domain.startsWith('[') && domain.endsWith(']') -> domain.substring(1, domain.length - 1).all { it.code in 0x21..0x5a || it.code in 0x5e..0x7e }
+                else -> domain.split('.').all { label -> label.isNotEmpty() && alphanumeric(label.codePointAt(0)) &&
+                    alphanumeric(label.codePointBefore(label.length)) && size(label) <= 63 && atom(label) }
+            }
+        }
         fun offer(value: String): Boolean {
             val chunks = value.split('+'); val normalized = chunks.mapIndexed { index, s -> if (index == 0) s else s.trimStart() }.joinToString("")
             return chunks.all { it.isNotBlank() } && (normalized == normalized.lowercase() || normalized == normalized.uppercase()) && Regex("^lno1[02-9ac-hj-np-z]+$", RegexOption.IGNORE_CASE).matches(normalized)
@@ -35,7 +81,9 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
                 }
                 if (decoded.prefix == "lnurl" && !decoded.isM) {
                     val url = PaymentEncoding.bytes(decoded.words)?.toString(Charsets.UTF_8)?.let { runCatching { URI(it) }.getOrNull() }
-                    if (url?.scheme == "https" && url.host != null) return SendDestination("lnurl")
+                    // LNURL-auth logs in rather than pays: refuse it here instead of at the fetch.
+                    if (url?.scheme == "https" && url.host != null) return if (url.rawQuery?.split('&')?.contains("tag=login") == true)
+                        SendDestination(error = SendDestinationError.LnurlAuth) else SendDestination("lnurl")
                 }
             }
             return SendDestination()
@@ -75,7 +123,8 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
                 // URI query decoding preserves literal '+', unlike form decoding.
                 val key = runCatching { URLDecoder.decode(fields[0].replace("+", "%2B"), "UTF-8") }.getOrNull() ?: return SendDestination(error = SendDestinationError.InvalidURI)
                 val decoded = runCatching { URLDecoder.decode(fields.getOrElse(1) { "" }.replace("+", "%2B"), "UTF-8") }.getOrNull() ?: return SendDestination(error = SendDestinationError.InvalidURI)
-                val lower = key.lowercase()
+                // BIP-321 `req-` parameters must be understood or refused; Send understands these two.
+                val lower = key.lowercase().let { if (it == "req-ark" || it == "req-amount") it.drop(4) else it }
                 if (lower in listOf("amount", "label", "message") && !seen.add(lower)) { errors.add(SendDestinationError.DuplicateParameter(lower)); invalid = true; continue }
                 when (lower) {
                     "amount" -> {
@@ -113,6 +162,7 @@ sealed class SendDestinationError : Exception() {
     data class AddressNetworkMismatch(val key: String) : SendDestinationError()
     data class UnknownRequiredParameter(val key: String) : SendDestinationError()
     data class InvalidMethods(val errors: List<SendDestinationError>) : SendDestinationError()
+    data object LnurlAuth : SendDestinationError()
 
     private val template: Pair<String, List<String>> get() = when (this) {
         is NetworkMismatch -> "Network mismatch: expected {expected}, got {actual}" to listOf(expected, actual)
@@ -125,6 +175,7 @@ sealed class SendDestinationError : Exception() {
         is DuplicateParameter -> "Multiple {parameter} parameters not allowed" to listOf(key)
         is AddressNetworkMismatch -> "Address network mismatch for {parameter} parameter" to listOf(key)
         is UnknownRequiredParameter -> "Unknown required parameter: {key}" to listOf(key)
+        LnurlAuth -> "This is a login link, not a payment request" to emptyList()
         is InvalidMethods -> error("Combined errors render their children")
     }
     override val message: String get() {
