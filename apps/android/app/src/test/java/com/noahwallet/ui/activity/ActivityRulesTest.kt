@@ -129,6 +129,8 @@ class ActivityRulesTest {
         val chain = record("c", Date(), type = "Onchain", source = "onchain-wallet", confirmed = true).copy(txid = txid, balanceChangeSat = -2_500)
         assertTrue(ActivityRules.receipt(rows(chain).single(), "−₿2,500", "Today", ActivityRules.chainTxid(chain, "regtest"), words)
             .endsWith("Via: On-chain\nTransaction ID: $txid"))
+        // Confirmed before its block time is known: no date line rather than a wrong one.
+        assertFalse(ActivityRules.receipt(rows(chain).single(), "−₿2,500", null, null, words).contains("Date"))
         // A renewal says how many coins it renewed.
         val renewal = record("r", Date()).copy(movementKind = "refresh", inputVtxos = listOf("a:0", "b:0", "c:0"))
         assertTrue(ActivityRules.receipt(rows(renewal).single(), "−₿45", "Today", null, words).startsWith("Renewed 3 coins −₿45"))

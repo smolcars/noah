@@ -326,8 +326,11 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
             rows += { last -> if (ark != null) DetailRow("Fee", money(ark), ValueKind.number, toasts = toasts, last = last) else DetailRow("Fee", tr("Free"), toasts = toasts, last = last) }
     }
     ActivityRules.total(record, home)?.let { total -> rows += { last -> DetailRow("Total", money(total), ValueKind.number, toasts = toasts, last = last) } }
-    val date = longDate(home.date, ui)
-    rows += { last -> DetailRow("Date", date, toasts = toasts, last = last) }
+    // A confirmed payment whose block time isn't known yet has no date; Confirmed names its block.
+    if (home.date != null || record.hasConfirmation != true) {
+        val date = longDate(home.date, ui)
+        rows += { last -> DetailRow("Date", date, toasts = toasts, last = last) }
+    }
     record.confirmationHeight?.takeIf { record.hasConfirmation == true }?.let { height ->
         rows += { last -> DetailRow("Confirmed", tr("Block {height}", java.text.NumberFormat.getIntegerInstance(ui.locale).format(height.toLong())), toasts = toasts, last = last) }
     }
@@ -336,7 +339,7 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
             rows += { last -> DetailRow("Entered as", if (ui.hidden) "••••" else FiatCurrency.format(value, repeat.fiatCurrency!!, ui.locale), toasts = toasts, last = last) }
         }
     }
-    val note = record.repeatPayment?.comment?.takeIf { it.isNotEmpty() } ?: record.description?.takeIf { it != home.title }
+    val note = record.repeatPayment?.comment?.takeIf { it.isNotEmpty() } ?: record.description
     note?.let { rows += { last -> DetailRow("Note", it, toasts = toasts, last = last) } }
     record.recurring?.takeIf { record.direction == "outgoing" }?.let { recurring ->
         rows += { last -> DetailRow("Repeats", tr(recurring.interval.description), toasts = toasts, last = last) { actions.recurring(recurring.scheduleID) } }
@@ -437,7 +440,7 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
 private fun receiptText(ui: ActivityUi, row: ActivityRules.Row): String {
     val context = LocalContext.current
     val amount = row.home.sign + BitcoinAmount.format(row.record.amount, ui.unit, ui.locale)
-    val date = longDate(row.home.date, ui)
+    val date = longDate(row.home.date, ui).takeIf { row.home.date != null || row.record.hasConfirmation != true }
     val resources = androidx.compose.ui.platform.LocalResources.current
     return remember(row, amount, date, resources) {
         ActivityRules.receipt(row, amount, date, ActivityRules.chainTxid(row.record, ui.variant)) { source, arguments ->
