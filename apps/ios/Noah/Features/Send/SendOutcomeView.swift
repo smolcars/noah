@@ -342,6 +342,8 @@ struct SendOutcomeView: View {
                 return L10n.text("It confirms in about 20 minutes. Activity shows when.", locale: language)
             }
         case .refunded:
+            // Only a person or address can be "reached"; an invoice or offer just gets the refund line.
+            guard case .initial = label.avatar else { return L10n.text("{amount} is back in your wallet.", format(sendingAmount), locale: language) }
             return L10n.text("{amount} is back in your wallet. Lightning couldn’t reach {recipient}.", format(sendingAmount), recipientName, locale: language)
         case .failed:
             return attempt?.failureMessage.map { L10n.text($0, locale: language) } ?? L10n.text(payment?.source == .onchain

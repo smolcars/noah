@@ -1168,6 +1168,7 @@
         "{amount} arriving",
         "{amount} available",
         "{amount} available in Ark",
+        "{amount} is back in your wallet.",
         "{amount} is back in your wallet. Lightning couldn’t reach {recipient}.",
         "{amount} sent to {recipient}.",
         "{amount} to {recipient} could not be sent yet: {error}",
