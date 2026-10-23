@@ -1,4 +1,5 @@
 import com.android.build.api.artifact.SingleArtifact
+import java.net.URI
 import java.util.Properties
 import java.util.UUID
 
@@ -20,6 +21,16 @@ abstract class SentryMappingMetadata : DefaultTask() {
         val directory = outputDirectory.get().asFile.apply { mkdirs() }
         directory.resolve("sentry-debug-meta.properties").writeText("io.sentry.ProguardUuids=$uuid\n")
     }
+}
+
+/** Regtest URL overrides must be exactly http(s)://host[:port] with a port in 1-65535; anything else fails the build. */
+fun regtestEndpoint(property: String, value: String): String {
+    val uri = runCatching { URI(value) }.getOrNull()
+    val host = uri?.host
+    val valid = uri != null && uri.scheme in setOf("http", "https") && !host.isNullOrEmpty() && (uri.port == -1 || uri.port in 1..65535) &&
+        value == "${uri.scheme}://$host${if (uri.port == -1) "" else ":${uri.port}"}"
+    require(valid) { "Invalid $property \"$value\": expected http(s)://host[:port] with a port from 1 to 65535" }
+    return value
 }
 
 val localProperties = Properties().apply {
@@ -81,8 +92,7 @@ android {
         val regtestHost = providers.gradleProperty("noahRegtestHost").orElse("10.0.2.2").get()
         require(regtestHost.matches(Regex("[a-zA-Z0-9.-]+"))) { "Invalid regtest host" }
         buildConfigField("String", "REGTEST_HOST", "\"$regtestHost\"")
-        val regtestServer = providers.gradleProperty("noahRegtestServerURL").orElse("http://$regtestHost:3000").get()
-        require(regtestServer.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid regtest server URL" }
+        val regtestServer = regtestEndpoint("noahRegtestServerURL", providers.gradleProperty("noahRegtestServerURL").orElse("http://$regtestHost:3000").get())
         buildConfigField("String", "REGTEST_SERVER_URL", "\"$regtestServer\"")
         // Set only by the regtest flavor below; empty keeps the host's :3535 / :18443.
         buildConfigField("String", "REGTEST_ARK_URL", "\"\"")
@@ -121,8 +131,7 @@ android {
             // Optional Ark server / bitcoind URLs replacing the host's :3535 / :18443, e.g. a second stack:
             // -PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443
             for ((property, field) in listOf("noahRegtestArkURL" to "REGTEST_ARK_URL", "noahRegtestBitcoindURL" to "REGTEST_BITCOIND_URL")) {
-                val url = providers.gradleProperty(property).orElse("").get()
-                require(url.isEmpty() || url.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid $property" }
+                val url = providers.gradleProperty(property).orElse("").get().let { if (it.isEmpty()) it else regtestEndpoint(property, it) }
                 buildConfigField("String", field, "\"$url\"")
             }
         }

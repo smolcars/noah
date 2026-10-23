@@ -41,7 +41,9 @@ The built APK carries the AAR's arm64 library byte for byte.
   The label reuses the existing es/ja/ko/sv translations (0 untranslated).
 - **Regtest endpoints.** `-PnoahRegtestArkURL` / `-PnoahRegtestBitcoindURL` replace
   the host's `:3535` / `:18443`. Only the regtest flavor sets `REGTEST_ARK_URL` /
-  `REGTEST_BITCOIND_URL` (empty otherwise, validated like the server URL), and only
+  `REGTEST_BITCOIND_URL` (empty otherwise; like the server URL, each must be exactly
+  `http(s)://host[:port]` with a port from 1 to 65535, checked by
+  `scripts/check-regtest-endpoints.sh`), and only
   the regtest branch of `WalletConfiguration.base` / `ArkInfoEndpoints` reads them.
   With both flags passed, mainnet and signet debug/release BuildConfig stay empty
   ([evidence](ffi060/regtest-overrides.txt)). For `noah-bark08`:

@@ -22,5 +22,13 @@ signet/release/com/noahwallet/BuildConfig.java
   public static final String REGTEST_ARK_URL = "";
   public static final String REGTEST_BITCOIND_URL = "";
 
--PnoahRegtestArkURL=http://x/path fails configuration:
-Invalid noahRegtestArkURL
+Validation (regtestEndpoint, shared with -PnoahRegtestServerURL): each value must be exactly
+http(s)://host[:port] with a port from 1 to 65535. scripts/check-regtest-endpoints.sh, 0 failures:
+  rejects noahRegtestArkURL: http://:  http://localhost:banana  http://localhost:0  ftp://x  http://
+    http://:13535  http://localhost:65536  http://localhost:  http://user:pw@localhost:1
+    http://localhost:1/path  http://bad_host:1
+  rejects noahRegtestBitcoindURL: http://localhost:banana  http://:
+  rejects noahRegtestServerURL: http://:  http://localhost:0  ftp://x
+  accepts http://10.0.2.2:13535 (Ark), https://ark.example.com (Ark), http://127.0.0.1:28443 (bitcoind),
+    http://10.0.2.2:13000 (server); mainnet/signet debug+release keep both overrides empty; defaults unchanged
+Example error: Invalid noahRegtestBitcoindURL "http://localhost:banana": expected http(s)://host[:port] with a port from 1 to 65535
