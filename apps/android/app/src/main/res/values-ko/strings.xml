@@ -538,6 +538,7 @@
   <string name="gt_402419e92096bd4a">"GBP"</string>
   <string name="gt_71efbb90cdf5b89b">"GeoNames"</string>
   <string name="gt_7ff998b8021274e7">"Ark 정보 가져오기"</string>
+  <string name="gt_74871a4c5c4bbd05">"Get Debug Info"</string>
   <string name="gt_b31f9ded6ae4d5f1">"푸시 토큰 가져오기"</string>
   <string name="gt_7108d01cdfb7e15d">"최신 수정 사항 받기"</string>
   <string name="gt_83047f2bb98b251f">"이 결제에 사용할 짧은 이름을 입력하세요(최대 64자)."</string>

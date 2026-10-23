@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1432,
-  "sourceKeys": 1435,
+  "catalogEntries": 1433,
+  "sourceKeys": 1436,
   "coverage": {
     "ios": {
       "used": [
@@ -427,6 +427,7 @@
         "GBP",
         "GeoNames",
         "Get Ark Info",
+        "Get Debug Info",
         "Get Push Token",
         "Get the latest fixes",
         "Give this payment a short name (max 64 characters).",
@@ -1139,10 +1140,18 @@
         "· nothing left your wallet"
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_74871a4c5c4bbd05"
+        ],
+        "ja": [
+          "gt_74871a4c5c4bbd05"
+        ],
+        "ko": [
+          "gt_74871a4c5c4bbd05"
+        ],
+        "sv": [
+          "gt_74871a4c5c4bbd05"
+        ]
       }
     },
     "android": {

@@ -19285,6 +19285,42 @@
         }
       }
     },
+    "Get Debug Info": {
+      "comment": "GT gt_74871a4c5c4bbd05; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Debug Info"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Debug Info"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Debug Info"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Debug Info"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Debug Info"
+          }
+        }
+      }
+    },
     "Get Push Token": {
       "comment": "GT gt_b31f9ded6ae4d5f1; arguments: none",
       "extractionState": "manual",
