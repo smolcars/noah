@@ -16,7 +16,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun VtxosScreen(app: AppModel) {
-    var detailID by rememberSaveable { mutableStateOf<String?>(null) }
+    var detailID by rememberSaveable { mutableStateOf(app.vtxoDetail?.also { app.vtxoDetail = null }) }
     val id = detailID
     if (id != null) {
         BackHandler { detailID = null }

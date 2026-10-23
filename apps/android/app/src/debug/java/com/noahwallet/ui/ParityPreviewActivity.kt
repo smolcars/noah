@@ -21,6 +21,12 @@ class ParityPreviewActivity : FragmentActivity() {
             .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Activity from public fixtures on the real clock (motion checks): --es screen activity --es state busy|everyday|empty|loading|error
+        if (intent.getStringExtra("screen") == "activity") {
+            setContent { NoahTheme { com.noahwallet.ui.activity.ActivityPreviewHost(com.noahwallet.ui.activity.ActivityFixtures.ui(intent.getStringExtra("state") ?: "busy"),
+                keepBar = intent.getBooleanExtra("keepBar", false)) } }
+            return
+        }
         lifecycleScope.launch {
             val model = loadAppModel(this@ParityPreviewActivity)
         setContent { NoahTheme { Surface { Box(Modifier.fillMaxSize().safeDrawingPadding()) {

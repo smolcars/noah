@@ -10,5 +10,25 @@
   "Expires in {n} hours": {
     "one": "Expires in {n} hour",
     "other": "Expires in {n} hours"
+  },
+  "{n} payments as a CSV file.": {
+    "one": "{n} payment as a CSV file.",
+    "other": "{n} payments as a CSV file."
+  },
+  "{n} Lightning payments as a CSV file.": {
+    "one": "{n} Lightning payment as a CSV file.",
+    "other": "{n} Lightning payments as a CSV file."
+  },
+  "{n} Ark payments as a CSV file.": {
+    "one": "{n} Ark payment as a CSV file.",
+    "other": "{n} Ark payments as a CSV file."
+  },
+  "{n} on-chain payments as a CSV file.": {
+    "one": "{n} on-chain payment as a CSV file.",
+    "other": "{n} on-chain payments as a CSV file."
+  },
+  "Renewed {n} coins": {
+    "one": "Renewed {n} coin",
+    "other": "Renewed {n} coins"
   }
 }

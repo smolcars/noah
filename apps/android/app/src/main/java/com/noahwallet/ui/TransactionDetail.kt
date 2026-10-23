@@ -27,34 +27,6 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.*
 import com.noahwallet.history.*
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HistoryDetailsHost(app: AppModel, selectedID: String?, onClose: () -> Unit,
-    onRepeatPayment: (RepeatPayment) -> Unit, showEmptyPane: Boolean = false, content: @Composable () -> Unit) {
-    val selected = app.history.transactions.firstOrNull { it.id == selectedID }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val expanded = AdaptiveLayout.useDetailPane(maxWidth.value, maxHeight.value, androidx.compose.ui.platform.LocalDensity.current.fontScale)
-        val repeat: (RepeatPayment) -> Unit = { onClose(); onRepeatPayment(it) }
-        Row(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f)) { content() }
-            if (expanded && (selected != null || showEmptyPane)) {
-                VerticalDivider()
-                Box(Modifier.weight(1f).fillMaxHeight()) {
-                    if (selected != null) TransactionDetail(app, selected, repeat, onClose)
-                    else Column(Modifier.align(Alignment.Center).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(tr("Select a transaction"), style = MaterialTheme.typography.titleLarge)
-                        Text(tr("Choose a payment to see its details."))
-                    }
-                }
-            }
-        }
-        if (!expanded && selected != null) WalletModalBottomSheet(onDismissRequest = onClose,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-            TransactionDetail(app, selected, repeat, onClose)
-        }
-    }
-}
-
 @Composable
 internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat: (RepeatPayment) -> Unit, onClose: () -> Unit) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]

@@ -90,7 +90,7 @@ class AdaptiveLayoutDeviceTest {
                 com.noahwallet.ui.receive.ReceiveAmountSheet(com.noahwallet.ui.receive.ReceiveUi(com.noahwallet.services.wallet.ReceiveRequest("tark1layout", "bcrt1layout"),
                     null, com.noahwallet.ui.receive.ReceiveFormat.request, com.noahwallet.formatting.BitcoinAmountUnit.sats, java.util.Locale.US, null, "USD")) { _, _ -> }
             } }
-            show("history") { TransactionsScreen(model) {} }
+            show("history") { ActivityScreen(model, {}) }
             show("btc-map") { com.noahwallet.btcmap.BtcMapScreen {} }
             show("history-detail") { TransactionDetail(model, com.noahwallet.history.HistoryTransaction(
                 "layout-fixture", "Arkoor", 12345, "2026-10-20T12:30:00Z", "outgoing",

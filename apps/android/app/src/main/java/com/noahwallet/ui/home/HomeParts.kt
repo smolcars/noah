@@ -247,39 +247,62 @@ internal fun MapRow(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** A 42 dp avatar: an initial for people and addresses, otherwise a rail glyph; pending, failed and new marks. */
+/**
+ * A 42 dp avatar (60 dp [large], Activity's detail): an initial for people and addresses, otherwise a rail glyph;
+ * pending, failed and new marks. [fading] shrinks the new dot away (soft, prototype `fadeDot`), then [onSeen].
+ */
 @Composable
-internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean) {
+internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, large: Boolean = false, fading: Boolean = false, onSeen: () -> Unit = {},
+                       modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val turn = if (row.pending && !reduceMotion) rememberInfiniteTransition(label = "pending").animateFloat(0f, 360f,
         infiniteRepeatable(tween(8_000, easing = LinearEasing)), label = "pending").value else 0f
-    Box(Modifier.size(42.dp)) {
+    val side = if (large) 60.dp else 42.dp
+    val glyph = if (large) 27.dp else 20.dp
+    Box(modifier.size(side)) {
         Box(Modifier.fillMaxSize().background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
-            when (val avatar = row.avatar) {
-                is HomeRow.Avatar.Initial -> Text(avatar.letter, style = HomeType.avatar, color = palette.foreground)
-                HomeRow.Avatar.Lightning -> Icon(painterResource(HomeIcons.lightning), null, Modifier.size(20.dp), tint = palette.foreground)
-                HomeRow.Avatar.Chain -> Icon(painterResource(HomeIcons.chain), null, Modifier.size(20.dp), tint = palette.foreground)
-                HomeRow.Avatar.Received -> Icon(painterResource(HomeIcons.receive), null, Modifier.size(20.dp), tint = palette.foreground)
-                HomeRow.Avatar.Sent -> Icon(painterResource(HomeIcons.send), null, Modifier.size(20.dp), tint = palette.foreground)
-                HomeRow.Avatar.Recurring -> Icon(painterResource(HomeIcons.repeat), null, Modifier.size(20.dp), tint = palette.foreground)
-                HomeRow.Avatar.Renewal -> Icon(painterResource(HomeIcons.renew), null, Modifier.size(20.dp), tint = palette.foreground)
+            val icon = when (val avatar = row.avatar) {
+                is HomeRow.Avatar.Initial -> null.also {
+                    Text(avatar.letter, style = if (large) HomeType.avatar.copy(fontSize = 24.sp, lineHeight = 24.sp) else HomeType.avatar, color = palette.foreground)
+                }
+                HomeRow.Avatar.Lightning -> HomeIcons.lightning
+                HomeRow.Avatar.Chain -> HomeIcons.chain
+                HomeRow.Avatar.Received -> HomeIcons.receive
+                HomeRow.Avatar.Sent -> HomeIcons.send
+                HomeRow.Avatar.Recurring -> HomeIcons.repeat
+                HomeRow.Avatar.Renewal -> HomeIcons.renew
             }
+            icon?.let { Icon(painterResource(it), null, Modifier.size(glyph), tint = palette.foreground) }
         }
-        if (row.pending) Canvas(Modifier.requiredSize(48.dp).align(Alignment.Center).graphicsLayer { rotationZ = turn }) {
-            val width = 1.5.dp.toPx()
+        if (row.pending) Canvas(Modifier.requiredSize(side + if (large) 8.dp else 6.dp).align(Alignment.Center).graphicsLayer { rotationZ = turn }) {
+            val width = (if (large) 2.dp else 1.5.dp).toPx()
             drawCircle(palette.muted, (size.minDimension - width) / 2, style = Stroke(width,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.5.dp.toPx(), 3.dp.toPx()))))
         }
-        if (row.failed) Box(Modifier.align(Alignment.BottomEnd).offset(5.dp, 5.dp).size(21.dp).background(palette.background, CircleShape)
+        if (row.failed) Box(Modifier.align(Alignment.BottomEnd).offset(if (large) 4.dp else 5.dp, if (large) 4.dp else 5.dp)
+            .size(if (large) 26.dp else 21.dp).background(palette.background, CircleShape)
             .padding(2.dp).background(palette.failure, CircleShape), contentAlignment = Alignment.Center) {
-            Text("!", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 11.sp), color = Color.White)
+            val size = if (large) 13.sp else 11.sp
+            Text("!", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = size, lineHeight = size), color = Color.White)
         }
         if (new) {
             val scale = remember { Animatable(if (pop && !reduceMotion) 0f else 1f) }
+            val gone = remember { Animatable(0f) }
             LaunchedEffect(Unit) { if (scale.value < 1f) { delay(120); scale.animateTo(1f, NoahTokens.Motion.bouncy()) } }
-            Box(Modifier.align(Alignment.TopEnd).offset(3.dp, (-3).dp).size(15.dp).graphicsLayer { scaleX = scale.value; scaleY = scale.value }
-                .background(palette.background, CircleShape).padding(2.dp).background(palette.orange, CircleShape))
+            LaunchedEffect(fading) {
+                if (!fading) return@LaunchedEffect
+                if (reduceMotion) gone.animateTo(1f, tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+                else gone.animateTo(1f, tween((SpringCurve.soft.settle * 1_400).toInt(), easing = LinearEasing))
+                onSeen()
+            }
+            Box(Modifier.align(Alignment.TopEnd).offset(3.dp, (-3).dp).size(15.dp).graphicsLayer {
+                // Grows a little, then shrinks to nothing (prototype keyframes 1 → 1.35 at 25 % → 0).
+                val g = gone.value
+                val shrink = if (reduceMotion) 1f else if (g < .25f) lerp(1f, 1.35f, SpringCurve.soft.over(g / .25f)) else lerp(1.35f, 0f, SpringCurve.soft.over((g - .25f) / .75f))
+                scaleX = scale.value * shrink; scaleY = scale.value * shrink
+                alpha = if (reduceMotion) 1 - g else if (g < .25f) 1f else 1 - (g - .25f) / .75f
+            }.background(palette.background, CircleShape).padding(2.dp).background(palette.orange, CircleShape))
         }
     }
 }
@@ -310,23 +333,36 @@ internal fun dayLabel(date: java.util.Date, locale: java.util.Locale, now: java.
     return java.text.SimpleDateFormat(pattern, locale).format(date)
 }
 
-/** One Recent/Activity row (66 dp): avatar, title, subtitle and a monochrome amount. */
+/** The row's signed amount, or dots while amounts are hidden. */
+internal fun rowAmount(row: HomeRow, hidden: Boolean, unit: com.noahwallet.formatting.BitcoinAmountUnit, locale: java.util.Locale) =
+    if (hidden) "••••" else row.sign + BitcoinAmount.format(row.amount, unit, locale)
+
+/**
+ * One Recent/Activity row (66 dp): avatar, title, subtitle and a monochrome amount. Activity adds its [selected]
+ * highlight, the new dot [fading] away once seen, and modifiers that carry the avatar, name and amount into the detail.
+ */
 @Composable
 internal fun ActivityRow(row: HomeRow, hidden: Boolean, unit: com.noahwallet.formatting.BitcoinAmountUnit, locale: java.util.Locale, now: java.util.Date,
-                         new: Boolean, pop: Boolean, divider: Boolean, onClick: () -> Unit) {
+                         new: Boolean, pop: Boolean, divider: Boolean, modifier: Modifier = Modifier, selected: Boolean = false,
+                         fading: Boolean = false, onSeen: () -> Unit = {}, avatarModifier: Modifier = Modifier, titleModifier: Modifier = Modifier,
+                         amountModifier: Modifier = Modifier, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val (subtitle, failed) = rowSubtitle(row, locale, now)
-    val amount = if (hidden) "••••" else row.sign + BitcoinAmount.format(row.amount, unit, locale)
-    Row(Modifier.fillMaxWidth().height(66.dp).clickable(role = Role.Button, onClick = onClick).semantics(mergeDescendants = true) {}
+    val amount = rowAmount(row, hidden, unit, locale)
+    Row(modifier.fillMaxWidth().height(66.dp)
         .drawBehind {
+            // The selected row's soft highlight reaches 12 dp past the text (prototype `.rw.sel::before`).
+            if (selected) drawRoundRect(palette.soft, Offset(-12.dp.toPx(), 3.dp.toPx()), androidx.compose.ui.geometry.Size(size.width + 24.dp.toPx(), size.height - 6.dp.toPx()),
+                androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()))
             if (divider) drawRect(palette.hairline, Offset(56.dp.toPx(), size.height - 1.dp.toPx()), androidx.compose.ui.geometry.Size(size.width - 56.dp.toPx(), 1.dp.toPx()))
-        }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        RowAvatar(row, new, pop)
+        }.clickable(role = Role.Button, onClick = onClick).semantics(mergeDescendants = true) { if (selected) this.selected = true },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        RowAvatar(row, new, pop, fading = fading, onSeen = onSeen, modifier = avatarModifier)
         Column(Modifier.weight(1f)) {
-            Text(tr(row.title), style = HomeType.rowTitle, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tr(row.title), titleModifier, style = HomeType.rowTitle, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(subtitle, style = HomeType.small, color = if (failed) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(amount, style = HomeType.amount.copy(textDecoration = if (row.failed || row.canceled) TextDecoration.LineThrough else null),
+        Text(amount, amountModifier, style = HomeType.amount.copy(textDecoration = if (row.failed || row.canceled) TextDecoration.LineThrough else null),
             color = if (row.pending || row.failed || row.canceled) palette.muted else palette.foreground, maxLines = 1)
     }
 }

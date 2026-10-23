@@ -21,6 +21,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
         android:theme="@style/AppTheme">
         <!-- Initialization belongs to Application after installing the privacy hooks. -->
         <meta-data android:name="io.sentry.auto-init" android:value="false" />

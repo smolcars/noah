@@ -203,6 +203,8 @@ class WalletSession internal constructor(
     suspend fun movements(): List<io.github.niteshbalusu11.bark.Movement> = withOpen { it.history() }
     /** The tip of the chain source the wallet already uses, for Send and Receive's block row. */
     suspend fun chainTip(): Long = withOpen { it.m6.tip() }
+    /** A transaction's confirmation from that same chain source, for Activity's block row. */
+    suspend fun chainStatus(txid: String): ChainStatus = withOpen { ChainStatus.from(it.m6.transactionStatus(txid)) }
 
     class Reservation internal constructor()
     private var runningCalls = 0
