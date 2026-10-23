@@ -108,6 +108,27 @@ class ReceiveFormatsTest {
         assertNull(ReceiveArrivals.next(rows, afterPayment, "bcrt1qpayme", emptySet(), emptySet(), none, 11))
     }
 
+    @Test fun theBlockRowFollowsAReplacementOrStopsWaiting() {
+        val amount = { target: String, hex: String -> if (target == "bcrt1qpayme" && hex in setOf("hex-a", "hex-b")) 9_000L else null }
+        val a = chain("a", 9_500)
+        val tracked = ReceiveArrival(ReceiveArrival.Rail.onchain, 9_000, 1, "a", "bcrt1qpayme")
+        val known = setOf(a.id)
+        // While it's in the records, it's followed as it is.
+        assertEquals(tracked to null, ReceiveArrivals.followed(tracked, listOf(a), known, amount))
+        // Replaced (RBF), and the replacement confirmed before the next refresh: the block row follows the replacement.
+        val b = chain("b", 9_400, confirmed = true)
+        assertEquals(tracked.copy(txid = "b") to b, ReceiveArrivals.followed(tracked, listOf(b), known, amount))
+        // A new transaction paying somewhere else isn't its replacement: the original is gone, so the wait ends.
+        assertEquals(null to null, ReceiveArrivals.followed(tracked, listOf(chain("other", 7_000)), known, amount))
+        // Not tied to an address: any new incoming transaction takes its place, and with none the wait ends.
+        val untied = tracked.copy(address = null, sats = 9_500)
+        assertEquals("b", ReceiveArrivals.followed(untied, listOf(b), known, amount).first?.txid)
+        assertEquals(null to null, ReceiveArrivals.followed(untied, emptyList(), known, amount))
+        // A deposit paying this request's address is tied to it.
+        val (_, arrival) = checkNotNull(ReceiveArrivals.next(listOf(a), ReceiveRecords(emptySet(), emptySet()), "bcrt1qpayme", emptySet(), emptySet(), amount, 1))
+        assertEquals("bcrt1qpayme", arrival.address)
+    }
+
     @Test fun anArrivalTakesAFreeCardOrOneShowingADeposit() {
         // The deposit's block row carries on separately, so a later payment can take its card; an Ark or Lightning one plays out first.
         assertTrue(ReceiveArrivals.takesCard(null))

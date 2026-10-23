@@ -23,15 +23,26 @@ data class ReceiveRecords(val known: Set<String>, val settled: Set<String>) {
 /**
  * Shows arrivals from the wallet's records one at a time: a new unconfirmed deposit first, then payments to your
  * Lightning address. It looks again whenever the records or the request change, the card comes free or an arrival is
- * taken, so several arrivals in one history update each play in turn.
+ * taken, so several arrivals in one history update each play in turn. It also keeps [chain], the deposit the block
+ * row follows, on the transaction that's really in the records.
  */
 @Composable
 internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Boolean, request: ReceiveRequest?, ownArk: Set<String>, ownHashes: Set<String>,
                                    records: MutableState<ReceiveRecords?>, arrival: MutableState<ReceiveArrival?>, chain: MutableState<ReceiveArrival?>,
                                    onAddressPayment: () -> Unit = {}) {
-    LaunchedEffect(rows, loading, request, ownArk, ownHashes, records.value, arrival.value == null) {
+    LaunchedEffect(rows, loading, request, ownArk, ownHashes, records.value, arrival.value == null, chain.value) {
         if (loading) return@LaunchedEffect
         val seen = records.value ?: run { records.value = ReceiveRecords.baseline(rows); return@LaunchedEffect }
+        // The deposit the block row follows, reconciled on its own (the arrival filter skips confirmed transactions):
+        // a replacement takes over and shows its confirmation without a second arrival; one that's gone ends the wait.
+        chain.value?.let { tracked ->
+            val (followed, replacement) = ReceiveArrivals.followed(tracked, rows, seen.known, ::paid)
+            if (followed != tracked) {
+                replacement?.let { records.value = seen.copy(known = seen.known + it.id) }
+                chain.value = followed
+                return@LaunchedEffect
+            }
+        }
         if (arrival.value != null) return@LaunchedEffect
         val (taken, next) = ReceiveArrivals.next(rows, seen, request?.onchainAddress, ownArk, ownHashes, ::paid, SystemClock.elapsedRealtime())
             ?: return@LaunchedEffect

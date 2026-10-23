@@ -48,4 +48,31 @@ class ReceiveRecordsTest {
         assertNull(arrival.value)
         assertEquals(1, payments)
     }
+
+    @Test fun aConfirmedReplacementTakesOverTheBlockRow() {
+        val records = mutableStateOf<ReceiveRecords?>(null)
+        val arrival = mutableStateOf<ReceiveArrival?>(null)
+        val chain = mutableStateOf<ReceiveArrival?>(null)
+        val old = deposit("old", 5_000, confirmed = true)
+        var rows by mutableStateOf(listOf(old))
+        compose.setContent { ReceiveRecordsWatcher(rows, false, ReceiveFixtures.plain, emptySet(), emptySet(), records, arrival, chain) }
+        compose.waitForIdle()
+        compose.runOnIdle { rows = listOf(old, deposit("a", 20_000)) }
+        compose.waitForIdle()
+        assertEquals("a", chain.value?.txid)
+        compose.runOnIdle { arrival.value = null }
+        compose.waitForIdle()
+        // The sender replaces it, and the replacement is mined before the next refresh: the original leaves the records.
+        val replacement = deposit("b", 19_800, confirmed = true)
+        compose.runOnIdle { rows = listOf(old, replacement) }
+        compose.waitForIdle()
+        assertEquals("the block row follows the replacement", "b", chain.value?.txid)
+        assertNull("the same deposit isn't announced again", arrival.value)
+        assertTrue(replacement.id in checkNotNull(records.value).known)
+        // A deposit that just disappears ends the wait.
+        compose.runOnIdle { rows = listOf(old) }
+        compose.waitForIdle()
+        assertNull(chain.value)
+        assertNull(arrival.value)
+    }
 }

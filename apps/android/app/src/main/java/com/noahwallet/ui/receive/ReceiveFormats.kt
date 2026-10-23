@@ -41,10 +41,10 @@ internal object ReceiveFormats {
 /**
  * Money seen arriving while Receive is visible, from the wallet's own records. [startedAt] (elapsedRealtime)
  * times the motion so a pose change resumes it in place; on-chain arrivals keep their [txid] so the block row
- * can follow the confirmation.
+ * can follow the confirmation, and the [address] they pay when it could be tied to this request.
  */
 @Serializable
-data class ReceiveArrival(val rail: Rail, val sats: Long, val startedAt: Long, val txid: String? = null) {
+data class ReceiveArrival(val rail: Rail, val sats: Long, val startedAt: Long, val txid: String? = null, val address: String? = null) {
     @Serializable enum class Rail { ark, lightning, onchain }
 }
 
@@ -71,13 +71,30 @@ internal object ReceiveArrivals {
     fun next(rows: List<HistoryTransaction>, records: ReceiveRecords, address: String?, ownArk: Set<String>, ownHashes: Set<String>,
              amount: (String, String) -> Long?, now: Long): Pair<ReceiveRecords, ReceiveArrival>? {
         onchain(rows, records.known, address, amount)?.let { (row, sats) ->
-            return records.copy(known = records.known + row.id) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid)
+            val paying = address?.takeIf { target -> row.txHex?.let { amount(target, it) }?.let { it > 0 } == true }
+            return records.copy(known = records.known + row.id) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid, paying)
         }
         viaAddress(rows, records.settled, ownArk, ownHashes)?.let { row ->
             val rail = if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark
             return records.copy(settled = records.settled + row.id) to ReceiveArrival(rail, row.amount, now)
         }
         return null
+    }
+
+    /**
+     * The deposit the block row follows, as the records now stand: itself while it's there. If it's gone (the sender
+     * replaced it, as RBF does, or it left the mempool), the new incoming transaction that took its place, confirmed
+     * or not, paying the same address when the original was tied to one; with none, nothing, so the wait ends. The
+     * replacement's row comes back too, to be marked seen: it's the same deposit, not a new arrival.
+     */
+    fun followed(tracked: ReceiveArrival, rows: List<HistoryTransaction>, known: Set<String>, amount: (String, String) -> Long?): Pair<ReceiveArrival?, HistoryTransaction?> {
+        if (rows.any { it.source == "onchain-wallet" && it.txid == tracked.txid }) return tracked to null
+        fun paid(row: HistoryTransaction) = tracked.address?.let { target -> row.txHex?.let { amount(target, it) }?.takeIf { it > 0 } }
+        val replacement = rows.firstOrNull { row ->
+            row.source == "onchain-wallet" && row.direction == "incoming" && (row.balanceChangeSat ?: 0) > 0 && row.txid != null &&
+                row.id !in known && (tracked.address == null || paid(row) != null)
+        } ?: return null to null
+        return tracked.copy(txid = replacement.txid, sats = paid(replacement) ?: replacement.balanceChangeSat ?: replacement.amount) to replacement
     }
 
     /** The receipts already complete when Receive appeared: a pending one isn't, so its later success is announced. */
