@@ -15,8 +15,17 @@ import org.junit.Test
 class ReceiveRecordsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun deposit(id: String, sats: Long, confirmed: Boolean = false) = HistoryTransaction("onchain-wallet-$id", "Onchain", sats,
-        "2026-10-22T10:00:00Z", "incoming", source = "onchain-wallet", txid = id, txHex = "hex-$id", balanceChangeSat = sats, hasConfirmation = confirmed)
+    private fun deposit(id: String, sats: Long, confirmed: Boolean = false, spending: String? = null) = HistoryTransaction("onchain-wallet-$id", "Onchain", sats,
+        "2026-10-22T10:00:00Z", "incoming", source = "onchain-wallet", txid = id, txHex = spending?.let { tx(it, sats) } ?: "hex-$id",
+        balanceChangeSat = sats, hasConfirmation = confirmed)
+    /** A minimal one-input, one-output transaction spending output 0 of [coin] (a txid in hex). */
+    private fun tx(coin: String, sats: Long): String {
+        fun le(value: Long, bytes: Int) = (0 until bytes).joinToString("") { "%02x".format((value shr (8 * it)) and 0xff) }
+        return "02000000" + "01" + coin.chunked(2).reversed().joinToString("") + le(0, 4) + "00" + "fdffffff" +
+            "01" + le(sats, 8) + "16" + "0014" + "11".repeat(20) + "00000000"
+    }
+    private val coin = "ab".repeat(32)
+    private val otherCoin = "cd".repeat(32)
     private fun addressPayment(id: String, sats: Long) = HistoryTransaction(id, "Bolt11", sats, "2026-10-22T10:00:00Z", "incoming",
         movementStatus = "successful", movementKind = "lightning-receive", metadataJson = """{"payment_hash":"elsewhere"}""")
 
@@ -57,13 +66,14 @@ class ReceiveRecordsTest {
         var rows by mutableStateOf(listOf(old))
         compose.setContent { ReceiveRecordsWatcher(rows, false, ReceiveFixtures.plain, emptySet(), emptySet(), records, arrival, chain) }
         compose.waitForIdle()
-        compose.runOnIdle { rows = listOf(old, deposit("a", 20_000)) }
+        compose.runOnIdle { rows = listOf(old, deposit("a", 20_000, spending = coin)) }
         compose.waitForIdle()
         assertEquals("a", chain.value?.txid)
+        assertEquals(listOf("$coin:0"), chain.value?.inputs)
         compose.runOnIdle { arrival.value = null }
         compose.waitForIdle()
-        // The sender replaces it, and the replacement is mined before the next refresh: the original leaves the records.
-        val replacement = deposit("b", 19_800, confirmed = true)
+        // The sender replaces it (the replacement spends the same coin) and it's mined before the next refresh.
+        val replacement = deposit("b", 19_800, confirmed = true, spending = coin)
         compose.runOnIdle { rows = listOf(old, replacement) }
         compose.waitForIdle()
         assertEquals("the block row follows the replacement", "b", chain.value?.txid)
@@ -74,5 +84,26 @@ class ReceiveRecordsTest {
         compose.waitForIdle()
         assertNull(chain.value)
         assertNull(arrival.value)
+    }
+
+    @Test fun anUnrelatedDepositAfterTheFollowedOneDisappearsIsStillAnnounced() {
+        val records = mutableStateOf<ReceiveRecords?>(null)
+        val arrival = mutableStateOf<ReceiveArrival?>(null)
+        val chain = mutableStateOf<ReceiveArrival?>(null)
+        val old = deposit("old", 5_000, confirmed = true)
+        var rows by mutableStateOf(listOf(old))
+        compose.setContent { ReceiveRecordsWatcher(rows, false, ReceiveFixtures.plain, emptySet(), emptySet(), records, arrival, chain) }
+        compose.waitForIdle()
+        compose.runOnIdle { rows = listOf(old, deposit("a", 20_000, spending = coin)) }
+        compose.waitForIdle()
+        compose.runOnIdle { arrival.value = null }
+        compose.waitForIdle()
+        // A leaves the records, and a new deposit spending a different coin arrives (to the same address, say).
+        compose.runOnIdle { rows = listOf(old, deposit("c", 7_000, spending = otherCoin)) }
+        compose.waitForIdle()
+        assertEquals("it's announced as its own arrival", "c", arrival.value?.txid)
+        assertEquals(ReceiveArrival.Rail.onchain, arrival.value?.rail)
+        assertEquals(7_000L, arrival.value?.sats)
+        assertEquals("and the block row follows it, not A", "c", chain.value?.txid)
     }
 }

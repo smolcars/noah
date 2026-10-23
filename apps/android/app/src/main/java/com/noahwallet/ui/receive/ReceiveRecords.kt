@@ -34,9 +34,10 @@ internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Bool
         if (loading) return@LaunchedEffect
         val seen = records.value ?: run { records.value = ReceiveRecords.baseline(rows); return@LaunchedEffect }
         // The deposit the block row follows, reconciled on its own (the arrival filter skips confirmed transactions):
-        // a replacement takes over and shows its confirmation without a second arrival; one that's gone ends the wait.
+        // a replacement spending the same coins takes over and shows its confirmation without a second arrival; one
+        // that's simply gone ends the wait.
         chain.value?.let { tracked ->
-            val (followed, replacement) = ReceiveArrivals.followed(tracked, rows, seen.known, ::paid)
+            val (followed, replacement) = ReceiveArrivals.followed(tracked, rows, seen.known, ::spends)
             if (followed != tracked) {
                 replacement?.let { records.value = seen.copy(known = seen.known + it.id) }
                 chain.value = followed
@@ -44,7 +45,7 @@ internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Bool
             }
         }
         if (arrival.value != null) return@LaunchedEffect
-        val (taken, next) = ReceiveArrivals.next(rows, seen, request?.onchainAddress, ownArk, ownHashes, ::paid, SystemClock.elapsedRealtime())
+        val (taken, next) = ReceiveArrivals.next(rows, seen, request?.onchainAddress, ownArk, ownHashes, ::paid, ::spends, SystemClock.elapsedRealtime())
             ?: return@LaunchedEffect
         // Taken in one step: a new key restarts this effect, so nothing here may suspend before the arrival is set.
         records.value = taken
@@ -56,3 +57,6 @@ internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Bool
 
 /** The sats [hex] pays to [address], when it can be read. */
 private fun paid(address: String, hex: String): Long? = runCatching { SendTransaction.amount(address, hex) }.getOrNull()
+
+/** The coins [hex] spends, as "txid:vout", when it can be read. */
+private fun spends(hex: String): List<String>? = runCatching { SendTransaction.parse(hex).inputs.map { "${it.txid}:${it.vout}" } }.getOrNull()

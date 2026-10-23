@@ -99,34 +99,37 @@ class ReceiveFormatsTest {
         val baseline = ReceiveRecords.baseline(listOf(old))
         val rows = listOf(old, deposit, payment)
         // The deposit first...
-        val (afterDeposit, first) = checkNotNull(ReceiveArrivals.next(rows, baseline, "bcrt1qpayme", emptySet(), emptySet(), none, 7))
+        val (afterDeposit, first) = checkNotNull(ReceiveArrivals.next(rows, baseline, "bcrt1qpayme", emptySet(), emptySet(), none, { null }, 7))
         assertEquals(ReceiveArrival(ReceiveArrival.Rail.onchain, 20_000, 7, "new"), first)
         // ...then the address payment from the same update...
-        val (afterPayment, second) = checkNotNull(ReceiveArrivals.next(rows, afterDeposit, "bcrt1qpayme", emptySet(), emptySet(), none, 9))
+        val (afterPayment, second) = checkNotNull(ReceiveArrivals.next(rows, afterDeposit, "bcrt1qpayme", emptySet(), emptySet(), none, { null }, 9))
         assertEquals(ReceiveArrival(ReceiveArrival.Rail.lightning, 2_000, 9), second)
         // ...and then nothing is left waiting.
-        assertNull(ReceiveArrivals.next(rows, afterPayment, "bcrt1qpayme", emptySet(), emptySet(), none, 11))
+        assertNull(ReceiveArrivals.next(rows, afterPayment, "bcrt1qpayme", emptySet(), emptySet(), none, { null }, 11))
     }
 
-    @Test fun theBlockRowFollowsAReplacementOrStopsWaiting() {
-        val amount = { target: String, hex: String -> if (target == "bcrt1qpayme" && hex in setOf("hex-a", "hex-b")) 9_000L else null }
+    @Test fun onlyATransactionSpendingTheSameCoinsReplacesTheFollowedDeposit() {
+        val spends = { hex: String -> mapOf("hex-a" to listOf("c:0", "d:1"), "hex-b" to listOf("c:0"), "hex-c" to listOf("e:0"))[hex] }
+        val none = { _: String, _: String -> null as Long? }
         val a = chain("a", 9_500)
-        val tracked = ReceiveArrival(ReceiveArrival.Rail.onchain, 9_000, 1, "a", "bcrt1qpayme")
+        val tracked = ReceiveArrival(ReceiveArrival.Rail.onchain, 9_500, 1, "a", listOf("c:0", "d:1"))
         val known = setOf(a.id)
+        // A deposit's arrival remembers the coins its transaction spends.
+        assertEquals(tracked.inputs, ReceiveArrivals.next(listOf(a), ReceiveRecords(emptySet(), emptySet()), null, emptySet(), emptySet(), none, spends, 1)?.second?.inputs)
         // While it's in the records, it's followed as it is.
-        assertEquals(tracked to null, ReceiveArrivals.followed(tracked, listOf(a), known, amount))
-        // Replaced (RBF), and the replacement confirmed before the next refresh: the block row follows the replacement.
+        assertEquals(tracked to null, ReceiveArrivals.followed(tracked, listOf(a), known, spends))
+        // Replaced (RBF: it spends one of the same coins) and mined before the next refresh: the block row follows it.
         val b = chain("b", 9_400, confirmed = true)
-        assertEquals(tracked.copy(txid = "b") to b, ReceiveArrivals.followed(tracked, listOf(b), known, amount))
-        // A new transaction paying somewhere else isn't its replacement: the original is gone, so the wait ends.
-        assertEquals(null to null, ReceiveArrivals.followed(tracked, listOf(chain("other", 7_000)), known, amount))
-        // Not tied to an address: any new incoming transaction takes its place, and with none the wait ends.
-        val untied = tracked.copy(address = null, sats = 9_500)
-        assertEquals("b", ReceiveArrivals.followed(untied, listOf(b), known, amount).first?.txid)
-        assertEquals(null to null, ReceiveArrivals.followed(untied, emptyList(), known, amount))
-        // A deposit paying this request's address is tied to it.
-        val (_, arrival) = checkNotNull(ReceiveArrivals.next(listOf(a), ReceiveRecords(emptySet(), emptySet()), "bcrt1qpayme", emptySet(), emptySet(), amount, 1))
-        assertEquals("bcrt1qpayme", arrival.address)
+        assertEquals(tracked.copy(txid = "b", sats = 9_400, inputs = listOf("c:0")) to b, ReceiveArrivals.followed(tracked, listOf(b), known, spends))
+        // An unrelated deposit, even to the same address, isn't a replacement: the original's wait just ends...
+        val c = chain("c", 7_000)
+        assertEquals(null to null, ReceiveArrivals.followed(tracked, listOf(c), known, spends))
+        // ...and the new deposit is announced as an arrival of its own.
+        val pays = { target: String, hex: String -> if (target == "bcrt1qpayme" && hex == "hex-c") 7_000L else null }
+        assertEquals(ReceiveArrival(ReceiveArrival.Rail.onchain, 7_000, 2, "c", listOf("e:0")),
+            ReceiveArrivals.next(listOf(c), ReceiveRecords(known, emptySet()), "bcrt1qpayme", emptySet(), emptySet(), pays, spends, 2)?.second)
+        // Without the original's coins, nothing is assumed either.
+        assertEquals(null to null, ReceiveArrivals.followed(tracked.copy(inputs = emptyList()), listOf(b), known, spends))
     }
 
     @Test fun anArrivalTakesAFreeCardOrOneShowingADeposit() {

@@ -41,10 +41,11 @@ internal object ReceiveFormats {
 /**
  * Money seen arriving while Receive is visible, from the wallet's own records. [startedAt] (elapsedRealtime)
  * times the motion so a pose change resumes it in place; on-chain arrivals keep their [txid] so the block row
- * can follow the confirmation, and the [address] they pay when it could be tied to this request.
+ * can follow the confirmation, and the coins their transaction spends ([inputs], "txid:vout") so a replacement
+ * can be recognised.
  */
 @Serializable
-data class ReceiveArrival(val rail: Rail, val sats: Long, val startedAt: Long, val txid: String? = null, val address: String? = null) {
+data class ReceiveArrival(val rail: Rail, val sats: Long, val startedAt: Long, val txid: String? = null, val inputs: List<String> = emptyList()) {
     @Serializable enum class Rail { ark, lightning, onchain }
 }
 
@@ -69,10 +70,10 @@ internal object ReceiveArrivals {
      * then a payment to your Lightning address. Null when nothing is waiting.
      */
     fun next(rows: List<HistoryTransaction>, records: ReceiveRecords, address: String?, ownArk: Set<String>, ownHashes: Set<String>,
-             amount: (String, String) -> Long?, now: Long): Pair<ReceiveRecords, ReceiveArrival>? {
+             amount: (String, String) -> Long?, spends: (String) -> List<String>?, now: Long): Pair<ReceiveRecords, ReceiveArrival>? {
         onchain(rows, records.known, address, amount)?.let { (row, sats) ->
-            val paying = address?.takeIf { target -> row.txHex?.let { amount(target, it) }?.let { it > 0 } == true }
-            return records.copy(known = records.known + row.id) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid, paying)
+            val inputs = row.txHex?.let(spends).orEmpty()
+            return records.copy(known = records.known + row.id) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid, inputs)
         }
         viaAddress(rows, records.settled, ownArk, ownHashes)?.let { row ->
             val rail = if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark
@@ -82,19 +83,20 @@ internal object ReceiveArrivals {
     }
 
     /**
-     * The deposit the block row follows, as the records now stand: itself while it's there. If it's gone (the sender
-     * replaced it, as RBF does, or it left the mempool), the new incoming transaction that took its place, confirmed
-     * or not, paying the same address when the original was tied to one; with none, nothing, so the wait ends. The
-     * replacement's row comes back too, to be marked seen: it's the same deposit, not a new arrival.
+     * The deposit the block row follows, as the records now stand: itself while it's there. If it's gone, a new
+     * incoming transaction spending one of the same coins replaced it (as RBF does) and takes over, confirmed or not;
+     * its row comes back too, to be marked seen, since it's the same deposit, not a new arrival. Without that evidence
+     * nothing is assumed: the wait just ends, and any new deposit is an arrival of its own.
      */
-    fun followed(tracked: ReceiveArrival, rows: List<HistoryTransaction>, known: Set<String>, amount: (String, String) -> Long?): Pair<ReceiveArrival?, HistoryTransaction?> {
+    fun followed(tracked: ReceiveArrival, rows: List<HistoryTransaction>, known: Set<String>, spends: (String) -> List<String>?): Pair<ReceiveArrival?, HistoryTransaction?> {
         if (rows.any { it.source == "onchain-wallet" && it.txid == tracked.txid }) return tracked to null
-        fun paid(row: HistoryTransaction) = tracked.address?.let { target -> row.txHex?.let { amount(target, it) }?.takeIf { it > 0 } }
+        if (tracked.inputs.isEmpty()) return null to null
         val replacement = rows.firstOrNull { row ->
             row.source == "onchain-wallet" && row.direction == "incoming" && (row.balanceChangeSat ?: 0) > 0 && row.txid != null &&
-                row.id !in known && (tracked.address == null || paid(row) != null)
+                row.id !in known && row.txHex?.let(spends).orEmpty().any { it in tracked.inputs }
         } ?: return null to null
-        return tracked.copy(txid = replacement.txid, sats = paid(replacement) ?: replacement.balanceChangeSat ?: replacement.amount) to replacement
+        return tracked.copy(txid = replacement.txid, sats = replacement.balanceChangeSat ?: replacement.amount,
+            inputs = replacement.txHex?.let(spends).orEmpty()) to replacement
     }
 
     /** The receipts already complete when Receive appeared: a pending one isn't, so its later success is announced. */
