@@ -432,10 +432,11 @@ struct ReceiveView: View {
     /// its confirmation, or to the replacement that took its place.
     private func watchChain() async {
         guard let address = chainKey else { return }
-        let read = fixture?.chain ?? { try await WalletSession.shared.receiveChainSnapshot(address: $0) }
+        let read: (String, Bool) async throws -> ReceiveChainSnapshot = fixture?.chain.map { chain in { address, _ in try await chain(address) } }
+            ?? { try await WalletSession.shared.receiveChainSnapshot(address: $0, baseline: $1) }
         var known: Set<String>?
         while !Task.isCancelled {
-            if let snapshot = try? await read(address), !Task.isCancelled {
+            if let snapshot = try? await read(address, known == nil), !Task.isCancelled {
                 tip = snapshot.tip
                 let followed = arrivals.follow(snapshot)
                 if followed.confirmed { haptics.play(.light) }

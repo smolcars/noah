@@ -412,6 +412,12 @@ struct ReceiveFormatTests {
         // arrival; what was already there (unrelated or confirmed) isn't.
         #expect(snapshot.look(known: nil, announced: []).arrivals.map(\.txid) == ["old", "mine"])
         #expect(snapshot.look(known: nil, announced: ["old"]).arrivals.map(\.txid) == ["mine"])
+        // With what the wallet knew before the first sync, a deposit that synced in meanwhile to
+        // an address you shared earlier is news too; one it already had isn't.
+        let synced = ReceiveChainSnapshot(tip: 100, incoming: snapshot.incoming, before: ["other", "mined", "mine"])
+        #expect(synced.look(known: nil, announced: []).arrivals.map(\.txid) == ["old", "mine"])
+        let older = ReceiveChainSnapshot(tip: 100, incoming: snapshot.incoming, before: ["old", "mined"])
+        #expect(older.look(known: nil, announced: []).arrivals.map(\.txid) == ["old", "mine", "other"])
         // After the first arrival, a second deposit still arrives.
         let next = ReceiveChainSnapshot(tip: 100, incoming: snapshot.incoming + [.init(txid: "again", toAddress: 4, received: 4, confirmedHeight: nil)])
         #expect(next.look(known: later.known, announced: ["mine", "other"]).arrivals.map(\.txid) == ["again"])

@@ -38,10 +38,12 @@ extension WalletSession {
     }
 
     /// Syncs the on-chain wallet (shared with today's sync flight) and reads the tip and
-    /// incoming transactions, for Receive's on-chain arrival and its block row.
-    func receiveChainSnapshot(address: String) async throws -> ReceiveChainSnapshot {
+    /// incoming transactions, for Receive's on-chain arrival and its block row. The first
+    /// check (`baseline`) also notes what the wallet knew before its sync.
+    func receiveChainSnapshot(address: String, baseline: Bool) async throws -> ReceiveChainSnapshot {
         let flight = syncFlight
         return try await withOpenWallet { handles in
+            let before = baseline ? Set(try await handles.onchain.transactions().map(\.txid)) : nil
             try await flight.serialized { _ = try await handles.onchain.sync() }
             let tip = try await handles.onchain.tipHeight()
             let incoming = try await handles.onchain.transactions().filter { $0.balanceChangeSats > 0 }.map {
@@ -50,7 +52,7 @@ extension WalletSession {
                     received: UInt64($0.balanceChangeSats), confirmedHeight: $0.confirmation?.height,
                     inputs: Set((try? SendTransaction.parse(hex: $0.txHex).inputs) ?? []))
             }
-            return ReceiveChainSnapshot(tip: tip, incoming: incoming)
+            return ReceiveChainSnapshot(tip: tip, incoming: incoming, before: before)
         }
     }
 }
@@ -87,14 +89,19 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
 
     var tip: UInt32
     var incoming: [Transaction]
+    /// On the first check, the transactions the wallet knew before syncing.
+    var before: Set<String>? = nil
 
     /// One check of Receive's watch: the new unconfirmed incoming transactions to announce
     /// (those paying the request's address first, then any other), and what's known after.
-    /// The first check (`known` nil) already knows every transaction except unconfirmed ones
-    /// paying the request's address: those arrived while it synced. An already-confirmed
-    /// transaction is never news.
+    /// The first check (`known` nil) knows what the wallet had before its sync, so anything
+    /// that synced in meanwhile is news, to any of your addresses; an unconfirmed payment to
+    /// this request's fresh address is news even if a sync elsewhere fetched it first. An
+    /// already-confirmed transaction is never news.
     func look(known: Set<String>?, announced: Set<String>) -> (arrivals: [Transaction], known: Set<String>) {
-        let seen = (known ?? Set(incoming.filter { $0.toAddress == 0 || $0.confirmedHeight != nil }.map(\.txid))).union(announced)
+        let unseenHere = Set(incoming.filter { $0.toAddress > 0 && $0.confirmedHeight == nil }.map(\.txid))
+        let first = (before ?? Set(incoming.map(\.txid))).subtracting(unseenHere)
+        let seen = (known ?? first).union(announced)
         let fresh = incoming.filter { !seen.contains($0.txid) && $0.confirmedHeight == nil }
         return (fresh.filter { $0.toAddress > 0 } + fresh.filter { $0.toAddress == 0 }, seen.union(incoming.map(\.txid)))
     }
