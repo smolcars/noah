@@ -21,6 +21,7 @@ struct SendConfirmation: View {
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
     var clock: SendMotionClock? = nil
     var gate: SendHoldGate? = nil
+    var chainTip: UInt32? = nil
     @State private var ownGate = SendHoldGate()
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @Environment(\.locale) private var locale
@@ -35,7 +36,7 @@ struct SendConfirmation: View {
         Group {
             if controller.locked {
                 SendOutcomeView(controller: controller, btcPrice: btcPrice, fiatCurrency: fiatCurrency, done: done, clock: clock,
-                                unit: unit, recipient: label, wide: wide, sideInsets: sideInsets, reviewed: payment)
+                                unit: unit, recipient: label, wide: wide, sideInsets: sideInsets, reviewed: payment, chainTip: chainTip)
             } else {
                 review
             }

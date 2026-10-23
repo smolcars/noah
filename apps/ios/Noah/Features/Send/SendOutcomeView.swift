@@ -23,10 +23,11 @@ struct SendOutcomeView: View {
     var onLeave: () -> Void = {}
     /// The payment just confirmed, until the controller has saved its attempt.
     var reviewed: SendPayment? = nil
+    /// The chain tip, read by Send with each receipt check.
+    var chainTip: UInt32? = nil
     @State private var ownClock = SendMotionClock()
     @State private var history: [HistoryTransaction] = []
     @State private var refund: Bool?
-    @State private var tip: UInt32?
     @State private var completedAt = Date()
     @State private var confirmOverride = false
     @State private var resultShown = false
@@ -35,6 +36,7 @@ struct SendOutcomeView: View {
     @State private var haptics = OnboardingHaptics()
 
     private var motion: SendMotionClock { clock ?? ownClock }
+    private var tip: UInt32? { fixture?.tip ?? chainTip }
     private var isWide: Bool { wide ?? window.wide }
     private var attempt: SendPaymentController.Attempt? { controller.attempt }
     private var payment: SendPayment? { attempt?.payment ?? (controller.state == .submitting ? reviewed : nil) }
@@ -116,7 +118,6 @@ struct SendOutcomeView: View {
             if !Task.isCancelled { history = rows }
         }
         .task(id: refundKey) { await readRefund() }
-        .task(id: tipKey) { await watchTip() }
         .task(id: resultKey) { await revealResult() }
         .task(id: hapticKey) { await playHaptics() }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
@@ -524,26 +525,6 @@ struct SendOutcomeView: View {
         guard !hash.isEmpty else { refund = false; return }
         let recorded = (try? await WalletSession.shared.lightningSendRefunded(paymentHash: hash)) ?? false
         if !Task.isCancelled { refund = recorded }
-    }
-
-    private var tipKey: String? {
-        guard rail.isOnchain, case .succeeded = controller.state, scenePhase == .active else { return nil }
-        return receipt?.txid
-    }
-
-    /// The block row's tip: on appear, then at most every 30 s while visible. A new tip
-    /// re-checks the payment's confirmation through today's status check.
-    private func watchTip() async {
-        guard tipKey != nil else { return }
-        if let fixture { tip = fixture.tip; return }
-        while !Task.isCancelled {
-            if let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled {
-                let changed = tip != nil && next != tip
-                tip = next
-                if changed { await controller.checkStatus() }
-            }
-            do { try await Task.sleep(for: .seconds(30)) } catch { return }
-        }
     }
 
     private var resultKey: String { "\(rail)-\(shownOutcome)-\(motion.submittedAt?.timeIntervalSince1970 ?? 0)-\(motion.outcomeAt?.timeIntervalSince1970 ?? 0)" }

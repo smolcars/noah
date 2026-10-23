@@ -47,6 +47,8 @@ struct SendView: View {
     /// The screen before this one, for the slide's direction.
     @State private var lastScreen = SendScreen.amount
     @State private var railFees: [SendRail: UInt64] = [:]
+    /// The chain tip, read with each receipt check, for the block row.
+    @State private var chainTip: UInt32?
     @FocusState private var focus: Field?
     private enum Field { case recipient, note }
 
@@ -93,7 +95,9 @@ struct SendView: View {
         }
         .task(id: receiptRefreshID) {
             guard receiptRefreshID != nil else { return }
-            await SendReceiptRefresh.observe(check: { await model.controller.checkStatus() })
+            await SendReceiptRefresh.observe(tip: {
+                if let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled { chainTip = next }
+            }, check: { await model.controller.checkStatus() })
         }
         .onChange(of: app.summary) { _, summary in
             model.arkBalance = summary?.balance.ark.spendable ?? 0
@@ -723,7 +727,7 @@ struct SendView: View {
                 controller: model.controller, cancel: cancelReview, done: finish,
                 unit: unit, recipient: .of(destination: model.destination, payment: payment, ownDomain: ownDomain),
                 invoiceNote: invoiceNote, wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), clock: clock,
-                gate: holdGate)
+                gate: holdGate, chainTip: chainTip)
         } else {
             // Today's quote is being prepared.
             panes {
@@ -748,7 +752,7 @@ struct SendView: View {
                         done: finish, clock: clock, unit: unit,
                         recipient: (model.controller.attempt?.payment ?? model.payment).map { .of(destination: model.destination, payment: $0, ownDomain: ownDomain) },
                         wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), onLeave: onLeave,
-                        reviewed: model.payment)
+                        reviewed: model.payment, chainTip: chainTip)
     }
 
     // MARK: Navigation

@@ -35,14 +35,14 @@ import Testing
             #expect(receipt.boardAmounts(quote: quote) == row.expected)
         }
     }
-    @Test func sendReceiptRefreshesImmediatelyThenEveryTenSecondsUntilCancellation() async {
-        var checks = 0
+    @Test func sendReceiptRefreshesImmediatelyThenEveryThirtySecondsUntilCancellation() async {
+        var events: [String] = []
         var sleeps: [Duration] = []
-        await SendReceiptRefresh.observe(check: { checks += 1 }, sleep: { duration in
+        await SendReceiptRefresh.observe(tip: { events.append("tip") }, check: { events.append("check") }, sleep: { duration in
             sleeps.append(duration)
             if sleeps.count == 2 { throw CancellationError() }
         })
-        #expect(checks == 2 && sleeps == [.seconds(10), .seconds(10)])
+        #expect(events == ["tip", "check", "tip", "check"] && sleeps == [.seconds(30), .seconds(30)])
     }
     @Test func sendLookupErrorsDoNotSurviveSerialization() throws {
         let receipt = SendReceipt(amount: 1000, txid: "exact", status: .submitted,
