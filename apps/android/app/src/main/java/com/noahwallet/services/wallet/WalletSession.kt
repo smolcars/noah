@@ -194,6 +194,8 @@ class WalletSession internal constructor(
         sdk.recipientService().resolve(destination)
     }
     suspend fun pendingSendHashes(): Set<String> = withOpen { (it.send as SdkSendWallet).pendingHashes() }
+    /** The amount a BOLT12 offer fixes, for Send's keypad; the quote checks it again. */
+    suspend fun sendOfferAmount(offer: String): Long? = withOpen { (it.send as SdkSendWallet).offerAmount(offer) }
     /** Display only, for Send's method cards; the review's quote stays the authority. */
     suspend fun estimateSendFee(rail: com.noahwallet.send.SendRail, amount: Long, destination: String?): Long =
         withOpen { (it.send as SdkSendWallet).estimateFee(rail, amount, destination) }

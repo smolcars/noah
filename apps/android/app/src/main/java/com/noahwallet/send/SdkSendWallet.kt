@@ -11,6 +11,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     override suspend fun retryDiscards() = preparations.retryDiscards()
     fun recipientService() = SendRecipientService(network, warn, arkServerKey = { wallet.arkInfo()?.serverPubkey }, validateArk = { wallet.validateArkoorAddress(it) })
     suspend fun pendingHashes() = wallet.pendingLightningSends().map { it.paymentHash }.toSet()
+    suspend fun offerAmount(offer: String) = offerAmount(offer) { wallet.parsePaymentRequest(it) }
     /** The SDK estimates today's quotes start from. Prepares and reserves nothing; never used to pay. */
     suspend fun estimateFee(rail: SendRail, amount: Long, destination: String?): Long = when (rail) {
         SendRail.ark -> wallet.estimateArkoorPaymentFee(amount.toULong())
@@ -37,6 +38,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     private suspend fun quoteResolved(payment: SendPayment): SendQuote {
         val parsed = SendDestination.parse(payment.destination, network)
         requireSend(parsed.destinationType == payment.method && parsed.error == null)
+        requireOfferAmount(payment) { wallet.parsePaymentRequest(it) }
         if (payment.method == "lightning") {
             val invoice = PaymentEncoding.invoice(payment.destination) ?: throw SendFailure(SendFailure.Reason.invalid)
             requireSend(invoice.expires > System.currentTimeMillis() / 1000, SendFailure.Reason.expired)
@@ -205,4 +207,19 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         quote.prepared?.let { preparations.discard(it.id, includingClaimed) }
     }
     override suspend fun discardAll() = preparations.discardAll()
+    companion object {
+        /** The amount a BOLT12 offer fixes, or null when it fixes none. One bark parses but can't pay (another network) is
+         *  refused; one it can't parse at all (fiat-priced offers, `invalidPaymentRequest`) keeps the typed amount, as before. */
+        suspend fun offerAmount(offer: String, parse: suspend (String) -> PaymentRequest): Long? {
+            val request = try { parse(offer) } catch (failure: BarkError) {
+                if (failure.code == BarkErrorCode.INVALID_PAYMENT_REQUEST) return null else throw failure
+            }
+            requireSend(request.defaultOption != null)
+            return request.amountSats?.let { requireSend(it <= 2_100_000_000_000_000uL); it.toLong() }
+        }
+        /** bark pays a passed amount over an offer's own, so a fixed offer must be paid exactly its amount. */
+        suspend fun requireOfferAmount(payment: SendPayment, parse: suspend (String) -> PaymentRequest) {
+            if (payment.method == "offer") offerAmount(payment.destination, parse)?.let { requireSend(it == payment.amount) }
+        }
+    }
 }

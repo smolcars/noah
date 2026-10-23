@@ -48,7 +48,7 @@ import kotlinx.serialization.json.JsonObject
 @Composable
 fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit) {
     val context = LocalContext.current
-    val presentation = viewModel<SendPresentation>(key = "send-presentation") { SendPresentation(SendModel(SendRuntime.shared(context).controller, BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend)) }
+    val presentation = viewModel<SendPresentation>(key = "send-presentation") { SendPresentation(SendModel(SendRuntime.shared(context).controller, BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend, offerAmount = app.session::sendOfferAmount)) }
     val model = presentation.model
     val controller = model.controller
     val scope = presentation.viewModelScope

@@ -9,7 +9,9 @@ class SendModel(val controller: SendController, private val network: String,
     private val resolveRecipient: suspend (String) -> SendRecipientRoute,
     private val quotePayment: suspend (SendPayment) -> SendQuote,
     private val discardQuote: suspend (SendQuote) -> Unit,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)) {
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    /** The amount a BOLT12 offer fixes, or null; the quote checks it again. */
+    private val offerAmount: suspend (String) -> Long? = { null }) {
     var amount by mutableStateOf("")
     var destination by mutableStateOf("")
         private set
@@ -91,6 +93,12 @@ class SendModel(val controller: SendController, private val network: String,
             requireSend(parsed.destinationType != null && parsed.error == null)
             if (isMax && (!SendFlow.canMax(parsed.destinationType, parsed.bip321) || parsed.amount != null)) {
                 error = "MAX requires an on-chain address without a fixed amount."; return
+            }
+            if (parsed.destinationType == "offer") {
+                val fixed = offerAmount(SendDestination.cleaned(destination))
+                if (revision != recipientRevision || reviewAtStart != reviewGeneration) return
+                // An offer that fixes its amount behaves like an invoice with one.
+                fixed?.let { parsed = parsed.copy(amount = it.toBigDecimal(), isAmountEditable = false) }
             }
             parsed.amount?.let { fixed ->
                 requireSend(fixed <= 2_100_000_000_000_000L.toBigDecimal() && runCatching { fixed.longValueExact() }.isSuccess)
