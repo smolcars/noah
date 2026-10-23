@@ -15,6 +15,9 @@ import Foundation
             let due = wait()
             if due > .zero { do { try await sleep(due) } catch { return }; continue }
             await tip()
+            // Send was left, or the entry check ran, while the tip was read: no check now.
+            guard !Task.isCancelled else { return }
+            if wait() > .zero { continue }
             await check()
             // A check that recorded nothing still waits a full interval.
             if wait() == .zero { do { try await sleep(.seconds(interval)) } catch { return } }

@@ -87,6 +87,27 @@ import Testing
         await model.entryStatusCheck(now: { now }, sleep: { _ in Issue.record("Due checks don't wait") })
         #expect(checks.withLock { $0 } == 3)
     }
+    /// Leaving Send while the tip is read ends observation before any check.
+    @Test func leavingSendWhileTheTipIsReadStartsNoCheck() async {
+        let checks = RecurringExecutorTests.Locked(0)
+        let observation = Task {
+            await SendReceiptRefresh.observe(tip: { withUnsafeCurrentTask { $0?.cancel() } }, check: { checks.withLock { $0 += 1 } },
+                                             sleep: { _ in })
+        }
+        await observation.value
+        #expect(checks.withLock { $0 } == 0)
+    }
+    /// The entry check runs while the tip is read: the periodic one waits out its window.
+    @Test func anEntryCheckDuringTheTipReadIsNotFollowedByAnother() async {
+        var events: [String] = []
+        var sleeps: [Duration] = []
+        var last: Double?
+        await SendReceiptRefresh.observe(wait: { last.map { .seconds(max(0, 30 - (0 - $0))) } ?? .zero },
+                                         tip: { events.append("tip"); last = 0 },
+                                         check: { events.append("check") },
+                                         sleep: { duration in sleeps.append(duration); throw CancellationError() })
+        #expect(events == ["tip"] && sleeps == [.seconds(30)])
+    }
     @Test func sendsEntryAndPeriodicStatusChecksShareOneClock() async {
         let storage = SendPaymentTests.Storage()
         storage.attempt = .init(payment: SendPaymentTests().payment, snapshot: .init(movementIDs: []))
