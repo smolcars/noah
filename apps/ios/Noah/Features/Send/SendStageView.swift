@@ -84,8 +84,8 @@ struct SendStageView: View {
                 painter.draw(at: state.submittedAt.map { max(0, timeline.date.timeIntervalSince($0)) } ?? 0)
             }
         }
-        .task(id: state) {
-            // Stop redrawing once nothing moves any more; a new outcome or block wakes it.
+        .task(id: Settle(state: state, reduceMotion: reduceMotion)) {
+            // Stop redrawing once nothing moves any more; a new outcome, block or motion setting wakes it.
             settled = false
             guard let end = SendStagePainter.settleTime(state, reduceMotion: reduceMotion) else { return }
             let wait = end - (state.submittedAt.map { Date().timeIntervalSince($0) } ?? 0)
@@ -93,6 +93,12 @@ struct SendStageView: View {
             settled = true
         }
         .accessibilityHidden(true)
+    }
+
+    /// What decides when the stage settles: its state and Reduce Motion.
+    private struct Settle: Equatable {
+        var state: SendStagePainter.State
+        var reduceMotion: Bool
     }
 }
 
