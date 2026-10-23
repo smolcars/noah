@@ -51,6 +51,7 @@ import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.home.HomeIcons
 import com.noahwallet.ui.home.tonal
 import com.noahwallet.ui.onboarding.LocalPalette
+import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.LocalReduceMotion
 import com.noahwallet.ui.onboarding.rememberHaptics
 import kotlinx.coroutines.delay
@@ -275,7 +276,7 @@ internal fun ValueRow(label: String, value: String, number: Boolean = false, ico
 
 /**
  * Hold to send: holding 0.8 s traces an orange stroke around the pill (your signature), with ticks at
- * 25/50/75 % and a heavy one on completion; letting go early rewinds it. [onConfirm] runs once per gesture.
+ * 25/50/75 % and a heavy one on completion; letting go early, or a pose change, rewinds it. [onConfirm] runs once per gesture.
  * TalkBack and Switch Access get a "Send ₿X" action that asks for confirmation instead of holding.
  */
 @Composable
@@ -305,7 +306,8 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
         }
         .background(palette.foreground, RoundedCornerShape(29.dp))
         .testTag("send-hold")
-        .pointerInput(Unit) {
+        // A pose change moves the pill under the finger, so it restarts the gesture: hold again in the new pose.
+        .pointerInput(LocalPose.current) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 if (!currentEnabled) return@awaitEachGesture
@@ -321,11 +323,12 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
                     ticks.cancel()
                     if (currentEnabled) { fired = true; haptics.heavy(); currentConfirm() }
                 }
-                waitForUpOrCancellation()
-                if (!fired && hold.isActive) {
-                    hold.cancel()
-                    scope.launch { launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }; progress.animateTo(0f, tween(260, easing = LinearOutSlowInEasing)) }
-                } else scope.launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
+                try { waitForUpOrCancellation() } finally {
+                    if (!fired && hold.isActive) {
+                        hold.cancel()
+                        scope.launch { launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }; progress.animateTo(0f, tween(260, easing = LinearOutSlowInEasing)) }
+                    } else scope.launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
+                }
             }
         }
         .semantics(mergeDescendants = true) {
