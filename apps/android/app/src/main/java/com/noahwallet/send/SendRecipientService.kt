@@ -17,18 +17,15 @@ class SendRecipientService(private val network: String, private val warn: (Strin
     private val arkServerKey: suspend () -> String? = { null }, private val validateArk: suspend (String) -> Boolean = { false }) {
     suspend fun resolve(destination: String): SendRecipientRoute {
         val value = SendDestination.cleaned(destination).lowercase()
-        val endpoint = if (SendDestination.isLightningAddress(value)) {
-            // The name is one path segment, whatever it contains; a domain that isn't a host fails here.
-            val at = value.lastIndexOf('@')
-            runCatching { HttpUrl.Builder().scheme("https").host(value.substring(at + 1)).addPathSegments(".well-known/lnurlp").addPathSegment(value.substring(0, at)).build() }.getOrNull()
-        } else PaymentEncoding.bech32(value)?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8)?.toHttpUrlOrNull() }
-        requireSend(endpoint?.isHttps == true)
+        val endpoint = if (SendDestination.isLightningAddress(value)) SendDestination.addressEndpoint(value)
+            else PaymentEncoding.bech32(value)?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8)?.toHttpUrlOrNull() }
+        requireSend(SendDestination.allowsLnurl(endpoint))
         val request = endpoint!!.newBuilder().apply { runCatching { arkServerKey() }.getOrNull()?.let { addQueryParameter("ark", it) } }.build()
         val response = fetch(request)
         fun string(key: String) = response[key]?.jsonPrimitive?.contentOrNull
         val callback = string("callback")?.toHttpUrlOrNull()
         val min = response["minSendable"]?.jsonPrimitive?.longOrNull; val max = response["maxSendable"]?.jsonPrimitive?.longOrNull
-        requireSend(string("tag") == "payRequest" && callback?.isHttps == true && min != null && max != null && min >= 0 && min <= max)
+        requireSend(string("tag") == "payRequest" && SendDestination.allowsLnurl(callback) && min != null && max != null && min >= 0 && min <= max)
         val ark = string("ark")?.takeIf { runCatching { validateArk(it) }.getOrDefault(false) }
         return SendRecipientRoute(value, min!!, max!!, maxOf(0, response["commentAllowed"]?.jsonPrimitive?.intOrNull ?: 0), ark, callback!!, string("metadata"))
     }

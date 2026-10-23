@@ -48,6 +48,15 @@ class SendLnurlTest {
         requests = 0
         assertTrue(runCatching { service.invoice(SendPayment("alice@example.com", "lnurl", 1000, comment = "x".repeat(11))) }.isFailure); assertEquals(1, requests)
     }
+    @Test fun onionOrUserinfoCallbacksAreNeverRequested() = runBlocking {
+        for (callback in listOf("https://abc.onion/cb", "https://ABC.ONION./cb", "https://user:pass@example.com/cb", "https://user@example.com/cb")) {
+            val requests = mutableListOf<String>()
+            val service = SendRecipientService("regtest", fetch = { url -> requests += url.toString()
+                buildJsonObject { put("tag", "payRequest"); put("callback", callback); put("minSendable", 1000); put("maxSendable", 2000) } })
+            assertTrue(callback, runCatching { service.invoice(SendPayment("alice@example.com", "lnurl", 1)) }.isFailure)
+            assertEquals(callback, listOf("https://example.com/.well-known/lnurlp/alice"), requests)
+        }
+    }
     @Test fun malformedOrInsecureCallbacksAndUnvalidatedArkRoutesAreRejected() = runBlocking {
         for (callback in listOf("http://example.com/callback", "javascript:bad")) {
             val service = SendRecipientService("regtest", fetch = { buildJsonObject { put("tag", "payRequest"); put("callback", callback); put("minSendable", 1); put("maxSendable", 1000) } })

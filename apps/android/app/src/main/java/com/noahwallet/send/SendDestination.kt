@@ -1,5 +1,6 @@
 package com.noahwallet.send
 
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.math.BigDecimal
 import java.net.URI
@@ -22,8 +23,18 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
             if (!value.startsWith("lnurlp://", true)) return null
             val rest = value.drop(9)
             val url = if (rest.startsWith('/') || rest.startsWith('\\')) null else "https://$rest".toHttpUrlOrNull()
-            if (url == null || url.username.isNotEmpty() || url.password.isNotEmpty() || url.host.trimEnd('.').endsWith(".onion")) return null
+            if (url == null || !allowsLnurl(url)) return null
             return PaymentEncoding.encodeBech32("lnurl", url.toString().toByteArray()).takeIf { it.length <= 1023 }
+        }
+        /** What Noah's LNURL client may request: HTTPS, no userinfo, and never a `.onion` host (that would need cleartext).
+         *  Checked right before every request, and when parsing, so such a link is no destination. */
+        fun allowsLnurl(url: HttpUrl?) = url != null && url.isHttps && url.username.isEmpty() && url.password.isEmpty() && !isOnion(url.host)
+        /** HttpUrl hosts are already normalised (lower case, IDNA); a trailing dot is ignored. */
+        private fun isOnion(host: String) = host.trimEnd('.').endsWith(".onion")
+        /** A Lightning address's endpoint. The name is one path segment, whatever it contains; null when the domain isn't a host. */
+        fun addressEndpoint(value: String): HttpUrl? {
+            val at = value.lastIndexOf('@')
+            return runCatching { HttpUrl.Builder().scheme("https").host(value.substring(at + 1)).addPathSegments(".well-known/lnurlp").addPathSegment(value.substring(0, at)).build() }.getOrNull()
         }
         /** bark's rule: lnurl-rs 0.10's `LightningAddress` is email_address 0.2.5 with default options, so quoted local parts
          *  and domain literals count too. Lengths are UTF-8 bytes, as in Rust. Resolution stays HTTPS-only. */
@@ -66,7 +77,8 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
         fun parse(input: String, network: String): SendDestination {
             if (input.startsWith("bitcoin:", true)) return uri(input, network)
             val value = cleaned(input)
-            if (isLightningAddress(value)) return SendDestination("lnurl")
+            // Like an `lnurlp://` one, a `.onion` domain would need cleartext, so it is no destination.
+            if (isLightningAddress(value)) return if (addressEndpoint(value)?.host?.let(::isOnion) == true) SendDestination() else SendDestination("lnurl")
             PaymentEncoding.invoice(value)?.let { invoice ->
                 if (!matches(invoice.network, network, "lightning")) return mismatch(invoice.network, network)
                 if (invoice.sats != null && invoice.sats > BigDecimal.ZERO && invoice.sats < BigDecimal.ONE) return SendDestination("lightning", error = SendDestinationError.SubSatoshiInvoice)
@@ -84,9 +96,10 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
                     val url = text?.let { runCatching { URI(it) }.getOrNull() }
                     // LNURL-auth logs in rather than pays: refuse it here instead of at the fetch. The query is read decoded,
                     // as the LNURL client's HttpUrl reads it, so encoding or case can't hide `tag=login`.
-                    val login = text?.toHttpUrlOrNull()?.let { query -> (0 until query.querySize).any {
+                    val http = text?.toHttpUrlOrNull()
+                    val login = http?.let { query -> (0 until query.querySize).any {
                         query.queryParameterName(it).equals("tag", true) && query.queryParameterValue(it).equals("login", true) } } == true
-                    if (url?.scheme == "https" && url.host != null) return if (login) SendDestination(error = SendDestinationError.LnurlAuth) else SendDestination("lnurl")
+                    if (url?.scheme == "https" && url.host != null && allowsLnurl(http)) return if (login) SendDestination(error = SendDestinationError.LnurlAuth) else SendDestination("lnurl")
                 }
             }
             return SendDestination()
