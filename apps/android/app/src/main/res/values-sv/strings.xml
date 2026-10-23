@@ -40,6 +40,8 @@
   <string name="gt_eb6c016d2a3f5c97">"Avancerade utvecklaråtgärder"</string>
   <string name="gt_7b68fe5510851da3">"Efter"</string>
   <string name="gt_3e53a4da41d1a918">"Efter ett visst antal"</string>
+  <string name="gt_1ab182592ebf923e">"Efter en bekräftelse"</string>
+  <string name="gt_c99b0d023c7ff010">"Efter %1$s bekräftelser"</string>
   <string name="gt_a52ace420f2175d0">"Alla"</string>
   <string name="gt_dafb15f7c8ae0a82">"Alla möjliga att lösa in vid"</string>
   <string name="gt_22a80351096850d8">"Alla möjliga att lösa in vid block %1$s"</string>
@@ -86,8 +88,6 @@
   <string name="gt_af094d458523f61f">"Information om Ark-servern är inte tillgänglig. Försök uppdatera."</string>
   <string name="gt_521cb154a1b3a593">"Inställningar för Ark-server, plånbok och blockutforskare"</string>
   <string name="gt_d2047b1c7d8dd813">"Ark signerar tillbaka den till dig"</string>
-  <string name="gt_21ce893ff1c236c8">"Ark byter dina mynt mot en betalning på blockkedjan, sedan behövs en bekräftelse."</string>
-  <string name="gt_93fa68c9e6c98f0b">"Ark byter dina mynt mot en betalning på blockkedjan, sedan behövs %1$s bekräftelser."</string>
   <string name="gt_1a5b92522bb6c9c8">"Arks publicerade Lightning-avgifter för det här beloppet kan uppgå till %1$s sats, vilket överstiger din gräns för automatiska betalningar på %2$s sats. Granska betalningen för att betala manuellt."</string>
   <string name="gt_325d3644954c9188">"Arks publicerade Lightning-avgifter för det här beloppet kan uppgå till %1$s sats, vilket överstiger din gräns för automatiska betalningar på %2$s sats. Granska betalningen för att betala manuellt."</string>
   <string name="gt_fd1aab50cfb65421">"ArkInfo är inte tillgängligt; den publicerade avgiftstabellen för Lightning används"</string>

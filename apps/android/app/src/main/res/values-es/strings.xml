@@ -40,6 +40,8 @@
   <string name="gt_eb6c016d2a3f5c97">"Acciones avanzadas para desarrolladores"</string>
   <string name="gt_7b68fe5510851da3">"Después de"</string>
   <string name="gt_3e53a4da41d1a918">"Tras un número de pagos"</string>
+  <string name="gt_1ab182592ebf923e">"Tras una confirmación"</string>
+  <string name="gt_c99b0d023c7ff010">"Tras %1$s confirmaciones"</string>
   <string name="gt_a52ace420f2175d0">"Todos"</string>
   <string name="gt_dafb15f7c8ae0a82">"Todo reclamable a partir de"</string>
   <string name="gt_22a80351096850d8">"Todos los fondos serán reclamables en el bloque %1$s"</string>
@@ -86,8 +88,6 @@
   <string name="gt_af094d458523f61f">"La información del servidor Ark no está disponible. Intenta actualizarla."</string>
   <string name="gt_521cb154a1b3a593">"Configuración del servidor Ark, la billetera y el explorador"</string>
   <string name="gt_d2047b1c7d8dd813">"Ark te lo devuelve firmado"</string>
-  <string name="gt_21ce893ff1c236c8">"Ark cambia tus monedas por un pago en cadena y luego necesita una confirmación."</string>
-  <string name="gt_93fa68c9e6c98f0b">"Ark cambia tus monedas por un pago en cadena y luego necesita %1$s confirmaciones."</string>
   <string name="gt_1a5b92522bb6c9c8">"Las comisiones de Lightning publicadas por Ark para este importe pueden alcanzar %1$s sats y superar tu límite automático de %2$s sats. Revisa el pago para realizarlo manualmente."</string>
   <string name="gt_325d3644954c9188">"Las comisiones Lightning publicadas por Ark para este importe pueden alcanzar los %1$s sats y superar tu límite automático de %2$s sats. Revisa el pago para realizarlo manualmente."</string>
   <string name="gt_fd1aab50cfb65421">"ArkInfo no disponible; se usa la tabla publicada de comisiones de Lightning"</string>

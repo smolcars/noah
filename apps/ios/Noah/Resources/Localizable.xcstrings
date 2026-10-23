@@ -1405,6 +1405,78 @@
         }
       }
     },
+    "After one confirmation": {
+      "comment": "GT gt_1ab182592ebf923e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After one confirmation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tras una confirmación"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1回の承認後"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1회 확인 후"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efter en bekräftelse"
+          }
+        }
+      }
+    },
+    "After {count} confirmations": {
+      "comment": "GT gt_c99b0d023c7ff010; arguments: count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After %1$@ confirmations"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tras %1$@ confirmaciones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@回の承認後"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@회 확인 후"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efter %1$@ bekräftelser"
+          }
+        }
+      }
+    },
     "All": {
       "comment": "GT gt_a52ace420f2175d0; arguments: none",
       "extractionState": "manual",
@@ -3057,78 +3129,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ark signerar tillbaka den till dig"
-          }
-        }
-      }
-    },
-    "Ark swaps your coins for an on-chain payment, then it needs one confirmation.": {
-      "comment": "GT gt_21ce893ff1c236c8; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark swaps your coins for an on-chain payment, then it needs one confirmation."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark cambia tus monedas por un pago en cadena y luego necesita una confirmación."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arkがあなたのコインをオンチェーンの支払いに交換し、その後1回の承認が必要です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark가 코인을 온체인 결제로 교환한 뒤 확인이 1번 필요해요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark byter dina mynt mot en betalning på blockkedjan, sedan behövs en bekräftelse."
-          }
-        }
-      }
-    },
-    "Ark swaps your coins for an on-chain payment, then it needs {count} confirmations.": {
-      "comment": "GT gt_93fa68c9e6c98f0b; arguments: count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark swaps your coins for an on-chain payment, then it needs %1$@ confirmations."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark cambia tus monedas por un pago en cadena y luego necesita %1$@ confirmaciones."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arkがあなたのコインをオンチェーンの支払いに交換し、その後%1$@回の承認が必要です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark가 코인을 온체인 결제로 교환한 뒤 확인이 %1$@번 필요해요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark byter dina mynt mot en betalning på blockkedjan, sedan behövs %1$@ bekräftelser."
           }
         }
       }

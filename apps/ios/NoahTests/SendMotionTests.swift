@@ -413,20 +413,28 @@ struct SendMotionTests {
         #expect(model.error == "Enter a valid Bitcoin, Lightning, or Ark destination.")
     }
 
-    /// An Ark-funded on-chain review notes the round's confirmations, from today's setting.
-    @Test func anArkFundedOnchainReviewNotesItsConfirmations() {
+    /// An Ark-funded on-chain review shows the round's confirmations (today's setting) in its
+    /// Arrives row, so a Max quote's estimate note or an invoice note can't crowd them out.
+    @Test func anArkFundedOnchainReviewShowsItsConfirmations() {
         #expect(WalletConfiguration.base(for: .mainnet).roundTxRequiredConfirmations == 2)
-        #expect(SendConfirmation.confirmationNote(rail: .onchainSwap, required: 2, locale: "en")
-                == "Ark swaps your coins for an on-chain payment, then it needs 2 confirmations.")
-        #expect(SendConfirmation.confirmationNote(rail: .onchainSwap, required: 1, locale: "en")
-                == "Ark swaps your coins for an on-chain payment, then it needs one confirmation.")
-        for rail in [SendMotion.Rail.ark, .lightning, .onchainWallet] {
-            #expect(SendConfirmation.confirmationNote(rail: rail, required: 2, locale: "en") == nil)
+        let max = SendPayment(destination: SendReceiveShotTests.bitcoin, method: "onchain", amount: 50_000, source: .offchain)
+        let maxQuote = SendQuote(amount: 49_500, fee: 500, total: 50_000, vtxoIDs: ["vtxo"])
+        let invoiceNote = "The invoice sets the amount to ₿1,500"
+        for (payment, quote, note) in [(max, maxQuote, nil), (max, SendQuote(amount: 1_500, fee: 300, total: 1_800), invoiceNote)] {
+            #expect(SendMotion.Rail(payment) == .onchainSwap)
+            #expect(SendConfirmation.arrives(.init(payment), required: 2, locale: "en") == "After 2 confirmations")
+            // The fine print keeps its own note.
+            #expect(SendConfirmation.fine(invoiceNote: note, quote: quote, locale: "en")
+                    == note ?? SendQuote.recipientEstimateExplanation)
         }
-        let english = SendConfirmation.confirmationNote(rail: .onchainSwap, required: 2, locale: "en")
+        #expect(SendConfirmation.arrives(.onchainSwap, required: 1, locale: "en") == "After one confirmation")
+        #expect(SendConfirmation.arrives(.onchainWallet, required: 2, locale: "en") == "In about 20 minutes")
+        #expect(SendConfirmation.arrives(.ark, required: 2, locale: "en") == "Instantly")
+        #expect(SendConfirmation.arrives(.lightning, required: 2, locale: "en") == "In seconds")
         for language in ["es", "ja", "ko", "sv"] {
-            let note = SendConfirmation.confirmationNote(rail: .onchainSwap, required: 2, locale: language)
-            #expect(note != english && note?.contains("2") == true, "\(language)")
+            let row = SendConfirmation.arrives(.onchainSwap, required: 2, locale: language)
+            #expect(row != "After 2 confirmations" && row.contains("2"), "\(language)")
+            #expect(SendConfirmation.arrives(.onchainSwap, required: 1, locale: language) != "After one confirmation", "\(language)")
         }
     }
 

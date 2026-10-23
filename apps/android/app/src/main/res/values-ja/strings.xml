@@ -40,6 +40,8 @@
   <string name="gt_eb6c016d2a3f5c97">"開発者向けの高度な操作"</string>
   <string name="gt_7b68fe5510851da3">"指定回数後"</string>
   <string name="gt_3e53a4da41d1a918">"指定回数後"</string>
+  <string name="gt_1ab182592ebf923e">"1回の承認後"</string>
+  <string name="gt_c99b0d023c7ff010">"%1$s回の承認後"</string>
   <string name="gt_a52ace420f2175d0">"すべて"</string>
   <string name="gt_dafb15f7c8ae0a82">"すべて受け取り可能になる時点"</string>
   <string name="gt_22a80351096850d8">"すべて受け取り可能になるブロック：%1$s"</string>
@@ -86,8 +88,6 @@
   <string name="gt_af094d458523f61f">"Arkサーバーの情報を取得できません。更新してみてください。"</string>
   <string name="gt_521cb154a1b3a593">"Arkサーバー、ウォレット、エクスプローラーの設定"</string>
   <string name="gt_d2047b1c7d8dd813">"Arkが署名してあなたに戻します"</string>
-  <string name="gt_21ce893ff1c236c8">"Arkがあなたのコインをオンチェーンの支払いに交換し、その後1回の承認が必要です。"</string>
-  <string name="gt_93fa68c9e6c98f0b">"Arkがあなたのコインをオンチェーンの支払いに交換し、その後%1$s回の承認が必要です。"</string>
   <string name="gt_1a5b92522bb6c9c8">"この金額に対してArkが公表しているライトニング手数料は最大%1$s satsで、自動支払いの手数料上限である%2$s satsを超えています。内容を確認して手動で支払ってください。"</string>
   <string name="gt_325d3644954c9188">"この金額に対してArkが公表しているライトニング手数料は最大%1$s satsで、自動支払いの上限%2$s satsを超えています。内容を確認して手動で支払ってください。"</string>
   <string name="gt_fd1aab50cfb65421">"ArkInfoを取得できないため、公開されているライトニングの手数料表を使用します"</string>

@@ -119,7 +119,8 @@ struct SendConfirmation: View {
             if let source = payment.source {
                 SendDetailRow("From", text: source.label)
             }
-            SendDetailRow("Arrives", text: rail == .ark ? "Instantly" : rail == .lightning ? "In seconds" : "In about 20 minutes")
+            SendDetailRow("Arrives", text: Self.arrives(rail, required: WalletConfiguration.base(for: .current).roundTxRequiredConfirmations,
+                                                        locale: locale.identifier), verbatim: true)
             if quote.fee == 0 && rail == .ark {
                 SendDetailRow(estimated ? "Estimated fee" : "Fee", text: "Free")
             } else {
@@ -134,24 +135,28 @@ struct SendConfirmation: View {
         .accessibilityIdentifier("send-review-rows")
     }
 
+    private var fine: String? { Self.fine(invoiceNote: invoiceNote, quote: quote, locale: locale.identifier) }
+
     /// One line at most: the invoice amount, the signed transaction's expiry, or today's estimate notes.
-    private var fine: String? {
-        let language = locale.identifier
+    static func fine(invoiceNote: String?, quote: SendQuote, locale: String) -> String? {
         if let invoiceNote { return invoiceNote }
         if quote.prepared != nil {
-            return L10n.text("This signed transaction expires after two minutes. Review again for a fresh fee rate.", locale: language)
+            return L10n.text("This signed transaction expires after two minutes. Review again for a fresh fee rate.", locale: locale)
         }
-        if quote.recipientIsEstimated { return L10n.text(SendQuote.recipientEstimateExplanation, locale: language) }
-        if quote.approximate { return L10n.text(SendQuote.feeEstimateExplanation, locale: language) }
-        return Self.confirmationNote(rail: rail, required: WalletConfiguration.base(for: .current).roundTxRequiredConfirmations,
-                                     locale: language)
+        if quote.recipientIsEstimated { return L10n.text(SendQuote.recipientEstimateExplanation, locale: locale) }
+        if quote.approximate { return L10n.text(SendQuote.feeEstimateExplanation, locale: locale) }
+        return nil
     }
 
-    /// An Ark-funded on-chain send waits for the round's confirmations (today's setting).
-    static func confirmationNote(rail: SendMotion.Rail, required: UInt32, locale: String) -> String? {
-        guard rail == .onchainSwap else { return nil }
-        return required <= 1
-            ? L10n.text("Ark swaps your coins for an on-chain payment, then it needs one confirmation.", locale: locale)
-            : L10n.text("Ark swaps your coins for an on-chain payment, then it needs {count} confirmations.", Int(required), locale: locale)
+    /// The Arrives row. An Ark-funded on-chain send waits for the round's confirmations
+    /// (today's setting), shown here so no fine print can crowd them out.
+    static func arrives(_ rail: SendMotion.Rail, required: UInt32, locale: String) -> String {
+        switch rail {
+        case .ark: L10n.text("Instantly", locale: locale)
+        case .lightning: L10n.text("In seconds", locale: locale)
+        case .onchainWallet: L10n.text("In about 20 minutes", locale: locale)
+        case .onchainSwap: required <= 1 ? L10n.text("After one confirmation", locale: locale)
+            : L10n.text("After {count} confirmations", Int(required), locale: locale)
+        }
     }
 }
