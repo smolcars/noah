@@ -1,10 +1,12 @@
 package com.noahwallet.send
 
+import com.noahwallet.recurring.*
 import io.github.niteshbalusu11.bark.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
 
 /** SDK 0.6.0 returns movement ids for Ark sends and offboards (FFI item 16). */
 class SendMovementIdentityTest {
@@ -37,6 +39,41 @@ class SendMovementIdentityTest {
             assertTrue(rail, restarted.attempt!!.receipt!!.isProven(payment))
             assertEquals(rail, 1, wallet.calls); assertEquals("A returned result needs no reconciliation", 0, reconciled)
         }
+    }
+
+    /** Once Send's shared journal is gone, the recurring journal is the only copy of the returned id. */
+    @Test fun recurringArkMovementIDSurvivesRestartWithoutTheSendJournal() = runBlocking {
+        val w = RecurringWorld(this)
+        try {
+            val schedule = w.add()
+            // Die after the payment, before the schedule settles: the policy store's next write fails.
+            w.wallet.payBlock = { w.mmkvFails = true; SendReceipt(1000, movementID = 42u, proof = SendReceipt.Proof.submitReturnedArkSuccess) }
+            w.executor.execute()
+            assertEquals(1, w.wallet.calls)
+            val paid = w.journal.load().getValue(schedule.id)
+            assertEquals(RecurringJournal.Outcome.succeeded, paid.terminal?.outcome)
+            assertEquals(42u, paid.terminal?.attempt?.receipt?.movementID)
+            assertFalse(paid.historyApplied)
+
+            // Settlement releases Send's shared journal before applying the schedule; removing it here keeps
+            // the recurring journal as the only copy whatever that order. Restart with storage healthy again.
+            w.sendJournal.attempt = null
+            w.mmkvFails = false
+            val store = RecurringStore({ w.raw }, { w.raw = it })
+            store.protectPolicies(File("${w.journal.file.path}.policies"), sync = {}, syncFile = {}) { w.binding }
+            val controller = controller(w.wallet, w.sendJournal, this)
+            val executor = RecurringExecutor(RecurringExecutor.Dependencies(store, w.journal, controller, ensureOpen = {}, binding = { w.binding },
+                allowed = {}, quote = { error("Recovery must not quote or pay") }, automationGeneration = { null }, now = { w.now }, zone = { w.zone }), this)
+            controller.reloadForWalletChange()
+            assertNull(controller.attempt)
+            repeat(2) { executor.execute(); executor.checkStatus(schedule.id) }
+            assertEquals(1, w.wallet.calls)
+            val settled = w.journal.load().getValue(schedule.id)
+            assertEquals(paid.terminal?.settlementID, settled.terminal?.settlementID)
+            assertEquals(42u, settled.terminal?.attempt?.receipt?.movementID)
+            assertTrue(settled.consumed && settled.historyApplied && settled.released)
+            assertEquals(1, store.load().schedules.getValue(schedule.id).occurrencesPaid)
+        } finally { w.policyDirectory.parentFile!!.deleteRecursively() }
     }
 
     @Test fun metadataAttachesOnlyToTheExactNewMovement() {
