@@ -1,5 +1,106 @@
 # Native Send verification
 
+## bark-bolt-ffi 0.6.0 adoption (2026-10-22)
+
+Base `fe4296dd`. iOS pins **exactVersion 0.6.0** (Bark 0.8.0, `lib-0.8.0`
+`959a489f`) at `b5aed0bb88a794483e3e0932a5f0dacf3de7c9e7`. The SPM checkout's
+`Package.swift` hashes `5816d1c4…` and the resolved XCFramework archive
+`72c95272…`; both match the release `SHA256SUMS` and SPM's artifact-source record
+([artifact evidence](evidence/ffi060-artifact.json)). SwiftPM was warmed with
+`swift package --disable-keychain resolve` in a scratch package, because Xcode's
+own download waits on a keychain prompt.
+
+- **Lightning options.** Invoice and offer sends pass
+  `LightningSendOptions(wait: true, retryForSecs: 60)` (`SendLightningSubmission.options`):
+  60 s is today's server default, set explicitly; `wait: false` stays for the
+  async-payments phase. `checkLightningPayment(paymentHash:wait:)` is unchanged.
+- **Movement identity (FFI 16).** `sendArkoorPayment` returns the payment's
+  movement id and `sendOnchain` / `offboardVtxos` return `OffboardResult { txid,
+  movementId }`. The Send receipt stores the id, so the Send and recurring
+  journals keep it across restarts and `SendSuccessDetails` links the exact
+  History row. Offboard receipts fill actual amount/fee only when the returned id
+  and txid agree. Repeat-payment metadata is written with `updateHistoryMetadata`
+  on that exact id (or the hash-bound Lightning movement), never on a
+  destination/amount match; movements that predate the attempt are untouched.
+- **Old journals.** Receipts saved before 0.6.0 have no id: offboards still bind
+  by txid alone and Ark attempts without a receipt still show candidates. A
+  missing id never means "not sent": the crash window between Bark recording a
+  payment and Noah saving its receipt remains uncertain (FFI 19).
+- **Errors.** `BarkErrorCode` keeps codes 0–12 unchanged and adds
+  `invalidPaymentRequest` (13), used only by the new payment-request APIs, so the
+  existing mappings (`SendOnchainSubmission.notSubmitted`, board/M6 errors) need
+  no change.
+- **Debug info.** Settings › Debug Screen › "Get Debug Info" shows `debugInfo()`'s
+  network, mailbox id and VTXO xpub with a Copy row. The xpub is display-only:
+  it is never logged, and Sentry attaches no screenshots or view hierarchy.
+- **Regtest endpoints.** `NOAH_REGTEST_ARK_URL` / `NOAH_REGTEST_BITCOIND_URL`
+  (Info.plist `NoahRegtestArkURL` / `NoahRegtestBitcoindURL`) replace the
+  host's `:3535` / `:18443`. They are empty by default and read only for
+  regtest, e.g. `xcodebuild … NOAH_REGTEST_ARK_URL=http://127.0.0.1:13535
+  NOAH_REGTEST_BITCOIND_URL=http://127.0.0.1:28443
+  NOAH_REGTEST_SERVER_URL=http://127.0.0.1:13000` for the `noah-bark08` stack.
+
+**No SQLite migration.** `bark/src/persist/sqlite/migrations` is identical
+between `bfbe6b7` (0.5.0's Bark) and `959a489f`; the newest migration is still
+`m0042`. The only client persistence change is a read query
+(`get_movement_id_by_action`).
+
+**Tests.** Targeted: 124 tests in 14 suites (Send safety/restart/offboard/
+Lightning/LNURL/payment, the new `SendMovementIdentityTests`, recurring executor,
+history fixtures, translations, debug JSON, configuration). Full NoahTests once:
+**989 total / 954 passed / 35 opt-in skipped / 0 failed**, 194 suites. Simulator
+"Noah FFI iPhone" (iPhone 17, iOS 27.0), DerivedData `/private/tmp/noah-ffi060-ios-dd`.
+
+**Live checks on `noah-bark08`** (captaind `nightly-2026-10-22`, opt-in
+`FFI060LiveTests`, `TEST_RUNNER_NOAH_FFI060_STAGE=<stage>`; the host acts between
+stages through `docker exec` only and mined two blocks, 882 and 883):
+
+| Stage | Result |
+| --- | --- |
+| `create` | New wallet; ArkInfo read from `:13535` |
+| `receive` | Core paid 200,000 sats onchain (confirmed in 882). LND paid a 30,000-sat invoice: one `bark.lightning_receive` movement, 29,840 spendable (server fee 100 + 2,000 ppm) |
+| `ark` | 8,000 sats to a second in-process wallet: receipt, journal and History all carry movement 2 (`bark.arkoor` send to that address); repeat metadata only on 2. The peer paid 3,000 back and it arrived as an arkoor receive |
+| `ln-send` | 5,000-sat LND invoice settled: proven receipt, movement 4, fee 80. captaind's xpay `pay` span shows `retry_for: 60s` |
+| `ln-probe` | A raw `payLightningInvoice` with `retryForSecs: 45` shows `retry_for: 45s`: the SDK forwards the option (60 s alone equals the server default) |
+| `ln-fail` | LND hold invoice held, then cancelled: Bark revoked, Send ended Failed (movement 5 `failed`), spendable 19,760 before and after, no pending Lightning send |
+| `offboard` | `sendOnchain` 10,000 sats to Core: txid and movement 7 journaled; `bark.offboard` `send_onchain` with that txid; amount 10,000, fee 2,550; in mempool |
+| `offboard-confirmed` | After block 883, a fresh controller resolved the journal to Confirmed with the same id and txid; Core saw 10,000 sats |
+| `reopen` | Close/reopen: same fingerprint, 7 movements and balances; `debugInfo()` returned regtest, mailbox id and xpub; the exported app log has no xpub |
+| `upgrade` | See below |
+
+The app UI then opened on Home (₿206,134; the 8,000-sat row labelled from its
+repeat metadata) and again after terminate/relaunch. The Debug screen's "Get
+Debug Info" showed the three fields; that screenshot was deleted, and no app or
+host log contains the xpub.
+
+**In-place upgrade.** A scratch copy of `fe4296dd` (0.5.0) plus only the
+regtest-override commit created a wallet on `noah-bark08` with 0.5.0, received
+10,000 sats over Lightning, sent 3,000 Ark and 2,000 Lightning: fingerprint
+`df0379c7`, 3 movements, 4,803 spendable. Installing the 0.6.0 build over it
+(same container) opened the wallet through `openExisting` with the same
+fingerprint, every movement's id/status/kind/amounts/fee and the same balance,
+before and after a sync. Bark's `migrations` table stayed at 42 and the full
+`sqlite_master` schema was byte-identical (`1a49351e…`) before and after.
+The RN → native runner (`UpgradeTests/run.sh`) was not rerun: it needs an RN
+regtest build (none exists) and funds through the default `scripts` stack.
+Its last funded iOS rerun (`0d1d724e`, `UpgradeTests/README.md`) already ran on
+0.5.0's Bark, whose client SQLite schema 0.6.0 leaves unchanged.
+
+LND's outbound liquidity was returned to its starting 46,530 sats with CLN
+payments afterwards. The owned simulator, its DerivedData, result bundles and
+scratch copies were deleted.
+
+**Not adopted yet** (after the Send/Receive redesign, with a parity review):
+`parsePaymentRequest` would sit beside `SendDestination.parse` (recipient step in
+`SendModel`, the `quote` guard in `WalletSession+Send.swift`, `RecurringRecipient`);
+`sendPayment` could replace only the final per-method call inside `submitSend`,
+keeping the checkpoint/journal guards and prepared BDK sends, with
+`PaymentResult.ark/.onchain` mapping to today's receipt fields;
+`estimatePaymentFee(s)` would replace the per-method estimators in
+`WalletSession.quote(_:handles:)`; `bip321Uri` would back `ReceiveRequest.uri()`
+and `WalletSession.receiveRequest` / `receiveInvoice`, keeping RN's receive rules
+and cancelling abandoned invoices with `cancelLightningReceive`.
+
 ## Recurring occurrence handoff (2026-10-20)
 
 Base `7e88fdd8`. A recurring terminal receipt is now copied into its occurrence's

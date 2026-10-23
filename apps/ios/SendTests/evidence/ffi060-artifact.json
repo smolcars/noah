@@ -1,0 +1,24 @@
+{
+  "revision": {
+    "revision": "b5aed0bb88a794483e3e0932a5f0dacf3de7c9e7",
+    "version": "0.6.0"
+  },
+  "artifactSource": {
+    "checksum": "72c95272f4d27295b3a2b9e3c2002ada95c8c97f6fbcd9924c9e81af0e6ddca5",
+    "type": "remote",
+    "url": "https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.6.0/BarkBoltFFI.xcframework.zip"
+  },
+  "artifactSha256": "72c95272f4d27295b3a2b9e3c2002ada95c8c97f6fbcd9924c9e81af0e6ddca5",
+  "manifestSha256": "5816d1c420ca717ddf425caa16e64654cbeba9a2dc2abe11a29d68c871d75e2a",
+  "releaseSha256Sums": {
+    "BarkBoltFFI.xcframework.zip": "72c95272f4d27295b3a2b9e3c2002ada95c8c97f6fbcd9924c9e81af0e6ddca5",
+    "Package.swift": "5816d1c420ca717ddf425caa16e64654cbeba9a2dc2abe11a29d68c871d75e2a"
+  },
+  "bark": {
+    "tag": "lib-0.8.0",
+    "commit": "959a489ff4934b181783b41c7d3ee68d85b95cbf",
+    "sqliteMigrationsChangedSince": "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c",
+    "sqliteMigrationsDiffLines": 0,
+    "latestMigration": "m0042_vtxo_registered"
+  }
+}
