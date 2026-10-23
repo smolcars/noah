@@ -84,6 +84,9 @@ android {
         val regtestServer = providers.gradleProperty("noahRegtestServerURL").orElse("http://$regtestHost:3000").get()
         require(regtestServer.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid regtest server URL" }
         buildConfigField("String", "REGTEST_SERVER_URL", "\"$regtestServer\"")
+        // Set only by the regtest flavor below; empty keeps the host's :3535 / :18443.
+        buildConfigField("String", "REGTEST_ARK_URL", "\"\"")
+        buildConfigField("String", "REGTEST_BITCOIND_URL", "\"\"")
         val regtestLnurlDomain = providers.gradleProperty("noahRegtestLnurlDomain").orElse("localhost.com").get()
         require(regtestLnurlDomain.matches(Regex("[a-zA-Z0-9.-]+"))) { "Invalid regtest Lightning-address domain" }
         buildConfigField("String", "REGTEST_LNURL_DOMAIN", "\"$regtestLnurlDomain\"")
@@ -115,6 +118,13 @@ android {
             versionNameSuffix = "-regtest"
             resValue("string", "app_name", "Noah (Regtest)")
             buildConfigField("String", "APP_VARIANT", "\"regtest\"")
+            // Optional Ark server / bitcoind URLs replacing the host's :3535 / :18443, e.g. a second stack:
+            // -PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443
+            for ((property, field) in listOf("noahRegtestArkURL" to "REGTEST_ARK_URL", "noahRegtestBitcoindURL" to "REGTEST_BITCOIND_URL")) {
+                val url = providers.gradleProperty(property).orElse("").get()
+                require(url.isEmpty() || url.matches(Regex("https?://[a-zA-Z0-9.:-]+"))) { "Invalid $property" }
+                buildConfigField("String", field, "\"$url\"")
+            }
         }
     }
 

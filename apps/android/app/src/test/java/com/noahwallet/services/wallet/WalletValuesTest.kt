@@ -34,6 +34,19 @@ class WalletValuesTest {
         assertEquals(12.toUShort(), WalletConfiguration.base("signet").vtxoRefreshExpiryThreshold)
         assertEquals(24.toUShort(), regtest.vtxoRefreshExpiryThreshold)
     }
+    @Test fun regtestArkAndBitcoindURLsCanTargetAnotherStack() {
+        val other = WalletConfiguration.base("regtest", "192.168.6.67", "http://10.0.2.2:13535", "http://10.0.2.2:28443")
+        assertEquals("http://10.0.2.2:13535", other.arkServer)
+        assertEquals("http://10.0.2.2:28443", other.bitcoind)
+        // Unset properties build as "", which must keep the host's default ports.
+        assertEquals("", com.noahwallet.BuildConfig.REGTEST_ARK_URL); assertEquals("", com.noahwallet.BuildConfig.REGTEST_BITCOIND_URL)
+        val defaults = WalletConfiguration.base("regtest", "192.168.6.67")
+        assertEquals("http://192.168.6.67:3535", defaults.arkServer); assertEquals("http://192.168.6.67:18443", defaults.bitcoind)
+        // Mainnet and signet never read them.
+        for (variant in listOf("mainnet", "signet"))
+            assertEquals(variant, WalletConfiguration.base(variant, regtestArkURL = null, regtestBitcoindURL = null),
+                WalletConfiguration.base(variant, regtestArkURL = "http://192.0.2.1:1", regtestBitcoindURL = "http://192.0.2.1:2"))
+    }
     @Test fun walletDataMeansAnyFileAndCleanupKeepsPreexistingEmptyDirectory() {
         val root = Files.createTempDirectory("wallet-location").toFile()
         try {

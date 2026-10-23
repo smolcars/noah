@@ -13,6 +13,10 @@ class ArkInfoEndpointTest {
             assertEquals("https://custom.example/api/blocks/tip/height", ArkInfoEndpoints.blockHeight(variant, "https://custom.example/api/"))
         }
         assertEquals("http://192.0.2.1:18443", ArkInfoEndpoints.blockHeight("regtest", "https://ignored.example", "192.0.2.1"))
+        assertEquals("http://10.0.2.2:28443", ArkInfoEndpoints.blockHeight("regtest", null, "192.0.2.1", "http://10.0.2.2:28443"))
+        for (variant in listOf("mainnet", "signet")) for (esplora in listOf(null, "https://custom.example/api"))
+            assertEquals(ArkInfoEndpoints.blockHeight(variant, esplora, regtestBitcoindURL = null),
+                ArkInfoEndpoints.blockHeight(variant, esplora, regtestBitcoindURL = "http://192.0.2.1:2"))
     }
 
     @Test fun pricesUseConfiguredServerForEveryVariant() {

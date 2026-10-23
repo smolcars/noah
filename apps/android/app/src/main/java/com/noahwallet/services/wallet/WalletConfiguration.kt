@@ -31,15 +31,18 @@ data class WalletConfiguration(
     )
 
     companion object {
-        fun base(variant: String, regtestHost: String = BuildConfig.REGTEST_HOST): WalletConfiguration = when (variant) {
+        /** Only regtest reads the Ark server / bitcoind overrides (-PnoahRegtestArkURL / -PnoahRegtestBitcoindURL). */
+        fun base(variant: String, regtestHost: String = BuildConfig.REGTEST_HOST,
+            regtestArkURL: String? = BuildConfig.REGTEST_ARK_URL.ifEmpty { null },
+            regtestBitcoindURL: String? = BuildConfig.REGTEST_BITCOIND_URL.ifEmpty { null }): WalletConfiguration = when (variant) {
             "mainnet" -> WalletConfiguration(Network.BITCOIN, "https://ark.second.tech",
                 esplora = "https://mempool.second.tech/api", vtxoRefreshExpiryThreshold = 144u,
                 roundTxRequiredConfirmations = 2u)
             "signet" -> WalletConfiguration(Network.SIGNET, "https://ark.signet.2nd.dev",
                 esplora = "https://esplora.signet.2nd.dev", vtxoRefreshExpiryThreshold = 12u,
                 roundTxRequiredConfirmations = 1u)
-            "regtest" -> WalletConfiguration(Network.REGTEST, "http://$regtestHost:3535",
-                bitcoind = "http://$regtestHost:18443", bitcoindUser = "second", bitcoindPass = "ark",
+            "regtest" -> WalletConfiguration(Network.REGTEST, regtestArkURL ?: "http://$regtestHost:3535",
+                bitcoind = regtestBitcoindURL ?: "http://$regtestHost:18443", bitcoindUser = "second", bitcoindPass = "ark",
                 vtxoRefreshExpiryThreshold = 24u, roundTxRequiredConfirmations = 1u)
             else -> error("Unknown app variant")
         }
