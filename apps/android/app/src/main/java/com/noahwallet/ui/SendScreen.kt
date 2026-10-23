@@ -67,12 +67,6 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     LaunchedEffect(app.summary) {
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
     }
-    LaunchedEffect(controller.attempt?.receipt?.txid, app.isWalletSuspended) {
-        if (controller.attempt?.receipt?.txid == null || app.isWalletSuspended) return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (isActive) { controller.checkStatus(); delay(10_000) }
-        }
-    }
     LaunchedEffect(app.preferredCurrency) {
         model.fiatCurrency = app.preferredCurrency
         model.btcPrice = runCatching { V0PricesClient(app.services.client).fiatPrices(JsonObject(emptyMap())).value().rates[app.preferredCurrency] }.getOrNull()?.takeIf { it.isFinite() && it > 0 }
@@ -145,17 +139,20 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
             }
         }
     }
-    // The block row's tip: re-read at most every 30 s while Send shows an on-chain payment; a new block re-checks it.
+    // While Send is visible with a transaction: one loop re-reads the block row's tip and today's status (which
+    // reconciles the transaction and retries a pending broadcast) at most every 30 s, including across leaving and returning.
+    val txid = controller.attempt?.receipt?.txid
     val onchain = controller.locked && controller.attempt?.payment?.method == "onchain"
     var tip by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(onchain, app.isWalletSuspended) {
-        if (!onchain || app.isWalletSuspended) return@LaunchedEffect
+    var checkedAt by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(txid, onchain, app.isWalletSuspended) {
+        if (txid == null && !onchain || app.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) {
-                val next = runCatching { app.session.chainTip() }.getOrNull()
-                if (next != null && tip != null && next != tip) controller.checkStatus()
-                if (next != null) tip = next
-                delay(30_000)
+                delay((checkedAt + 30_000 - SystemClock.elapsedRealtime()).coerceAtLeast(0))
+                runCatching { app.session.chainTip() }.getOrNull()?.let { tip = it }
+                if (txid != null) controller.checkStatus()
+                checkedAt = SystemClock.elapsedRealtime()
             }
         }
     }
