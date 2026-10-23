@@ -343,6 +343,13 @@ struct SendMotionTests {
         }
     }
 
+    /// The ticks land at 25, 50 and 75% of the 0.8 s hold, so completion never cuts the last one.
+    @Test func holdTicksAtAQuarterHalfAndThreeQuarters() {
+        let expected = [0.25, 0.5, 0.75].map { $0 * SendHoldButton.duration }
+        #expect(zip(SendHoldButton.ticks.map(\.at), expected).allSatisfy { abs($0 - $1) < 1e-9 })
+        #expect(SendHoldButton.ticks.map(\.kind) == [.selection, .light, .medium])
+    }
+
     /// A first finger presses, a second lands 500 ms later and the first lifts at 600 ms:
     /// no single finger held for 0.8 s, so the hold can't confirm until every finger lifts.
     @Test func aSecondFingerCancelsTheHold() {

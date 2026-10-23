@@ -13,6 +13,8 @@ struct SendHoldButton: View {
     let onConfirm: () -> Void
 
     static let duration = 0.8
+    /// Haptic ticks at 25, 50 and 75% of the hold; the heavy one comes on completion.
+    static let ticks: [(at: Double, kind: OnboardingHaptics.Kind)] = [(0.2, .selection), (0.4, .light), (0.6, .medium)]
 
     @State private var progress: CGFloat = 0
     @State private var pressing = false
@@ -76,10 +78,11 @@ struct SendHoldButton: View {
         pressing = true
         withAnimation(.linear(duration: Self.duration)) { progress = 1 }
         ticks?.cancel()
+        let start = ContinuousClock.now
         ticks = Task { @MainActor in
-            for (fraction, kind) in [(0.25, OnboardingHaptics.Kind.selection), (0.5, .light), (0.75, .medium)] {
-                do { try await Task.sleep(for: .seconds(Self.duration * (fraction - (fraction == 0.25 ? 0 : 0.25)))) } catch { return }
-                haptics.play(kind)
+            for tick in Self.ticks {
+                do { try await Task.sleep(until: start + .seconds(tick.at), clock: .continuous) } catch { return }
+                haptics.play(tick.kind)
             }
         }
     }
