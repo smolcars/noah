@@ -172,12 +172,18 @@ struct ReceiveAmountSheet: View {
         return FiatCurrency.fiatToSats(value, btcPrice: btcPrice)
     }
 
+    /// The amount in the other currency, canonical either way (satsToFiat always writes ".").
+    /// Only empty stays empty (a clear); a zero stays an invalid "0", never a removal.
+    static func switched(_ amount: String, fromFiat: Bool, btcPrice: Double, currency: String) -> String {
+        guard !amount.isEmpty else { return "" }
+        guard let sats = sats(amount, fiat: fromFiat, btcPrice: btcPrice), sats > 0 else { return "0" }
+        return fromFiat ? String(sats) : FiatCurrency.satsToFiat(sats, btcPrice: btcPrice, currency: currency)
+    }
+
     private func toggleCurrency() {
         guard let btcPrice else { return }
         haptics.play(.selection)
-        let sats = sats
-        // Canonical either way: satsToFiat always writes ".".
-        draft.amount = sats == 0 ? "" : useFiat ? String(sats) : FiatCurrency.satsToFiat(sats, btcPrice: btcPrice, currency: app.preferredCurrency)
+        draft.amount = Self.switched(amount, fromFiat: useFiat, btcPrice: btcPrice, currency: app.preferredCurrency)
         draft.useFiat.toggle()
     }
 }

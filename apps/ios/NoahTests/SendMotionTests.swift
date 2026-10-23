@@ -383,6 +383,19 @@ struct ReceiveFormatTests {
         #expect(ReceiveAmountSheet.sats("1500", fiat: false, btcPrice: nil) == 1_500)
     }
 
+    /// Switching currency keeps a zero an invalid zero: only an emptied amount removes it.
+    @Test func switchingCurrencyNeverTurnsAZeroIntoAClear() {
+        for zero in ["0", "0.0001", "0.00"] {
+            let switched = ReceiveAmountSheet.switched(zero, fromFiat: true, btcPrice: 100_000, currency: "USD")
+            #expect(switched == "0" && ReceiveAmountSheet.sats(switched, fiat: false, btcPrice: nil) == 0, "\(zero)")
+        }
+        #expect(ReceiveAmountSheet.switched("0", fromFiat: false, btcPrice: 100_000, currency: "USD") == "0")
+        #expect(ReceiveAmountSheet.switched("1", fromFiat: false, btcPrice: 100_000, currency: "USD") == "0.00")
+        #expect(ReceiveAmountSheet.switched("", fromFiat: true, btcPrice: 100_000, currency: "USD").isEmpty)
+        #expect(ReceiveAmountSheet.switched("2.80", fromFiat: true, btcPrice: 100_000, currency: "EUR") == "2800")
+        #expect(ReceiveAmountSheet.switched("2800", fromFiat: false, btcPrice: 100_000, currency: "EUR") == "2.80")
+    }
+
     @Test func onchainArrivalsAreEveryNewDepositThisRequestsAddressFirst() {
         let snapshot = ReceiveChainSnapshot(tip: 100, incoming: [
             .init(txid: "old", toAddress: 5, received: 5, confirmedHeight: nil),
