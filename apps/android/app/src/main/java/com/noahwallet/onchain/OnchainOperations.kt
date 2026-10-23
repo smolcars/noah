@@ -23,6 +23,8 @@ internal class OnchainOperations(
         val due = wallet.vtxos().map { vtxoModel(it, tip, expiring) }.filter { it.renewable }.map { it.id }.toSet()
         return ids.isNotEmpty() && ids.all { it in due }
     }
+    /** One coin by ID, spent ones included: the overview lists only the wallet's current coins. */
+    suspend fun vtxo(id: String, threshold: UInt): VtxoModel = vtxoModel(wallet.vtxo(id), wallet.tip(), wallet.expiring(threshold))
     suspend fun detail(id: String): ExitModel? {
         val status = wallet.status(id) ?: return null
         return exitModel(status)

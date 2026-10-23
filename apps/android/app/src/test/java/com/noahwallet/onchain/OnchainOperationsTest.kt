@@ -235,7 +235,9 @@ class OnchainOperationsTest {
         }
         override suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = bound.remove(quote.preparedBoard?.id) == quote
         override suspend fun vtxos() = items
-        override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); return Companion.vtxo(id) }
+        /** Coins the wallet keeps a record of by ID, spent ones included. */
+        val records = mutableMapOf<String, Vtxo>()
+        override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); return records[id] ?: Companion.vtxo(id) }
         override suspend fun exits() = active
         override suspend fun status(id: String) = states[id]?.let { ExitTransactionStatus(id, 30_000u, it, listOf(ExitState.Start(100u), it), 0u, emptyList()) }
         var tipHeight = 100L
@@ -265,6 +267,16 @@ class OnchainOperationsTest {
             fun vtxo(id: String, amount: ULong = 30_000u) = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, 500u, "pubkey", VtxoState.Spendable, 1u, 500u, true)
         }
     }
+    @Test fun aSpentCoinLoadsByIdThoughTheOverviewListsOnlyCurrentOnes() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.records["spent"] = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), "spent", 2_500u, 90u, "pubkey",
+            VtxoState.Spent, 1u, 500u, true)
+        assertTrue(ops.overview(24u).vtxos.none { it.id == "spent" })
+        val coin = ops.vtxo("spent", 24u)
+        assertEquals("Spent", coin.state); assertEquals(2_500L, coin.amount); assertEquals(90L, coin.expiry)
+        // A spent coin is never offered a refresh.
+        assertFalse(coin.refreshable)
+    } }
+
     private suspend fun fixture(body: suspend (Wallet, OnchainOperations, OnchainOperationJournal, File) -> Unit) {
         val root = Files.createTempDirectory("m6-ops").toFile()
         try {

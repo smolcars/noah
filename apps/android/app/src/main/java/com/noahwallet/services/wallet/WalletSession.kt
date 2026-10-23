@@ -397,6 +397,9 @@ class WalletSession internal constructor(
         onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
     }
     suspend fun exitDetail(id: String): ExitModel? = withM6 { onchainOperations(it).detail(id) }
+    suspend fun vtxoDetail(id: String): com.noahwallet.onchain.VtxoModel = withM6 {
+        onchainOperations(it).vtxo(id, WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
+    }
     suspend fun exitDepositAddress(): String = withM6 { it.m6.depositAddress() }
     suspend fun exitClaimDestinationIsMine(address: String): Boolean = withM6 { it.m6.destinationIsMine(address) }
     suspend fun boardingMinimum(): Long? = withM6 { it.m6.minimum() }

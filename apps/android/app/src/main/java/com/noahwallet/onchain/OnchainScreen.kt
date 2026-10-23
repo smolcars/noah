@@ -58,6 +58,7 @@ internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
         if (!onchainReady(app)) fail(OnchainFailure.unavailable)
         app.session.executeOnchain(quote, renewal = true)
     } },
+    coin = app.session::vtxoDetail,
 )
 
 @Composable

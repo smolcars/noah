@@ -68,7 +68,12 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
     OnchainScreen(app, model) {
         TextButton(back) { Text(tr("Back to VTXOs")) }
         Text(tr("VTXO Details"), style = MaterialTheme.typography.headlineSmall)
-        val vtxo = model.overview?.vtxos?.find { it.id == id }
+        val listed = model.overview?.vtxos?.find { it.id == id }
+        // A coin a payment spent isn't in the overview: load it by ID.
+        val stored by produceState<VtxoModel?>(null, id, model.overview != null && listed == null) {
+            if (model.overview != null && listed == null) value = model.coin(id)
+        }
+        val vtxo = listed ?: stored
         if (vtxo != null) {
             AmountRow(app, "Amount", vtxo.amount)
             DetailValue("VTXO ID", id, true); DetailRow("State", vtxo.state); DetailRow("Status", vtxo.status); DetailRow("Kind", vtxo.kind)
@@ -82,8 +87,11 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
             OnchainDisplay.explorerURL(vtxo.anchorPoint, BuildConfig.APP_VARIANT)?.let { url ->
                 TextButton({ uri.openUri(url) }) { Text(tr("View in explorer")) }
             }
-            if (vtxo.expired || vtxo.expiring) Text(tr("Refresh this VTXO to keep it available."))
+            if ((vtxo.expired || vtxo.expiring) && vtxo.refreshable) Text(tr("Refresh this VTXO to keep it available."))
             Button({ scope.launch { model.review(OnchainAction.refresh, listOf(id)) } }, enabled = vtxo.refreshable && !model.busy) { Text(tr("Refresh VTXO")) }
+        } else if (!model.loading && model.overview != null) {
+            // The wallet keeps no record of it: show what the payment recorded.
+            DetailValue("VTXO ID", id, true)
         } else if (!model.loading) Text(tr("VTXO is no longer in this view. Check its operation receipt or refresh."))
     }
 }
