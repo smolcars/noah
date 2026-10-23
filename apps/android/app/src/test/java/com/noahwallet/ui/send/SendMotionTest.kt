@@ -88,6 +88,23 @@ class SendMotionTest {
         assertFalse(SendTimeline.stillPaying(SendMotion(SendRoute.ark, 0).reach(SendMilestone.paying, 100), 20_000))
     }
 
+    @Test fun reduceMotionLightningWaitsGoQuiet() {
+        val paying = SendMotion(SendRoute.lightning, 0).reach(SendMilestone.paying, 100)
+        // The bolt loops while Lightning pays, so the clock keeps ticking with full motion.
+        assertNull(SendTimeline.quietAt(paying))
+        // Under Reduce Motion the bolt is still: the clock stops after the "Still paying" turn and its fade.
+        val quiet = checkNotNull(SendTimeline.quietAt(paying, reduceMotion = true))
+        assertTrue(quiet > SendTimeline.stillPayingMillis)
+        assertTrue(SendTimeline.stillPaying(paying, quiet, reduceMotion = true))
+        assertEquals(SendPhaseLines.of(paying, quiet, true, "₿ 500", null, null, 1) { it.toString() },
+            SendPhaseLines.of(paying, 10 * 60_000, true, "₿ 500", null, null, 1) { it.toString() })
+        assertEquals(SendTimeline.started(paying, quiet, true), SendTimeline.started(paying, 10 * 60_000, true))
+        // A later milestone is a new motion, which ticks again until its own quiet point.
+        val pending = paying.reach(SendMilestone.pending, 30_000)
+        assertNotNull(SendTimeline.quietAt(pending, reduceMotion = true))
+        assertTrue(checkNotNull(SendTimeline.quietAt(paying.reach(SendMilestone.sent, 40_000), reduceMotion = true)) > 40_000)
+    }
+
     @Test fun reduceMotionKeepsTheOrderAndTheGates() {
         val motion = SendMotion(SendRoute.lightning, 0).reach(SendMilestone.paying, 0).reach(SendMilestone.refunded, 100)
         val phases = phases(motion, reduceMotion = true)

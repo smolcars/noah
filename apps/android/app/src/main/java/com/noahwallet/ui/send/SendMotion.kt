@@ -128,12 +128,14 @@ internal object SendTimeline {
     /**
      * When the picture stops changing until the wallet reaches another milestone: a beat after the last phase
      * it can start. Null while something loops: Lightning still paying (the bolt) or a transaction waiting for
-     * its block ([waitingForBlock], the blink; it stops under Reduce Motion).
+     * its block ([waitingForBlock], the blink). Under Reduce Motion neither loops: the still bolt only waits for
+     * the "Still paying" line at [stillPayingMillis].
      */
     fun quietAt(motion: SendMotion, reduceMotion: Boolean = false, waitingForBlock: Boolean = false): Long? {
         val all = started(motion, Long.MAX_VALUE / 4, reduceMotion)
         val last = all.lastOrNull() ?: return 0
-        if (motion.route == SendRoute.lightning && motion.ending == null && all.any { it.phase == SendPhase.pay }) return null
+        if (motion.route == SendRoute.lightning && motion.ending == null && all.any { it.phase == SendPhase.pay })
+            return if (reduceMotion) maxOf(last.start, stillPayingMillis) + 1_600 else null
         if (last.phase == SendPhase.waiting && waitingForBlock && !reduceMotion) return null
         return last.start + 1_600
     }
