@@ -64,10 +64,12 @@ class SendModel(val controller: SendController, private val network: String,
     }
     fun maxSend() { if (controller.locked) return; reset(); progress = SendProgress(entry = "max"); stage = SendStage.source }
     fun recipientFirst() { progress = progress.copy(entry = "recipient-first"); stage = SendStage.recipient }
-    suspend fun importRecipient(value: String) {
+    /** Scan, paste and recents. [stay]: Amount's Paste keeps you on Amount until the recipient is accepted, so one it can't accept shows today's error there. */
+    suspend fun importRecipient(value: String, stay: Boolean = false) {
         setRecipient(value)
         if (stage == SendStage.amount) progress = progress.copy(entry = if (sats > 0) "amount-first" else "recipient-first")
-        stage = SendStage.recipient; acceptRecipient()
+        if (!stay) stage = SendStage.recipient
+        acceptRecipient()
     }
     suspend fun previewRecipient() {
         val revision = recipientRevision; val candidate = destination

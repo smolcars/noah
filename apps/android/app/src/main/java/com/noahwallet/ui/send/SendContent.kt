@@ -273,6 +273,10 @@ private fun RowScope.Scan(enabled: Boolean, onClick: () -> Unit) {
     CircleButton(HomeIcons.scan, tr("Scan"), Modifier.testTag("send-scan")) { if (enabled) { haptics.light(); onClick() } }
 }
 
+/** The clipboard's first item as text, as Paste reads it. */
+private fun Context.clipboardText(): String? =
+    (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+
 /**
  * Back one step, as today's flow allows; the review's back discards its quote first (today's leaveReview).
  * Returning to To clears the rail and balance choices, so continuing asks for them again.
@@ -312,6 +316,7 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scope = presentation.viewModelScope
+    val context = LocalContext.current
     val shake = rememberAmountShake()
     val available = maxOf(model.arkBalance, model.onchainBalance)
     val sats = model.sats
@@ -325,7 +330,17 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
     LaunchedEffect(model.amount) { if (over) { haptics.error(); shake.shakeAmount() } }
     val canMax = model.parsed.isAmountEditable && (model.arkBalance > 0 || model.onchainBalance > 0) &&
         (model.destination.isEmpty() || SendFlow.canMax(model.parsed.destinationType, model.parsed.bip321))
-    StepPanes(nav = { Spacer(Modifier.weight(1f)); Scan(!model.busy, actions.scan) }, leadingCentred = true, trailingAt = Alignment.Bottom, leading = {
+    // Today's import, as Scan does: an amount in the request skips the keypad; one it can't accept stays here with its error.
+    fun paste() {
+        haptics.light()
+        val value = context.clipboardText()?.takeIf { it.isNotBlank() } ?: return
+        scope.launch { model.importRecipient(value, stay = true) }
+    }
+    StepPanes(nav = {
+        Spacer(Modifier.weight(1f))
+        SendChip(tr("Paste"), Modifier.padding(end = 8.dp).testTag("send-paste-from-amount"), enabled = !model.busy, onClick = ::paste)
+        Scan(!model.busy, actions.scan)
+    }, leadingCentred = true, trailingAt = Alignment.Bottom, leading = {
         Text(if (over) tr("Only {amount} available", formatted(available, env)) else tr("{amount} available", formatted(available, env)),
             Modifier.fillMaxWidth().padding(top = 28.dp), style = SendType.line, color = if (over) palette.failure else palette.muted, textAlign = TextAlign.Center)
         Box(Modifier.fillMaxWidth().padding(top = 30.dp).height(72.dp), contentAlignment = Alignment.BottomCenter) {
@@ -340,6 +355,12 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
                     style = SendType.body, color = palette.muted)
                 Icon(painterResource(SendIcons.swap), null, Modifier.padding(start = 8.dp).size(16.dp), tint = palette.muted)
             }
+        }
+        // Recipient-first (a scan or paste without an amount): who it's for while you type the amount.
+        if (model.progress.recipientConfirmed && !model.isMax) {
+            val who = SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain)
+            Text(tr("to {name}", tr(who.name)), Modifier.fillMaxWidth().padding(top = 10.dp).testTag("send-amount-recipient"), style = SendType.body,
+                color = palette.muted, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(Modifier.fillMaxWidth().padding(top = 16.dp).height(32.dp), horizontalArrangement = Arrangement.Center) {
             if (canMax) SendChip(tr("Max"), Modifier.testTag("send-max"), enabled = !model.busy) {
@@ -405,8 +426,7 @@ private fun ToStep(presentation: SendPresentation, env: SendEnv, actions: SendAc
     StepPanes(nav = { Back { model.back() }; Title(); Scan(!model.busy, actions.scan) }, leadingCentred = false, trailingAt = Alignment.Top, leading = {
         if (model.sats > 0 && !model.isMax) Text(formatted(model.sats, env), Modifier.padding(top = 6.dp), style = SendType.summary, color = palette.foreground)
         ToField(model.destination, model::setRecipient, !model.busy, onPaste = {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString()?.let { value ->
+            context.clipboardText()?.let { value ->
                 haptics.light(); focus.clearFocus(); scope.launch { model.importRecipient(value) }
             }
         }, onDone = ::next, modifier = Modifier.padding(top = 18.dp))

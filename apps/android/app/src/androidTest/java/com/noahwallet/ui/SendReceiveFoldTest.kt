@@ -85,6 +85,7 @@ class SendReceiveFoldTest {
             val amount = send { it.model.amount = "500" }
             var fold = show(hinge) { SendPreviewHost(amount, SendFixtures.env()) }
             assertClear("$pose amount", fold); leads("$pose amount", fold, "send-amount", "send-key-5")
+            leads("$pose amount paste", fold, "send-paste-from-amount", "send-key-5")
             val review = send { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient(SendFixtures.ark); it.model.continueStage() }
             fold = show(hinge) { SendPreviewHost(review, SendFixtures.env()) }
             assertClear("$pose review", fold); leads("$pose review", fold, "send-review-title", "send-hold")
