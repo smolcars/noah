@@ -54,7 +54,7 @@ struct SendView: View {
 
     let isActive: Bool
     let onLeave: () -> Void
-    init(model: SendModel = SendModel(), isActive: Bool = true, onLeave: @escaping () -> Void = {}) {
+    init(model: SendModel = SendModel(), isActive: Bool = true, onLeave: @escaping () -> Void) {
         _model = State(initialValue: model)
         self.isActive = isActive
         self.onLeave = onLeave
@@ -770,7 +770,7 @@ struct SendView: View {
                     model.controller.submit(payment, quote: quote)
                 },
                 btcPrice: model.btcPrice, fiatCurrency: model.fiatCurrency, payment: payment, quote: quote,
-                controller: model.controller, cancel: cancelReview, done: finish,
+                controller: model.controller, cancel: cancelReview, done: finish, onLeave: onLeave,
                 unit: unit, recipient: .of(destination: model.destination, payment: payment, ownDomain: ownDomain),
                 invoiceNote: invoiceNote, wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), clock: clock,
                 gate: holdGate, chainTip: chainTip)

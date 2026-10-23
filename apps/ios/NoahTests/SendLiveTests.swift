@@ -183,7 +183,7 @@ struct SendRoundThreeLiveTests {
         let keyWindow = scene.windows.first { $0.isKeyWindow }
         let window = try #require(keyWindow)
         window.rootViewController = UIHostingController(rootView: SendConfirmation(
-            payment: onchain, quote: quote, controller: controller, cancel: {}, done: {}))
+            payment: onchain, quote: quote, controller: controller, cancel: {}, done: {}, onLeave: {}))
         window.makeKeyAndVisible()
         try Data().write(to: documents.appending(path: "send-round3-review-ready"))
         try await waitUntil { controller.state != .ready && controller.state != .submitting }

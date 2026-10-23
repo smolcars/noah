@@ -58,9 +58,9 @@ struct RecurringPaymentsView: View {
             }
         }
         .sheet(item: $review) { item in
-            SendConfirmation(confirm: { Task { await ForegroundExecution.run { await executor.execute(manual: true, approval: item) } } },
-                             payment: item.payment, quote: item.quote, controller: executor.controller,
-                             cancel: { review = nil }, done: { review = nil; Task { await executor.reload() } })
+            Self.approval(payment: item.payment, quote: item.quote, controller: executor.controller,
+                          pay: { Task { await ForegroundExecution.run { await executor.execute(manual: true, approval: item) } } },
+                          dismiss: { review = nil }, done: { review = nil; Task { await executor.reload() } })
         }
         .task { await executor.reload(); await ForegroundExecution.run { await executor.execute() } }
         .alert("Cancel recurring payment?", isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } })) {
@@ -77,6 +77,12 @@ struct RecurringPaymentsView: View {
                 overriding = nil
             }
         } message: { Text(LocalizedStringKey(RecurringExecutor.overrideWarning)) }
+    }
+    /// The approval sheet. Leaving an unresolved result (Close, or Done while still paying)
+    /// only dismisses it; the attempt and the send lock stay as they are.
+    static func approval(payment: SendPayment, quote: SendQuote, controller: SendPaymentController, pay: @escaping () -> Void,
+                         dismiss: @escaping () -> Void, done: @escaping () -> Void) -> SendConfirmation {
+        SendConfirmation(confirm: pay, payment: payment, quote: quote, controller: controller, cancel: dismiss, done: done, onLeave: dismiss)
     }
     private func scheduleSection(_ schedule: RecurringPayment) -> some View {
         Section {

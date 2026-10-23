@@ -12,6 +12,8 @@ struct SendConfirmation: View {
     @Bindable var controller: SendPaymentController
     let cancel: () -> Void
     let done: () -> Void
+    /// Leaving an unresolved result (see `SendOutcomeView.onLeave`).
+    let onLeave: () -> Void
     var unit: BitcoinAmountUnit = .bip177
     var recipient: SendRecipientLabel? = nil
     /// "The invoice sets the amount to ₿X", when you had typed a different amount.
@@ -36,7 +38,7 @@ struct SendConfirmation: View {
         Group {
             if controller.locked {
                 SendOutcomeView(controller: controller, btcPrice: btcPrice, fiatCurrency: fiatCurrency, done: done, clock: clock,
-                                unit: unit, recipient: label, wide: wide, sideInsets: sideInsets, reviewed: payment, chainTip: chainTip)
+                                unit: unit, recipient: label, wide: wide, sideInsets: sideInsets, onLeave: onLeave, reviewed: payment, chainTip: chainTip)
             } else {
                 review
             }

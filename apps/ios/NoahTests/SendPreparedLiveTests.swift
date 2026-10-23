@@ -38,7 +38,7 @@ struct SendPreparedLiveTests {
         var backedOut = false
         window.rootViewController = UIHostingController(rootView: SendConfirmation(
             payment: payment, quote: canceledQuote, controller: controller,
-            cancel: { Task { await session.discardSend(canceledQuote); backedOut = true } }, done: {}))
+            cancel: { Task { await session.discardSend(canceledQuote); backedOut = true } }, done: {}, onLeave: {}))
         window.makeKeyAndVisible()
         try JSONEncoder().encode(canceledQuote).write(to: documents.appending(path: "prepared-cancel-review.json"))
         try await waitUntil { backedOut }
@@ -65,7 +65,7 @@ struct SendPreparedLiveTests {
         #expect(enteredQuote.amount == canceledQuote.amount && enteredQuote.fee == canceledQuote.fee)
         try #require(enteredQuote.prepared != nil)
         window.rootViewController = UIHostingController(rootView: SendConfirmation(
-            payment: payment, quote: enteredQuote, controller: controller, cancel: {}, done: {}))
+            payment: payment, quote: enteredQuote, controller: controller, cancel: {}, done: {}, onLeave: {}))
         try JSONEncoder().encode(enteredQuote).write(to: documents.appending(path: "prepared-entered-review.json"))
         try await waitUntil { if case .succeeded = controller.state { return true }; return false }
         let enteredAttempt = try #require(controller.attempt)
@@ -80,7 +80,7 @@ struct SendPreparedLiveTests {
         let maxQuote = try await session.quoteSend(payment)
         #expect(maxQuote.amount > 0 && maxQuote.prepared != nil)
         window.rootViewController = UIHostingController(rootView: SendConfirmation(
-            payment: payment, quote: maxQuote, controller: controller, cancel: {}, done: {}))
+            payment: payment, quote: maxQuote, controller: controller, cancel: {}, done: {}, onLeave: {}))
         try JSONEncoder().encode(maxQuote).write(to: documents.appending(path: "prepared-max-review.json"))
         try await waitUntil { if case .succeeded = controller.state { return true }; return false }
         let maxAttempt = try #require(controller.attempt)

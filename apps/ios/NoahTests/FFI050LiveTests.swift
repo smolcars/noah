@@ -81,7 +81,7 @@ struct FFI050LiveTests {
             let quote = try await session.quoteSend(payment)
             let window = try liveWindow()
             window.rootViewController = UIHostingController(rootView: SendConfirmation(
-                payment: payment, quote: quote, controller: controller, cancel: {}, done: {}))
+                payment: payment, quote: quote, controller: controller, cancel: {}, done: {}, onLeave: {}))
             window.makeKeyAndVisible()
             let deadline = ContinuousClock.now.advanced(by: .seconds(110))
             while controller.attempt?.receipt == nil, ContinuousClock.now < deadline {
@@ -99,7 +99,7 @@ struct FFI050LiveTests {
             #expect(receipt.status == .confirmed)
             try JSONEncoder().encode(controller.attempt).write(to: documents.appending(path: "ffi050-offboard-confirmed.json"))
             let window = try liveWindow()
-            window.rootViewController = UIHostingController(rootView: SendOutcomeView(controller: controller, done: {}))
+            window.rootViewController = UIHostingController(rootView: SendOutcomeView(controller: controller, done: {}, onLeave: {}))
             window.makeKeyAndVisible()
             try await Task.sleep(for: .seconds(15))
         } else if stage == "cancel" || stage == "reopen" {

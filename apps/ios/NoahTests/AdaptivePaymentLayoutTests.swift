@@ -34,7 +34,7 @@ struct AdaptivePaymentLayoutTests {
         let payment = SendPayment(destination: "layout@example.com", method: "ark", amount: 500)
         let quote = SendQuote(amount: 500, fee: 0, total: 500)
         let host = UIHostingController(rootView: SendConfirmation(
-            payment: payment, quote: quote, controller: controller, cancel: {}, done: {}))
+            payment: payment, quote: quote, controller: controller, cancel: {}, done: {}, onLeave: {}))
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 402, height: 874))
         window.rootViewController = host
         window.isHidden = false

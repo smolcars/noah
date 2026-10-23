@@ -242,7 +242,7 @@ struct SendMotionTests {
         func show() {
             // A pose change rebuilds the review; Send's gate and the controller outlive it.
             window.rootViewController = UIHostingController(rootView: SendConfirmation(
-                payment: payment, quote: quote, controller: controller, cancel: {}, done: {}, gate: hold))
+                payment: payment, quote: quote, controller: controller, cancel: {}, done: {}, onLeave: {}, gate: hold))
         }
         window.isHidden = false
         defer { window.isHidden = true; window.rootViewController = nil }
@@ -308,6 +308,27 @@ struct SendMotionTests {
         for kind in [SendResultKind.sent, .refunded, .failed, .alreadyPaid, .stillSending, .sending] {
             #expect(!SendOutcomeView.actions(kind: kind, uncertain: false, resultShown: true).contains(.close))
         }
+    }
+
+    /// An uncertain recurring payment's approval sheet offers Close, which only dismisses the
+    /// sheet: the attempt, its state and the send lock stay as they are.
+    @Test func closingAnUncertainRecurringApprovalDismissesIt() async throws {
+        let backend = SendPaymentTests.Backend()
+        let controller = SendPaymentTests().make(backend, SendPaymentTests.Storage())
+        controller.submit(SendPaymentTests().payment, quote: SendPaymentTests().quote)
+        try await SendPaymentTests.waitUntil { controller.state == .uncertain && !controller.checking }
+        let kind = SendResultKind.of(state: controller.state, outcome: .stopped, slow: false)
+        #expect(SendOutcomeView.actions(kind: kind, uncertain: true, resultShown: true).last == .close)
+        let before = (controller.attempt?.payment, controller.attempt?.receipt, controller.generation)
+        var dismissed = 0
+        let sheet = RecurringPaymentsView.approval(payment: SendPaymentTests().payment, quote: SendPaymentTests().quote,
+                                                   controller: controller, pay: { Issue.record("Close paid") },
+                                                   dismiss: { dismissed += 1 }, done: { Issue.record("Close acknowledged") })
+        sheet.onLeave()
+        #expect(dismissed == 1)
+        #expect(controller.locked && controller.state == .uncertain && controller.generation == before.2)
+        #expect(controller.attempt?.payment == before.0 && controller.attempt?.receipt == before.1)
+        #expect(await backend.calls == 1)
     }
 
     /// 2,500 typed, then a scan straight from Amount brings an invoice for another amount:

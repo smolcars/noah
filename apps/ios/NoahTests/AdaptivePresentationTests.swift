@@ -54,12 +54,12 @@ struct AdaptivePresentationTests {
                 let view: AnyView
                 switch screen {
                 case "review":
-                    view = AnyView(SendConfirmation(payment: payment, quote: quote, controller: controller, cancel: {}, done: {}))
+                    view = AnyView(SendConfirmation(payment: payment, quote: quote, controller: controller, cancel: {}, done: {}, onLeave: {}))
                 case "receipt":
                     await backend.succeed()
                     controller.submit(payment, quote: quote)
                     try await SendPaymentTests.waitUntil { controller.state != .ready && controller.state != .submitting }
-                    view = AnyView(NavigationStack { SendOutcomeView(controller: controller, done: {}) })
+                    view = AnyView(NavigationStack { SendOutcomeView(controller: controller, done: {}, onLeave: {}) })
                 case "history":
                     view = AnyView(NavigationStack { TransactionsView(onRepeatPayment: { _ in }) })
                 case "transaction":

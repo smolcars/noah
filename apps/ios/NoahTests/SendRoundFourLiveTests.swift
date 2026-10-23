@@ -45,7 +45,7 @@ struct SendRoundFourLiveTests {
         #expect(restarted.state == controller.state && restarted.locked && !restarted.canOverride)
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
         let window = try #require(scene.windows.first { $0.isKeyWindow })
-        window.rootViewController = UIHostingController(rootView: SendOutcomeView(controller: controller, done: {}))
+        window.rootViewController = UIHostingController(rootView: SendOutcomeView(controller: controller, done: {}, onLeave: {}))
         window.makeKeyAndVisible()
         try JSONEncoder().encode(try #require(controller.attempt)).write(to: documents.appending(path: "send-round4-ark-evidence.json"))
         try Data().write(to: documents.appending(path: "send-round4-ark-ready"))

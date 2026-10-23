@@ -18,8 +18,9 @@ struct SendOutcomeView: View {
     /// Nil measures its own window (a host without Send around it).
     var wide: Bool? = nil
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
-    /// Done while Lightning is still paying: leave Send; the controller keeps the payment.
-    var onLeave: () -> Void = {}
+    /// Done while Lightning is still paying, or Close on an unresolved result: leave, keeping
+    /// the attempt and the send lock. Required, so no host can leave it doing nothing.
+    let onLeave: () -> Void
     /// The payment just confirmed, until the controller has saved its attempt.
     var reviewed: SendPayment? = nil
     /// The chain tip, read by Send with each receipt check.
