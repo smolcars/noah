@@ -62,6 +62,9 @@ class ReceiveFormatsTest {
         // Nothing tied to the address: any new incoming transaction, with its balance change.
         assertEquals(other to 7_000L, ReceiveArrivals.onchain(listOf(other, old), setOf(old.id), "bcrt1qpayme", amount))
         assertNull(ReceiveArrivals.onchain(listOf(chain("sent", 1_000, "outgoing")), emptySet(), "bcrt1qpayme", amount))
+        // An older, already-mined deposit that a reconnect surfaces isn't an arrival, even paying this address.
+        assertNull(ReceiveArrivals.onchain(listOf(chain("mined", 9_000, confirmed = true), old), setOf(old.id), "bcrt1qpayme", amount))
+        assertEquals(mine to 8_500L, ReceiveArrivals.onchain(listOf(chain("mined", 9_000, confirmed = true), mine), emptySet(), "bcrt1qpayme", amount))
     }
 
     @Test fun addressPaymentsSkipThisScreensOwnRequests() {
