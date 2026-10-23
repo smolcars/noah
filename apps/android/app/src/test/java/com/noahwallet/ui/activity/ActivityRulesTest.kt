@@ -154,6 +154,18 @@ class ActivityRulesTest {
         assertEquals(emptyList<ActivityRules.FeeLine>() to null, fees(record("c", Date(), type = "Onchain", source = "onchain-wallet", confirmed = true)))
     }
 
+    @Test fun aLightningAddressPaidByInvoiceKeepsItsRecipient() {
+        val invoice = ActivityFixtures.invoice("Pizza", 4)
+        // bark records the invoice Noah fetched; Noah's repeat metadata records the address.
+        val viaAddress = record("a", Date(), type = "Lnurl").copy(subsystemName = "bark.lightning_send",
+            sentTo = listOf(HistoryTransaction.Destination(invoice, 2_500, "invoice")), destination = "bob@getalby.com",
+            repeatPayment = RepeatPayment("bob@getalby.com", "", "SATS", "2500", 2_500))
+        assertEquals("bob@getalby.com", ActivityRules.recipient(viaAddress))
+        assertEquals("bob@getalby.com", rows(viaAddress).single().home.title)
+        // A bare invoice names no one.
+        assertNull(ActivityRules.recipient(viaAddress.copy(repeatPayment = null, destination = invoice, type = "Bolt11")))
+    }
+
     @Test fun receivesShowTheFeeTheyPaid() {
         val received = record("rx", Date(), type = "Bolt11", direction = "incoming", amount = 5_000)
             .copy(subsystemName = "bark.lightning_receive", effectiveBalanceSat = 4_950, offchainFeeSat = 50)

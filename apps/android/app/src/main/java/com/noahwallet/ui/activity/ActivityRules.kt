@@ -136,8 +136,11 @@ object ActivityRules {
     fun recipient(record: HistoryTransaction): String? {
         // An exit pays your own on-chain address.
         if (record.direction != "outgoing" || record.isRenewal || record.isInternalTransfer || record.movementKind == "exit") return null
+        // Noah pays a Lightning address with the invoice it fetched, so bark records the invoice; the address is in
+        // the repeat metadata Noah wrote.
+        record.repeatPayment?.destination?.takeIf { it.isNotEmpty() }?.let { return it }
         if (record.invoice != null || record.offer != null) return null
-        return (record.repeatPayment?.destination ?: record.destination)?.takeIf { it.isNotEmpty() }
+        return record.destination?.takeIf { it.isNotEmpty() }
     }
     /** Lightning and Noah addresses read as words; everything else is an identifier shown in monospace. */
     fun readable(value: String) = RepeatPayment.normalizeLightningAddress(value) != null
