@@ -366,6 +366,24 @@ struct SendMotionTests {
         #expect(model.stage == .review && model.payment?.amount == 700 && model.payment?.destination == SendReceiveShotTests.bitcoin)
     }
 
+    /// 2,500 typed, Next, Back, then an amountless recipient scanned or pasted on Amount: the
+    /// earlier Next doesn't count, so the keypad keeps its turn with 2,500 and Next goes on.
+    /// Scan and Paste share `importRecipient`; a scanned code is often a BIP-21 URI.
+    @Test func anAmountlessImportAfterNextAndBackKeepsTheKeypad() async {
+        for value in [SendReceiveShotTests.ark, "bitcoin:\(SendReceiveShotTests.bitcoin)"] {
+            let model = pasteModel()
+            model.amount = "2500"
+            await model.continueStage()
+            #expect(model.stage == .recipient && model.progress.amountConfirmed)
+            model.stage = .amount  // Back from To, as SendView's goBack does for an amount-first entry.
+            await model.importRecipient(value)
+            #expect(model.stage == .amount && model.sats == 2_500 && model.progress.recipientConfirmed, "\(value)")
+            #expect(!model.progress.amountConfirmed && model.error == nil, "\(value)")
+            await model.continueStage()
+            #expect(model.stage == .review && model.payment?.amount == 2_500, "\(value)")
+        }
+    }
+
     /// Anything else keeps today's error on Amount.
     @Test func pastingAnInvalidValueOnAmountKeepsTheError() async {
         let model = pasteModel()

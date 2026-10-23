@@ -175,8 +175,8 @@ import Observation
         guard !Task.isCancelled, revision == recipientRevision else { return }
         route = resolved
     }
-    /// `keepingKeypad`: a typed amount isn't taken as confirmed, so Amount stays next unless the
-    /// recipient sets its own.
+    /// `keepingKeypad`: a recipient without its own amount leaves the amount unconfirmed, even
+    /// one confirmed by an earlier Next, so Amount comes next with whatever is typed.
     func acceptRecipient(keepingKeypad: Bool = false) async {
         guard !busy, !controller.locked else { return }
         busy = true
@@ -224,7 +224,7 @@ import Observation
             }
         }
         progress.recipientConfirmed = true
-        if sats > 0 && !keepingKeypad { progress.amountConfirmed = true }
+        if keepingKeypad { progress.amountConfirmed = parsed.amount != nil } else if sats > 0 { progress.amountConfirmed = true }
         progress.selectedRail = isMax ? .onchain : SendFlow.recommend(rails, availability: availability)
         await advance()
     }
