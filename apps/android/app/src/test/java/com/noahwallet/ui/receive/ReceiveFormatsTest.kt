@@ -90,6 +90,24 @@ class ReceiveFormatsTest {
         assertNull(ReceiveArrivals.viaAddress(listOf(succeeded, completeAtOpen), settled + "f", emptySet(), emptySet()))
     }
 
+    @Test fun arrivalsInOneUpdateAreTakenOneAtATime() {
+        val old = chain("old", 5_000, confirmed = true)
+        val deposit = chain("new", 20_000)
+        val payment = HistoryTransaction("ln", "Bolt11", 2_000, "2026-10-22T10:00:00Z", "incoming",
+            movementStatus = "successful", movementKind = "lightning-receive", metadataJson = """{"payment_hash":"elsewhere"}""")
+        val none = { _: String, _: String -> null as Long? }
+        val baseline = ReceiveRecords.baseline(listOf(old))
+        val rows = listOf(old, deposit, payment)
+        // The deposit first...
+        val (afterDeposit, first) = checkNotNull(ReceiveArrivals.next(rows, baseline, "bcrt1qpayme", emptySet(), emptySet(), none, 7))
+        assertEquals(ReceiveArrival(ReceiveArrival.Rail.onchain, 20_000, 7, "new"), first)
+        // ...then the address payment from the same update...
+        val (afterPayment, second) = checkNotNull(ReceiveArrivals.next(rows, afterDeposit, "bcrt1qpayme", emptySet(), emptySet(), none, 9))
+        assertEquals(ReceiveArrival(ReceiveArrival.Rail.lightning, 2_000, 9), second)
+        // ...and then nothing is left waiting.
+        assertNull(ReceiveArrivals.next(rows, afterPayment, "bcrt1qpayme", emptySet(), emptySet(), none, 11))
+    }
+
     @Test fun anArrivalTakesAFreeCardOrOneShowingADeposit() {
         // The deposit's block row carries on separately, so a later payment can take its card; an Ark or Lightning one plays out first.
         assertTrue(ReceiveArrivals.takesCard(null))

@@ -36,7 +36,6 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.noahwallet.R
 import com.noahwallet.api.generated.client.V0PricesClient
 import com.noahwallet.formatting.*
-import com.noahwallet.send.SendTransaction
 import com.noahwallet.services.server.value
 import com.noahwallet.services.wallet.*
 import com.noahwallet.ui.receive.*
@@ -47,6 +46,10 @@ import kotlinx.serialization.json.Json
 private val requestSaver = Saver<ReceiveRequest?, String>(
     save = { it?.let { request -> Json.encodeToString(request) } ?: "" },
     restore = { it.takeIf(String::isNotEmpty)?.let { value -> Json.decodeFromString<ReceiveRequest>(value) } },
+)
+private val recordsSaver = Saver<ReceiveRecords?, String>(
+    save = { it?.let { records -> Json.encodeToString(records) } ?: "" },
+    restore = { it.takeIf(String::isNotEmpty)?.let { value -> Json.decodeFromString<ReceiveRecords>(value) } },
 )
 private val arrivalSaver = Saver<ReceiveArrival?, String>(
     save = { it?.let { arrival -> Json.encodeToString(arrival) } ?: "" },
@@ -63,13 +66,13 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
     var request by rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
     var format by rememberSaveable { mutableStateOf(ReceiveFormat.lightningAddress) }
-    var arrival by rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
+    val arrivalState = rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
+    var arrival by arrivalState
     // The on-chain arrival whose confirmation the block row follows, after its presentation has ended.
-    var chain by rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
-    // History rows already seen when Receive appeared, the receipts already complete (announced ones join them),
-    // and this screen's own Ark addresses and invoices.
-    var known by rememberSaveable { mutableStateOf<List<String>?>(null) }
-    var settled by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val chainState = rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
+    val chain by chainState
+    // What Receive has taken from the wallet's records, and this screen's own Ark addresses and invoices.
+    val records = rememberSaveable(stateSaver = recordsSaver) { mutableStateOf<ReceiveRecords?>(null) }
     var ownArk by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var ownHashes by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -132,27 +135,9 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
         arrival = null
         if (current.rail != ReceiveArrival.Rail.onchain) { format = ReceiveFormats.afterAmount(format, false); request = null }
     }
-    // On-chain arrivals and payments to your Lightning address, from the wallet's records.
+    // On-chain arrivals and payments to your Lightning address, from the wallet's records, one at a time.
     val rows = app.history.transactions
-    LaunchedEffect(rows, request, app.history.isLoading) {
-        if (app.history.isLoading) return@LaunchedEffect
-        val seen = known ?: run { known = rows.map { it.id }; settled = ReceiveArrivals.settled(rows); return@LaunchedEffect }
-        val baseline = seen.toSet()
-        ReceiveArrivals.onchain(rows, baseline, request?.onchainAddress) { address, hex -> runCatching { SendTransaction.amount(address, hex) }.getOrNull() }?.let { (row, sats) ->
-            known = seen + row.id
-            val next = ReceiveArrival(ReceiveArrival.Rail.onchain, sats, SystemClock.elapsedRealtime(), row.txid)
-            chain = next
-            if (ReceiveArrivals.takesCard(arrival)) arrival = next
-            return@LaunchedEffect
-        }
-        // While another Ark or Lightning arrival plays, a payment to your address waits its turn (it ends with a new request).
-        ReceiveArrivals.viaAddress(rows, settled.toSet(), ownArk.toSet(), ownHashes.toSet())?.takeIf { ReceiveArrivals.takesCard(arrival) }?.let { row ->
-            settled = settled + row.id
-            arrival = ReceiveArrival(if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark,
-                row.amount, SystemClock.elapsedRealtime())
-            app.refresh()
-        }
-    }
+    ReceiveRecordsWatcher(rows, app.history.isLoading, request, ownArk.toSet(), ownHashes.toSet(), records, arrivalState, chainState) { scope.launch { app.refresh() } }
     // While visible: re-check the wallet and the chain tip every 30 s (no faster), for on-chain arrivals and the block row.
     LaunchedEffect(lifecycle, app.isWalletSuspended) {
         if (app.isWalletSuspended) return@LaunchedEffect

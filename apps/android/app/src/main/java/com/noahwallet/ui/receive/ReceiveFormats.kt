@@ -64,6 +64,22 @@ internal object ReceiveArrivals {
         return paying ?: fresh.firstOrNull()?.let { it to (it.balanceChangeSat ?: it.amount) }
     }
 
+    /**
+     * The next arrival waiting in the records, and the records once it's taken: a new unconfirmed deposit first,
+     * then a payment to your Lightning address. Null when nothing is waiting.
+     */
+    fun next(rows: List<HistoryTransaction>, records: ReceiveRecords, address: String?, ownArk: Set<String>, ownHashes: Set<String>,
+             amount: (String, String) -> Long?, now: Long): Pair<ReceiveRecords, ReceiveArrival>? {
+        onchain(rows, records.known, address, amount)?.let { (row, sats) ->
+            return records.copy(known = records.known + row.id) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid)
+        }
+        viaAddress(rows, records.settled, ownArk, ownHashes)?.let { row ->
+            val rail = if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark
+            return records.copy(settled = records.settled + row.id) to ReceiveArrival(rail, row.amount, now)
+        }
+        return null
+    }
+
     /** The receipts already complete when Receive appeared: a pending one isn't, so its later success is announced. */
     fun settled(rows: List<HistoryTransaction>): List<String> = rows.filter { it.movementStatus == "successful" }.map { it.id }
 
