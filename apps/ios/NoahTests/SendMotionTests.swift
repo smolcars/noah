@@ -326,6 +326,54 @@ struct SendMotionTests {
         #expect(SendView.typedAmount(model, keeping: typed) == 2_500)
     }
 
+    /// Paste on Amount (the old app's send-paste-from-amount) takes today's import from there.
+    private func pasteModel() -> SendModel {
+        let model = SendModel(controller: SendPaymentTests().make(.init(), .init()),
+                              quotePayment: { .init(amount: $0.amount, fee: 0, total: $0.amount) })
+        model.arkBalance = 100_000
+        return model
+    }
+
+    /// An invoice with an amount fills it and goes on to Review.
+    @Test func pastingAnInvoiceOnAmountReachesReview() async {
+        let model = pasteModel()
+        await model.importRecipient(SendReceiveShotTests.invoice)
+        #expect(model.stage == .review && model.sats == 1_500 && model.progress.recipientConfirmed && model.quote?.amount == 1_500)
+        #expect(model.payment?.destination == SendReceiveShotTests.invoice)
+    }
+
+    /// A destination without an amount stays on Amount, recipient-first, with the recipient filled.
+    @Test func pastingAnAddressOnAmountStaysOnTheKeypad() async {
+        let model = pasteModel()
+        await model.importRecipient(SendReceiveShotTests.ark)
+        #expect(model.stage == .amount && model.progress.entry == .recipientFirst && model.progress.recipientConfirmed)
+        #expect(model.destination == SendReceiveShotTests.ark && model.error == nil && model.sats == 0)
+        // Then Next goes on with the amount typed.
+        model.amount = "2500"
+        await model.continueStage()
+        #expect(model.stage == .review && model.payment?.amount == 2_500)
+    }
+
+    /// A typed amount survives an amountless recipient from Amount, by Scan or Paste (both take
+    /// `importRecipient`): the keypad keeps its turn with the recipient shown, and Next goes on.
+    @Test func pastingAnAddressOnAmountKeepsTheTypedAmount() async {
+        let model = pasteModel()
+        model.amount = "700"
+        await model.importRecipient(SendReceiveShotTests.bitcoin)
+        #expect(model.stage == .amount && model.sats == 700 && model.progress.recipientConfirmed && !model.progress.amountConfirmed)
+        #expect(model.destination == SendReceiveShotTests.bitcoin && model.error == nil)
+        await model.continueStage()
+        #expect(model.stage == .review && model.payment?.amount == 700 && model.payment?.destination == SendReceiveShotTests.bitcoin)
+    }
+
+    /// Anything else keeps today's error on Amount.
+    @Test func pastingAnInvalidValueOnAmountKeepsTheError() async {
+        let model = pasteModel()
+        await model.importRecipient("not a destination")
+        #expect(model.stage == .amount && !model.progress.recipientConfirmed)
+        #expect(model.error == "Enter a valid Bitcoin, Lightning, or Ark destination.")
+    }
+
     /// An Ark-funded on-chain review notes the round's confirmations, from today's setting.
     @Test func anArkFundedOnchainReviewNotesItsConfirmations() {
         #expect(WalletConfiguration.base(for: .mainnet).roundTxRequiredConfirmations == 2)

@@ -67,6 +67,9 @@ struct QRHubTests {
         #expect(resolutions == ["alice@example.com"])
         #expect(send.quote == nil)
         #expect(!send.controller.locked)
+        #expect(send.stage == .amount)  // Recipient first: on to the keypad.
+        #expect(await QRScanRoute.apply("zz", to: send))
+        #expect(send.stage == .recipient && send.error != nil)
     }
 
     @Test func scanCannotReplaceAnUncertainPayment() async throws {

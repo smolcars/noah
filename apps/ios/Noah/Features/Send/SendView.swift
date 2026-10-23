@@ -157,7 +157,7 @@ struct SendView: View {
     }
 
     /// Back, a title and scan (prototype `.nav`).
-    private func nav(back: Bool = true, title: LocalizedStringKey? = nil, scan: Bool = true) -> some View {
+    private func nav(back: Bool = true, title: LocalizedStringKey? = nil, scan: Bool = true, paste: Bool = false) -> some View {
         HStack(spacing: 0) {
             if back {
                 SendIconButton(systemName: "chevron.left", label: "Back", id: "send-back", action: goBack)
@@ -167,6 +167,19 @@ struct SendView: View {
             Spacer(minLength: 8)
             if let title { Text(title).noahText(SendText.navTitle).foregroundStyle(NoahTokens.Colors.foreground) }
             Spacer(minLength: 8)
+            if paste {
+                // The system paste control reads the clipboard without a prompt.
+                PasteButton(payloadType: String.self) { values in
+                    guard let value = values.first else { return }
+                    importPasted(value)
+                }
+                .labelStyle(.titleOnly)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .tint(NoahTokens.Colors.foreground)
+                .accessibilityIdentifier("send-paste-from-amount")
+                .padding(.trailing, 6)
+            }
             if scan {
                 SendIconButton(systemName: "qrcode.viewfinder", label: "Scan QR code", id: "send-scan") {
                     focus = nil
@@ -234,7 +247,11 @@ struct SendView: View {
         let short = window.size.height < 760
         return panes {
             VStack(spacing: 0) {
-                nav(back: model.progress.entry != .amountFirst && model.progress.recipientConfirmed, scan: true)
+                nav(back: model.progress.entry != .amountFirst && model.progress.recipientConfirmed, scan: true, paste: true)
+                // A recipient chosen first (or pasted here) shows above the amount.
+                if model.progress.recipientConfirmed && !model.destination.isEmpty {
+                    recipientLine.frame(maxWidth: .infinity).padding(.top, 6).accessibilityIdentifier("send-amount-recipient")
+                }
                 if wide { Spacer(minLength: 0) }
                 Group {
                     if overBalance {
@@ -410,9 +427,7 @@ struct SendView: View {
             }
             PasteButton(payloadType: String.self) { values in
                 guard let value = values.first else { return }
-                focus = nil
-                captureTypedAmount()
-                Task { await model.importRecipient(value) }
+                importPasted(value)
             }
             .labelStyle(.titleOnly)
             .buttonBorderShape(.capsule)
@@ -544,6 +559,13 @@ struct SendView: View {
         focus = nil
         captureTypedAmount()
         Task { await model.continueStage() }
+    }
+
+    /// Paste on Amount or To: today's import, keeping the amount you typed for the review's note.
+    private func importPasted(_ value: String) {
+        focus = nil
+        captureTypedAmount()
+        Task { await model.importRecipient(value) }
     }
 
     /// Keeps the amount you typed for the review's invoice note. Taken on every way to a

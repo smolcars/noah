@@ -49,6 +49,7 @@ enum QRScanRoute {
     static func apply(_ value: String, to model: SendModel) async -> Bool {
         guard !model.controller.locked, !model.busy else { return false }
         model.reset()
+        model.recipientFirst() // A code that isn't a destination shows on To, as today.
         await model.importRecipient(value)
         return true
     }

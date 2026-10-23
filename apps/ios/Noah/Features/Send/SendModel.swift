@@ -152,11 +152,15 @@ import Observation
         progress.entry = .recipientFirst
         stage = .recipient
     }
+    /// A scanned or pasted recipient. From Amount it's checked there: a request with its own
+    /// amount fills both and goes on to Method or Review, one without keeps the keypad's turn
+    /// (with any amount typed) and shows the recipient, and one that isn't a destination keeps
+    /// today's error on Amount.
     func importRecipient(_ value: String) async {
         destination = value
-        if stage == .amount { progress.entry = sats > 0 ? .amountFirst : .recipientFirst }
-        stage = .recipient
-        await acceptRecipient()
+        let fromAmount = stage == .amount
+        if fromAmount { progress.entry = .recipientFirst } else { stage = .recipient }
+        await acceptRecipient(keepingKeypad: fromAmount)
     }
     func previewRecipient() async {
         let candidate = destination
@@ -171,7 +175,9 @@ import Observation
         guard !Task.isCancelled, revision == recipientRevision else { return }
         route = resolved
     }
-    func acceptRecipient() async {
+    /// `keepingKeypad`: a typed amount isn't taken as confirmed, so Amount stays next unless the
+    /// recipient sets its own.
+    func acceptRecipient(keepingKeypad: Bool = false) async {
         guard !busy, !controller.locked else { return }
         busy = true
         error = nil
@@ -218,7 +224,7 @@ import Observation
             }
         }
         progress.recipientConfirmed = true
-        if sats > 0 { progress.amountConfirmed = true }
+        if sats > 0 && !keepingKeypad { progress.amountConfirmed = true }
         progress.selectedRail = isMax ? .onchain : SendFlow.recommend(rails, availability: availability)
         await advance()
     }

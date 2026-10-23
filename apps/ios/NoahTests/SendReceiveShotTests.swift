@@ -7,7 +7,7 @@ import UIKit
 /// Opt-in screenshot fixtures for Send and Receive: the real tab shell with a scripted
 /// payment controller, a fake receive model and stand-ins for wallet reads (no wallet,
 /// server writes or recovery phrase). Write a state name to Documents/sr-shot; "stop" ends
-/// the session. Send: amount, amount-typed, amount-over, to, to-typing, to-error, to-nomatch,
+/// the session. Send: amount, amount-typed, amount-over, amount-recipient, to, to-typing, to-error, to-nomatch,
 /// method, source, review-ark, review-lightning, review-onchain, sending-ark, sent-ark,
 /// sent-lightning, slow-lightning, pending-lightning, refunded, failed, sent-swap,
 /// confirm-swap, sent-wallet, uncertain, already-paid, unavailable, broadcast-pending.
@@ -171,6 +171,10 @@ struct SendReceiveShotTests {
         case "amount": break
         case "amount-typed": send.amount = "2500"
         case "amount-over": send.amount = "250000"
+        case "amount-recipient":
+            // 700 typed, then a pasted destination without an amount: the keypad keeps its turn, recipient shown.
+            send.amount = "700"
+            after = { await send.importRecipient(Self.ark) }
         case "to", "to-typing", "to-error", "to-nomatch":
             send.amount = "2500"
             send.progress.amountConfirmed = true
