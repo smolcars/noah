@@ -36,16 +36,15 @@ object SendReconciliation {
         fee = lightningFee(movement, actual) ?: movement.offchainFeeSats.toLong(), proof = SendReceipt.Proof.actualMovement)
     /** Whether [invoice] sets its own amount, so every attempt on its hash sent that amount. */
     fun fixesAmount(invoice: String?) = (invoice?.let(PaymentEncoding::invoice)?.sats?.signum() ?: 0) > 0
-    /** A reused movement (its fee field and effective balance disagree) of an invoice without its own amount keeps the
-     *  first attempt's amount, so it can't say what the paying attempt sent or paid in fees: the receipt shows neither. */
-    private fun alreadyPaid(receipt: SendReceipt, movement: Movement, fixed: Boolean) = SendResolution.AlreadyPaid(
-        if (fixed || lightningFee(movement, receipt.amount) == movement.offchainFeeSats.toLong()) receipt else receipt.copy(amount = 0, fee = null))
+    /** An invoice without its own amount may have been paid by a retry for another amount, and bark's reused movement keeps
+     *  the first attempt's numbers: nothing on it proves what was sent or paid in fees, so the receipt shows neither. */
+    private fun alreadyPaid(receipt: SendReceipt, fixed: Boolean) = SendResolution.AlreadyPaid(if (fixed) receipt else receipt.copy(amount = 0, fee = null))
     fun lightning(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, fixed: Boolean): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
         val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
-            if (movement.id in snapshot.movementIDs) return alreadyPaid(receipt, movement, fixed)
+            if (movement.id in snapshot.movementIDs) return alreadyPaid(receipt, fixed)
             return if (actual == amount) SendResolution.Paid(receipt) else SendResolution.Uncertain
         }
         if (actual != amount) return SendResolution.Uncertain
@@ -67,7 +66,7 @@ object SendReconciliation {
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
             return when (snapshot.invoicePaid ?: completedSince?.not()) {
-                true -> alreadyPaid(receipt, movement, fixed)
+                true -> alreadyPaid(receipt, fixed)
                 false -> if (actual == amount && lightningFee(movement, actual) != null) SendResolution.Paid(receipt) else SendResolution.Uncertain
                 null -> SendResolution.Uncertain
             }

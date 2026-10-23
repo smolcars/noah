@@ -121,7 +121,7 @@ class SendLightningRetryTest {
 
     @Test fun anInvoicePaidBeforeThisAttemptIsStillAlreadyPaid() = runBlocking {
         val bark = Bark().apply { movement = reused("successful", -1083, longAgo, fee = 83u); paid = true; onPay = { error("never pays twice") } }
-        val subject = send(bark)
+        val subject = send(bark, paying = SendPayment(decoderInvoice("10u"), "lightning", 1000))
         assertEquals(SendController.State.alreadyPaid, subject.state)
         assertEquals(83L, subject.attempt!!.alreadyPaid!!.fee)
         assertEquals(0, bark.calls)
@@ -150,9 +150,27 @@ class SendLightningRetryTest {
         assertEquals(79L, (resolution as SendResolution.AlreadyPaid).receipt.fee)
     }
 
+    @Test fun anAmountlessInvoicePaidOnceIsAlreadyPaidWithoutAmountOrFee() = runBlocking {
+        val bark = Bark().apply { pays() }
+        val subject = send(bark)
+        // The paying attempt has its own receipt.
+        assertEquals(SendController.State.succeeded, subject.state)
+        assertEquals(1000L, subject.attempt!!.receipt!!.amount); assertEquals(79L, subject.attempt!!.receipt!!.fee)
+        subject.acknowledge(); assertFalse(subject.locked)
+        // Submitted again: already paid, with nothing on bark's movement to prove which attempt's numbers it holds.
+        bark.onPay = { error("never pays twice") }
+        subject.submit(payment, quote)!!.await()
+        assertEquals(SendController.State.alreadyPaid, subject.state)
+        assertNull(subject.attempt!!.alreadyPaid!!.fee); assertEquals(0L, subject.attempt!!.alreadyPaid!!.amount)
+        assertEquals(1, bark.calls)
+        val resolution = SendReconciliation.lightningAttempt(bark.movements, hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo, false)
+        assertNull((resolution as SendResolution.AlreadyPaid).receipt.fee); assertEquals(0L, resolution.receipt.amount)
+    }
+
     @Test fun anAmountlessInvoiceRetriedForAnotherAmountShowsNeitherAmountNorFee() = runBlocking {
-        // Failed at the first amount, paid at the other plus 79: bark's reused movement keeps the first amount and fee field.
-        for ((first, effective) in listOf(1000L to -2079L, 2000L to -1079L)) {
+        // Failed at the first amount, paid at another plus 79: bark's reused movement keeps the first amount and fee field.
+        // 1,000 then 921 + 79 leaves an effective balance whose fee agrees with the fee field's 0 by coincidence.
+        for ((first, effective) in listOf(1000L to -2079L, 2000L to -1079L, 1000L to -1000L)) {
             val bark = Bark().apply { movement = reused("successful", effective, longAgo, amount = first); paid = true; onPay = { error("never pays twice") } }
             val journal = TestJournal()
             // The pre-pay guard still blocks it as already paid, without an amount or fee it can't prove.

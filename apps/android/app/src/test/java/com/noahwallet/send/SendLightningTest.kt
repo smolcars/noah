@@ -48,12 +48,18 @@ class SendLightningTest {
         assertEquals(2000L, subject.attempt!!.existingLightning!!.amount)
         val restarted = controller(wallet, journal, this); restarted.reloadForWalletChange(); assertEquals(SendController.State.uncertain, restarted.state); assertEquals(2000L, restarted.attempt!!.existingLightning!!.amount)
     }
-    @Test fun alreadyPaidUsesRealAmountAndMissingMovementCannotFabricateReceipt() = runBlocking {
+    @Test fun alreadyPaidShowsOnlyProvableNumbersAndMissingMovementCannotFabricateReceipt() = runBlocking {
         val hash = PaymentEncoding.invoice(invoice())!!.hash; var pays = 0
         val paid = LightningSendStatus.Paid(hash, "proof")
+        // An amountless invoice: the movement can't say which attempt's amount and fee it holds.
         val result = runCatching { submit(paid, listOf(movement(amount = 2000))) { pays++; LightningSendStatus.Unknown } }
-        assertEquals(2000L, (result.exceptionOrNull() as SendAlreadyPaid).receipt.amount)
-        assertEquals(83L, (result.exceptionOrNull() as SendAlreadyPaid).receipt.fee)
+        assertEquals(0L, (result.exceptionOrNull() as SendAlreadyPaid).receipt.amount)
+        assertNull((result.exceptionOrNull() as SendAlreadyPaid).receipt.fee)
+        // An invoice with its own amount: the movement's.
+        val fixed = runCatching { SendLightningSubmission.submit(SendPayment(decoderInvoice("10u"), "lightning", 1000), paid, listOf(movement()), null,
+            FakeSendWallet.quote.copy(fee = 83, total = 1083), { LightningSendStatus.Unknown }) { pays++; LightningSendStatus.Unknown } }
+        assertEquals(1000L, (fixed.exceptionOrNull() as SendAlreadyPaid).receipt.amount)
+        assertEquals(83L, (fixed.exceptionOrNull() as SendAlreadyPaid).receipt.fee)
         assertTrue(runCatching { submit(paid) { pays++; LightningSendStatus.Unknown } }.exceptionOrNull() is SendFailure)
         assertEquals(0, pays)
     }
