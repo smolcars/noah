@@ -58,11 +58,18 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     var scanner by rememberSaveable { mutableStateOf(false) }
     fun leaveReview() { model.discardReview(); model.stage = if (model.isMax) SendStage.source else SendStage.recipient }
     fun done() { scope.launch { controller.acknowledge(); if (!controller.locked) { presentation.motion = null; model.reset(); app.refresh() } } }
+    // Today's automatic refresh: the status check (which reconciles a transaction and retries a pending broadcast) and,
+    // for an on-chain payment, the block row's tip. Entering Send and the loop below share its 30 s pacing.
+    suspend fun refresh() {
+        if (controller.locked && controller.attempt?.payment?.method == "onchain")
+            runCatching { app.session.chainTip() }.getOrNull()?.let { presentation.tip = it }
+        controller.checkStatus()
+    }
     LaunchedEffect(Unit) {
         model.fiatCurrency = app.preferredCurrency
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
         runCatching { app.session.pendingSendHashes() }.getOrNull()?.let { model.pendingLightningHashes = it }
-        controller.checkStatus()
+        presentation.refresh.ifDue(::refresh)
     }
     LaunchedEffect(app.summary) {
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
@@ -139,21 +146,16 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
             }
         }
     }
-    // While Send is visible with a transaction: one loop re-reads the block row's tip and today's status (which
-    // reconciles the transaction and retries a pending broadcast) at most every 30 s, including across leaving and returning.
+    // While Send is visible with a transaction, the automatic refresh repeats, at most every 30 s across entering Send,
+    // leaving the tab and recreating the activity (the pacing lives in the presentation). Check status stays immediate.
     val txid = controller.attempt?.receipt?.txid
     val onchain = controller.locked && controller.attempt?.payment?.method == "onchain"
-    var tip by remember { mutableStateOf<Long?>(null) }
-    var checkedAt by remember { mutableLongStateOf(0L) }
     LaunchedEffect(txid, onchain, app.isWalletSuspended) {
         if (txid == null && !onchain || app.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (isActive) {
-                delay((checkedAt + 30_000 - SystemClock.elapsedRealtime()).coerceAtLeast(0))
-                runCatching { app.session.chainTip() }.getOrNull()?.let { tip = it }
-                if (txid != null) controller.checkStatus()
-                checkedAt = SystemClock.elapsedRealtime()
-            }
+            // The block row's first tip doesn't wait: there's none to refresh yet.
+            if (onchain && presentation.tip == null) runCatching { app.session.chainTip() }.getOrNull()?.let { presentation.tip = it }
+            while (isActive) { delay(presentation.refresh.wait()); presentation.refresh.ifDue(::refresh) }
         }
     }
     // Today's estimates for the method cards; the review's quote stays the authority.
@@ -186,7 +188,7 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     val env = SendEnv(app.amountUnit, locale, BuildConfig.APP_VARIANT, address?.substringAfter('@', "")?.takeIf { it.isNotEmpty() },
         history = app.history.transactions,
         pendingRound = app.summary?.balance?.let { balance -> balance.pendingRoundMessage(com.noahwallet.formatting.BitcoinAmount.format(balance.ark.pendingInRound.toLong(), app.amountUnit, locale)) },
-        tip = tip, chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(),
+        tip = presentation.tip, chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(),
         refund = refund, estimates = estimates, variant = BuildConfig.APP_VARIANT)
     val actions = SendActions(scan = { focus.clearFocus(); scanner = true }, done = ::done, leave = onDone,
         checkStatus = { scope.launch { controller.checkStatus() } }, startOver = { presentation.motion = null; model.reset() })
@@ -305,6 +307,9 @@ internal class SendPresentation(val model: SendModel) : ViewModel() {
     var hapticsAt = 0L
     /** The amount typed before a recipient (an invoice) set its own, for the review's note. */
     var typedBefore: Long? = null
+    /** Send's automatic refresh pacing and the block row's last tip, kept across leaving the tab and recreation. */
+    val refresh = SendRefresh()
+    var tip by mutableStateOf<Long?>(null)
 
     /** Holding to send confirms exactly as today's confirm button did: once, for the reviewed quote only. */
     fun confirm(payment: SendPayment, quote: SendQuote) {
