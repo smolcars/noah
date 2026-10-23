@@ -250,7 +250,7 @@ struct SendReceiveShotTests {
             case "receive-ark": fixture.receiveFormat = .ark
             case "receive-bitcoin": fixture.receiveFormat = .bitcoin
             case "receive-formats": fixture.receiveSheet = "formats"
-            case "receive-amount-sheet": fixture.receiveSheet = "amount"
+            case "receive-amount-sheet", "receive-saving": fixture.receiveSheet = "amount"
             case "arrive-onchain": fixture.chain = Self.chain()
             default: break
             }
@@ -283,6 +283,8 @@ struct SendReceiveShotTests {
                 return addresses
             },
             invoice: { request, sats, description in
+                // Creating the invoice takes a while, so the saving lock can be seen.
+                if state == "receive-saving" { try await Task.sleep(for: .seconds(20)) }
                 var next = request
                 next.amountSat = sats
                 next.description = description
