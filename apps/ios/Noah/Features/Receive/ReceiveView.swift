@@ -349,8 +349,10 @@ struct ReceiveView: View {
         if saved { haptics.play(.success) }
     }
 
-    /// Swiped or tapped away: the edit is dropped.
+    /// Swiped or tapped away: the edit is dropped. Not while the invoice is being created:
+    /// the wide pane's backdrop and escape gesture can't close it then, like the sheet.
     private func cancelAmount() {
+        guard !model.isSaving else { return }
         editing = false
         draft = nil
     }
