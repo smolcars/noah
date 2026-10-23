@@ -209,6 +209,10 @@ struct SendMotionTests {
         #expect(!SendRefundEvidence.recorded([Self.send(status: "failed", hash: "other")], paymentHash: "hash"))
         #expect(!SendRefundEvidence.recorded([Self.send(status: "failed"), Self.send(status: "failed")], paymentHash: "hash"))
         #expect(!SendRefundEvidence.recorded([], paymentHash: "hash"))
+        // A retried invoice reuses a movement from before the attempt: what came back can't be tied to it.
+        #expect(SendRefundEvidence.refund([Self.send(status: "failed")], paymentHash: "hash", before: [7]) == .untied)
+        #expect(SendRefundEvidence.refund([Self.send(status: "failed")], paymentHash: "hash", before: [1]) == .recorded)
+        #expect(SendRefundEvidence.refund([Self.send(status: "pending")], paymentHash: "hash", before: []) == .notRecorded)
     }
 
     // MARK: Hold to send

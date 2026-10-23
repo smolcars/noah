@@ -10,9 +10,10 @@ extension WalletSession {
         try await withOpenWallet { try await $0.onchain.tipHeight() }
     }
 
-    /// Whether history records the refund of a failed Lightning send (see `SendRefundEvidence`).
-    func lightningSendRefunded(paymentHash: String) async throws -> Bool {
-        try await withOpenWallet { SendRefundEvidence.recorded(try await $0.wallet.history(), paymentHash: paymentHash) }
+    /// What history records coming back from a failed Lightning send (see `SendRefundEvidence`). `before` is the
+    /// attempt's snapshot of movement ids.
+    func lightningSendRefund(paymentHash: String, before: Set<UInt32>) async throws -> SendRefund {
+        try await withOpenWallet { SendRefundEvidence.refund(try await $0.wallet.history(), paymentHash: paymentHash, before: before) }
     }
 
     /// Today's fee estimates for each rail a request offers, for the Method cards.
@@ -70,6 +71,26 @@ enum SendRefundEvidence {
         return send.status == "failed" && !send.outputVtxoIds.isEmpty && send.exitedVtxoIds.isEmpty
             && send.effectiveBalanceSats == 0 && send.offchainFeeSats == 0
     }
+
+    /// A retried invoice reuses the hash's movement from before the attempt, whose outputs include the earlier
+    /// attempts' coins, so nothing there can be tied to this one (async-payments.md, "Reused hashes").
+    static func refund(_ movements: [Movement], paymentHash: String, before: Set<UInt32>) -> SendRefund {
+        let reused = movements.contains {
+            $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == paymentHash && before.contains($0.id)
+        }
+        if reused { return .untied }
+        return recorded(movements, paymentHash: paymentHash) ? .recorded : .notRecorded
+    }
+}
+
+/// What a failed Lightning send's records show came back to the wallet.
+enum SendRefund: Equatable, Sendable {
+    /// bark recorded the revocation's coins on this attempt's own movement: "back in your wallet".
+    case recorded
+    /// No refund recorded: the send failed before leaving the wallet, or its coins went to an exit.
+    case notRecorded
+    /// A retried invoice: what came back can't be tied to this attempt.
+    case untied
 }
 
 /// What Receive's on-chain watch sees on one check.

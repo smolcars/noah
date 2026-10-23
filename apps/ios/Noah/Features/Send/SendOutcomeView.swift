@@ -27,7 +27,7 @@ struct SendOutcomeView: View {
     var chainTip: UInt32? = nil
     @State private var ownClock = SendMotionClock()
     @State private var history: [HistoryTransaction] = []
-    @State private var refund: Bool?
+    @State private var refund: SendRefund?
     @State private var completedAt = Date()
     @State private var confirmOverride = false
     @State private var resultShown = false
@@ -42,7 +42,7 @@ struct SendOutcomeView: View {
     private var payment: SendPayment? { attempt?.payment ?? (controller.state == .submitting ? reviewed : nil) }
     private var rail: SendMotion.Rail { payment.map(SendMotion.Rail.init) ?? .ark }
     private var outcome: SendMotion.Outcome {
-        SendMotion.outcome(state: controller.state, attempt: attempt, checking: controller.checking, refund: refund)
+        SendMotion.outcome(state: controller.state, attempt: attempt, checking: controller.checking, refund: refund.map { $0 == .recorded })
     }
     /// A status check never takes a shown result back to "Sending".
     private var shownOutcome: SendMotion.Outcome { outcome == .inFlight && motion.outcome != .inFlight ? motion.outcome : outcome }
@@ -146,7 +146,7 @@ struct SendOutcomeView: View {
             if receipt.amountIsPending == true { return L10n.text("Payment sent", locale: language) }
             return L10n.text("Sent {amount}", (receipt.amountIsEstimated == true ? "≈ " : "") + format(receipt.amount), locale: language)
         case .refunded: return L10n.text("Payment failed", locale: language)
-        case .failed: return L10n.text("Payment did not complete", locale: language)
+        case .failed: return L10n.text(refund == .untied ? "Payment failed" : "Payment did not complete", locale: language)
         case .alreadyPaid: return L10n.text("Invoice already paid", locale: language)
         case .uncertain: return L10n.text("Payment may have been sent", locale: language)
         case .unavailable: return L10n.text("Payment status unavailable", locale: language)
@@ -346,6 +346,8 @@ struct SendOutcomeView: View {
             guard case .initial = label.avatar else { return L10n.text("{amount} is back in your wallet.", format(sendingAmount), locale: language) }
             return L10n.text("{amount} is back in your wallet. Lightning couldn’t reach {recipient}.", format(sendingAmount), recipientName, locale: language)
         case .failed:
+            // A retried invoice: bark's records can't say this attempt's coins came back, so no "back in your wallet".
+            if refund == .untied { return L10n.text("That payment didn’t go through.", locale: language) }
             return attempt?.failureMessage.map { L10n.text($0, locale: language) } ?? L10n.text(payment?.source == .onchain
                 ? "Submission stopped before a transaction could be recorded. Review the amount and fee before trying again."
                 : "Wallet history confirms this payment failed or was canceled.", locale: language)
@@ -544,13 +546,13 @@ struct SendOutcomeView: View {
         return attempt?.paymentHash ?? ""
     }
 
-    /// Reads whether history records the refund; without a payment hash there's no evidence.
+    /// Reads what history records coming back; without a payment hash there's no evidence.
     private func readRefund() async {
         guard let hash = refundKey else { refund = nil; return }
-        if let fixture { refund = fixture.refunded ?? false; return }
-        guard !hash.isEmpty else { refund = false; return }
-        let recorded = (try? await WalletSession.shared.lightningSendRefunded(paymentHash: hash)) ?? false
-        if !Task.isCancelled { refund = recorded }
+        if let fixture { refund = fixture.refunded == true ? .recorded : .notRecorded; return }
+        guard !hash.isEmpty else { refund = .notRecorded; return }
+        let read = (try? await WalletSession.shared.lightningSendRefund(paymentHash: hash, before: attempt?.snapshot.movementIDs ?? [])) ?? .notRecorded
+        if !Task.isCancelled { refund = read }
     }
 
     private var resultKey: String { "\(rail)-\(shownOutcome)-\(motion.submittedAt?.timeIntervalSince1970 ?? 0)-\(motion.outcomeAt?.timeIntervalSince1970 ?? 0)" }
