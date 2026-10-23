@@ -2984,7 +2984,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ark-runda"
+            "value": "Ark-omgång"
           }
         }
       }
@@ -3362,19 +3362,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Llegando"
+            "value": "En camino"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "着金待ち"
+            "value": "受け取り中"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "도착 중"
+            "value": "입금 예정"
           }
         },
         "sv": {
@@ -6104,7 +6104,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ブロック%1$@"
+            "value": "ブロック %1$@"
           }
         },
         "ko": {
@@ -11516,7 +11516,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kunde inte läsa in aktiviteten"
+            "value": "Det gick inte att läsa in aktiviteten"
           }
         }
       }
@@ -13340,13 +13340,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "日付、金額、手数料、価格、IDと宛先"
+            "value": "日付、金額、手数料、価格、IDと送金先"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "날짜, 금액, 수수료, 가격, ID 및 대상"
+            "value": "날짜, 금액, 수수료, 가격, ID 및 받는 곳"
           }
         },
         "sv": {
@@ -17120,19 +17120,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出の詳細"
+            "value": "出金の詳細"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "출금 세부 정보"
+            "value": "출금 상세 정보"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Detaljer om uttaget"
+            "value": "Detaljer om nöduttaget"
           }
         }
       }
@@ -17660,7 +17660,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出済みコイン"
+            "value": "出金したコイン"
           }
         },
         "ko": {
@@ -17672,7 +17672,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uttagna mynt"
+            "value": "Mynt med nöduttag"
           }
         }
       }
@@ -17690,13 +17690,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Saliendo"
+            "value": "Retirando"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出中"
+            "value": "出金中"
           }
         },
         "ko": {
@@ -17708,7 +17708,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tas ut"
+            "value": "Nöduttag pågår"
           }
         }
       }
@@ -20846,25 +20846,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "History export failed"
+            "value": "No se pudo exportar el historial"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "History export failed"
+            "value": "履歴のエクスポートに失敗しました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "History export failed"
+            "value": "내역 내보내기 실패"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "History export failed"
+            "value": "Det gick inte att exportera historiken"
           }
         }
       }
@@ -21356,19 +21356,19 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ラウンド中"
+            "value": "ラウンド参加中"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "라운드 진행 중"
+            "value": "라운드 참여 중"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "I en runda"
+            "value": "I en omgång"
           }
         }
       }
@@ -26114,7 +26114,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "더보기"
+            "value": "더 보기"
           }
         },
         "sv": {
@@ -26288,7 +26288,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arkへ移動済み"
+            "value": "Arkに移動しました"
           }
         },
         "ko": {
@@ -27296,13 +27296,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ライトニングの支払いはありません"
+            "value": "Lightningの支払いはありません"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning 결제가 없습니다"
+            "value": "라이트닝 결제가 없습니다"
           }
         },
         "sv": {
@@ -28100,7 +28100,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inga betalningar på blockkedjan"
+            "value": "Inga betalningar på kedjan"
           }
         }
       }
@@ -31322,25 +31322,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens coin details"
+            "value": "Abre los detalles de la moneda"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens coin details"
+            "value": "コインの詳細を開きます"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens coin details"
+            "value": "코인 상세 정보를 엽니다"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opens coin details"
+            "value": "Öppnar myntets detaljer"
           }
         }
       }
@@ -36812,7 +36812,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Förnyad"
+            "value": "Förnyat"
           }
         }
       }
@@ -36845,13 +36845,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Se renovó %1$lld moneda"
+                  "value": "%1$lld moneda renovada"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Se renovaron %1$lld monedas"
+                  "value": "%1$lld monedas renovadas"
                 }
               }
             }
@@ -40244,13 +40244,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "支払いを選択してください"
+            "value": "支払いを選択"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "결제를 선택하세요"
+            "value": "결제 선택"
           }
         },
         "sv": {
@@ -40712,7 +40712,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "送金中 · ルートを探しています"
+            "value": "送金中 · 経路を探しています"
           }
         },
         "ko": {
@@ -40724,7 +40724,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skickar · söker fortfarande en väg"
+            "value": "Skickar · letar fortfarande efter en väg"
           }
         }
       }
@@ -40748,7 +40748,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "送金中 · Arkラウンド待ち"
+            "value": "送金中 · Arkのラウンド待ち"
           }
         },
         "ko": {
@@ -40760,7 +40760,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skickar · väntar på en Ark-runda"
+            "value": "Skickar · väntar på en Ark-omgång"
           }
         }
       }
@@ -49460,7 +49460,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最大%1$@"
+            "value": "最大 %1$@"
           }
         },
         "ko": {
@@ -54326,25 +54326,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ at the time"
+            "value": "%1$@ en ese momento"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ at the time"
+            "value": "当時 %1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ at the time"
+            "value": "당시 %1$@"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ at the time"
+            "value": "%1$@ vid tillfället"
           }
         }
       }
@@ -55043,13 +55043,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Arkの支払い%1$lld件をCSVファイルで書き出します。"
+                  "value": "%1$lld件のArk支払いをCSVファイルで書き出します。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Arkの支払い%1$lld件をCSVファイルで書き出します。"
+                  "value": "%1$lld件のArk支払いをCSVファイルで書き出します。"
                 }
               }
             }
@@ -55079,13 +55079,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld Ark-betalning som en CSV-fil."
+                  "value": "%1$lld Ark-betalning som CSV-fil."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld Ark-betalningar som en CSV-fil."
+                  "value": "%1$lld Ark-betalningar som CSV-fil."
                 }
               }
             }
@@ -55139,13 +55139,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "ライトニングの支払い%1$lld件をCSVファイルで書き出します。"
+                  "value": "%1$lld件のLightning支払いをCSVファイルで書き出します。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "ライトニングの支払い%1$lld件をCSVファイルで書き出します。"
+                  "value": "%1$lld件のLightning支払いをCSVファイルで書き出します。"
                 }
               }
             }
@@ -55157,13 +55157,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Lightning 결제 %1$lld건을 CSV 파일로 내보냅니다."
+                  "value": "라이트닝 결제 %1$lld건을 CSV 파일로 내보냅니다."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Lightning 결제 %1$lld건을 CSV 파일로 내보냅니다."
+                  "value": "라이트닝 결제 %1$lld건을 CSV 파일로 내보냅니다."
                 }
               }
             }
@@ -55175,13 +55175,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld Lightning-betalning som en CSV-fil."
+                  "value": "%1$lld Lightning-betalning som CSV-fil."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld Lightning-betalningar som en CSV-fil."
+                  "value": "%1$lld Lightning-betalningar som CSV-fil."
                 }
               }
             }
@@ -55271,13 +55271,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "オンチェーンの支払い%1$lld件をCSVファイルで書き出します。"
+                  "value": "%1$lld件のオンチェーン支払いをCSVファイルで書き出します。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "オンチェーンの支払い%1$lld件をCSVファイルで書き出します。"
+                  "value": "%1$lld件のオンチェーン支払いをCSVファイルで書き出します。"
                 }
               }
             }
@@ -55307,13 +55307,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld betalning på blockkedjan som en CSV-fil."
+                  "value": "%1$lld betalning på kedjan som CSV-fil."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld betalningar på blockkedjan som en CSV-fil."
+                  "value": "%1$lld betalningar på kedjan som CSV-fil."
                 }
               }
             }
@@ -55403,13 +55403,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld betalning som en CSV-fil."
+                  "value": "%1$lld betalning som CSV-fil."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld betalningar som en CSV-fil."
+                  "value": "%1$lld betalningar som CSV-fil."
                 }
               }
             }

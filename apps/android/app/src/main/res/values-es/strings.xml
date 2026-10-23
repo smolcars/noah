@@ -94,7 +94,7 @@
   <string name="gt_fd1aab50cfb65421">"ArkInfo no disponible; se usa la tabla publicada de comisiones de Lightning"</string>
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_72c7f155f1532f44">"Llega"</string>
-  <string name="gt_5dda9fcf2694981e">"Llegando"</string>
+  <string name="gt_5dda9fcf2694981e">"En camino"</string>
   <string name="gt_f5d2fa6426c30863">"Solicitar un depósito en Ark cuando el saldo en cadena permita cubrir %1$s sats más las comisiones y dejar al menos 5,000 sats en cadena. Confirma las comisiones exactas y la reserva antes de depositar."</string>
   <string name="gt_0c2d9eae6632bce6">"Preguntar si deseas depositar cuando los fondos en cadena cubran %1$s sats, las comisiones y una reserva de 5000 sats."</string>
   <string name="gt_e3c03bb0dee641c5">"Pide %1$s"</string>
@@ -492,7 +492,7 @@
   <string name="gt_85fc46c17cd71d1d">"Retirado"</string>
   <string name="gt_f27f33ca7ae65032">"VTXO retirados mediante salida"</string>
   <string name="gt_7c2f8a4625fab18d">"Monedas retiradas"</string>
-  <string name="gt_4a366d77739e7414">"Saliendo"</string>
+  <string name="gt_4a366d77739e7414">"Retirando"</string>
   <string name="gt_292ce5ce3450f0b4">"Saliendo a la cadena"</string>
   <string name="gt_5e561017c8169c76">"Salidas"</string>
   <string name="gt_db5f066a21225f71">"Se ha avanzado en las salidas. Es posible que se hayan difundido transacciones o aumentado sus comisiones."</string>
@@ -581,7 +581,7 @@
   <string name="gt_920ac8601c18daac">"Ocultar saldo de la billetera"</string>
   <string name="gt_31f47a7b7c67fe38">"API de precios históricos"</string>
   <string name="gt_f622cc11b8240847">"Valor histórico no disponible"</string>
-  <string name="gt_7f1929550de947a7">"History export failed"</string>
+  <string name="gt_7f1929550de947a7">"No se pudo exportar el historial"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"No se pudo leer el historial"</string>
   <string name="gt_5013616d3cb50e40">"Mantén pulsado para enviar"</string>
   <string name="gt_3a78695388b38b5c">"Inicio"</string>
@@ -872,7 +872,7 @@
   <string name="gt_6be6caff13df7c0f">"Abre tu billetera antes de cambiar el punto de acceso."</string>
   <string name="gt_f4ce6b8f22a13fe1">"Abrir %1$s en el navegador"</string>
   <string name="gt_557d3ad870771176">"Abriendo BTC Map integrado…"</string>
-  <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
+  <string name="gt_eb4bbb3d312d0b21">"Abre los detalles de la moneda"</string>
   <string name="gt_f893fab7e39f5540">"Si no, Android puede pausar Noah y los pagos podrían dejar de llegar."</string>
   <string name="gt_3619cf0b90923a4b">"Saliente"</string>
   <string name="gt_5830129e672b39a9">"VTXOs de salida"</string>
@@ -1026,8 +1026,8 @@
   <string name="gt_77ad89ff1752beb2">"Estado de renovación no disponible"</string>
   <string name="gt_1c736ed5f00ea1a6">"Renovado"</string>
   <plurals name="gt_c93ae43d7d80967e">
-    <item quantity="one">"Se renovó %1$s moneda"</item>
-    <item quantity="other">"Se renovaron %1$s monedas"</item>
+    <item quantity="one">"%1$s moneda renovada"</item>
+    <item quantity="other">"%1$s monedas renovadas"</item>
   </plurals>
   <string name="gt_b6b7a0065808a62e">"Repetir"</string>
   <string name="gt_9a180349dd1464e0">"Repetir pago"</string>
@@ -1515,7 +1515,7 @@
     <item quantity="other">"%1$s lugares%2$s"</item>
   </plurals>
   <string name="gt_31ba1bfe057bd412">"%1$s en camino"</string>
-  <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
+  <string name="gt_0632ba4767ab1888">"%1$s en ese momento"</string>
   <string name="gt_05421802af3d82be">"%1$s disponible"</string>
   <string name="gt_07af0226de4cedc3">"%1$s disponible en Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s ha vuelto a tu billetera."</string>

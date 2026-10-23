@@ -94,7 +94,7 @@
   <string name="gt_fd1aab50cfb65421">"ArkInfo 이용 불가 · 공개된 Lightning 수수료표 사용 중"</string>
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_72c7f155f1532f44">"도착"</string>
-  <string name="gt_5dda9fcf2694981e">"도착 중"</string>
+  <string name="gt_5dda9fcf2694981e">"입금 예정"</string>
   <string name="gt_f5d2fa6426c30863">"온체인 잔액으로 %1$s sats와 수수료를 충당하고 온체인에 최소 5,000 sats를 남길 수 있을 때 Ark 입금을 제안합니다. 입금 전에 정확한 수수료와 남겨 둘 금액을 확인하세요."</string>
   <string name="gt_0c2d9eae6632bce6">"온체인 자금으로 %1$s sats, 수수료, 예비 자금 5,000 sats를 충당할 수 있으면 입금 여부를 묻습니다."</string>
   <string name="gt_e3c03bb0dee641c5">"%1$s 요청"</string>
@@ -371,7 +371,7 @@
   <string name="gt_3c1c01b405853556">"주의가 필요한 설정"</string>
   <string name="gt_95bc71717feaf89f">"위험을 감수하고 이 VTXO를 삭제하시겠습니까?"</string>
   <string name="gt_99c40ab405926cb5">"날짜"</string>
-  <string name="gt_01f5e36f742d6610">"날짜, 금액, 수수료, 가격, ID 및 대상"</string>
+  <string name="gt_01f5e36f742d6610">"날짜, 금액, 수수료, 가격, ID 및 받는 곳"</string>
   <string name="gt_1a03bd2fd107c453">"디버그"</string>
   <string name="gt_6168260eb938c95d">"디버그 화면"</string>
   <string name="gt_2d33cff196396113">"VTXO 16진수 디코딩"</string>
@@ -476,7 +476,7 @@
   <string name="gt_6796f99963bfff4f">"출금 최상위 블록"</string>
   <string name="gt_b17b4e5b1642d246">"출금이 취소되었습니다. VTXO는 계속 사용할 수 있습니다."</string>
   <string name="gt_22b3b7a335275593">"출금 깊이"</string>
-  <string name="gt_37566aa4ce592457">"출금 세부 정보"</string>
+  <string name="gt_37566aa4ce592457">"출금 상세 정보"</string>
   <string name="gt_ba61a6796c9bda55">"출금 처리가 완료되기 전에 취소되었습니다."</string>
   <string name="gt_0cb3378726d1acba">"출금 진행 중 오류가 %1$s개 발생했습니다. 거래가 전파되었거나 수수료가 인상되었을 수 있습니다. 계속하기 전에 출금 세부 정보를 새로고침하세요."</string>
   <string name="gt_1bc751fa07b37246">"출금이 시작되었습니다. Noah가 백그라운드에서 자동으로 진행하며, 거래 전파 및 수수료 인상에 드는 비용은 온체인 잔액에서 지불합니다."</string>
@@ -581,7 +581,7 @@
   <string name="gt_920ac8601c18daac">"지갑 잔액 숨기기"</string>
   <string name="gt_31f47a7b7c67fe38">"과거 가격 API"</string>
   <string name="gt_f622cc11b8240847">"과거 가치를 확인할 수 없습니다"</string>
-  <string name="gt_7f1929550de947a7">"History export failed"</string>
+  <string name="gt_7f1929550de947a7">"내역 내보내기 실패"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"내역 불러오기 실패"</string>
   <string name="gt_5013616d3cb50e40">"길게 눌러 보내기"</string>
   <string name="gt_3a78695388b38b5c">"홈"</string>
@@ -595,7 +595,7 @@
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_1d93f10792a18bf1">"미성숙 잔액"</string>
   <string name="gt_86a486e897edd1bc">"VTXO 가져오기"</string>
-  <string name="gt_1016441cc23c561f">"라운드 진행 중"</string>
+  <string name="gt_1016441cc23c561f">"라운드 참여 중"</string>
   <string name="gt_14f23687c9fe3353">"약 20분 후"</string>
   <string name="gt_f868160d0a466230">"몇 초 안에"</string>
   <string name="gt_e301820ac8393100">"수신"</string>
@@ -727,7 +727,7 @@
   <string name="gt_86387c399b5ea22e">"내장 BIP39 단어 목록 누락"</string>
   <string name="gt_656ea5e06bac3d88">"복수형 리소스 누락: %1$s"</string>
   <string name="gt_9b11f6b707d2a03e">"매월"</string>
-  <string name="gt_d47d7cb0e4f8fd2b">"더보기"</string>
+  <string name="gt_d47d7cb0e4f8fd2b">"더 보기"</string>
   <string name="gt_6a1756ecb05ed667">"온체인 Bitcoin을 Ark로 이동"</string>
   <string name="gt_95e949f1c9e6a26a">"빠르고 저렴하게 결제하려면 온체인 Bitcoin을 Ark로 옮기세요."</string>
   <string name="gt_85720a9d10dec1ca">"이 서명된 자금 조달 거래를 그대로 사용하여 온체인 Bitcoin을 Ark로 이동합니다. 입금 금액에는 Ark 수수료가 포함되며 온체인 수수료는 별도로 지불합니다. 입금이 완료되면 자금을 사용할 수 있습니다. 이 검토 내용은 2분 후 만료됩니다."</string>
@@ -760,7 +760,7 @@
   <string name="gt_83a4672409350abd">"다음 결제: %1$s"</string>
   <string name="gt_1ea442a134b2a184">"아니요"</string>
   <string name="gt_5d770afa42d9782f">"Ark 결제가 없습니다"</string>
-  <string name="gt_14835c06d76778bb">"Lightning 결제가 없습니다"</string>
+  <string name="gt_14835c06d76778bb">"라이트닝 결제가 없습니다"</string>
   <string name="gt_f8ae9307585f292e">"이 화면에는 VTXO가 없습니다."</string>
   <string name="gt_0a12b92ce7899469">"아직 활동 내역이 없습니다"</string>
   <string name="gt_7190d03c8e934c65">"이 링크를 열 수 있는 앱이 없습니다."</string>
@@ -872,7 +872,7 @@
   <string name="gt_6be6caff13df7c0f">"엔드포인트를 변경하기 전에 지갑을 여세요."</string>
   <string name="gt_f4ce6b8f22a13fe1">"브라우저에서 %1$s 열기"</string>
   <string name="gt_557d3ad870771176">"내장 BTC Map 여는 중…"</string>
-  <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
+  <string name="gt_eb4bbb3d312d0b21">"코인 상세 정보를 엽니다"</string>
   <string name="gt_f893fab7e39f5540">"그렇지 않으면 Android가 Noah를 일시 중지해 결제가 도착하지 않을 수 있습니다."</string>
   <string name="gt_3619cf0b90923a4b">"송신"</string>
   <string name="gt_5830129e672b39a9">"출력 VTXO"</string>
@@ -1121,7 +1121,7 @@
   <string name="gt_a0066e88129f5f98">"배포 앱 선택"</string>
   <string name="gt_0834cfb81fbae767">"VTXO 선택"</string>
   <string name="gt_65f9b19c0365a914">"VTXO를 선택해 상세 정보를 확인하세요"</string>
-  <string name="gt_0bdc583e8496eb4a">"결제를 선택하세요"</string>
+  <string name="gt_0bdc583e8496eb4a">"결제 선택"</string>
   <string name="gt_ba6afbdcb15d6321">"조건에 맞는 모든 VTXO 선택"</string>
   <string name="gt_a81bdedbd0dccc7d">"만료 임박 항목 선택"</string>
   <string name="gt_70f58736b63e2c9e">"표시된 항목 선택"</string>
@@ -1515,7 +1515,7 @@
     <item quantity="other">"%1$s곳%2$s"</item>
   </plurals>
   <string name="gt_31ba1bfe057bd412">"%1$s 입금 예정"</string>
-  <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
+  <string name="gt_0632ba4767ab1888">"당시 %1$s"</string>
   <string name="gt_05421802af3d82be">"%1$s 사용 가능"</string>
   <string name="gt_07af0226de4cedc3">"Ark에서 %1$s 사용 가능"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s이 지갑으로 돌아왔어요."</string>
@@ -1539,8 +1539,8 @@
     <item quantity="other">"Ark 결제 %1$s건을 CSV 파일로 내보냅니다."</item>
   </plurals>
   <plurals name="gt_2c4c9aa016a69f38">
-    <item quantity="one">"Lightning 결제 %1$s건을 CSV 파일로 내보냅니다."</item>
-    <item quantity="other">"Lightning 결제 %1$s건을 CSV 파일로 내보냅니다."</item>
+    <item quantity="one">"라이트닝 결제 %1$s건을 CSV 파일로 내보냅니다."</item>
+    <item quantity="other">"라이트닝 결제 %1$s건을 CSV 파일로 내보냅니다."</item>
   </plurals>
   <string name="gt_3612e1cd7501afab">"%1$s/%2$s"</string>
   <plurals name="gt_cbc409d6a950d6e9">

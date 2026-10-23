@@ -83,7 +83,7 @@
   <string name="gt_03fc60ebe53fdf56">"Ark håller den åt dig"</string>
   <string name="gt_084e20c59e73feb6">"Ark håller den medan Lightning betalar"</string>
   <string name="gt_a82ff39c153e2885">"Ark tar emot"</string>
-  <string name="gt_e3fdc6fb344a217d">"Ark-runda"</string>
+  <string name="gt_e3fdc6fb344a217d">"Ark-omgång"</string>
   <string name="gt_bb52f900a0567ac9">"Ark-server"</string>
   <string name="gt_d41263e062524b08">"Information om Ark-servern är inte tillgänglig. Dra för att uppdatera."</string>
   <string name="gt_af094d458523f61f">"Information om Ark-servern är inte tillgänglig. Försök uppdatera."</string>
@@ -320,7 +320,7 @@
   <string name="gt_3bb6d3bf6a4baf55">"Kunde inte läsa in Ark-information. Dra nedåt för att uppdatera."</string>
   <string name="gt_64b871562593e23b">"Kunde inte läsa in en adress till Noah-plånboken. Försök igen när plånboken är redo."</string>
   <string name="gt_28c0fd81cb2b2864">"Kunde inte läsa in en insättningsadress. Stäng och försök igen när plånboken är redo."</string>
-  <string name="gt_075bebe38f9136fa">"Kunde inte läsa in aktiviteten"</string>
+  <string name="gt_075bebe38f9136fa">"Det gick inte att läsa in aktiviteten"</string>
   <string name="gt_c2c38bbef6138610">"Det gick inte att läsa in transaktionerna. Försök igen."</string>
   <string name="gt_562864a6f342bc5c">"Kunde inte läsa in ditt saldo."</string>
   <string name="gt_c71c66c1d0794f97">"Det gick inte att läsa in ditt saldo. Dra nedåt för att försöka igen."</string>
@@ -476,7 +476,7 @@
   <string name="gt_6796f99963bfff4f">"Nöduttagets senaste block"</string>
   <string name="gt_b17b4e5b1642d246">"Nöduttaget avbröts. VTXO:n kan fortfarande användas."</string>
   <string name="gt_22b3b7a335275593">"Nöduttagets djup"</string>
-  <string name="gt_37566aa4ce592457">"Detaljer om uttaget"</string>
+  <string name="gt_37566aa4ce592457">"Detaljer om nöduttaget"</string>
   <string name="gt_ba61a6796c9bda55">"Behandlingen av nöduttaget avbröts innan den slutfördes."</string>
   <string name="gt_0cb3378726d1acba">"Den fortsatta hanteringen av nöduttaget gav %1$s fel. Transaktioner kan ha sänts eller fått höjda avgifter. Uppdatera nöduttagets detaljer innan du fortsätter."</string>
   <string name="gt_1bc751fa07b37246">"Nöduttag startat. Noah hanterar det automatiskt i bakgrunden och betalar avgifter för sändning och avgiftshöjning från ditt saldo på blockkedjan."</string>
@@ -491,8 +491,8 @@
   <string name="gt_efe13cdfa8a35c1e">"Nöduttagets vikt (WU)"</string>
   <string name="gt_85fc46c17cd71d1d">"Nöduttag genomfört"</string>
   <string name="gt_f27f33ca7ae65032">"VTXO:er med genomförda nöduttag"</string>
-  <string name="gt_7c2f8a4625fab18d">"Uttagna mynt"</string>
-  <string name="gt_4a366d77739e7414">"Tas ut"</string>
+  <string name="gt_7c2f8a4625fab18d">"Mynt med nöduttag"</string>
+  <string name="gt_4a366d77739e7414">"Nöduttag pågår"</string>
   <string name="gt_292ce5ce3450f0b4">"Tas ut till blockkedjan"</string>
   <string name="gt_5e561017c8169c76">"Nöduttag"</string>
   <string name="gt_db5f066a21225f71">"Nöduttagen har förts vidare. Transaktioner kan ha sänts eller fått höjda avgifter."</string>
@@ -581,7 +581,7 @@
   <string name="gt_920ac8601c18daac">"Dölj plånbokens saldo"</string>
   <string name="gt_31f47a7b7c67fe38">"API för historiska priser"</string>
   <string name="gt_f622cc11b8240847">"Historiskt värde saknas"</string>
-  <string name="gt_7f1929550de947a7">"History export failed"</string>
+  <string name="gt_7f1929550de947a7">"Det gick inte att exportera historiken"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"Det gick inte att läsa historiken"</string>
   <string name="gt_5013616d3cb50e40">"Håll in för att skicka"</string>
   <string name="gt_3a78695388b38b5c">"Hem"</string>
@@ -595,7 +595,7 @@
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_1d93f10792a18bf1">"Omoget"</string>
   <string name="gt_86a486e897edd1bc">"Importera VTXO"</string>
-  <string name="gt_1016441cc23c561f">"I en runda"</string>
+  <string name="gt_1016441cc23c561f">"I en omgång"</string>
   <string name="gt_14f23687c9fe3353">"Om cirka 20 minuter"</string>
   <string name="gt_f868160d0a466230">"Inom några sekunder"</string>
   <string name="gt_e301820ac8393100">"Inkommande"</string>
@@ -782,7 +782,7 @@
   <string name="gt_169ca55a020a737a">"Inga matchande platser · prova en annan sökning eller kategori"</string>
   <string name="gt_66e0a8d59d77f285">"Inga fler betalningar kommer att skickas. Redan skickade betalningar kan inte ångras. En pågående betalning kan fortfarande slutföras."</string>
   <string name="gt_0ce1d833039b6004">"Ingen ny betalning gjordes för beloppet du granskade."</string>
-  <string name="gt_aa87648ab2667bd6">"Inga betalningar på blockkedjan"</string>
+  <string name="gt_aa87648ab2667bd6">"Inga betalningar på kedjan"</string>
   <string name="gt_e36d3c06c3e6c1cd">"Ingen betalning skickades."</string>
   <string name="gt_1d62830d5f29977c">"Inga platser i vyn"</string>
   <string name="gt_6a8f8f4a6309d592">"Inga återkommande betalningar ännu. Schemalägg betalningar för hyra, prenumerationer, fickpengar eller donationer till en Ark-adress, en Lightning-adress eller ett BOLT12-erbjudande."</string>
@@ -872,7 +872,7 @@
   <string name="gt_6be6caff13df7c0f">"Öppna din plånbok innan du ändrar slutpunkten."</string>
   <string name="gt_f4ce6b8f22a13fe1">"Öppna %1$s i webbläsaren"</string>
   <string name="gt_557d3ad870771176">"Öppnar den medföljande versionen av BTC Map…"</string>
-  <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
+  <string name="gt_eb4bbb3d312d0b21">"Öppnar myntets detaljer"</string>
   <string name="gt_f893fab7e39f5540">"Annars kan Android pausa Noah, och betalningar kan sluta komma fram."</string>
   <string name="gt_3619cf0b90923a4b">"Utgående"</string>
   <string name="gt_5830129e672b39a9">"Utgående VTXO:er"</string>
@@ -1024,7 +1024,7 @@
   <string name="gt_90c1689b0b74f032">"Förnya"</string>
   <string name="gt_46e6876f99389ec8">"Förnya %1$s"</string>
   <string name="gt_77ad89ff1752beb2">"Förnyelsestatus är inte tillgänglig"</string>
-  <string name="gt_1c736ed5f00ea1a6">"Förnyad"</string>
+  <string name="gt_1c736ed5f00ea1a6">"Förnyat"</string>
   <plurals name="gt_c93ae43d7d80967e">
     <item quantity="one">"Förnyade %1$s mynt"</item>
     <item quantity="other">"Förnyade %1$s mynt"</item>
@@ -1134,8 +1134,8 @@
   <string name="gt_dad3741faaf71ced">"Skicka %1$s"</string>
   <string name="gt_e595f17fac1d8384">"Skickar"</string>
   <string name="gt_a23752f662daf656">"Skickar %1$s"</string>
-  <string name="gt_5485623750e9453e">"Skickar · söker fortfarande en väg"</string>
-  <string name="gt_c5fb1b5d6362edc0">"Skickar · väntar på en Ark-runda"</string>
+  <string name="gt_5485623750e9453e">"Skickar · letar fortfarande efter en väg"</string>
+  <string name="gt_c5fb1b5d6362edc0">"Skickar · väntar på en Ark-omgång"</string>
   <string name="gt_a38ba37fd4f8a52a">"Skickar · väntar på bekräftelser"</string>
   <string name="gt_286a3af7348e8312">"Skickar..."</string>
   <string name="gt_b8ed5279e897be5d">"Skickar…"</string>
@@ -1515,7 +1515,7 @@
     <item quantity="other">"%1$s platser%2$s"</item>
   </plurals>
   <string name="gt_31ba1bfe057bd412">"%1$s på väg"</string>
-  <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
+  <string name="gt_0632ba4767ab1888">"%1$s vid tillfället"</string>
   <string name="gt_05421802af3d82be">"%1$s tillgängligt"</string>
   <string name="gt_07af0226de4cedc3">"%1$s tillgängligt i Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s är tillbaka i din plånbok."</string>
@@ -1535,21 +1535,21 @@
   <string name="gt_6f9665f75e53113c">"%1$s@%2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
-    <item quantity="one">"%1$s Ark-betalning som en CSV-fil."</item>
-    <item quantity="other">"%1$s Ark-betalningar som en CSV-fil."</item>
+    <item quantity="one">"%1$s Ark-betalning som CSV-fil."</item>
+    <item quantity="other">"%1$s Ark-betalningar som CSV-fil."</item>
   </plurals>
   <plurals name="gt_2c4c9aa016a69f38">
-    <item quantity="one">"%1$s Lightning-betalning som en CSV-fil."</item>
-    <item quantity="other">"%1$s Lightning-betalningar som en CSV-fil."</item>
+    <item quantity="one">"%1$s Lightning-betalning som CSV-fil."</item>
+    <item quantity="other">"%1$s Lightning-betalningar som CSV-fil."</item>
   </plurals>
   <string name="gt_3612e1cd7501afab">"%1$s av %2$s"</string>
   <plurals name="gt_cbc409d6a950d6e9">
-    <item quantity="one">"%1$s betalning på blockkedjan som en CSV-fil."</item>
-    <item quantity="other">"%1$s betalningar på blockkedjan som en CSV-fil."</item>
+    <item quantity="one">"%1$s betalning på kedjan som CSV-fil."</item>
+    <item quantity="other">"%1$s betalningar på kedjan som CSV-fil."</item>
   </plurals>
   <plurals name="gt_af16209be5ba011c">
-    <item quantity="one">"%1$s betalning som en CSV-fil."</item>
-    <item quantity="other">"%1$s betalningar som en CSV-fil."</item>
+    <item quantity="one">"%1$s betalning som CSV-fil."</item>
+    <item quantity="other">"%1$s betalningar som CSV-fil."</item>
   </plurals>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"%1$s vid tillfället"</string>

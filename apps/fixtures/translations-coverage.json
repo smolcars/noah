@@ -1221,26 +1221,10 @@
         "· nothing left your wallet"
       ],
       "untranslated": {
-        "es": [
-          "gt_0632ba4767ab1888",
-          "gt_7f1929550de947a7",
-          "gt_eb4bbb3d312d0b21"
-        ],
-        "ja": [
-          "gt_0632ba4767ab1888",
-          "gt_7f1929550de947a7",
-          "gt_eb4bbb3d312d0b21"
-        ],
-        "ko": [
-          "gt_0632ba4767ab1888",
-          "gt_7f1929550de947a7",
-          "gt_eb4bbb3d312d0b21"
-        ],
-        "sv": [
-          "gt_0632ba4767ab1888",
-          "gt_7f1929550de947a7",
-          "gt_eb4bbb3d312d0b21"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     },
     "android": {

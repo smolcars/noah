@@ -94,7 +94,7 @@
   <string name="gt_fd1aab50cfb65421">"ArkInfoを取得できないため、公開されているライトニングの手数料表を使用します"</string>
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_72c7f155f1532f44">"着金"</string>
-  <string name="gt_5dda9fcf2694981e">"着金待ち"</string>
+  <string name="gt_5dda9fcf2694981e">"受け取り中"</string>
   <string name="gt_f5d2fa6426c30863">"オンチェーン残高で%1$s satsと手数料をまかない、さらにオンチェーンに5,000 sats以上を残せる場合に、Arkに入金するか確認します。Arkへの入金前に、正確な手数料と残しておく金額を確認してください。"</string>
   <string name="gt_0c2d9eae6632bce6">"オンチェーン資金で%1$s sats、手数料、予備資金5,000 satsをまかなえる場合に、Arkへの入金を提案します。"</string>
   <string name="gt_e3c03bb0dee641c5">"%1$s の請求"</string>
@@ -170,7 +170,7 @@
   <string name="gt_cc3bf438e0ff0a5a">"ブロック高"</string>
   <string name="gt_72e6d3aef9cf136d">"ブロック高API"</string>
   <string name="gt_9e16c107128974b9">"ブロック高：%1$s"</string>
-  <string name="gt_b69792e8c9b6b4aa">"ブロック%1$s"</string>
+  <string name="gt_b69792e8c9b6b4aa">"ブロック %1$s"</string>
   <string name="gt_d20282998912f670">"ブロック %1$s"</string>
   <string name="gt_a7f1ee1a5b8f9592">"期限切れまでのブロック数"</string>
   <string name="gt_4816cbfd74aa8297">"Arkに入金する"</string>
@@ -371,7 +371,7 @@
   <string name="gt_3c1c01b405853556">"注意が必要な操作"</string>
   <string name="gt_95bc71717feaf89f">"危険を伴いますが、このVTXOを削除しますか？"</string>
   <string name="gt_99c40ab405926cb5">"日付"</string>
-  <string name="gt_01f5e36f742d6610">"日付、金額、手数料、価格、IDと宛先"</string>
+  <string name="gt_01f5e36f742d6610">"日付、金額、手数料、価格、IDと送金先"</string>
   <string name="gt_1a03bd2fd107c453">"デバッグ"</string>
   <string name="gt_6168260eb938c95d">"デバッグ画面"</string>
   <string name="gt_2d33cff196396113">"VTXOの16進数データをデコード"</string>
@@ -476,7 +476,7 @@
   <string name="gt_6796f99963bfff4f">"退出の最新ブロック"</string>
   <string name="gt_b17b4e5b1642d246">"退出をキャンセルしました。VTXOは引き続き使用できます。"</string>
   <string name="gt_22b3b7a335275593">"退出の深度"</string>
-  <string name="gt_37566aa4ce592457">"退出の詳細"</string>
+  <string name="gt_37566aa4ce592457">"出金の詳細"</string>
   <string name="gt_ba61a6796c9bda55">"退出処理は完了前に取り消されました。"</string>
   <string name="gt_0cb3378726d1acba">"退出処理で%1$s件のエラーが発生しました。取引がブロードキャストされたか、手数料が引き上げられた可能性があります。続行する前に退出の詳細を更新してください。"</string>
   <string name="gt_1bc751fa07b37246">"退出を開始しました。Noahはバックグラウンドで自動的に処理を進め、ブロードキャストと手数料引き上げにかかる費用をオンチェーン残高から支払います。"</string>
@@ -491,8 +491,8 @@
   <string name="gt_efe13cdfa8a35c1e">"退出のウェイト（WU）"</string>
   <string name="gt_85fc46c17cd71d1d">"出金済み"</string>
   <string name="gt_f27f33ca7ae65032">"退出済みVTXO"</string>
-  <string name="gt_7c2f8a4625fab18d">"退出済みコイン"</string>
-  <string name="gt_4a366d77739e7414">"退出中"</string>
+  <string name="gt_7c2f8a4625fab18d">"出金したコイン"</string>
+  <string name="gt_4a366d77739e7414">"出金中"</string>
   <string name="gt_292ce5ce3450f0b4">"チェーンへ退出中"</string>
   <string name="gt_5e561017c8169c76">"退出"</string>
   <string name="gt_db5f066a21225f71">"退出の出金処理を進めました。トランザクションがブロードキャストされたか、手数料が引き上げられた可能性があります。"</string>
@@ -581,7 +581,7 @@
   <string name="gt_920ac8601c18daac">"ウォレット残高を非表示"</string>
   <string name="gt_31f47a7b7c67fe38">"過去の価格API"</string>
   <string name="gt_f622cc11b8240847">"過去の評価額を取得できません"</string>
-  <string name="gt_7f1929550de947a7">"History export failed"</string>
+  <string name="gt_7f1929550de947a7">"履歴のエクスポートに失敗しました"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"履歴の読み込みに失敗しました"</string>
   <string name="gt_5013616d3cb50e40">"長押しで送金"</string>
   <string name="gt_3a78695388b38b5c">"ホーム"</string>
@@ -595,7 +595,7 @@
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_1d93f10792a18bf1">"未成熟"</string>
   <string name="gt_86a486e897edd1bc">"VTXOをインポート"</string>
-  <string name="gt_1016441cc23c561f">"ラウンド中"</string>
+  <string name="gt_1016441cc23c561f">"ラウンド参加中"</string>
   <string name="gt_14f23687c9fe3353">"約20分後"</string>
   <string name="gt_f868160d0a466230">"数秒で"</string>
   <string name="gt_e301820ac8393100">"入金"</string>
@@ -732,7 +732,7 @@
   <string name="gt_95e949f1c9e6a26a">"オンチェーンのビットコインをArkに移動すると、低い手数料で素早く支払えます。"</string>
   <string name="gt_85720a9d10dec1ca">"この署名済み入金トランザクションをそのまま使用して、オンチェーンのBitcoinをArkに入金します。Arkへの入金額にはArkの手数料が含まれますが、オンチェーン手数料は別途かかります。Arkへの入金が完了すると資金を使用できます。この確認内容は2分後に失効します。"</string>
   <string name="gt_a571fc41c8ac198d">"オンチェーンのBitcoinをArkに入金します。表示されている金額と手数料は、この準備済みトランザクションに適用される正確な値です。Arkへの入金が完了すると資金を使用できます。"</string>
-  <string name="gt_5c948b346d0764f3">"Arkへ移動済み"</string>
+  <string name="gt_5c948b346d0764f3">"Arkに移動しました"</string>
   <string name="gt_dcfb842231d789f7">"資金移動ID"</string>
   <string name="gt_0850cf54792998dd">"資金移動の種類"</string>
   <string name="gt_befdcebd952d5b84">"Arkへ移動中"</string>
@@ -760,7 +760,7 @@
   <string name="gt_83a4672409350abd">"次回の支払い：%1$s"</string>
   <string name="gt_1ea442a134b2a184">"いいえ"</string>
   <string name="gt_5d770afa42d9782f">"Arkの支払いはありません"</string>
-  <string name="gt_14835c06d76778bb">"ライトニングの支払いはありません"</string>
+  <string name="gt_14835c06d76778bb">"Lightningの支払いはありません"</string>
   <string name="gt_f8ae9307585f292e">"この画面にはVTXOがありません。"</string>
   <string name="gt_0a12b92ce7899469">"まだ取引はありません"</string>
   <string name="gt_7190d03c8e934c65">"このリンクを開けるアプリがありません。"</string>
@@ -872,7 +872,7 @@
   <string name="gt_6be6caff13df7c0f">"エンドポイントを変更する前にウォレットを開いてください。"</string>
   <string name="gt_f4ce6b8f22a13fe1">"%1$sをブラウザーで開く"</string>
   <string name="gt_557d3ad870771176">"内蔵のBTC Mapを開いています…"</string>
-  <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
+  <string name="gt_eb4bbb3d312d0b21">"コインの詳細を開きます"</string>
   <string name="gt_f893fab7e39f5540">"そうしないと Android が Noah を一時停止し、支払いが届かなくなることがあります。"</string>
   <string name="gt_3619cf0b90923a4b">"出金"</string>
   <string name="gt_5830129e672b39a9">"出力VTXO"</string>
@@ -1121,7 +1121,7 @@
   <string name="gt_a0066e88129f5f98">"配信アプリを選択"</string>
   <string name="gt_0834cfb81fbae767">"VTXOを選択"</string>
   <string name="gt_65f9b19c0365a914">"VTXOを選択すると詳細が表示されます"</string>
-  <string name="gt_0bdc583e8496eb4a">"支払いを選択してください"</string>
+  <string name="gt_0bdc583e8496eb4a">"支払いを選択"</string>
   <string name="gt_ba6afbdcb15d6321">"対象のVTXOをすべて選択"</string>
   <string name="gt_a81bdedbd0dccc7d">"まもなく期限切れになるものを選択"</string>
   <string name="gt_70f58736b63e2c9e">"表示中のものを選択"</string>
@@ -1134,8 +1134,8 @@
   <string name="gt_dad3741faaf71ced">"%1$s を送る"</string>
   <string name="gt_e595f17fac1d8384">"送金中"</string>
   <string name="gt_a23752f662daf656">"%1$s を送金中"</string>
-  <string name="gt_5485623750e9453e">"送金中 · ルートを探しています"</string>
-  <string name="gt_c5fb1b5d6362edc0">"送金中 · Arkラウンド待ち"</string>
+  <string name="gt_5485623750e9453e">"送金中 · 経路を探しています"</string>
+  <string name="gt_c5fb1b5d6362edc0">"送金中 · Arkのラウンド待ち"</string>
   <string name="gt_a38ba37fd4f8a52a">"送金中 · 承認待ち"</string>
   <string name="gt_286a3af7348e8312">"送信中..."</string>
   <string name="gt_b8ed5279e897be5d">"送信中…"</string>
@@ -1377,7 +1377,7 @@
   <string name="gt_8c1c051923c4b6b2">"この定期支払い記録のバージョンには対応していません。送信は引き続き停止されています。"</string>
   <string name="gt_e693d8441d19b569">"この定期支払いのバージョンには対応していません。送金は停止しています。"</string>
   <string name="gt_5cdbe6c5df81af71">"最新の状態、または変更待ち"</string>
-  <string name="gt_7652c992b14f72a5">"最大%1$s"</string>
+  <string name="gt_7652c992b14f72a5">"最大 %1$s"</string>
   <string name="gt_c945161e74e60f7f">"次回の定期支払い"</string>
   <string name="gt_c1c1009d3f37ec05">"アップデート"</string>
   <string name="gt_ff8b555d818f0b25">"アップデートがあります"</string>
@@ -1515,7 +1515,7 @@
     <item quantity="other">"%1$s か所%2$s"</item>
   </plurals>
   <string name="gt_31ba1bfe057bd412">"%1$s 受け取り中"</string>
-  <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
+  <string name="gt_0632ba4767ab1888">"当時 %1$s"</string>
   <string name="gt_05421802af3d82be">"%1$s 利用可能"</string>
   <string name="gt_07af0226de4cedc3">"Arkで%1$sを利用可能"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s はウォレットに戻りました。"</string>
@@ -1535,17 +1535,17 @@
   <string name="gt_6f9665f75e53113c">"%1$s@%2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
-    <item quantity="one">"Arkの支払い%1$s件をCSVファイルで書き出します。"</item>
-    <item quantity="other">"Arkの支払い%1$s件をCSVファイルで書き出します。"</item>
+    <item quantity="one">"%1$s件のArk支払いをCSVファイルで書き出します。"</item>
+    <item quantity="other">"%1$s件のArk支払いをCSVファイルで書き出します。"</item>
   </plurals>
   <plurals name="gt_2c4c9aa016a69f38">
-    <item quantity="one">"ライトニングの支払い%1$s件をCSVファイルで書き出します。"</item>
-    <item quantity="other">"ライトニングの支払い%1$s件をCSVファイルで書き出します。"</item>
+    <item quantity="one">"%1$s件のLightning支払いをCSVファイルで書き出します。"</item>
+    <item quantity="other">"%1$s件のLightning支払いをCSVファイルで書き出します。"</item>
   </plurals>
   <string name="gt_3612e1cd7501afab">"%1$s/%2$s"</string>
   <plurals name="gt_cbc409d6a950d6e9">
-    <item quantity="one">"オンチェーンの支払い%1$s件をCSVファイルで書き出します。"</item>
-    <item quantity="other">"オンチェーンの支払い%1$s件をCSVファイルで書き出します。"</item>
+    <item quantity="one">"%1$s件のオンチェーン支払いをCSVファイルで書き出します。"</item>
+    <item quantity="other">"%1$s件のオンチェーン支払いをCSVファイルで書き出します。"</item>
   </plurals>
   <plurals name="gt_af16209be5ba011c">
     <item quantity="one">"%1$s件の支払いをCSVファイルで書き出します。"</item>
