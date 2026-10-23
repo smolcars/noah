@@ -75,4 +75,9 @@ class SendRecipientTest {
         assertTrue(runCatching { SendRecipientService.validateInvoice(value, 1000, "mainnet") }.isFailure) // amountless/expired fixture
         assertNull(SendRecipientService.suggestionQuery("lnbc1anything", "example.com")); assertEquals("al", SendRecipientService.suggestionQuery("al", "example.com"))
     }
+    @Test fun suggestionsNeverIncludeOwnAddress() {
+        assertEquals(listOf("bob@example.com", "carol@example.com"),
+            SendRecipientService.withoutOwnAddress(listOf("bob@example.com", "ALICE@Example.com", "carol@example.com"), "alice@example.com"))
+        assertEquals(listOf("bob@example.com"), SendRecipientService.withoutOwnAddress(listOf("bob@example.com"), null))
+    }
 }

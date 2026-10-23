@@ -65,5 +65,6 @@ class SendRecipientService(private val network: String, private val warn: (Strin
             } else if (!domain.startsWith(parts[1])) return null
             return value
         }
+        fun withoutOwnAddress(suggestions: List<String>, own: String?) = suggestions.filterNot { it.equals(own, ignoreCase = true) }
     }
 }

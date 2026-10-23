@@ -94,9 +94,9 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
             launch { model.previewRecipient() }
             launch {
                 val query = SendRecipientService.suggestionQuery(candidate, LightningIdentity.domain(BuildConfig.APP_VARIANT)) ?: return@launch
-                delay(300)
+                delay(200)
                 val result = runCatching { V0LnAddressSuggestionsClient(app.services.client).lnAddressSuggestions(LightningAddressSuggestionsPayload(query)).value().suggestions }.getOrDefault(emptyList())
-                if (model.destination == candidate && isActive) model.suggestions = result
+                if (model.destination == candidate && isActive) model.suggestions = SendRecipientService.withoutOwnAddress(result, app.server.state.lightningAddress)
             }
         }
     }
