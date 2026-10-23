@@ -401,6 +401,6 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
 5. **Amount-free Live Activities:** yes, ship them.
 6. **Result notifications when Live Activities are off:** yes.
 7. **Send stays locked while a Lightning send is pending,** with the override parking it: yes.
-8. **Bark changes:** send all three upstream. Change 2 blocks only `wait: false` background payments (phase 2), not today's app or the Send/Receive redesign; fork it only if upstream hasn't merged it by then.
+8. **Bark changes:** send all three upstream. Change 2 is open as [ark-bitcoin/bark!2663](https://gitlab.com/ark-bitcoin/bark/-/merge_requests/2663) (2026-10-22; it also makes bark's daemon sync drive pending Lightning sends); changes 1 and 3 follow as separate small MRs. Change 2 blocks only `wait: false` background payments (phase 2), not today's app or the Send/Receive redesign; fork it only if upstream hasn't merged it by then.
 9. **"Ask for a new invoice" when re-paying a failed BOLT11 invoice** until bark change 3: explained. Pending their OK.
 10. **Push priority:** normal for every push this design adds. The existing high-priority server wake pushes (maintenance refresh) stay as they are.
