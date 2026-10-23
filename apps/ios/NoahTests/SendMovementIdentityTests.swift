@@ -31,6 +31,38 @@ import Testing
         #expect(restarted.attempt?.receipt?.isProven(for: payment) == true)
     }
 
+    /// Once Send's shared journal is gone, the recurring journal is the only copy of the returned id.
+    @Test func recurringArkMovementIDSurvivesRestartWithoutTheSendJournal() async throws {
+        let h = try RecurringExecutorTests.Harness()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        h.arkMovementID = 42
+        let schedule = try h.add()
+        // Die after the payment, before the schedule settles.
+        h.afterPay = { h.storeWriteFails.withLock { $0 = true } }
+        await h.executor.execute()
+        #expect(h.calls.withLock { $0 } == 1)
+        let paid = try #require(h.journal.load()[schedule.id])
+        #expect(paid.terminal?.outcome == .succeeded && paid.terminal?.attempt.receipt?.movementID == 42)
+        #expect(paid.historyApplied != true)
+
+        // Settlement releases Send's shared journal before applying the schedule; removing it here keeps
+        // the recurring journal as the only copy whatever that order. Restart with storage healthy again.
+        h.saved = nil
+        h.afterPay = nil
+        h.storeWriteFails.withLock { $0 = false }
+        h.store = RecurringStore(settings: h.settings)
+        h.rebuild()
+        h.controller.reloadForWalletChange()
+        #expect(h.controller.attempt == nil)
+        for _ in 0..<2 { await h.executor.execute(); await h.executor.checkStatus(schedule.id) }
+        #expect(h.calls.withLock { $0 } == 1)
+        let settled = try #require(h.journal.load()[schedule.id])
+        #expect(settled.terminal?.settlementID == paid.terminal?.settlementID)
+        #expect(settled.terminal?.attempt.receipt?.movementID == 42)
+        #expect(settled.consumed == true && settled.historyApplied == true && settled.released == true)
+        #expect(try h.store.load().schedules[schedule.id]?.occurrencesPaid == 1)
+    }
+
     @Test func metadataAttachesOnlyToTheExactNewMovement() {
         let snapshot = SendSnapshot(movementIDs: [1, 2])
         #expect(SendReconciliation.metadataMovementID(.init(amount: 1000, movementID: 7, proof: .submitReturnedArkSuccess),

@@ -24,6 +24,7 @@ import Testing
         var writeReceiptFails = false
         var writeRemovalFails = false
         var ambiguous = false
+        var arkMovementID: UInt32?
         var resolution: SendPaymentController.Resolution = .uncertain
         var statusChecks = 0
         var fee: UInt64 = 0
@@ -84,7 +85,7 @@ import Testing
                     calls.withLock { $0 += 1 }
                     try await afterPayment()
                     if await isAmbiguous() { throw URLError(.timedOut) }
-                    if payment.method == "ark" { return .init(amount: payment.amount, proof: .submitReturnedArkSuccess) }
+                    if payment.method == "ark" { return .init(amount: payment.amount, movementID: await arkReceiptMovementID(), proof: .submitReturnedArkSuccess) }
                     return .init(amount: payment.amount, paymentHash: PaymentEncoding.invoice(payment.destination)?.hash ?? "test-hash", movementID: 1, fee: 0, proof: .actualMovement)
                 }))
             executor = .init(dependencies: .init(store: store, journal: journal, controller: controller,
@@ -119,6 +120,7 @@ import Testing
         func beforePayment() async throws { try await beforePay?() }
         func afterPayment() async throws { try await afterPay?() }
         func isAmbiguous() -> Bool { ambiguous }
+        func arkReceiptMovementID() -> UInt32? { arkMovementID }
         func reconcile() -> SendPaymentController.Resolution { statusChecks += 1; return resolution }
         func sync(_ entries: [Components.Schemas.RecurringPaymentScheduleEntry]) async throws { sentEntries.append(entries); try await syncHook?(entries) }
         func add() throws -> RecurringPayment {
