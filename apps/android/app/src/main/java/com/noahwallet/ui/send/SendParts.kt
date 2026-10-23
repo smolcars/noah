@@ -274,6 +274,9 @@ internal fun ValueRow(label: String, value: String, number: Boolean = false, ico
     }
 }
 
+/** How long the finger stays down before a hold sends. */
+internal const val HoldMillis = 800L
+
 /**
  * Hold to send: holding 0.8 s traces an orange stroke around the pill (your signature), with ticks at
  * 25/50/75 % and a heavy one on completion; letting go early, or a pose change, rewinds it. [onConfirm] runs once per gesture.
@@ -317,10 +320,17 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
                     val ticks = launch {
                         delay(200); haptics.selection(); delay(200); haptics.light(); delay(200); haptics.medium()
                     }
-                    // Every hold is a full 0.8 s, even one that starts while the last one rewinds.
+                    // Every hold is a full 0.8 s, even one that starts while the last one rewinds. The stroke follows
+                    // frame time rather than an animation, so it still traces when animations are removed.
                     progress.snapTo(0f)
-                    progress.animateTo(1f, tween(800, easing = LinearEasing))
-                    ticks.cancel()
+                    val stroke = launch {
+                        val start = withFrameMillis { it }
+                        while (true) progress.snapTo(((withFrameMillis { it } - start) / HoldMillis.toFloat()).coerceAtMost(1f))
+                    }
+                    // Sending waits on the unscaled clock: "Remove animations" finishes animations at once but can't shorten this.
+                    delay(HoldMillis)
+                    stroke.cancel(); ticks.cancel()
+                    progress.snapTo(1f)
                     if (currentEnabled) { fired = true; haptics.heavy(); currentConfirm() }
                 }
                 try { waitForUpOrCancellation() } finally {
