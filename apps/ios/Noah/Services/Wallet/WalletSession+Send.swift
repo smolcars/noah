@@ -19,6 +19,7 @@ extension WalletSession {
         guard payment.amount <= 2_100_000_000_000_000 else { throw SendFailure.invalid }
         let parsed = SendDestination.parse(payment.destination)
         guard parsed.destinationType == payment.method, parsed.error == nil else { throw SendFailure.invalid }
+        try await SendOfferAmount.require(payment) { try await handles.wallet.parsePaymentRequest(input: $0) }
         if payment.method == "lightning" {
             guard let invoice = PaymentEncoding.invoice(payment.destination) else { throw SendFailure.invalid }
             guard invoice.expires > Date() else { throw SendFailure.expired }
@@ -311,6 +312,28 @@ extension WalletSession {
     }
     func validateSendArkAddress(_ address: String) async throws -> Bool {
         try await withOpenWallet { try await $0.wallet.validateArkoorAddress(address: address) }
+    }
+    /// The amount a BOLT12 offer fixes, for Send's keypad; the quote checks it again.
+    func sendOfferAmount(_ offer: String) async throws -> UInt64? {
+        try await withOpenWallet { handles in try await SendOfferAmount.fixed(offer) { try await handles.wallet.parsePaymentRequest(input: $0) } }
+    }
+}
+
+/// BOLT12 offers that fix their amount (ffi-phase-b.md row 12): Bark's parser supplies the amount, the quote enforces it.
+enum SendOfferAmount {
+    /// The amount an offer fixes, or nil when it fixes none. One Bark parses but can't pay (another network) is refused;
+    /// one it can't parse at all (fiat-priced offers, `invalidPaymentRequest`) keeps the typed amount, as before.
+    static func fixed(_ offer: String, parse: @Sendable (String) async throws -> PaymentRequest) async throws -> UInt64? {
+        let request: PaymentRequest
+        do { request = try await parse(offer) } catch let error as BarkError where error.code == .invalidPaymentRequest { return nil }
+        guard request.defaultOption != nil else { throw SendFailure.invalid }
+        if let amount = request.amountSats, amount > 2_100_000_000_000_000 { throw SendFailure.invalid }
+        return request.amountSats
+    }
+    /// Bark pays a passed amount over an offer's own, so a fixed offer must be paid exactly its amount.
+    static func require(_ payment: SendPayment, parse: @Sendable (String) async throws -> PaymentRequest) async throws {
+        guard payment.method == "offer", let fixed = try await fixed(payment.destination, parse: parse) else { return }
+        guard fixed == payment.amount else { throw SendFailure.invalid }
     }
 }
 

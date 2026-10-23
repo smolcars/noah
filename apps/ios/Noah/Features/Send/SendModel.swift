@@ -61,15 +61,19 @@ import Observation
     private let resolveRecipient: (String) async throws -> SendRecipientRoute
     private let quotePayment: (SendPayment) async throws -> SendQuote
     private let discardQuote: (SendQuote) async -> Void
+    /// The amount a BOLT12 offer fixes, or nil; the quote checks it again.
+    private let offerAmount: (String) async throws -> UInt64?
     init(session: WalletSession = .shared, controller: SendPaymentController = .shared,
          resolveRecipient: ((String) async throws -> SendRecipientRoute)? = nil,
          quotePayment: ((SendPayment) async throws -> SendQuote)? = nil,
-         discardQuote: ((SendQuote) async -> Void)? = nil) {
+         discardQuote: ((SendQuote) async -> Void)? = nil,
+         offerAmount: ((String) async throws -> UInt64?)? = nil) {
         self.session = session
         self.controller = controller
         self.resolveRecipient = resolveRecipient ?? { try await SendRecipientService.resolve($0, session: session) }
         self.quotePayment = quotePayment ?? { try await session.quoteSend($0) }
         self.discardQuote = discardQuote ?? { await session.discardSend($0) }
+        self.offerAmount = offerAmount ?? { try await session.sendOfferAmount($0) }
     }
     var isMax: Bool { progress.entry == .max }
     var sats: UInt64 {
@@ -198,6 +202,19 @@ import Observation
         if isMax && (!SendFlow.canMax(type: type, request: parsed.bip321) || parsed.amount != nil) {
             error = "MAX requires an on-chain address without a fixed amount."
             return
+        }
+        if type == "offer" {
+            let revision = recipientRevision
+            do {
+                let fixed = try await offerAmount(SendDestination.cleaned(destination))
+                guard revision == recipientRevision else { return }
+                // An offer that fixes its amount behaves like an invoice with one.
+                if let fixed { parsed.amount = Decimal(fixed); parsed.isAmountEditable = false }
+            } catch {
+                guard revision == recipientRevision else { return }
+                self.error = "Unable to resolve this Lightning recipient. Please check the address."
+                return
+            }
         }
         if let fixed = parsed.amount {
             let number = NSDecimalNumber(decimal: fixed)
