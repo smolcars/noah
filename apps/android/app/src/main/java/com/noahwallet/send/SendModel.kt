@@ -64,12 +64,14 @@ class SendModel(val controller: SendController, private val network: String,
     }
     fun maxSend() { if (controller.locked) return; reset(); progress = SendProgress(entry = "max"); stage = SendStage.source }
     fun recipientFirst() { progress = progress.copy(entry = "recipient-first"); stage = SendStage.recipient }
-    /** Scan, paste and recents. [stay]: Amount's Paste keeps you on Amount until the recipient is accepted, so one it can't accept shows today's error there. */
+    /** Scan, paste and recents. [stay]: Amount's Paste keeps you on Amount until the recipient is accepted, so one it can't accept shows today's error there.
+     *  From Amount only a request's own amount skips the keypad; a typed one waits for Next (send-receive.md, Amount). */
     suspend fun importRecipient(value: String, stay: Boolean = false) {
         setRecipient(value)
-        if (stage == SendStage.amount) progress = progress.copy(entry = if (sats > 0) "amount-first" else "recipient-first")
+        val keypad = stage == SendStage.amount
+        if (keypad) progress = progress.copy(entry = if (sats > 0) "amount-first" else "recipient-first", amountConfirmed = false)
         if (!stay) stage = SendStage.recipient
-        acceptRecipient()
+        acceptRecipient(keypad)
     }
     suspend fun previewRecipient() {
         val revision = recipientRevision; val candidate = destination
@@ -80,7 +82,7 @@ class SendModel(val controller: SendController, private val network: String,
         if (revision != recipientRevision || !currentCoroutineContext().isActive) return
         route = resolved; resolvingRecipient = false
     }
-    suspend fun acceptRecipient() {
+    suspend fun acceptRecipient(keypad: Boolean = false) {
         if (busy || controller.locked) return
         busy = true; error = null
         val revision = recipientRevision; val reviewAtStart = reviewGeneration
@@ -99,7 +101,7 @@ class SendModel(val controller: SendController, private val network: String,
                 if (revision != recipientRevision || reviewAtStart != reviewGeneration) return
                 route = resolved; requireSend(matchingRoute != null)
             }
-            progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || sats > 0,
+            progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || sats > 0 && !keypad,
                 selectedRail = if (isMax) SendRail.onchain else SendFlow.recommend(rails, availability))
         } catch (_: Exception) {
             if (revision == recipientRevision) {

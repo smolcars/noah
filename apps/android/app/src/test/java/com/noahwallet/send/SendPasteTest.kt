@@ -38,6 +38,29 @@ class SendPasteTest {
         assertEquals(SendStage.review, m.stage)
     }
 
+    @Test fun aTypedAmountWaitsForNextWhenTheRecipientHasNone() = runBlocking {
+        val address = "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22"
+        for (paste in listOf(true, false)) {
+            val reviewed = mutableListOf<SendPayment>()
+            val m = model(this) { reviewed += it; FakeSendWallet.quote }
+            m.amount = "700"
+            // Paste stays on Amount itself; Scan imports through To and comes back to the keypad.
+            m.importRecipient(address, stay = paste)
+            assertEquals("paste=$paste", SendStage.amount, m.stage)
+            assertEquals("700", m.amount); assertEquals(address, m.destination)
+            assertTrue(m.progress.recipientConfirmed); assertNull(m.quote); assertTrue(reviewed.isEmpty())
+            m.continueStage()
+            assertEquals(SendStage.review, m.stage)
+            assertEquals(listOf(SendPayment(address, "onchain", 700, source = SendSource.offchain)), reviewed)
+        }
+        // An amount confirmed earlier, back on Amount: the import still waits for Next.
+        val m = model(this)
+        m.amount = "700"; m.continueStage(); assertEquals(SendStage.recipient, m.stage)
+        m.stage = SendStage.amount
+        m.importRecipient(address, stay = true)
+        assertEquals(SendStage.amount, m.stage); assertNull(m.quote)
+    }
+
     @Test fun anInvalidPasteStaysOnAmountWithTodaysError() = runBlocking {
         var quotes = 0
         for (value in listOf("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "not a destination")) {
