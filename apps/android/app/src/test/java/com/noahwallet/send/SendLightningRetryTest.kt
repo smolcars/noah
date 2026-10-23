@@ -130,6 +130,23 @@ class SendLightningRetryTest {
         assertTrue(SendReconciliation.lightningAttempt(listOf(later), hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo) is SendResolution.AlreadyPaid)
     }
 
+    @Test fun anInvoicePaidByARetryIsAlreadyPaidWithTheRetrysFee() = runBlocking {
+        val bark = Bark().apply { movement = reused("failed", 0, longAgo); pays() }
+        val subject = send(bark)
+        assertEquals(SendController.State.succeeded, subject.state)
+        subject.acknowledge(); assertFalse(subject.locked)
+        // The same invoice again: the pre-pay guard blocks it, with the fee bark's effective balance took, not the fee field's 0.
+        bark.onPay = { error("never pays twice") }
+        subject.submit(payment, quote)!!.await()
+        assertEquals(SendController.State.alreadyPaid, subject.state)
+        assertEquals(79L, subject.attempt!!.alreadyPaid!!.fee)
+        assertEquals(0uL, bark.movement!!.offchainFeeSats)
+        assertEquals(1, bark.calls)
+        // Reconciliation reads it the same way.
+        val resolution = SendReconciliation.lightningAttempt(bark.movements, hash, 1000, SendSnapshot(setOf(5u), invoicePaid = true), longAgo)
+        assertEquals(79L, (resolution as SendResolution.AlreadyPaid).receipt.fee)
+    }
+
     @Test fun aJournalFromBeforeThePaidFlagGoesByTheMovementsCompletion() = runBlocking {
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
         val startedAt = System.currentTimeMillis() - 60_000
@@ -192,7 +209,7 @@ class SendLightningRetryTest {
         val paid = LightningSendStatus.Paid(hash, "proof")
         // The reused movement's fee field says 0; its effective balance took exactly this checkpoint's fee.
         assertEquals(79L, checkpoint.receipt(paid, listOf(reused("successful", -1079, longAgo)), payment, quote).fee)
-        // A fee field that agrees is kept, and without that evidence the reading is today's.
+        // The effective balance decides, whatever the fee field says.
         assertEquals(79L, checkpoint.receipt(paid, listOf(reused("successful", -1079, longAgo, fee = 79u)), payment, quote).fee)
         assertEquals(0L, checkpoint.receipt(paid, listOf(reused("successful", -1000, longAgo)), payment, quote).fee)
     }

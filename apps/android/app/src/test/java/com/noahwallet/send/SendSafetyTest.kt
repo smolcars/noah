@@ -34,8 +34,9 @@ internal val arkPayment = SendPayment("ark-address", "ark", 1000)
 internal val chainPayment = SendPayment("chain-address", "onchain", 1000, SendSource.onchain)
 internal val chainQuote = FakeSendWallet.quote.copy(prepared = SendPrepared("process-local", "exact", 143, 1))
 internal fun invoice(): String = SharedFixtures.load("send-utils").map { it.input.jsonObject.getValue("destination").jsonPrimitive.content }.first { PaymentEncoding.invoice(it) != null }
+/** A Lightning send's effective balance is its HTLCs, amount plus fee, as bark 0.8 records it. */
 internal fun movement(method: String = "lightning", amount: Long = 1000, hash: String? = PaymentEncoding.invoice(invoice())!!.hash, status: String = "successful", id: UInt = 1u) = Movement(
-    id, status, if (method == "ark") "bark.arkoor" else "bark.lightning_send", "send", "{}", -amount, -amount, 83u,
+    id, status, if (method == "ark") "bark.arkoor" else "bark.lightning_send", "send", "{}", -amount, if (method == "ark") -amount else -amount - 83, 83u,
     listOf(MovementDestination(PaymentMethod(method, "ark-address"), amount.toULong())), emptyList(), emptyList(), emptyList(), emptyList(), "2099-01-01T00:00:00Z", "2099-01-01T00:00:00Z", null, hash, null, null)
 internal fun transaction(id: String = "exact", confirmed: Boolean = false) = WalletTransaction(id, "", 10u, -1010, if (confirmed) BlockRef(1u, "block") else null, false)
 

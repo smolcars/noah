@@ -28,11 +28,17 @@ object SendReconciliation {
         return movement.sentToAddresses.any { it.paymentMethod.value == payment.destination && (payment.max || it.amountSats == payment.amount.toULong()) } ||
             payment.method == "offer" && movement.lightningOffer == payment.destination && movement.sentToAddresses.sumOf { it.amountSats } == payment.amount.toULong()
     }
+    /** What a successful send's effective balance took beyond [actual]. A retried invoice's reused movement keeps its first
+     *  attempt's fee field, so this is its fee; null when bark's numbers can't give one. */
+    fun lightningFee(movement: Movement, actual: Long): Long? =
+        runCatching { Math.subtractExact(Math.negateExact(movement.effectiveBalanceSats), actual) }.getOrNull()?.takeIf { it >= 0 }
+    private fun receipt(movement: Movement, actual: Long, hash: String) = SendReceipt(actual, paymentHash = hash, movementID = movement.id,
+        fee = lightningFee(movement, actual) ?: movement.offchainFeeSats.toLong(), proof = SendReceipt.Proof.actualMovement)
     fun lightning(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
         val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
         if (movement.status == "successful" && actual > 0) {
-            val receipt = SendReceipt(actual, paymentHash = hash, movementID = movement.id, fee = movement.offchainFeeSats.toLong(), proof = SendReceipt.Proof.actualMovement)
+            val receipt = receipt(movement, actual, hash)
             if (movement.id in snapshot.movementIDs) return SendResolution.AlreadyPaid(receipt)
             return if (actual == amount) SendResolution.Paid(receipt) else SendResolution.Uncertain
         }
@@ -53,13 +59,10 @@ object SendReconciliation {
         val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
         val completedSince = startedAt?.let { start -> movement.completedAt?.let { HistoryRules.parseDate(it) }?.time?.let { it > start } }
         if (movement.status == "successful" && actual > 0) {
-            val receipt = SendReceipt(actual, paymentHash = hash, movementID = movement.id, fee = movement.offchainFeeSats.toLong(), proof = SendReceipt.Proof.actualMovement)
+            val receipt = receipt(movement, actual, hash)
             return when (snapshot.invoicePaid ?: completedSince?.not()) {
                 true -> SendResolution.AlreadyPaid(receipt)
-                false -> {
-                    val fee = runCatching { Math.subtractExact(Math.negateExact(movement.effectiveBalanceSats), actual) }.getOrNull()
-                    if (actual == amount && fee != null && fee >= 0) SendResolution.Paid(receipt.copy(fee = fee)) else SendResolution.Uncertain
-                }
+                false -> if (actual == amount && lightningFee(movement, actual) != null) SendResolution.Paid(receipt) else SendResolution.Uncertain
                 null -> SendResolution.Uncertain
             }
         }
