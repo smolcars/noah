@@ -127,7 +127,7 @@ class ActivityRulesTest {
         // On-chain: the transaction ID.
         val txid = "cd".repeat(32)
         val chain = record("c", Date(), type = "Onchain", source = "onchain-wallet", confirmed = true).copy(txid = txid, balanceChangeSat = -2_500)
-        assertTrue(ActivityRules.receipt(rows(chain).single(), "−₿2,500", "Today", ActivityRules.chainTxid(chain, "regtest"), words)
+        assertTrue(ActivityRules.receipt(rows(chain).single(), "−₿2,500", "Today", ActivityRules.chainTxid(chain), words)
             .endsWith("Via: On-chain\nTransaction ID: $txid"))
         // Confirmed before its block time is known: no date line rather than a wrong one.
         assertFalse(ActivityRules.receipt(rows(chain).single(), "−₿2,500", null, null, words).contains("Date"))
@@ -136,11 +136,24 @@ class ActivityRulesTest {
         assertTrue(ActivityRules.receipt(rows(renewal).single(), "−₿45", "Today", null, words).startsWith("Renewed 3 coins −₿45"))
     }
 
-    @Test fun onlyRealTransactionIdsOpenTheExplorer() {
-        val placeholder = record("p", Date(), type = "Onchain").copy(txid = "movement-104")
-        assertNull(ActivityRules.chainTxid(placeholder, "regtest"))
-        val vtxo = record("v", Date(), type = "Onchain").copy(txid = "ef".repeat(32) + ":1")
-        assertEquals("ef".repeat(32), ActivityRules.chainTxid(vtxo, "regtest"))
-        assertNull("Ark payments have no chain transaction", ActivityRules.chainTxid(record("a", Date()).copy(txid = "ef".repeat(32)), "regtest"))
+    @Test fun onlyRecordedOnChainTransactionsAreNamed() {
+        val coin = "ef".repeat(32)
+        // An offboard still waiting for its transaction: its txid falls back to a spent coin's ID, which names that
+        // coin's parent transaction. No Transaction ID, explorer link or receipt line until bark records the offboard.
+        val waiting = record("w", Date(), type = "Onchain").copy(movementKind = "send-onchain", txid = "$coin:1", metadataJson = "{}")
+        assertNull(ActivityRules.chainTxid(waiting)); assertNull(ActivityRules.explorerURL(waiting, "regtest"))
+        assertFalse(ActivityRules.receipt(rows(waiting).single(), "−₿2,500", "Today", ActivityRules.chainTxid(waiting), words).contains(coin))
+        val signed = "ab".repeat(32)
+        val offboard = waiting.copy(txid = signed, metadataJson = """{"offboard_txid":"$signed"}""")
+        assertEquals(signed, ActivityRules.chainTxid(offboard))
+        assertEquals("https://mempool.space/signet/tx/$signed", ActivityRules.explorerURL(offboard, "regtest"))
+        // A board's anchor, without its vout.
+        val board = record("b", Date(), type = "Onchain").copy(movementKind = "onboard", metadataJson = """{"chain_anchor":"$signed:0"}""")
+        assertEquals(signed, ActivityRules.chainTxid(board))
+        // The on-chain wallet's own transaction.
+        assertEquals(signed, ActivityRules.chainTxid(record("c", Date(), type = "Onchain", source = "onchain-wallet").copy(txid = signed)))
+        // Movement placeholders and Ark payments name none.
+        assertNull(ActivityRules.chainTxid(record("p", Date(), type = "Onchain").copy(txid = "movement-104")))
+        assertNull(ActivityRules.chainTxid(record("a", Date()).copy(txid = coin)))
     }
 }

@@ -81,11 +81,21 @@ object ActivityRules {
     /** "Free" is a claim only Ark and Lightning sends can make; on-chain kinds without a recorded fee show none. */
     fun offchain(rail: Rail) = rail != Rail.chain
 
-    /** The on-chain transaction to show and open in the explorer: a real txid, never a VTXO or movement placeholder. */
-    fun chainTxid(record: HistoryTransaction, variant: String): String? {
-        if (record.explorerURL(variant) == null) return null
-        return record.txid?.substringBefore(':')?.takeIf { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
+    /**
+     * The on-chain transaction a payment made, from explicit evidence only: the on-chain wallet's own transaction, or
+     * the offboard txid or board anchor bark recorded. Never a coin's ID: before an offboard's transaction exists, that
+     * names the coin's parent transaction, which this payment didn't make.
+     */
+    fun chainTxid(record: HistoryTransaction): String? {
+        val txid = when (record.source) {
+            "onchain-wallet" -> record.txid
+            "ark" -> HistoryMetadata.parse(record.metadataJson ?: "").let { it.offboardTxid ?: it.chainAnchor?.substringBefore(':') }
+            else -> null
+        }
+        return txid?.takeIf { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
     }
+    /** The explorer page for [chainTxid], with today's per-network links. */
+    fun explorerURL(record: HistoryTransaction, variant: String) = chainTxid(record)?.let { record.copy(txid = it).explorerURL(variant) }
 
     /**
      * The one status line under the amount (English source and its tone). [coins]: a renewal's coin count. Unknown

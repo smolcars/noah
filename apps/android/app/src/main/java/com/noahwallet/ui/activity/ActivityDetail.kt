@@ -346,8 +346,8 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
     }
     if (record.movementKind == "exit") rows += { last -> DetailRow("Progress", tr("Exit details"), toasts = toasts, last = last, onClick = actions.exits) }
     ActivityRules.proof(record)?.let { proof -> rows += { last -> DetailRow("Proof of payment", short(proof), ValueKind.mono, copy = proof, toasts = toasts, last = last) } }
-    ActivityRules.chainTxid(record, ui.variant)?.let { txid ->
-        val url = record.explorerURL(ui.variant)!!
+    ActivityRules.chainTxid(record)?.let { txid ->
+        val url = ActivityRules.explorerURL(record, ui.variant)
         rows += { last -> DetailRow("Transaction ID", short(txid), ValueKind.mono, copy = txid, explorer = url, toasts = toasts, onExplorer = explore, last = last) }
     }
     rows.forEachIndexed { i, content -> content(i == rows.lastIndex) }
@@ -407,7 +407,6 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
         ?.let { DetailBlock("Invoice", it, toasts) }
     record.offer?.let { DetailBlock("Offer", it, toasts) }
     DetailBlock("Payment ID", record.id, toasts)
-    record.txid?.takeIf { ActivityRules.chainTxid(record, ui.variant) == null }?.let { DetailBlock("Transaction ID", it, toasts) }
     if (record.source == "onchain-wallet" || record.balanceChangeSat != null) {
         DetailRow("Chain status", tr(if (record.hasConfirmation == true) "Confirmed" else "Unconfirmed"), small = true, toasts = toasts)
         record.balanceChangeSat?.let { DetailRow("Balance change", signed(it), ValueKind.number, small = true, toasts = toasts) }
@@ -443,7 +442,7 @@ private fun receiptText(ui: ActivityUi, row: ActivityRules.Row): String {
     val date = longDate(row.home.date, ui).takeIf { row.home.date != null || row.record.hasConfirmation != true }
     val resources = androidx.compose.ui.platform.LocalResources.current
     return remember(row, amount, date, resources) {
-        ActivityRules.receipt(row, amount, date, ActivityRules.chainTxid(row.record, ui.variant)) { source, arguments ->
+        ActivityRules.receipt(row, amount, date, ActivityRules.chainTxid(row.record)) { source, arguments ->
             if (row.record.isRenewal && source == "Renewed {n} coins")
                 com.noahwallet.localization.L10n.plural(context, source, (arguments.firstOrNull() as? String)?.toIntOrNull() ?: 1)
             else com.noahwallet.localization.L10n.text(context, source, *arguments)
