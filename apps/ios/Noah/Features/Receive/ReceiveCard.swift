@@ -13,6 +13,8 @@ struct ReceiveArrival: Equatable, Identifiable {
     var txid: String?
     var confirmedHeight: UInt32?
     var confirmedAt: Date?
+    /// On-chain: the outputs it spends, to follow a replacement (RBF).
+    var inputs: Set<SendTransaction.Input> = []
 
     /// The card flips to its back this many seconds after the arrival starts.
     var flipAt: Double {
@@ -64,6 +66,24 @@ struct ReceiveArrival: Equatable, Identifiable {
         return 180 + 180 * min(1, MotionTime.spring(t - flipBackAt, .snappy))
     }
 
+    /// Follows an on-chain arrival in a new check: its confirmation, or the replacement that
+    /// took its place (RBF), even one already confirmed, so it never waits for a block that
+    /// won't include it. True when it just confirmed.
+    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> Bool {
+        guard rail == .onchain, let txid, let seen = snapshot.follow(txid: txid, inputs: inputs) else { return false }
+        if seen.txid != txid {
+            self.txid = seen.txid
+            inputs = seen.inputs
+            sats = seen.arrivingSats
+            confirmedHeight = nil
+            confirmedAt = nil
+        }
+        guard confirmedHeight == nil, let height = seen.confirmedHeight else { return false }
+        confirmedHeight = height
+        confirmedAt = date
+        return true
+    }
+
     /// Every haptic of the arrival (prototype `hap` calls), by key.
     var haptics: [(key: String, at: Double, kind: OnboardingHaptics.Kind)] {
         switch rail {
@@ -71,6 +91,45 @@ struct ReceiveArrival: Equatable, Identifiable {
         case .lightning: [("lock", 0.85, .light), ("unlock", 2.07, .light), ("flip", flipAt, .success)]
         case .onchain: [("flip", flipAt, .success)]
         }
+    }
+}
+
+/// Arrivals in the order they came: one plays at a time, and the next starts as soon as the
+/// current one has flipped home (one check can bring two).
+struct ReceiveArrivalQueue: Equatable {
+    private(set) var current: ReceiveArrival?
+    private(set) var waiting: [ReceiveArrival] = []
+
+    /// Plays `next` now, or once the one playing has flipped home.
+    mutating func announce(_ next: ReceiveArrival, at date: Date = Date()) {
+        if let current, current.elapsed(date) < current.settledAt { waiting.append(next) } else { start(next, at: date) }
+    }
+
+    /// The current arrival has flipped home: the next one starts (true), or an Ark or
+    /// Lightning arrival ends while an on-chain one stays for its block row (false).
+    @discardableResult mutating func finish(at date: Date = Date()) -> Bool {
+        if !waiting.isEmpty { start(waiting.removeFirst(), at: date); return true }
+        if current?.rail != .onchain { current = nil }
+        return false
+    }
+
+    /// Follows the on-chain arrivals (playing or waiting) in a new check. Returns whether the
+    /// playing one just confirmed, and the transactions followed now, replacements included.
+    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> (confirmed: Bool, txids: Set<String>) {
+        let confirmed = current?.follow(snapshot, at: date) ?? false
+        for index in waiting.indices { _ = waiting[index].follow(snapshot, at: date) }
+        return (confirmed, Set(([current] + waiting).compactMap { $0?.txid }))
+    }
+
+    mutating func clear() {
+        current = nil
+        waiting = []
+    }
+
+    private mutating func start(_ next: ReceiveArrival, at date: Date) {
+        var next = next
+        next.start = date
+        current = next
     }
 }
 

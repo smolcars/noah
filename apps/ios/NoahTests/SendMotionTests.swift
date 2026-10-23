@@ -323,16 +323,71 @@ struct ReceiveFormatTests {
         #expect(ReceiveAmountSheet.sats("1500", fiat: false, btcPrice: nil) == 1_500)
     }
 
-    @Test func onchainArrivalPrefersThisRequestsAddress() {
+    @Test func onchainArrivalsAreEveryNewDepositThisRequestsAddressFirst() {
         let snapshot = ReceiveChainSnapshot(tip: 100, incoming: [
             .init(txid: "old", toAddress: 5, received: 5, confirmedHeight: nil),
             .init(txid: "other", toAddress: 0, received: 9, confirmedHeight: nil),
             .init(txid: "mine", toAddress: 7, received: 7, confirmedHeight: nil),
             .init(txid: "mined", toAddress: 8, received: 8, confirmedHeight: 99),
         ])
-        #expect(snapshot.arrival(excluding: ["old"])?.txid == "mine")
-        #expect(snapshot.arrival(excluding: ["old", "mine"])?.txid == "other")
-        #expect(snapshot.arrival(excluding: ["old", "mine", "other"]) == nil)
+        // Later checks: every new unconfirmed deposit, the address's first; never an already-confirmed one.
+        let later = snapshot.look(known: ["old"], announced: [])
+        #expect(later.arrivals.map(\.txid) == ["mine", "other"])
+        #expect(later.known == ["old", "other", "mine", "mined"])
+        #expect(snapshot.look(known: ["old"], announced: ["mine"]).arrivals.map(\.txid) == ["other"])
+        // The first check: a payment to this address that landed while it synced is an
+        // arrival; what was already there (unrelated or confirmed) isn't.
+        #expect(snapshot.look(known: nil, announced: []).arrivals.map(\.txid) == ["old", "mine"])
+        #expect(snapshot.look(known: nil, announced: ["old"]).arrivals.map(\.txid) == ["mine"])
+        // After the first arrival, a second deposit still arrives.
+        let next = ReceiveChainSnapshot(tip: 100, incoming: snapshot.incoming + [.init(txid: "again", toAddress: 4, received: 4, confirmedHeight: nil)])
+        #expect(next.look(known: later.known, announced: ["mine", "other"]).arrivals.map(\.txid) == ["again"])
+    }
+
+    /// Two arrivals in one check: the second plays as soon as the first has flipped home,
+    /// with nothing else changing; an on-chain arrival then stays for its block row.
+    @Test func simultaneousArrivalsPlayInTurn() {
+        let start = Date()
+        var queue = ReceiveArrivalQueue()
+        let deposit = ReceiveArrival(rail: .onchain, sats: 100_000, start: start, txid: "a")
+        let lightning = ReceiveArrival(rail: .lightning, sats: 1_500, start: start)
+        queue.announce(deposit, at: start)
+        queue.announce(lightning, at: start)
+        #expect(queue.current?.id == deposit.id && queue.waiting.map(\.id) == [lightning.id])
+        let home = start.addingTimeInterval(deposit.settledAt)
+        let next = queue.finish(at: home)
+        #expect(next)
+        #expect(queue.current?.id == lightning.id && queue.current?.start == home && queue.waiting.isEmpty)
+        let after = queue.finish(at: home.addingTimeInterval(lightning.settledAt))
+        #expect(!after && queue.current == nil)
+        // A settled on-chain arrival gives way at once, and stays when nothing follows it.
+        queue.announce(deposit, at: start)
+        let stays = !queue.finish(at: home)
+        #expect(stays && queue.current?.id == deposit.id)
+        let second = ReceiveArrival(rail: .onchain, sats: 5_000, start: start, txid: "b")
+        queue.announce(second, at: home.addingTimeInterval(1))
+        #expect(queue.current?.id == second.id && queue.waiting.isEmpty)
+    }
+
+    /// The deposit being followed is replaced (RBF) and the replacement confirms before the
+    /// next check: the block row confirms with it instead of waiting for the old one.
+    @Test func aConfirmedReplacementConfirmsTheFollowedDeposit() {
+        let spent: Set<SendTransaction.Input> = [.init(txid: "funding", vout: 1)]
+        var queue = ReceiveArrivalQueue()
+        queue.announce(ReceiveArrival(rail: .onchain, sats: 100_000, start: Date(), txid: "a", inputs: spent))
+        let replaced = ReceiveChainSnapshot(tip: 101, incoming: [
+            .init(txid: "b", toAddress: 100_000, received: 100_000, confirmedHeight: 101, inputs: spent.union([.init(txid: "more", vout: 0)])),
+        ])
+        let followed = queue.follow(replaced)
+        #expect(followed.confirmed && followed.txids == ["b"])
+        #expect(queue.current?.txid == "b" && queue.current?.confirmedHeight == 101)
+        // Announced as followed, the replacement isn't news either.
+        #expect(replaced.look(known: ["a"], announced: followed.txids).arrivals.isEmpty)
+        // An unrelated confirmed deposit is not a replacement.
+        var other = ReceiveArrivalQueue()
+        other.announce(ReceiveArrival(rail: .onchain, sats: 100_000, start: Date(), txid: "a", inputs: spent))
+        let unrelated = ReceiveChainSnapshot(tip: 101, incoming: [.init(txid: "c", toAddress: 0, received: 7, confirmedHeight: 101, inputs: [.init(txid: "x", vout: 0)])])
+        #expect(!other.follow(unrelated).confirmed && other.current?.txid == "a" && other.current?.confirmedHeight == nil)
     }
 
     @Test func arrivalsFlipOnlyAfterTheirPhasesAndPlayEachHapticOnce() {

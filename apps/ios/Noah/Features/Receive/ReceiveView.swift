@@ -25,8 +25,12 @@ struct ReceiveView: View {
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @State private var haptics = OnboardingHaptics()
     @State private var tilt = 0
-    @State private var arrival: ReceiveArrival?
+    @State private var arrivals = ReceiveArrivalQueue()
     @State private var played: Set<String> = []
+    /// On-chain transactions already announced, so a restarted watch doesn't announce them again.
+    @State private var announced: Set<String> = []
+    /// The compact sheet an on-chain arrival set aside, to bring back once the card is home.
+    @State private var interrupted: Sheet?
     /// What the card showed when a payment arrived; the request is used up by then.
     @State private var lastShown: Shown?
     @State private var tip: UInt32?
@@ -49,6 +53,9 @@ struct ReceiveView: View {
     }
 
     private var wide: Bool { window.wide }
+    private var arrival: ReceiveArrival? { arrivals.current }
+    /// An Ark or Lightning arrival is showing: the request it paid is used up.
+    private var paidArrival: Bool { arrival.map { $0.rail != .onchain } ?? false }
     private var address: String? { app.server.state.lightningAddress }
     private var hasAmount: Bool { model.request?.amountSat != nil }
     private var amountText: String? {
@@ -68,7 +75,7 @@ struct ReceiveView: View {
             } : nil,
             unavailable: format == .lightningAddress && address == nil)
     }
-    private var shown: Shown { arrival != nil && arrival?.rail != .onchain ? (lastShown ?? current) : current }
+    private var shown: Shown { paidArrival ? (lastShown ?? current) : current }
     private var qrSide: CGFloat { wide ? 228 : min(226, max(168, window.size.height - 470)) }
 
     var body: some View {
@@ -110,24 +117,22 @@ struct ReceiveView: View {
                 sheet = nil
                 editing = false
                 draft = nil
-                arrival = nil
+                arrivals.clear()
+                interrupted = nil
             }
         }
         .onDisappear { model.stop() }
-        .onChange(of: current, initial: true) { _, value in if arrival == nil && value.payload != nil { lastShown = value } }
+        .onChange(of: current, initial: true) { _, value in if !paidArrival && value.payload != nil { lastShown = value } }
         .onChange(of: model.receivedSats) { _, sats in
             guard let sats else { return }
-            sheet = nil
-            editing = false
-            played = []
-            arrival = ReceiveArrival(rail: model.receivedRail == .lightning ? .lightning : .ark, sats: sats, start: Date())
-            Task { await app.refresh() }
+            announce(ReceiveArrival(rail: model.receivedRail == .lightning ? .lightning : .ark, sats: sats, start: Date()))
         }
         .onChange(of: model.baseError) { _, error in if error != nil { sheet = nil; editing = false } }
         .onChange(of: model.request) { old, new in
             // A draft belongs to its request.
             if let draft, draft.request != new { self.draft = nil; editing = false }
-            guard arrival == nil, let new else { return }
+            // After an Ark or Lightning payment, the arrival regenerates the request itself.
+            guard !paidArrival, let new else { return }
             if let old, old.arkAddress == new.arkAddress, old.onchainAddress == new.onchainAddress {
                 // The same request with a new amount, or with it removed.
                 if old.amountSat != new.amountSat { show(ReceiveFormat.after(amountChange: new.amountSat != nil), haptic: false) }
@@ -245,7 +250,7 @@ struct ReceiveView: View {
                     Text(hasAmount ? "Change amount" : "Add amount").minimumScaleFactor(0.75).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(HomePillStyle(prominent: false, height: wide ? 52 : 48, font: wide ? NoahTokens.Typography.button : SendText.pill))
-                .disabled(model.request == nil || model.isSaving || arrival != nil && arrival?.rail != .onchain)
+                .disabled(model.request == nil || model.isSaving || paidArrival)
                 .accessibilityIdentifier("receive-amount-button")
                 if let payload = shown.payload {
                     ShareLink(item: payload) { Text("Share").frame(maxWidth: .infinity) }
@@ -359,24 +364,52 @@ struct ReceiveView: View {
 
     // MARK: Arrivals
 
+    /// Plays an arrival now, or once the one playing has flipped home.
+    private func announce(_ next: ReceiveArrival) {
+        arrivals.announce(next)
+        Task { await app.refresh() }
+    }
+
     /// Plays the arrival's haptics once each, then flips home and, after an Ark or
-    /// Lightning payment, regenerates the request as Receive does today.
+    /// Lightning payment, regenerates the request as Receive does today. Then the next
+    /// arrival plays, or a sheet an on-chain arrival set aside comes back.
     private func playArrival() async {
         guard let arrival else { return }
+        stepAside(for: arrival)
         for item in arrival.haptics {
             let wait = item.at - arrival.elapsed(Date())
             if wait > 0 { do { try await Task.sleep(for: .seconds(wait)) } catch { return } }
             if played.insert("\(arrival.id):\(item.key)").inserted { haptics.play(item.kind) }
         }
-        guard arrival.rail != .onchain else { return }
         let wait = arrival.settledAt - arrival.elapsed(Date())
         if wait > 0 { do { try await Task.sleep(for: .seconds(wait)) } catch { return } }
         guard self.arrival?.id == arrival.id else { return }
-        // Regenerate before clearing the arrival: clearing it ends this task.
-        format = ReceiveFormat.reconciled(format, hasAmount: false)
-        if isActive && fixture == nil { await model.start() }
-        guard self.arrival?.id == arrival.id else { return }
-        self.arrival = nil
+        if arrival.rail != .onchain {
+            // Regenerate before moving on: changing the arrival ends this task.
+            format = ReceiveFormat.reconciled(format, hasAmount: false)
+            if isActive && fixture == nil { await model.start() }
+            guard self.arrival?.id == arrival.id else { return }
+        }
+        if arrivals.finish() { return }
+        guard let resume = interrupted else { return }
+        interrupted = nil
+        guard !editing, sheet == nil else { return }
+        if resume == .formats { sheet = .formats } else if draft != nil { editing = true }
+    }
+
+    /// Compact sheets would hide the card, so they step aside for an arrival. One set aside
+    /// for an on-chain arrival comes back with its draft; an Ark or Lightning payment uses
+    /// up the request, and the draft with it. Wide windows show the card beside the pane.
+    private func stepAside(for arrival: ReceiveArrival) {
+        if arrival.rail == .onchain {
+            guard !wide, editing || sheet != nil else { return }
+            interrupted = editing ? .amount : sheet
+        } else {
+            interrupted = nil
+            draft = nil
+        }
+        editing = false
+        sheet = nil
     }
 
     private var chainKey: String? {
@@ -385,8 +418,9 @@ struct ReceiveView: View {
     }
 
     /// Receive's on-chain watch: re-checks the on-chain wallet at most every 30 s while
-    /// visible. A new unconfirmed incoming transaction (one paying this request's address
-    /// first) plays the arrival; its block row then follows it to its confirmation.
+    /// visible. Each new unconfirmed incoming transaction (those paying this request's
+    /// address first) plays an arrival in turn; the block row follows the one showing to
+    /// its confirmation, or to the replacement that took its place.
     private func watchChain() async {
         guard let address = chainKey else { return }
         let read = fixture?.chain ?? { try await WalletSession.shared.receiveChainSnapshot(address: $0) }
@@ -394,20 +428,17 @@ struct ReceiveView: View {
         while !Task.isCancelled {
             if let snapshot = try? await read(address), !Task.isCancelled {
                 tip = snapshot.tip
-                if let current = arrival, current.rail == .onchain, let txid = current.txid {
-                    if current.confirmedHeight == nil,
-                       let height = snapshot.incoming.first(where: { $0.txid == txid })?.confirmedHeight {
-                        arrival?.confirmedHeight = height
-                        arrival?.confirmedAt = Date()
-                        haptics.play(.light)
-                    }
-                } else if let known, arrival == nil, let transaction = snapshot.arrival(excluding: known) {
-                    played = []
-                    arrival = ReceiveArrival(rail: .onchain, sats: Int64(clamping: transaction.toAddress > 0 ? transaction.toAddress : transaction.received),
-                                             start: Date(), txid: transaction.txid)
-                    Task { await app.refresh() }
+                let followed = arrivals.follow(snapshot)
+                if followed.confirmed { haptics.play(.light) }
+                // A replacement is the same deposit, not another arrival.
+                announced.formUnion(followed.txids)
+                let look = snapshot.look(known: known, announced: announced)
+                for transaction in look.arrivals {
+                    announced.insert(transaction.txid)
+                    announce(ReceiveArrival(rail: .onchain, sats: transaction.arrivingSats, start: Date(),
+                                            txid: transaction.txid, inputs: transaction.inputs))
                 }
-                known = (known ?? []).union(snapshot.incoming.map(\.txid))
+                known = look.known
             }
             do { try await Task.sleep(for: .seconds(fixture?.chain == nil ? 30 : 2)) } catch { return }
         }

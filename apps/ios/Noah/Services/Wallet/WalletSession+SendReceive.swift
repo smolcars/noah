@@ -47,7 +47,8 @@ extension WalletSession {
             let incoming = try await handles.onchain.transactions().filter { $0.balanceChangeSats > 0 }.map {
                 ReceiveChainSnapshot.Transaction(
                     txid: $0.txid, toAddress: (try? SendTransaction.amount(to: address, hex: $0.txHex)) ?? 0,
-                    received: UInt64($0.balanceChangeSats), confirmedHeight: $0.confirmation?.height)
+                    received: UInt64($0.balanceChangeSats), confirmedHeight: $0.confirmation?.height,
+                    inputs: Set((try? SendTransaction.parse(hex: $0.txHex).inputs) ?? []))
             }
             return ReceiveChainSnapshot(tip: tip, incoming: incoming)
         }
@@ -77,15 +78,30 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
         var toAddress: UInt64
         var received: UInt64
         var confirmedHeight: UInt32?
+        /// The outputs it spends, to recognise a replacement (RBF).
+        var inputs: Set<SendTransaction.Input> = []
+
+        /// What Receive shows arriving: the sats paid to the address, else all received.
+        var arrivingSats: Int64 { Int64(clamping: toAddress > 0 ? toAddress : received) }
     }
 
     var tip: UInt32
     var incoming: [Transaction]
 
-    /// A new unconfirmed incoming transaction since `known` was taken: one paying the
-    /// request's address first, otherwise any new unconfirmed incoming transaction.
-    func arrival(excluding known: Set<String>) -> Transaction? {
-        let fresh = incoming.filter { !known.contains($0.txid) && $0.confirmedHeight == nil }
-        return fresh.first { $0.toAddress > 0 } ?? fresh.first
+    /// One check of Receive's watch: the new unconfirmed incoming transactions to announce
+    /// (those paying the request's address first, then any other), and what's known after.
+    /// The first check (`known` nil) already knows every transaction except unconfirmed ones
+    /// paying the request's address: those arrived while it synced. An already-confirmed
+    /// transaction is never news.
+    func look(known: Set<String>?, announced: Set<String>) -> (arrivals: [Transaction], known: Set<String>) {
+        let seen = (known ?? Set(incoming.filter { $0.toAddress == 0 || $0.confirmedHeight != nil }.map(\.txid))).union(announced)
+        let fresh = incoming.filter { !seen.contains($0.txid) && $0.confirmedHeight == nil }
+        return (fresh.filter { $0.toAddress > 0 } + fresh.filter { $0.toAddress == 0 }, seen.union(incoming.map(\.txid)))
+    }
+
+    /// A followed transaction in this check, or the one that replaced it (spending any of
+    /// its inputs), which may already be confirmed.
+    func follow(txid: String, inputs: Set<SendTransaction.Input>) -> Transaction? {
+        incoming.first { $0.txid == txid } ?? incoming.first { !inputs.isEmpty && !$0.inputs.isDisjoint(with: inputs) }
     }
 }
