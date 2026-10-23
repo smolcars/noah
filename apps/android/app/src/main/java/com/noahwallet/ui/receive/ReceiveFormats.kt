@@ -67,19 +67,36 @@ internal object ReceiveArrivals {
 
     /**
      * The next arrival waiting in the records, and the records once it's taken: a new unconfirmed deposit first,
-     * then a payment to your Lightning address. Null when nothing is waiting.
+     * then a payment to your Lightning address. Replacements of deposits already shown are taken first, as seen
+     * with no arrival (null). Null when nothing is waiting.
      */
     fun next(rows: List<HistoryTransaction>, records: ReceiveRecords, address: String?, ownArk: Set<String>, ownHashes: Set<String>,
-             amount: (String, String) -> Long?, spends: (String) -> List<String>?, now: Long): Pair<ReceiveRecords, ReceiveArrival>? {
-        onchain(rows, records.known, address, amount)?.let { (row, sats) ->
+             amount: (String, String) -> Long?, spends: (String) -> List<String>?, now: Long): Pair<ReceiveRecords, ReceiveArrival?>? {
+        val seen = replaced(rows, records, spends)
+        onchain(rows, seen.known, address, amount)?.let { (row, sats) ->
             val inputs = row.txHex?.let(spends).orEmpty()
-            return records.copy(known = records.known + row.id) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid, inputs)
+            return seen.copy(known = seen.known + row.id, spent = seen.spent + inputs) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid, inputs)
         }
-        viaAddress(rows, records.settled, ownArk, ownHashes)?.let { row ->
+        viaAddress(rows, seen.settled, ownArk, ownHashes)?.let { row ->
             val rail = if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark
-            return records.copy(settled = records.settled + row.id) to ReceiveArrival(rail, row.amount, now)
+            return seen.copy(settled = seen.settled + row.id) to ReceiveArrival(rail, row.amount, now)
         }
-        return null
+        return if (seen != records) seen to null else null
+    }
+
+    /**
+     * The records with every replacement of a deposit shown this session marked seen: a new on-chain transaction
+     * spending one of the coins a shown deposit spent ([ReceiveRecords.spent]), as RBF does. Its own coins are kept
+     * too, so a replacement of the replacement is caught as well.
+     */
+    fun replaced(rows: List<HistoryTransaction>, records: ReceiveRecords, spends: (String) -> List<String>?): ReceiveRecords {
+        var seen = records
+        while (true) {
+            val replacement = rows.firstOrNull { row ->
+                row.source == "onchain-wallet" && row.txid != null && row.id !in seen.known && row.txHex?.let(spends).orEmpty().any { it in seen.spent }
+            } ?: return seen
+            seen = seen.copy(known = seen.known + replacement.id, spent = seen.spent + replacement.txHex?.let(spends).orEmpty())
+        }
     }
 
     /**

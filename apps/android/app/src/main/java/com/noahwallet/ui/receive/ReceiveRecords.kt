@@ -11,10 +11,11 @@ import kotlinx.serialization.Serializable
 
 /**
  * What Receive has taken from the wallet's records: the rows there when it appeared plus each deposit it has shown
- * since ([known]), and the receipts already complete plus each address payment it has shown ([settled]).
+ * since ([known]), the receipts already complete plus each address payment it has shown ([settled]), and the coins
+ * every deposit shown since spends, "txid:vout" ([spent]), so a replacement of any of them is never a new arrival.
  */
 @Serializable
-data class ReceiveRecords(val known: Set<String>, val settled: Set<String>) {
+data class ReceiveRecords(val known: Set<String>, val settled: Set<String>, val spent: Set<String> = emptySet()) {
     companion object {
         fun baseline(rows: List<HistoryTransaction>) = ReceiveRecords(rows.map { it.id }.toSet(), ReceiveArrivals.settled(rows).toSet())
     }
@@ -39,7 +40,7 @@ internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Bool
         chain.value?.let { tracked ->
             val (followed, replacement) = ReceiveArrivals.followed(tracked, rows, seen.known, ::spends)
             if (followed != tracked) {
-                replacement?.let { records.value = seen.copy(known = seen.known + it.id) }
+                replacement?.let { records.value = seen.copy(known = seen.known + it.id, spent = seen.spent + followed?.inputs.orEmpty()) }
                 chain.value = followed
                 return@LaunchedEffect
             }
@@ -49,6 +50,8 @@ internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Bool
             ?: return@LaunchedEffect
         // Taken in one step: a new key restarts this effect, so nothing here may suspend before the arrival is set.
         records.value = taken
+        // Only replacements of deposits already shown: they're marked seen, with no arrival.
+        if (next == null) return@LaunchedEffect
         if (next.rail == ReceiveArrival.Rail.onchain) chain.value = next
         arrival.value = next
         if (next.rail != ReceiveArrival.Rail.onchain) onAddressPayment()

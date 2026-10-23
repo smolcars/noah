@@ -86,6 +86,37 @@ class ReceiveRecordsTest {
         assertNull(arrival.value)
     }
 
+    @Test fun aDepositReplacedAfterALaterOneIsNotAnnouncedAgain() {
+        val records = mutableStateOf<ReceiveRecords?>(null)
+        val arrival = mutableStateOf<ReceiveArrival?>(null)
+        val chain = mutableStateOf<ReceiveArrival?>(null)
+        val old = deposit("old", 5_000, confirmed = true)
+        var rows by mutableStateOf(listOf(old))
+        compose.setContent { ReceiveRecordsWatcher(rows, false, ReceiveFixtures.plain, emptySet(), emptySet(), records, arrival, chain) }
+        compose.waitForIdle()
+        // A is announced and its card finishes; then B (another coin) is announced and the block row moves on to it.
+        val a = deposit("a", 20_000, spending = coin)
+        compose.runOnIdle { rows = listOf(old, a) }
+        compose.waitForIdle()
+        assertEquals("a", arrival.value?.txid)
+        compose.runOnIdle { arrival.value = null }
+        val b = deposit("b", 7_000, spending = otherCoin)
+        compose.runOnIdle { rows = listOf(old, a, b) }
+        compose.waitForIdle()
+        assertEquals("b", arrival.value?.txid)
+        assertEquals("b", chain.value?.txid)
+        compose.runOnIdle { arrival.value = null }
+        compose.waitForIdle()
+        // The sender replaces A with an unconfirmed A′ spending A's coin, then replaces it again.
+        for (replacement in listOf(deposit("a2", 19_800, spending = coin), deposit("a3", 19_600, spending = coin))) {
+            compose.runOnIdle { rows = listOf(old, replacement, b) }
+            compose.waitForIdle()
+            assertNull("${replacement.txid} is A again, not a new deposit", arrival.value)
+            assertEquals("the block row stays on B", "b", chain.value?.txid)
+            assertTrue(replacement.id in checkNotNull(records.value).known)
+        }
+    }
+
     @Test fun anUnrelatedDepositAfterTheFollowedOneDisappearsIsStillAnnounced() {
         val records = mutableStateOf<ReceiveRecords?>(null)
         val arrival = mutableStateOf<ReceiveArrival?>(null)

@@ -132,6 +132,44 @@ class ReceiveFormatsTest {
         assertEquals(null to null, ReceiveArrivals.followed(tracked.copy(inputs = emptyList()), listOf(b), known, spends))
     }
 
+    @Test fun aReplacedDepositIsNeverAnnouncedAgainAfterALaterOne() {
+        val spends = { hex: String -> mapOf("hex-a" to listOf("c:0", "d:1"), "hex-b" to listOf("e:0"), "hex-a2" to listOf("c:0", "f:2"),
+            "hex-a3" to listOf("f:2"), "hex-x" to listOf("g:0"))[hex] }
+        val none = { _: String, _: String -> null as Long? }
+        val old = chain("old", 5_000, confirmed = true)
+        fun next(rows: List<HistoryTransaction>, records: ReceiveRecords) = ReceiveArrivals.next(rows, records, "bcrt1qpayme", emptySet(), emptySet(), none, spends, 1)
+        // A is announced (its card then finishes), then B: the block row moves on to B.
+        val a = chain("a", 9_500)
+        val (afterA, first) = checkNotNull(next(listOf(old, a), ReceiveRecords.baseline(listOf(old))))
+        assertEquals("a", first?.txid)
+        assertEquals(setOf("c:0", "d:1"), afterA.spent)
+        val b = chain("b", 3_000)
+        val (afterB, second) = checkNotNull(next(listOf(old, a, b), afterA))
+        assertEquals("b", second?.txid)
+        // A is replaced by an unconfirmed A′ spending one of A's coins: it's the same deposit, marked seen with no arrival.
+        val a2 = chain("a2", 9_400)
+        val (afterA2, third) = checkNotNull(next(listOf(old, a2, b), afterB))
+        assertNull(third)
+        assertTrue(a2.id in afterA2.known)
+        assertEquals(setOf("c:0", "d:1", "e:0", "f:2"), afterA2.spent)
+        assertNull(next(listOf(old, a2, b), afterA2))
+        // Replaced again, spending only a coin A′ added: still the same deposit.
+        val a3 = chain("a3", 9_300)
+        val (afterA3, fourth) = checkNotNull(next(listOf(old, a3, b), afterA2))
+        assertNull(fourth)
+        assertTrue(a3.id in afterA3.known)
+        assertNull(next(listOf(old, a3, b), afterA3))
+        // A deposit spending other coins is still its own arrival.
+        val x = chain("x", 1_000)
+        assertEquals("x", next(listOf(old, a3, b, x), afterA3)?.second?.txid)
+        // Replacements are taken before a new deposit in the same update, which still plays.
+        val (both, arrival) = checkNotNull(next(listOf(old, a2, b, x), afterB))
+        assertEquals("x", arrival?.txid)
+        assertTrue(a2.id in both.known)
+        // Records saved before this change (no coins) still decode.
+        assertEquals(ReceiveRecords(setOf("k"), setOf("s")), kotlinx.serialization.json.Json.decodeFromString<ReceiveRecords>("""{"known":["k"],"settled":["s"]}"""))
+    }
+
     @Test fun anArrivalTakesAFreeCardOrOneShowingADeposit() {
         // The deposit's block row carries on separately, so a later payment can take its card; an Ark or Lightning one plays out first.
         assertTrue(ReceiveArrivals.takesCard(null))
