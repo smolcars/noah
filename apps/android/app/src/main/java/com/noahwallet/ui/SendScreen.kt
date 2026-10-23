@@ -69,7 +69,9 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
         model.fiatCurrency = app.preferredCurrency
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
         runCatching { app.session.pendingSendHashes() }.getOrNull()?.let { model.pendingLightningHashes = it }
-        presentation.refresh.ifDue(::refresh)
+        // Within 30 s of the last automatic refresh this waits for the next one instead of skipping it, so an uncertain
+        // or storage-blocked payment (with or without a transaction) is always looked at again.
+        presentation.refresh.whenDue(::refresh)
     }
     LaunchedEffect(app.summary) {
         app.summary?.let { model.arkBalance = it.balance.ark.spendable.toLong(); model.onchainBalance = it.balance.onchain.confirmed.toLong() }
@@ -155,7 +157,7 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             // The block row's first tip doesn't wait: there's none to refresh yet.
             if (onchain && presentation.tip == null) runCatching { app.session.chainTip() }.getOrNull()?.let { presentation.tip = it }
-            while (isActive) { delay(presentation.refresh.wait()); presentation.refresh.ifDue(::refresh) }
+            while (isActive) presentation.refresh.whenDue(::refresh)
         }
     }
     // Today's estimates for the method cards; the review's quote stays the authority.

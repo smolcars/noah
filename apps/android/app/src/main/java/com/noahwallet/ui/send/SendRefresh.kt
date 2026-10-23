@@ -1,6 +1,7 @@
 package com.noahwallet.ui.send
 
 import android.os.SystemClock
+import kotlinx.coroutines.delay
 
 /**
  * Paces Send's automatic refresh (today's status check and the block row's tip) to at most once every [every] ms.
@@ -12,6 +13,16 @@ internal class SendRefresh(private val every: Long = 30_000, private val clock: 
 
     /** How long until the next automatic refresh is due. */
     fun wait(): Long = refreshedAt?.let { (it + every - clock()).coerceAtLeast(0) } ?: 0
+
+    /** Waits until a refresh is due, then runs [refresh] unless another got there first: a paced check is late, never lost. */
+    suspend fun whenDue(refresh: suspend () -> Unit) {
+        val last = refreshedAt
+        while (wait() > 0) {
+            delay(wait())
+            if (refreshedAt != last) return
+        }
+        ifDue(refresh)
+    }
 
     /** Runs [refresh] if one is due, and starts the next interval. */
     suspend fun ifDue(refresh: suspend () -> Unit) {
