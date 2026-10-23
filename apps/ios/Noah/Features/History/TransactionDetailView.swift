@@ -68,7 +68,7 @@ struct TransactionDetailView: View {
                 }
                 .foregroundStyle(NoahTokens.Colors.foreground)
                 .padding(.leading, wide ? 36 : NoahTokens.Space.screen).padding(.trailing, wide ? 32 : NoahTokens.Space.screen)
-                .padding(.top, wide ? 18 : 8)
+                .padding(.top, wide ? 4 : 8)
                 .padding(.bottom, payAgain == nil ? 60 : 130)
                 .frame(maxWidth: 640, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -79,7 +79,7 @@ struct TransactionDetailView: View {
         .overlay(alignment: .top) { toastLayer }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbar }
+        .modifier(DetailChrome(wide: wide, bar: AnyView(paneBar)) { toolbar })
         .tint(NoahTokens.Colors.foreground)
         .navigationDestination(for: Link.self, destination: destination)
         .task(id: "\(transaction.id):\(transaction.isPending)") { await load() }
@@ -92,6 +92,10 @@ struct TransactionDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
             HomeAvatar(avatar: row.avatar, pending: row.status.isPending, failed: row.status.isFailure, isNew: false, size: 60)
+                // Switching rows on wide pops the avatar (bouncy) while the amount rolls.
+                .id(transaction.id)
+                .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
+                .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: transaction.id)
                 .padding(.top, 6)
             Text(verbatim: row.amount(unit: app.amountUnit, hidden: hidden, locale: locale))
                 .noahText(ActivityDetailText.amount)
@@ -368,6 +372,27 @@ struct TransactionDetailView: View {
         }
     }
 
+    /// Wide panes draw share and × themselves: the system bar's buttons would move to the Duo's far edge.
+    private var paneBar: some View {
+        GlassGroup(spacing: 8) {
+            HStack(spacing: 8) {
+                Spacer()
+                Button(action: share) { ActivityCircleIcon(systemName: "square.and.arrow.up") }
+                    .buttonStyle(HomePressStyle())
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { shareAnchor = $0 }
+                    .accessibilityLabel(Text("Share"))
+                    .accessibilityIdentifier("transaction-detail-share")
+                if closable {
+                    Button(action: onClose) { ActivityCircleIcon(systemName: "xmark") }
+                        .buttonStyle(HomePressStyle())
+                        .accessibilityLabel(Text("Close"))
+                        .accessibilityIdentifier("transaction-detail-close")
+                }
+            }
+        }
+        .padding(.horizontal, 16).padding(.top, 14)
+    }
+
     private func payAgainBar(_ details: RepeatPayment) -> some View {
         Button { haptics.play(.light); onRepeatPayment(details) } label: {
             Text("Pay again").frame(maxWidth: .infinity)
@@ -436,6 +461,21 @@ struct TransactionDetailView: View {
         // The receipt is the user's to share; it is never logged.
         let text = ActivityDetail.receipt(transaction, ownDomain: ownDomain, unit: app.amountUnit, locale: locale, date: dateText)
         ActivityShare.present([text], anchor: wide ? shareAnchor : nil)
+    }
+}
+
+/// Phones (and Home's sheets) use the system bar; wide panes their own.
+private struct DetailChrome<Bar: ToolbarContent>: ViewModifier {
+    let wide: Bool
+    let bar: AnyView
+    @ToolbarContentBuilder let toolbar: () -> Bar
+
+    func body(content: Content) -> some View {
+        if wide {
+            content.toolbar(.hidden, for: .navigationBar).safeAreaInset(edge: .top, spacing: 0) { bar }
+        } else {
+            content.toolbar(content: toolbar)
+        }
     }
 }
 

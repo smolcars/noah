@@ -242,10 +242,13 @@ private struct ActivityListPane: View {
         }
     }
 
+    /// The prototype's side padding: 24 on phones, 32 in the wide pane.
+    private var pad: CGFloat { wide ? 32 : NoahTokens.Space.screen }
+
     var body: some View {
-        ScrollView {
+        let list = ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                if !wide && !searching { largeTitle.padding(.horizontal, NoahTokens.Space.screen) }
+                if !wide && !searching { largeTitle.padding(.horizontal, pad) }
                 content
             }
             .scrollTargetLayout()
@@ -257,12 +260,60 @@ private struct ActivityListPane: View {
         }
         .refreshable { await refresh() }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
-        .navigationTitle("Activity")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbar }
-        .modifier(ActivitySearch(query: $query, searching: $searching))
-        .tint(NoahTokens.Colors.foreground)
         .onboardingHaptics(haptics)
+        if wide {
+            // No system bar: on the open Duo its buttons move to the far edge, across the fold.
+            list
+                .toolbar(.hidden, for: .navigationBar)
+                .safeAreaInset(edge: .top, spacing: 0) { wideHeader }
+                .tint(NoahTokens.Colors.foreground)
+        } else {
+            list
+                .navigationTitle("Activity")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { toolbar }
+                .modifier(ActivitySearch(query: $query, searching: $searching))
+                .tint(NoahTokens.Colors.foreground)
+        }
+    }
+
+    /// The leading pane's own bar (prototype `.ph.wide .nav`): the title and chip, then search and ⋯.
+    private var wideHeader: some View {
+        HStack(spacing: 8) {
+            if searching {
+                ActivitySearchField(query: $query) {
+                    withAnimation(NoahTokens.Motion.travel(reduceMotion)) { query = ""; searching = false }
+                }
+                .transition(.opacity)
+            } else {
+                Text("Activity").noahText(ActivityText.wideTitle).accessibilityAddTraits(.isHeader).fixedSize()
+                chip.padding(.leading, 2)
+                Spacer(minLength: 8)
+                GlassGroup(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button {
+                            haptics.play(.light)
+                            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { searching = true }
+                        } label: { ActivityCircleIcon(systemName: "magnifyingglass") }
+                        .buttonStyle(HomePressStyle())
+                        .accessibilityLabel(Text("Search"))
+                        .accessibilityIdentifier("activity-search")
+                        menu(label: ActivityCircleIcon(systemName: "ellipsis"))
+                    }
+                }
+            }
+        }
+        .frame(height: NoahTokens.Size.hitTarget)
+        .padding(.leading, pad).padding(.trailing, 16)
+        .padding(.top, 14).padding(.bottom, 6)
+        .background {
+            LinearGradient(stops: [.init(color: NoahTokens.Colors.background, location: 0.78),
+                                   .init(color: NoahTokens.Colors.background.opacity(0), location: 1)],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea(edges: .top)
+        }
+        .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: filter)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: searching)
     }
 
     // MARK: Header
@@ -297,27 +348,16 @@ private struct ActivityListPane: View {
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        if wide {
-            ToolbarItem(placement: .topBarLeading) {
-                HStack(spacing: 10) {
-                    Text("Activity").noahText(ActivityText.wideTitle).fixedSize()
-                    chip
-                }
-                .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: filter)
-            }
-            .sharedBackgroundVisibilityIfAvailable(.hidden)
-        } else {
-            ToolbarItem(placement: .principal) {
-                Text("Activity").noahText(NoahTokens.Typography.button).opacity(tucked && !searching ? 1 : 0)
-                    .animation(NoahTokens.Motion.travel(reduceMotion), value: tucked)
-                    .accessibilityHidden(!tucked)
-            }
+        ToolbarItem(placement: .principal) {
+            Text("Activity").noahText(NoahTokens.Typography.button).opacity(tucked && !searching ? 1 : 0)
+                .animation(NoahTokens.Motion.travel(reduceMotion), value: tucked)
+                .accessibilityHidden(!tucked)
         }
         ActivitySearchButton()
-        ToolbarItem(placement: .topBarTrailing) { menu }
+        ToolbarItem(placement: .topBarTrailing) { menu(label: Label("More", systemImage: "ellipsis")) }
     }
 
-    private var menu: some View {
+    private func menu(label: some View) -> some View {
         Menu {
             Picker(selection: Binding(get: { filter }, set: setFilter)) {
                 ForEach(HistoryFilter.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
@@ -332,8 +372,9 @@ private struct ActivityListPane: View {
                     .accessibilityIdentifier("activity-refresh")
             }
         } label: {
-            Label("More", systemImage: "ellipsis")
+            label
         }
+        .accessibilityLabel(Text("More"))
         .accessibilityIdentifier("activity-menu")
     }
 
@@ -343,7 +384,7 @@ private struct ActivityListPane: View {
         if app.isWalletSuspended {
             ActivityErrorView(message: "Your wallet is suspended. Resume it to view transactions.") { Task { await refresh() } }
         } else if history.isLoading {
-            ActivitySkeleton().padding(.horizontal, NoahTokens.Space.screen)
+            ActivitySkeleton().padding(.horizontal, pad)
         } else if let error = history.error {
             ActivityErrorView(message: error) { Task { await refresh() } }
         } else if history.transactions.isEmpty {
@@ -381,10 +422,10 @@ private struct ActivityListPane: View {
                         }
                 }
             } header: {
-                ActivityDayHeader(title: title(group.title), first: group.id == groups.first?.id)
+                ActivityDayHeader(title: title(group.title), first: group.id == groups.first?.id, pad: pad)
             }
         }
-        .padding(.horizontal, NoahTokens.Space.screen)
+        .padding(.horizontal, pad)
         .animation(NoahTokens.Motion.travel(reduceMotion), value: visible.map(\.id))
     }
 
@@ -520,6 +561,7 @@ private struct ActivityRowPressStyle: ButtonStyle {
 private struct ActivityDayHeader: View {
     let title: String
     let first: Bool
+    let pad: CGFloat
 
     var body: some View {
         Text(verbatim: title)
@@ -527,9 +569,9 @@ private struct ActivityDayHeader: View {
             .foregroundStyle(NoahTokens.Colors.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, first ? 8 : 14).padding(.bottom, 4)
-            .padding(.horizontal, NoahTokens.Space.screen)
+            .padding(.horizontal, pad)
             .background(NoahTokens.Colors.background)
-            .padding(.horizontal, -NoahTokens.Space.screen)
+            .padding(.horizontal, -pad)
             .accessibilityAddTraits(.isHeader)
     }
 }
@@ -663,6 +705,59 @@ private struct ActivityNoneView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 56)
+    }
+}
+
+/// A 40-pt glass circle for the wide panes' own bars (Home's top-bar buttons).
+struct ActivityCircleIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 19, weight: .medium))
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .frame(width: 40, height: 40)
+            .contentShape(Circle())
+            .glassCompat(in: Circle(), interactive: true)
+            .frame(width: NoahTokens.Size.hitTarget, height: NoahTokens.Size.hitTarget)
+    }
+}
+
+/// The wide pane's search field (prototype `.srch`), opened over its bar with the keyboard.
+private struct ActivitySearchField: View {
+    @Binding var query: String
+    let onCancel: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").font(.system(size: 16, weight: .medium)).foregroundStyle(NoahTokens.Colors.muted)
+                TextField("Search", text: $query)
+                    .noahText(NoahTokens.Typography.body)
+                    .focused($focused)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    .accessibilityIdentifier("activity-search-field")
+                if !query.isEmpty {
+                    Button { query = ""; focused = true } label: {
+                        Image(systemName: "xmark.circle.fill").font(.system(size: 16)).foregroundStyle(NoahTokens.Colors.muted)
+                            .frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Clear search"))
+                }
+            }
+            .padding(.leading, 14).padding(.trailing, 6)
+            .frame(height: NoahTokens.Size.hitTarget)
+            .glassCompat(in: Capsule())
+            Button("Cancel", action: onCancel)
+                .noahText(NoahTokens.Typography.body)
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .padding(.leading, 6)
+        }
+        .onAppear { focused = true }
     }
 }
 
