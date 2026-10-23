@@ -277,8 +277,15 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
             }
         })
     }
-    // Saving closes the sheet once today's invoice creation has returned the new request.
-    LaunchedEffect(ui.request?.paymentHash, ui.request?.amountSat) { if (sheet == "amount" && !ui.saving && ui.invoiceError == null) sheet = null }
+    // Saving closes the sheet once today's invoice creation has returned a new request: only after a save seen
+    // starting here, so a sheet restored with the screen (rotation, a pose change) stays open.
+    var savingFrom by remember { mutableStateOf<ReceiveRequest?>(null) }
+    LaunchedEffect(ui.saving, ui.request) {
+        if (ui.saving) { if (savingFrom == null) savingFrom = ui.request; return@LaunchedEffect }
+        val from = savingFrom ?: return@LaunchedEffect
+        savingFrom = null
+        if (sheet == "amount" && ui.request != from && ui.invoiceError == null) sheet = null
+    }
 }
 
 /** A Material 3 sheet on the tonal soft surface (prototype `.ph.android .sheet`), inside the trailing pane when split. */
