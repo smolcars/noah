@@ -310,20 +310,13 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
     }
     val rail = ActivityRules.rail(record)
     rows += { last -> DetailRow("Via", tr(rail.label), glyph = railGlyph.getValue(rail), toasts = toasts, last = last) }
-    val ark = ActivityRules.arkFee(record)
-    val network = ActivityRules.networkFee(record)
-    when {
-        ActivityRules.struck(home) -> rows += { last -> DetailRow("Fee", tr("None"), toasts = toasts, last = last) }
-        home.pending && (rail == ActivityRules.Rail.lightning || rail == ActivityRules.Rail.offer) && !home.incoming ->
-            rows += { last -> DetailRow("Fee", ark?.let { tr("Up to {amount}", money(it)) } ?: tr("Free"), ValueKind.number, toasts = toasts, last = last) }
-        record.isRenewal -> rows += { last -> DetailRow("Fee", money(record.amount), ValueKind.number, toasts = toasts, last = last) }
-        ark != null && network != null -> {
-            rows += { last -> DetailRow("Ark fee", money(ark), ValueKind.number, toasts = toasts, last = last) }
-            rows += { last -> DetailRow("Network fee", money(network), ValueKind.number, toasts = toasts, last = last) }
+    for (line in ActivityRules.fees(record, home)) rows += { last ->
+        when (val value = line.value) {
+            is ActivityRules.FeeValue.Sats -> DetailRow(line.label, money(value.sats), ValueKind.number, toasts = toasts, last = last)
+            is ActivityRules.FeeValue.UpTo -> DetailRow(line.label, tr("Up to {amount}", money(value.sats)), ValueKind.number, toasts = toasts, last = last)
+            ActivityRules.FeeValue.Free -> DetailRow(line.label, tr("Free"), toasts = toasts, last = last)
+            ActivityRules.FeeValue.None -> DetailRow(line.label, tr("None"), toasts = toasts, last = last)
         }
-        network != null -> rows += { last -> DetailRow("Network fee", money(network), ValueKind.number, toasts = toasts, last = last) }
-        record.direction == "outgoing" && !record.isInternalTransfer && (ark != null || ActivityRules.offchain(rail)) ->
-            rows += { last -> if (ark != null) DetailRow("Fee", money(ark), ValueKind.number, toasts = toasts, last = last) else DetailRow("Fee", tr("Free"), toasts = toasts, last = last) }
     }
     ActivityRules.total(record, home)?.let { total -> rows += { last -> DetailRow("Total", money(total), ValueKind.number, toasts = toasts, last = last) } }
     // A confirmed payment whose block time isn't known yet has no date; Confirmed names its block.

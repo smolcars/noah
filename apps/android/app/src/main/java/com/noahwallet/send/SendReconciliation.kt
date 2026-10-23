@@ -30,8 +30,9 @@ object SendReconciliation {
     }
     /** What a successful send's effective balance took beyond [actual]. A retried invoice's reused movement keeps its first
      *  attempt's fee field, so this is its fee; null when bark's numbers can't give one. */
-    fun lightningFee(movement: Movement, actual: Long): Long? =
-        runCatching { Math.subtractExact(Math.negateExact(movement.effectiveBalanceSats), actual) }.getOrNull()?.takeIf { it >= 0 }
+    fun lightningFee(movement: Movement, actual: Long): Long? = lightningFee(movement.effectiveBalanceSats, actual)
+    fun lightningFee(effective: Long, actual: Long): Long? =
+        runCatching { Math.subtractExact(Math.negateExact(effective), actual) }.getOrNull()?.takeIf { it >= 0 }
     private fun receipt(movement: Movement, actual: Long, hash: String) = SendReceipt(actual, paymentHash = hash, movementID = movement.id,
         fee = lightningFee(movement, actual) ?: movement.offchainFeeSats.toLong(), proof = SendReceipt.Proof.actualMovement)
     /** Whether [invoice] sets its own amount, so every attempt on its hash sent that amount. */

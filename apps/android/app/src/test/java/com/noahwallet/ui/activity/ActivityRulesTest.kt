@@ -136,6 +136,24 @@ class ActivityRulesTest {
         assertTrue(ActivityRules.receipt(rows(renewal).single(), "−₿45", "Today", null, words).startsWith("Renewed 3 coins −₿45"))
     }
 
+    @Test fun settledLightningFeesComeFromTheBalanceTheyTook() {
+        val fixed = "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
+        fun fees(record: HistoryTransaction) = rows(record).single().let { ActivityRules.fees(record, it.home) to ActivityRules.total(record, it.home) }
+        // A retried invoice: bark kept the first attempt's fee field (12), but the movement took 1,530 for 1,500.
+        val retried = record("ln", Date(), type = "Bolt11", amount = 1_500).copy(subsystemName = "bark.lightning_send", offchainFeeSat = 12,
+            effectiveBalanceSat = -1_530, sentTo = listOf(HistoryTransaction.Destination(fixed, 1_500, "invoice")))
+        assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(30))) to 1_530L, fees(retried))
+        // An amountless invoice proves no fee (Send's already-paid rule): no Fee row, no Total, never "Free".
+        val amountless = retried.copy(sentTo = listOf(HistoryTransaction.Destination(ActivityFixtures.invoice("Tea", 1), 1_500, "invoice")))
+        assertEquals(emptyList<ActivityRules.FeeLine>() to null, fees(amountless))
+        // Still in flight: the quoted fee, as the most it may take.
+        assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.UpTo(12))) to 1_512L, fees(retried.copy(movementStatus = "pending")))
+        // Ark sends prove their fee field; a proven zero is "Free".
+        assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Free)) to null, fees(record("ark", Date()).copy(subsystemName = "bark.arkoor")))
+        // An on-chain wallet send without a recorded fee claims nothing.
+        assertEquals(emptyList<ActivityRules.FeeLine>() to null, fees(record("c", Date(), type = "Onchain", source = "onchain-wallet", confirmed = true)))
+    }
+
     @Test fun onlyRecordedOnChainTransactionsAreNamed() {
         val coin = "ef".repeat(32)
         // An offboard still waiting for its transaction: its txid falls back to a spent coin's ID, which names that

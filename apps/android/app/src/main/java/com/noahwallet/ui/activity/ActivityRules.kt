@@ -4,6 +4,7 @@ import com.noahwallet.history.HistoryFilter
 import com.noahwallet.history.HistoryMetadata
 import com.noahwallet.history.HistoryTransaction
 import com.noahwallet.history.RepeatPayment
+import com.noahwallet.send.SendReconciliation
 import com.noahwallet.ui.home.HomeDays
 import com.noahwallet.ui.home.HomeRow
 import java.util.Date
@@ -144,19 +145,64 @@ object ActivityRules {
     /** The successful Lightning send's preimage: its proof of payment. Never a receive's. */
     fun proof(record: HistoryTransaction) = record.preimage?.takeIf { record.direction == "outgoing" && record.movementStatus == "successful" }
 
-    /** Ark and network fees as recorded; on-chain fees count for payments out and boards only. */
-    fun arkFee(record: HistoryTransaction) = record.offchainFeeSat?.takeIf { record.source == "ark" && it > 0 }
+    /** A fee row's value: a proven amount, the most a pending Lightning send may take, "Free" or "None". */
+    sealed interface FeeValue {
+        data class Sats(val sats: Long) : FeeValue
+        data class UpTo(val sats: Long) : FeeValue
+        data object Free : FeeValue
+        data object None : FeeValue
+    }
+    data class FeeLine(val label: String, val value: FeeValue)
+
+    /**
+     * The Ark fee a record proves, zero included; null when it proves none. A settled Lightning send's is what its
+     * effective balance took beyond what it sent (Send's reconciliation rule), because bark's reused movement keeps
+     * a retried invoice's first fee field. An amountless invoice may have been retried for another amount, so, as
+     * with Send's already-paid receipts, it proves no fee.
+     */
+    fun arkFee(record: HistoryTransaction): Long? {
+        if (record.source != "ark") return null
+        if (record.subsystemName == "bark.lightning_send" && record.movementStatus == "successful") {
+            if (record.invoice?.let { !SendReconciliation.fixesAmount(it) } == true) return null
+            val sent = runCatching { record.sentTo.orEmpty().fold(0L) { sum, d -> Math.addExact(sum, d.amount_sat.also { require(it >= 0) }) } }
+                .getOrNull()?.takeIf { it > 0 } ?: return null
+            return SendReconciliation.lightningFee(record.effectiveBalanceSat ?: return null, sent)
+        }
+        return record.offchainFeeSat
+    }
+    /** On-chain fees count for payments out and boards only. */
     fun networkFee(record: HistoryTransaction) = record.onchainFeeSat?.takeIf {
         it > 0 && (record.direction == "outgoing" || record.isInternalTransfer) && (record.source == "ark" || record.hasOnchainFee == true)
     }
+
+    /** The fee rows a payment shows, Activity's and Home's sheet alike. */
+    fun fees(record: HistoryTransaction, home: HomeRow): List<FeeLine> {
+        val rail = rail(record)
+        if (struck(home)) return listOf(FeeLine("Fee", FeeValue.None))
+        if (home.pending && !home.incoming && (rail == Rail.lightning || rail == Rail.offer))
+            return listOf(FeeLine("Fee", record.offchainFeeSat?.takeIf { it > 0 }?.let(FeeValue::UpTo) ?: FeeValue.Free))
+        if (record.isRenewal) return listOf(FeeLine("Fee", FeeValue.Sats(record.amount)))
+        val ark = arkFee(record)
+        val paid = ark?.takeIf { it > 0 }
+        val network = networkFee(record)
+        return when {
+            paid != null && network != null -> listOf(FeeLine("Ark fee", FeeValue.Sats(paid)), FeeLine("Network fee", FeeValue.Sats(network)))
+            network != null -> listOf(FeeLine("Network fee", FeeValue.Sats(network)))
+            record.direction != "outgoing" || record.isInternalTransfer -> emptyList()
+            paid != null -> listOf(FeeLine("Fee", FeeValue.Sats(paid)))
+            // "Free" is a claim only a proven zero on Ark or Lightning can make; a fee nothing proves has no row.
+            ark == 0L && offchain(rail) -> listOf(FeeLine("Fee", FeeValue.Free))
+            else -> emptyList()
+        }
+    }
     /**
-     * Amount plus fees, on sends only, and only where the amount excludes them: an on-chain wallet send's amount is
-     * its whole balance change and an offboard's is what left the Ark balance, so they have no separate total.
+     * Amount plus the fees shown, on sends only, and only where the amount excludes them: an on-chain wallet send's
+     * amount is its whole balance change and an offboard's is what left the Ark balance, so they have no separate total.
      */
     fun total(record: HistoryTransaction, home: HomeRow): Long? {
         if (record.direction != "outgoing" || record.isRenewal || struck(home)) return null
         if (record.source == "onchain-wallet" || record.movementKind == "offboard") return null
-        val fees = (arkFee(record) ?: 0) + (networkFee(record) ?: 0)
+        val fees = fees(record, home).sumOf { when (val value = it.value) { is FeeValue.Sats -> value.sats; is FeeValue.UpTo -> value.sats; else -> 0L } }
         return if (fees > 0) record.amount + fees else null
     }
 
