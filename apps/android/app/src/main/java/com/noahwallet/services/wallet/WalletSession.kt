@@ -37,7 +37,7 @@ class WalletSession internal constructor(
     }
 
     enum class DebugAction(val title: String, val needsInput: Boolean = false, val destructive: Boolean = false) {
-        ark("Get Ark Info"), refresh("Refresh Server"), maintenance("Maintenance"),
+        ark("Get Ark Info"), debugInfo("Get Debug Info"), refresh("Refresh Server"), maintenance("Maintenance"),
         maintenanceRefresh("Maintenance Refresh"), delegated("Maintenance Delegated"),
         offboard("Offboard All", true, true), decode("Decode VTXO Hex", true),
         importVtxo("Import VTXO", true), drop("Drop VTXO", true, true), unlock("Unlock VTXO", true),
@@ -602,6 +602,8 @@ class WalletSession internal constructor(
         override suspend fun debug(action: DebugAction, input: String): String {
             return when (action) {
                 DebugAction.ark -> DebugJSON.ark(wallet.arkInfo())
+                // Shown only here for support; the xpub must never reach logs or Sentry.
+                DebugAction.debugInfo -> DebugJSON.debugInfo(wallet.debugInfo())
                 DebugAction.refresh -> { wallet.refreshServer(); "Server refreshed" }
                 DebugAction.maintenance -> { wallet.maintenance(); "Maintenance completed" }
                 DebugAction.maintenanceRefresh -> wallet.maintenanceRefresh() ?: "Maintenance refresh completed"

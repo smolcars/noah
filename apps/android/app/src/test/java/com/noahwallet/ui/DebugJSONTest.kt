@@ -21,6 +21,11 @@ class DebugJSONTest {
         assertEquals("point", result["point"]!!.jsonObject["txid"]!!.jsonPrimitive.content)
         assertEquals("unknown", result["state"]!!.jsonPrimitive.content)
     }
+    @Test fun debugInfoShowsExactlyTheThreeSupportIdentifiers() {
+        val text = DebugJSON.debugInfo(DebugInfo(Network.REGTEST, "mailbox", "tpub-test"))
+        assertEquals(mapOf("network" to "regtest", "mailboxId" to "mailbox", "vtxoXpub" to "tpub-test"),
+            Json.parseToJsonElement(text).jsonObject.mapValues { it.value.jsonPrimitive.content })
+    }
     @Test fun errorsUseOnlyRedactedSDKTextOrProviderType() {
         assertEquals("[redacted]", SafeErrorDescription.of(BarkError("token=fake-test-token")))
         assertEquals("IllegalStateException", SafeErrorDescription.of(IllegalStateException("private request input")))

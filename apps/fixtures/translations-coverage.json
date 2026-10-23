@@ -1594,6 +1594,7 @@
         "Funds were recovered on-chain.",
         "GBP",
         "Get Ark Info",
+        "Get Debug Info",
         "Get Push Token",
         "Get the latest fixes",
         "Give this payment a short name (max 64 characters).",

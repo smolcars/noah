@@ -12,6 +12,12 @@ internal object DebugJSON {
     fun ark(info: ArkInfo?): String = format(info?.let(::value) ?: JsonNull)
     fun decoded(vtxo: Vtxo): String = format(value(vtxo))
     fun imported(ids: List<String>): String = format(JsonArray(ids.map(::JsonPrimitive)))
+    /** The VTXO xpub reveals every VTXO public key of the wallet: display only, never log. */
+    fun debugInfo(info: DebugInfo): String = format(buildJsonObject {
+        put("mailboxId", JsonPrimitive(info.mailboxId))
+        put("network", JsonPrimitive(info.network.name.lowercase(Locale.ROOT)))
+        put("vtxoXpub", JsonPrimitive(info.vtxoXpub))
+    })
     fun format(value: JsonElement): String = json.encodeToString(JsonElement.serializer(), value)
     private fun value(result: ArkInfo): JsonObject = buildJsonObject {
         put("mailboxPubkey", JsonPrimitive(result.mailboxPubkey))
