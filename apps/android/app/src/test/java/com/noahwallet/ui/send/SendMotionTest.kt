@@ -1,6 +1,9 @@
 package com.noahwallet.ui.send
 
 import com.noahwallet.send.*
+import com.noahwallet.send.FakeSendWallet
+import com.noahwallet.send.TestJournal
+import com.noahwallet.send.controller
 import io.github.niteshbalusu11.bark.Movement
 import org.junit.Assert.*
 import org.junit.Test
@@ -147,6 +150,20 @@ class SendMotionTest {
         assertEquals(0L, BlockRow.confirmations(10, null)); assertEquals(3L, BlockRow.confirmations(12, 10))
         assertEquals(PhaseLine("Locking {amount}", "₿ 500"),
             SendPhaseLines.of(SendMotion(SendRoute.lightning, 0).reach(SendMilestone.paying, 0), 1_200, false, "₿ 500", null, null, 1) { it.toString() })
+    }
+
+    @Test fun backToRecipientAsksForTheRailAgain() = kotlinx.coroutines.runBlocking {
+        val m = SendModel(controller(FakeSendWallet(), TestJournal(), this), "regtest", { error("unused") }, { FakeSendWallet.quote }, {}, this)
+        m.arkBalance = 10_000; m.amount = "500"; m.continueStage()
+        m.setRecipient("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?ark=tark1pj8a9t8ezqqpfdvjfqfst3xzwxnhq7r5lyzg8hp2g7gqdun2vevz5jaaqd7ry7xezqyp6e3ghflqezh7k5hkwav8m4fahfaaqtnuqhykjjf5tsvwyt309xkctc2n22")
+        m.continueStage()
+        assertEquals(SendStage.method, m.stage)
+        m.progress = m.progress.copy(selectedRail = SendRail.ark, railConfirmed = true); m.continueStage()
+        assertEquals(SendStage.review, m.stage)
+        m.back(); assertEquals(SendStage.method, m.stage); assertFalse(m.showReview)
+        m.back(); assertEquals(SendStage.recipient, m.stage); assertFalse(m.progress.railConfirmed)
+        m.continueStage(); assertEquals("continuing from To offers the rails again", SendStage.method, m.stage)
+        m.back(); m.back(); assertEquals(SendStage.amount, m.stage); assertEquals("500", m.amount)
     }
 
     @Test fun recentsComeFromSuccessfulOutgoingHistoryOnly() {

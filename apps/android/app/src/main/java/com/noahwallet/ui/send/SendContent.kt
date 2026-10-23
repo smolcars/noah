@@ -267,9 +267,16 @@ private fun RowScope.Scan(enabled: Boolean, onClick: () -> Unit) {
     CircleButton(HomeIcons.scan, tr("Scan"), Modifier.testTag("send-scan")) { if (enabled) { haptics.light(); onClick() } }
 }
 
-/** Back one step, as today's flow allows; the review's back discards its quote first (today's leaveReview). */
+/**
+ * Back one step, as today's flow allows; the review's back discards its quote first (today's leaveReview).
+ * Returning to To clears the rail and balance choices, so continuing asks for them again.
+ */
 internal fun SendModel.back() {
     if (controller.locked || busy) return
+    fun toRecipient() {
+        progress = progress.copy(railConfirmed = false, sourceConfirmed = isMax && progress.sourceConfirmed)
+        stage = SendStage.recipient
+    }
     when (stage) {
         SendStage.amount -> if (progress.recipientConfirmed) stage = SendStage.recipient
         SendStage.recipient -> when {
@@ -277,15 +284,15 @@ internal fun SendModel.back() {
             progress.entry == "amount-first" -> stage = SendStage.amount
             else -> reset()
         }
-        SendStage.method -> stage = SendStage.recipient
-        SendStage.source -> if (isMax) reset() else stage = if (progress.rails.size > 1) SendStage.method else SendStage.recipient
+        SendStage.method -> toRecipient()
+        SendStage.source -> if (isMax) reset() else if (progress.rails.size > 1) stage = SendStage.method else toRecipient()
         SendStage.review -> {
             discardReview()
-            stage = when {
-                isMax -> SendStage.source
-                progress.selectedRail == SendRail.onchain && progress.sourceOptions.size > 1 -> SendStage.source
-                progress.rails.size > 1 || progress.selectedRailAvailable == false -> SendStage.method
-                else -> SendStage.recipient
+            when {
+                isMax -> stage = SendStage.source
+                progress.selectedRail == SendRail.onchain && progress.sourceOptions.size > 1 -> stage = SendStage.source
+                progress.rails.size > 1 || progress.selectedRailAvailable == false -> stage = SendStage.method
+                else -> toRecipient()
             }
         }
     }
