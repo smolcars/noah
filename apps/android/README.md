@@ -592,6 +592,25 @@ expedited foreground path, and delivery through a real UnifiedPush distributor.
 Expo's SDK-free HTTP exchange is a compatibility endpoint rather than a guaranteed
 public API; keep the existing Expo server credentials configured.
 
+## Activity
+
+Activity follows [its redesign](../../docs/native-rewrite/design/activity.md): Home's rows over the shared
+`HistoryMapping` (failed and refunded sends, fee-paying renewals, the recurring join, invoice and offer
+descriptions), a Pending group and day groups, search, the filter in ⋯, a row → detail shared-element push with
+a predictive back preview, the export sheet, and book/tabletop splits at the fold.
+`ActivityTransitionTest` (phones) and `ActivityFoldTest` (synthetic folds) run unconditionally. Opt-in:
+- fixture gallery: `-e class com.noahwallet.ui.ActivityGalleryTest -e noahActivityShots <label>` (optionally
+  `-e noahActivityOnly list-busy,detail-failed`), then pull `files/activity-shots/<label>` with `run-as`;
+- the debug preview on a real clock: `adb shell am start -n com.noahwallet.regtest/com.noahwallet.ui.ParityPreviewActivity
+  --es screen activity --es state busy`;
+- live stages on a disposable wallet against a second Bark 0.8 stack (build with the regtest overrides below):
+  `-e class com.noahwallet.ui.ActivityLiveTest -e noahActivityLive <create|fund|pay|fail|nothing-left|onchain|address|chain-send|ack>
+  -e owner activity-disposable` with `-e invoice`, `-e recipient` or `-e amount` as each stage documents.
+
+On regtest, bark finishes an Ark-funded on-chain send once it's in the mempool (`offboard_required_confirmations`
+is 0 off mainnet), so "Confirmed in block N · 1 of 2" only shows on mainnet; on-chain wallet payments show the
+block row until their block.
+
 `lintRegtestDebug` remains blocked by the pre-existing camera permission lacking
 an optional `android.hardware.camera` feature declaration
 (`PermissionImpliesUnsupportedChromeOsHardware`). Push's deliberate RN-compatible
