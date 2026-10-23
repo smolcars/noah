@@ -1223,6 +1223,8 @@
         "Address network mismatch for {parameter} parameter",
         "Advanced developer actions",
         "After count",
+        "After one confirmation",
+        "After {count} confirmations",
         "All",
         "All claimable at: Block {nativeValue1}",
         "All wallet operations are disabled. Resume your wallet in Settings.",

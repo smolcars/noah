@@ -604,7 +604,8 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
 private fun ReviewRows(model: SendModel, quote: SendQuote?, payment: SendPayment?, rail: SendRail?, env: SendEnv, top: Dp) {
         Column(Modifier.padding(top = top)) {
             if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail))
-            if (rail != null) ValueRow(tr("Arrives"), tr(when (rail) { SendRail.ark -> "Instantly"; SendRail.lightning -> "In seconds"; SendRail.onchain -> "In about 20 minutes" }))
+            // Wraps at large text sizes rather than cutting off the count.
+            if (rail != null) ValueRow(tr("Arrives"), arrives(rail, model.source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, maxLines = Int.MAX_VALUE)
             if (quote != null) {
                 ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark)
                 payment?.source?.let { ValueRow(tr("From"), tr(it.label)) }
@@ -612,6 +613,17 @@ private fun ReviewRows(model: SendModel, quote: SendQuote?, payment: SendPayment
                 ValueRow(tr(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false)
             }
         }
+}
+
+/** The Arrives row's words and count. An Ark-funded on-chain send waits for the round's confirmations (today's setting). */
+internal fun arrives(rail: SendRail, source: SendSource?, needed: Long): Pair<String, Long?> = when (rail) {
+    SendRail.ark -> "Instantly" to null
+    SendRail.lightning -> "In seconds" to null
+    SendRail.onchain -> when {
+        source == SendSource.onchain -> "In about 20 minutes" to null
+        needed <= 1 -> "After one confirmation" to null
+        else -> "After {count} confirmations" to needed
+    }
 }
 
 /** At most one line of fine print, today's notes first: checkpoint, invoice amount, sweep, estimate. */

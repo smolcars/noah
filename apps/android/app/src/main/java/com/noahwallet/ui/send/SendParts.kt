@@ -258,7 +258,7 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
 
 /** A review or result row (48 dp): muted label, value on the right; amounts in Space Grotesk. */
 @Composable
-internal fun ValueRow(label: String, value: String, number: Boolean = false, icon: Int? = null, divider: Boolean = true, copy: (() -> Unit)? = null, modifier: Modifier = Modifier) {
+internal fun ValueRow(label: String, value: String, number: Boolean = false, icon: Int? = null, divider: Boolean = true, copy: (() -> Unit)? = null, maxLines: Int = 1, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().heightIn(min = 48.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
@@ -267,7 +267,7 @@ internal fun ValueRow(label: String, value: String, number: Boolean = false, ico
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
             Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+                maxLines = maxLines, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
         }
         val copyLabel = tr("Copy")
         if (copy != null) Box(Modifier.padding(start = 8.dp).size(36.dp).tonal(CircleShape, palette.soft)
