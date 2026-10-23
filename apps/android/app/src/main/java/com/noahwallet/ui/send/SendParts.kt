@@ -30,6 +30,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
@@ -362,7 +363,9 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
 
 /**
  * Waits while the finger that started a hold keeps holding: it ends when that finger lifts, is consumed or leaves the
- * pill, or when a second finger lands, so overlapping fingers can't add up to one 0.8 s hold.
+ * pill, or when a second finger lands, so overlapping fingers can't add up to one 0.8 s hold. As Compose's own
+ * waitForUpOrCancellation does, it also looks at the Final pass, where a parent's consumption shows: a scroll that
+ * drags the pill along under the finger ends the hold even though the finger never leaves it.
  */
 private suspend fun AwaitPointerEventScope.holdUntilReleased(finger: PointerId) {
     while (true) {
@@ -370,6 +373,7 @@ private suspend fun AwaitPointerEventScope.holdUntilReleased(finger: PointerId) 
         if (changes.any { it.id != finger && it.pressed }) return
         val change = changes.firstOrNull { it.id == finger } ?: return
         if (!change.pressed || change.isConsumed || change.isOutOfBounds(size, extendedTouchPadding)) return
+        if (awaitPointerEvent(PointerEventPass.Final).changes.any { it.isConsumed }) return
     }
 }
 

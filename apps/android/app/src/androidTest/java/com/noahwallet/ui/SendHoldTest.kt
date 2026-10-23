@@ -1,8 +1,13 @@
 package com.noahwallet.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -91,6 +96,29 @@ class SendHoldTest {
         hold(1_000)
         compose.waitUntil(5_000) { wallet.calls == 1 }
         compose.runOnIdle { assertTrue(presentation.model.controller.locked) }
+    }
+
+    @Test fun scrollingThenHoldingStillNeverSends() {
+        // A review taller than the screen: the pill sits in a scrolling column, as on a short phone or under a fold.
+        var calls = 0
+        compose.mainClock.autoAdvance = false
+        compose.setContent { NoahTheme {
+            Column(Modifier.size(320.dp, 360.dp).verticalScroll(rememberScrollState())) {
+                Spacer(Modifier.height(240.dp))
+                HoldToSend("₿ 500", enabled = true, sending = false) { calls++ }
+                Spacer(Modifier.height(900.dp))
+            }
+        } }
+        compose.mainClock.advanceTimeBy(500)
+        // Drag to scroll without leaving the pill (it moves along under the finger), then hold still past 0.8 s.
+        compose.onNodeWithTag("send-hold").performTouchInput { down(center); repeat(8) { moveBy(Offset(0f, -12f)) } }
+        compose.mainClock.advanceTimeBy(1_200)
+        compose.onRoot().performTouchInput { up() }
+        compose.mainClock.advanceTimeBy(300)
+        compose.runOnIdle { assertEquals("the scroll took the gesture", 0, calls) }
+        // A fresh, still hold on the scrolled pill sends once.
+        hold(1_000)
+        compose.runOnIdle { assertEquals(1, calls) }
     }
 
     @Test fun accessibilityAsksForConfirmationThenSendsOnce() {
