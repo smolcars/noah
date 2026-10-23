@@ -340,7 +340,7 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
         }
         model.error?.let { ErrorLine(it, model) }
     }, trailing = {
-        SendKeypad(model.useFiat, editable, Modifier.padding(top = 12.dp)) { key -> model.amount = keypadInput(model.amount, key, model.useFiat) }
+        SendKeypad(model.useFiat, editable, Modifier.padding(top = 12.dp), keyHeight = if (LocalPose.current is OnboardingPose.Tabletop) 48.dp else 60.dp) { key -> model.amount = keypadInput(model.amount, key, model.useFiat) }
         // An empty amount continues recipient-first, as today's "Choose recipient first" did.
         SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(top = 12.dp).testTag("send-continue"), enabled = !model.busy && !over) {
             haptics.light()
@@ -482,7 +482,7 @@ private fun MethodStep(presentation: SendPresentation, env: SendEnv) {
     val rails = model.rails
     val availability = model.availability
     val best = SendFlow.recommend(rails, availability)
-    StepPanes(nav = { Back { model.back() }; Title(); Spacer(Modifier.width(40.dp)) }, leadingCentred = true, trailingAt = Alignment.Top, leading = {
+    StepPanes(nav = { Back { model.back() }; Title(); Spacer(Modifier.width(40.dp)) }, leadingCentred = false, trailingAt = Alignment.Top, leading = {
         Text(tr("How to send {amount}", formatted(model.sats, env)), Modifier.padding(top = 18.dp).semantics { heading() }, style = SendType.big, color = palette.foreground)
         Text(tr("Choose payment method"), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.muted)
     }, trailing = {
@@ -508,7 +508,7 @@ private fun SourceStep(presentation: SendPresentation, env: SendEnv) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scope = presentation.viewModelScope
-    StepPanes(nav = { Back { model.back() }; Title(); Spacer(Modifier.width(40.dp)) }, leadingCentred = true, trailingAt = Alignment.Top, leading = {
+    StepPanes(nav = { Back { model.back() }; Title(); Spacer(Modifier.width(40.dp)) }, leadingCentred = false, trailingAt = Alignment.Top, leading = {
         Text(tr("Choose balance"), Modifier.padding(top = 18.dp).semantics { heading() }, style = SendType.big, color = palette.foreground)
         if (!model.isMax) Text(tr("Send {amount}", formatted(model.sats, env)), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.muted)
     }, trailing = {
@@ -542,23 +542,17 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
     val rail = model.progress.selectedRail
     val amount = quote?.amount ?: model.sats
     val who = SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain)
-    StepPanes(nav = { Back(!model.busy) { model.back() }; Spacer(Modifier.weight(1f)) }, leadingCentred = true, trailingAt = Alignment.Bottom, leading = {
+    val tabletop = LocalPose.current is OnboardingPose.Tabletop
+    val rows = @Composable { ReviewRows(model, quote, payment, rail, env, if (tabletop) 16.dp else 24.dp) }
+    StepPanes(nav = { Back(!model.busy) { model.back() }; Spacer(Modifier.weight(1f)) }, leadingCentred = false, trailingAt = Alignment.Bottom, leading = {
         Text(tr("Send {amount}", formatted(amount, env)), Modifier.padding(top = 18.dp).semantics { heading() }.testTag("send-review-title"), style = SendType.big, color = palette.foreground)
         Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             WhoAvatar(who, 36.dp, SendType.initial.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)))
             Text(tr(who.name), style = SendType.body, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+        if (tabletop) rows()
     }, trailing = {
-        Column(Modifier.padding(top = 24.dp)) {
-            if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail))
-            if (rail != null) ValueRow(tr("Arrives"), tr(when (rail) { SendRail.ark -> "Instantly"; SendRail.lightning -> "In seconds"; SendRail.onchain -> "In about 20 minutes" }))
-            if (quote != null) {
-                ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark)
-                payment?.source?.let { ValueRow(tr("From"), tr(it.label)) }
-                if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment)
-                ValueRow(tr(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false)
-            }
-        }
+        if (!tabletop) rows()
         reviewNote(model, quote, env, presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = palette.muted) }
         model.error?.let { ErrorLine(it, model) }
         controller.message?.let { ErrorLine(it) }
@@ -570,6 +564,20 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
             haptics.light(); scope.launch { model.continueStage() }
         }
     })
+}
+
+@Composable
+private fun ReviewRows(model: SendModel, quote: SendQuote?, payment: SendPayment?, rail: SendRail?, env: SendEnv, top: Dp) {
+        Column(Modifier.padding(top = top)) {
+            if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail))
+            if (rail != null) ValueRow(tr("Arrives"), tr(when (rail) { SendRail.ark -> "Instantly"; SendRail.lightning -> "In seconds"; SendRail.onchain -> "In about 20 minutes" }))
+            if (quote != null) {
+                ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark)
+                payment?.source?.let { ValueRow(tr("From"), tr(it.label)) }
+                if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment)
+                ValueRow(tr(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false)
+            }
+        }
 }
 
 /** At most one line of fine print, today's notes first: checkpoint, invoice amount, sweep, estimate. */
@@ -633,7 +641,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val stageHeight: Dp = if (pose is OnboardingPose.Wide) 330.dp else if (pose is OnboardingPose.Tabletop) 200.dp else 270.dp
     val show = remember { Animatable(if (resultShown) 1f else 0f) }
     LaunchedEffect(resultShown) { if (resultShown) show.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) }
-    StepPanes(nav = { }, leadingCentred = true, trailingAt = Alignment.CenterVertically, leading = {
+    StepPanes(nav = { }, leadingCentred = false, trailingAt = Alignment.CenterVertically, leading = {
         SwapTitle(title, SendType.big, Modifier.padding(top = 6.dp).testTag("send-title"))
         if (who.name.isNotEmpty()) Text(tr("to {name}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt, Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))

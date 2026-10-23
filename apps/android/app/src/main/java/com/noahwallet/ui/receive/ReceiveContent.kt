@@ -364,7 +364,9 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
         fiat -> (runCatching { java.util.Currency.getInstance(ui.currency).getSymbol(ui.locale) }.getOrDefault(ui.currency)) + amount.replace('.', DecimalFormatSymbols.getInstance(ui.locale).decimalSeparator)
         else -> ui.sats(sats)
     }
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+    // Under a horizontal fold the sheet only has the lower half, so the amount sits beside the keypad there.
+    val sideBySide = LocalPose.current is OnboardingPose.Tabletop
+    val fields = @Composable {
         Text(if (request.amountSat == null) tr("Add amount") else tr("Change amount"), Modifier.fillMaxWidth().semantics { heading() },
             style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)), color = palette.foreground)
         Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(58.dp), contentAlignment = Alignment.BottomCenter) {
@@ -389,8 +391,18 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
         }
         if (note.trim().length > 639) Text(tr("Note must be 639 characters or fewer."), style = SendType.small, color = palette.failure)
         ui.invoiceError?.let { Text(it, Modifier.padding(top = 6.dp), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }
-        SendKeypad(fiat, !ui.saving, Modifier.padding(top = 6.dp), keyHeight = 56.dp) { key -> amount = keypadInput(amount, key, fiat) }
+    }
+    val keypad = @Composable { modifier: Modifier ->
+        SendKeypad(fiat, !ui.saving, modifier, keyHeight = if (sideBySide) 52.dp else 56.dp) { key -> amount = keypadInput(amount, key, fiat) }
+    }
+    val done = @Composable {
         SendPill(if (ui.saving) tr("Creating invoice…") else tr("Done"), Modifier.fillMaxWidth().padding(top = 12.dp).testTag("receive-amount-submit"),
             enabled = valid && !ui.saving) { haptics.light(); onDone(sats, note) }
+    }
+    if (sideBySide) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) { fields(); done() }
+        keypad(Modifier.weight(1f))
+    } else Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+        fields(); keypad(Modifier.padding(top = 6.dp)); done()
     }
 }
