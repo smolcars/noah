@@ -5785,42 +5785,6 @@
         }
       }
     },
-    "Boarding completed": {
-      "comment": "GT gt_d8e06c5b29c4ee57; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Boarding completed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Depósito completado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arkへの入金が完了"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "입금 완료"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Insättning slutförd"
-          }
-        }
-      }
-    },
     "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again.": {
       "comment": "GT gt_aca0fb7b6af91d5e; arguments: none",
       "extractionState": "manual",
@@ -52509,6 +52473,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ tillgängligt"
+          }
+        }
+      }
+    },
+    "{amount} available in Ark": {
+      "comment": "GT gt_07af0226de4cedc3; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ available in Ark"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ disponible en Ark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkで%1$@を利用可能"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark에서 %1$@ 사용 가능"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ tillgängligt i Ark"
           }
         }
       }

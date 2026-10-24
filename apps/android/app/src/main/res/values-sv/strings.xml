@@ -163,7 +163,6 @@
   <string name="gt_0ce74d1d6042dd44">"Block %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Sätt in"</string>
   <string name="gt_a3659865c762c69f">"Sätt in på Ark"</string>
-  <string name="gt_d8e06c5b29c4ee57">"Insättning slutförd"</string>
   <string name="gt_aca0fb7b6af91d5e">"Insättningen har skickats men är inte bekräftad. Noah fortsätter att försöka sända den. Sätt inte in dessa medel igen."</string>
   <string name="gt_21bea5494ecbdd9d">"Insättning skickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning."</string>
   <string name="gt_01c437c9f900b81f">"Insättning skickad. Medlen kan användas när insättningen är klar."</string>
@@ -1481,6 +1480,7 @@
   <string name="gt_31ba1bfe057bd412">"%1$s på väg"</string>
   <string name="gt_0632ba4767ab1888">"%1$s vid tillfället"</string>
   <string name="gt_05421802af3d82be">"%1$s tillgängligt"</string>
+  <string name="gt_07af0226de4cedc3">"%1$s tillgängligt i Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s är tillbaka i din plånbok."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s är tillbaka i din plånbok. Lightning kunde inte nå %2$s."</string>
   <string name="gt_1cfd3ae82c2e9be1">"%1$s skickat till %2$s."</string>

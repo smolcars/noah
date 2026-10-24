@@ -143,7 +143,9 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     }
     val completion = HomeRules.toast(backupBanner, boardingBanner)
     val completionAt = if (completion == "Backup completed") signals.backup.lastBackupAt?.toLong() else boarding?.second
-    val completionText = completion?.let { tr(it) }
+    // Boarding names its amount in Home's format, so a hidden balance stays hidden.
+    val completionText = if (completion == "Backup completed") tr(completion) else completion?.let { boarding?.let { (amount, _) ->
+        tr("{amount} available in Ark", if (model.hidden) "••••" else com.noahwallet.formatting.BitcoinAmount.format(amount, model.amountUnit, locale)) } }
     LaunchedEffect(completionText, completionAt) {
         val key = "$completion:$completionAt"
         if (completionText != null && completionAt != null && memory.toastSeen != key) {

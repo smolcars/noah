@@ -163,7 +163,6 @@
   <string name="gt_0ce74d1d6042dd44">"Bloques %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Transferir"</string>
   <string name="gt_a3659865c762c69f">"Transferir a Ark"</string>
-  <string name="gt_d8e06c5b29c4ee57">"Depósito completado"</string>
   <string name="gt_aca0fb7b6af91d5e">"Depósito enviado, pero sin confirmar. Noah seguirá intentando difundirlo. No vuelvas a depositar estos fondos."</string>
   <string name="gt_21bea5494ecbdd9d">"Depósito enviado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar."</string>
   <string name="gt_01c437c9f900b81f">"Depósito enviado. Los fondos podrán gastarse cuando se complete el depósito."</string>
@@ -1481,6 +1480,7 @@
   <string name="gt_31ba1bfe057bd412">"%1$s en camino"</string>
   <string name="gt_0632ba4767ab1888">"%1$s en ese momento"</string>
   <string name="gt_05421802af3d82be">"%1$s disponible"</string>
+  <string name="gt_07af0226de4cedc3">"%1$s disponible en Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s ha vuelto a tu billetera."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s ha vuelto a tu billetera. Lightning no pudo llegar a %2$s."</string>
   <string name="gt_1cfd3ae82c2e9be1">"Se ha enviado %1$s a %2$s."</string>
