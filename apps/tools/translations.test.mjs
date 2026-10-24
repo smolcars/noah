@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
-import { flatten, format, entries, iosCatalog, androidCatalog, resourceName, locales, sourceEntries, translationJSON, readTranslations, seedTranslations, extract, generate, root, translate, missingGroups } from './translations.mjs';
+import { flatten, format, entries, iosCatalog, androidCatalog, resourceName, locales, sourceEntries, translationJSON, readTranslations, seedTranslations, extract, generate, root, translate, missingGroups, platformOnly } from './translations.mjs';
 
 const text = { t: 'Text', c: ['Hello ', { t: 'strong', c: { v: 'v', k: 'name' } }, '!'] };
 test('rich text keeps text and variables in reading order', () => {
@@ -102,6 +102,7 @@ async function fixture(run) {
     await put('apps/ios/Noah/Features/Example.swift', 'Text("Hello {name}")\nText("Native only")');
     await put('apps/android/app/src/main/java/com/noahwallet/ui/Example.kt', 'Text(tr("Send"))');
     await put('apps/i18n/plurals.json', '{}');
+    await put('apps/i18n/platform-only.json', JSON.stringify({ ios: { 'Hello {name}': 'fixture', 'Native only': 'fixture' }, android: { Send: 'fixture' } }));
     await run(base, put);
   } finally { await rm(base, { recursive: true, force: true }); }
 }
@@ -211,5 +212,19 @@ test('native discovery includes dynamic fallback copy and ignores identifiers an
     expect(english[resourceName('Balance: {nativeValue1}')]).toBe('Balance: {{nativeValue1}}');
     expect(Object.values(english)).not.toContain('send-button');
     expect(Object.values(english)).not.toContain('https://example.com');
+  });
+});
+
+test('single-platform copy needs a listed reason, and a listed entry must stay single-platform', async () => {
+  const used = { ios: new Map([['Shared', new Set()], ['Face ID', new Set()]]), android: new Map([['Shared', new Set()], ['Battery', new Set()]]) };
+  expect(platformOnly(used, { ios: { 'Face ID': 'platform' }, android: { Battery: 'platform' } })).toEqual([]);
+  expect(platformOnly(used, { ios: { 'Face ID': 'platform' } })).toEqual(['android only, not listed: Battery']);
+  expect(platformOnly(used, { ios: { 'Face ID': ' ', Shared: 'stale', Gone: 'stale' }, android: { Battery: 'platform' } })).toEqual([
+    'Listed for ios without a reason: Face ID', 'Listed for ios, but android uses it too: Shared', 'Listed for ios, which no longer uses it: Gone']);
+  await fixture(async (base, put) => {
+    await generate(false, base);
+    await generate(true, base);
+    await put('apps/i18n/platform-only.json', JSON.stringify({ ios: { 'Hello {name}': 'fixture' }, android: { Send: 'fixture' } }));
+    await expect(generate(true, base)).rejects.toThrow('ios only, not listed: Native only');
   });
 });

@@ -24,7 +24,7 @@ bun apps/tools/translations.mjs --check   # Compare English JSON, catalogs and c
 bun test apps/tools/translations.test.mjs
 ```
 
-`--check` fails if English is stale against native code, or catalogs/coverage differ from the JSON. Coverage lists all used source strings per platform and missing JSON keys per locale. Missing translations fall back to English and remain visible in that inventory. An unchanged English product name counts as translated when its locale key exists.
+`--check` fails if English is stale against native code, or catalogs/coverage differ from the JSON. It also fails on copy only one platform uses unless `apps/i18n/platform-only.json` lists it for that platform with a reason, and on listed entries that both platforms (or neither) now use. Prefer the same English on both platforms; see `docs/native-rewrite/copy-unification.md`. Coverage lists all used source strings per platform and missing JSON keys per locale. Missing translations fall back to English and remain visible in that inventory. An unchanged English product name counts as translated when its locale key exists.
 
 Optional migration only, while RN is available:
 

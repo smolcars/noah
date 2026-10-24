@@ -80,7 +80,7 @@ jobs:
       - name: Test translation generator
         run: nix develop .#android-ci --command bun test apps/tools/translations.test.mjs
 
-      - name: Check native translation drift
+      - name: Check native translation drift and single-platform copy
         run: nix develop .#android-ci --command bun apps/tools/translations.mjs --check
 
       - name: Check native log output boundary

@@ -297,6 +297,20 @@ export async function seed(force = false) {
   console.log(JSON.stringify({ seededKeys: counts }));
   return counts;
 }
+/** Copy one platform uses alone must be listed for that platform with a reason; a listed entry must still be that platform's alone. */
+export function platformOnly(used, allowlist = {}) {
+  const problems = [];
+  for (const [platform, other] of [['ios', 'android'], ['android', 'ios']]) {
+    const listed = allowlist[platform] ?? {};
+    for (const source of used[platform].keys()) if (!used[other].has(source) && !Object.hasOwn(listed, source)) problems.push(`${platform} only, not listed: ${source}`);
+    for (const [source, reason] of Object.entries(listed)) {
+      if (!used[platform].has(source)) problems.push(`Listed for ${platform}, which no longer uses it: ${source}`);
+      else if (used[other].has(source)) problems.push(`Listed for ${platform}, but ${other} uses it too: ${source}`);
+      if (typeof reason !== 'string' || !reason.trim()) problems.push(`Listed for ${platform} without a reason: ${source}`);
+    }
+  }
+  return problems;
+}
 export async function generate(check = false, base = root) {
   const { all: sources, used, english } = await extract(base);
   const catalogs = await localeFiles(base);
@@ -315,6 +329,11 @@ export async function generate(check = false, base = root) {
   }));
   outputs.set('apps/fixtures/translations-coverage.json', json({ locales, catalogEntries: all.length, sourceKeys: Object.keys(english).length, coverage }));
   await outputFiles(outputs, check, base);
+  if (check) {
+    const allowlist = JSON.parse(await readFile(resolve(base, 'apps/i18n/platform-only.json'), 'utf8').catch(error => { if (error.code === 'ENOENT') return '{}'; throw error; }));
+    const problems = platformOnly(used, allowlist);
+    if (problems.length) throw new Error(`Single-platform copy. Use the same English on both platforms, or list it with a reason in apps/i18n/platform-only.json:\n${problems.join('\n')}`);
+  }
   return { catalogEntries: all.length, sourceKeys: Object.keys(english).length, untranslated: Object.fromEntries(Object.entries(coverage).map(([platform, value]) => [platform, Object.fromEntries(Object.entries(value.untranslated).map(([locale, keys]) => [locale, keys.length]))])) };
 }
 async function runGT(command, directory, base) {
