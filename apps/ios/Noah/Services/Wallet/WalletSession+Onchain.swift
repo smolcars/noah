@@ -16,11 +16,38 @@ extension WalletSession {
             }
             let models = try await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)
                 .map(Self.exitModel)
-            return OnchainOverview(
+            var overview = OnchainOverview(
                 walletID: handles.wallet.fingerprint(), vtxos: vtxos, exits: models,
                 confirmed: try await handles.onchain.balance().confirmedSats, tip: tip,
                 pendingTotal: try await handles.wallet.pendingExitsTotalSats(),
                 claimableHeight: try await handles.wallet.allExitsClaimableAtHeight())
+            guard !models.isEmpty else { return overview }
+            // What the exit screens add; optional, so a failed read never hides the exits themselves.
+            overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
+            let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
+            let claims = Set(models.compactMap { $0.details.claim_txid ?? $0.details.txid })
+            for transaction in (try? await handles.onchain.transactions()) ?? [] {
+                if children.contains(transaction.txid), let fee = transaction.onchainFeeSats { overview.childFees[transaction.txid] = fee }
+                if claims.contains(transaction.txid), transaction.balanceChangeSats > 0 {
+                    overview.received[transaction.txid] = UInt64(transaction.balanceChangeSats)
+                }
+            }
+            for exit in models where exit.parkedTxid != nil {
+                guard let estimate = try? await handles.wallet.estimateEmergencyExitFee(
+                    vtxoIds: [exit.id], feeRateSatPerVb: nil, destination: nil, feeMargin: 1), estimate.txsToBroadcast > 0
+                else { continue }
+                overview.packageFees[exit.id] = estimate.exitBroadcastFeeSats / estimate.txsToBroadcast
+            }
+            return overview
+        }
+    }
+
+    /// The emergency exit estimate for these VTXOs; read-only, it never starts or sends anything.
+    /// An empty list would price the whole wallet, so it's refused.
+    func exitEstimate(_ ids: [String]) async throws -> EmergencyExitFeeEstimate {
+        guard !ids.isEmpty else { throw OnchainFailure.invalid }
+        return try await withOpenWallet {
+            try await $0.wallet.estimateEmergencyExitFee(vtxoIds: ids, feeRateSatPerVb: nil, destination: nil)
         }
     }
 
@@ -73,10 +100,7 @@ extension WalletSession {
     static func claimDestinationOwnership(
         _ address: String, network: String, isMine: (String) async throws -> Bool
     ) async throws -> Bool {
-        guard let actual = PaymentEncoding.bitcoinNetwork(address),
-            actual == network || actual == "testnet"
-                && (network == "signet" || network == "regtest" && !address.lowercased().hasPrefix("tb1"))
-        else { throw OnchainFailure.invalid }
+        guard ExitRules.acceptsClaimAddress(address, network: network) else { throw OnchainFailure.invalid }
         return try await isMine(address)
     }
 
@@ -561,6 +585,13 @@ extension WalletSession {
         func block(_ value: BlockRef) -> ExitDetails.Block {
             .init(height: value.height, hash: value.hash)
         }
+        func origin(_ value: ExitTxOrigin) -> String {
+            switch value {
+            case .wallet: "wallet"
+            case .mempool: "mempool"
+            case .block: "block"
+            }
+        }
         switch value {
         case .start(let tip): return ("Start", .init(kind: "start", tip_height: tip))
         case .processing(let tip, let transactions):
@@ -574,10 +605,10 @@ extension WalletSession {
                         case .verifyInputs: status = .init(kind: "verify-inputs")
                         case .awaitingInputConfirmation: status = .init(kind: "awaiting-input-confirmation")
                         case .awaitingCpfpBroadcast: status = .init(kind: "awaiting-cpfp-broadcast")
-                        case .awaitingConfirmation(let child, _):
-                            status = .init(kind: "awaiting-confirmation", child_txid: child)
-                        case .confirmed(let child, let ref, _):
-                            status = .init(kind: "confirmed", child_txid: child, block: block(ref))
+                        case .awaitingConfirmation(let child, let from):
+                            status = .init(kind: "awaiting-confirmation", child_txid: child, origin: origin(from))
+                        case .confirmed(let child, let ref, let from):
+                            status = .init(kind: "confirmed", child_txid: child, block: block(ref), origin: origin(from))
                         }
                         return .init(txid: tx.txid, status: status)
                     })

@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Observation
 
@@ -18,6 +19,7 @@ final class OnchainModel {
         var claimAddress: @Sendable () async throws -> String = { throw OnchainFailure.unavailable }
         var claimOwnership: @Sendable (String) async throws -> Bool = { _ in throw OnchainFailure.unavailable }
         var discardReview: @Sendable (OnchainQuote) async -> Void = { _ in }
+        var estimate: @Sendable ([String]) async throws -> EmergencyExitFeeEstimate = { _ in throw OnchainFailure.unavailable }
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -38,7 +40,8 @@ final class OnchainModel {
                 refreshReceipts: { try await session.refreshOnchainReceiptFees() },
                 claimAddress: { try await session.exitDepositAddress() },
                 claimOwnership: { try await session.exitClaimDestinationIsMine($0) },
-                discardReview: { await session.discardBoard($0) })
+                discardReview: { await session.discardBoard($0) },
+                estimate: { try await session.exitEstimate($0) })
         }
 
         /// Home's Renew: the same review, submitted through the renewal path that rechecks
@@ -146,6 +149,7 @@ final class OnchainModel {
             let latest = try await dependencies.overview()
             guard await dependencies.ready(), token == generation else { return }
             overview = latest
+            Self.funds.observe(latest.exits, now: Date())
             error = statusFailed ? "Couldn't check network status. Showing the last known status." : nil
         } catch {
             self.error =
@@ -226,6 +230,31 @@ final class OnchainModel {
         await load()
         if let submissionError { error = submissionError }
     }
+    /// When each parked exit transaction was first seen, for every screen (Decision 3).
+    private static var funds = ExitFunds()
+
+    /// The exit as its screens show it, with the needs-funds inference.
+    func progress(_ exit: ExitModel, now: Date = Date()) -> ExitProgress {
+        let needsFunds = overview.map {
+            Self.funds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], now: now)
+        } ?? false
+        return ExitProgress(exit, tip: overview?.tip ?? exit.details.tip_height ?? 0, needsFunds: needsFunds)
+    }
+
+    /// The exit estimate for a selection, or nil when it can't be read (the review still offers
+    /// "Continue without estimate"). Read-only.
+    func exitEstimate(_ ids: [String]) async -> EmergencyExitFeeEstimate? {
+        guard !ids.isEmpty, await dependencies.ready() else { return nil }
+        return try? await dependencies.estimate(ids)
+    }
+
+    /// Decision 4's labels for the eligible VTXOs; none when the estimator fails.
+    func uneconomic(_ vtxos: [VtxoModel]) async -> Set<String> {
+        guard await dependencies.ready() else { return [] }
+        let estimate = dependencies.estimate
+        return (try? await ExitEconomics.uneconomic(vtxos) { try await estimate($0).totalFeeSats }) ?? []
+    }
+
     func acknowledge(_ id: UUID) async {
         do {
             try await dependencies.acknowledge(id)

@@ -58,6 +58,14 @@ struct OnchainOverview: Sendable {
     var tip: UInt32
     var pendingTotal: UInt64
     var claimableHeight: UInt32?
+    /// The server's `vtxo_exit_delta`: blocks an exit waits after its last transaction confirms.
+    var exitDelta: UInt32? = nil
+    /// Fees this wallet paid for its exits, by fee-child txid.
+    var childFees: [String: UInt64] = [:]
+    /// What this wallet received, by claim txid (claims to this phone).
+    var received: [String: UInt64] = [:]
+    /// Decision 3: a parked exit's next package fee (bark's estimate without its margin, per transaction).
+    var packageFees: [String: UInt64] = [:]
 }
 
 enum OnchainAction: String, Codable, Sendable {

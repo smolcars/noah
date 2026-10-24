@@ -27,6 +27,20 @@ enum ExitRules {
         }
         return nil
     }
+    /// States an exit ends in; every other state is live (start to claimed or canceled).
+    static let finished = ["Canceled", "Claimed", "VtxoAlreadySpent", "VtxoSwept"]
+    static func live(_ state: String) -> Bool { !finished.contains(state) }
+    /// Decision 5: Settings' Emergency exit row says "In progress" only while an exit is live.
+    static func settingsValue(_ exits: [ExitModel]) -> String? {
+        exits.contains { live($0.state) } ? "In progress" : nil
+    }
+    /// Decision 8: a claim to another wallet takes only an on-chain Bitcoin address for this
+    /// network (today's destination parser; no URIs, no other networks).
+    static func acceptsClaimAddress(_ address: String, network: String) -> Bool {
+        guard let actual = PaymentEncoding.bitcoinNetwork(address) else { return false }
+        return actual == network || actual == "testnet"
+            && (network == "signet" || network == "regtest" && !address.lowercased().hasPrefix("tb1"))
+    }
     static func cancelable(state: String, finalTransactionKind: String?) -> Bool {
         if state == "Start" { return true }
         guard state == "Processing" else { return false }
@@ -46,6 +60,8 @@ struct ExitDetails: Codable, Equatable, Sendable {
             var kind: String
             var child_txid: String?
             var block: Block?
+            /// Whose fee child: "wallet" (this wallet paid), "mempool" or "block" (another wallet's, adopted).
+            var origin: String?
         }
         var txid: String
         var status: Status
