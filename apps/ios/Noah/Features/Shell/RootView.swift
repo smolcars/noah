@@ -162,6 +162,8 @@ struct WalletTabs: View {
                     .modifier(WideTabContent(wide: window.wide, padsForBar: false, barHidden: activityHidesBar))
             }
         }
+        // The bar is monochrome like the wide bar; WideTabContent gives the tabs back the brand tint.
+        .tint(NoahTokens.Colors.foreground)
         .overlay(alignment: .bottomLeading) {
             if window.wide {
                 WideTabBar(selection: $selection)
@@ -276,7 +278,7 @@ private struct LaunchMessageView: View {
 
 /// Wide windows: no system tab bar, and other tabs keep their content clear of the glass bar.
 /// Home, Receive and Send keep their own leading pane clear of it. Send hides the phone
-/// tab bar on its steps after Amount.
+/// tab bar on its steps after Amount. Every tab's content keeps the brand tint the bar dropped.
 private struct WideTabContent: ViewModifier {
     let wide: Bool
     var padsForBar = true
@@ -284,6 +286,7 @@ private struct WideTabContent: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .tint(NoahColor.brand)
             .toolbarVisibility(wide || barHidden ? .hidden : .automatic, for: .tabBar)
             .safeAreaPadding(.bottom, wide && padsForBar ? WideTabBar.clearance : 0)
     }
