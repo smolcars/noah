@@ -340,7 +340,8 @@ Recreation: on a fold or rotation, a leaving secret hands its count to the lock 
 releasing it. The next `showSecret`, from the screen coming back, takes it over. This keeps `MainActivity`'s first
 `applySecure` and `LaunchGateView`'s loading pass (its gate state resets on recreation) from ever seeing a zero count.
 If no secret screen returns, a 5-second fallback releases the count. The Settings recovery-phrase page uses the same
-handover; before, it released immediately.
+handover; before, it released immediately. A handover keeps only the count, never the destroyed window, and a
+takeover removes its fallback timer, so rapid rotations don't keep old activities alive.
 
 `RestoreShieldDeviceTest` samples the resumed window's FLAG_SECURE:
 - **Opt-in runs** (`-e noahRestoreShield disposable-emulator`, MainActivity, the silent server): 0 unshielded
@@ -387,4 +388,12 @@ Results:
     `isSingleLine`.
   - `interruptedJournalAndWaitingSecretNeverOfferCreation` waits for "Unlock your device", but that screen reads
     "Wallet recovery required".
-- Full JVM suite: 4,216 tests in 197 suites, 0 failures; the instrumentation APK builds.
+- `SecureWindowTest` (JVM) covers the handover:
+  - the replacement stays secure past the old timeout;
+  - two rapid rotations, then the count back at zero after leaving;
+  - an activity finishing mid-handover;
+  - App lock turned on or off mid-handover;
+  - no fallback left queued after a takeover.
+- Rerun after that change: `RecoveryPhraseShieldDeviceTest` and `RestoreShieldDeviceTest` (3/3) passed, still with
+  0 unshielded samples.
+- Full JVM suite: 4,219 tests in 197 suites, 0 failures; the instrumentation APK builds.

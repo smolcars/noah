@@ -108,27 +108,45 @@ class WalletLock(private val settings: SettingsStorage) {
         if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
 
-    /** Keeps [window] secure while a secret is on screen; the returned release (idempotent) ends it. */
-    fun showSecret(window: Window): () -> Unit {
-        secrets++; applySecure(window)
-        // A recreated screen is back: what its old activity handed over can go now.
-        handoffs.toList().also { handoffs.clear() }.forEach { it() }
-        var released = false
-        return { if (!released) { released = true; secrets--; applySecure(window) } }
+    /** A secret on screen; invoking it ends it (once, however often it's called). */
+    inner class Secret internal constructor(window: Window) : () -> Unit {
+        private var window: Window? = window
+        private var released = false
+        override fun invoke() {
+            if (released) return
+            released = true; secrets--
+            window?.let(::applySecure); window = null
+        }
+        /** A fold or rotation destroyed the window: only the count is handed over, so the old activity can be collected. */
+        internal fun forgetWindow() { window = null }
     }
 
-    /** Releases a fold or rotation handed over, kept until the replacement shows a secret again. */
-    private val handoffs = mutableListOf<() -> Unit>()
+    /** Keeps [window] secure while a secret is on screen until the returned [Secret] is invoked. */
+    fun showSecret(window: Window): Secret {
+        secrets++; applySecure(window)
+        // A recreated screen is back: what its old activity handed over can go now, timers included.
+        handoffs.toList().also { handoffs.clear() }.forEach { main.removeCallbacks(it.fallback); it.secret() }
+        return Secret(window)
+    }
+
+    /** A count a fold or rotation handed over, and the timer that ends it if no secret screen comes back. */
+    private class Handoff(val secret: Secret) { lateinit var fallback: Runnable }
+    private val handoffs = mutableListOf<Handoff>()
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     /**
-     * Ends a secret as its screen leaves. When [recreating] (a fold or rotation), LaunchGateView's loading pass can come
+     * Ends [secret] as its screen leaves. When [recreating] (a fold or rotation), LaunchGateView's loading pass can come
      * before the screen returns, so the count stays up until a secret is shown again: MainActivity and LaunchGateView then
-     * keep the new window secure from its first frame. [handoffMillis] releases it if no secret screen comes back.
+     * keep the new window secure from its first frame (LaunchGateView reapplies whenever [secure] changes). After
+     * [handoffMillis] with no secret screen back, the count is released.
      */
-    fun releaseSecret(recreating: Boolean, release: () -> Unit) {
-        if (!recreating) return release()
-        handoffs += release
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (handoffs.remove(release)) release() }, handoffMillis)
+    fun releaseSecret(recreating: Boolean, secret: Secret) {
+        if (!recreating) return secret()
+        secret.forgetWindow()
+        val handoff = Handoff(secret)
+        handoff.fallback = Runnable { if (handoffs.remove(handoff)) handoff.secret() }
+        handoffs += handoff
+        main.postDelayed(handoff.fallback, handoffMillis)
     }
 
     fun reset() { prompt?.cancelAuthentication(); policy.setEnabled(false); enabled = false; locked = false }
