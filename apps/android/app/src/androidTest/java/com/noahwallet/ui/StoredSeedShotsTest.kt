@@ -39,6 +39,7 @@ class StoredSeedShotsTest {
         for (i in 0 until node.childCount) find(node.getChild(i), predicate)?.let { return it }
         return null
     }
+    private fun text(value: String) = find(automation.rootInActiveWindow) { it.text?.toString() == value }
     private fun button(title: String) = find(automation.rootInActiveWindow) { node ->
         node.isClickable && node.isEnabled && find(node) { it.text?.toString() == title } != null
     }
@@ -91,6 +92,12 @@ class StoredSeedShotsTest {
             waitFor("Restore running") { model.restore.running }
             capture("restoring", 2600)
             waitFor("The silent server fails the restore", 120_000) { model.restore.issue != null && !model.busy }
+            // A failure returns to Recovery phrase found with its error, and Restore Wallet is offered again.
+            val message = checkNotNull(model.restore.issue).message
+            waitFor("Back on Recovery phrase found with the error and Restore Wallet enabled") {
+                text("Recovery phrase found") != null && text(message) != null && button("Restore Wallet") != null
+            }
+            assertEquals("storedSeed", model.step)
             capture("error")
         } finally {
             instrumentation.runOnMainSync { activity?.finish() }

@@ -49,6 +49,7 @@ class RestoreUIDeviceTest {
         return null
     }
     private fun text(value: String) = find(automation.rootInActiveWindow) { !it.isEditable && it.text?.toString() == value }
+    private fun shell(command: String) = android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
     /** A recovery word cell: visible text (as on iOS and RN), labelled by its invisible "Word N" hint. */
     private fun wordField() = find(automation.rootInActiveWindow) { it.isEditable && it.hintText?.toString()?.startsWith("Word ") == true }
     private fun clickDescription(value: String) {
@@ -257,12 +258,35 @@ class RestoreUIDeviceTest {
             waitFor("Deletion fallback remains available") { text("Delete Wallet") != null }
             clickText("Resume Recovery")
             waitFor("Recovery resumed") { seedOnly.second.canRestoreWallet }
+            // Home, not the battery prompt, follows Ready: this disposable app is exempt from battery optimisation.
+            shell("cmd deviceidle whitelist +${context.packageName}")
+            val seedModel = seedOnly.second
+            fun secureWindow(): Boolean {
+                var on = false
+                instrumentation.runOnMainSync { on = activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
+                return on
+            }
+            // Read with the hold on the main thread, so a sample can't land between Ready ending and Home appearing.
+            fun shieldedWhileHeld(): Boolean {
+                var ok = true
+                instrumentation.runOnMainSync {
+                    if (seedModel.holdRestoreCompletion) ok = activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
+                }
+                return ok
+            }
+            fun home() = find(automation.rootInActiveWindow) { it.contentDescription?.toString() == "Settings" } != null
             submit()
-            // As on iOS, stored-phrase recovery plays onboarding's Restoring scene, then holds "Ready" before Home.
-            waitFor("Restoring scene shown") { listOf("Restoring your wallet", "Finding your bitcoin", "Ready").any { text(it) != null } }
-            waitFor("Saved phrase restore opens wallet") { seedOnly.second.restore.completed || seedOnly.second.restore.issue != null }
-            assertTrue(seedOnly.second.restore.completed)
-            waitFor("Home follows Ready") { !seedOnly.second.holdRestoreCompletion }
+            // As on iOS: onboarding's Restoring scene, a visible "Ready", then Home. With App lock off, the restore shield
+            // alone keeps FLAG_SECURE on the whole way and lets go only when Home takes over.
+            waitFor("Ready shown") {
+                assertTrue("Secure while restoring", shieldedWhileHeld())
+                text("Ready") != null || seedModel.restore.issue != null
+            }
+            assertNull("Saved phrase restore succeeded", seedModel.restore.issue)
+            assertTrue(seedModel.restore.completed)
+            waitFor("Home follows Ready") { assertTrue("Secure until Home", shieldedWhileHeld()); home() }
+            assertFalse(seedModel.holdRestoreCompletion)
+            waitFor("Home isn't shielded with App lock off") { !secureWindow() }
             val seedOnlySummary = checkNotNull(seedOnly.second.session.summary())
             assertEquals(expected.balance, seedOnlySummary.balance)
             assertEquals(expected.movementCount, seedOnlySummary.movementCount)
@@ -285,6 +309,7 @@ class RestoreUIDeviceTest {
             cleanupClient?.close(); cleanupPublic?.close()
             instrumentation.runOnMainSync { activity?.finish() }
             runCatching { current?.services?.lifecycle?.delete() }
+            runCatching { shell("cmd deviceidle whitelist -${context.packageName}") }
         }
     }
 
