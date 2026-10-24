@@ -394,7 +394,7 @@ struct ExitStatusLine: View {
 
     /// One sentence per phase for the wide layout's leading pane.
     var explanation: String {
-        if progress.stale { return tr("Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on.") }
+        if progress.stale { return tr("Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.") }
         switch progress.phase {
         case .starting: return tr("Your VTXO leaves Ark. Nothing from here on needs Ark’s server.")
         case .publishing: return L10n.plural("Your bitcoin sits at the end of a path of {n} transactions in the round’s tree. The round’s own transaction is already on-chain.",

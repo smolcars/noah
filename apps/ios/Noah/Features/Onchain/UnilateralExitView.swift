@@ -126,7 +126,7 @@ struct ExitChooseView: View {
         } footer: {
             if !all && !settings.wide {
                 Text(verbatim: selection.isEmpty ? L10n.text("Choose the VTXOs to exit", locale: language)
-                     : L10n.text("{amount} · fees {fee}", money(value), estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", locale: language))
+                     : estimate.map { L10n.text("{amount} · fees ~{fee}", money(value), money($0.exitBroadcastFeeSats), locale: language) } ?? money(value))
                     .noahText(HomeText.amount).monospacedDigit()
             }
             Button(L10n.text("Review exit", locale: language)) {

@@ -142,12 +142,12 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
                 SendChip(tr("Scan"), Modifier.testTag("exit-claim-scan"), enabled = !busy) { scanning = true }
             }
             if (typed.isNotBlank() && address == null) FinePrint(tr("Enter an on-chain Bitcoin address for this network."), failed = true)
-            else FinePrint(tr("Check the address. This can't be undone."))
+            else FinePrint(tr("Check the address. This can’t be undone."))
         }
-        RadioRow(tr("This phone's on-chain wallet"), detail = phone?.let { short(it, 8, 4) }, selected = to == ClaimTo.phone, divider = false,
+        RadioRow(tr("This phone’s on-chain wallet"), detail = phone?.let { short(it, 8, 4) }, selected = to == ClaimTo.phone, divider = false,
             modifier = Modifier.testTag("exit-to-phone"), enabled = !busy) { haptics.selection(); choose(ClaimTo.phone) }
         if (to == ClaimTo.phone) FinePrint(if (phoneError) tr("Couldn't load a Noah wallet address. Try again when the wallet is ready.")
-            else tr("Noah won't move these back to Ark."), failed = phoneError)
+            else tr("Noah won’t move these back to Ark."), failed = phoneError)
         Column(Modifier.padding(top = 18.dp)) {
             if (exits.size > 1) DetailRow(tr("Exits"), exits.size.toString(), ValueKind.number, toasts = toasts)
             DetailRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: if (quote != null || fallback != null) tr("Unknown") else "—", ValueKind.number, toasts = toasts, last = true)
@@ -156,7 +156,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
         if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = true)?.let { Warning(tr(it), failed = true) }
         if ((quote ?: fallback)?.feesUnknown == true) Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), failed = true)
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
-        FinePrint(tr("Every exit that's ready goes in this one transaction. Earlier network fees aren't taken again."))
+        FinePrint(tr("Every exit that’s ready goes in this one transaction. Earlier network fees aren’t taken again."))
         status()
     }
     if (scanning) Box(Modifier.fillMaxSize().background(palette.background).testTag("exit-claim-scanner")) {

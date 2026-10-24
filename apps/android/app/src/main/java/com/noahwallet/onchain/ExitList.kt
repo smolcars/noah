@@ -126,7 +126,7 @@ private fun ExitListRow(exit: ExitModel, stage: ExitStage, tip: Long, shared: Bo
     val muted = stage.phase in setOf(ExitStage.Phase.canceled, ExitStage.Phase.spent, ExitStage.Phase.swept)
     val line = when {
         failed -> tr("Needs on-chain funds")
-        stage.phase == ExitStage.Phase.wait -> (stage.left(tip) ?: 0).let { tr("Waiting · {n} blocks · about {time}", number(it), timeLeft(it)) }
+        stage.phase == ExitStage.Phase.wait -> (stage.left(tip) ?: 0).let { trPlural("Waiting · {n} blocks · {time}", it, exitAbout(it)) }
         stage.phase == ExitStage.Phase.claimed -> tr("Claimed · block {height}", number(stage.claimedBlock ?: 0))
         stage.phase == ExitStage.Phase.canceled -> tr("Canceled · still in Ark")
         shared && stage.live && stage.phase !in setOf(ExitStage.Phase.claimable, ExitStage.Phase.claiming) -> tr("{status} · shared", exitStatusWord(stage))

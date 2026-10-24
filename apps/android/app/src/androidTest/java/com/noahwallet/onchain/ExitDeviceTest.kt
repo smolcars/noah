@@ -86,7 +86,7 @@ class ExitDeviceTest {
         typed = regtest
         compose.mainClock.advanceTimeBy(500)
         compose.onNodeWithTag("exit-hold-claim").assertIsEnabled()
-        compose.onNodeWithText("Check the address. This can't be undone.").assertExists()
+        compose.onNodeWithText("Check the address. This can’t be undone.").assertExists()
         hold("exit-hold-claim")
         compose.runOnIdle { assertEquals(1, claims) }
     }

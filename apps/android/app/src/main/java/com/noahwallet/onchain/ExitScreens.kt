@@ -144,7 +144,7 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
     ExitFrame(tr("Emergency exit"), back, foot = {
         FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), enabled = !suspended, onClick = choose)
     }, leading = {
-        Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark's server."), Modifier.padding(top = 8.dp),
+        Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val live = exits.filter { it.state !in ExitTimeline.terminal }
         if (exits.isNotEmpty()) Column(Modifier.padding(top = 14.dp)) {
@@ -152,7 +152,7 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
             SettingsRow(tr("All exits"), SettingsIcons.exit, value = if (live.isEmpty()) null else tr("{n} in progress", live.size.toString()),
                 divider = false, modifier = Modifier.testTag("exit-all"), onClick = all)
         }
-        ExitPicture(ExitPose.sample(tip = tip), tr("Your VTXO's path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
+        ExitPicture(ExitPose.sample(tip = tip), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
     }) {
         if (suspended) FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
         Column(Modifier.padding(top = 20.dp)) {
@@ -160,7 +160,7 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
                 ?: tr("Then a wait of about a day before you can claim."))
             Fact(SettingsIcons.fee, tr("Costs on-chain fees"), sample?.let { tr("About {amount} a VTXO now, from your on-chain bitcoin.", money(it)) }
                 ?: tr("Paid from your on-chain bitcoin."))
-            Fact(SettingsIcons.noUndo, tr("Can't be undone"), tr("Once its last transaction is sent."))
+            Fact(SettingsIcons.noUndo, tr("Can’t be undone"), tr("Once its last transaction is sent."))
             Fact(SettingsIcons.ark, tr("Ark is faster and cheaper"), tr("If Ark works, send to a Bitcoin address instead."), divider = false)
         }
         FinePrint(tr("Reading this screen and estimating fees never broadcasts an exit."))
@@ -322,7 +322,7 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
             TotalRow(tr("You get"), fees?.fee?.let { "~" + money(ExitRules.received(value, it)) } ?: money(value))
         }
         if (short > 0) {
-            Warning(tr("Add about {amount} on-chain first. Each exit transaction's fee comes from there.", money(short)), failed = true)
+            Warning(tr("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short)), failed = true)
             SettingsLink(tr("Add on-chain funds"), Modifier.padding(top = 4.dp).testTag("exit-add-funds")) { deposit(short) }
         } else if (fees != null && confirmed != null) FinePrint(tr("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
             money(confirmed), fees.feeRate.toString()))
@@ -330,13 +330,13 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
         if (fees != null && value > 0 && fees.totalFee >= value) Warning(tr("Fees are more than these VTXOs are worth."), failed = true)
         if (everything) {
             if (unknown > 0) {
-                FinePrint(tr("Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one."), failed = true)
+                FinePrint(trPlural("Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.", unknown), failed = true)
                 SettingsLink(tr("Try again"), Modifier.testTag("exit-costs-retry"), enabled = !busy, onClick = retry)
             }
             val out = ExitCosts.leftOut(vtxos, costs.orEmpty())
-            if (out.dust > 0) FinePrint(tr("Left out, too small to exit: {amount}.", money(out.dust)))
-            if (out.locked > 0) FinePrint(tr("Left out, in use right now: {amount}.", money(out.locked)))
-            if (out.uneconomic > 0) FinePrint(tr("Left out, fees more than they're worth: {amount}. Choose them to exit them anyway.", money(out.uneconomic)))
+            if (out.dust > 0) FinePrint(tr("Left out: {amount}, too small to exit.", money(out.dust)))
+            if (out.locked > 0) FinePrint(tr("Left out: {amount}, in use right now.", money(out.locked)))
+            if (out.uneconomic > 0) FinePrint(tr("Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.", money(out.uneconomic)))
         }
         Spacer(Modifier.height(40.dp))
         status()
@@ -363,7 +363,7 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
         vtxo.state == "Locked" -> tr("In use right now")
         vtxo.amount < ExitRules.dust -> tr("Too small to exit · under {amount}", money(ExitRules.dust))
         !vtxo.eligible -> vtxo.status
-        uneconomic -> tr("Fees more than it's worth")
+        uneconomic -> tr("Fees more than it’s worth")
         else -> expiresText(vtxo)
     }
     val picking = checked != null

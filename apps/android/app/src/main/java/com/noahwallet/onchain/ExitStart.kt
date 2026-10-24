@@ -87,7 +87,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
                 Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
-        if (wide) ExitPicture(ExitPose.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4, tip), tr("Your VTXO's path to the chain"),
+        if (wide) ExitPicture(ExitPose.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4, tip), tr("Your VTXO’s path to the chain"),
             exitPicture().padding(top = 14.dp))
     }) {
         Column(Modifier.padding(top = 18.dp)) {
@@ -106,7 +106,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             Warning(tr("Broadcast funding status is unknown; confirmed onchain funds are required."), failed = true)
         }
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
-        FinePrint(tr("Noah then sends and fee-bumps the exit's transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
+        FinePrint(tr("Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
         status()
     }
 }

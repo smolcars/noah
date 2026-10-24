@@ -247,7 +247,7 @@ struct ExitVtxoRow: View {
         if vtxo.state == "Locked" { return L10n.text("In use right now", locale: language) }
         if vtxo.amount < ExitRules.dust { return L10n.text("Too small to exit · under {amount}", money(ExitRules.dust), locale: language) }
         if uneconomic { return L10n.text("Fees more than it’s worth", locale: language) }
-        return L10n.text("Expires in {time}", VtxoList.span(Int64(vtxo.expiry) - Int64(vtxo.tip), locale: language), locale: language)
+        return VtxoList.expiresIn(Int64(vtxo.expiry) - Int64(vtxo.tip), locale: language)
     }
 }
 

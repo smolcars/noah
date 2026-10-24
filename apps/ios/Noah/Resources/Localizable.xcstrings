@@ -901,42 +901,6 @@
         }
       }
     },
-    "Add about {amount} on-chain first. Each exit transaction's fee comes from there.": {
-      "comment": "GT gt_2f0183c4e7f054bf; arguments: amount",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add about %1$@ on-chain first. Each exit transaction's fee comes from there."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Primero añade unos %1$@ en cadena. La comisión de cada transacción de salida sale de ahí."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "先に約%1$@をオンチェーンに追加してください。出金トランザクションの手数料はそこから支払われます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "먼저 온체인에 약 %1$@을 추가하세요. 각 출금 거래의 수수료는 여기에서 지불됩니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lägg först till ungefär %1$@ på blockkedjan. Avgiften för varje nöduttagstransaktion tas därifrån."
-          }
-        }
-      }
-    },
     "Add about {amount} on-chain first. Each exit transaction’s fee comes from there.": {
       "comment": "GT gt_cbad6124846a30ad; arguments: amount",
       "extractionState": "manual",
@@ -2473,42 +2437,6 @@
         }
       }
     },
-    "Anchor + {amount} fee · {n} of {total}": {
-      "comment": "GT gt_a47b5658ea2b2529; arguments: amount, n, total",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anchor + %1$@ fee · %2$@ of %3$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anclaje + comisión de %1$@ · %2$@ de %3$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アンカー + 手数料%1$@ · %2$@/%3$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앵커 + 수수료 %1$@ · %2$@/%3$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Förankring + %1$@ i avgift · %2$@ av %3$@"
-          }
-        }
-      }
-    },
     "Anchor + {fee} fee · {n} of {total}": {
       "comment": "GT gt_94c45bc285c9613e; arguments: fee, n, total",
       "extractionState": "manual",
@@ -2613,42 +2541,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "En annan Lightning-betalning pågår fortfarande. Försök igen när den är klar."
-          }
-        }
-      }
-    },
-    "Another exit from your round already sent this one, with its own fee. You don't pay for it.": {
-      "comment": "GT gt_c08a02390e201002; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Another exit from your round already sent this one, with its own fee. You don't pay for it."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otra salida de tu ronda ya envió esta, con su propia comisión. No la pagas tú."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同じラウンドの別の出金が、自身の手数料でこのトランザクションを送信済みです。あなたの支払いはありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "같은 라운드의 다른 출금이 자체 수수료로 이 거래를 이미 보냈습니다. 이 거래의 수수료는 내지 않습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ett annat nöduttag från din runda har redan skickat den här, med egen avgift. Du betalar inte för den."
           }
         }
       }
@@ -6505,42 +6397,6 @@
         }
       }
     },
-    "Can't be undone": {
-      "comment": "GT gt_066a27d543018358; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Can't be undone"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se puede deshacer"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取り消せません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "되돌릴 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte ångras"
-          }
-        }
-      }
-    },
     "Cancel": {
       "comment": "GT gt_19766ed6ccb2f4a3; arguments: none",
       "extractionState": "manual",
@@ -7657,42 +7513,6 @@
         }
       }
     },
-    "Check the address. This can't be undone.": {
-      "comment": "GT gt_ed8367c6e1178cba; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check the address. This can't be undone."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Revisa la dirección. Esto no se puede deshacer."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アドレスを確認してください。取り消しはできません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주소를 확인하세요. 되돌릴 수 없습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrollera adressen. Det går inte att ångra."
-          }
-        }
-      }
-    },
     "Check the address. This can’t be undone.": {
       "comment": "GT gt_44cb983669c9d0a9; arguments: none",
       "extractionState": "manual",
@@ -8805,42 +8625,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kan lösas in om ungefär %1$@"
-          }
-        }
-      }
-    },
-    "Claimable in {n} blocks · about {time}": {
-      "comment": "GT gt_32a315c279d0ee7f; arguments: n, time",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claimable in %1$@ blocks · about %2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reclamable en %1$@ bloques · unos %2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ブロック後に受け取り可能 · 約%2$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@블록 후 청구 가능 · 약 %2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan lösas in om %1$@ block · ungefär %2$@"
           }
         }
       }
@@ -13861,42 +13645,6 @@
         }
       }
     },
-    "Each transaction's fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms.": {
-      "comment": "GT gt_5888c65ca705318d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Each transaction's fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La comisión de cada transacción sale de tu bitcoin en cadena confirmado. Noah envía la siguiente cuando se confirme un depósito."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "各トランザクションの手数料は、承認済みのオンチェーンのビットコインから支払われます。入金が承認されると、Noahが次のトランザクションを送ります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "각 거래의 수수료는 확정된 온체인 비트코인에서 지불됩니다. 입금이 확정되면 Noah가 다음 거래를 보냅니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avgiften för varje transaktion tas från din bekräftade bitcoin på blockkedjan. Noah skickar nästa när en insättning har bekräftats."
-          }
-        }
-      }
-    },
     "Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms.": {
       "comment": "GT gt_985a8feacc07a757; arguments: none",
       "extractionState": "manual",
@@ -14397,42 +14145,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nöduttag"
-          }
-        }
-      }
-    },
-    "Emergency use only. It takes your bitcoin out of Ark without Ark's server.": {
-      "comment": "GT gt_6b37661a5dd8e8ae; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Emergency use only. It takes your bitcoin out of Ark without Ark's server."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo para emergencias. Saca tu bitcoin de Ark sin el servidor de Ark."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "緊急時専用です。Arkのサーバーを使わずに、ビットコインをArkから出金します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "긴급 상황에서만 사용하세요. Ark 서버 없이 비트코인을 Ark에서 꺼냅니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endast i nödfall. Det tar ut din bitcoin ur Ark utan Arks server."
           }
         }
       }
@@ -15765,42 +15477,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Varje dag"
-          }
-        }
-      }
-    },
-    "Every exit that's ready goes in this one transaction. Earlier network fees aren't taken again.": {
-      "comment": "GT gt_adcd27dbb4f6be17; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Every exit that's ready goes in this one transaction. Earlier network fees aren't taken again."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Todas las salidas listas van en esta única transacción. Las comisiones de red anteriores no se vuelven a cobrar."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "受け取り可能なすべての出金が、この1つのトランザクションにまとめられます。これまでのネットワーク手数料が再度差し引かれることはありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "청구 가능한 모든 출금이 이 거래 하나에 포함됩니다. 앞서 낸 네트워크 수수료는 다시 빠지지 않습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alla nöduttag som är klara ingår i den här enda transaktionen. Tidigare nätverksavgifter dras inte igen."
           }
         }
       }
@@ -17557,42 +17233,6 @@
         }
       }
     },
-    "Expires in {time}": {
-      "comment": "GT gt_43315d79d02c7823; arguments: time",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expires in %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vence en %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@後に期限切れ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 후 만료"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Går ut om %1$@"
-          }
-        }
-      }
-    },
     "Expiring": {
       "comment": "GT gt_ff44a401445c99df; arguments: none",
       "extractionState": "manual",
@@ -18633,42 +18273,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avgifterna är högre än vad de här VTXO:erna är värda."
-          }
-        }
-      }
-    },
-    "Fees more than it's worth": {
-      "comment": "GT gt_e2a3937904b6bf08; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fees more than it's worth"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las comisiones superan su valor"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手数料が価値を上回ります"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수수료가 가치보다 큼"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avgifterna överstiger värdet"
           }
         }
       }
@@ -22477,42 +22081,6 @@
         }
       }
     },
-    "It's ordinary bitcoin now, on-chain.": {
-      "comment": "GT gt_459200cb52405496; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It's ordinary bitcoin now, on-chain."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ahora es bitcoin normal, en cadena."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通常のオンチェーンのビットコインになりました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이제 온체인의 일반 비트코인입니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nu är det vanlig bitcoin, på blockkedjan."
-          }
-        }
-      }
-    },
     "It’s ordinary bitcoin now.": {
       "comment": "GT gt_12ad7bf0e646c2d9; arguments: none",
       "extractionState": "manual",
@@ -23481,114 +23049,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kvar"
-          }
-        }
-      }
-    },
-    "Left out, fees more than they're worth: {amount}. Choose them to exit them anyway.": {
-      "comment": "GT gt_8d889b2a0398edd9; arguments: amount",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Left out, fees more than they're worth: %1$@. Choose them to exit them anyway."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Excluidos porque las comisiones superan su valor: %1$@. Elígelos para sacarlos de todos modos."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手数料が価値を上回るため除外：%1$@。それでも出金するには個別に選択してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수수료가 가치보다 커서 제외됨: %1$@. 그래도 출금하려면 직접 선택하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utelämnade eftersom avgifterna överstiger värdet: %1$@. Välj dem om du ändå vill ta ut dem."
-          }
-        }
-      }
-    },
-    "Left out, in use right now: {amount}.": {
-      "comment": "GT gt_71dd91736743204f; arguments: amount",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Left out, in use right now: %1$@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Excluidos por estar en uso ahora: %1$@."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現在使用中のため除外：%1$@。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금 사용 중이라 제외됨: %1$@."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utelämnade eftersom de används just nu: %1$@."
-          }
-        }
-      }
-    },
-    "Left out, too small to exit: {amount}.": {
-      "comment": "GT gt_1b02259449b4abf0; arguments: amount",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Left out, too small to exit: %1$@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Excluidos por ser demasiado pequeños para salir: %1$@."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "出金するには少なすぎるため除外：%1$@。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "출금하기에 너무 작아 제외됨: %1$@."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utelämnade eftersom de är för små för ett nöduttag: %1$@."
           }
         }
       }
@@ -29065,14 +28525,14 @@
         }
       }
     },
-    "Noah hasn't checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.": {
-      "comment": "GT gt_6ee90a045027e1c3; arguments: none",
+    "Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.": {
+      "comment": "GT gt_545eb93f8194bd47; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah hasn't checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."
+            "value": "Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."
           }
         },
         "es": {
@@ -29245,42 +28705,6 @@
         }
       }
     },
-    "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on.": {
-      "comment": "GT gt_0450659e5fbd54ab; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah no está consultando la cadena para esta salida ahora mismo. Usa Consultar la cadena para avanzarla."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahは現在この出金のチェーンを確認していません。「チェーンを確認」で進めてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금 Noah가 이 출금의 체인을 확인하지 않고 있어요. ‘체인 확인’으로 진행하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah kontrollerar inte blockkedjan för det här uttaget just nu. Använd Kontrollera blockkedjan för att föra det vidare."
-          }
-        }
-      }
-    },
     "Noah notifications": {
       "comment": "GT gt_338e68cc4323f294; arguments: none",
       "extractionState": "manual",
@@ -29389,42 +28813,6 @@
         }
       }
     },
-    "Noah then sends and fee-bumps the exit's transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.": {
-      "comment": "GT gt_c31c87ce77cb431b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah then sends and fee-bumps the exit's transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Después Noah envía las transacciones de la salida y sube sus comisiones por sí solo, pagando con tu bitcoin en cadena. Las comisiones son estimaciones. Solo la comisión de reclamación se descuenta del importe. Puedes cancelar hasta que se envíe la última transacción."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "その後はNoahが出金トランザクションの送信と手数料の引き上げを自動で行い、オンチェーンのビットコインから支払います。手数料は見積もりです。金額から差し引かれるのは受け取り手数料だけです。最後のトランザクションが送信されるまではキャンセルできます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이후 Noah가 출금 거래를 직접 보내고 수수료를 올리며, 온체인 비트코인에서 지불합니다. 수수료는 예상치입니다. 금액에서는 청구 수수료만 빠집니다. 마지막 거래를 보내기 전까지 취소할 수 있습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sedan skickar Noah nöduttagets transaktioner och höjer deras avgifter själv, och betalar från din bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."
-          }
-        }
-      }
-    },
     "Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.": {
       "comment": "GT gt_f3727b33f0798006; arguments: none",
       "extractionState": "manual",
@@ -29529,42 +28917,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah avbröts medan betalningen skickades. Kontrollera din transaktionshistorik innan du fortsätter."
-          }
-        }
-      }
-    },
-    "Noah won't move these back to Ark.": {
-      "comment": "GT gt_0c304c0eb596d6e9; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah won't move these back to Ark."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah no los devolverá a Ark."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NoahがこれらをArkに戻すことはありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah가 이 자금을 Ark로 다시 옮기지 않습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah flyttar inte tillbaka dessa till Ark."
           }
         }
       }
@@ -41941,42 +41293,6 @@
         }
       }
     },
-    "Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one.": {
-      "comment": "GT gt_cb11dae84f992f25; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudieron estimar las comisiones de algunos VTXO, así que Todos los espera. Aún puedes elegir los VTXO uno a uno."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一部のVTXOの手数料を見積もれなかったため、「すべて」はそれを待っています。VTXOを個別に選択することはできます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일부 VTXO의 수수료를 추정하지 못해 전체는 이를 기다립니다. VTXO를 하나씩 선택할 수는 있습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avgifterna för vissa VTXO:er kunde inte uppskattas, så Alla väntar på dem. Du kan fortfarande välja VTXO:er en och en."
-          }
-        }
-      }
-    },
     "Source code": {
       "comment": "GT gt_bf046c7395cb38ee; arguments: none",
       "extractionState": "manual",
@@ -44965,42 +44281,6 @@
         }
       }
     },
-    "The lock is open. Claim it to another wallet or this phone's on-chain wallet.": {
-      "comment": "GT gt_94d659bd975575ca; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The lock is open. Claim it to another wallet or this phone's on-chain wallet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El bloqueo está abierto. Reclámalo a otra billetera o a la billetera en cadena de este teléfono."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ロックが解除されました。別のウォレット、またはこのスマートフォンのオンチェーンウォレットに受け取れます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "잠금이 풀렸습니다. 다른 지갑이나 이 휴대폰의 온체인 지갑으로 청구하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Låset är öppet. Lös in till en annan plånbok eller till den här telefonens plånbok på blockkedjan."
-          }
-        }
-      }
-    },
     "The lock is open. Claim it to another wallet or to this phone’s on-chain wallet.": {
       "comment": "GT gt_c7954684c87d96cd; arguments: none",
       "extractionState": "manual",
@@ -46909,42 +46189,6 @@
         }
       }
     },
-    "This phone's on-chain wallet": {
-      "comment": "GT gt_1d3e83672dd2617a; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This phone's on-chain wallet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La billetera en cadena de este teléfono"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このスマートフォンのオンチェーンウォレット"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 휴대폰의 온체인 지갑"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den här telefonens plånbok på blockkedjan"
-          }
-        }
-      }
-    },
     "This phone’s on-chain wallet": {
       "comment": "GT gt_dbf64e9803529181; arguments: none",
       "extractionState": "manual",
@@ -47625,42 +46869,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tog"
-          }
-        }
-      }
-    },
-    "Took about": {
-      "comment": "GT gt_0145b833d52ef562; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Took about"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tardó unos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "かかった時間"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "걸린 시간"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tog ungefär"
           }
         }
       }
@@ -50977,42 +50185,6 @@
         }
       }
     },
-    "Waiting · {n} blocks · about {time}": {
-      "comment": "GT gt_38b84da1d4c099eb; arguments: n, time",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Waiting · %1$@ blocks · about %2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En espera · %1$@ bloques · unos %2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "待機中 · %1$@ブロック · 約%2$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대기 중 · %1$@블록 · 약 %2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Väntar · %1$@ block · ungefär %2$@"
-          }
-        }
-      }
-    },
     "Waiting · {n} blocks · {time}": {
       "comment": "GT gt_985fc1ec623fd8b3; arguments: n, time",
       "extractionState": "manual",
@@ -52621,42 +51793,6 @@
         }
       }
     },
-    "Your VTXO leaves Ark. Nothing from here on needs Ark's server.": {
-      "comment": "GT gt_35a41dfb18ba253c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your VTXO leaves Ark. Nothing from here on needs Ark's server."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu VTXO sale de Ark. A partir de aquí nada necesita el servidor de Ark."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXOがArkを出ます。ここから先はArkのサーバーを必要としません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXO가 Ark를 떠납니다. 이제부터는 Ark 서버가 필요하지 않습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Din VTXO lämnar Ark. Inget härifrån behöver Arks server."
-          }
-        }
-      }
-    },
     "Your VTXO leaves Ark. Nothing from here on needs Ark’s server.": {
       "comment": "GT gt_7594ebdff7a25376; arguments: none",
       "extractionState": "manual",
@@ -52729,14 +51865,14 @@
         }
       }
     },
-    "Your VTXO's path to the chain": {
-      "comment": "GT gt_d2ecd48583f8a6a9; arguments: none",
+    "Your VTXO’s path to the chain": {
+      "comment": "GT gt_113e303aa9642dc1; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your VTXO's path to the chain"
+            "value": "Your VTXO’s path to the chain"
           }
         },
         "es": {
@@ -52998,102 +52134,6 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "Dina bitcoin finns på blockkedjan, låsta i %1$lld block. Låset ger Ark tid att stoppa en VTXO som redan har spenderats."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Your bitcoin sits at the end of a path of {n} transactions in the round's tree. The round's own transaction is already on-chain.": {
-      "comment": "GT gt_cead2df59d70f3de; arguments: n",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Your bitcoin sits at the end of a path of one transaction in the round's tree. The round's own transaction is already on-chain."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Your bitcoin sits at the end of a path of %1$lld transactions in the round's tree. The round's own transaction is already on-chain."
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Tu bitcoin está al final de un camino de una transacción en el árbol de la ronda. La transacción de la propia ronda ya está en cadena."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Tu bitcoin está al final de un camino de %1$lld transacciones en el árbol de la ronda. La transacción de la propia ronda ya está en cadena."
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "ビットコインは、ラウンドのツリー内の1つのトランザクションからなる経路の先にあります。ラウンド自体のトランザクションはすでにオンチェーンにあります。"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "ビットコインは、ラウンドのツリー内の%1$lld個のトランザクションからなる経路の先にあります。ラウンド自体のトランザクションはすでにオンチェーンにあります。"
-                }
-              }
-            }
-          }
-        },
-        "ko": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "비트코인은 라운드 트리에서 거래 1개로 이루어진 경로 끝에 있습니다. 라운드 자체의 거래는 이미 온체인에 있습니다."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "비트코인은 라운드 트리에서 거래 %1$lld개로 이루어진 경로 끝에 있습니다. 라운드 자체의 거래는 이미 온체인에 있습니다."
-                }
-              }
-            }
-          }
-        },
-        "sv": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Din bitcoin finns i slutet av en väg med en transaktion i rundans träd. Rundans egen transaktion finns redan på blockkedjan."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Din bitcoin finns i slutet av en väg med %1$lld transaktioner i rundans träd. Rundans egen transaktion finns redan på blockkedjan."
                 }
               }
             }
@@ -54733,42 +53773,6 @@
         }
       }
     },
-    "{amount} left": {
-      "comment": "GT gt_3152898f21ae93dc; arguments: amount",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ left"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quedan %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "残り%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 남음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ kvar"
-          }
-        }
-      }
-    },
     "{amount} sent to {recipient}.": {
       "comment": "GT gt_1cfd3ae82c2e9be1; arguments: amount, recipient",
       "extractionState": "manual",
@@ -54873,42 +53877,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ skickas till %2$@ i morgon."
-          }
-        }
-      }
-    },
-    "{amount} · fees {fee}": {
-      "comment": "GT gt_2af449b05cd95d7f; arguments: amount, fee",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · fees %2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · comisiones %2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · 手数料 %2$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · 수수료 %2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · avgifter %2$@"
           }
         }
       }

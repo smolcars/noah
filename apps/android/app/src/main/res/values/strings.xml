@@ -26,7 +26,6 @@
   <string name="gt_a301e27dce0ce4cd">"Actual onchain fee"</string>
   <string name="gt_9fd728c66c9a256b">"Add"</string>
   <string name="gt_322c0e13ef4fa485">"Add a note"</string>
-  <string name="gt_2f0183c4e7f054bf">"Add about %1$s on-chain first. Each exit transaction\'s fee comes from there."</string>
   <string name="gt_cbad6124846a30ad">"Add about %1$s on-chain first. Each exit transaction’s fee comes from there."</string>
   <string name="gt_b5ff9ca4a77d7d6e">"Add about %1$s on-chain. Noah sends the next transaction once it confirms."</string>
   <string name="gt_223e44268146e60d">"Add amount"</string>
@@ -71,11 +70,9 @@
   <string name="gt_3841549f59f967ba">"An output this exit needs was spent on-chain, so it can’t finish."</string>
   <string name="gt_b636320b54efe2b7">"An unknown error occurred while backing up."</string>
   <string name="gt_a4ae750b610e875e">"Anchor"</string>
-  <string name="gt_a47b5658ea2b2529">"Anchor + %1$s fee · %2$s of %3$s"</string>
   <string name="gt_94c45bc285c9613e">"Anchor + %1$s fee · %2$s of %3$s"</string>
   <string name="gt_dea19a697a27a904">"Android SDK built for"</string>
   <string name="gt_15ea390b9d935697">"Another Lightning payment is still in progress. Try again once it completes."</string>
-  <string name="gt_c08a02390e201002">"Another exit from your round already sent this one, with its own fee. You don\'t pay for it."</string>
   <string name="gt_aa8f23bda4bd9ea8">"Another exit from your round already sent this one, with its own fee. You don’t pay for it."</string>
   <string name="gt_c4e9b3d10877c72c">"Another wallet"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
@@ -183,7 +180,6 @@
   <string name="gt_d6e645b7d2b2da64">"Call"</string>
   <string name="gt_c0e4c9ea037a36e4">"Camera permission is required to scan QR codes."</string>
   <string name="gt_caed8de2afc3776f">"Camera unavailable. Close the scanner and try again."</string>
-  <string name="gt_066a27d543018358">"Can\'t be undone"</string>
   <string name="gt_19766ed6ccb2f4a3">"Cancel"</string>
   <string name="gt_804eb334c4bd5e69">"Cancel Exit"</string>
   <string name="gt_369b66c4cc89a054">"Cancel exit"</string>
@@ -215,7 +211,6 @@
   <string name="gt_fb7099ad8e818d42">"Check again"</string>
   <string name="gt_c52a96b66db5c212">"Check operation status"</string>
   <string name="gt_69cd3590300a68c6">"Check status"</string>
-  <string name="gt_ed8367c6e1178cba">"Check the address. This can\'t be undone."</string>
   <string name="gt_44cb983669c9d0a9">"Check the address. This can’t be undone."</string>
   <string name="gt_c31be569a492274b">"Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."</string>
   <string name="gt_0a4944369b913265">"Check the chain"</string>
@@ -247,7 +242,6 @@
   <string name="gt_c52ed3f9cce24384">"Claimable"</string>
   <string name="gt_5791d9f14fa53cfd">"Claimable Lightning Receive"</string>
   <string name="gt_f78dda21b2e48efd">"Claimable in about %1$s"</string>
-  <string name="gt_32a315c279d0ee7f">"Claimable in %1$s blocks · about %2$s"</string>
   <plurals name="gt_17bf7bb54aafd273">
     <item quantity="one">"Claimable in %1$s block · %2$s"</item>
     <item quantity="other">"Claimable in %1$s blocks · %2$s"</item>
@@ -390,7 +384,6 @@
   <string name="gt_5655e4c5f2e921a8">"Drop VTXO"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
   <string name="gt_a8652bad1788fdd8">"Each one is sent only after the one before it is in a block."</string>
-  <string name="gt_5888c65ca705318d">"Each transaction\'s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms."</string>
   <string name="gt_985a8feacc07a757">"Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms."</string>
   <string name="gt_464c4ffd019e1e96">"Edit"</string>
   <string name="gt_84c74f3a02721306">"Edit email address"</string>
@@ -405,7 +398,6 @@
   <string name="gt_bdfb1e4f00c73e98">"Email verified"</string>
   <string name="gt_3a9f176a663d540d">"Emergency Email"</string>
   <string name="gt_b8eea92a324ae5b4">"Emergency exit"</string>
-  <string name="gt_6b37661a5dd8e8ae">"Emergency use only. It takes your bitcoin out of Ark without Ark\'s server."</string>
   <string name="gt_4f5556b1b428d358">"Emergency use only. It takes your bitcoin out of Ark without Ark’s server."</string>
   <string name="gt_cade2f4efb6f7c99">"Emulator"</string>
   <string name="gt_1cd009ba27e712a8">"Enable wallet authentication"</string>
@@ -443,7 +435,6 @@
   <string name="gt_8019400caf0913fa">"Estimated total"</string>
   <string name="gt_d9f3d2f604dad97a">"Estimated total fees meet or exceed the value being recovered."</string>
   <string name="gt_c4e42b974c335dc5">"Every day"</string>
-  <string name="gt_adcd27dbb4f6be17">"Every exit that\'s ready goes in this one transaction. Earlier network fees aren\'t taken again."</string>
   <string name="gt_b938e292a4f7d14e">"Every exit that’s ready goes in this one transaction. Earlier network fees aren’t taken again."</string>
   <string name="gt_70271ecc4f808d06">"Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin."</string>
   <string name="gt_24859dc0201bd88a">"Every month"</string>
@@ -498,7 +489,6 @@
     <item quantity="one">"Expires in %1$s hour"</item>
     <item quantity="other">"Expires in %1$s hours"</item>
   </plurals>
-  <string name="gt_43315d79d02c7823">"Expires in %1$s"</string>
   <string name="gt_ff44a401445c99df">"Expiring"</string>
   <string name="gt_c39d646f10769b07">"Explorer"</string>
   <string name="gt_3664895579f0a7e6">"Export"</string>
@@ -528,7 +518,6 @@
   <string name="gt_6c6cc6eb80efa410">"Fee rate"</string>
   <string name="gt_aac77df347205252">"Feedback"</string>
   <string name="gt_779ff4584d72f733">"Fees are more than these VTXOs are worth."</string>
-  <string name="gt_e2a3937904b6bf08">"Fees more than it\'s worth"</string>
   <string name="gt_e45e304fea7e1b7b">"Fees more than it’s worth"</string>
   <string name="gt_35c1c9ca10618cf1">"Fees paid"</string>
   <string name="gt_c8e5709f89baf900">"Fees rose, so Noah paid more"</string>
@@ -636,7 +625,6 @@
   <string name="gt_047f932e6c3ea4f2">"It arrived instantly. Ark sends are free."</string>
   <string name="gt_f89a30c95c2897b8">"It confirms in about 20 minutes. Activity shows when."</string>
   <string name="gt_5002fe6fff33796d">"It needs %1$s confirmations to arrive."</string>
-  <string name="gt_459200cb52405496">"It\'s ordinary bitcoin now, on-chain."</string>
   <string name="gt_12ad7bf0e646c2d9">"It’s ordinary bitcoin now."</string>
   <string name="gt_5cc37a0a3b8a1e82">"It’s with the Noah team."</string>
   <string name="gt_b2307a77795822d1">"JPEG or PNG, 5 MB or smaller"</string>
@@ -664,9 +652,6 @@
   <string name="gt_ec3b8bf1e0261664">"Last good backup %1$s"</string>
   <string name="gt_e85039a1d8fa0011">"Leaving Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
-  <string name="gt_8d889b2a0398edd9">"Left out, fees more than they\'re worth: %1$s. Choose them to exit them anyway."</string>
-  <string name="gt_71dd91736743204f">"Left out, in use right now: %1$s."</string>
-  <string name="gt_1b02259449b4abf0">"Left out, too small to exit: %1$s."</string>
   <string name="gt_4f14b3e9b20d43a4">"Left out: %1$s that costs more in fees than it’s worth. Choose it to exit anyway."</string>
   <string name="gt_a3b3e07f52c173b1">"Left out: %1$s, in use right now."</string>
   <string name="gt_1d78b52b9fdeac1c">"Left out: %1$s, too small to exit."</string>
@@ -819,20 +804,17 @@
   <string name="gt_db92e3e2f6075f8b">"Noah couldn\'t safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet."</string>
   <string name="gt_822918727e4f828f">"Noah default"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."</string>
-  <string name="gt_6ee90a045027e1c3">"Noah hasn\'t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."</string>
+  <string name="gt_545eb93f8194bd47">"Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noah is Locked"</string>
   <string name="gt_9354e260e9c82293">"Noah is in beta. Only keep what you’re comfortable losing."</string>
   <string name="gt_2588c7db9f3fe277">"Noah is locked"</string>
   <string name="gt_f590e31a6eb944e2">"Noah is still finishing a backup. Try again in a moment."</string>
-  <string name="gt_0450659e5fbd54ab">"Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."</string>
   <string name="gt_338e68cc4323f294">"Noah notifications"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registers this wallet with the server again. Your wallet stays."</string>
   <string name="gt_286c0deecb39be99">"Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."</string>
-  <string name="gt_c31c87ce77cb431b">"Noah then sends and fee-bumps the exit\'s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_f3727b33f0798006">"Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>
   <string name="gt_f802f9f1257fc080">"Noah was interrupted while sending this payment. Check your transaction history before resuming."</string>
-  <string name="gt_0c304c0eb596d6e9">"Noah won\'t move these back to Ark."</string>
   <string name="gt_deca5f2b35700ac7">"Noah won’t move these back to Ark."</string>
   <string name="gt_f02d150579902f58">"NoahAppVariant missing or invalid in Info.plist"</string>
   <string name="gt_dc937b59892604f5">"None"</string>
@@ -1182,7 +1164,6 @@
   <string name="gt_28d03596d24eeb4e">"Skip"</string>
   <string name="gt_12698ce1ea5cd4ab">"Skipped"</string>
   <string name="gt_44d27a286f01669e">"Smallest move"</string>
-  <string name="gt_cb11dae84f992f25">"Some VTXOs\' fees couldn\'t be estimated, so All waits for them. You can still choose VTXOs one by one."</string>
   <string name="gt_bf046c7395cb38ee">"Source code"</string>
   <string name="gt_83d21eddee267cd8">"Spend bitcoin nearby"</string>
   <string name="gt_8e8252533cde7bc4">"Spendable"</string>
@@ -1266,7 +1247,6 @@
   <string name="gt_5f97e174b6c50b9d">"The first payment can\'t be in the past."</string>
   <string name="gt_4ce7d56e24aef58c">"The invoice must request whole satoshis."</string>
   <string name="gt_03401b1fd160f1c8">"The invoice sets the amount to %1$s"</string>
-  <string name="gt_94d659bd975575ca">"The lock is open. Claim it to another wallet or this phone\'s on-chain wallet."</string>
   <string name="gt_c7954684c87d96cd">"The lock is open. Claim it to another wallet or to this phone’s on-chain wallet."</string>
   <string name="gt_708398a18d2f5dfe">"The map position could not be saved."</string>
   <string name="gt_bc71b743861782dc">"The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available."</string>
@@ -1320,7 +1300,6 @@
   <string name="gt_f76ccf8f2c1d3ac9">"This payment may have been sent. Check its status before making another payment."</string>
   <string name="gt_d31a2f01307db793">"This payment request has no reusable Ark address or Lightning offer"</string>
   <string name="gt_154bf57eb2583196">"This phone"</string>
-  <string name="gt_1d3e83672dd2617a">"This phone\'s on-chain wallet"</string>
   <string name="gt_dbf64e9803529181">"This phone’s on-chain wallet"</string>
   <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
   <string name="gt_7d13ecdf60d28aa9">"This place may require another payment app"</string>
@@ -1340,7 +1319,6 @@
   <string name="gt_2b065c7c9ce466e5">"Today"</string>
   <string name="gt_8e5d375aee547cf8">"Too small to exit · under %1$s"</string>
   <string name="gt_168d36c2d331807e">"Took"</string>
-  <string name="gt_0145b833d52ef562">"Took about"</string>
   <string name="gt_d5cdfcf7ff75338f">"Top"</string>
   <string name="gt_c9b3c38247f744e1">"Total"</string>
   <string name="gt_220753c790bf5c5f">"Total (reviewed coins)"</string>
@@ -1433,7 +1411,6 @@
   <string name="gt_14c805ec3e8cb07b">"Waiting for secure storage"</string>
   <string name="gt_d99bd370a6d72213">"Waiting for secure storage. Unlock your device and try again."</string>
   <string name="gt_706eee3cfecc480a">"Waiting for the timelock"</string>
-  <string name="gt_38b84da1d4c099eb">"Waiting · %1$s blocks · about %2$s"</string>
   <plurals name="gt_985fc1ec623fd8b3">
     <item quantity="one">"Waiting · %1$s block · %2$s"</item>
     <item quantity="other">"Waiting · %1$s blocks · %2$s"</item>
@@ -1480,10 +1457,9 @@
   <string name="gt_723022dbd02fce20">"You\'ve reached the maximum number of recurring payments."</string>
   <string name="gt_3d26c2347422ac51">"Your Ark balance cannot be swept to this wallet\'s own onchain address. Use an external Bitcoin address."</string>
   <string name="gt_f9f55c49d8421334">"Your VTXO"</string>
-  <string name="gt_35a41dfb18ba253c">"Your VTXO leaves Ark. Nothing from here on needs Ark\'s server."</string>
   <string name="gt_7594ebdff7a25376">"Your VTXO leaves Ark. Nothing from here on needs Ark’s server."</string>
   <string name="gt_e452c7da44fe3110">"Your VTXO stays in Ark"</string>
-  <string name="gt_d2ecd48583f8a6a9">"Your VTXO\'s path to the chain"</string>
+  <string name="gt_113e303aa9642dc1">"Your VTXO’s path to the chain"</string>
   <string name="gt_aa7eb8c4c9ef6410">"Your address"</string>
   <string name="gt_f415a2f332511929">"Your app version and phone model are attached."</string>
   <string name="gt_978433e18203431a">"Your backup was restored, but setup couldn\'t finish. Do not restore again. Close and restart Noah to continue."</string>
@@ -1491,10 +1467,6 @@
   <plurals name="gt_8d95f0972bf7b0f6">
     <item quantity="one">"Your bitcoin is on-chain, locked for %1$s block. The lock gives Ark time to stop a VTXO that was already spent."</item>
     <item quantity="other">"Your bitcoin is on-chain, locked for %1$s blocks. The lock gives Ark time to stop a VTXO that was already spent."</item>
-  </plurals>
-  <plurals name="gt_cead2df59d70f3de">
-    <item quantity="one">"Your bitcoin sits at the end of a path of one transaction in the round\'s tree. The round\'s own transaction is already on-chain."</item>
-    <item quantity="other">"Your bitcoin sits at the end of a path of %1$s transactions in the round\'s tree. The round\'s own transaction is already on-chain."</item>
   </plurals>
   <plurals name="gt_b5ead457183af288">
     <item quantity="one">"Your bitcoin sits at the end of a path of %1$s transaction in the round’s tree. The round’s own transaction is already on-chain."</item>
@@ -1544,11 +1516,9 @@
   <string name="gt_05421802af3d82be">"%1$s available"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s is back in your wallet."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s is back in your wallet. Lightning couldn’t reach %2$s."</string>
-  <string name="gt_3152898f21ae93dc">"%1$s left"</string>
   <string name="gt_1cfd3ae82c2e9be1">"%1$s sent to %2$s."</string>
   <string name="gt_16d7d21cf4846790">"%1$s to %2$s could not be sent yet: %3$s"</string>
   <string name="gt_e4687b2d37b4a9a5">"%1$s to %2$s will be sent tomorrow."</string>
-  <string name="gt_2af449b05cd95d7f">"%1$s · fees %2$s"</string>
   <string name="gt_643409a7df643204">"%1$s · fees ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · in Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · share of %2$s for %3$s exits"</string>

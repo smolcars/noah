@@ -26,7 +26,6 @@
   <string name="gt_a301e27dce0ce4cd">"Faktisk avgift på blockkedjan"</string>
   <string name="gt_9fd728c66c9a256b">"Lägg till"</string>
   <string name="gt_322c0e13ef4fa485">"Lägg till en anteckning"</string>
-  <string name="gt_2f0183c4e7f054bf">"Lägg först till ungefär %1$s på blockkedjan. Avgiften för varje nöduttagstransaktion tas därifrån."</string>
   <string name="gt_cbad6124846a30ad">"Lägg först till ungefär %1$s på blockkedjan. Avgiften för varje uttagstransaktion tas därifrån."</string>
   <string name="gt_b5ff9ca4a77d7d6e">"Lägg till ungefär %1$s på blockkedjan. Noah skickar nästa transaktion när den har bekräftats."</string>
   <string name="gt_223e44268146e60d">"Lägg till belopp"</string>
@@ -71,11 +70,9 @@
   <string name="gt_3841549f59f967ba">"En utgång som uttaget behöver har spenderats på blockkedjan, så det kan inte slutföras."</string>
   <string name="gt_b636320b54efe2b7">"Ett okänt fel uppstod vid säkerhetskopieringen."</string>
   <string name="gt_a4ae750b610e875e">"Förankring"</string>
-  <string name="gt_a47b5658ea2b2529">"Förankring + %1$s i avgift · %2$s av %3$s"</string>
   <string name="gt_94c45bc285c9613e">"Ankare + %1$s i avgift · %2$s av %3$s"</string>
   <string name="gt_dea19a697a27a904">"Android SDK byggt för"</string>
   <string name="gt_15ea390b9d935697">"En annan Lightning-betalning pågår fortfarande. Försök igen när den är klar."</string>
-  <string name="gt_c08a02390e201002">"Ett annat nöduttag från din runda har redan skickat den här, med egen avgift. Du betalar inte för den."</string>
   <string name="gt_aa8f23bda4bd9ea8">"Ett annat uttag från din runda har redan skickat den här, med egen avgift. Du betalar inte för den."</string>
   <string name="gt_c4e9b3d10877c72c">"En annan plånbok"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Den som har telefonen kan se din fras. Ställ in ett skärmlås i Inställningar för att skydda den."</string>
@@ -183,7 +180,6 @@
   <string name="gt_d6e645b7d2b2da64">"Ring"</string>
   <string name="gt_c0e4c9ea037a36e4">"Åtkomst till kameran krävs för att skanna QR-koder."</string>
   <string name="gt_caed8de2afc3776f">"Kameran är inte tillgänglig. Stäng skannern och försök igen."</string>
-  <string name="gt_066a27d543018358">"Kan inte ångras"</string>
   <string name="gt_19766ed6ccb2f4a3">"Avbryt"</string>
   <string name="gt_804eb334c4bd5e69">"Avbryt nöduttag"</string>
   <string name="gt_369b66c4cc89a054">"Avbryt uttaget"</string>
@@ -215,7 +211,6 @@
   <string name="gt_fb7099ad8e818d42">"Kontrollera igen"</string>
   <string name="gt_c52a96b66db5c212">"Kontrollera åtgärdens status"</string>
   <string name="gt_69cd3590300a68c6">"Kontrollera status"</string>
-  <string name="gt_ed8367c6e1178cba">"Kontrollera adressen. Det går inte att ångra."</string>
   <string name="gt_44cb983669c9d0a9">"Kontrollera adressen. Det här kan inte ångras."</string>
   <string name="gt_c31be569a492274b">"Kontrollera beloppet, valda VTXO:er och destinationen. Det kanske inte finns tillräckligt med bekräftade medel."</string>
   <string name="gt_0a4944369b913265">"Kontrollera blockkedjan"</string>
@@ -247,7 +242,6 @@
   <string name="gt_c52ed3f9cce24384">"Möjliga att lösa in"</string>
   <string name="gt_5791d9f14fa53cfd">"Lightning-betalning möjlig att lösa in"</string>
   <string name="gt_f78dda21b2e48efd">"Kan lösas in om ungefär %1$s"</string>
-  <string name="gt_32a315c279d0ee7f">"Kan lösas in om %1$s block · ungefär %2$s"</string>
   <plurals name="gt_17bf7bb54aafd273">
     <item quantity="one">"Kan lösas in om %1$s block · %2$s"</item>
     <item quantity="other">"Kan lösas in om %1$s block · %2$s"</item>
@@ -390,7 +384,6 @@
   <string name="gt_5655e4c5f2e921a8">"Ta bort VTXO"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
   <string name="gt_a8652bad1788fdd8">"Var och en skickas först när den före är med i ett block."</string>
-  <string name="gt_5888c65ca705318d">"Avgiften för varje transaktion tas från din bekräftade bitcoin på blockkedjan. Noah skickar nästa när en insättning har bekräftats."</string>
   <string name="gt_985a8feacc07a757">"Varje transaktions avgift tas från dina bekräftade bitcoin på blockkedjan. Noah skickar nästa när en insättning har bekräftats."</string>
   <string name="gt_464c4ffd019e1e96">"Ändra"</string>
   <string name="gt_84c74f3a02721306">"Ändra e-postadress"</string>
@@ -405,7 +398,6 @@
   <string name="gt_bdfb1e4f00c73e98">"E-post verifierad"</string>
   <string name="gt_3a9f176a663d540d">"E-postadress för nödfall"</string>
   <string name="gt_b8eea92a324ae5b4">"Nöduttag"</string>
-  <string name="gt_6b37661a5dd8e8ae">"Endast i nödfall. Det tar ut din bitcoin ur Ark utan Arks server."</string>
   <string name="gt_4f5556b1b428d358">"Endast i nödfall. Det tar ut dina bitcoin ur Ark utan Arks server."</string>
   <string name="gt_cade2f4efb6f7c99">"Emulator"</string>
   <string name="gt_1cd009ba27e712a8">"Aktivera autentisering för plånboken"</string>
@@ -443,7 +435,6 @@
   <string name="gt_8019400caf0913fa">"Beräknad totalsumma"</string>
   <string name="gt_d9f3d2f604dad97a">"De beräknade totala avgifterna är lika stora som eller överstiger beloppet som återförs."</string>
   <string name="gt_c4e42b974c335dc5">"Varje dag"</string>
-  <string name="gt_adcd27dbb4f6be17">"Alla nöduttag som är klara ingår i den här enda transaktionen. Tidigare nätverksavgifter dras inte igen."</string>
   <string name="gt_b938e292a4f7d14e">"Alla uttag som är klara ingår i den här enda transaktionen. Tidigare nätverksavgifter dras inte igen."</string>
   <string name="gt_70271ecc4f808d06">"Varje uttagstransaktion har ett avgiftsankare. Noah lägger till en avgift där, betald med dina bitcoin på blockkedjan."</string>
   <string name="gt_24859dc0201bd88a">"Varje månad"</string>
@@ -498,7 +489,6 @@
     <item quantity="one">"Löper ut om %1$s timme"</item>
     <item quantity="other">"Löper ut om %1$s timmar"</item>
   </plurals>
-  <string name="gt_43315d79d02c7823">"Går ut om %1$s"</string>
   <string name="gt_ff44a401445c99df">"Löper snart ut"</string>
   <string name="gt_c39d646f10769b07">"Blockutforskare"</string>
   <string name="gt_3664895579f0a7e6">"Exportera"</string>
@@ -528,7 +518,6 @@
   <string name="gt_6c6cc6eb80efa410">"Avgiftssats"</string>
   <string name="gt_aac77df347205252">"Synpunkter"</string>
   <string name="gt_779ff4584d72f733">"Avgifterna är högre än vad de här VTXO:erna är värda."</string>
-  <string name="gt_e2a3937904b6bf08">"Avgifterna överstiger värdet"</string>
   <string name="gt_e45e304fea7e1b7b">"Avgifter högre än värdet"</string>
   <string name="gt_35c1c9ca10618cf1">"Betalda avgifter"</string>
   <string name="gt_c8e5709f89baf900">"Avgifterna steg, så Noah betalade mer"</string>
@@ -636,7 +625,6 @@
   <string name="gt_047f932e6c3ea4f2">"Den kom fram direkt. Ark-betalningar är gratis."</string>
   <string name="gt_f89a30c95c2897b8">"Den bekräftas om cirka 20 minuter. Aktivitet visar när."</string>
   <string name="gt_5002fe6fff33796d">"Det behövs %1$s bekräftelser innan det kommer fram."</string>
-  <string name="gt_459200cb52405496">"Nu är det vanlig bitcoin, på blockkedjan."</string>
   <string name="gt_12ad7bf0e646c2d9">"Nu är det vanliga bitcoin."</string>
   <string name="gt_5cc37a0a3b8a1e82">"Noah-teamet har fått den."</string>
   <string name="gt_b2307a77795822d1">"JPEG eller PNG, högst 5 MB"</string>
@@ -664,9 +652,6 @@
   <string name="gt_ec3b8bf1e0261664">"Senaste lyckade säkerhetskopia %1$s"</string>
   <string name="gt_e85039a1d8fa0011">"Lämnar Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"Kvar"</string>
-  <string name="gt_8d889b2a0398edd9">"Utelämnade eftersom avgifterna överstiger värdet: %1$s. Välj dem om du ändå vill ta ut dem."</string>
-  <string name="gt_71dd91736743204f">"Utelämnade eftersom de används just nu: %1$s."</string>
-  <string name="gt_1b02259449b4abf0">"Utelämnade eftersom de är för små för ett nöduttag: %1$s."</string>
   <string name="gt_4f14b3e9b20d43a4">"Utelämnat: %1$s som kostar mer i avgifter än det är värt. Välj det för att ta ut det ändå."</string>
   <string name="gt_a3b3e07f52c173b1">"Utelämnat: %1$s, används just nu."</string>
   <string name="gt_1d78b52b9fdeac1c">"Utelämnat: %1$s, för litet för uttag."</string>
@@ -819,20 +804,17 @@
   <string name="gt_db92e3e2f6075f8b">"Noah kunde inte ångra återställningen på ett säkert sätt. Försök inte igen. Stäng och starta om Noah så att plånboken kan återställas."</string>
   <string name="gt_822918727e4f828f">"Noahs standard"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah har inte bekräftat det slutliga utfallet. Betala inte igen. En statuskontroll skickar aldrig en ny betalning."</string>
-  <string name="gt_6ee90a045027e1c3">"Noah har inte kontrollerat kedjan för det här nöduttaget på ett tag. En kontroll kan också skicka dess transaktioner eller höja deras avgift."</string>
+  <string name="gt_545eb93f8194bd47">"Noah har inte kontrollerat kedjan för det här nöduttaget på ett tag. En kontroll kan också skicka dess transaktioner eller höja deras avgift."</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noah är låst"</string>
   <string name="gt_9354e260e9c82293">"Noah är i beta. Förvara bara det du har råd att förlora."</string>
   <string name="gt_2588c7db9f3fe277">"Noah är låst"</string>
   <string name="gt_f590e31a6eb944e2">"Noah håller fortfarande på att slutföra en säkerhetskopiering. Försök igen om en stund."</string>
-  <string name="gt_0450659e5fbd54ab">"Noah kontrollerar inte blockkedjan för det här uttaget just nu. Använd Kontrollera blockkedjan för att föra det vidare."</string>
   <string name="gt_338e68cc4323f294">"Aviseringar från Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registrerar plånboken hos servern igen. Din plånbok finns kvar."</string>
   <string name="gt_286c0deecb39be99">"Noah skickar den här betalningen automatiskt från ditt Ark-saldo. Betalningen får bara skickas till den här mottagaren och med det här beloppet. Du kan pausa eller avsluta den när som helst."</string>
-  <string name="gt_c31c87ce77cb431b">"Sedan skickar Noah nöduttagets transaktioner och höjer deras avgifter själv, och betalar från din bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."</string>
   <string name="gt_f3727b33f0798006">"Sedan skickar Noah uttagets transaktioner och höjer avgifterna själv, med betalning från dina bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."</string>
   <string name="gt_ddecc0272120b4ba">"Noah-användare"</string>
   <string name="gt_f802f9f1257fc080">"Noah avbröts medan betalningen skickades. Kontrollera din transaktionshistorik innan du fortsätter."</string>
-  <string name="gt_0c304c0eb596d6e9">"Noah flyttar inte tillbaka dessa till Ark."</string>
   <string name="gt_deca5f2b35700ac7">"Noah flyttar inte tillbaka dem till Ark."</string>
   <string name="gt_f02d150579902f58">"NoahAppVariant saknas eller är ogiltig i Info.plist"</string>
   <string name="gt_dc937b59892604f5">"Ingen"</string>
@@ -1182,7 +1164,6 @@
   <string name="gt_28d03596d24eeb4e">"Hoppa över"</string>
   <string name="gt_12698ce1ea5cd4ab">"Överhoppad"</string>
   <string name="gt_44d27a286f01669e">"Minsta belopp att flytta"</string>
-  <string name="gt_cb11dae84f992f25">"Avgifterna för vissa VTXO:er kunde inte uppskattas, så Alla väntar på dem. Du kan fortfarande välja VTXO:er en och en."</string>
   <string name="gt_bf046c7395cb38ee">"Källkod"</string>
   <string name="gt_83d21eddee267cd8">"Spendera bitcoin i närheten"</string>
   <string name="gt_8e8252533cde7bc4">"Kan användas"</string>
@@ -1266,7 +1247,6 @@
   <string name="gt_5f97e174b6c50b9d">"Den första betalningen kan inte vara schemalagd till en tidpunkt som redan har passerat."</string>
   <string name="gt_4ce7d56e24aef58c">"Betalningsbegäran måste avse ett helt antal satoshis."</string>
   <string name="gt_03401b1fd160f1c8">"Fakturan sätter beloppet till %1$s"</string>
-  <string name="gt_94d659bd975575ca">"Låset är öppet. Lös in till en annan plånbok eller till den här telefonens plånbok på blockkedjan."</string>
   <string name="gt_c7954684c87d96cd">"Låset är öppet. Lös in det till en annan plånbok eller till den här telefonens plånbok på blockkedjan."</string>
   <string name="gt_708398a18d2f5dfe">"Kartpositionen kunde inte sparas."</string>
   <string name="gt_bc71b743861782dc">"Åtgärden kan ha skickats. Kontrollera dess status innan du upprepar den. Andra återställningsåtgärder är fortfarande tillgängliga."</string>
@@ -1320,7 +1300,6 @@
   <string name="gt_f76ccf8f2c1d3ac9">"Den här betalningen kan ha skickats. Kontrollera statusen innan du gör en ny betalning."</string>
   <string name="gt_d31a2f01307db793">"Den här betalningsbegäran saknar en återanvändbar Ark-adress eller ett Lightning-erbjudande"</string>
   <string name="gt_154bf57eb2583196">"Den här telefonen"</string>
-  <string name="gt_1d3e83672dd2617a">"Den här telefonens plånbok på blockkedjan"</string>
   <string name="gt_dbf64e9803529181">"Den här telefonens plånbok på blockkedjan"</string>
   <string name="gt_40db1d4d49d0c277">"Det gick inte att låsa upp säkerhetskopian med den här frasen, eller så är säkerhetskopian skadad. Kontrollera alla 12 eller 24 ord och deras ordning."</string>
   <string name="gt_7d13ecdf60d28aa9">"Det här stället kan kräva en annan betalapp"</string>
@@ -1340,7 +1319,6 @@
   <string name="gt_2b065c7c9ce466e5">"I dag"</string>
   <string name="gt_8e5d375aee547cf8">"För litet för uttag · under %1$s"</string>
   <string name="gt_168d36c2d331807e">"Tog"</string>
-  <string name="gt_0145b833d52ef562">"Tog ungefär"</string>
   <string name="gt_d5cdfcf7ff75338f">"Överst"</string>
   <string name="gt_c9b3c38247f744e1">"Totalt"</string>
   <string name="gt_220753c790bf5c5f">"Totalt (granskade mynt)"</string>
@@ -1433,7 +1411,6 @@
   <string name="gt_14c805ec3e8cb07b">"Väntar på säker lagring"</string>
   <string name="gt_d99bd370a6d72213">"Väntar på åtkomst till säker lagring. Lås upp enheten och försök igen."</string>
   <string name="gt_706eee3cfecc480a">"Väntar på tidslåset"</string>
-  <string name="gt_38b84da1d4c099eb">"Väntar · %1$s block · ungefär %2$s"</string>
   <plurals name="gt_985fc1ec623fd8b3">
     <item quantity="one">"Väntar · %1$s block · %2$s"</item>
     <item quantity="other">"Väntar · %1$s block · %2$s"</item>
@@ -1480,10 +1457,9 @@
   <string name="gt_723022dbd02fce20">"Du har nått gränsen för antalet återkommande betalningar."</string>
   <string name="gt_3d26c2347422ac51">"Det går inte att överföra hela ditt Ark-saldo till den här plånbokens egen adress på kedjan. Använd en extern Bitcoin-adress."</string>
   <string name="gt_f9f55c49d8421334">"Din VTXO"</string>
-  <string name="gt_35a41dfb18ba253c">"Din VTXO lämnar Ark. Inget härifrån behöver Arks server."</string>
   <string name="gt_7594ebdff7a25376">"Din VTXO lämnar Ark. Inget härifrån behöver Arks server."</string>
   <string name="gt_e452c7da44fe3110">"Din VTXO stannar i Ark"</string>
-  <string name="gt_d2ecd48583f8a6a9">"Din VTXO:s väg till blockkedjan"</string>
+  <string name="gt_113e303aa9642dc1">"Din VTXO:s väg till blockkedjan"</string>
   <string name="gt_aa7eb8c4c9ef6410">"Din adress"</string>
   <string name="gt_f415a2f332511929">"Appversion och telefonmodell bifogas."</string>
   <string name="gt_978433e18203431a">"Din säkerhetskopia återställdes, men konfigurationen kunde inte slutföras. Gör inte en ny återställning. Stäng och starta om Noah för att fortsätta."</string>
@@ -1491,10 +1467,6 @@
   <plurals name="gt_8d95f0972bf7b0f6">
     <item quantity="one">"Dina bitcoin finns på blockkedjan, låsta i %1$s block. Låset ger Ark tid att stoppa en VTXO som redan har spenderats."</item>
     <item quantity="other">"Dina bitcoin finns på blockkedjan, låsta i %1$s block. Låset ger Ark tid att stoppa en VTXO som redan har spenderats."</item>
-  </plurals>
-  <plurals name="gt_cead2df59d70f3de">
-    <item quantity="one">"Din bitcoin finns i slutet av en väg med en transaktion i rundans träd. Rundans egen transaktion finns redan på blockkedjan."</item>
-    <item quantity="other">"Din bitcoin finns i slutet av en väg med %1$s transaktioner i rundans träd. Rundans egen transaktion finns redan på blockkedjan."</item>
   </plurals>
   <plurals name="gt_b5ead457183af288">
     <item quantity="one">"Dina bitcoin ligger i slutet av en väg med %1$s transaktion i rundans träd. Rundans egen transaktion finns redan på blockkedjan."</item>
@@ -1544,11 +1516,9 @@
   <string name="gt_05421802af3d82be">"%1$s tillgängligt"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s är tillbaka i din plånbok."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s är tillbaka i din plånbok. Lightning kunde inte nå %2$s."</string>
-  <string name="gt_3152898f21ae93dc">"%1$s kvar"</string>
   <string name="gt_1cfd3ae82c2e9be1">"%1$s skickat till %2$s."</string>
   <string name="gt_16d7d21cf4846790">"Det gick ännu inte att skicka %1$s till %2$s: %3$s"</string>
   <string name="gt_e4687b2d37b4a9a5">"%1$s skickas till %2$s i morgon."</string>
-  <string name="gt_2af449b05cd95d7f">"%1$s · avgifter %2$s"</string>
   <string name="gt_643409a7df643204">"%1$s · avgifter ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · i Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · andel av %2$s för %3$s nöduttag"</string>

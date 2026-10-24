@@ -2073,6 +2073,7 @@
   "gt_dc8cb064d1762d2f": "Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner.",
   "gt_942dd82f7e0ad733_one": "Avgifterna för {{n}} VTXO kunde inte kontrolleras, så Alla väntar. Välj den separat eller försök igen.",
   "gt_942dd82f7e0ad733_other": "Avgifterna för {{n}} VTXO:er kunde inte kontrolleras, så Alla väntar. Välj dem en i taget eller försök igen.",
-  "gt_d4ea61c79c9b77d6": "Granska igen",
-  "gt_d59c8e3fe94700c0": "Auto-board erbjöd ingen insättning: varje förberedelse använde ett inlöst uttag till den här telefonen"
+  "gt_d59c8e3fe94700c0": "Auto-board erbjöd ingen insättning: varje förberedelse använde ett inlöst uttag till den här telefonen",
+  "gt_113e303aa9642dc1": "Din VTXO:s väg till blockkedjan",
+  "gt_545eb93f8194bd47": "Noah har inte kontrollerat kedjan för det här nöduttaget på ett tag. En kontroll kan också skicka dess transaktioner eller höja deras avgift."
 }
