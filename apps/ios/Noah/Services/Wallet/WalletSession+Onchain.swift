@@ -251,7 +251,7 @@ extension WalletSession {
                     throw error
                 }
             }
-            AppLog("onchain").w("Auto-board didn't offer a board: each preparation spent an exit claim to this phone")
+            AppLog("onchain").w(#"Auto-board didn't offer a board: each preparation spent an exit claim to this phone"#)
             return nil
         } catch {
             throw OnchainSubmission.boardFailure(error) ?? error

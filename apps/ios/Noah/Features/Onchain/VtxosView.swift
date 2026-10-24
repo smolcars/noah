@@ -113,7 +113,7 @@ struct VtxosView: View {
         } else if let soonest = vtxos.filter(\.refreshable).map({ Int64($0.expiry) - Int64($0.tip) }).min() {
             HStack(spacing: 8) {
                 Image(systemName: "clock").font(.system(size: 15))
-                Text(verbatim: L10n.text("Next expiry in {time} · renews automatically", VtxoList.span(soonest, locale: language), locale: language))
+                Text(verbatim: L10n.text("Next expiry in {time} · renews automatically", VtxoList.timeLeft(soonest, locale: language), locale: language))
             }
             .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
             .padding(.top, 6)
@@ -176,7 +176,7 @@ struct VtxosView: View {
                 .disabled(vtxos.isEmpty || model.locked)
                 .accessibilityIdentifier("vtxos-select")
                 // Its own string: "Refresh" is the old word for renewing.
-                Button(L10n.text("Reload list", locale: language), systemImage: "arrow.clockwise") {
+                Button(L10n.text("Refresh list", locale: language), systemImage: "arrow.clockwise") {
                     Task { model.invalidate(); await model.load() }
                 }
                 .disabled(model.loading)
@@ -221,6 +221,13 @@ extension VtxoList {
         if blocks < 144 { return L10n.text("{n} h", blocks / 6, locale: locale) }
         if blocks < 1_008 { return L10n.text("{n} d", blocks / 144, locale: locale) }
         return L10n.text("{n} wk", blocks / 1_008, locale: locale)
+    }
+
+    /// The next-expiry line's span, as Android words it: "under an hour", "6 hours", "3 days".
+    static func timeLeft(_ blocks: Int64, locale: String) -> String {
+        if blocks < 6 { return L10n.text("under an hour", locale: locale) }
+        if blocks < 144 { return L10n.plural("{n} hours", count: Int((Double(blocks) / 6).rounded()), locale: locale) }
+        return L10n.plural("{n} days", count: Int((Double(blocks) / 144).rounded()), locale: locale)
     }
 
     /// The row's status words.
@@ -276,8 +283,7 @@ struct VtxoRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: VtxoList.status(vtxo, locale: locale.identifier)).noahText(SettingsText.value)
                         .foregroundStyle(vtxo.expired && vtxo.state != "Locked" ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
-                    Text(verbatim: L10n.text("Block {height}", vtxo.expiry.formatted(.number.locale(locale)), locale: locale.identifier)
-                         + " · " + String(vtxo.id.prefix(6)) + "…")
+                    Text(verbatim: L10n.text("Block {height} · {id}", vtxo.expiry.formatted(.number.locale(locale)), String(vtxo.id.prefix(6)) + "…", locale: locale.identifier))
                         .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                 }
                 .lineLimit(1)
@@ -429,9 +435,9 @@ struct VtxoDetailView: View {
                     SettingsDetailRow(label: L10n.text("Type", locale: language), value: vtxo.kind, compact: true)
                     SettingsDetailRow(label: L10n.text("Status", locale: language),
                                       value: L10n.text(vtxo.registered ? "Registered" : "Not registered", locale: language), compact: true)
-                    SettingsDetailRow(label: L10n.text("Exit delta", locale: language), value: L10n.text("{count} blocks", vtxo.exitDelta, locale: language), compact: true)
+                    SettingsDetailRow(label: L10n.text("Exit delta", locale: language), value: L10n.text("{n} blocks", vtxo.exitDelta.formatted(.number.locale(locale)), locale: language), compact: true)
                     SettingsDetailRow(label: L10n.text("Exit depth", locale: language), value: "\(vtxo.exitDepth)", compact: true)
-                    SettingsDetailRow(label: L10n.text("Exit weight", locale: language), value: "\(vtxo.exitWeight) wu", compact: true)
+                    SettingsDetailRow(label: L10n.text("Exit weight", locale: language), value: L10n.text("{n} wu", vtxo.exitWeight.formatted(.number.locale(locale)), locale: language), compact: true)
                     SettingsDetailRow(label: L10n.text("Server key", locale: language), value: vtxo.serverPubkey, mono: true, compact: true, copy: vtxo.serverPubkey)
                     SettingsDetailRow(label: L10n.text("Point", locale: language), value: vtxo.point, mono: true, compact: true, copy: vtxo.point)
                     if vtxo.tip > 0 {
@@ -548,7 +554,8 @@ struct RenewReviewSheet: View {
     var body: some View {
         SettingsSheetBody(title: quote.ids.count == 1 ? L10n.text("Renew this VTXO", locale: language)
                                                      : L10n.plural("Renew {n} VTXOs", count: quote.ids.count, locale: language),
-                          line: L10n.text("This refreshes the selected VTXOs in a delegated Ark round.", locale: language)) {
+                          line: quote.ids.count == 1 ? L10n.text("Joins the next Ark round, so it stays spendable.", locale: language)
+                                                     : L10n.text("Joins the next Ark round, so they stay spendable.", locale: language)) {
             VStack(spacing: 0) {
                 SettingsDetailRow(label: L10n.text("Amount", locale: language), value: money(quote.amount), numeric: true)
                 SettingsDetailRow(label: L10n.text("VTXOs", locale: language), value: "\(quote.ids.count)", numeric: true)

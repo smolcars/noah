@@ -112,9 +112,7 @@
   <string name="gt_4c9ce17646b28614">"監査を利用できません"</string>
   <string name="gt_c8271c0bafb7c1eb">"認証してウォレットにアクセスしてください"</string>
   <string name="gt_4190475b52357e7a">"認証に失敗しました。もう一度お試しください。"</string>
-  <string name="gt_d59c8e3fe94700c0">"Auto-boardはArkへの入金を提案しませんでした: どの準備も、この端末に受け取った出金を使っていました"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Auto-boardのしきい値を取得できません"</string>
-  <string name="gt_36b0afe54f3fffba">"Auto-board: どの準備でもこのスマートフォンに受け取ったコインが使われたため、入金は提案されません"</string>
   <string name="gt_cb8603c8ce918947">"自動バックアップ"</string>
   <string name="gt_afbb8dd2c2dc511f">"自動バックアップはオフです"</string>
   <string name="gt_168ae9aa2da9e959">"%1$sへの自動支払いはスキップされました。スケジュールを開いて手数料を確認し、手動で支払ってください。"</string>
@@ -206,7 +204,6 @@
   <string name="gt_62147460a3d20c27">"エクスポートされた設定を確認できません"</string>
   <string name="gt_7830e14445428d0a">"ウォレットのディレクトリを確認できません"</string>
   <string name="gt_76dbc28dfacadd7d">"リンクを開けません"</string>
-  <string name="gt_4c00b0a7252c0827">"ウォレットのジャーナルを公開できません"</string>
   <string name="gt_31a90f3cda2dfb7b">"barkウォレットのプロパティを読み取れません"</string>
   <string name="gt_ca985bb90dcf0a7b">"一時保存されたファイルを読み取れません"</string>
   <string name="gt_baa67160c5bcf450">"元に戻せません"</string>
@@ -340,7 +337,6 @@
   <string name="gt_0d5423d40addc1a4">"復旧を再開できませんでした。Noahを再起動して、もう一度お試しください。"</string>
   <string name="gt_9f01ece862c96f1d">"認証設定を保存できませんでした。"</string>
   <string name="gt_83462be19140c53a">"Auto-boardの設定を保存できませんでした。"</string>
-  <string name="gt_638978fdc93e6a4b">"Auto-boardの設定を保存できませんでした。"</string>
   <string name="gt_e25b19f7d22a2fdf">"デバッグ設定を保存できませんでした。"</string>
   <string name="gt_a23e74658fe15a8e">"この支払いを保存できませんでした。もう一度お試しください。"</string>
   <string name="gt_f86a26a2b4cac899">"名前を保存できませんでした。"</string>
@@ -628,7 +624,6 @@
   <string name="gt_0dc23ef619cceb30">"あと%1$s"</string>
   <string name="gt_e301820ac8393100">"入金"</string>
   <string name="gt_544bf107f0c7d65e">"Lightningで着金中"</string>
-  <string name="gt_7abc49dfa87bc183">"入力"</string>
   <string name="gt_ff67ecdfc6ccee10">"プッシュ通知を有効にするには、F-Droidから「ntfy」などの配信アプリをインストールしてください。"</string>
   <string name="gt_2304400f597b8734">"F-Droidからntfyをインストールして、もう一度開いてください。"</string>
   <string name="gt_ddd409663e0a1d7b">"Arkウォレットから即時・無料"</string>
@@ -749,7 +744,6 @@
   <string name="gt_6ecc3df6bffdd06c">"移動"</string>
   <string name="gt_ae88a18039eabe64">"自動で移動"</string>
   <string name="gt_85720a9d10dec1ca">"この署名済み入金トランザクションをそのまま使用して、オンチェーンのBitcoinをArkに入金します。Arkへの入金額にはArkの手数料が含まれますが、オンチェーン手数料は別途かかります。Arkへの入金が完了すると資金を使用できます。この確認内容は2分後に失効します。"</string>
-  <string name="gt_a571fc41c8ac198d">"オンチェーンのBitcoinをArkに入金します。表示されている金額と手数料は、この準備済みトランザクションに適用される正確な値です。Arkへの入金が完了すると資金を使用できます。"</string>
   <string name="gt_44541f362e819e01">"Arkに移動"</string>
   <string name="gt_5c948b346d0764f3">"Arkに移動しました"</string>
   <string name="gt_dcfb842231d789f7">"資金移動ID"</string>
@@ -989,7 +983,6 @@
   <string name="gt_89ff281050e4797e">"支払い用QRコードにカメラを向けてください。"</string>
   <string name="gt_5e4e164840885a18">"履歴に関連する可能性のある支払いがあります"</string>
   <string name="gt_2f2428e63d61518a">"プリイメージ"</string>
-  <string name="gt_b3c84728c472190c">"準備済みのArkへの入金処理の後処理に失敗しました。再試行のためハンドルを保持します"</string>
   <string name="gt_a79b96c142a5a5de">"準備済みの送信ハンドルを破棄できませんでした。再試行のために保持します"</string>
   <string name="gt_5d1fa38bcf0d88ca">"準備中…"</string>
   <string name="gt_38ff9507d52b4581">"価格API"</string>
@@ -1068,7 +1061,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"RegtestウォレットはEsploraの代わりにBitcoin Coreを使用します。"</string>
   <string name="gt_addcab98b516c661">"RegtestのウォレットはBitcoin Coreを使います。"</string>
-  <string name="gt_0953524e2307a002">"リストを再読み込み"</string>
   <string name="gt_c3812fc4acb861d5">"削除"</string>
   <string name="gt_4e9ea48ffbfb99b0">"支払いを削除"</string>
   <string name="gt_ed14fa72453957ca">"スクリーンショットを削除"</string>
@@ -1089,7 +1081,6 @@
   <string name="gt_56887030c2bff90f">"家賃、お小遣い、寄付を期日どおりに。"</string>
   <string name="gt_2f701cdd590b11d8">"重複送金防止を解除しました"</string>
   <string name="gt_dc11f56227629a10">"重複防止が解除されました。元の試行の記録は引き続き保存されています。再送信する前に、現在のウォレットの状態を確認してください。"</string>
-  <string name="gt_0e878c81671aa8dc">"重複防止を解除："</string>
   <string name="gt_92ee0233f01396ac">"繰り返し"</string>
   <string name="gt_8b535099834c9d05">"不具合の報告やアイデアをお寄せください。"</string>
   <string name="gt_fae09a4a2a5c48bb">"カメラへのアクセスをリクエスト中…"</string>
@@ -1113,7 +1104,6 @@
   <string name="gt_a5c671347dbb4adc">"履歴を確認してから再開"</string>
   <string name="gt_646db00716cc87dc">"それでも再開する"</string>
   <string name="gt_a97d32ddb6baca01">"再開しました"</string>
-  <string name="gt_ec12debd44b73ef1">"後処理を再試行するため、準備済みのArkへの入金を保持しています"</string>
   <string name="gt_942087cc2d41e013">"再試行"</string>
   <string name="gt_ffcac3158ccc4063">"再試行の詳細"</string>
   <string name="gt_04048ff7f2687457">"登録を再試行"</string>
@@ -1243,7 +1233,6 @@
   <string name="gt_68971283841aecdf">"件名"</string>
   <string name="gt_1af1dbb07ecbb25a">"取引が記録される前に送信が停止しました。再試行する前に金額と手数料を確認してください。"</string>
   <string name="gt_64900440a8c9a5ed">"送信済み"</string>
-  <string name="gt_95e5ff4198a9aea1">"送信済みですが未確認です。Noahは引き続きブロードキャストを試みます。この資金を再びArkに入金しないでください。"</string>
   <string name="gt_b50137cc6d52c59c">"送信済みで、ブロードキャスト待ちです。Noahはブロードキャストを引き続き試みます。この支払いを再送信しないでください。"</string>
   <string name="gt_8b60ea61b803ead4">"送信済みです。更新してネットワークの状態を確認してください。この支払いを再送しないでください。"</string>
   <string name="gt_63734ae10b7e46e9">"サブシステム"</string>
@@ -1306,7 +1295,6 @@
   <string name="gt_708398a18d2f5dfe">"地図の表示位置を保存できませんでした。"</string>
   <string name="gt_bc71b743861782dc">"操作は送信済みの可能性があります。再実行する前に状況を確認してください。ほかの復旧操作は引き続き利用できます。"</string>
   <string name="gt_b0186376f1dac3ea">"受取人は現在、この金額を受け付けていません。定期支払いを変更するか取り消してください。"</string>
-  <string name="gt_c092b01e17668d25">"記録された取引は、このウォレットの取引履歴にあります。"</string>
   <string name="gt_0d09cc372ee7f6aa">"記録された取引が見つかりました。ネットワーク上の状況を確認してください。"</string>
   <string name="gt_a8e2a0913b846c88">"選択した残高では、支払い額と手数料を賄えません。"</string>
   <string name="gt_16bade73921c8987">"選択した項目の状態から、この試行の結果が確定しました。続行する前に現在の状況と履歴を確認してください。"</string>
@@ -1428,7 +1416,6 @@
   <string name="gt_c5b5f0e95343c511">"ブロック %1$s でロック解除"</string>
   <string name="gt_ea72a231d1b8a76f">"制限なし"</string>
   <string name="gt_b38065110f2bd113">"未署名のトランザクション %1$s"</string>
-  <string name="gt_54324658e2eba91c">"未対応"</string>
   <string name="gt_cd815000e69f78a3">"対応していない受取人"</string>
   <string name="gt_8c1c051923c4b6b2">"この定期支払い記録のバージョンには対応していません。送信は引き続き停止されています。"</string>
   <string name="gt_e693d8441d19b569">"この定期支払いのバージョンには対応していません。送金は停止しています。"</string>
@@ -1449,14 +1436,12 @@
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO ID"</string>
   <string name="gt_a3d44a4fe18f60fb">"VTXOの16進数表記またはID"</string>
-  <string name="gt_0dc0eb4bd2d0ecca">"このVTXOは現在の表示には含まれていません。処理記録を確認するか、表示を更新してください。"</string>
   <string name="gt_3e552e392aa7a2c8">"VTXOの有効期間"</string>
   <string name="gt_00ca04b2d388077c">"VTXOを削除しました"</string>
   <string name="gt_0a32a9c29b63eb4e">"VTXOのロックを解除しました"</string>
   <string name="gt_9e4d55257ab31314">"VTXO %1$s…, %2$s, %3$s, %4$s"</string>
   <string name="gt_d8a3ba6381971636">"VTXO"</string>
   <string name="gt_fbf9a3d817acb63b">"選択したVTXO"</string>
-  <string name="gt_72d4d360dea4e316">"選択したVTXO：%1$s"</string>
   <string name="gt_3ee75029c70e284c">"確認コード"</string>
   <string name="gt_4f7838402f37674e">"検証済み"</string>
   <string name="gt_87672f62ea3f7a51">"確認済み：%1$s"</string>
@@ -1602,7 +1587,6 @@
   <string name="gt_59d264482aee8976">"%1$s · %3$s件の出金で%2$sを分担"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · 残り%2$s"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s ブロック"</string>
-  <string name="gt_1ad21324d7fd6678">"%1$s ブロック"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s。ほかのバックアップは残ります。"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>

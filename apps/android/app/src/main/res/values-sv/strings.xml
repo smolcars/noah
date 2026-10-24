@@ -112,9 +112,7 @@
   <string name="gt_4c9ce17646b28614">"Granskning inte tillgänglig"</string>
   <string name="gt_c8271c0bafb7c1eb">"Verifiera din identitet för att komma åt din plånbok"</string>
   <string name="gt_4190475b52357e7a">"Autentiseringen misslyckades. Försök igen."</string>
-  <string name="gt_d59c8e3fe94700c0">"Auto-board erbjöd ingen insättning: varje förberedelse använde ett inlöst uttag till den här telefonen"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Tröskelvärdet för Auto-board är inte tillgängligt"</string>
-  <string name="gt_36b0afe54f3fffba">"Auto-board: varje förberedelse använde ett mynt som lösts in till den här telefonen, så ingen insättning erbjuds"</string>
   <string name="gt_cb8603c8ce918947">"Automatisk säkerhetskopiering"</string>
   <string name="gt_afbb8dd2c2dc511f">"Automatisk säkerhetskopiering av"</string>
   <string name="gt_168ae9aa2da9e959">"Den automatiska betalningen till %1$s hoppades över. Öppna schemat för att granska avgiften och betala manuellt."</string>
@@ -206,7 +204,6 @@
   <string name="gt_62147460a3d20c27">"Kan inte granska exporterade inställningar"</string>
   <string name="gt_7830e14445428d0a">"Kan inte granska plånboksmappen"</string>
   <string name="gt_76dbc28dfacadd7d">"Kan inte öppna länken"</string>
-  <string name="gt_4c00b0a7252c0827">"Kan inte publicera plånboksjournalen"</string>
   <string name="gt_31a90f3cda2dfb7b">"Kan inte läsa egenskaperna för bark-plånboken"</string>
   <string name="gt_ca985bb90dcf0a7b">"Kan inte läsa mellanlagrade filer"</string>
   <string name="gt_baa67160c5bcf450">"Kan inte ångras"</string>
@@ -340,7 +337,6 @@
   <string name="gt_0d5423d40addc1a4">"Kunde inte återuppta återställningen. Starta om Noah och försök igen."</string>
   <string name="gt_9f01ece862c96f1d">"Kunde inte spara autentiseringsinställningen."</string>
   <string name="gt_83462be19140c53a">"Kunde inte spara inställningen för Auto-board."</string>
-  <string name="gt_638978fdc93e6a4b">"Kunde inte spara inställningen för Auto-board."</string>
   <string name="gt_e25b19f7d22a2fdf">"Kunde inte spara felsökningsinställningen."</string>
   <string name="gt_a23e74658fe15a8e">"Kunde inte spara betalningen. Försök igen."</string>
   <string name="gt_f86a26a2b4cac899">"Det gick inte att spara ditt namn."</string>
@@ -628,7 +624,6 @@
   <string name="gt_0dc23ef619cceb30">"Om %1$s"</string>
   <string name="gt_e301820ac8393100">"Inkommande"</string>
   <string name="gt_544bf107f0c7d65e">"Inkommande via Lightning"</string>
-  <string name="gt_7abc49dfa87bc183">"Ingångar"</string>
   <string name="gt_ff67ecdfc6ccee10">"Installera en distributörsapp som ”ntfy” från F-Droid för att aktivera pushaviseringar."</string>
   <string name="gt_2304400f597b8734">"Installera ntfy från F-Droid och kom sedan tillbaka."</string>
   <string name="gt_ddd409663e0a1d7b">"Direkt och gratis från Ark-plånböcker"</string>
@@ -749,7 +744,6 @@
   <string name="gt_6ecc3df6bffdd06c">"Flytta"</string>
   <string name="gt_ae88a18039eabe64">"Flytta automatiskt"</string>
   <string name="gt_85720a9d10dec1ca">"Flytta bitcoin på blockkedjan till Ark med just den här signerade finansieringstransaktionen. Insättningsbeloppet inkluderar Ark-avgiften. Avgiften på blockkedjan tillkommer. Medlen kan användas när insättningen är klar. Den här granskningen är giltig i två minuter."</string>
-  <string name="gt_a571fc41c8ac198d">"Flytta bitcoin på blockkedjan till Ark. Beloppen och avgifterna som visas är exakta för den här förberedda transaktionen. Medlen kan användas när insättningen är klar."</string>
   <string name="gt_44541f362e819e01">"Flytta till Ark"</string>
   <string name="gt_5c948b346d0764f3">"Flyttat till Ark"</string>
   <string name="gt_dcfb842231d789f7">"Medelsrörelsens ID"</string>
@@ -989,7 +983,6 @@
   <string name="gt_89ff281050e4797e">"Rikta kameran mot en QR-kod för betalning."</string>
   <string name="gt_5e4e164840885a18">"Möjligen relaterad betalning i Historik"</string>
   <string name="gt_2f2428e63d61518a">"Förbild"</string>
-  <string name="gt_b3c84728c472190c">"Rensningen av den förberedda insättningen misslyckades. Referensen sparas för ett nytt försök"</string>
   <string name="gt_a79b96c142a5a5de">"Det förberedda sändningshandtaget kunde inte tas bort och sparas för ett nytt försök"</string>
   <string name="gt_5d1fa38bcf0d88ca">"Förbereder…"</string>
   <string name="gt_38ff9507d52b4581">"Pris-API"</string>
@@ -1068,7 +1061,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Regtest-plånböcker använder Bitcoin Core i stället för Esplora."</string>
   <string name="gt_addcab98b516c661">"Regtest-plånböcker använder Bitcoin Core."</string>
-  <string name="gt_0953524e2307a002">"Ladda om listan"</string>
   <string name="gt_c3812fc4acb861d5">"Ta bort"</string>
   <string name="gt_4e9ea48ffbfb99b0">"Ta bort betalning"</string>
   <string name="gt_ed14fa72453957ca">"Ta bort skärmbild"</string>
@@ -1089,7 +1081,6 @@
   <string name="gt_56887030c2bff90f">"Hyra, fickpengar eller donationer, betalt i tid."</string>
   <string name="gt_2f701cdd590b11d8">"Skyddet mot upprepning har åsidosatts"</string>
   <string name="gt_dc11f56227629a10">"Skyddet mot upprepning har åsidosatts. Det ursprungliga försöket är fortfarande sparat. Granska plånbokens aktuella tillstånd innan du skickar igen."</string>
-  <string name="gt_0e878c81671aa8dc">"Skydd mot upprepning åsidosatt: "</string>
   <string name="gt_92ee0233f01396ac">"Upprepas"</string>
   <string name="gt_8b535099834c9d05">"Rapportera ett fel eller dela en idé."</string>
   <string name="gt_fae09a4a2a5c48bb">"Begär åtkomst till kameran…"</string>
@@ -1113,7 +1104,6 @@
   <string name="gt_a5c671347dbb4adc">"Återuppta efter att ha kollat historiken"</string>
   <string name="gt_646db00716cc87dc">"Återuppta ändå"</string>
   <string name="gt_a97d32ddb6baca01">"Återupptagen"</string>
-  <string name="gt_ec12debd44b73ef1">"Behåller förberedd insättning för ett nytt rensningsförsök"</string>
   <string name="gt_942087cc2d41e013">"Försök igen"</string>
   <string name="gt_ffcac3158ccc4063">"Försök läsa in detaljer igen"</string>
   <string name="gt_04048ff7f2687457">"Försök registrera igen"</string>
@@ -1243,7 +1233,6 @@
   <string name="gt_68971283841aecdf">"Ämne"</string>
   <string name="gt_1af1dbb07ecbb25a">"Sändningen stoppades innan en transaktion kunde registreras. Granska beloppet och avgiften innan du försöker igen."</string>
   <string name="gt_64900440a8c9a5ed">"Inskickad"</string>
-  <string name="gt_95e5ff4198a9aea1">"Skickad men obekräftad. Noah fortsätter att försöka sända transaktionen. Sätt inte in dessa medel igen."</string>
   <string name="gt_b50137cc6d52c59c">"Skickad, väntar på sändning. Noah fortsätter att försöka sända den. Skicka inte den här betalningen igen."</string>
   <string name="gt_8b60ea61b803ead4">"Skickad. Uppdatera för att kontrollera status i nätverket. Skicka inte den här betalningen igen."</string>
   <string name="gt_63734ae10b7e46e9">"Delsystem"</string>
@@ -1306,7 +1295,6 @@
   <string name="gt_708398a18d2f5dfe">"Kartpositionen kunde inte sparas."</string>
   <string name="gt_bc71b743861782dc">"Åtgärden kan ha skickats. Kontrollera dess status innan du upprepar den. Andra återställningsåtgärder är fortfarande tillgängliga."</string>
   <string name="gt_b0186376f1dac3ea">"Mottagaren accepterar inte längre detta belopp. Uppdatera eller avbryt den återkommande betalningen."</string>
-  <string name="gt_c092b01e17668d25">"Den registrerade transaktionen finns i den här plånbokens transaktionshistorik."</string>
   <string name="gt_0d09cc372ee7f6aa">"Den registrerade transaktionen hittades. Granska dess nätverksstatus."</string>
   <string name="gt_a8e2a0913b846c88">"Det valda saldot räcker inte till betalningen och avgiften."</string>
   <string name="gt_16bade73921c8987">"De valda objektens tillstånd har klargjort utfallet av det här försöket. Granska deras aktuella status och historik innan du fortsätter."</string>
@@ -1428,7 +1416,6 @@
   <string name="gt_c5b5f0e95343c511">"Låses upp vid block %1$s"</string>
   <string name="gt_ea72a231d1b8a76f">"Obegränsad"</string>
   <string name="gt_b38065110f2bd113">"Osignerad transaktion %1$s"</string>
-  <string name="gt_54324658e2eba91c">"Stöds inte"</string>
   <string name="gt_cd815000e69f78a3">"Mottagaren stöds inte"</string>
   <string name="gt_8c1c051923c4b6b2">"Versionen av journalen för återkommande betalningar stöds inte. Inga betalningar skickas tills vidare."</string>
   <string name="gt_e693d8441d19b569">"Den här versionen av återkommande betalningar stöds inte. Det går inte att skicka betalningar."</string>
@@ -1449,14 +1436,12 @@
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO-ID"</string>
   <string name="gt_a3d44a4fe18f60fb">"VTXO i hexformat eller ID"</string>
-  <string name="gt_0dc0eb4bd2d0ecca">"VTXO:n finns inte längre i den här vyn. Kontrollera kvittot för åtgärden eller uppdatera."</string>
   <string name="gt_3e552e392aa7a2c8">"VTXO-livslängd"</string>
   <string name="gt_00ca04b2d388077c">"VTXO borttagen"</string>
   <string name="gt_0a32a9c29b63eb4e">"VTXO upplåst"</string>
   <string name="gt_9e4d55257ab31314">"VTXO %1$s…, %2$s, %3$s, %4$s"</string>
   <string name="gt_d8a3ba6381971636">"VTXO:er"</string>
   <string name="gt_fbf9a3d817acb63b">"VTXO:er valda"</string>
-  <string name="gt_72d4d360dea4e316">"Valda VTXO:er: %1$s"</string>
   <string name="gt_3ee75029c70e284c">"Verifieringskod"</string>
   <string name="gt_4f7838402f37674e">"Verifierad"</string>
   <string name="gt_87672f62ea3f7a51">"Verifierad %1$s"</string>
@@ -1602,7 +1587,6 @@
   <string name="gt_59d264482aee8976">"%1$s · andel av %2$s för %3$s nöduttag"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · %2$s kvar"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s block"</string>
-  <string name="gt_1ad21324d7fd6678">"%1$s block"</string>
   <string name="gt_d8c81b717fe6d90e">"Växelkurs för %1$s saknas"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Dina andra säkerhetskopior finns kvar."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s kl. %2$s"</string>

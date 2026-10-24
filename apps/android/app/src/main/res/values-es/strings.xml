@@ -112,9 +112,7 @@
   <string name="gt_4c9ce17646b28614">"Auditoría no disponible"</string>
   <string name="gt_c8271c0bafb7c1eb">"Autentícate para acceder a tu billetera"</string>
   <string name="gt_4190475b52357e7a">"Error de autenticación. Inténtalo de nuevo."</string>
-  <string name="gt_d59c8e3fe94700c0">"La transferencia automática a Ark no ofreció ningún depósito: cada preparación gastaba una reclamación de salida a este teléfono"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Umbral de transferencia automática a Ark no disponible"</string>
-  <string name="gt_36b0afe54f3fffba">"Transferencia automática a Ark: cada preparación gastaba una moneda reclamada a este teléfono, así que no se ofrece ningún depósito"</string>
   <string name="gt_cb8603c8ce918947">"Copias de seguridad automáticas"</string>
   <string name="gt_afbb8dd2c2dc511f">"Copias de seguridad automáticas desactivadas"</string>
   <string name="gt_168ae9aa2da9e959">"Se omitió el pago automático a %1$s. Abre la programación para revisar la comisión y pagar manualmente."</string>
@@ -206,7 +204,6 @@
   <string name="gt_62147460a3d20c27">"No se pueden inspeccionar las exportaciones de configuración"</string>
   <string name="gt_7830e14445428d0a">"No se puede inspeccionar el directorio de la billetera"</string>
   <string name="gt_76dbc28dfacadd7d">"No se puede abrir el enlace"</string>
-  <string name="gt_4c00b0a7252c0827">"No se puede publicar el registro de la billetera"</string>
   <string name="gt_31a90f3cda2dfb7b">"No se pueden leer las propiedades de la billetera bark"</string>
   <string name="gt_ca985bb90dcf0a7b">"No se pueden leer los archivos preparados"</string>
   <string name="gt_baa67160c5bcf450">"No se puede deshacer"</string>
@@ -340,7 +337,6 @@
   <string name="gt_0d5423d40addc1a4">"No se pudo reanudar la recuperación. Reinicia Noah e inténtalo de nuevo."</string>
   <string name="gt_9f01ece862c96f1d">"No se pudo guardar la preferencia de autenticación."</string>
   <string name="gt_83462be19140c53a">"No se pudo guardar la preferencia de transferencia automática."</string>
-  <string name="gt_638978fdc93e6a4b">"No se pudo guardar el ajuste de transferencia automática."</string>
   <string name="gt_e25b19f7d22a2fdf">"No se pudo guardar el ajuste de depuración."</string>
   <string name="gt_a23e74658fe15a8e">"No se pudo guardar este pago. Inténtalo de nuevo."</string>
   <string name="gt_f86a26a2b4cac899">"No se pudo guardar tu nombre."</string>
@@ -628,7 +624,6 @@
   <string name="gt_0dc23ef619cceb30">"En %1$s"</string>
   <string name="gt_e301820ac8393100">"Entrante"</string>
   <string name="gt_544bf107f0c7d65e">"Llegando por Lightning"</string>
-  <string name="gt_7abc49dfa87bc183">"Entradas"</string>
   <string name="gt_ff67ecdfc6ccee10">"Instala una aplicación distribuidora como \"ntfy\" desde F-Droid para activar las notificaciones push."</string>
   <string name="gt_2304400f597b8734">"Instala ntfy desde F-Droid y vuelve."</string>
   <string name="gt_ddd409663e0a1d7b">"Instantáneo y gratis desde billeteras Ark"</string>
@@ -749,7 +744,6 @@
   <string name="gt_6ecc3df6bffdd06c">"Mover"</string>
   <string name="gt_ae88a18039eabe64">"Mover automáticamente"</string>
   <string name="gt_85720a9d10dec1ca">"Transfiere Bitcoin en cadena a Ark usando esta misma transacción de financiación firmada. El importe del depósito incluye la comisión de Ark; la comisión en cadena se paga aparte. Podrás gastar los fondos cuando se complete el depósito. Esta revisión caduca a los dos minutos."</string>
-  <string name="gt_a571fc41c8ac198d">"Transfiere Bitcoin en cadena a Ark. Los importes y las comisiones que se muestran son exactos para esta transacción preparada. Podrás gastar los fondos cuando se complete el depósito."</string>
   <string name="gt_44541f362e819e01">"Mover a Ark"</string>
   <string name="gt_5c948b346d0764f3">"Movido a Ark"</string>
   <string name="gt_dcfb842231d789f7">"ID del movimiento"</string>
@@ -989,7 +983,6 @@
   <string name="gt_89ff281050e4797e">"Apunta la cámara a un código QR de pago."</string>
   <string name="gt_5e4e164840885a18">"Posible pago relacionado en el historial"</string>
   <string name="gt_2f2428e63d61518a">"Preimagen"</string>
-  <string name="gt_b3c84728c472190c">"Falló la limpieza del depósito preparado; se conserva su identificador para volver a intentarlo"</string>
   <string name="gt_a79b96c142a5a5de">"No se pudo descartar el identificador del envío preparado; se conserva para volver a intentarlo"</string>
   <string name="gt_5d1fa38bcf0d88ca">"Preparando…"</string>
   <string name="gt_38ff9507d52b4581">"API de precios"</string>
@@ -1068,7 +1061,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Las billeteras Regtest usan Bitcoin Core en lugar de Esplora."</string>
   <string name="gt_addcab98b516c661">"Las billeteras de regtest usan Bitcoin Core."</string>
-  <string name="gt_0953524e2307a002">"Recargar lista"</string>
   <string name="gt_c3812fc4acb861d5">"Eliminar"</string>
   <string name="gt_4e9ea48ffbfb99b0">"Eliminar pago"</string>
   <string name="gt_ed14fa72453957ca">"Quitar captura"</string>
@@ -1089,7 +1081,6 @@
   <string name="gt_56887030c2bff90f">"Alquiler, asignaciones o donaciones, pagados a tiempo."</string>
   <string name="gt_2f701cdd590b11d8">"Protección contra repeticiones anulada"</string>
   <string name="gt_dc11f56227629a10">"Protección contra repeticiones anulada. El intento original sigue guardado. Revisa el estado actual de la billetera antes de volver a enviar."</string>
-  <string name="gt_0e878c81671aa8dc">"Protección contra repeticiones anulada: "</string>
   <string name="gt_92ee0233f01396ac">"Se repite"</string>
   <string name="gt_8b535099834c9d05">"Informa de un error o comparte una idea."</string>
   <string name="gt_fae09a4a2a5c48bb">"Solicitando acceso a la cámara…"</string>
@@ -1113,7 +1104,6 @@
   <string name="gt_a5c671347dbb4adc">"Reanudar tras revisar el historial"</string>
   <string name="gt_646db00716cc87dc">"Reanudar de todos modos"</string>
   <string name="gt_a97d32ddb6baca01">"Reanudado"</string>
-  <string name="gt_ec12debd44b73ef1">"Conservando el depósito preparado para reintentar la limpieza"</string>
   <string name="gt_942087cc2d41e013">"Reintentar"</string>
   <string name="gt_ffcac3158ccc4063">"Detalles del reintento"</string>
   <string name="gt_04048ff7f2687457">"Reintentar el registro"</string>
@@ -1243,7 +1233,6 @@
   <string name="gt_68971283841aecdf">"Asunto"</string>
   <string name="gt_1af1dbb07ecbb25a">"El envío se detuvo antes de que se pudiera registrar una transacción. Revisa el importe y la comisión antes de intentarlo de nuevo."</string>
   <string name="gt_64900440a8c9a5ed">"Enviado"</string>
-  <string name="gt_95e5ff4198a9aea1">"Enviado, pero sin confirmar. Noah seguirá intentando difundirlo. No vuelvas a depositar estos fondos."</string>
   <string name="gt_b50137cc6d52c59c">"Enviado, pendiente de difusión. Noah seguirá intentando difundirlo. No vuelvas a enviar este pago."</string>
   <string name="gt_8b60ea61b803ead4">"Enviado. Actualiza para comprobar el estado en la red. No vuelvas a enviar este pago."</string>
   <string name="gt_63734ae10b7e46e9">"Subsistema"</string>
@@ -1306,7 +1295,6 @@
   <string name="gt_708398a18d2f5dfe">"No se pudo guardar la posición del mapa."</string>
   <string name="gt_bc71b743861782dc">"Es posible que la operación se haya enviado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."</string>
   <string name="gt_b0186376f1dac3ea">"El destinatario ya no acepta este importe. Actualiza o cancela el pago recurrente."</string>
-  <string name="gt_c092b01e17668d25">"La transacción registrada está en el historial de transacciones de esta billetera."</string>
   <string name="gt_0d09cc372ee7f6aa">"Se encontró la transacción registrada. Revisa su estado en la red."</string>
   <string name="gt_a8e2a0913b846c88">"El saldo seleccionado no alcanza para cubrir este pago y su comisión."</string>
   <string name="gt_16bade73921c8987">"El estado de los elementos seleccionados permite dar por resuelto este intento. Revisa su estado actual y su historial antes de continuar."</string>
@@ -1428,7 +1416,6 @@
   <string name="gt_c5b5f0e95343c511">"Se desbloquea en el bloque %1$s"</string>
   <string name="gt_ea72a231d1b8a76f">"Sin restricciones"</string>
   <string name="gt_b38065110f2bd113">"Transacción sin firmar %1$s"</string>
-  <string name="gt_54324658e2eba91c">"No compatible"</string>
   <string name="gt_cd815000e69f78a3">"Destinatario no compatible"</string>
   <string name="gt_8c1c051923c4b6b2">"Versión del registro de pagos recurrentes no compatible. El envío sigue detenido."</string>
   <string name="gt_e693d8441d19b569">"Versión de pagos recurrentes no compatible. Los envíos están detenidos."</string>
@@ -1449,14 +1436,12 @@
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"ID de VTXO"</string>
   <string name="gt_a3d44a4fe18f60fb">"Valor hexadecimal o ID del VTXO"</string>
-  <string name="gt_0dc0eb4bd2d0ecca">"El VTXO ya no aparece en esta vista. Consulta el comprobante de su operación o actualiza la vista."</string>
   <string name="gt_3e552e392aa7a2c8">"Vida útil de VTXO"</string>
   <string name="gt_00ca04b2d388077c">"VTXO eliminado"</string>
   <string name="gt_0a32a9c29b63eb4e">"VTXO desbloqueado"</string>
   <string name="gt_9e4d55257ab31314">"VTXO %1$s…, %2$s, %3$s, %4$s"</string>
   <string name="gt_d8a3ba6381971636">"VTXOs"</string>
   <string name="gt_fbf9a3d817acb63b">"VTXOs seleccionados"</string>
-  <string name="gt_72d4d360dea4e316">"VTXOs seleccionados: %1$s"</string>
   <string name="gt_3ee75029c70e284c">"Código de verificación"</string>
   <string name="gt_4f7838402f37674e">"Verificado"</string>
   <string name="gt_87672f62ea3f7a51">"Verificado el %1$s"</string>
@@ -1602,7 +1587,6 @@
   <string name="gt_59d264482aee8976">"%1$s · parte de %2$s para %3$s salidas"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · quedan %2$s"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s bloque"</string>
-  <string name="gt_1ad21324d7fd6678">"%1$s bloques"</string>
   <string name="gt_d8c81b717fe6d90e">"Tipo de cambio de %1$s no disponible"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Tus otras copias de seguridad se conservan."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s a las %2$s"</string>

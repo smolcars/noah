@@ -378,7 +378,7 @@ internal fun VtxoDetailPage(app: AppModel, nav: SettingsNav, id: String) {
             if (stored != null) {
                 DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts, last = true)
                 FinePrint(tr("Couldn't read wallet status. Pull to refresh."))
-            } else if (!model.loading && model.overview == null) FinePrint(tr("VTXO is no longer in this view. Check its operation receipt or refresh."))
+            } else if (!model.loading && model.overview == null) FinePrint(tr("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status."))
             OnchainStatus(app, model)
             return@SettingsFrame
         }

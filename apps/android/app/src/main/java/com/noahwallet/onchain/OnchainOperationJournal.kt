@@ -18,7 +18,7 @@ internal class OnchainFile(val file: File, private val syncParent: (File) -> Uni
         val temporary = File(file.parentFile, ".${file.name}-${java.util.UUID.randomUUID()}")
         try {
             FileOutputStream(temporary).use { it.write(text.toByteArray(Charsets.UTF_8)); it.fd.sync() }
-            check(temporary.renameTo(file)) { "Cannot publish wallet journal" }
+            check(temporary.renameTo(file)) { """Cannot publish wallet journal""" }
             syncParent(checkNotNull(file.parentFile))
         } finally { temporary.delete() }
     }

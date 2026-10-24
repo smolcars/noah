@@ -54,7 +54,7 @@ extension WalletSession {
                 boardPreparations.removeValue(forKey: id)
                 return
             } catch {
-                AppLog("board").w("Retaining prepared board for cleanup retry")
+                AppLog("board").w(#"Retaining prepared board for cleanup retry"#)
                 if retry < 2 { try? await Task.sleep(for: .milliseconds(100)) }
             }
         }

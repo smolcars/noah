@@ -104,7 +104,7 @@ struct BoardArkView: View {
     private func setAutoBoard(_ enabled: Bool) {
         transaction.setAutoBoarding(enabled)
         do { try SettingsStorage.shared.setPersistedState(transaction, key: PersistedTransactionState.key, version: PersistedTransactionState.version) }
-        catch { self.error = "Couldn't save auto-board setting." }
+        catch { self.error = "Couldn't save auto-board preference." }
     }
 
     private func money(_ sats: UInt64) -> String {

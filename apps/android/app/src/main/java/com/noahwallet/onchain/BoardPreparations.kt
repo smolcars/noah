@@ -70,7 +70,7 @@ internal class BoardPreparations(
                 }
                 return
             } catch (_: Exception) {
-                warn("Prepared board cleanup failed; retaining its handle for retry")
+                warn("""Prepared board cleanup failed; retaining its handle for retry""")
                 if (retry < 2) delay(100)
             }
         }

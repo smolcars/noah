@@ -56,7 +56,7 @@ actor OnchainOperationJournal {
                     receipt.broadcastRetryPending = true
                     return receipt
                 }
-                return .init(message: "The recorded transaction is in this wallet's transaction history.", txid: txid)
+                return .init(message: "The recorded transaction was found. Review its network status.", txid: txid)
             }
             let ids = attempt.quote.ids
             guard !ids.isEmpty else { return nil }

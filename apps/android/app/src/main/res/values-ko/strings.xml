@@ -112,9 +112,7 @@
   <string name="gt_4c9ce17646b28614">"감사 불가"</string>
   <string name="gt_c8271c0bafb7c1eb">"지갑을 사용하려면 인증해 주세요"</string>
   <string name="gt_4190475b52357e7a">"인증에 실패했습니다. 다시 시도해 주세요."</string>
-  <string name="gt_d59c8e3fe94700c0">"자동 입금이 입금을 제안하지 않았습니다: 모든 준비가 이 휴대폰으로 청구한 출금을 사용했습니다"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"자동 입금 기준 금액을 확인할 수 없습니다"</string>
-  <string name="gt_36b0afe54f3fffba">"자동 입금: 모든 준비 과정에서 이 휴대폰으로 청구한 코인이 사용되어 입금을 제안하지 않습니다"</string>
   <string name="gt_cb8603c8ce918947">"자동 백업"</string>
   <string name="gt_afbb8dd2c2dc511f">"자동 백업 꺼짐"</string>
   <string name="gt_168ae9aa2da9e959">"%1$s님에게 보낼 자동 결제를 건너뛰었습니다. 일정을 열어 수수료를 확인하고 직접 결제하세요."</string>
@@ -206,7 +204,6 @@
   <string name="gt_62147460a3d20c27">"내보낸 설정 파일을 검사할 수 없습니다"</string>
   <string name="gt_7830e14445428d0a">"지갑 디렉터리를 검사할 수 없습니다"</string>
   <string name="gt_76dbc28dfacadd7d">"링크를 열 수 없습니다"</string>
-  <string name="gt_4c00b0a7252c0827">"지갑 기록을 게시할 수 없습니다"</string>
   <string name="gt_31a90f3cda2dfb7b">"bark 지갑 속성을 읽을 수 없음"</string>
   <string name="gt_ca985bb90dcf0a7b">"준비된 파일을 읽을 수 없습니다"</string>
   <string name="gt_baa67160c5bcf450">"되돌릴 수 없어요"</string>
@@ -340,7 +337,6 @@
   <string name="gt_0d5423d40addc1a4">"복구를 재개하지 못했습니다. Noah를 다시 시작한 후 다시 시도하세요."</string>
   <string name="gt_9f01ece862c96f1d">"인증 설정을 저장하지 못했습니다."</string>
   <string name="gt_83462be19140c53a">"자동 입금 설정을 저장하지 못했습니다."</string>
-  <string name="gt_638978fdc93e6a4b">"자동 입금 설정을 저장하지 못했습니다."</string>
   <string name="gt_e25b19f7d22a2fdf">"디버그 설정을 저장하지 못했습니다."</string>
   <string name="gt_a23e74658fe15a8e">"이 결제를 저장하지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_f86a26a2b4cac899">"이름을 저장하지 못했습니다."</string>
@@ -628,7 +624,6 @@
   <string name="gt_0dc23ef619cceb30">"%1$s 남음"</string>
   <string name="gt_e301820ac8393100">"수신"</string>
   <string name="gt_544bf107f0c7d65e">"라이트닝으로 들어오는 중"</string>
-  <string name="gt_7abc49dfa87bc183">"입력"</string>
   <string name="gt_ff67ecdfc6ccee10">"푸시 알림을 받으려면 F-Droid에서 \"ntfy\"와 같은 배포 앱을 설치하세요."</string>
   <string name="gt_2304400f597b8734">"F-Droid에서 ntfy를 설치한 뒤 다시 돌아오세요."</string>
   <string name="gt_ddd409663e0a1d7b">"Ark 지갑에서 즉시, 무료로"</string>
@@ -749,7 +744,6 @@
   <string name="gt_6ecc3df6bffdd06c">"이동"</string>
   <string name="gt_ae88a18039eabe64">"자동으로 이동"</string>
   <string name="gt_85720a9d10dec1ca">"이 서명된 자금 조달 거래를 그대로 사용하여 온체인 Bitcoin을 Ark로 이동합니다. 입금 금액에는 Ark 수수료가 포함되며 온체인 수수료는 별도로 지불합니다. 입금이 완료되면 자금을 사용할 수 있습니다. 이 검토 내용은 2분 후 만료됩니다."</string>
-  <string name="gt_a571fc41c8ac198d">"온체인 Bitcoin을 Ark로 옮깁니다. 표시된 금액과 수수료는 준비된 거래에 실제로 적용되는 값입니다. 입금이 완료되면 자금을 사용할 수 있습니다."</string>
   <string name="gt_44541f362e819e01">"Ark로 이동"</string>
   <string name="gt_5c948b346d0764f3">"Ark로 이동됨"</string>
   <string name="gt_dcfb842231d789f7">"자금 이동 ID"</string>
@@ -989,7 +983,6 @@
   <string name="gt_89ff281050e4797e">"카메라를 결제 QR 코드에 맞추세요."</string>
   <string name="gt_5e4e164840885a18">"내역에 관련된 것으로 보이는 결제가 있습니다"</string>
   <string name="gt_2f2428e63d61518a">"프리이미지"</string>
-  <string name="gt_b3c84728c472190c">"준비된 입금 정리에 실패했습니다. 재시도를 위해 핸들을 유지합니다"</string>
   <string name="gt_a79b96c142a5a5de">"준비된 송금 핸들을 폐기하지 못해 재시도를 위해 보관합니다"</string>
   <string name="gt_5d1fa38bcf0d88ca">"준비 중…"</string>
   <string name="gt_38ff9507d52b4581">"가격 API"</string>
@@ -1068,7 +1061,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Regtest 지갑은 Esplora 대신 Bitcoin Core를 사용합니다."</string>
   <string name="gt_addcab98b516c661">"Regtest 지갑은 Bitcoin Core를 사용합니다."</string>
-  <string name="gt_0953524e2307a002">"목록 새로고침"</string>
   <string name="gt_c3812fc4acb861d5">"삭제"</string>
   <string name="gt_4e9ea48ffbfb99b0">"결제 삭제"</string>
   <string name="gt_ed14fa72453957ca">"화면 캡처 삭제"</string>
@@ -1089,7 +1081,6 @@
   <string name="gt_56887030c2bff90f">"월세, 용돈, 기부금을 제때 보내요."</string>
   <string name="gt_2f701cdd590b11d8">"중복 결제 방지 해제됨"</string>
   <string name="gt_dc11f56227629a10">"중복 방지가 해제되었습니다. 기존 시도 기록은 그대로 저장되어 있습니다. 다시 제출하기 전에 현재 지갑 상태를 확인하세요."</string>
-  <string name="gt_0e878c81671aa8dc">"중복 방지 무시됨: "</string>
   <string name="gt_92ee0233f01396ac">"반복"</string>
   <string name="gt_8b535099834c9d05">"오류를 신고하거나 아이디어를 공유하세요."</string>
   <string name="gt_fae09a4a2a5c48bb">"카메라 접근 권한 요청 중…"</string>
@@ -1113,7 +1104,6 @@
   <string name="gt_a5c671347dbb4adc">"내역 확인 후 재개"</string>
   <string name="gt_646db00716cc87dc">"그래도 재개"</string>
   <string name="gt_a97d32ddb6baca01">"재개됨"</string>
-  <string name="gt_ec12debd44b73ef1">"정리 작업을 재시도하기 위해 준비된 입금 작업을 유지하는 중"</string>
   <string name="gt_942087cc2d41e013">"다시 시도"</string>
   <string name="gt_ffcac3158ccc4063">"재시도 세부 정보"</string>
   <string name="gt_04048ff7f2687457">"등록 재시도"</string>
@@ -1243,7 +1233,6 @@
   <string name="gt_68971283841aecdf">"제목"</string>
   <string name="gt_1af1dbb07ecbb25a">"거래가 기록되기 전에 제출이 중단되었습니다. 다시 시도하기 전에 금액과 수수료를 확인하세요."</string>
   <string name="gt_64900440a8c9a5ed">"제출됨"</string>
-  <string name="gt_95e5ff4198a9aea1">"제출되었지만 확정되지 않았습니다. Noah가 계속 전파를 시도합니다. 이 자금을 다시 입금하지 마세요."</string>
   <string name="gt_b50137cc6d52c59c">"제출되었으며 전파를 기다리고 있습니다. Noah가 계속 전파를 재시도합니다. 이 결제를 다시 보내지 마세요."</string>
   <string name="gt_8b60ea61b803ead4">"제출되었습니다. 새로고침하여 네트워크 상태를 확인하세요. 이 결제를 다시 보내지 마세요."</string>
   <string name="gt_63734ae10b7e46e9">"하위 시스템"</string>
@@ -1306,7 +1295,6 @@
   <string name="gt_708398a18d2f5dfe">"지도 위치를 저장하지 못했습니다."</string>
   <string name="gt_bc71b743861782dc">"작업이 이미 제출되었을 수 있습니다. 다시 실행하기 전에 상태를 확인하세요. 다른 복구 작업은 계속 사용할 수 있습니다."</string>
   <string name="gt_b0186376f1dac3ea">"수신자가 더 이상 이 금액을 받지 않습니다. 정기 결제를 수정하거나 취소해 주세요."</string>
-  <string name="gt_c092b01e17668d25">"기록된 거래가 이 지갑의 거래 내역에 있습니다."</string>
   <string name="gt_0d09cc372ee7f6aa">"기록된 거래를 찾았습니다. 해당 거래의 네트워크 상태를 확인하세요."</string>
   <string name="gt_a8e2a0913b846c88">"선택한 잔액으로는 결제 금액과 수수료를 충당할 수 없습니다."</string>
   <string name="gt_16bade73921c8987">"선택한 항목의 상태가 변경되어 이 시도가 종결되었습니다. 계속하기 전에 현재 상태와 내역을 확인하세요."</string>
@@ -1428,7 +1416,6 @@
   <string name="gt_c5b5f0e95343c511">"블록 %1$s에서 잠금 해제"</string>
   <string name="gt_ea72a231d1b8a76f">"제한 없음"</string>
   <string name="gt_b38065110f2bd113">"미서명 거래 %1$s"</string>
-  <string name="gt_54324658e2eba91c">"지원되지 않음"</string>
   <string name="gt_cd815000e69f78a3">"지원하지 않는 수신자"</string>
   <string name="gt_8c1c051923c4b6b2">"지원하지 않는 정기 결제 기록 버전입니다. 송금이 중지된 상태로 유지됩니다."</string>
   <string name="gt_e693d8441d19b569">"지원하지 않는 정기 결제 버전입니다. 전송이 중지되었습니다."</string>
@@ -1449,14 +1436,12 @@
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO ID"</string>
   <string name="gt_a3d44a4fe18f60fb">"VTXO 16진수 또는 ID"</string>
-  <string name="gt_0dc0eb4bd2d0ecca">"이 VTXO는 더 이상 현재 화면에 표시되지 않습니다. 작업 영수증을 확인하거나 새로고침하세요."</string>
   <string name="gt_3e552e392aa7a2c8">"VTXO 유효 기간"</string>
   <string name="gt_00ca04b2d388077c">"VTXO 제거됨"</string>
   <string name="gt_0a32a9c29b63eb4e">"VTXO 잠금 해제됨"</string>
   <string name="gt_9e4d55257ab31314">"VTXO %1$s…, %2$s, %3$s, %4$s"</string>
   <string name="gt_d8a3ba6381971636">"VTXO"</string>
   <string name="gt_fbf9a3d817acb63b">"선택한 VTXO"</string>
-  <string name="gt_72d4d360dea4e316">"선택된 VTXO: %1$s"</string>
   <string name="gt_3ee75029c70e284c">"인증 코드"</string>
   <string name="gt_4f7838402f37674e">"검증됨"</string>
   <string name="gt_87672f62ea3f7a51">"확인일: %1$s"</string>
@@ -1602,7 +1587,6 @@
   <string name="gt_59d264482aee8976">"%1$s · 출금 %3$s건의 %2$s 중 분담분"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · %2$s 남음"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s 블록"</string>
-  <string name="gt_1ad21324d7fd6678">"%1$s 블록"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s 환율을 확인할 수 없음"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. 다른 백업은 그대로 유지돼요."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>

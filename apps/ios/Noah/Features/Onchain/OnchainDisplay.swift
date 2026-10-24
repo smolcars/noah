@@ -11,7 +11,7 @@ enum OnchainDisplay {
         guard target > current else { return L10n.text("Now", locale: locale) }
         let count = target - current
         if count == 1 { return L10n.text("{count} block", count, locale: locale) }
-        return L10n.text("{count} blocks", count, locale: locale)
+        return L10n.text("{n} blocks", count, locale: locale)
     }
 
     static func block(_ block: ExitDetails.Block) -> String { "\(block.height) (\(block.hash))" }

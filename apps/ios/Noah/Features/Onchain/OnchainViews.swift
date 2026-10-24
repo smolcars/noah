@@ -30,7 +30,7 @@ struct OnchainStatusSection: View {
                 Text(attempt.quote.createdAt, style: .date).font(NoahFont.footnote)
                 Text(LocalizedStringKey(attempt.receipt?.message ?? OnchainFailure.uncertain.errorDescription!)).textSelection(.enabled)
                 if attempt.receipt?.broadcastRetryPending == true {
-                    Text("Submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again.")
+                    Text("Boarding submitted, but delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again.")
                 }
                 if let audit = attempt.overrideAudit {
                     LabeledContent("Repeat protection overridden") {

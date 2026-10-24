@@ -157,7 +157,7 @@ internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
         Text(tr(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(attempt.quote.createdAt))))
         Text(tr(attempt.receipt?.message ?: OnchainFailure.uncertain.text))
         attempt.overrideAudit?.let { audit ->
-            Text(tr("Repeat protection overridden: " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt))))
+            Text(tr("Repeat protection overridden") + ": " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt)))
             Text(tr(audit.statusMessage)); Text(tr(audit.title)); Text(tr(audit.warning)); Text(tr(audit.confirmation))
         }
         attempt.receipt?.chainStatus?.let { Text(tr(it.text)) }
@@ -172,7 +172,7 @@ internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
         (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
         if (attempt.receipt != null && !attempt.receipt.broadcastRetryPending) {
             TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Done")) }
-            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Check status")) }
+            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Refresh network status")) }
         }
         else {
             Text(tr("Noah checks again automatically as your wallet syncs."))
@@ -202,7 +202,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr(if (quote.feesUnknown) "Continue without estimate?" else quote.action.title), style = MaterialTheme.typography.headlineSmall)
             AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)
-            if (quote.ids.isNotEmpty()) Text(tr("VTXOs selected: ${quote.ids.size}"))
+            if (quote.ids.isNotEmpty()) Text(tr("VTXOs selected") + ": " + quote.ids.size)
             if (quote.action != OnchainAction.cancel && quote.fee != null && quote.chainFee != null) {
                 AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
                 if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
@@ -212,7 +212,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
             quote.preparedBoard?.let { prepared ->
                 AmountRow(app, "Total leaving onchain wallet", quote.totalLeaving)
                 DetailRow("Signed transaction size", "${prepared.vsize} vB")
-                DetailRow("Inputs", "${prepared.inputs.size}")
+                DetailRow("Funding inputs", "${prepared.inputs.size}")
             }
             if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - checkNotNull(quote.chainFee))
             quote.destination?.let { DetailRow("Destination", it) }
@@ -221,7 +221,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
                 Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), color = MaterialTheme.colorScheme.error)
                 if (quote.action == OnchainAction.startExit) Text(tr("Broadcast funding status is unknown; confirmed onchain funds are required."))
             }
-            Text(tr(reviewExplanation(quote)))
+            Text(reviewText(quote))
             if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
                 if (quote.fee != null && quote.chainFee != null) ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
                 if (!quote.feesUnknown && !quote.fundable) Text(tr("Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."))
@@ -232,9 +232,12 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
         }
     }
 }
+/** The review's explanation; MAX adds its own sentence, translated separately. */
+@Composable
+internal fun reviewText(quote: OnchainQuote): String = tr(reviewExplanation(quote)) +
+    if (quote.action == OnchainAction.board && quote.boardAll) " " + tr("MAX uses confirmed funds only and deducts the onchain fee from that balance.") else ""
 internal fun reviewExplanation(quote: OnchainQuote): String = when (quote.action) {
-    OnchainAction.board -> "Move onchain bitcoin into Ark. The amounts and fees shown are exact for this prepared transaction. Funds become spendable after the board completes." +
-        (if (quote.boardAll) " MAX boards confirmed funds only; the onchain fee is deducted from that balance." else " The onchain fee is paid in addition to the boarding amount.")
+    OnchainAction.board -> "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."
     OnchainAction.refresh -> "This refreshes the selected VTXOs in a delegated Ark round."
     OnchainAction.startExit -> if (quote.feesUnknown) "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast." else "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
     OnchainAction.progress -> "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast."

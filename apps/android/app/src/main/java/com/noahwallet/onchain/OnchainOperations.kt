@@ -124,7 +124,7 @@ internal class OnchainOperations(
             // Branch-and-bound's selection is deterministic: a little less moves it off the fit that used the claimed coin.
             amount -= maxOf(amount / 100, 1_000)
         }
-        if (stranded.add("${wallet.walletID}:$candidate")) warn("Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered")
+        if (stranded.add("${wallet.walletID}:$candidate")) warn("""Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered""")
         return null
     }
     suspend fun quote(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,

@@ -129,7 +129,7 @@ private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, mone
             DetailRow(tr("Network fee"), money(checkNotNull(quote.chainFee)), ValueKind.number, toasts = toasts)
             DetailRow(tr("Arrives in Ark"), money(quote.net), ValueKind.number, toasts = toasts)
             DetailRow(tr("Total"), money(quote.totalLeaving), ValueKind.number, toasts = toasts, last = true)
-            FinePrint(tr(reviewExplanation(quote)))
+            FinePrint(reviewText(quote))
             if (!current) FinePrint(tr(OnchainFailure.changed.text), failed = true)
         }
         model.error?.let { FinePrint(tr(it), failed = true) }
