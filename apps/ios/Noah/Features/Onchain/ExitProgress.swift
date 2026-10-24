@@ -143,6 +143,13 @@ extension ExitModel {
         records.last { $0.transactions?.isEmpty == false }?.transactions ?? []
     }
 
+    /// A claim Noah broadcast (`txid`, from its journal) that bark hasn't recorded yet: shown as
+    /// claiming until bark first sees it. After that bark's state counts, so a claim that fell out
+    /// of the mempool reads Claimable again.
+    func awaitsClaim(_ txid: String) -> Bool {
+        state == "Claimable" && !records.contains { $0.claimTxid == txid }
+    }
+
     /// The transaction parked in `AwaitingCpfpBroadcast`, waiting for a fee child.
     var parkedTxid: String? {
         guard state == "Processing", let next = details.transactions?.first(where: { $0.status.block == nil }),

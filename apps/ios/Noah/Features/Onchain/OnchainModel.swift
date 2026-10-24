@@ -246,7 +246,9 @@ final class OnchainModel {
             ExitFunds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], proven: $0.provenParked,
                                  parkedSince: parkedSince, daemonSince: $0.daemonSince, now: now)
         } ?? false
-        let claimSent = attempts.contains { $0.quote.action == .claim && $0.quote.ids.contains(exit.id) && $0.receipt?.txid != nil }
+        let claimSent = attempts.contains { attempt in
+            attempt.quote.action == .claim && attempt.quote.ids.contains(exit.id) && attempt.receipt?.txid.map(exit.awaitsClaim) == true
+        }
         return ExitProgress(exit, tip: overview?.tip ?? exit.details.tip_height ?? 0, needsFunds: needsFunds, claimSent: claimSent,
                             checkedTip: overview?.checkedTip,
                             progressing: overview.map { $0.daemonSince != nil && !$0.checkFailed } ?? true, seen: sightings.value.tips)

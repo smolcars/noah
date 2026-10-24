@@ -120,6 +120,18 @@ struct ExitProgressTests {
         let ready = Self.exit("Claimable", .init(kind: "claimable", tip_height: 248, claimable_since: .init(height: 248, hash: "h")))
         #expect(ExitProgress(ready, tip: 248).phase == .claimable)
         #expect(ExitProgress(ready, tip: 248, claimSent: true).phase == .claiming)
+        // Before bark records the claim, the journal's broadcast covers the gap.
+        #expect(ready.awaitsClaim("claim"))
+        // bark saw it, then it fell out of the mempool: bark's Claimable counts again.
+        let evicted = ExitModel(id: "v", amount: 31_000, state: "Claimable",
+            details: .init(kind: "claimable", tip_height: 250, claimable_since: .init(height: 248, hash: "h")),
+            history: ["Claimable", "ClaimInProgress"],
+            historyDetails: [.init(kind: "claimable", tip_height: 248, claimable_since: .init(height: 248, hash: "h")),
+                             .init(kind: "claim-in-progress", tip_height: 249, claimable_since: .init(height: 248, hash: "h"), claim_txid: "claim")],
+            claimable: true)
+        #expect(!evicted.awaitsClaim("claim"))
+        // A later claim, not yet seen, is covered again.
+        #expect(evicted.awaitsClaim("claim-2"))
     }
 
     // MARK: Decision 3
