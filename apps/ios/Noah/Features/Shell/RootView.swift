@@ -45,8 +45,8 @@ struct RootView: View {
             }
         }
         .onOpenURL { model.paymentLink.receive($0, gate: model.paymentLinkGate) }
-        // Launch ending in onboarding or a gate drops a link held through it.
-        .onChange(of: model.paymentLinkGate) { _, gate in if gate == .ignore { _ = model.paymentLink.take(gate) } }
+        // Launch ending in onboarding or a gate drops a link held through it. Initial: the phase swaps this Group's child.
+        .onChange(of: model.paymentLinkGate, initial: true) { _, gate in if gate == .ignore { _ = model.paymentLink.take(gate) } }
         .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in
             Task { await model.walletConfigurationChanged() }
         }
