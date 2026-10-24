@@ -15,6 +15,7 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.history.RepeatPayment
 import com.noahwallet.ui.activity.*
 import com.noahwallet.ui.home.*
+import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.OnboardingPose
 import com.noahwallet.ui.settings.SettingsDestination
@@ -206,9 +207,12 @@ internal fun HomePaymentSheet(ui: ActivityUi, state: ActivityState, actions: Act
     val scope = rememberCoroutineScope()
     // As in Activity: the block row reads the chain as the payment opens and on each history read.
     LaunchedEffect(record, ui.revision) { actions.shown(record) }
-    com.noahwallet.ui.onboarding.OnboardingSheet({ state.selected = null }, sheet, padded = false) {
-        ActivityDetail(ui, row, actions, state, toasts, wide = LocalPose.current != OnboardingPose.Compact, shared = null, sheet = true) {
-            scope.launch { sheet.hide() }.invokeOnCompletion { state.selected = null }
+    // The detail's own colour edge to edge, as on iOS: dark mode's sheet grey would hide its soft circles.
+    MaterialTheme(MaterialTheme.colorScheme.copy(surfaceContainerLow = LocalPalette.current.background)) {
+        com.noahwallet.ui.onboarding.OnboardingSheet({ state.selected = null }, sheet, padded = false) {
+            ActivityDetail(ui, row, actions, state, toasts, wide = LocalPose.current != OnboardingPose.Compact, shared = null, closable = true) {
+                scope.launch { sheet.hide() }.invokeOnCompletion { state.selected = null }
+            }
         }
     }
 }
