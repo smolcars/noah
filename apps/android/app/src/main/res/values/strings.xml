@@ -7,6 +7,7 @@
   <string name="gt_fae43771b7367b9c">"24 words"</string>
   <string name="gt_0d1fa0dfcc9e3821">"6-digit code"</string>
   <string name="gt_ca4925ac35b345a4">"A custom Esplora server can observe the Bitcoin addresses and transactions requested by this wallet. Only use a server you trust."</string>
+  <string name="gt_1ef4529eb54eae53">"A custom server can see your addresses. Use one you trust."</string>
   <string name="gt_51eedf36dc1a1749">"A payment of %1$s sats for this invoice is already in progress. Do not pay again."</string>
   <string name="gt_5018be8389df6597">"A payment of %1$s sats for this invoice is already in progress. Do not pay again."</string>
   <string name="gt_f6a7e36fc225654b">"A payment to %1$s was interrupted. Check your history, then resume it."</string>
@@ -42,7 +43,6 @@
   <string name="gt_04eb3a8bed8492d0">"Adds a NIP-05 identity to the same address. Never paste an nsec."</string>
   <string name="gt_9f088dbebd6c3c70">"Advanced"</string>
   <string name="gt_60784a76bfa6f1e6">"Advanced debug actions for developers"</string>
-  <string name="gt_eb6c016d2a3f5c97">"Advanced developer actions"</string>
   <string name="gt_7b68fe5510851da3">"After"</string>
   <string name="gt_1ab182592ebf923e">"After one confirmation"</string>
   <string name="gt_c99b0d023c7ff010">"After %1$s confirmations"</string>
@@ -55,9 +55,6 @@
   <string name="gt_22a80351096850d8">"All claimable at: Block %1$s"</string>
   <string name="gt_dbffa8bd40a8f321">"All wallet operations are disabled. Resume your wallet in Settings."</string>
   <string name="gt_d08c48b7696a251e">"Allow Noah to monitor your Ark mailbox so it can wake this app to claim Lightning payments in the background."</string>
-  <string name="gt_0b5a096e5fb17b77">"Allow Noah to receive payment notifications and maintain your wallet while it is in the background."</string>
-  <string name="gt_39c457807f3a1784">"Allow Noah to wake the app to claim incoming payments"</string>
-  <string name="gt_18b3e62ea7f24ab9">"Allow background wallet notifications"</string>
   <string name="gt_e18835ef2f6c8558">"Allow camera"</string>
   <string name="gt_8074d363626518da">"Allow camera access in Settings to scan a payment QR code."</string>
   <string name="gt_5294f0159e3758cf">"Already Verified"</string>
@@ -82,7 +79,6 @@
   <string name="gt_0d04bfeb7d64b71c">"App"</string>
   <string name="gt_b0d015fdadc38e33">"App lock"</string>
   <string name="gt_2b16e2ecee477adb">"Appears to have gone through — check History"</string>
-  <string name="gt_ac08210c6e686e23">"Application logs"</string>
   <string name="gt_6007acbe30b2cd98">"Approve"</string>
   <string name="gt_d052399ec796a8de">"Approve and resume"</string>
   <string name="gt_c82d9996442489a6">"Are you sure you want to reset your server registration? This will not delete your wallet, but you will need to register with the server again."</string>
@@ -101,7 +97,6 @@
   <string name="gt_bb52f900a0567ac9">"Ark server"</string>
   <string name="gt_d41263e062524b08">"Ark server info is unavailable. Pull to refresh."</string>
   <string name="gt_af094d458523f61f">"Ark server info is unavailable. Try refreshing."</string>
-  <string name="gt_521cb154a1b3a593">"Ark server, wallet, and explorer configuration"</string>
   <string name="gt_d2047b1c7d8dd813">"Ark signs it back to you"</string>
   <string name="gt_1a5b92522bb6c9c8">"Ark\'s published Lightning fees for this amount can reach %1$s sats, above your automatic limit of %2$s sats. Review it to pay manually."</string>
   <string name="gt_325d3644954c9188">"Ark\'s published Lightning fees for this amount can reach %1$s sats, above your automatic limit of %2$s sats. Review it to pay manually."</string>
@@ -162,9 +157,6 @@
   <string name="gt_415dbb79e7e425e7">"Balance change"</string>
   <string name="gt_82f7047c9e44772d">"Basemap unavailable · Retry"</string>
   <string name="gt_dfcb7c1619d5abd1">"Battery"</string>
-  <string name="gt_0363faa7a9734ded">"Battery Optimization"</string>
-  <string name="gt_d80412512553e428">"Battery optimization is disabled for Noah."</string>
-  <string name="gt_684f75e8eac9b75b">"Battery optimization may delay background payments."</string>
   <string name="gt_74e492d5d0df0bab">"Before you start"</string>
   <string name="gt_b6e65f6a71b4b6be">"Below dust limit"</string>
   <string name="gt_c47d21c643c02c57">"Best"</string>
@@ -172,6 +164,7 @@
   <string name="gt_2b680906402b453b">"Biometric Authentication"</string>
   <string name="gt_b4056df6691f8dc7">"Bitcoin"</string>
   <string name="gt_a7b822040637297e">"Bitcoin (BIP-177)"</string>
+  <string name="gt_f7cf2bcf911db9ad">"Bitcoin Core"</string>
   <string name="gt_5538c35c05d2ea68">"Bitcoin Map"</string>
   <string name="gt_804b771b7a7895d6">"Bitcoin Unit"</string>
   <string name="gt_574c3a5e56925ad9">"Bitcoin address"</string>
@@ -240,6 +233,7 @@
   <string name="gt_028afe3eebb92266">"Change amount"</string>
   <string name="gt_ff2ec2618b91b367">"Change email"</string>
   <string name="gt_dd16e499335d3a53">"Change email address"</string>
+  <string name="gt_fb7099ad8e818d42">"Check again"</string>
   <string name="gt_c52a96b66db5c212">"Check operation status"</string>
   <string name="gt_ae1b6f51f5f5da9f">"Check payment status"</string>
   <string name="gt_69cd3590300a68c6">"Check status"</string>
@@ -265,6 +259,7 @@
   <string name="gt_c07175f38cb0aa96">"Choose your Lightning Address"</string>
   <string name="gt_6ac674c9f0a80fb1">"City search is unavailable."</string>
   <string name="gt_05f4e6f4ede4a216">"Claim Exits"</string>
+  <string name="gt_0c6a6352089917f2">"Claim payments in the background"</string>
   <string name="gt_03baf110b771f684">"Claim recovered funds"</string>
   <string name="gt_aa87e940cf06cc86">"Claim submitted. Refresh to check confirmation."</string>
   <string name="gt_32a9a43b06393d19">"Claim transaction"</string>
@@ -279,22 +274,20 @@
   <string name="gt_28f01c81fd62a9ec">"Claiming with your key"</string>
   <string name="gt_83b12c2216efb4fd">"Clear"</string>
   <string name="gt_ba59e2d4a5e39a42">"Clear filter"</string>
-  <string name="gt_2cade3f6b9302759">"Clear local server registration and register again? Your wallet will be kept."</string>
   <string name="gt_3b7ea51793e9d906">"Clear search"</string>
   <string name="gt_cea4d2e010b8fd52">"Clear selection"</string>
   <string name="gt_05ea88a85f558c4c">"Clear your registration with the server. You will need to register again."</string>
   <string name="gt_7d9eb7acb13e2462">"Close"</string>
   <string name="gt_dfc885030d22671d">"Close place details"</string>
   <string name="gt_55656b5e434f4c06">"Close search"</string>
-  <string name="gt_c08aa5bbc4491798">"Close the wallet and disable all wallet operations until re-enabled"</string>
   <string name="gt_54cb4b725a66af16">"Coin %1$s"</string>
   <string name="gt_b322b65227bc3ec9">"Collapsed"</string>
   <string name="gt_5a7b1979437abf8d">"Combined errors render their children"</string>
   <string name="gt_bc1dbb36faac6cf7">"Coming soon in the native app."</string>
   <string name="gt_22a970d2e5b1cc23">"Completed"</string>
-  <string name="gt_8a8041ef40e7db1a">"Configure push notifications"</string>
   <string name="gt_eebdd24a77d9ad32">"Confirm"</string>
   <string name="gt_a55c4ed2db28a403">"Confirm payment"</string>
+  <string name="gt_5dfa99a6fa762317">"Confirmations"</string>
   <string name="gt_fe00b67b6dd1143f">"Confirmed"</string>
   <string name="gt_617a8f15d57215f3">"Confirmed at block %1$s"</string>
   <string name="gt_aeae980b83b4c572">"Confirmed at block %1$s"</string>
@@ -318,6 +311,7 @@
   <string name="gt_3664cca676c6d7bd">"Copy Lightning address"</string>
   <string name="gt_fbf381be9230f1e7">"Copy Seed Phrase"</string>
   <string name="gt_97aa37b889c4ee5f">"Copy address: %1$s"</string>
+  <string name="gt_c467973d015e9cb7">"Copy result"</string>
   <string name="gt_df377616065c56fa">"Copy support message"</string>
   <string name="gt_5d9172fe6bc675da">"Copy transaction ID"</string>
   <string name="gt_63ba394601c5c4aa">"Copy %1$s"</string>
@@ -342,7 +336,6 @@
   <string name="gt_f41da471fbfdefcb">"Couldn\'t finish setup. Please try again."</string>
   <string name="gt_1d8505ecfe54e3ec">"Couldn\'t finish wallet recovery. Your wallet files have been kept. Please try again."</string>
   <string name="gt_75433c45038e4e69">"Couldn\'t list backups."</string>
-  <string name="gt_de4c288f656b054b">"Couldn\'t load Ark info."</string>
   <string name="gt_3bb6d3bf6a4baf55">"Couldn\'t load Ark info. Pull to refresh."</string>
   <string name="gt_64b871562593e23b">"Couldn\'t load a Noah wallet address. Try again when the wallet is ready."</string>
   <string name="gt_28c0fd81cb2b2864">"Couldn\'t load a deposit address. Close and try again when the wallet is ready."</string>
@@ -393,6 +386,7 @@
   <string name="gt_494ca78f7374e46f">"Custom"</string>
   <string name="gt_5fb0795eaf2ee446">"Custom endpoint"</string>
   <string name="gt_2cf66471929b6b6b">"Custom intervals must be between 1 and 365 days."</string>
+  <string name="gt_c25f1d1f12dd10e2">"Custom server"</string>
   <string name="gt_b36c2611dcdfa190">"Daily"</string>
   <string name="gt_3c1c01b405853556">"Danger Zone"</string>
   <string name="gt_95bc71717feaf89f">"Dangerously remove this VTXO?"</string>
@@ -401,6 +395,8 @@
   <string name="gt_1a03bd2fd107c453">"Debug"</string>
   <string name="gt_6168260eb938c95d">"Debug Screen"</string>
   <string name="gt_3479a30b178c2355">"Debug is on"</string>
+  <string name="gt_166f21953904ae98">"Debug mode"</string>
+  <string name="gt_139995ce578c6baa">"Debug off"</string>
   <string name="gt_7bd159967356a176">"Debug on"</string>
   <string name="gt_2d33cff196396113">"Decode VTXO Hex"</string>
   <string name="gt_21b111cbfe6e8fca">"Default"</string>
@@ -414,12 +410,14 @@
   <string name="gt_eb1bbaf775e6c7ab">"Delete encrypted backup?"</string>
   <string name="gt_f335ba3fdc3a04b5">"Delete this backup?"</string>
   <string name="gt_65684f308cb12bf2">"Delete wallet"</string>
+  <string name="gt_472b52f016214da3">"Deliver with"</string>
   <string name="gt_906115657390f367">"Delivered"</string>
   <string name="gt_a0760d3dd093f263">"Delivering"</string>
   <string name="gt_ae79af44798ae9ee">"Deposit Onchain Funds"</string>
   <string name="gt_526e0087cc3f254d">"Description"</string>
   <string name="gt_293d404a500f5f9a">"Destination"</string>
   <string name="gt_45989de49fb7f66d">"Details"</string>
+  <string name="gt_268f14bbfe119c1e">"Diagnostics"</string>
   <string name="gt_68fe721765d87b10">"Did you mean"</string>
   <string name="gt_47a081866ba71b83">"Didn\'t receive the code?"</string>
   <string name="gt_db282d70878d9d3c">"Didn’t get it?"</string>
@@ -461,10 +459,12 @@
   <string name="gt_3d5044351caf9c70">"Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_1e1e7aaa734a1633">"Encrypting and uploading"</string>
   <string name="gt_14303aa0c4a08d39">"End date"</string>
+  <string name="gt_3df9726c68ba76d6">"Endpoint"</string>
   <string name="gt_75cf6f7ba8e690b8">"Endpoint not changed"</string>
   <string name="gt_116f5d831d32a009">"Endpoint not changed. Restart Noah to reopen the previous endpoint."</string>
   <string name="gt_37e1760c4da6d94b">"Endpoint not changed. The wallet is using the previous endpoint."</string>
   <string name="gt_44914ac9a9fded71">"Endpoint updated"</string>
+  <string name="gt_fce7fec2a58c8b49">"Endpoints"</string>
   <string name="gt_e98982c9f2ba3332">"Ends"</string>
   <string name="gt_727cb2670fd98607">"Ends: %1$s"</string>
   <string name="gt_251de8d83bdb7bd0">"Enter Bitcoin address"</string>
@@ -487,6 +487,7 @@
   <string name="gt_54a0e8c17ebb21a1">"Error"</string>
   <string name="gt_a464fa0760351f31">"Error: %1$s"</string>
   <string name="gt_7107b114487556ea">"Esplora"</string>
+  <string name="gt_311656f3bd25348c">"Esplora API"</string>
   <string name="gt_4aca231490486ddf">"Esplora API base URL"</string>
   <string name="gt_dea4969e1e0f5ab1">"Esplora API · Custom endpoint"</string>
   <string name="gt_673e1f4d5ca309f4">"Esplora API · Noah default"</string>
@@ -552,6 +553,7 @@
   <string name="gt_ff44a401445c99df">"Expiring"</string>
   <string name="gt_62e07fdadbbe9af4">"Expiry Height"</string>
   <string name="gt_ff57161969e87713">"Expiry: Block %1$s"</string>
+  <string name="gt_c39d646f10769b07">"Explorer"</string>
   <string name="gt_f4a9c52fcbef8486">"Explorer APIs"</string>
   <string name="gt_3664895579f0a7e6">"Export"</string>
   <string name="gt_91f71c14c8d6cc64">"Export CSV"</string>
@@ -597,6 +599,7 @@
   <string name="gt_e41727ad36a36410">"First height: %1$s"</string>
   <string name="gt_45650656cfdd8260">"First payment"</string>
   <string name="gt_48f1e8beb4c38745">"Food &amp; drink"</string>
+  <string name="gt_305a93ebd8a6e87e">"For developers. Some actions change your wallet."</string>
   <string name="gt_8aa38c1af4a2e0e9">"For prices next to your bitcoin."</string>
   <string name="gt_16e335b86c93460e">"For urgent wallet alerts"</string>
   <string name="gt_fa455979bb8dbab9">"For %1$s only"</string>
@@ -661,6 +664,7 @@
   <string name="gt_170322a32f3c35b2">"Info"</string>
   <string name="gt_7abc49dfa87bc183">"Inputs"</string>
   <string name="gt_ff67ecdfc6ccee10">"Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."</string>
+  <string name="gt_2304400f597b8734">"Install ntfy from F-Droid, then come back."</string>
   <string name="gt_b24147c47f1ae370">"Installing wallet…"</string>
   <string name="gt_ddd409663e0a1d7b">"Instant and free from Ark wallets"</string>
   <string name="gt_cf9ea7f321c15e4b">"Instant · free"</string>
@@ -710,6 +714,7 @@
   <string name="gt_f0d66a79c138e951">"Keys"</string>
   <string name="gt_4993449490bbc0ac">"LNURL invoice description hash does not commit to endpoint metadata"</string>
   <string name="gt_a4fe65264ef7dbb3">"Language"</string>
+  <string name="gt_aef7c5afac4b70b8">"Largest VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"Last"</string>
   <string name="gt_2d90a7570f22b14c">"Last Backup"</string>
   <string name="gt_d947f5e87db8d3fd">"Last attempt: %1$s (%2$s)"</string>
@@ -725,6 +730,7 @@
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
   <string name="gt_68dc9d6d2e2e87ef">"Legacy Android callback"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Let Noah run in the background"</string>
+  <string name="gt_e085922bf6346107">"Lets Noah wake up for Lightning"</string>
   <string name="gt_17968e6e1b20c79e">"Letters and numbers"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
   <string name="gt_4e62bd8335f08ccf">"Lightning Address"</string>
@@ -739,6 +745,7 @@
   <string name="gt_49ae83f26e5d0d93">"Lightning is still finding a route. You can leave this screen; Noah finishes it in the background."</string>
   <string name="gt_ca7eb2b925786eb2">"Lightning offer"</string>
   <string name="gt_b93018eee5c09c88">"Lightning receive %1$s. Generate a new payment request and try again."</string>
+  <string name="gt_abbfcd250b826648">"Lightning send delta"</string>
   <string name="gt_0ceef1fc78ab9b23">"List Backups"</string>
   <string name="gt_5d3789ebb7f966b3">"Listen to the biblical story that inspired our wallet\'s name"</string>
   <string name="gt_de1a03ce5fcc3be8">"Live details are unavailable. The bundled places still work offline."</string>
@@ -764,8 +771,10 @@
   <string name="gt_d4b3a4dca22d6c37">"Made with ❤️ from Noah team"</string>
   <string name="gt_94683fd21ba6ced9">"Mailbox Notifications"</string>
   <string name="gt_dacaaac564509e99">"Mailbox authorization is disabled"</string>
+  <string name="gt_0271cf5ff81b28c0">"Mailbox key"</string>
   <string name="gt_a21d42b5a962296c">"Mailbox pubkey"</string>
   <string name="gt_334f6f4f68b014c5">"Mailbox update is in progress."</string>
+  <string name="gt_23b4803f3d70b3cd">"Mainnet"</string>
   <string name="gt_17ccfa5b681e3e7b">"Maintenance"</string>
   <string name="gt_632e4ae827bfb9a0">"Maintenance Delegated"</string>
   <string name="gt_2f59b03b1a5e43b2">"Maintenance Refresh"</string>
@@ -828,6 +837,7 @@
   <string name="gt_83a4672409350abd">"Next payment: %1$s"</string>
   <string name="gt_1ea442a134b2a184">"No"</string>
   <string name="gt_5d770afa42d9782f">"No Ark payments"</string>
+  <string name="gt_e2dc88570af2145a">"No Google Play here, so another app delivers notifications."</string>
   <string name="gt_14835c06d76778bb">"No Lightning payments"</string>
   <string name="gt_f8ae9307585f292e">"No VTXOs in this view."</string>
   <string name="gt_9c922c642a31a549">"No VTXOs yet"</string>
@@ -840,10 +850,12 @@
   <string name="gt_d42128b50335bf93">"No browser available to open the explorer."</string>
   <string name="gt_b51ac248f2fcdf56">"No camera device found."</string>
   <string name="gt_d3f355f33a058f16">"No camera is available. You can paste the payment request instead."</string>
+  <string name="gt_992a290f2761d516">"No distributor found"</string>
   <string name="gt_99b13b050691cd88">"No distributors detected. Install ntfy or another UnifiedPush distributor."</string>
   <string name="gt_a5efd1404132fe49">"No eligible spendable VTXOs."</string>
   <string name="gt_d3ec5c01fb837c5c">"No emergency email set"</string>
   <string name="gt_096987783ca38a4e">"No exits have been started."</string>
+  <string name="gt_f7fcff0d8feaf039">"No limit"</string>
   <string name="gt_2c131be7e653b5b8">"No logs found."</string>
   <string name="gt_2df01a03ff43400b">"No matches"</string>
   <string name="gt_3455233e0fab0c48">"No matching cities or Bitcoin places"</string>
@@ -864,11 +876,15 @@
   <string name="gt_678202b3c0c345ef">"Noah"</string>
   <string name="gt_c6d29584a2c5564a">"Noah Android %1$s (%2$s): "</string>
   <string name="gt_51bf7dd8c85b84da">"Noah Wallet Transaction Export"</string>
+  <string name="gt_518f6fc1d2bea961">"Noah can receive and renew while closed."</string>
   <string name="gt_966bc2f318542271">"Noah can\'t read its secure storage yet. Unlock your device to continue."</string>
   <string name="gt_072dd91b690ac073">"Noah can\'t reconstruct this schedule\'s earlier payment history. Cancel it and explicitly approve a new recurring payment."</string>
   <string name="gt_a0bdac1d74ff4bfc">"Noah can\'t safely read this schedule. Cancel it and explicitly approve a new recurring payment."</string>
   <string name="gt_c1409d2c850b64e1">"Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer."</string>
+  <string name="gt_55b9a93591fa4702">"Noah can’t receive payments or renew your bitcoin."</string>
   <string name="gt_69015317a2b04485">"Noah checks again automatically as your wallet syncs."</string>
+  <string name="gt_c2fe2ee25b70bb73">"Noah checks it’s on the right network before switching."</string>
+  <string name="gt_5a00f75927a33884">"Noah closes the wallet and stops payments until you turn this off."</string>
   <string name="gt_7db88997746b5ec1">"Noah could not determine your current location. Try again."</string>
   <string name="gt_c1f6e702ec74583d">"Noah could not read or save the payment attempt. Sending is disabled until its status can be recovered."</string>
   <string name="gt_34c9cafb61bbac7d">"Noah couldn\'t access secure storage. Unlock your device and try again."</string>
@@ -888,6 +904,7 @@
   <string name="gt_338e68cc4323f294">"Noah notifications"</string>
   <string name="gt_88412489feb3f0b2">"Noah on GitHub"</string>
   <string name="gt_f9e22cf4260bab0d">"Noah progresses exits automatically. You can also progress all pending exits manually."</string>
+  <string name="gt_08b28eee5b5a6d39">"Noah registers this wallet with the server again. Your wallet stays."</string>
   <string name="gt_286c0deecb39be99">"Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."</string>
   <string name="gt_4ad1be4370f0322f">"Noah support"</string>
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>
@@ -903,7 +920,9 @@
   <string name="gt_b94b03f4cd232a39">"Nostr public keys must use npub encoding"</string>
   <string name="gt_67e716b9f541b283">"Not backed up yet"</string>
   <string name="gt_ca374c23ed92ea82">"Not registered"</string>
+  <string name="gt_5fe2851c6d173f8d">"Not required"</string>
   <string name="gt_22b3467c1ba90e48">"Not saved"</string>
+  <string name="gt_94b768af74236a67">"Not set up"</string>
   <string name="gt_15133907259330da">"Not verified"</string>
   <string name="gt_d8da2c49df39d91d">"Note"</string>
   <string name="gt_f9b73e1abc37cf5b">"Note (optional)"</string>
@@ -952,6 +971,7 @@
   <string name="gt_f4ce6b8f22a13fe1">"Open %1$s in browser"</string>
   <string name="gt_557d3ad870771176">"Opening the bundled BTC Map…"</string>
   <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
+  <string name="gt_a0348c11ea886849">"Optimized"</string>
   <string name="gt_4c48892477df67f4">"Optional. We only write when your bitcoin needs you."</string>
   <string name="gt_f893fab7e39f5540">"Otherwise Android may pause Noah, and payments could stop arriving."</string>
   <string name="gt_3619cf0b90923a4b">"Outgoing"</string>
@@ -969,6 +989,7 @@
   <string name="gt_f012547b9f87dbeb">"Paste payment request"</string>
   <string name="gt_858e4ba7a29fd38b">"Pause"</string>
   <string name="gt_e159b06187d369a0">"Paused"</string>
+  <string name="gt_2537c82bbce31609">"Pauses all wallet activity"</string>
   <string name="gt_0468d821ffcacc9e">"Pay again"</string>
   <string name="gt_fbccc2394f7f77c6">"Pay with"</string>
   <string name="gt_046aa79048e8f8a5">"Paying over Lightning"</string>
@@ -1088,7 +1109,7 @@
   <string name="gt_117f6a7cf0372277">"Refunded"</string>
   <string name="gt_3de658e662e84920">"Refunded · back in your wallet"</string>
   <string name="gt_bb7234ec12451361">"Register"</string>
-  <string name="gt_c318282f057b94ca">"Register this wallet and push notifications again"</string>
+  <string name="gt_dfedc705d4521581">"Register again"</string>
   <string name="gt_bc5d61cf1c3cf507">"Register this wallet before syncing recurring payments."</string>
   <string name="gt_e25e5b89a9bf90b6">"Register with UnifiedPush"</string>
   <string name="gt_2351ee992626bafb">"Registered"</string>
@@ -1097,7 +1118,9 @@
   <string name="gt_9ef767a32782109c">"Registering..."</string>
   <string name="gt_3e44ad8763804c2e">"Registration Error"</string>
   <string name="gt_6cfaa6f78b393854">"Registration is in progress."</string>
+  <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Regtest wallets use Bitcoin Core instead of Esplora."</string>
+  <string name="gt_addcab98b516c661">"Regtest wallets use Bitcoin Core."</string>
   <string name="gt_f3e4352a5df650e5">"Remaining"</string>
   <string name="gt_c3812fc4acb861d5">"Remove"</string>
   <string name="gt_86c0f68e1ece91e2">"Remove Screenshot"</string>
@@ -1123,12 +1146,15 @@
   <string name="gt_1adc3ea3fdbcbb26">"Report bugs or share feedback with the Noah team"</string>
   <string name="gt_fae09a4a2a5c48bb">"Requesting camera access…"</string>
   <string name="gt_1c7052816e70489e">"Require biometric authentication to unlock your wallet"</string>
+  <string name="gt_4850b174b713d88c">"Required"</string>
   <string name="gt_ab6b06887f08fcb1">"Required board confirmations"</string>
   <string name="gt_1f94843777aed851">"Resend"</string>
   <string name="gt_8bbbb0b609c07e3f">"Resend Code"</string>
   <string name="gt_538931fb28538397">"Resend code in %1$s"</string>
   <string name="gt_daee7606b339f3c3">"Reset"</string>
   <string name="gt_c72212abb47303d2">"Reset Server Registration"</string>
+  <string name="gt_55d67318211dbda2">"Reset registration"</string>
+  <string name="gt_9d5cd4a03ec60322">"Reset registration?"</string>
   <string name="gt_6be538eb01cfe029">"Reset to Noah Default"</string>
   <string name="gt_5954f39fc8781bfa">"Restart Noah to settle the pending restore before deleting"</string>
   <string name="gt_a76e13b9839270eb">"Restore"</string>
@@ -1158,11 +1184,14 @@
   <string name="gt_8b3426dcf53c3f35">"Reviewed amount"</string>
   <string name="gt_883361d5d682a157">"Right"</string>
   <string name="gt_90c56699eca1d0e9">"Round #%1$s"</string>
+  <string name="gt_bd6121f9f5c36dec">"Round every"</string>
   <string name="gt_f8c70589f402363d">"Round in progress"</string>
   <string name="gt_0383bb4272ba17f6">"Round interval"</string>
   <string name="gt_5094b5ed60506f03">"Round nonces"</string>
   <string name="gt_4725c4e98951924f">"Rounds &amp; Expiry"</string>
+  <string name="gt_0b83057f98fb1953">"Rounds and expiry"</string>
   <string name="gt_9dc630eaa7a65934">"Rounds in progress"</string>
+  <string name="gt_00d60e31a4e6b834">"Run"</string>
   <string name="gt_7470c75c087553d4">"Run due payments now"</string>
   <string name="gt_df00e58b3325e786">"Running in background"</string>
   <string name="gt_4977a7e5bb3675c4">"Running..."</string>
@@ -1241,6 +1270,7 @@
   <string name="gt_0191f24cb9f6ec6b">"Share Bitcoin address"</string>
   <string name="gt_0682d833fd5c9126">"Share app logs"</string>
   <string name="gt_483ffbdd70c9c49f">"Share place"</string>
+  <string name="gt_959aab0a1caf37f5">"Shared logs never include your phrase or keys."</string>
   <string name="gt_331207ee9863d023">"Shared with the recipient"</string>
   <string name="gt_ae71ba566c676006">"Shops"</string>
   <string name="gt_0df6f1cad36c49da">"Show"</string>
@@ -1254,6 +1284,7 @@
   <string name="gt_d8425d416f6d496d">"Show wallet balance"</string>
   <string name="gt_07f7360db556274d">"Shown to people you pay."</string>
   <string name="gt_6e65049bf16d9dc9">"Signed transaction size"</string>
+  <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Signing with Ark"</string>
   <string name="gt_28d03596d24eeb4e">"Skip"</string>
   <string name="gt_12698ce1ea5cd4ab">"Skipped"</string>
@@ -1298,21 +1329,28 @@
   <string name="gt_47681e105e10cd08">"Suggested deposit"</string>
   <string name="gt_479b9ae48026aec9">"Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."</string>
   <string name="gt_2dd46d7515a9b8c0">"Support code: WALLET_CONFLICT. Noah found wallet records that cannot be safely matched. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."</string>
+  <string name="gt_4948e134182f8420">"Suspend"</string>
   <string name="gt_f58b620caacbfc69">"Suspend Wallet"</string>
+  <string name="gt_7ed4156d267cb233">"Suspend wallet"</string>
+  <string name="gt_c1989bc262294358">"Suspend wallet?"</string>
   <string name="gt_e392a3891c070abe">"Suspended"</string>
   <string name="gt_f13735d87fed3876">"Swapping with Ark"</string>
   <string name="gt_e33c6493161b3d66">"Swept"</string>
   <string name="gt_4faef8c86f8b1bfe">"Switch amount currency"</string>
   <string name="gt_4ce03fd28e521932">"Switch to sats"</string>
   <string name="gt_429aa8abc9b40afd">"Switch to %1$s"</string>
+  <string name="gt_3234d0b9764f1a1f">"Switched"</string>
   <string name="gt_f0fe7ec1fdf9ab12">"Sync the wallet once before preparing a board."</string>
   <string name="gt_cb24f22aa3099c53">"Synced tip"</string>
   <string name="gt_8a046cc90ab0a981">"Syncing…"</string>
+  <string name="gt_28c83220eb3316b6">"System settings"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"Taken"</string>
   <string name="gt_55c7eb36ed47d5f6">"Telegram Support"</string>
   <string name="gt_04ba45dd2525a37f">"Telegram support"</string>
   <string name="gt_0b38e7e7a0f80600">"Test &amp; Save Endpoint"</string>
+  <string name="gt_be8494fb38fef6d7">"Test and save"</string>
+  <string name="gt_e806a291cfc3e61f">"Testing"</string>
   <string name="gt_487cace9d67bfca4">"Testing Endpoint..."</string>
   <string name="gt_2034ce6155036f8a">"Thank You"</string>
   <string name="gt_2e48454ee6ef8e0a">"That code didn’t work. Try again."</string>
@@ -1370,7 +1408,6 @@
   <string name="gt_23333df084dfad80">"This Lightning invoice has expired. Request a new invoice."</string>
   <string name="gt_74bb47afc8d3b8c4">"This QR contains only your Lightning address."</string>
   <string name="gt_1d4b5ac7d8751913">"This VTXO is no longer in the wallet\'s current VTXOs. Refresh to check its status."</string>
-  <string name="gt_0a2eaa4df5760913">"This action changes your wallet and may cause loss of funds. Type delete to confirm."</string>
   <string name="gt_71986704cdb8d4d0">"This action changes your wallet. Type delete to confirm."</string>
   <string name="gt_52d68c1550b8eb0c">"This action is irreversible. Your wallet and its recovery phrase will be removed from this device. Make sure you have your recovery phrase or a backup before you continue."</string>
   <string name="gt_69d8d757288ce17b">"This address isn\'t in your Noah wallet. The claimed funds will be sent there."</string>
@@ -1378,6 +1415,7 @@
   <string name="gt_14eec81c84b44811">"This backup belongs to a different Bitcoin network. Use the matching version of Noah."</string>
   <string name="gt_f8225bade85a4f12">"This backup was created by a newer version of Noah. Update the app, then try restoring again."</string>
   <string name="gt_42336142cf45ba47">"This broadcasts the claim transaction. Earlier broadcast fees are not deducted again."</string>
+  <string name="gt_58daedb7ce4a84c1">"This changes your wallet and can lose funds."</string>
   <string name="gt_ac257bcd97ce86b9">"This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet."</string>
   <string name="gt_dfa27aa18fe3eb7c">"This differs from the %1$s sats you reviewed."</string>
   <string name="gt_9e3a6e3e9bd56700">"This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."</string>
@@ -1422,6 +1460,7 @@
   <string name="gt_d8b8392e2c542950">"Try again"</string>
   <string name="gt_026460792a12cc5d">"Turn it on or back up now"</string>
   <string name="gt_92dfd3632baeb6d4">"Turn on notifications"</string>
+  <string name="gt_ae9c99bb67325b70">"Turn them on in Settings. Noah checks again when you come back."</string>
   <string name="gt_baaddf70fb5d432b">"Type"</string>
   <string name="gt_11f461fc56ac26c4">"Type delete to confirm"</string>
   <string name="gt_9b202ecbc6d45c6d">"US"</string>
@@ -1461,6 +1500,7 @@
   <string name="gt_b126042b7ef8a274">"Unlock VTXO"</string>
   <string name="gt_3470a00c3bb2d5ca">"Unlock to see your wallet."</string>
   <string name="gt_fae022f4a65e9a7d">"Unreadable image"</string>
+  <string name="gt_ea72a231d1b8a76f">"Unrestricted"</string>
   <string name="gt_8b5f54fcadeccafe">"Unsigned tx %1$s"</string>
   <string name="gt_b38065110f2bd113">"Unsigned tx %1$s"</string>
   <string name="gt_54324658e2eba91c">"Unsupported"</string>
@@ -1478,6 +1518,7 @@
   <string name="gt_a7a68b529b93080a">"Updating Noah wallet"</string>
   <string name="gt_b1a5d49f22607423">"Updating places"</string>
   <string name="gt_77a11d005b310667">"Updating wallet"</string>
+  <string name="gt_a769cedc799260e8">"Use default"</string>
   <string name="gt_330cc4388c5218a4">"Use default server"</string>
   <string name="gt_ba12e98ccf18a87c">"Use my Noah wallet address"</string>
   <string name="gt_28ef268f1e77dc1b">"Use the recovery phrase stored on this device to restore your backup."</string>
@@ -1485,6 +1526,7 @@
   <string name="gt_b6dc690d5982336d">"Used for Bitcoin network data throughout the wallet."</string>
   <string name="gt_e3b89e9d33f88e52">"Username"</string>
   <string name="gt_0bc523a8f221ea9f">"Username may only contain a-z, 0-9, dash, underscore, and period"</string>
+  <string name="gt_94dcfd1ebf80512e">"Using the default"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_8429e678433b1192">"VTXO Details"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO ID"</string>
@@ -1534,6 +1576,7 @@
   <string name="gt_1db6ba4dfd2bc628">"Wallet not open"</string>
   <string name="gt_24a1e5675ef33e7c">"Wallet public key"</string>
   <string name="gt_157e2e4d3fa7c80a">"Wallet recovery needed"</string>
+  <string name="gt_46a366f15c4809e0">"Wallet resumed"</string>
   <string name="gt_172f54e96d258f92">"Wallet seed unavailable"</string>
   <string name="gt_65f399ccde3d3cdf">"Wallet status observation unavailable"</string>
   <string name="gt_7adf4a8d18569397">"Wallet suspended"</string>
@@ -1547,6 +1590,7 @@
   <string name="gt_2975132481a7a695">"Weekly"</string>
   <string name="gt_6621249514b7887c">"Welcome back"</string>
   <string name="gt_367140c51afa98ec">"When your VTXOs expire"</string>
+  <string name="gt_ec5007d07cfee86d">"Where Noah reads the Bitcoin chain."</string>
   <string name="gt_9c91b3b673435dea">"Without them, Noah can’t receive payments or renew your bitcoin before it expires."</string>
   <string name="gt_426a2521e0e63bcc">"Word %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"Working"</string>
@@ -1619,6 +1663,7 @@
     <item quantity="one">"One place%2$s"</item>
     <item quantity="other">"%1$s places%2$s"</item>
   </plurals>
+  <string name="gt_21daf39744874523">"%1$s?"</string>
   <string name="gt_31ba1bfe057bd412">"%1$s arriving"</string>
   <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
   <string name="gt_05421802af3d82be">"%1$s available"</string>
@@ -1677,6 +1722,7 @@
     <item quantity="one">"%1$s payment as a CSV file."</item>
     <item quantity="other">"%1$s payments as a CSV file."</item>
   </plurals>
+  <string name="gt_996a4adc403eb54c">"%1$s seconds"</string>
   <string name="gt_6f18db1fb525f402">"%1$s wk"</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>

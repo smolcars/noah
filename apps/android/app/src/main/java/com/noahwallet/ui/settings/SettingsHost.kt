@@ -209,14 +209,13 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         is EditorPage -> com.noahwallet.recurring.RecurringEditorPage(model, nav, key.id)
         // Out of scope (settings.md): today's exit screens, unchanged, under Settings' bar.
         SettingsDestination.Exits -> Today(tr("Emergency exit")) { com.noahwallet.onchain.UnilateralExitScreen(model) }
-        SettingsDestination.Notifications -> Today(tr("Notifications")) { TodaysNotifications(model, nav) }
-        SettingsDestination.Battery -> Today(tr("Battery")) { BatteryScreen() }
-        SettingsDestination.UnifiedPush -> Today(tr("UnifiedPush")) { com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = false) { nav.pop() } }
-        SettingsDestination.Advanced -> Today(tr("Advanced")) { TodaysAdvanced(model, nav, live) }
-        SettingsDestination.Ark -> Today(tr("Ark server")) { ArkInfoScreen(model) { nav.open(it) } }
-        SettingsDestination.Esplora -> Today(tr("Esplora")) { EsploraSettingsScreen(model) }
-        SettingsDestination.Logs -> Today(tr("Logs")) { LogScreen(model) }
-        SettingsDestination.Debug -> if (live.debug) Today(tr("Debug")) { DebugScreen(model) }
+        SettingsDestination.Notifications -> NotificationsPage(model, nav, live, preview?.unifiedPush ?: PlatformAccess.unifiedPush(LocalContext.current))
+        SettingsDestination.UnifiedPush -> UnifiedPushPage(nav)
+        SettingsDestination.Advanced -> AdvancedPage(model, nav, live, initialSheet)
+        SettingsDestination.Ark -> ArkServerPage(model, nav)
+        SettingsDestination.Esplora -> EsploraPage(model, nav)
+        SettingsDestination.Logs -> LogsPage(model, nav)
+        SettingsDestination.Debug -> if (live.debug) DebugPage(model, nav)
         SettingsDestination.Feedback -> Today(tr("Feedback")) { FeedbackScreen(model) }
         SettingsDestination.About -> Today(tr("About Noah")) { TodaysAbout() }
     }

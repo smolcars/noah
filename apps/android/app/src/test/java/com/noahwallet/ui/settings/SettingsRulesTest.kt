@@ -51,6 +51,11 @@ class SettingsRulesTest {
         assertEquals(SettingsRules.Recurring(1, 2), SettingsRules.recurring(listOf(schedule("active"), schedule("active"), schedule("needs_approval"), schedule("paused"))))
     }
 
+    @Test fun batteryRowShowsAndroidsOptimisation() {
+        assertEquals(SettingsRules.Battery.optimized, SettingsRules.battery(optimizationEnabled = true))
+        assertEquals(SettingsRules.Battery.unrestricted, SettingsRules.battery(optimizationEnabled = false))
+    }
+
     @Test fun everyDeepLinkLandsOnItsPageWithSettingsBeneath() {
         val settings = SettingsDestination.Settings
         val links: Map<String, Pair<NavKey, List<NavKey>>> = mapOf(

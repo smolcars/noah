@@ -126,7 +126,7 @@ class AdaptiveLayoutDeviceTest {
                 com.noahwallet.send.SendQuote(12345, 5, 12350), controller, {}, {}) }
             show("dialog") { WalletAlertDialog({}, { TextButton({}) { Text("Confirm") } },
                 title = { Text("Confirm payment") }, text = { Text("Layout verification ".repeat(60)) }) }
-            show("debug-tools") { DebugScreen(model) }
+            show("debug-tools", chrome = false) { com.noahwallet.ui.onboarding.OnboardingFrame(null) { DebugPage(model, SettingsNav(null, {}, {}, {}, {})) } }
             show("lock-cover", chrome = false) { androidx.compose.ui.window.Dialog({}, properties = androidx.compose.ui.window.DialogProperties(
                 usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
                 Surface(Modifier.fillMaxSize()) { Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge()) { NoahForm("Noah is Locked") { Text("Authenticate to access your wallet"); NoahButton("Unlock") {} } } }

@@ -82,31 +82,98 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
         confirmButton = { TextButton({ failed = false }) { Text(tr("OK")) } })
 }
 
+/**
+ * UnifiedPush without Google Play: the installed distributors, the saved choice, this app's endpoint and today's
+ * registration (wait up to 30 s for the endpoint, then hand it to Noah's server, or queue the retry).
+ */
+@Stable
+class UnifiedPushSetup internal constructor(private val context: android.content.Context, private val scope: kotlinx.coroutines.CoroutineScope) {
+    var registration by mutableStateOf<UnifiedPushRegistration?>(null); private set
+    var distributors by mutableStateOf(emptyList<UnifiedPushRegistration.Distributor>()); private set
+    var selected by mutableStateOf<String?>(null); private set
+    var endpoint by mutableStateOf<String?>(null); private set
+    var loading by mutableStateOf(true); private set
+    var registering by mutableStateOf(false); private set
+    var failed by mutableStateOf(false); private set
+
+    internal suspend fun load() {
+        loading = true
+        val connector = withContext(Dispatchers.IO) { UnifiedPushRegistration(context) }
+        val choices = withContext(Dispatchers.IO) { connector.distributors() }
+        endpoint = withContext(Dispatchers.IO) { connector.endpoint() }
+        distributors = choices
+        selected = choices.firstOrNull { it.saved }?.id ?: choices.firstOrNull { it.connected }?.id
+        registration = connector
+        loading = false
+    }
+
+    fun reload() { scope.launch { load() } }
+
+    fun select(id: String) {
+        scope.launch {
+            val connector = registration ?: return@launch
+            loading = true
+            try {
+                distributors = withContext(Dispatchers.IO) { connector.select(id); connector.distributors() }
+                selected = id
+            } finally { loading = false }
+        }
+    }
+
+    fun register(done: (Boolean) -> Unit = {}) {
+        scope.launch {
+            registering = true; failed = false
+            try {
+                val connector = registration ?: return@launch
+                val received = withContext(Dispatchers.IO) {
+                    selected?.let(connector::select)
+                    connector.register()
+                    withTimeoutOrNull(30_000) {
+                        while (connector.endpoint() == null) delay(1000)
+                        connector.endpoint()
+                    }
+                }
+                endpoint = received
+                if (received != null) {
+                    // Onboarding has a registered server user before isInitialized is set.
+                    val services = com.noahwallet.services.AppServices.shared(context)
+                    try {
+                        withContext(Dispatchers.IO) { if (services.registration.state.isRegisteredWithServer == true)
+                            com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
+                                .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(received)).value() }
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { withContext(Dispatchers.IO) { com.noahwallet.services.logging.AppLog(context, "push").w("UnifiedPush server registration failed; queued for retry") } }
+                    withContext(Dispatchers.IO) { PushWork.register(context) }
+                } else failed = true
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { failed = true }
+            finally { registering = false; done(!failed && endpoint != null) }
+        }
+    }
+}
+
+/** The setup, re-read each time Noah resumes (a distributor installed meanwhile appears). */
+@Composable
+fun rememberUnifiedPushSetup(): UnifiedPushSetup {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val setup = remember { UnifiedPushSetup(context, scope) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { setup.load(); awaitCancellation() }
+    }
+    return setup
+}
+
 @Composable
 fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
     val context = LocalContext.current
-    var registration by remember { mutableStateOf<UnifiedPushRegistration?>(null) }
-    var distributors by remember { mutableStateOf(emptyList<UnifiedPushRegistration.Distributor>()) }
-    var selected by remember { mutableStateOf<String?>(null) }
-    var endpoint by remember { mutableStateOf<String?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var registering by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            loading = true
-            val connector = withContext(Dispatchers.IO) { UnifiedPushRegistration(context) }
-            val choices = withContext(Dispatchers.IO) { connector.distributors() }
-            endpoint = withContext(Dispatchers.IO) { connector.endpoint() }
-            distributors = choices
-            selected = choices.firstOrNull { it.saved }?.id ?: choices.firstOrNull { it.connected }?.id
-            registration = connector
-            loading = false
-            awaitCancellation()
-        }
-    }
+    val setup = rememberUnifiedPushSetup()
+    val distributors = setup.distributors
+    val selected = setup.selected
+    val endpoint = setup.endpoint
+    val loading = setup.loading
+    val registering = setup.registering
     BackHandler(enabled = !fromOnboarding) { onContinue() }
     NoahForm(if (fromOnboarding) "UnifiedPush Setup" else "UnifiedPush") {
         Text(tr("Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy)."))
@@ -114,16 +181,7 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
         if (loading) Text(tr("Loading distributors…"))
         else if (distributors.isEmpty()) Text(tr("No distributors detected. Install ntfy or another UnifiedPush distributor."))
         distributors.forEach { distributor ->
-            NoahButton(distributor.name, !registering && !loading, secondary = selected != distributor.id) {
-                scope.launch {
-                    val connector = registration ?: return@launch
-                    loading = true
-                    try {
-                        distributors = withContext(Dispatchers.IO) { connector.select(distributor.id); connector.distributors() }
-                        selected = distributor.id
-                    } finally { loading = false }
-                }
-            }
+            NoahButton(distributor.name, !registering && !loading, secondary = selected != distributor.id) { setup.select(distributor.id) }
             Text(tr(distributor.id), style = MaterialTheme.typography.bodySmall)
         }
         Text(tr("Current Endpoint:"), style = MaterialTheme.typography.titleMedium)
@@ -131,37 +189,10 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
         if (endpoint != null) NoahButton("Copy Endpoint", secondary = true) {
             (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("UnifiedPush endpoint", endpoint))
         }
-        if (failed) Text(tr("Couldn't register with UnifiedPush. Please try again."), color = MaterialTheme.colorScheme.error)
+        if (setup.failed) Text(tr("Couldn't register with UnifiedPush. Please try again."), color = MaterialTheme.colorScheme.error)
         if (endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
-        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush", !registering && !loading && registration != null) {
-            scope.launch {
-                registering = true; failed = false
-                try {
-                    val connector = registration ?: return@launch
-                    val received = withContext(Dispatchers.IO) {
-                        selected?.let(connector::select)
-                        connector.register()
-                        withTimeoutOrNull(30_000) {
-                            while (connector.endpoint() == null) delay(1000)
-                            connector.endpoint()
-                        }
-                    }
-                    endpoint = received
-                    if (received != null) {
-                        // Onboarding has a registered server user before isInitialized is set.
-                        val services = com.noahwallet.services.AppServices.shared(context)
-                        try {
-                            withContext(Dispatchers.IO) { if (services.registration.state.isRegisteredWithServer == true)
-                                com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
-                                    .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(received)).value() }
-                        } catch (cancelled: CancellationException) { throw cancelled }
-                        catch (_: Exception) { withContext(Dispatchers.IO) { com.noahwallet.services.logging.AppLog(context, "push").w("UnifiedPush server registration failed; queued for retry") } }
-                        withContext(Dispatchers.IO) { PushWork.register(context) }
-                    } else failed = true
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { failed = true }
-                finally { registering = false }
-            }
+        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush", !registering && !loading && setup.registration != null) {
+            setup.register()
         }
         Text(tr("Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."))
     }

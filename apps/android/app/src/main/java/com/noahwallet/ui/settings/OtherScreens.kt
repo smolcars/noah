@@ -20,7 +20,6 @@ import com.noahwallet.R
 import com.noahwallet.api.generated.client.V0SupportTicketClient
 import com.noahwallet.services.server.DeviceInfo
 import com.noahwallet.services.server.value
-import com.noahwallet.services.wallet.WalletSession.DebugAction
 import com.noahwallet.ui.*
 import kotlinx.coroutines.*
 
@@ -132,53 +131,6 @@ fun StoryScreen() {
     }
 }
 
-@Composable
-fun DebugScreen(model: AppModel) {
-    var action by rememberSaveable { mutableStateOf(DebugAction.ark) }
-    var push by remember { mutableStateOf(false) }
-    var menu by remember { mutableStateOf(false) }
-    var input by rememberSaveable { mutableStateOf("") }
-    var result by remember { mutableStateOf<String?>(null) }
-    var confirming by remember { mutableStateOf(false) }
-    var confirmation by rememberSaveable { mutableStateOf("") }
-    val context = LocalContext.current
-    fun execute() { model.action("Action failed. Check your input and connection before trying again.") {
-      result = null
-      try {
-        result = if (push) {
-            var token: String? = null
-            val outcome = com.noahwallet.services.push.PushRuntime(context, model.services).register { token = it }
-            token ?: outcome.name
-        }
-            else model.session.debug(action, input)
-      } catch (cancelled: CancellationException) { throw cancelled }
-      catch (failure: Exception) { result = com.noahwallet.services.logging.SafeErrorDescription.of(failure) }
-    } }
-    SettingsColumn {
-        SectionTitle("Select Action")
-        Box {
-            OutlinedButton({ menu = true }, enabled = !model.busy) { Text(tr(if (push) "Get Push Token" else action.title)) }
-            DropdownMenu(menu, { menu = false }) {
-                DebugAction.entries.forEach { candidate -> DropdownMenuItem(text = { Text(tr(candidate.title)) }, onClick = { action = candidate; push = false; input = ""; result = null; menu = false }) }
-                DropdownMenuItem(text = { Text(tr("Get Push Token")) }, onClick = { push = true; result = null; menu = false })
-            }
-        }
-        if (!push && action.needsInput) OutlinedTextField(input, { input = it }, label = { Text(tr(if (action == DebugAction.offboard) "Bitcoin address" else "VTXO hex or ID")) }, enabled = !model.busy, modifier = Modifier.fillMaxWidth())
-        NoahButton("Execute", !model.busy && !model.isWalletSuspended && (push || !action.needsInput || input.isNotBlank())) {
-            if (!push && action.destructive) { confirmation = ""; confirming = true } else execute()
-        }
-        if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        result?.let { CopyRow("Result", it) }
-    }
-    if (confirming) WalletAlertDialog(onDismissRequest = { confirming = false }, title = { Text(tr(action.title)) },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(tr("This action changes your wallet and may cause loss of funds. Type delete to confirm."))
-            OutlinedTextField(confirmation, { confirmation = it }, label = { Text(tr("delete")) })
-        } }, dismissButton = { TextButton({ confirming = false }) { Text(tr("Cancel")) } },
-        confirmButton = { TextButton({ confirming = false; execute() }, enabled = confirmation.equals("delete", true)) { Text(tr("Confirm")) } })
-}
-
-/** Large image drafts stay in memory rather than Android's saved-instance Bundle. */
 internal class FeedbackAttachments : androidx.lifecycle.ViewModel() {
     var screenshot by mutableStateOf<ByteArray?>(null)
     var cropImage by mutableStateOf<android.graphics.Bitmap?>(null)

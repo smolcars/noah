@@ -33,6 +33,11 @@ internal object SettingsRules {
     fun recurring(schedules: List<RecurringPayment>) =
         Recurring(schedules.count { it.status == "needs_approval" }, schedules.count { it.status == "active" })
 
+    enum class Battery { unrestricted, optimized }
+
+    /** Notifications → Battery: Android's battery optimisation for Noah, as the row's value. */
+    fun battery(optimizationEnabled: Boolean) = if (optimizationEnabled) Battery.optimized else Battery.unrestricted
+
     /** The version line unlocks debug after five taps, each within two seconds of the last. */
     class DebugTaps(private val window: Long = 2_000, private val needed: Int = 5) {
         private var count = 0

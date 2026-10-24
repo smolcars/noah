@@ -11,8 +11,6 @@ import kotlinx.serialization.Serializable
 enum class SettingsDestination : NavKey {
     Settings, Profile, Lightning, Email, Seed, Backup, Vtxos, Board, Recurring, Exits,
     Notifications, UnifiedPush, Advanced, Ark, Esplora, Logs, Debug, Feedback, About,
-    /** Today's battery screen, until Notifications takes it in. */
-    Battery,
 }
 
 /** One VTXO (Activity's VTXO links open it). */
@@ -26,7 +24,7 @@ enum class SettingsDestination : NavKey {
 
 internal object SettingsRoutes {
     private val parents = listOf(SettingsDestination.Lightning, SettingsDestination.Email).associateWith { SettingsDestination.Profile } +
-        listOf(SettingsDestination.UnifiedPush, SettingsDestination.Battery).associateWith { SettingsDestination.Notifications } +
+        (SettingsDestination.UnifiedPush to SettingsDestination.Notifications) +
         listOf(SettingsDestination.Ark, SettingsDestination.Esplora, SettingsDestination.Logs, SettingsDestination.Debug).associateWith { SettingsDestination.Advanced }
 
     /** The page a page's Back returns to; null for the list. */
