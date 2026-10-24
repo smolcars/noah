@@ -40,7 +40,6 @@ struct SendView: View {
     @State private var holdGate = SendHoldGate()
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @State private var haptics = OnboardingHaptics()
-    @State private var scanner = false
     @State private var shake = 0
     /// An amount typed before an invoice set its own (for the review's note).
     @State private var typedAmount: UInt64?
@@ -115,9 +114,9 @@ struct SendView: View {
         .onChange(of: model.controller.state) { _, state in if state != .ready { focus = nil } }
         .onChange(of: scenePhase) { _, phase in if phase != .active { cancelReview() } }
         .onDisappear { cancelReview() }
-        .fullScreenCover(isPresented: $scanner) {
+        .fullScreenCover(isPresented: $model.scanning) {
             SendScanner { value in
-                scanner = false
+                model.scanning = false
                 captureTypedAmount()
                 Task { await model.importRecipient(value) }
             }
@@ -183,7 +182,7 @@ struct SendView: View {
             if scan {
                 SendIconButton(systemName: "qrcode.viewfinder", label: "Scan QR code", id: "send-scan") {
                     focus = nil
-                    scanner = true
+                    model.scanning = true
                 }
             } else {
                 Color.clear.frame(width: NoahTokens.Size.hitTarget, height: NoahTokens.Size.hitTarget)

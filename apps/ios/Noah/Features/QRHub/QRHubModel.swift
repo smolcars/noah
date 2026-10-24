@@ -99,6 +99,7 @@ final class PaymentLinkRoute {
     /// Send takes a link as a scan, but never over a review it is preparing or showing.
     static func apply(_ link: String, to send: SendModel) async -> Bool {
         guard send.stage != .review, !send.showReview else { return false }
+        send.scanning = false // The camera would cover the request.
         return await QRScanRoute.apply(link, to: send)
     }
 }

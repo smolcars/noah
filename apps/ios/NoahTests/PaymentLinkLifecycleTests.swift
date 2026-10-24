@@ -68,6 +68,11 @@ struct PaymentLinkLifecycleTests {
         return window
     }
 
+    private func covered(_ controller: UIViewController?) -> Bool {
+        guard let controller else { return false }
+        return controller.presentedViewController != nil || controller.children.contains { covered($0) }
+    }
+
     @Test func notificationsDeniedLateDropTheLinkBeforeSendStartsOnIt() async throws {
         let late = LateStatus()
         let (app, root, finishing) = try await walletApp(device(late))
@@ -106,5 +111,23 @@ struct PaymentLinkLifecycleTests {
         await app.pushPermission.refresh()
         try await Task.sleep(for: .milliseconds(300))
         #expect(model.destination == "alice@example.com" && app.paymentLinkGate == .open)
+    }
+
+    @Test func aLinkClosesSendsScannerAndShowsTheRequest() async throws {
+        let push = PushPermissionModel(dependencies: .init(isPhysicalDevice: false, status: { .granted }, request: {}))
+        let (app, root, finishing) = try await walletApp(push)
+        await finishing.value
+        #expect(app.phase == .wallet && app.paymentLinkGate == .open)
+        let model = send()
+        let window = try mount(tabs(app, send: model, tab: .send))
+        defer { window.isHidden = true; window.rootViewController = nil; app.appBecameInactive(); try? FileManager.default.removeItem(at: root) }
+        try await Task.sleep(for: .milliseconds(300))
+        model.scanning = true
+        try await SendPaymentTests.waitUntil { covered(window.rootViewController) }
+        #expect(app.paymentLinkGate == .open)
+        app.paymentLink.receive(try #require(URL(string: Self.link)), gate: app.paymentLinkGate)
+        try await SendPaymentTests.waitUntil { model.destination == Self.link }
+        try await SendPaymentTests.waitUntil { !covered(window.rootViewController) }
+        #expect(!model.scanning)
     }
 }

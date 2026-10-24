@@ -56,6 +56,8 @@ import Observation
     var quote: SendQuote?
     var payment: SendPayment?
     var showReview = false
+    /// Send's camera, a cover over every step.
+    var scanning = false
     let controller: SendPaymentController
     private let session: WalletSession
     private let resolveRecipient: (String) async throws -> SendRecipientRoute
