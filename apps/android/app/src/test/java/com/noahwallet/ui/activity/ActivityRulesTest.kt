@@ -182,6 +182,16 @@ class ActivityRulesTest {
         assertEquals(1_000L, rows(retried.copy(movementStatus = "pending")).single().home.amount)
     }
 
+    @Test fun amountSearchMatchesTheAmountShown() {
+        val retried = record("ln", Date(), type = "Bolt11", amount = 1_000).copy(subsystemName = "bark.lightning_send", effectiveBalanceSat = -2_010,
+            sentTo = listOf(HistoryTransaction.Destination(ActivityFixtures.invoice("Tea", 1), 1_000, "invoice")))
+        fun found(record: HistoryTransaction, query: String) = ActivityRules.visible(rows(record), HistoryFilter.All, query, emptyMap()).isNotEmpty()
+        assertTrue(found(retried, "2,010")); assertTrue(found(retried, "₿2010"))
+        assertFalse("bark's recorded 1,000 isn't what the row shows", found(retried, "1,000"))
+        // No amount shown, none matched.
+        assertFalse(found(retried.copy(effectiveBalanceSat = 0), "1,000"))
+    }
+
     @Test fun aLightningAddressPaidByInvoiceKeepsItsRecipient() {
         val invoice = ActivityFixtures.invoice("Pizza", 4)
         // bark records the invoice Noah fetched; Noah's repeat metadata records the address.

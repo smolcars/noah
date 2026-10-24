@@ -41,17 +41,17 @@ object ActivityRules {
 
     private val separators = setOf(',', '.', ' ', ' ', ' ', '\'', '_')
 
-    /** Case-insensitive; an amount matches with or without separators or a leading ₿. */
-    fun matches(haystack: String, amount: Long, query: String): Boolean {
+    /** Case-insensitive; the amount shown matches with or without separators or a leading ₿ (none shown, none matched). */
+    fun matches(haystack: String, amount: Long?, query: String): Boolean {
         val q = query.trim().lowercase(Locale.ROOT).removePrefix("₿").trim()
         if (q.isEmpty()) return true
         val digits = q.filterNot { it in separators }
-        if (digits.isNotEmpty() && digits.all(Char::isDigit) && amount.toString().contains(digits)) return true
+        if (digits.isNotEmpty() && digits.all(Char::isDigit) && amount?.toString()?.contains(digits) == true) return true
         return haystack.contains(q)
     }
 
     fun visible(rows: List<Row>, filter: HistoryFilter, query: String, haystacks: Map<String, String>): List<Row> =
-        rows.filter { filter.includes(it.record) && matches(haystacks[it.id] ?: haystack(it), it.record.amount, query) }
+        rows.filter { filter.includes(it.record) && matches(haystacks[it.id] ?: haystack(it), it.home.amount, query) }
 
     /** The rows Export CSV writes: today's export rows narrowed by the filter, never the newly shown failures. */
     fun exported(records: List<HistoryTransaction>, filter: HistoryFilter) = records.filter { filter.includes(it) && it.exported }
