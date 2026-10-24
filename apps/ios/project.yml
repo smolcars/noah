@@ -115,7 +115,7 @@ targets:
         CFBundleName: "$(PRODUCT_NAME)"
         CFBundlePackageType: "$(PRODUCT_BUNDLE_PACKAGE_TYPE)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
-        CFBundleURLTypes: [{"CFBundleURLSchemes": ["$(NOAH_URL_SCHEME)"]}]
+        CFBundleURLTypes: [{"CFBundleURLSchemes": ["$(NOAH_URL_SCHEME)"]}, {"CFBundleURLSchemes": ["bitcoin", "lightning", "lnurlp"]}]
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSApplicationQueriesSchemes: ["whatsapp", "telegram", "signal"]
         LSRequiresIPhoneOS: true

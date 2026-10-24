@@ -44,6 +44,9 @@ struct RootView: View {
                 }
             }
         }
+        .onOpenURL { model.paymentLink.receive($0, gate: model.paymentLinkGate) }
+        // Launch ending in onboarding or a gate drops a link held through it.
+        .onChange(of: model.paymentLinkGate) { _, gate in if gate == .ignore { _ = model.paymentLink.take(gate) } }
         .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in
             Task { await model.walletConfigurationChanged() }
         }
@@ -126,6 +129,8 @@ struct WalletTabs: View {
     @State private var pendingRepeatPayment: RepeatPayment?
     @State private var send: SendModel
     @State private var scanBlocked = false
+    /// The blocked request was an OS link, not a scan.
+    @State private var linkBlocked = false
     @State private var selection: Tab
     @State private var settingsRoute = SettingsRoute.shared
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
@@ -178,7 +183,10 @@ struct WalletTabs: View {
         .onChange(of: send.busy) { _, _ in consumeRepeatPayment() }
         .alert("Payment in progress", isPresented: $scanBlocked) {
             Button("OK", role: .cancel) {}
-        } message: { Text("Finish the current payment before scanning another request.") }
+        } message: { Text(Self.blockedMessage(link: linkBlocked)) }
+        .onChange(of: app.paymentLink.pending != nil && app.paymentLinkGate == .open, initial: true) { _, ready in
+            if ready, let link = app.paymentLink.take(.open) { open(link, link: true) }
+        }
         .environment(history)
         .environment(tracker)
         .environment(settingsSummary)
@@ -198,9 +206,15 @@ struct WalletTabs: View {
         .tabBarMinimizeOnScrollIfAvailable()
     }
 
-    private func scanned(_ value: String) {
+    static func blockedMessage(link: Bool) -> LocalizedStringKey {
+        link ? "Finish the current payment before opening another payment request." : "Finish the current payment before scanning another request."
+    }
+
+    private func scanned(_ value: String) { open(value, link: false) }
+
+    private func open(_ value: String, link: Bool) {
         selection = .send
-        Task { if !(await QRScanRoute.apply(value, to: send)) { scanBlocked = true } }
+        Task { if !(await QRScanRoute.apply(value, to: send)) { linkBlocked = link; scanBlocked = true } }
     }
 
     private func consumeRepeatPayment() {

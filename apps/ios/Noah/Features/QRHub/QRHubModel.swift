@@ -54,3 +54,36 @@ enum QRScanRoute {
         return true
     }
 }
+
+/// `bitcoin:`, `lightning:` and `lnurlp:` links from the OS take `QRScanRoute`. A link lives in memory only:
+/// held through launch and the app lock, ignored behind onboarding or a launch gate, and handed over once.
+@MainActor
+@Observable
+final class PaymentLinkRoute {
+    enum Gate: Equatable {
+        case hold, ignore, open
+
+        init(phase: AppModel.Phase, onboarding: Bool, gated: Bool, locked: Bool) {
+            switch phase {
+            case .launching: self = .hold
+            case .wallet where !onboarding && !gated: self = locked ? .hold : .open
+            default: self = .ignore
+            }
+        }
+    }
+
+    private(set) var pending: String?
+
+    /// The URL's own string, so its case and percent-encoding reach Send as a scanned code's would.
+    func receive(_ url: URL, gate: Gate) {
+        guard gate != .ignore, ["bitcoin", "lightning", "lnurlp"].contains(url.scheme?.lowercased()) else { return }
+        pending = url.absoluteString
+    }
+
+    /// The held link once the gate opens; an ignoring gate drops it.
+    func take(_ gate: Gate) -> String? {
+        guard gate != .hold else { return nil }
+        defer { pending = nil }
+        return gate == .open ? pending : nil
+    }
+}

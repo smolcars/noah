@@ -452,6 +452,7 @@
         "Find places that accept bitcoin",
         "Finding your bitcoin",
         "Finish setting up your Lightning address before sharing your QR.",
+        "Finish the current payment before opening another payment request.",
         "Finish the current payment before scanning another request.",
         "Finished",
         "First payment",

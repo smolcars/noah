@@ -101,6 +101,11 @@ final class AppModel {
     let versionCheck = AppVersionCheck()
     let pushPermission = PushPermissionModel()
     let walletLock: WalletLock
+    let paymentLink = PaymentLinkRoute()
+    var paymentLinkGate: PaymentLinkRoute.Gate {
+        .init(phase: phase, onboarding: holdsOnboardingAfterRestore,
+              gated: isWalletSuspended || pushPermission.blocksWallet(initialized: true), locked: walletLock.policy.locked)
+    }
     let server: ServerRegistration
     private let log = AppLog("app")
     private let settings: SettingsStorage

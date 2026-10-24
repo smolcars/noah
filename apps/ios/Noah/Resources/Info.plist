@@ -33,6 +33,14 @@
 				<string>$(NOAH_URL_SCHEME)</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>bitcoin</string>
+				<string>lightning</string>
+				<string>lnurlp</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
