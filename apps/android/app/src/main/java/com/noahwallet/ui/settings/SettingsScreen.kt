@@ -14,7 +14,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.noahwallet.ui.*
 
@@ -46,19 +45,6 @@ fun SettingToggle(title: String, detail: String, checked: Boolean, enabled: Bool
             if (detail.isNotEmpty()) Text(tr(detail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked, change, enabled = enabled, modifier = Modifier.semantics { contentDescription = localizedTitle })
-    }
-}
-
-/** Today's story and links from the old list, until About is rebuilt. */
-@Composable
-internal fun TodaysAbout() {
-    val uri = LocalUriHandler.current
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) { StoryScreen() }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            TextButton({ uri.openUri("https://t.me/blixtwallet/605026") }) { Text(tr("Telegram support")) }
-            TextButton({ uri.openUri("https://github.com/smolcars/noah") }) { Text(tr("Noah on GitHub")) }
-        }
     }
 }
 

@@ -1189,6 +1189,42 @@
         }
       }
     },
+    "Add screenshot": {
+      "comment": "GT gt_ef61c03bbcda7402; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add screenshot"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add screenshot"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add screenshot"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add screenshot"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add screenshot"
+          }
+        }
+      }
+    },
     "Add your email": {
       "comment": "GT gt_fcdcc9c0caf001eb; arguments: none",
       "extractionState": "manual",
@@ -8301,6 +8337,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ändra e-postadress"
+          }
+        }
+      }
+    },
+    "Chat on Telegram": {
+      "comment": "GT gt_77a94e1521d6a8e8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat on Telegram"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat on Telegram"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat on Telegram"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat on Telegram"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat on Telegram"
           }
         }
       }
@@ -15861,6 +15933,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "E-post (valfritt)"
+          }
+        }
+      }
+    },
+    "Email (optional)": {
+      "comment": "GT gt_6eea8608c452711b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email (optional)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email (optional)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email (optional)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email (optional)"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email (optional)"
           }
         }
       }
@@ -24757,6 +24865,42 @@
         }
       }
     },
+    "It’s with the Noah team.": {
+      "comment": "GT gt_5cc37a0a3b8a1e82; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s with the Noah team."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s with the Noah team."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s with the Noah team."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s with the Noah team."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s with the Noah team."
+          }
+        }
+      }
+    },
     "I’ve written it down": {
       "comment": "GT gt_97812286b5d2cb4b; arguments: none",
       "extractionState": "manual",
@@ -32245,42 +32389,6 @@
         }
       }
     },
-    "Noah on GitHub": {
-      "comment": "GT gt_88412489feb3f0b2; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah on GitHub"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah en GitHub"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GitHubのNoah"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GitHub의 Noah"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah på GitHub"
-          }
-        }
-      }
-    },
     "Noah progresses exits automatically. You can also progress all pending exits manually.": {
       "comment": "GT gt_f9e22cf4260bab0d; arguments: none",
       "extractionState": "manual",
@@ -37069,6 +37177,42 @@
         }
       }
     },
+    "Privacy policy": {
+      "comment": "GT gt_ba445cff3898a3f2; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy policy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy policy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy policy"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy policy"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy policy"
+          }
+        }
+      }
+    },
     "Processing": {
       "comment": "GT gt_c8e3e92a62ecf181; arguments: none",
       "extractionState": "manual",
@@ -40237,6 +40381,42 @@
         }
       }
     },
+    "Remove screenshot": {
+      "comment": "GT gt_ed14fa72453957ca; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove screenshot"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove screenshot"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove screenshot"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove screenshot"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove screenshot"
+          }
+        }
+      }
+    },
     "Renew": {
       "comment": "GT gt_90c1689b0b74f032; arguments: none",
       "extractionState": "manual",
@@ -40833,6 +41013,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Upprepas"
+          }
+        }
+      }
+    },
+    "Report a bug or share an idea.": {
+      "comment": "GT gt_8b535099834c9d05; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a bug or share an idea."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a bug or share an idea."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a bug or share an idea."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a bug or share an idea."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a bug or share an idea."
           }
         }
       }
@@ -45553,6 +45769,42 @@
         }
       }
     },
+    "Short summary": {
+      "comment": "GT gt_c57d4ecc83b7a2c7; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Short summary"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Short summary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Short summary"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Short summary"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Short summary"
+          }
+        }
+      }
+    },
     "Show": {
       "comment": "GT gt_0df6f1cad36c49da; arguments: none",
       "extractionState": "manual",
@@ -46125,6 +46377,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Smallest move"
+          }
+        }
+      }
+    },
+    "Source code": {
+      "comment": "GT gt_bf046c7395cb38ee; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source code"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source code"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source code"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source code"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source code"
           }
         }
       }
@@ -48181,6 +48469,42 @@
         }
       }
     },
+    "Telegram": {
+      "comment": "GT gt_acdd1e734125f341; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        }
+      }
+    },
     "Telegram Support": {
       "comment": "GT gt_55c7eb36ed47d5f6; arguments: none",
       "extractionState": "manual",
@@ -48195,42 +48519,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Asistencia en Telegram"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Telegramサポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Telegram 지원"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Support via Telegram"
-          }
-        }
-      }
-    },
-    "Telegram support": {
-      "comment": "GT gt_04ba45dd2525a37f; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Telegram support"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Soporte por Telegram"
           }
         },
         "ja": {
@@ -48429,6 +48717,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tack"
+          }
+        }
+      }
+    },
+    "Thank you": {
+      "comment": "GT gt_268bc1833e83306f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thank you"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thank you"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thank you"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thank you"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thank you"
           }
         }
       }
@@ -49833,6 +50157,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Servern svarar inte. Byter tillbaka…"
+          }
+        }
+      }
+    },
+    "The story of Noah’s Ark": {
+      "comment": "GT gt_919fe342fe619b2c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story of Noah’s Ark"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story of Noah’s Ark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story of Noah’s Ark"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story of Noah’s Ark"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story of Noah’s Ark"
+          }
+        }
+      }
+    },
+    "The story that gave Noah its name.": {
+      "comment": "GT gt_cf0ac52cbfc6c5d1; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story that gave Noah its name."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story that gave Noah its name."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story that gave Noah its name."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story that gave Noah its name."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The story that gave Noah its name."
           }
         }
       }
@@ -55525,6 +55921,42 @@
         }
       }
     },
+    "Version {version}": {
+      "comment": "GT gt_a18745121bb8af6d; arguments: version",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@"
+          }
+        }
+      }
+    },
     "Via": {
       "comment": "GT gt_2ed8b8066255f7d2; arguments: none",
       "extractionState": "manual",
@@ -56929,6 +57361,42 @@
         }
       }
     },
+    "What happened, or what would help?": {
+      "comment": "GT gt_73d2cd15889fe99e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What happened, or what would help?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What happened, or what would help?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What happened, or what would help?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What happened, or what would help?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What happened, or what would help?"
+          }
+        }
+      }
+    },
     "When your VTXOs expire": {
       "comment": "GT gt_367140c51afa98ec; arguments: none",
       "extractionState": "manual",
@@ -57793,6 +58261,42 @@
         }
       }
     },
+    "Your app version and phone model are attached.": {
+      "comment": "GT gt_f415a2f332511929; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your app version and phone model are attached."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your app version and phone model are attached."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your app version and phone model are attached."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your app version and phone model are attached."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your app version and phone model are attached."
+          }
+        }
+      }
+    },
     "Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.": {
       "comment": "GT gt_978433e18203431a; arguments: none",
       "extractionState": "manual",
@@ -58077,6 +58581,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dina synpunkter har skickats till Noah-teamet."
+          }
+        }
+      }
+    },
+    "Your name": {
+      "comment": "GT gt_2c6b2e253c01fb2e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name"
           }
         }
       }
