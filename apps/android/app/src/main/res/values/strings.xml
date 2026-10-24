@@ -293,7 +293,6 @@
   <string name="gt_ca778115cc05083c">"Copy Bitcoin address"</string>
   <string name="gt_5a531e363a276b20">"Copy Endpoint"</string>
   <string name="gt_3664cca676c6d7bd">"Copy Lightning address"</string>
-  <string name="gt_fbf381be9230f1e7">"Copy Seed Phrase"</string>
   <string name="gt_97aa37b889c4ee5f">"Copy address: %1$s"</string>
   <string name="gt_c467973d015e9cb7">"Copy result"</string>
   <string name="gt_df377616065c56fa">"Copy support message"</string>
@@ -346,6 +345,7 @@
   <string name="gt_f86a26a2b4cac899">"Couldn\'t save your name."</string>
   <string name="gt_a541bee10f51fc47">"Couldn\'t save your name. Please try again."</string>
   <string name="gt_de1c8e4d260f4c2f">"Couldn\'t save your preference."</string>
+  <string name="gt_dc1fe218989321e7">"Couldn\'t save your preference. Please try again."</string>
   <string name="gt_be09de6cd8e0775e">"Couldn\'t share logs. Please try again."</string>
   <string name="gt_2ad14a344060b310">"Couldn\'t update backup settings."</string>
   <string name="gt_395881a9f3636129">"Couldn\'t update mailbox notifications."</string>
@@ -671,7 +671,6 @@
   <string name="gt_f89a30c95c2897b8">"It confirms in about 20 minutes. Activity shows when."</string>
   <string name="gt_5002fe6fff33796d">"It needs %1$s confirmations to arrive."</string>
   <string name="gt_5cc37a0a3b8a1e82">"It’s with the Noah team."</string>
-  <string name="gt_97812286b5d2cb4b">"I’ve written it down"</string>
   <string name="gt_b2307a77795822d1">"JPEG or PNG, 5 MB or smaller"</string>
   <string name="gt_43d44ae6f646956e">"JPY"</string>
   <string name="gt_db1a21a0bc2ef8fb">"JSON"</string>
@@ -1036,6 +1035,7 @@
   <string name="gt_3b208c8df3744b19">"Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming."</string>
   <string name="gt_41edd3f47328da5a">"Recovery phrase"</string>
   <string name="gt_512d764f27c017d9">"Recovery phrase found"</string>
+  <string name="gt_9b40b8e408567040">"Recovery phrase hidden"</string>
   <string name="gt_42340084a768bf70">"Recovery phrase needed"</string>
   <string name="gt_c0c06e547b1b55e1">"Recurring"</string>
   <string name="gt_f1edc38f48fa8c1a">"Recurring background work stopped."</string>
@@ -1361,6 +1361,7 @@
   <string name="gt_b721722a0c00f9a9">"The wallet is now using Noah\'s default Esplora endpoint."</string>
   <string name="gt_70f8c0c39c5d2857">"The wallet is now using the new Esplora endpoint."</string>
   <string name="gt_fd04d8103140aa83">"The wallet or fees changed, or the quote expired. Review again before confirming."</string>
+  <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
   <string name="gt_d05e4b12e63fdf63">"Their receipt unlocks it"</string>
   <string name="gt_9cc11d41c56f8fed">"There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation."</string>
   <string name="gt_2f536a74d5111f93">"There are too many small coins for this board. Try a smaller amount."</string>
@@ -1377,7 +1378,6 @@
   <string name="gt_f8225bade85a4f12">"This backup was created by a newer version of Noah. Update the app, then try restoring again."</string>
   <string name="gt_42336142cf45ba47">"This broadcasts the claim transaction. Earlier broadcast fees are not deducted again."</string>
   <string name="gt_58daedb7ce4a84c1">"This changes your wallet and can lose funds."</string>
-  <string name="gt_ac257bcd97ce86b9">"This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet."</string>
   <string name="gt_dfa27aa18fe3eb7c">"This differs from the %1$s sats you reviewed."</string>
   <string name="gt_9e3a6e3e9bd56700">"This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."</string>
   <string name="gt_f2faa6b386bacbee">"This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."</string>
@@ -1550,7 +1550,6 @@
   <string name="gt_9c91b3b673435dea">"Without them, Noah can’t receive payments or renew your bitcoin before it expires."</string>
   <string name="gt_426a2521e0e63bcc">"Word %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"Working"</string>
-  <string name="gt_e325adc5b94bc4ab">"Write down these %1$s words in order and store them in a safe place. This is the only way to recover your wallet."</string>
   <string name="gt_4b68ab3847feda7d">"X"</string>
   <string name="gt_85a39ab345d672ff">"Yes"</string>
   <string name="gt_566181254b293aa6">"Yesterday"</string>
@@ -1563,7 +1562,6 @@
   <string name="gt_04dc7cb10406d3ac">"You\'ll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice."</string>
   <string name="gt_723022dbd02fce20">"You\'ve reached the maximum number of recurring payments."</string>
   <string name="gt_3d26c2347422ac51">"Your Ark balance cannot be swept to this wallet\'s own onchain address. Use an external Bitcoin address."</string>
-  <string name="gt_cc46cdc66a73235d">"Your Recovery Phrase"</string>
   <string name="gt_aa7eb8c4c9ef6410">"Your address"</string>
   <string name="gt_f415a2f332511929">"Your app version and phone model are attached."</string>
   <string name="gt_978433e18203431a">"Your backup was restored, but setup couldn\'t finish. Do not restore again. Close and restart Noah to continue."</string>
@@ -1678,6 +1676,7 @@
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s seconds"</string>
   <string name="gt_6f18db1fb525f402">"%1$s wk"</string>
+  <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"%1$s at the time"</string>

@@ -121,24 +121,41 @@ struct WalletContentProtection: ViewModifier {
     }
 }
 
+/// The lock cover (prototype `scr=locked`): the lock, one line, and Unlock with Face ID.
 struct WalletLockView: View {
     @Environment(WalletLock.self) private var lock
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-                VStack(spacing: 24) {
-                    Image(systemName: "lock.fill").font(.largeTitle)
-                    Text("Noah is Locked").font(NoahFont.title)
-                    Text("Authenticate to access your wallet").foregroundStyle(NoahColor.mutedForeground)
-                    if let error = lock.error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
-                    NoahButton(title: "Unlock", isLoading: lock.authenticating) { Task { await lock.unlock() } }
+                VStack(spacing: 10) {
+                    Image(systemName: "lock").font(.system(size: 28, weight: .medium))
+                        .frame(width: 64, height: 64)
+                        .background(NoahTokens.Colors.soft, in: Circle())
+                        .accessibilityHidden(true)
+                    Text("Noah is locked").noahText(SettingsText.heroName).padding(.top, 14)
+                    Text("Unlock to see your wallet.").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                    if let error = lock.error {
+                        Text(LocalizedStringKey(error)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.failure)
+                    }
+                    Button { Task { await lock.unlock() } } label: {
+                        HStack(spacing: 8) {
+                            if lock.authenticating { ProgressView().tint(NoahTokens.Colors.background) }
+                            else { Image(systemName: WalletLock.biometry.symbol) }
+                            Text("Unlock")
+                        }
+                    }
+                    .buttonStyle(SettingsActionStyle())
+                    .disabled(lock.authenticating)
+                    .padding(.top, 28)
                 }
+                .multilineTextAlignment(.center)
+                .foregroundStyle(NoahTokens.Colors.foreground)
                 .padding(32)
-                .readableWidth(520)
+                .readableWidth(420)
                 .frame(minHeight: geometry.size.height)
             }
         }
-        .background(NoahColor.background.ignoresSafeArea())
+        .background(NoahTokens.Colors.background.ignoresSafeArea())
     }
 }
 

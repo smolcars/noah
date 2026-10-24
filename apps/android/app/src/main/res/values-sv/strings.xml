@@ -293,7 +293,6 @@
   <string name="gt_ca778115cc05083c">"Kopiera Bitcoin-adress"</string>
   <string name="gt_5a531e363a276b20">"Kopiera slutpunkt"</string>
   <string name="gt_3664cca676c6d7bd">"Kopiera Lightning-adress"</string>
-  <string name="gt_fbf381be9230f1e7">"Kopiera återställningsfras"</string>
   <string name="gt_97aa37b889c4ee5f">"Kopiera adress: %1$s"</string>
   <string name="gt_c467973d015e9cb7">"Kopiera resultat"</string>
   <string name="gt_df377616065c56fa">"Kopiera supportmeddelande"</string>
@@ -346,6 +345,7 @@
   <string name="gt_f86a26a2b4cac899">"Det gick inte att spara ditt namn."</string>
   <string name="gt_a541bee10f51fc47">"Kunde inte spara ditt namn. Försök igen."</string>
   <string name="gt_de1c8e4d260f4c2f">"Kunde inte spara ditt val."</string>
+  <string name="gt_dc1fe218989321e7">"Kunde inte spara ditt val. Försök igen."</string>
   <string name="gt_be09de6cd8e0775e">"Det gick inte att dela loggarna. Försök igen."</string>
   <string name="gt_2ad14a344060b310">"Kunde inte uppdatera inställningarna för säkerhetskopiering."</string>
   <string name="gt_395881a9f3636129">"Kunde inte uppdatera aviseringarna för brevlådan."</string>
@@ -671,7 +671,6 @@
   <string name="gt_f89a30c95c2897b8">"Den bekräftas om cirka 20 minuter. Aktivitet visar när."</string>
   <string name="gt_5002fe6fff33796d">"Det behövs %1$s bekräftelser innan det kommer fram."</string>
   <string name="gt_5cc37a0a3b8a1e82">"Den har kommit fram till Noah-teamet."</string>
-  <string name="gt_97812286b5d2cb4b">"Jag har skrivit ner den"</string>
   <string name="gt_b2307a77795822d1">"JPEG eller PNG, högst 5 MB"</string>
   <string name="gt_43d44ae6f646956e">"JPY"</string>
   <string name="gt_db1a21a0bc2ef8fb">"JSON"</string>
@@ -1036,6 +1035,7 @@
   <string name="gt_3b208c8df3744b19">"Återför dina Ark-medel till blockkedjan om Ark-servern inte är tillgänglig. Nöduttag kräver bekräftade medel på blockkedjan för sändningsavgifter, och ett tidslås måste löpa ut innan medlen kan lösas in."</string>
   <string name="gt_41edd3f47328da5a">"Återställningsfras"</string>
   <string name="gt_512d764f27c017d9">"Återställningsfras hittad"</string>
+  <string name="gt_9b40b8e408567040">"Recovery phrase hidden"</string>
   <string name="gt_42340084a768bf70">"Återställningsfras behövs"</string>
   <string name="gt_c0c06e547b1b55e1">"Återkommande"</string>
   <string name="gt_f1edc38f48fa8c1a">"Återkommande bakgrundsarbete har stoppats."</string>
@@ -1361,6 +1361,7 @@
   <string name="gt_b721722a0c00f9a9">"Plånboken använder nu Noahs standardslutpunkt för Esplora."</string>
   <string name="gt_70f8c0c39c5d2857">"Plånboken använder nu den nya Esplora-slutpunkten."</string>
   <string name="gt_fd04d8103140aa83">"Plånboken eller avgifterna har ändrats, eller så har prisuppgiften upphört att gälla. Granska uppgifterna igen innan du bekräftar."</string>
+  <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
   <string name="gt_d05e4b12e63fdf63">"Deras kvitto låser upp den"</string>
   <string name="gt_9cc11d41c56f8fed">"Det finns inte tillräckligt med bekräftade medel på blockkedjan för beloppet och avgifterna. Minska beloppet eller vänta på bekräftelse."</string>
   <string name="gt_2f536a74d5111f93">"Det finns för många små mynt för den här insättningen. Försök med ett mindre belopp."</string>
@@ -1377,7 +1378,6 @@
   <string name="gt_f8225bade85a4f12">"Den här säkerhetskopian skapades med en nyare version av Noah. Uppdatera appen och försök sedan återställa igen."</string>
   <string name="gt_42336142cf45ba47">"Detta sänder inlösentransaktionen. Tidigare sändningsavgifter dras inte av igen."</string>
   <string name="gt_58daedb7ce4a84c1">"Det här ändrar din plånbok och kan leda till förlorade pengar."</string>
-  <string name="gt_ac257bcd97ce86b9">"Den här enheten saknar skärmlås. Alla som har tillgång till den kan se din återställningsfras. Aktivera skärmlås i enhetens inställningar för att skydda din plånbok."</string>
   <string name="gt_dfa27aa18fe3eb7c">"Det här skiljer sig från de %1$s sats du granskade."</string>
   <string name="gt_9e3a6e3e9bd56700">"Detta avbryter inte den ursprungliga åtgärden. Om du skickar igen kan ytterligare medel förbrukas eller avgifter tillkomma. Noah sparar försöket och kontrollerar dess status när plånboken synkroniseras."</string>
   <string name="gt_f2faa6b386bacbee">"Det här nöduttaget kan inte längre avbrytas. Dess slutliga transaktion kan redan ha sänts. Uppdatera statusen."</string>
@@ -1550,7 +1550,6 @@
   <string name="gt_9c91b3b673435dea">"Utan dem kan Noah inte ta emot betalningar eller förnya din bitcoin innan den löper ut."</string>
   <string name="gt_426a2521e0e63bcc">"Ord %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"Bearbetar"</string>
-  <string name="gt_e325adc5b94bc4ab">"Skriv ner de här %1$s orden i rätt ordning och förvara dem på en säker plats. Det är det enda sättet att återställa din plånbok."</string>
   <string name="gt_4b68ab3847feda7d">"X"</string>
   <string name="gt_85a39ab345d672ff">"Ja"</string>
   <string name="gt_566181254b293aa6">"I går"</string>
@@ -1563,7 +1562,6 @@
   <string name="gt_04dc7cb10406d3ac">"Du får en påminnelse dagen före och en avisering efter varje betalning. Om en betalning missas medan telefonen är avstängd hoppar Noah över den i stället för att betala dubbelt."</string>
   <string name="gt_723022dbd02fce20">"Du har nått gränsen för antalet återkommande betalningar."</string>
   <string name="gt_3d26c2347422ac51">"Det går inte att överföra hela ditt Ark-saldo till den här plånbokens egen adress på kedjan. Använd en extern Bitcoin-adress."</string>
-  <string name="gt_cc46cdc66a73235d">"Din återställningsfras"</string>
   <string name="gt_aa7eb8c4c9ef6410">"Din adress"</string>
   <string name="gt_f415a2f332511929">"Appversion och telefonmodell bifogas."</string>
   <string name="gt_978433e18203431a">"Din säkerhetskopia återställdes, men konfigurationen kunde inte slutföras. Gör inte en ny återställning. Stäng och starta om Noah för att fortsätta."</string>
@@ -1678,6 +1676,7 @@
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s sekunder"</string>
   <string name="gt_6f18db1fb525f402">"%1$s v"</string>
+  <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"%1$s vid tillfället"</string>

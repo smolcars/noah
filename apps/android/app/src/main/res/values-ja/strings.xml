@@ -293,7 +293,6 @@
   <string name="gt_ca778115cc05083c">"ビットコインアドレスをコピー"</string>
   <string name="gt_5a531e363a276b20">"エンドポイントをコピー"</string>
   <string name="gt_3664cca676c6d7bd">"ライトニングアドレスをコピー"</string>
-  <string name="gt_fbf381be9230f1e7">"シードフレーズをコピー"</string>
   <string name="gt_97aa37b889c4ee5f">"住所をコピー：%1$s"</string>
   <string name="gt_c467973d015e9cb7">"結果をコピー"</string>
   <string name="gt_df377616065c56fa">"サポート用メッセージをコピー"</string>
@@ -346,6 +345,7 @@
   <string name="gt_f86a26a2b4cac899">"名前を保存できませんでした。"</string>
   <string name="gt_a541bee10f51fc47">"名前を保存できませんでした。もう一度お試しください。"</string>
   <string name="gt_de1c8e4d260f4c2f">"設定を保存できませんでした。"</string>
+  <string name="gt_dc1fe218989321e7">"設定を保存できませんでした。もう一度お試しください。"</string>
   <string name="gt_be09de6cd8e0775e">"ログを共有できませんでした。再試行してください。"</string>
   <string name="gt_2ad14a344060b310">"バックアップ設定を更新できませんでした。"</string>
   <string name="gt_395881a9f3636129">"メールボックスの通知を更新できませんでした。"</string>
@@ -671,7 +671,6 @@
   <string name="gt_f89a30c95c2897b8">"約20分で承認されます。承認はアクティビティに表示されます。"</string>
   <string name="gt_5002fe6fff33796d">"到着には%1$s回の承認が必要です。"</string>
   <string name="gt_5cc37a0a3b8a1e82">"Noahチームに届きました。"</string>
-  <string name="gt_97812286b5d2cb4b">"書き留めました"</string>
   <string name="gt_b2307a77795822d1">"JPEGまたはPNG、5 MB以下"</string>
   <string name="gt_43d44ae6f646956e">"JPY"</string>
   <string name="gt_db1a21a0bc2ef8fb">"JSON"</string>
@@ -1036,6 +1035,7 @@
   <string name="gt_3b208c8df3744b19">"Arkサーバーが利用できない場合に、Arkの資金をオンチェーンで回収します。退出にはブロードキャスト手数料を支払うための確認済みオンチェーン資金が必要です。また、受け取りにはタイムロック期間が過ぎるまで待つ必要があります。"</string>
   <string name="gt_41edd3f47328da5a">"復元フレーズ"</string>
   <string name="gt_512d764f27c017d9">"復元フレーズが見つかりました"</string>
+  <string name="gt_9b40b8e408567040">"Recovery phrase hidden"</string>
   <string name="gt_42340084a768bf70">"復元フレーズが必要です"</string>
   <string name="gt_c0c06e547b1b55e1">"定期"</string>
   <string name="gt_f1edc38f48fa8c1a">"定期的なバックグラウンド処理が停止しました。"</string>
@@ -1361,6 +1361,7 @@
   <string name="gt_b721722a0c00f9a9">"ウォレットの接続先をNoahの標準Esploraエンドポイントに切り替えました。"</string>
   <string name="gt_70f8c0c39c5d2857">"ウォレットの接続先を新しいEsploraエンドポイントに切り替えました。"</string>
   <string name="gt_fd04d8103140aa83">"ウォレットや手数料が変更されたか、見積もりの有効期限が切れました。確定する前に、もう一度確認してください。"</string>
+  <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
   <string name="gt_d05e4b12e63fdf63">"相手の受領証明でロック解除"</string>
   <string name="gt_9cc11d41c56f8fed">"この金額と手数料を賄うだけの確認済みのオンチェーン資金がありません。金額を減らすか、確認をお待ちください。"</string>
   <string name="gt_2f536a74d5111f93">"今回のArkへの入金には少額のコインが多すぎます。金額を減らしてお試しください。"</string>
@@ -1377,7 +1378,6 @@
   <string name="gt_f8225bade85a4f12">"このバックアップは、現在より新しいバージョンのNoahで作成されています。アプリを更新してから、もう一度復元をお試しください。"</string>
   <string name="gt_42336142cf45ba47">"受け取りトランザクションをブロードキャストします。それまでのブロードキャスト手数料が再度差し引かれることはありません。"</string>
   <string name="gt_58daedb7ce4a84c1">"ウォレットが変更され、資金を失う可能性があります。"</string>
-  <string name="gt_ac257bcd97ce86b9">"この端末には画面ロックが設定されていません。端末を操作できる人なら誰でも復元フレーズを表示できます。ウォレットを保護するため、端末の設定で画面ロックを設定してください。"</string>
   <string name="gt_dfa27aa18fe3eb7c">"先ほど確認した %1$s sats と異なります。"</string>
   <string name="gt_9e3a6e3e9bd56700">"元の操作は取り消されません。再送すると追加の資金や手数料が使われる場合があります。Noahはこの試行の記録を保持し、ウォレットの同期時に状態を確認します。"</string>
   <string name="gt_f2faa6b386bacbee">"この退出はもう取り消せません。最終トランザクションがすでにブロードキャストされている可能性があります。状態を更新してください。"</string>
@@ -1550,7 +1550,6 @@
   <string name="gt_9c91b3b673435dea">"通知がないと、Noah は支払いを受け取れず、ビットコインが期限切れになる前に更新することもできません。"</string>
   <string name="gt_426a2521e0e63bcc">"単語 %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"処理中"</string>
-  <string name="gt_e325adc5b94bc4ab">"これらの%1$s個の単語を順番に書き留め、安全な場所に保管してください。このフレーズがウォレットを復元する唯一の手段です。"</string>
   <string name="gt_4b68ab3847feda7d">"X"</string>
   <string name="gt_85a39ab345d672ff">"はい"</string>
   <string name="gt_566181254b293aa6">"昨日"</string>
@@ -1563,7 +1562,6 @@
   <string name="gt_04dc7cb10406d3ac">"支払いの前日にリマインダーが届き、支払い後に毎回通知が届きます。スマートフォンの電源が切れていて支払いができなかった場合、Noahはその回の支払いをスキップし、2回分をまとめて支払うことはありません。"</string>
   <string name="gt_723022dbd02fce20">"定期支払いの登録数が上限に達しました。"</string>
   <string name="gt_3d26c2347422ac51">"Ark残高をこのウォレット自身のオンチェーンアドレスに全額送金することはできません。外部のBitcoinアドレスを使用してください。"</string>
-  <string name="gt_cc46cdc66a73235d">"復元フレーズ"</string>
   <string name="gt_aa7eb8c4c9ef6410">"あなたのアドレス"</string>
   <string name="gt_f415a2f332511929">"アプリのバージョンと端末のモデルが添付されます。"</string>
   <string name="gt_978433e18203431a">"バックアップは復元されましたが、設定を完了できませんでした。再度復元しないでください。続行するにはNoahを閉じて再起動してください。"</string>
@@ -1678,6 +1676,7 @@
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s秒"</string>
   <string name="gt_6f18db1fb525f402">"%1$s週"</string>
+  <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"当時%1$s"</string>

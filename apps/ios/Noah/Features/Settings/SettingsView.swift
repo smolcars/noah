@@ -530,7 +530,7 @@ struct SettingsPageView: View {
         case .lightningAddress: LightningAddressPage()
         case .email: EmailPage()
         case .backup: BackupSettingsView()
-        case .recovery: MnemonicView()
+        case .recovery: RecoveryPhrasePage()
         case .vtxos: VtxosView()
         case .vtxo(let id): VtxosView().id(id)
         case .onchain: BoardArkView()

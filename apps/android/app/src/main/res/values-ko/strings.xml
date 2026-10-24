@@ -293,7 +293,6 @@
   <string name="gt_ca778115cc05083c">"Bitcoin 주소 복사"</string>
   <string name="gt_5a531e363a276b20">"엔드포인트 복사"</string>
   <string name="gt_3664cca676c6d7bd">"라이트닝 주소 복사"</string>
-  <string name="gt_fbf381be9230f1e7">"시드 문구 복사"</string>
   <string name="gt_97aa37b889c4ee5f">"주소 복사: %1$s"</string>
   <string name="gt_c467973d015e9cb7">"결과 복사"</string>
   <string name="gt_df377616065c56fa">"지원 문의 메시지 복사"</string>
@@ -346,6 +345,7 @@
   <string name="gt_f86a26a2b4cac899">"이름을 저장하지 못했습니다."</string>
   <string name="gt_a541bee10f51fc47">"이름을 저장하지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_de1c8e4d260f4c2f">"환경설정을 저장하지 못했습니다."</string>
+  <string name="gt_dc1fe218989321e7">"환경설정을 저장하지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_be09de6cd8e0775e">"로그를 공유하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_2ad14a344060b310">"백업 설정을 업데이트하지 못했습니다."</string>
   <string name="gt_395881a9f3636129">"우편함 알림을 업데이트하지 못했습니다."</string>
@@ -671,7 +671,6 @@
   <string name="gt_f89a30c95c2897b8">"약 20분 후 확인돼요. 활동에서 확인할 수 있어요."</string>
   <string name="gt_5002fe6fff33796d">"도착하려면 %1$s번의 확인이 필요합니다."</string>
   <string name="gt_5cc37a0a3b8a1e82">"Noah 팀에 전달되었습니다."</string>
-  <string name="gt_97812286b5d2cb4b">"적어 두었어요"</string>
   <string name="gt_b2307a77795822d1">"JPEG 또는 PNG, 5 MB 이하"</string>
   <string name="gt_43d44ae6f646956e">"JPY"</string>
   <string name="gt_db1a21a0bc2ef8fb">"JSON"</string>
@@ -1036,6 +1035,7 @@
   <string name="gt_3b208c8df3744b19">"Ark 서버를 사용할 수 없을 때 Ark 자금을 온체인으로 복구하세요. 출금하려면 전파 수수료를 지불할 확정된 온체인 자금이 필요하며, 시간 잠금 기간이 지나야 청구할 수 있습니다."</string>
   <string name="gt_41edd3f47328da5a">"복구 문구"</string>
   <string name="gt_512d764f27c017d9">"복구 문구를 찾았습니다"</string>
+  <string name="gt_9b40b8e408567040">"Recovery phrase hidden"</string>
   <string name="gt_42340084a768bf70">"복구 문구 필요"</string>
   <string name="gt_c0c06e547b1b55e1">"정기"</string>
   <string name="gt_f1edc38f48fa8c1a">"정기 백그라운드 작업이 중지되었습니다."</string>
@@ -1361,6 +1361,7 @@
   <string name="gt_b721722a0c00f9a9">"이제 지갑이 Noah의 기본 Esplora 엔드포인트를 사용합니다."</string>
   <string name="gt_70f8c0c39c5d2857">"이제 지갑이 새 Esplora 엔드포인트를 사용합니다."</string>
   <string name="gt_fd04d8103140aa83">"지갑 상태나 수수료가 변경되었거나 견적이 만료되었습니다. 확정하기 전에 다시 검토하세요."</string>
+  <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
   <string name="gt_d05e4b12e63fdf63">"상대의 영수증으로 잠금 해제"</string>
   <string name="gt_9cc11d41c56f8fed">"결제 금액과 수수료를 충당할 확정된 온체인 자금이 부족합니다. 금액을 줄이거나 확정을 기다리세요."</string>
   <string name="gt_2f536a74d5111f93">"이번 입금에 사용되는 소액 코인이 너무 많습니다. 더 적은 금액으로 시도해 주세요."</string>
@@ -1377,7 +1378,6 @@
   <string name="gt_f8225bade85a4f12">"이 백업은 더 최신 버전의 Noah에서 생성되었습니다. 앱을 업데이트한 후 다시 복원하세요."</string>
   <string name="gt_42336142cf45ba47">"청구 트랜잭션을 전파합니다. 이전에 지불한 전파 수수료는 다시 차감되지 않습니다."</string>
   <string name="gt_58daedb7ce4a84c1">"지갑이 변경되며 자금을 잃을 수 있습니다."</string>
-  <string name="gt_ac257bcd97ce86b9">"이 기기에는 화면 잠금이 설정되어 있지 않습니다. 기기에 접근할 수 있는 사람은 누구나 복구 구문을 볼 수 있습니다. 지갑을 보호하려면 기기 설정에서 화면 잠금을 설정하세요."</string>
   <string name="gt_dfa27aa18fe3eb7c">"앞서 확인한 %1$s sats와 다른 금액입니다."</string>
   <string name="gt_9e3a6e3e9bd56700">"기존 작업은 취소되지 않습니다. 다시 제출하면 자금이나 수수료가 추가로 지출될 수 있습니다. Noah는 이번 시도를 기록해 두고 지갑 동기화 중에 상태를 확인합니다."</string>
   <string name="gt_f2faa6b386bacbee">"이 출금은 더 이상 취소할 수 없습니다. 최종 거래가 이미 전파되었을 수 있습니다. 상태를 새로 고치세요."</string>
@@ -1550,7 +1550,6 @@
   <string name="gt_9c91b3b673435dea">"알림이 없으면 Noah는 결제를 받거나 비트코인이 만료되기 전에 갱신할 수 없습니다."</string>
   <string name="gt_426a2521e0e63bcc">"단어 %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"처리 중"</string>
-  <string name="gt_e325adc5b94bc4ab">"다음 %1$s개의 단어를 순서대로 적어 안전한 곳에 보관하세요. 이 문구는 지갑을 복구할 수 있는 유일한 수단입니다."</string>
   <string name="gt_4b68ab3847feda7d">"X"</string>
   <string name="gt_85a39ab345d672ff">"예"</string>
   <string name="gt_566181254b293aa6">"어제"</string>
@@ -1563,7 +1562,6 @@
   <string name="gt_04dc7cb10406d3ac">"결제 하루 전과 각 결제 후에 알림을 보내드립니다. 휴대전화가 꺼져 있어 결제가 누락되면 Noah는 두 번 결제하는 대신 해당 회차를 건너뜁니다."</string>
   <string name="gt_723022dbd02fce20">"정기 결제를 최대 개수만큼 등록했습니다."</string>
   <string name="gt_3d26c2347422ac51">"Ark 잔액 전액을 이 지갑의 온체인 주소로 보낼 수 없습니다. 외부 Bitcoin 주소를 사용해 주세요."</string>
-  <string name="gt_cc46cdc66a73235d">"내 복구 문구"</string>
   <string name="gt_aa7eb8c4c9ef6410">"내 주소"</string>
   <string name="gt_f415a2f332511929">"앱 버전과 휴대폰 모델이 첨부됩니다."</string>
   <string name="gt_978433e18203431a">"백업은 복원되었지만 설정을 완료하지 못했습니다. 다시 복원하지 마세요. 계속하려면 Noah를 종료한 후 다시 시작하세요."</string>
@@ -1678,6 +1676,7 @@
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s초"</string>
   <string name="gt_6f18db1fb525f402">"%1$s주"</string>
+  <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"당시 %1$s"</string>

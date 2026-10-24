@@ -10465,42 +10465,6 @@
         }
       }
     },
-    "Copy Seed Phrase": {
-      "comment": "GT gt_fbf381be9230f1e7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Seed Phrase"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copiar frase semilla"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "シードフレーズをコピー"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시드 문구 복사"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kopiera återställningsfras"
-          }
-        }
-      }
-    },
     "Copy address: {value1}": {
       "comment": "GT gt_97aa37b889c4ee5f; arguments: value1",
       "extractionState": "manual",
@@ -12369,6 +12333,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kunde inte spara ditt val."
+          }
+        }
+      }
+    },
+    "Couldn't save your preference. Please try again.": {
+      "comment": "GT gt_dc1fe218989321e7; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save your preference. Please try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar tu preferencia. Inténtalo de nuevo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を保存できませんでした。もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "환경설정을 저장하지 못했습니다. 다시 시도해 주세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunde inte spara ditt val. Försök igen."
           }
         }
       }
@@ -23925,42 +23925,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den har kommit fram till Noah-teamet."
-          }
-        }
-      }
-    },
-    "I’ve written it down": {
-      "comment": "GT gt_97812286b5d2cb4b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I’ve written it down"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ya la anoté"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "書き留めました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "적어 두었어요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jag har skrivit ner den"
           }
         }
       }
@@ -37069,6 +37033,42 @@
         }
       }
     },
+    "Recovery phrase hidden": {
+      "comment": "GT gt_9b40b8e408567040; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery phrase hidden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery phrase hidden"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery phrase hidden"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery phrase hidden"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery phrase hidden"
+          }
+        }
+      }
+    },
     "Recovery phrase needed": {
       "comment": "GT gt_42340084a768bf70; arguments: none",
       "extractionState": "manual",
@@ -48721,6 +48721,42 @@
         }
       }
     },
+    "The words that restore your wallet.": {
+      "comment": "GT gt_be11c0d9d86f778e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that restore your wallet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that restore your wallet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that restore your wallet."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that restore your wallet."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that restore your wallet."
+          }
+        }
+      }
+    },
     "Their receipt unlocks it": {
       "comment": "GT gt_d05e4b12e63fdf63; arguments: none",
       "extractionState": "manual",
@@ -49293,42 +49329,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det här ändrar din plånbok och kan leda till förlorade pengar."
-          }
-        }
-      }
-    },
-    "This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet.": {
-      "comment": "GT gt_ac257bcd97ce86b9; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este dispositivo no tiene bloqueo de pantalla. Cualquier persona con acceso a él puede ver tu frase de recuperación. Configura un bloqueo de pantalla en los ajustes del dispositivo para proteger tu billetera."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この端末には画面ロックが設定されていません。端末を操作できる人なら誰でも復元フレーズを表示できます。ウォレットを保護するため、端末の設定で画面ロックを設定してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 기기에는 화면 잠금이 설정되어 있지 않습니다. 기기에 접근할 수 있는 사람은 누구나 복구 구문을 볼 수 있습니다. 지갑을 보호하려면 기기 설정에서 화면 잠금을 설정하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den här enheten saknar skärmlås. Alla som har tillgång till den kan se din återställningsfras. Aktivera skärmlås i enhetens inställningar för att skydda din plånbok."
           }
         }
       }
@@ -55525,42 +55525,6 @@
         }
       }
     },
-    "Write down these {nativeValue1} words in order and store them in a safe place. This is the only way to recover your wallet.": {
-      "comment": "GT gt_e325adc5b94bc4ab; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Write down these %1$@ words in order and store them in a safe place. This is the only way to recover your wallet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anota estas %1$@ palabras en orden y guárdalas en un lugar seguro. Es la única forma de recuperar tu billetera."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "これらの%1$@個の単語を順番に書き留め、安全な場所に保管してください。このフレーズがウォレットを復元する唯一の手段です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 %1$@개의 단어를 순서대로 적어 안전한 곳에 보관하세요. 이 문구는 지갑을 복구할 수 있는 유일한 수단입니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skriv ner de här %1$@ orden i rätt ordning och förvara dem på en säker plats. Det är det enda sättet att återställa din plånbok."
-          }
-        }
-      }
-    },
     "X": {
       "comment": "GT gt_4b68ab3847feda7d; arguments: none",
       "extractionState": "manual",
@@ -55989,42 +55953,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det går inte att överföra hela ditt Ark-saldo till den här plånbokens egen adress på kedjan. Använd en extern Bitcoin-adress."
-          }
-        }
-      }
-    },
-    "Your Recovery Phrase": {
-      "comment": "GT gt_cc46cdc66a73235d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your Recovery Phrase"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu frase de recuperación"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "復元フレーズ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내 복구 문구"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Din återställningsfras"
           }
         }
       }
@@ -59649,6 +59577,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ v"
+          }
+        }
+      }
+    },
+    "{n} words that restore your wallet.": {
+      "comment": "GT gt_7668781bc1fd97f9; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ words that restore your wallet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ words that restore your wallet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ words that restore your wallet."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ words that restore your wallet."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ words that restore your wallet."
           }
         }
       }

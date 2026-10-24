@@ -293,7 +293,6 @@
   <string name="gt_ca778115cc05083c">"Copiar dirección de Bitcoin"</string>
   <string name="gt_5a531e363a276b20">"Copiar punto de acceso"</string>
   <string name="gt_3664cca676c6d7bd">"Copiar dirección Lightning"</string>
-  <string name="gt_fbf381be9230f1e7">"Copiar frase semilla"</string>
   <string name="gt_97aa37b889c4ee5f">"Copiar dirección: %1$s"</string>
   <string name="gt_c467973d015e9cb7">"Copiar resultado"</string>
   <string name="gt_df377616065c56fa">"Copiar mensaje para soporte"</string>
@@ -346,6 +345,7 @@
   <string name="gt_f86a26a2b4cac899">"No se pudo guardar tu nombre."</string>
   <string name="gt_a541bee10f51fc47">"No se pudo guardar tu nombre. Inténtalo de nuevo."</string>
   <string name="gt_de1c8e4d260f4c2f">"No se pudo guardar tu preferencia."</string>
+  <string name="gt_dc1fe218989321e7">"No se pudo guardar tu preferencia. Inténtalo de nuevo."</string>
   <string name="gt_be09de6cd8e0775e">"No se pudieron compartir los registros. Vuelve a intentarlo."</string>
   <string name="gt_2ad14a344060b310">"No se pudo actualizar la configuración de las copias de seguridad."</string>
   <string name="gt_395881a9f3636129">"No se pudieron actualizar las notificaciones del buzón."</string>
@@ -671,7 +671,6 @@
   <string name="gt_f89a30c95c2897b8">"Se confirma en unos 20 minutos. Actividad mostrará cuándo."</string>
   <string name="gt_5002fe6fff33796d">"Necesita %1$s confirmaciones para llegar."</string>
   <string name="gt_5cc37a0a3b8a1e82">"Ya lo tiene el equipo de Noah."</string>
-  <string name="gt_97812286b5d2cb4b">"Ya la anoté"</string>
   <string name="gt_b2307a77795822d1">"JPEG o PNG, de 5 MB o menos"</string>
   <string name="gt_43d44ae6f646956e">"JPY"</string>
   <string name="gt_db1a21a0bc2ef8fb">"JSON"</string>
@@ -1036,6 +1035,7 @@
   <string name="gt_3b208c8df3744b19">"Recupera tus fondos de Ark en cadena si el servidor Ark no está disponible. Las salidas requieren fondos confirmados en cadena para cubrir las comisiones de difusión y un plazo de bloqueo antes de poder reclamar los fondos."</string>
   <string name="gt_41edd3f47328da5a">"Frase de recuperación"</string>
   <string name="gt_512d764f27c017d9">"Frase de recuperación encontrada"</string>
+  <string name="gt_9b40b8e408567040">"Recovery phrase hidden"</string>
   <string name="gt_42340084a768bf70">"Se necesita la frase de recuperación"</string>
   <string name="gt_c0c06e547b1b55e1">"Recurrente"</string>
   <string name="gt_f1edc38f48fa8c1a">"Tareas recurrentes en segundo plano detenidas."</string>
@@ -1361,6 +1361,7 @@
   <string name="gt_b721722a0c00f9a9">"La billetera ahora usa el punto de acceso de Esplora predeterminado de Noah."</string>
   <string name="gt_70f8c0c39c5d2857">"La billetera ahora usa el nuevo punto de acceso de Esplora."</string>
   <string name="gt_fd04d8103140aa83">"La billetera o las comisiones han cambiado, o la cotización ha caducado. Revisa los datos de nuevo antes de confirmar."</string>
+  <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
   <string name="gt_d05e4b12e63fdf63">"Su recibo lo desbloquea"</string>
   <string name="gt_9cc11d41c56f8fed">"No hay suficientes fondos confirmados en cadena para cubrir este importe y sus comisiones. Reduce el importe o espera a que se confirmen los fondos."</string>
   <string name="gt_2f536a74d5111f93">"Hay demasiadas monedas de poco valor para este depósito. Prueba con un importe menor."</string>
@@ -1377,7 +1378,6 @@
   <string name="gt_f8225bade85a4f12">"Esta copia de seguridad se creó con una versión más reciente de Noah. Actualiza la aplicación y vuelve a intentar restaurarla."</string>
   <string name="gt_42336142cf45ba47">"Esto difunde la transacción de reclamación. Las comisiones de difusión anteriores no se vuelven a descontar."</string>
   <string name="gt_58daedb7ce4a84c1">"Esto modifica tu billetera y puede hacerte perder fondos."</string>
-  <string name="gt_ac257bcd97ce86b9">"Este dispositivo no tiene bloqueo de pantalla. Cualquier persona con acceso a él puede ver tu frase de recuperación. Configura un bloqueo de pantalla en los ajustes del dispositivo para proteger tu billetera."</string>
   <string name="gt_dfa27aa18fe3eb7c">"Este importe no coincide con los %1$s sats que revisaste."</string>
   <string name="gt_9e3a6e3e9bd56700">"Esto no cancela la operación original. Volver a enviarla puede suponer un gasto adicional de fondos o comisiones. Noah conserva este intento y comprueba su estado mientras tu billetera se sincroniza."</string>
   <string name="gt_f2faa6b386bacbee">"Esta salida ya no se puede cancelar. Es posible que su transacción final ya se haya difundido. Actualiza su estado."</string>
@@ -1550,7 +1550,6 @@
   <string name="gt_9c91b3b673435dea">"Sin ellas, Noah no puede recibir pagos ni renovar tu bitcoin antes de que caduque."</string>
   <string name="gt_426a2521e0e63bcc">"Palabra %1$s"</string>
   <string name="gt_a92f0449a9f7235b">"Procesando"</string>
-  <string name="gt_e325adc5b94bc4ab">"Anota estas %1$s palabras en orden y guárdalas en un lugar seguro. Es la única forma de recuperar tu billetera."</string>
   <string name="gt_4b68ab3847feda7d">"X"</string>
   <string name="gt_85a39ab345d672ff">"Sí"</string>
   <string name="gt_566181254b293aa6">"Ayer"</string>
@@ -1563,7 +1562,6 @@
   <string name="gt_04dc7cb10406d3ac">"Recibirás un recordatorio el día anterior y una notificación después de cada pago. Si un pago no se realiza porque tu teléfono está apagado, Noah lo omite en lugar de realizarlo dos veces."</string>
   <string name="gt_723022dbd02fce20">"Has alcanzado el número máximo de pagos recurrentes."</string>
   <string name="gt_3d26c2347422ac51">"No puedes transferir todo tu saldo Ark a la dirección en cadena de esta misma billetera. Usa una dirección Bitcoin externa."</string>
-  <string name="gt_cc46cdc66a73235d">"Tu frase de recuperación"</string>
   <string name="gt_aa7eb8c4c9ef6410">"Tu dirección"</string>
   <string name="gt_f415a2f332511929">"Se adjuntan la versión de la app y el modelo de tu teléfono."</string>
   <string name="gt_978433e18203431a">"Tu copia de seguridad se restauró, pero no se pudo completar la configuración. No vuelvas a restaurarla. Cierra y reinicia Noah para continuar."</string>
@@ -1678,6 +1676,7 @@
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s segundos"</string>
   <string name="gt_6f18db1fb525f402">"%1$s sem"</string>
+  <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"%1$s en ese momento"</string>
