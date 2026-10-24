@@ -84,6 +84,30 @@ The Activity tab follows [`docs/native-rewrite/design/activity.md`](../../docs/n
 
   Regtest's offboards need one confirmation, so "· 1 of 2" was covered by unit tests only.
 
+## Settings (2026-10-24)
+
+Settings follows [`docs/native-rewrite/design/settings.md`](../../docs/native-rewrite/design/settings.md).
+
+- **Navigation:** pages are `HomeView.Route.page(SettingsPage)` entries in Home's stack, after `.settings`. Deep links (the backup and suspended nudges, recurring notifications) use `SettingsPath.deepLink`, so Settings is beneath them. Pages move through the `\.settings` navigator; a slow save uses `leave(page)`, which goes back only if that page is still on top.
+- **Wide windows:** each pushed `SettingsHost` draws the list in the leading pane and its page in the trailing pane, with their own bars. Pushes there skip the animation and the page fades in. The page keeps its place in the view tree across a pose change, so its scroll, typed text and revealed phrase survive. Home measures the window on its stack, not its root, because the root stops updating while Settings is pushed over it. Sheets go through `settingsSheet`, which uses a pane sheet in the trailing pane on wide windows.
+- **Code:** `Features/Settings`:
+  - `SettingsNavigation` and `SettingsComponents`: the host, chrome, rows, sheets and fields;
+  - `SettingsView`: the list, its live values (`SettingsSummary`) and Display's sheets;
+  - `SettingsRules`: debug unlock, backup status, the VTXO groups, the delete checklist and the suspend switch;
+  - `RecoveryPhrasePage`: `PhraseGate` reads the words only after authentication;
+  - `DeleteWalletSheet`: `WalletDeletion` keeps a running delete locked across pose changes.
+
+  VTXOs and On-chain live in `Features/Onchain`, and Recurring in `Features/Recurring`. The emergency exit screens are unchanged.
+- **Fixtures:** `NoahTests/SettingsShotTests` (opt-in, `TEST_RUNNER_NOAH_SET_SHOTS=1`). Write a state to the app's `Documents/set-shot`: `root`, `profile`, `lightning-address`, `email`, `backup`, `recovery-gated`, `recovery-shown`, `vtxos`, `vtxo`, `onchain`, `recurring`, `schedule`, `editor`, `notifications`, `advanced`, `ark-server`, `esplora`, `logs`, `debug`, `feedback`, `about`, `delete`, `unit`, `currency` or `language`. The phrase is the prototype's sample phrase. Light and dark follow the simulator's appearance; the Duo open shows the panes.
+- **Tests:** `SettingsNavigationTests`, `SettingsDebugSuspendTests`, `SettingsSafetyTests`, `RecoveryPhraseGateTests`, `BackupStatusTests` and `VtxoListTests`.
+- **Live on `noah-bark08`** (blocks 890–894 mined for these checks):
+  - Move to Ark: 150,000 sats from On-chain (Ark fee 330, network fee 155). Send's block row showed "Waiting for block 891", and the VTXO became spendable after its third confirmation.
+  - Renew from Settings: that VTXO's Renew review (fee 749) joined a delegated round, then showed as "Renewed" in Activity once the round confirmed.
+  - Recurring: a monthly 1,000-sat payment to another wallet's Ark address, first due on save, paid at once ("1 payment · Sent"). Pause, Resume and Cancel also worked. The approval path wasn't exercised: it needs a Lightning fee above the limit.
+  - Backup now: the server answered 500 for the upload (no S3 credentials on this stack) and the page showed the failure. Listing backups worked.
+  - Export file: the share sheet offered the encrypted `.noahbackup` file (57 KB).
+  - Delete wallet: a throwaway wallet ended back in onboarding.
+
 ## Direct native backup compatibility (2026-10-20)
 
 Base `5a19f992`. `NoahTests/CrossPlatformBackupTests.swift` exports through the
