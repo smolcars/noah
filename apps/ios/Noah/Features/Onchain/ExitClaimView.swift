@@ -16,6 +16,7 @@ struct ExitClaimView: View {
     @Environment(\.locale) private var locale
     @Environment(\.settingsFixture) private var fixture
     @Environment(\.exitPaneHeight) private var paneHeight
+    @Environment(\.scenePhase) private var scenePhase
 
     init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
 
@@ -95,9 +96,10 @@ struct ExitClaimView: View {
             default: break
             }
         }
-        // Today's claim quote for the current destination, once it can be priced.
-        .task(id: [destination ?? "", ready.map(\.id).joined(separator: ",")]) {
-            guard let destination, !ready.isEmpty else { return }
+        // Today's claim quote for the current destination, once it can be priced, and again whenever the
+        // app comes back (leaving drops the review).
+        .task(id: [destination ?? "", ready.map(\.id).joined(separator: ","), String(scenePhase == .active)]) {
+            guard let destination, !ready.isEmpty, scenePhase == .active else { return }
             do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
             while model.loading { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
             await model.review(.claim, ids: ready.map(\.id), destination: destination)

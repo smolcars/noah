@@ -254,6 +254,7 @@ struct ExitReviewView: View {
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
     @Environment(\.exitPaneHeight) private var paneHeight
+    @Environment(\.scenePhase) private var scenePhase
 
     init(ids: [String], model: OnchainModel = OnchainModel()) {
         self.ids = ids
@@ -322,11 +323,13 @@ struct ExitReviewView: View {
         .settingsChrome(nil)
         .onboardingHaptics(haptics)
         .modifier(OnchainScreen(model: model, presentsReview: false))
-        .task {
+        // On arrival, and again whenever the app comes back: leaving drops the review (OnchainScreen).
+        .task(id: scenePhase == .active) {
+            guard scenePhase == .active, model.quote == nil else { return }
             // After the page's first read: a review invalidates any read still in flight.
-            while model.loading { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
+            while model.loading || model.busy { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
             await model.review(.startExit, ids: ids)
-            estimate = await model.exitEstimate(ids)
+            if estimate == nil { estimate = await model.exitEstimate(ids) }
         }
     }
 
