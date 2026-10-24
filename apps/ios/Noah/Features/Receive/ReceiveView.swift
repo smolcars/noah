@@ -177,7 +177,7 @@ struct ReceiveView: View {
                     .presentationDetents([.fraction(0.66), .large])
             }
         }
-        .navigationDestination(isPresented: $profile) { ProfileView() }
+        .navigationDestination(isPresented: $profile) { SettingsHost(page: .profile) }
     }
 
     // MARK: Leading: the card

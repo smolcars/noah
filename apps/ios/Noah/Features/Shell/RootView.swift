@@ -115,6 +115,8 @@ struct WalletTabs: View {
     @State private var history: HistoryModel
     /// Home's in-memory "new" set; Activity shares it.
     @State private var tracker = HomeActivityTracker()
+    /// Settings' live row values, for every tab that opens a Settings page.
+    @State private var settingsSummary = SettingsSummary()
     @State private var activityHidesBar = false
     /// Settings, pushed on Home, hides the phone's tab bar.
     @State private var homeHidesBar = false
@@ -177,6 +179,7 @@ struct WalletTabs: View {
         } message: { Text("Finish the current payment before scanning another request.") }
         .environment(history)
         .environment(tracker)
+        .environment(settingsSummary)
         // A recurring payment notification: Home opens Recurring payments with Settings beneath.
         .onChange(of: recurringRoute.presented, initial: true) { _, presented in if presented { selection = .home } }
         .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {

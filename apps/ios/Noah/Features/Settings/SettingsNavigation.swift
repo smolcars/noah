@@ -46,6 +46,8 @@ enum SettingsPath {
 /// How pages move. Home builds it: phones push with the platform slide; wide windows swap the
 /// trailing page without moving the list, and sheets stay in the trailing pane.
 struct SettingsNavigator {
+    /// Built by Home. Pages pushed elsewhere (Receive's profile link) navigate on their own.
+    var live = false
     var wide = false
     /// The leading pane's width on wide windows.
     var leadingWidth: CGFloat = 0
@@ -75,10 +77,18 @@ extension EnvironmentValues {
 struct SettingsHost: View {
     /// nil is Settings itself.
     let page: SettingsPage?
-    @Environment(\.settings) private var settings
+    @Environment(\.settings) private var home
+    @Environment(\.dismiss) private var dismiss
     /// Display's pickers and Delete wallet, opened from the list; wide windows show them in the trailing pane.
     @State private var sheet: SettingsRootSheet?
     @State private var sheetLocked = false
+    /// Outside Home's Settings: the page this one opened.
+    @State private var standalonePage: SettingsPage?
+
+    private var settings: SettingsNavigator {
+        home.live ? home : SettingsNavigator(select: { standalonePage = $0 }, open: { standalonePage = $0 },
+                                             back: { dismiss() }, close: { dismiss() })
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -96,6 +106,8 @@ struct SettingsHost: View {
         }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(settings.wide)
+        .environment(\.settings, settings)
+        .navigationDestination(item: $standalonePage) { SettingsHost(page: $0) }
         .foregroundStyle(NoahTokens.Colors.foreground)
         .tint(NoahTokens.Colors.foreground)
     }

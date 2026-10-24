@@ -527,8 +527,8 @@ struct SettingsPageView: View {
     var body: some View {
         switch page {
         case .profile: ProfileView()
-        case .lightningAddress: LightningAddressView {}
-        case .email: EmergencyEmailView {}
+        case .lightningAddress: LightningAddressPage()
+        case .email: EmailPage()
         case .backup: BackupSettingsView()
         case .recovery: MnemonicView()
         case .vtxos: VtxosView()

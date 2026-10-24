@@ -124,7 +124,7 @@ struct EmailScreen: View {
             }
             .padding(.top, column.firstTop(compact: 36))
             .onboardingAppear(2)
-            hints.padding(.top, 14)
+            EmailHints(email: email, haptics: haptics).padding(.top, 14)
             if let error = email.error {
                 Text(LocalizedStringKey(error))
                     .noahText(NoahTokens.Typography.sub)
@@ -133,36 +133,6 @@ struct EmailScreen: View {
             }
         }
         .onChange(of: email.isValid) { _, valid in if valid { haptics.play(.selection) } }
-    }
-
-    private var hints: some View {
-        GlassGroup(spacing: NoahTokens.Space.s) {
-            WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: 0) {
-                switch email.hint {
-                case .none:
-                    EmptyView()
-                case .didYouMean(let fixed):
-                    Text("Did you mean")
-                        .noahText(NoahTokens.Typography.sub)
-                        .foregroundStyle(NoahTokens.Colors.muted)
-                    chip(fixed, label: fixed)
-                case .complete(let addresses):
-                    ForEach(addresses, id: \.self) { address in
-                        chip(address, label: String(address[address.firstIndex(of: "@")!...]))
-                    }
-                }
-            }
-        }
-        .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .topLeading)
-    }
-
-    private func chip(_ address: String, label: String) -> some View {
-        Button {
-            email.text = address
-            haptics.play(.selection)
-        } label: { Text(verbatim: label) }
-        .buttonStyle(OnboardingChipStyle())
-        .accessibilityLabel(Text(verbatim: address))
     }
 
     /// "Send code" morphs into a spinner (one glass shape on iOS 26).
@@ -222,38 +192,7 @@ struct EmailScreen: View {
                     .accessibilityIdentifier("onboarding-email-error")
             }
             if email.stage != .verified {
-                resend.padding(.top, email.error == nil ? 18 : NoahTokens.Space.s)
-            }
-        }
-    }
-
-    private var resend: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { timeline in
-            let remaining = email.resendRemaining(at: timeline.date)
-            if remaining > 0 {
-                Text(verbatim: L10n.text("Resend code in {time}", String(format: "%d:%02d", remaining / 60, remaining % 60), locale: locale.identifier))
-                    .noahText(NoahTokens.Typography.sub)
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .monospacedDigit()
-                    .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .leading)
-            } else {
-                HStack(spacing: 4) {
-                    Text("Didn’t get it?")
-                        .noahText(NoahTokens.Typography.sub)
-                        .foregroundStyle(NoahTokens.Colors.muted)
-                    Button {
-                        haptics.play(.light)
-                        Task { await email.resend() }
-                    } label: {
-                        Text("Resend").noahText(NoahTokens.Typography.sub).bold()
-                            .foregroundStyle(NoahTokens.Colors.foreground)
-                            .frame(minWidth: NoahTokens.Size.hitTarget, minHeight: NoahTokens.Size.hitTarget)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(email.stage == .verifying || email.isSending)
-                    .accessibilityIdentifier("onboarding-email-resend")
-                }
+                EmailResend(email: email, haptics: haptics).padding(.top, email.error == nil ? 18 : NoahTokens.Space.s)
             }
         }
     }
@@ -261,7 +200,7 @@ struct EmailScreen: View {
 
 /// Six glass boxes with an orange active box. A wrong code turns them red
 /// and shakes; success folds them into the orange check ring.
-private struct CodeBoxes: View {
+struct CodeBoxes: View {
     let email: EmailVerification
     let focused: Bool
     let namespace: Namespace.ID
@@ -347,7 +286,7 @@ private struct Caret: View {
 }
 
 /// The orange ring draws, then the check.
-private struct VerifiedCheck: View {
+struct VerifiedCheck: View {
     @State private var drawn = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -385,7 +324,7 @@ struct CheckShape: Shape {
 }
 
 /// The orange check beside a valid address.
-private struct CheckStroke: View {
+struct CheckStroke: View {
     let drawn: Bool
     var body: some View {
         CheckShape(points: [CGPoint(x: 5, y: 12.5), CGPoint(x: 9.5, y: 17), CGPoint(x: 19, y: 7.5)], box: 24)
@@ -393,5 +332,79 @@ private struct CheckStroke: View {
             .stroke(NoahTokens.Colors.orange, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
             .opacity(drawn ? 1 : 0)
             .animation(NoahTokens.Motion.snappy, value: drawn)
+    }
+}
+
+/// Domain completions and "Did you mean" under the address field.
+struct EmailHints: View {
+    @Bindable var email: EmailVerification
+    let haptics: OnboardingHaptics
+
+    var body: some View {
+        GlassGroup(spacing: NoahTokens.Space.s) {
+            WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: 0) {
+                switch email.hint {
+                case .none:
+                    EmptyView()
+                case .didYouMean(let fixed):
+                    Text("Did you mean")
+                        .noahText(NoahTokens.Typography.sub)
+                        .foregroundStyle(NoahTokens.Colors.muted)
+                    chip(fixed, label: fixed)
+                case .complete(let addresses):
+                    ForEach(addresses, id: \.self) { address in
+                        chip(address, label: String(address[address.firstIndex(of: "@")!...]))
+                    }
+                }
+            }
+        }
+        .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .topLeading)
+    }
+
+    private func chip(_ address: String, label: String) -> some View {
+        Button {
+            email.text = address
+            haptics.play(.selection)
+        } label: { Text(verbatim: label) }
+        .buttonStyle(OnboardingChipStyle())
+        .accessibilityLabel(Text(verbatim: address))
+    }
+}
+
+/// "Resend code in 0:30", then "Didn’t get it? Resend".
+struct EmailResend: View {
+    let email: EmailVerification
+    let haptics: OnboardingHaptics
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+            let remaining = email.resendRemaining(at: timeline.date)
+            if remaining > 0 {
+                Text(verbatim: L10n.text("Resend code in {time}", String(format: "%d:%02d", remaining / 60, remaining % 60), locale: locale.identifier))
+                    .noahText(NoahTokens.Typography.sub)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .monospacedDigit()
+                    .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .leading)
+            } else {
+                HStack(spacing: 4) {
+                    Text("Didn’t get it?")
+                        .noahText(NoahTokens.Typography.sub)
+                        .foregroundStyle(NoahTokens.Colors.muted)
+                    Button {
+                        haptics.play(.light)
+                        Task { await email.resend() }
+                    } label: {
+                        Text("Resend").noahText(NoahTokens.Typography.sub).bold()
+                            .foregroundStyle(NoahTokens.Colors.foreground)
+                            .frame(minWidth: NoahTokens.Size.hitTarget, minHeight: NoahTokens.Size.hitTarget)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(email.stage == .verifying || email.isSending)
+                    .accessibilityIdentifier("onboarding-email-resend")
+                }
+            }
+        }
     }
 }

@@ -24,9 +24,10 @@ struct NameScreen: View {
             FitOrScroll {
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer(minLength: 0).frame(maxHeight: column.lead)
-                    handle.padding(.top, column.firstTop(compact: NoahTokens.Space.xxxl)).onboardingAppear(2)
-                    availability.padding(.top, 14).onboardingAppear(3)
-                    suggestions.padding(.top, 14)
+                    NameHandleField(name: name, domain: domain, focused: $focused, label: "Pick a name") { if name.canContinue { onContinue() } }
+                        .padding(.top, column.firstTop(compact: NoahTokens.Space.xxxl)).onboardingAppear(2)
+                    NameStatusLine(status: name.status).padding(.top, 14).onboardingAppear(3)
+                    NameSuggestionChips(name: name, haptics: haptics).padding(.top, 14)
                     if let error {
                         Text(LocalizedStringKey(error))
                             .noahText(NoahTokens.Typography.sub)
@@ -67,7 +68,7 @@ struct NameScreen: View {
             default: break
             }
             if status == .available || status == .taken {
-                AccessibilityNotification.Announcement(L10n.text(statusText, locale: locale.identifier)).post()
+                AccessibilityNotification.Announcement(L10n.text(status.text, locale: locale.identifier)).post()
             }
         }
         .task {
@@ -75,84 +76,11 @@ struct NameScreen: View {
             focused = true
         }
     }
-
-    private var handle: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            WrapLayout(spacing: 3, lineSpacing: 0) {
-                // The field is as wide as what's typed, so the domain follows it.
-                Text(verbatim: name.text.isEmpty ? L10n.text("name", locale: locale.identifier) : name.text)
-                    .noahText(NoahTokens.Typography.handle)
-                    .lineLimit(1)
-                    .padding(.trailing, 3)
-                    .hidden()
-                    .overlay(alignment: .leading) {
-                        TextField("name", text: $name.text)
-                            .noahText(NoahTokens.Typography.handle)
-                            .foregroundStyle(NoahTokens.Colors.foreground)
-                            .tint(NoahTokens.Colors.orange)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .keyboardType(.asciiCapable)
-                            .submitLabel(.continue)
-                            .focused($focused)
-                            .onSubmit { if name.canContinue { onContinue() } }
-                            .accessibilityLabel(Text("Pick a name"))
-                            .accessibilityValue(Text(verbatim: name.text.isEmpty ? "" : "\(name.text)@\(domain)"))
-                            .accessibilityIdentifier("lightning-username-input")
-                    }
-                Text(verbatim: "@\(domain)")
-                    .noahText(NoahTokens.Typography.label)
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .accessibilityHidden(true)
-            }
-            OnboardingUnderline(focused: focused)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { focused = true }
-    }
-
-    private var statusText: String {
-        switch name.status {
-        case .hint: "Letters and numbers"
-        case .tooShort: "At least 3 characters"
-        case .checking: "Checking"
-        case .available: "Available"
-        case .taken: "Taken"
-        }
-    }
-
-    private var availability: some View {
-        HStack(spacing: NoahTokens.Space.s) {
-            AvailabilityDot(status: name.status)
-            Text(LocalizedStringKey(statusText))
-                .noahText(NoahTokens.Typography.sub)
-                .foregroundStyle(name.status == .available ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
-        }
-        .frame(minHeight: 22)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("onboarding-name-status")
-    }
-
-    private var suggestions: some View {
-        GlassGroup(spacing: NoahTokens.Space.s) {
-            WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: 0) {
-                ForEach(Array(name.suggestions.enumerated()), id: \.element) { index, suggestion in
-                    Button(suggestion) {
-                        name.use(suggestion)
-                        haptics.play(.selection)
-                    }
-                    .buttonStyle(OnboardingChipStyle())
-                    .onboardingAppear(index, base: 0, distance: 8)
-                }
-            }
-        }
-        .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .topLeading)
-    }
 }
 
 /// Grey for hints, a pulsing orange dot while checking, solid orange when
 /// available, hollow when taken.
-private struct AvailabilityDot: View {
+struct AvailabilityDot: View {
     let status: NameAvailability.Status
     @State private var pulse = false
     @State private var pop = false
@@ -183,5 +111,110 @@ private struct AvailabilityDot: View {
                 withAnimation(NoahTokens.Motion.bouncy) { pop = false }
             }
         }
+    }
+}
+
+/// The large inline `name@domain` field: as wide as what's typed, so the domain follows it.
+/// Onboarding's "Pick a name" and Settings → Lightning address.
+struct NameHandleField: View {
+    @Bindable var name: NameAvailability
+    let domain: String
+    var focused: FocusState<Bool>.Binding
+    let label: LocalizedStringKey
+    let onSubmit: () -> Void
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            WrapLayout(spacing: 3, lineSpacing: 0) {
+                Text(verbatim: name.text.isEmpty ? L10n.text("name", locale: locale.identifier) : name.text)
+                    .noahText(NoahTokens.Typography.handle)
+                    .lineLimit(1)
+                    .padding(.trailing, 3)
+                    .hidden()
+                    .overlay(alignment: .leading) {
+                        TextField("name", text: $name.text)
+                            .noahText(NoahTokens.Typography.handle)
+                            .foregroundStyle(NoahTokens.Colors.foreground)
+                            .tint(NoahTokens.Colors.orange)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.asciiCapable)
+                            .submitLabel(.continue)
+                            .focused(focused)
+                            .onSubmit(onSubmit)
+                            .accessibilityLabel(Text(label))
+                            .accessibilityValue(Text(verbatim: name.text.isEmpty ? "" : "\(name.text)@\(domain)"))
+                            .accessibilityIdentifier("lightning-username-input")
+                    }
+                Text(verbatim: "@\(domain)")
+                    .noahText(NoahTokens.Typography.label)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .accessibilityHidden(true)
+            }
+            OnboardingUnderline(focused: focused.wrappedValue)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { focused.wrappedValue = true }
+    }
+}
+
+extension NameAvailability.Status {
+    var text: String {
+        switch self {
+        case .hint: "Letters and numbers"
+        case .tooShort: "At least 3 characters"
+        case .checking: "Checking"
+        case .available: "Available"
+        case .taken: "Taken"
+        }
+    }
+}
+
+/// The availability dot and its word; Settings puts its own message there instead when it has one.
+struct NameStatusLine: View {
+    let status: NameAvailability.Status
+    var message: String?
+    var failure = false
+
+    var body: some View {
+        HStack(spacing: NoahTokens.Space.s) {
+            if failure {
+                Circle().fill(NoahTokens.Colors.failure).frame(width: 8, height: 8).accessibilityHidden(true)
+            } else {
+                AvailabilityDot(status: status)
+            }
+            Group {
+                if let message { Text(verbatim: message) } else { Text(LocalizedStringKey(status.text)) }
+            }
+            .noahText(NoahTokens.Typography.sub)
+            .foregroundStyle(failure ? NoahTokens.Colors.failure : status == .available ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(minHeight: 22)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("onboarding-name-status")
+    }
+}
+
+/// Suggestions when a name is taken.
+struct NameSuggestionChips: View {
+    let name: NameAvailability
+    let haptics: OnboardingHaptics
+
+    var body: some View {
+        GlassGroup(spacing: NoahTokens.Space.s) {
+            WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: 0) {
+                ForEach(Array(name.suggestions.enumerated()), id: \.element) { index, suggestion in
+                    Button(suggestion) {
+                        name.use(suggestion)
+                        haptics.play(.selection)
+                    }
+                    .buttonStyle(OnboardingChipStyle())
+                    .onboardingAppear(index, base: 0, distance: 8)
+                }
+            }
+        }
+        .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .topLeading)
     }
 }

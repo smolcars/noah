@@ -44,7 +44,6 @@ struct HomeView: View {
     @State private var toast: HomeToast?
     @State private var alert: String?
     @State private var emailFlowOpened = false
-    @State private var settingsSummary = SettingsSummary()
     @State private var settingsToast: HomeToast?
     @State private var recurringRoute = RecurringNotificationRoute.shared
     @Namespace private var settingsZoom
@@ -94,7 +93,6 @@ struct HomeView: View {
         // The phone's tab bar hides while Settings is open.
         .preference(key: ActivityHidesTabBar.self, value: !window.wide && path.contains(where: \.isSettings))
         .environment(\.settings, settingsNavigator)
-        .environment(settingsSummary)
         .overlay(alignment: .top) { settingsToastLayer }
         // A recurring payment notification opens Recurring payments with Settings beneath.
         .onChange(of: recurringRoute.presented && isActive, initial: true) { _, presented in
@@ -619,7 +617,7 @@ struct HomeView: View {
     /// is and swap the trailing page, so those moves skip the push animation.
     private var settingsNavigator: SettingsNavigator {
         SettingsNavigator(
-            wide: window.wide, leadingWidth: leadingWidth,
+            live: true, wide: window.wide, leadingWidth: leadingWidth,
             select: { page in
                 let next = SettingsPath.select(page, in: path, wide: window.wide)
                 if window.wide { quietly { path = next } } else { path = next }

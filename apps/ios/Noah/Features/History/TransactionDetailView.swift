@@ -539,6 +539,7 @@ struct DetailLine: View {
     var explorer: URL?
     var hairline = true
     var failure = false
+    var glyphColor: Color?
 
     var body: some View {
         HStack(alignment: wraps ? .firstTextBaseline : .center, spacing: 18) {
@@ -548,7 +549,7 @@ struct DetailLine: View {
                 .fixedSize()
             Spacer(minLength: 0)
             HStack(spacing: 8) {
-                if let glyph { Image(systemName: glyph).font(.system(size: 14, weight: .medium)) }
+                if let glyph { Image(systemName: glyph).font(.system(size: 14, weight: .medium)).foregroundStyle(glyphColor ?? NoahTokens.Colors.foreground) }
                 valueText.foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
                 if let onCopy {
                     Button(action: onCopy) {

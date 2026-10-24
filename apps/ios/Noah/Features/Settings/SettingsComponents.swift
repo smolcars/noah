@@ -289,6 +289,8 @@ struct SettingsDetailRow: View {
     var copy: String?
     var explorer: URL?
     var chevron = false
+    var glyph: String?
+    var glyphColor: Color?
     var hairline = true
     var action: (() -> Void)?
     @State private var copied = false
@@ -296,9 +298,9 @@ struct SettingsDetailRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let line = DetailLine(label: label, value: value, compact: compact, mono: mono, numeric: numeric, chevron: chevron || action != nil,
-                              copied: copied, onCopy: copy.map { value in { copyValue(value) } }, explorer: explorer, hairline: hairline,
-                              failure: failure)
+        let line = DetailLine(label: label, value: value, compact: compact, mono: mono, numeric: numeric, glyph: glyph,
+                              chevron: chevron || action != nil, copied: copied, onCopy: copy.map { value in { copyValue(value) } },
+                              explorer: explorer, hairline: hairline, failure: failure, glyphColor: glyphColor)
         if let action {
             Button(action: action) { line }.buttonStyle(.plain)
         } else {

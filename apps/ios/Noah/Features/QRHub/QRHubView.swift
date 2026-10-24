@@ -3,6 +3,7 @@ import SwiftUI
 struct QRHubView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.settings) private var settings
     @State private var hub: QRHubModel
     @State private var displayName = ""
     @State private var pendingScan: String?
@@ -62,7 +63,7 @@ struct QRHubView: View {
                                 VStack(alignment: .leading, spacing: 16) {
                                     Text("Lightning address unavailable").font(NoahFont.headline)
                                     Text("Finish setting up your Lightning address before sharing your QR.")
-                                    NavigationLink("Open Profile") { ProfileView() }
+                                    Button("Open Profile") { settings.open(.profile) }
                                 }
                             }
                         }
