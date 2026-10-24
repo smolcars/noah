@@ -184,7 +184,7 @@ private fun ExitPhaseLine(text: String, color: Color, modifier: Modifier = Modif
 }
 
 @Composable
-private fun number(value: Long) = java.text.NumberFormat.getIntegerInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).format(value)
+internal fun number(value: Long) = java.text.NumberFormat.getIntegerInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).format(value)
 
 /** The phase line (prototype `info().phase`) and whether it reads as done (foreground). */
 @Composable

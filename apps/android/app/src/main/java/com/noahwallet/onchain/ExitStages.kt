@@ -197,7 +197,17 @@ internal object ExitList {
     }
 }
 
+/** Where a claim goes (exit.md, Decision 8): another wallet by default, or this phone's on-chain wallet. */
+internal enum class ClaimTo { other, phone }
+
 internal object ExitClaim {
+    /** The claim's destination: the typed address once it's valid for [network], or this phone's fresh address. */
+    fun destination(to: ClaimTo, typed: String, phone: String?, network: String) = if (to == ClaimTo.phone) phone else address(typed, network)
+
+    /** Hold to claim works only with a valid destination and today's review of exactly it, still fresh. */
+    fun ready(destination: String?, quote: OnchainQuote?, now: Long = System.currentTimeMillis()) =
+        destination != null && quote != null && quote.action == OnchainAction.claim && quote.destination == destination && quote.current(now)
+
     /**
      * "Another wallet" (Decision 8): the address to claim to, or null. Only an on-chain Bitcoin address for this network,
      * checked by today's claim parser; a scanned `bitcoin:` URI gives its address through Send's parser.

@@ -79,6 +79,7 @@
   <string name="gt_dea19a697a27a904">"Android SDK 빌드 대상"</string>
   <string name="gt_15ea390b9d935697">"다른 Lightning 결제가 아직 진행 중입니다. 완료된 후 다시 시도하세요."</string>
   <string name="gt_c08a02390e201002">"Another exit from your round already sent this one, with its own fee. You don\'t pay for it."</string>
+  <string name="gt_c4e9b3d10877c72c">"Another wallet"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"이 휴대폰을 가진 사람은 누구나 문구를 볼 수 있어요. 보호하려면 설정에서 화면 잠금을 설정하세요."</string>
   <string name="gt_0d04bfeb7d64b71c">"앱"</string>
   <string name="gt_b0d015fdadc38e33">"앱 잠금"</string>
@@ -234,6 +235,7 @@
   <string name="gt_c52a96b66db5c212">"작업 상태 확인"</string>
   <string name="gt_ae1b6f51f5f5da9f">"결제 상태 확인"</string>
   <string name="gt_69cd3590300a68c6">"상태 확인"</string>
+  <string name="gt_ed8367c6e1178cba">"Check the address. This can\'t be undone."</string>
   <string name="gt_c31be569a492274b">"금액, 선택한 VTXO, 목적지를 확인하세요. 확정된 자금이 부족할 수 있습니다."</string>
   <string name="gt_0a4944369b913265">"Check the chain"</string>
   <string name="gt_5b08e343d8089308">"Check the chain?"</string>
@@ -468,6 +470,7 @@
   <string name="gt_d250d2a02a78eb03">"Ark 주소, 라이트닝 주소 또는 BOLT12 오퍼를 입력하세요."</string>
   <string name="gt_09694e31973d26c1">"Esplora API 엔드포인트를 입력해 주세요."</string>
   <string name="gt_b07b96712b96ce92">"0보다 큰 금액을 입력해 주세요."</string>
+  <string name="gt_4e0f1fca29a8da4a">"Enter an on-chain Bitcoin address for this network."</string>
   <string name="gt_a553c3e6a86cf907">"결제 횟수를 입력하세요."</string>
   <string name="gt_d22d6bb98979c568">"%1$s(으)로 보낸 코드를 입력하세요"</string>
   <string name="gt_e586fc593f600161">"%1$s(으)로 보낸 코드를 입력하세요."</string>
@@ -484,6 +487,7 @@
   <string name="gt_8019400caf0913fa">"예상 총액"</string>
   <string name="gt_d9f3d2f604dad97a">"예상 총 수수료가 회수할 금액 이상입니다."</string>
   <string name="gt_c4e42b974c335dc5">"매일"</string>
+  <string name="gt_adcd27dbb4f6be17">"Every exit that\'s ready goes in this one transaction. Earlier network fees aren\'t taken again."</string>
   <string name="gt_70271ecc4f808d06">"Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin."</string>
   <string name="gt_24859dc0201bd88a">"매월"</string>
   <string name="gt_1b7e18513af4abe9">"매주"</string>
@@ -629,6 +633,8 @@
   <string name="gt_31f47a7b7c67fe38">"과거 가격 API"</string>
   <string name="gt_7f1929550de947a7">"내역 내보내기 실패"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"내역 불러오기 실패"</string>
+  <string name="gt_8cafdf0c21852759">"Hold to claim"</string>
+  <string name="gt_d15c83e6bfc02929">"Hold to claim %1$s"</string>
   <string name="gt_5013616d3cb50e40">"길게 눌러 보내기"</string>
   <string name="gt_17b879d48aafcfb8">"Hold to start exit"</string>
   <string name="gt_3a78695388b38b5c">"홈"</string>
@@ -846,6 +852,7 @@
   <string name="gt_99b13b050691cd88">"배포 앱을 찾을 수 없습니다. ntfy 또는 다른 UnifiedPush 배포 앱을 설치하세요."</string>
   <string name="gt_a5efd1404132fe49">"조건에 맞는 사용 가능한 VTXO가 없습니다."</string>
   <string name="gt_ef2d0c6e9c73b8d4">"아직 이메일이 없어요"</string>
+  <string name="gt_f53385a88a883116">"No exits are ready to claim."</string>
   <string name="gt_096987783ca38a4e">"아직 시작된 출금이 없습니다."</string>
   <string name="gt_f7fcff0d8feaf039">"제한 없음"</string>
   <string name="gt_2c131be7e653b5b8">"로그가 없습니다."</string>
@@ -901,6 +908,7 @@
   <string name="gt_c31c87ce77cb431b">"Noah then sends and fee-bumps the exit\'s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Noah 사용자"</string>
   <string name="gt_f802f9f1257fc080">"이 결제를 전송하는 중 Noah가 중단되었습니다. 계속하기 전에 거래 내역을 확인해 주세요."</string>
+  <string name="gt_0c304c0eb596d6e9">"Noah won\'t move these back to Ark."</string>
   <string name="gt_f02d150579902f58">"Info.plist에 NoahAppVariant가 없거나 유효하지 않습니다"</string>
   <string name="gt_dc937b59892604f5">"없음"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr 키"</string>
@@ -1421,6 +1429,7 @@
   <string name="gt_2580b9f907abe759">"더 이상 이 결제를 진행할 필요가 없습니다."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"이미 전송된 결제일 수 있습니다. 다른 결제를 하기 전에 상태를 확인하세요."</string>
   <string name="gt_d31a2f01307db793">"이 결제 요청에는 재사용 가능한 Ark 주소나 라이트닝 오퍼가 없습니다"</string>
+  <string name="gt_1d3e83672dd2617a">"This phone\'s on-chain wallet"</string>
   <string name="gt_40db1d4d49d0c277">"이 문구로 백업의 잠금을 해제할 수 없거나 백업이 손상되었습니다. 12개 또는 24개 단어와 순서를 모두 확인하세요."</string>
   <string name="gt_7d13ecdf60d28aa9">"이곳에서는 다른 결제 앱이 필요할 수 있습니다"</string>
   <string name="gt_44f3e818daadd169">"이 장소에서 제공한 링크가 유효하지 않습니다."</string>

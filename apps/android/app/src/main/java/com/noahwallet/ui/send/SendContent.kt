@@ -274,7 +274,7 @@ private fun RowScope.Scan(enabled: Boolean, onClick: () -> Unit) {
 }
 
 /** The clipboard's first item as text, as Paste reads it. */
-private fun Context.clipboardText(): String? =
+internal fun Context.clipboardText(): String? =
     (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
 
 /**

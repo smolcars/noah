@@ -79,6 +79,7 @@
   <string name="gt_dea19a697a27a904">"SDK de Android compilado para"</string>
   <string name="gt_15ea390b9d935697">"Hay otro pago de Lightning en curso. Inténtalo de nuevo cuando termine."</string>
   <string name="gt_c08a02390e201002">"Another exit from your round already sent this one, with its own fee. You don\'t pay for it."</string>
+  <string name="gt_c4e9b3d10877c72c">"Another wallet"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Cualquiera con este teléfono podría ver tu frase. Configura un bloqueo de pantalla en Ajustes para protegerla."</string>
   <string name="gt_0d04bfeb7d64b71c">"Aplicación"</string>
   <string name="gt_b0d015fdadc38e33">"Bloqueo de app"</string>
@@ -234,6 +235,7 @@
   <string name="gt_c52a96b66db5c212">"Comprobar estado de la operación"</string>
   <string name="gt_ae1b6f51f5f5da9f">"Comprobar estado del pago"</string>
   <string name="gt_69cd3590300a68c6">"Comprobar estado"</string>
+  <string name="gt_ed8367c6e1178cba">"Check the address. This can\'t be undone."</string>
   <string name="gt_c31be569a492274b">"Comprueba el importe, los VTXO seleccionados y el destino. Puede que no haya suficientes fondos confirmados."</string>
   <string name="gt_0a4944369b913265">"Check the chain"</string>
   <string name="gt_5b08e343d8089308">"Check the chain?"</string>
@@ -468,6 +470,7 @@
   <string name="gt_d250d2a02a78eb03">"Introduce una dirección de Ark, una dirección de Lightning o una oferta BOLT12."</string>
   <string name="gt_09694e31973d26c1">"Introduce un punto de acceso de la API de Esplora."</string>
   <string name="gt_b07b96712b96ce92">"Introduce un importe mayor que cero."</string>
+  <string name="gt_4e0f1fca29a8da4a">"Enter an on-chain Bitcoin address for this network."</string>
   <string name="gt_a553c3e6a86cf907">"Indica cuántos pagos deben realizarse."</string>
   <string name="gt_d22d6bb98979c568">"Introduce el código que enviamos a %1$s"</string>
   <string name="gt_e586fc593f600161">"Introduce el código que enviamos a %1$s."</string>
@@ -484,6 +487,7 @@
   <string name="gt_8019400caf0913fa">"Total estimado"</string>
   <string name="gt_d9f3d2f604dad97a">"Las comisiones totales estimadas igualan o superan el importe que se recuperará."</string>
   <string name="gt_c4e42b974c335dc5">"Cada día"</string>
+  <string name="gt_adcd27dbb4f6be17">"Every exit that\'s ready goes in this one transaction. Earlier network fees aren\'t taken again."</string>
   <string name="gt_70271ecc4f808d06">"Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin."</string>
   <string name="gt_24859dc0201bd88a">"Cada mes"</string>
   <string name="gt_1b7e18513af4abe9">"Cada semana"</string>
@@ -629,6 +633,8 @@
   <string name="gt_31f47a7b7c67fe38">"API de precios históricos"</string>
   <string name="gt_7f1929550de947a7">"No se pudo exportar el historial"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"No se pudo leer el historial"</string>
+  <string name="gt_8cafdf0c21852759">"Hold to claim"</string>
+  <string name="gt_d15c83e6bfc02929">"Hold to claim %1$s"</string>
   <string name="gt_5013616d3cb50e40">"Mantén pulsado para enviar"</string>
   <string name="gt_17b879d48aafcfb8">"Hold to start exit"</string>
   <string name="gt_3a78695388b38b5c">"Inicio"</string>
@@ -846,6 +852,7 @@
   <string name="gt_99b13b050691cd88">"No se detectaron distribuidores. Instala ntfy u otro distribuidor de UnifiedPush."</string>
   <string name="gt_a5efd1404132fe49">"No hay VTXO que cumplan los requisitos para gastarlos."</string>
   <string name="gt_ef2d0c6e9c73b8d4">"Aún no hay correo"</string>
+  <string name="gt_f53385a88a883116">"No exits are ready to claim."</string>
   <string name="gt_096987783ca38a4e">"No se ha iniciado ninguna salida."</string>
   <string name="gt_f7fcff0d8feaf039">"Sin límite"</string>
   <string name="gt_2c131be7e653b5b8">"No se encontraron registros."</string>
@@ -901,6 +908,7 @@
   <string name="gt_c31c87ce77cb431b">"Noah then sends and fee-bumps the exit\'s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Usuario de Noah"</string>
   <string name="gt_f802f9f1257fc080">"Noah se interrumpió durante el envío de este pago. Revisa tu historial de transacciones antes de reanudarlo."</string>
+  <string name="gt_0c304c0eb596d6e9">"Noah won\'t move these back to Ark."</string>
   <string name="gt_f02d150579902f58">"Falta NoahAppVariant o no es válido en Info.plist"</string>
   <string name="gt_dc937b59892604f5">"Ninguno"</string>
   <string name="gt_5e2edf7902eab86b">"Clave de Nostr"</string>
@@ -1421,6 +1429,7 @@
   <string name="gt_2580b9f907abe759">"Este pago ya no está pendiente."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"Es posible que este pago ya se haya enviado. Consulta su estado antes de realizar otro pago."</string>
   <string name="gt_d31a2f01307db793">"Esta solicitud de pago no tiene una dirección de Ark reutilizable ni una oferta de Lightning"</string>
+  <string name="gt_1d3e83672dd2617a">"This phone\'s on-chain wallet"</string>
   <string name="gt_40db1d4d49d0c277">"No se pudo desbloquear la copia de seguridad con esta frase, o la copia está dañada. Comprueba las 12 o 24 palabras y su orden."</string>
   <string name="gt_7d13ecdf60d28aa9">"Puede que necesites otra aplicación de pago en este lugar"</string>
   <string name="gt_44f3e818daadd169">"El enlace proporcionado por este lugar no es válido."</string>

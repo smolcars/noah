@@ -79,6 +79,7 @@
   <string name="gt_dea19a697a27a904">"Android SDK built for"</string>
   <string name="gt_15ea390b9d935697">"Another Lightning payment is still in progress. Try again once it completes."</string>
   <string name="gt_c08a02390e201002">"Another exit from your round already sent this one, with its own fee. You don\'t pay for it."</string>
+  <string name="gt_c4e9b3d10877c72c">"Another wallet"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
   <string name="gt_0d04bfeb7d64b71c">"App"</string>
   <string name="gt_b0d015fdadc38e33">"App lock"</string>
@@ -234,6 +235,7 @@
   <string name="gt_c52a96b66db5c212">"Check operation status"</string>
   <string name="gt_ae1b6f51f5f5da9f">"Check payment status"</string>
   <string name="gt_69cd3590300a68c6">"Check status"</string>
+  <string name="gt_ed8367c6e1178cba">"Check the address. This can\'t be undone."</string>
   <string name="gt_c31be569a492274b">"Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."</string>
   <string name="gt_0a4944369b913265">"Check the chain"</string>
   <string name="gt_5b08e343d8089308">"Check the chain?"</string>
@@ -468,6 +470,7 @@
   <string name="gt_d250d2a02a78eb03">"Enter an Ark address, Lightning address or BOLT12 offer."</string>
   <string name="gt_09694e31973d26c1">"Enter an Esplora API endpoint."</string>
   <string name="gt_b07b96712b96ce92">"Enter an amount greater than zero."</string>
+  <string name="gt_4e0f1fca29a8da4a">"Enter an on-chain Bitcoin address for this network."</string>
   <string name="gt_a553c3e6a86cf907">"Enter how many payments should be made."</string>
   <string name="gt_d22d6bb98979c568">"Enter the code we sent to %1$s"</string>
   <string name="gt_e586fc593f600161">"Enter the code we sent to %1$s."</string>
@@ -484,6 +487,7 @@
   <string name="gt_8019400caf0913fa">"Estimated total"</string>
   <string name="gt_d9f3d2f604dad97a">"Estimated total fees meet or exceed the value being recovered."</string>
   <string name="gt_c4e42b974c335dc5">"Every day"</string>
+  <string name="gt_adcd27dbb4f6be17">"Every exit that\'s ready goes in this one transaction. Earlier network fees aren\'t taken again."</string>
   <string name="gt_70271ecc4f808d06">"Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin."</string>
   <string name="gt_24859dc0201bd88a">"Every month"</string>
   <string name="gt_1b7e18513af4abe9">"Every week"</string>
@@ -629,6 +633,8 @@
   <string name="gt_31f47a7b7c67fe38">"Historical price API"</string>
   <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"History read failed"</string>
+  <string name="gt_8cafdf0c21852759">"Hold to claim"</string>
+  <string name="gt_d15c83e6bfc02929">"Hold to claim %1$s"</string>
   <string name="gt_5013616d3cb50e40">"Hold to send"</string>
   <string name="gt_17b879d48aafcfb8">"Hold to start exit"</string>
   <string name="gt_3a78695388b38b5c">"Home"</string>
@@ -846,6 +852,7 @@
   <string name="gt_99b13b050691cd88">"No distributors detected. Install ntfy or another UnifiedPush distributor."</string>
   <string name="gt_a5efd1404132fe49">"No eligible spendable VTXOs."</string>
   <string name="gt_ef2d0c6e9c73b8d4">"No email yet"</string>
+  <string name="gt_f53385a88a883116">"No exits are ready to claim."</string>
   <string name="gt_096987783ca38a4e">"No exits have been started."</string>
   <string name="gt_f7fcff0d8feaf039">"No limit"</string>
   <string name="gt_2c131be7e653b5b8">"No logs found."</string>
@@ -901,6 +908,7 @@
   <string name="gt_c31c87ce77cb431b">"Noah then sends and fee-bumps the exit\'s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>
   <string name="gt_f802f9f1257fc080">"Noah was interrupted while sending this payment. Check your transaction history before resuming."</string>
+  <string name="gt_0c304c0eb596d6e9">"Noah won\'t move these back to Ark."</string>
   <string name="gt_f02d150579902f58">"NoahAppVariant missing or invalid in Info.plist"</string>
   <string name="gt_dc937b59892604f5">"None"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr key"</string>
@@ -1421,6 +1429,7 @@
   <string name="gt_2580b9f907abe759">"This payment is no longer due."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"This payment may have been sent. Check its status before making another payment."</string>
   <string name="gt_d31a2f01307db793">"This payment request has no reusable Ark address or Lightning offer"</string>
+  <string name="gt_1d3e83672dd2617a">"This phone\'s on-chain wallet"</string>
   <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
   <string name="gt_7d13ecdf60d28aa9">"This place may require another payment app"</string>
   <string name="gt_44f3e818daadd169">"This place provided an invalid link."</string>
