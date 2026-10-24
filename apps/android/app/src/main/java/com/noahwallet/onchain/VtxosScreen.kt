@@ -323,7 +323,7 @@ internal fun RenewSheet(app: AppModel, model: OnchainModel, quote: OnchainQuote,
     LaunchedEffect(quote) { while (current) { kotlinx.coroutines.delay(250); current = quote.current() } }
     val count = quote.ids.size
     val joined = tr("Joined the next round")
-    SettingsSheet(model::invalidate, if (count == 1) tr("Renew this VTXO") else tr("Renew {n} VTXOs", count.toString()),
+    SettingsSheet(model::invalidate, if (count == 1) tr("Renew this VTXO") else trPlural("Renew {n} VTXOs", count),
         if (count == 1) tr("Joins the next Ark round, so it stays spendable.") else tr("Joins the next Ark round, so they stay spendable."),
         modifier = Modifier.testTag("renew-sheet")) { close ->
         Column(Modifier.padding(top = 8.dp)) {
