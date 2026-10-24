@@ -38,6 +38,12 @@ class PaymentLinksTest {
     /** NoahApp's delivery: what reached the scan route, and how often Send was shown for a blocked link. */
     private class Delivery { val scanned = mutableListOf<String>(); var shown = 0 }
     private fun PaymentLinks.deliver(send: SendController, into: Delivery) = deliver(send, { into.scanned += it }, { into.shown++ })
+    /** LaunchGateView drops on ignore and hands an open link to NoahApp. */
+    private fun PaymentLinks.gate(step: LinkStep, send: SendController, into: Delivery) {
+        if (step == LinkStep.ignore) drop()
+        if (step == LinkStep.open) deliver(send, into)
+    }
+    private val wallet = LaunchState.existingWallet
 
     @Test fun everySchemeAndItsUppercaseReachTheScanRouteVerbatim() {
         val ready = send()
@@ -74,34 +80,41 @@ class PaymentLinksTest {
         val link = "lightning:lnurlp://example.com/pay"
         val links = PaymentLinks(); val delivery = Delivery()
         links.receive(view(link))
-        // Loading, then App lock over the wallet's tabs: LaunchGateView neither drops it nor hands it to NoahApp.
-        for (step in listOf(linkStep(LaunchRoute.loading, false, null, false, false), linkStep(LaunchRoute.message, false, null, false, false),
-            linkStep(LaunchRoute.message, false, LaunchState.existingWallet, false, false), linkStep(LaunchRoute.app, true, LaunchState.existingWallet, false, false)))
+        // Loading, a gate check that hasn't finished (even over a gate it may clear), then App lock over the wallet's tabs.
+        val ready = send()
+        for (step in listOf(linkStep(LaunchRoute.loading, false, false, null, false, false), linkStep(LaunchRoute.message, false, false, null, false, false),
+            linkStep(LaunchRoute.message, true, false, wallet, false, false), linkStep(LaunchRoute.push, true, true, wallet, false, false),
+            linkStep(LaunchRoute.app, true, true, wallet, false, false), linkStep(LaunchRoute.app, true, false, wallet, false, false))) {
             assertEquals(LinkStep.wait, step)
+            links.gate(step, ready, delivery)
+        }
         assertEquals(link, links.pending)
-        assertEquals(LinkStep.open, linkStep(LaunchRoute.app, false, LaunchState.existingWallet, false, false))
-        links.deliver(send(), delivery)
+        links.gate(linkStep(LaunchRoute.app, false, false, wallet, false, false), ready, delivery)
         assertEquals(listOf(link), delivery.scanned)
     }
 
     @Test fun aLinkIsIgnoredWithNoWalletOrBehindAGate() {
-        val ignored = listOf(
-            linkStep(LaunchRoute.onboarding, false, LaunchState.onboarding, false, false),
-            linkStep(LaunchRoute.onboarding, false, LaunchState.seedWithoutWalletData, false, false),
-            linkStep(LaunchRoute.push, false, LaunchState.existingWallet, false, false),
-            linkStep(LaunchRoute.battery, false, LaunchState.existingWallet, false, false),
-            linkStep(LaunchRoute.customServer, false, LaunchState.existingWallet, false, false),
-            linkStep(LaunchRoute.app, false, LaunchState.existingWallet, false, suspended = true),
-            linkStep(LaunchRoute.message, false, LaunchState.existingWallet, openFailed = true, false),
-        ) + listOf(LaunchState.walletDataWithoutSeed, LaunchState.secureStorageUnavailable, LaunchState.restoreIncomplete,
-            LaunchState.invalidSeed, LaunchState.seedConflict).map { linkStep(LaunchRoute.message, false, it, false, false) }
-        assertEquals(List(ignored.size) { LinkStep.ignore }, ignored)
-        // Locked over a gate it waits; unlocked, the gate drops it, and nothing is left to apply later.
-        assertEquals(LinkStep.wait, linkStep(LaunchRoute.push, true, LaunchState.existingWallet, false, false))
-        val links = PaymentLinks(); val delivery = Delivery()
+        // Decided when it arrives, App lock or not.
+        for (locked in listOf(false, true)) {
+            val ignored = listOf(
+                linkStep(LaunchRoute.onboarding, locked, false, LaunchState.onboarding, false, false),
+                linkStep(LaunchRoute.onboarding, locked, false, LaunchState.seedWithoutWalletData, false, false),
+                linkStep(LaunchRoute.push, locked, false, wallet, false, false),
+                linkStep(LaunchRoute.battery, locked, false, wallet, false, false),
+                linkStep(LaunchRoute.customServer, locked, false, wallet, false, false),
+                linkStep(LaunchRoute.app, locked, false, wallet, false, suspended = true),
+                linkStep(LaunchRoute.message, locked, false, wallet, openFailed = true, false),
+            ) + listOf(LaunchState.walletDataWithoutSeed, LaunchState.secureStorageUnavailable, LaunchState.restoreIncomplete,
+                LaunchState.invalidSeed, LaunchState.seedConflict).map { linkStep(LaunchRoute.message, locked, false, it, false, false) }
+            assertEquals("locked $locked", List(ignored.size) { LinkStep.ignore }, ignored)
+        }
+        // A link behind the notifications gate with App lock up; the user grants notifications in Settings, returns
+        // (the gate re-checks), the gate is gone and they unlock: the link was dropped when it came, so nothing opens.
+        val links = PaymentLinks(); val delivery = Delivery(); val ready = send()
         links.receive(view("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22"))
-        links.drop()
-        links.deliver(send(), delivery)
+        for (step in listOf(linkStep(LaunchRoute.push, true, false, wallet, false, false), linkStep(LaunchRoute.push, true, true, wallet, false, false),
+            linkStep(LaunchRoute.app, true, false, wallet, false, false), linkStep(LaunchRoute.app, false, false, wallet, false, false)))
+            links.gate(step, ready, delivery)
         assertNull(links.pending)
         assertEquals(emptyList<String>(), delivery.scanned)
     }

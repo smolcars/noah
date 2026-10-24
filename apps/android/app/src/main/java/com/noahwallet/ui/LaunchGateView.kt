@@ -147,7 +147,7 @@ fun LaunchGateView(model: AppModel) {
         else -> LaunchRoute.message
     }
     val links = androidx.lifecycle.viewmodel.compose.viewModel<PaymentLinks>()
-    val linkStep = linkStep(route, covered, state, model.error != null, model.isWalletSuspended)
+    val linkStep = linkStep(route, model.walletLock.locked, checking, state, model.error != null, model.isWalletSuspended)
     LaunchedEffect(linkStep, links.pending) { if (linkStep == LinkStep.ignore) links.drop() }
     // Onboarding and its gate screens split the whole window at a fold themselves; everything else keeps one pane.
     // The wallet app applies that per screen: Home splits the window itself, other tabs keep one pane.
@@ -202,11 +202,15 @@ fun LaunchGateView(model: AppModel) {
 
 internal enum class LaunchRoute { customServer, message, loading, push, battery, app, onboarding }
 
-/** A link waits out loading and App lock, opens Send in the wallet's tabs, and is dropped by onboarding, suspension and every gate. */
-internal fun linkStep(route: LaunchRoute, covered: Boolean, state: LaunchState?, openFailed: Boolean, suspended: Boolean) = when {
-    covered || route == LaunchRoute.loading || route == LaunchRoute.message && (state == null || state == LaunchState.existingWallet && !openFailed) -> LinkStep.wait
-    route == LaunchRoute.app && !suspended -> LinkStep.open
-    else -> LinkStep.ignore
+/**
+ * A link waits out loading and an unfinished gate check. Onboarding, suspension and every decided gate then drop it, even
+ * behind App lock, so it can't open once the gate clears (deep-links.md, Gates); the wallet's tabs wait for unlock.
+ */
+internal fun linkStep(route: LaunchRoute, locked: Boolean, checking: Boolean, state: LaunchState?, openFailed: Boolean, suspended: Boolean) = when {
+    checking || route == LaunchRoute.loading || route == LaunchRoute.message && (state == null || state == LaunchState.existingWallet && !openFailed) -> LinkStep.wait
+    route != LaunchRoute.app || suspended -> LinkStep.ignore
+    locked -> LinkStep.wait
+    else -> LinkStep.open
 }
 
 /** Modifier-only shielding preserves remember/NavDisplay state in the covered subtree. */
