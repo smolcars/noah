@@ -2005,6 +2005,7 @@
   "gt_fe00b67b6dd1143f": "Confirmado",
   "gt_fe18013d93d22f4f": "Ahora",
   "gt_fe453fd2b1186bf1": "alrededor de un día",
+  "gt_feb81c547b248d40": "Termina el pago actual antes de abrir otra solicitud de pago.",
   "gt_fec76a562b406e84": "{{value}} en ese momento",
   "gt_fef5813efef1e50a": "Pagando {{rate}} sat/vB · esperando el bloque {{height}}",
   "gt_ff2ec2618b91b367": "Cambiar correo",

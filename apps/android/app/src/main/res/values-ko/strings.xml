@@ -592,6 +592,7 @@
   <string name="gt_280918c59094fc48">"비트코인을 찾는 중"</string>
   <string name="gt_ff8fa5b5d54ed7db">"지갑 백그라운드 작업을 시작하기 전에 초기 설정을 완료하세요"</string>
   <string name="gt_25cc2b0e08f9d856">"QR 코드를 공유하기 전에 라이트닝 주소 설정을 완료하세요."</string>
+  <string name="gt_feb81c547b248d40">"다른 결제 요청을 열기 전에 현재 결제를 완료하세요."</string>
   <string name="gt_b7657804c2b4cf70">"다른 요청을 스캔하기 전에 현재 결제를 완료하세요."</string>
   <string name="gt_7804f7a79a9eee32">"완료됨"</string>
   <string name="gt_45650656cfdd8260">"첫 결제"</string>

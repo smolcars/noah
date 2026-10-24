@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1689,
-  "sourceKeys": 1719,
+  "catalogEntries": 1690,
+  "sourceKeys": 1720,
   "coverage": {
     "ios": {
       "used": [
@@ -1820,6 +1820,7 @@
         "Finding your bitcoin",
         "Finish onboarding before background wallet work",
         "Finish setting up your Lightning address before sharing your QR.",
+        "Finish the current payment before opening another payment request.",
         "Finished",
         "First payment",
         "Food & drink",
@@ -2166,6 +2167,7 @@
         "Payment confirmed",
         "Payment failed",
         "Payment hash",
+        "Payment in progress",
         "Payment may have been sent",
         "Payment not sent",
         "Payment preimage",

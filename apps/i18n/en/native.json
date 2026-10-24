@@ -1704,6 +1704,7 @@
   "gt_fe00b67b6dd1143f": "Confirmed",
   "gt_fe18013d93d22f4f": "Now",
   "gt_fe453fd2b1186bf1": "about a day",
+  "gt_feb81c547b248d40": "Finish the current payment before opening another payment request.",
   "gt_fec76a562b406e84": "{{value}} at the time",
   "gt_fef5813efef1e50a": "Paying {{rate}} sat/vB · waiting for block {{height}}",
   "gt_ff2ec2618b91b367": "Change email",

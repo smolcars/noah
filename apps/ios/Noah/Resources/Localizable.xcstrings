@@ -20941,6 +20941,42 @@
         }
       }
     },
+    "Finish the current payment before opening another payment request.": {
+      "comment": "GT gt_feb81c547b248d40; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish the current payment before opening another payment request."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termina el pago actual antes de abrir otra solicitud de pago."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別の支払いリクエストを開く前に、現在の支払いを完了してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 결제 요청을 열기 전에 현재 결제를 완료하세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slutför den pågående betalningen innan du öppnar en annan betalningsbegäran."
+          }
+        }
+      }
+    },
     "Finish the current payment before scanning another request.": {
       "comment": "GT gt_b7657804c2b4cf70; arguments: none",
       "extractionState": "manual",

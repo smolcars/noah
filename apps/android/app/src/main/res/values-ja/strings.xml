@@ -592,6 +592,7 @@
   <string name="gt_280918c59094fc48">"ビットコインを探しています"</string>
   <string name="gt_ff8fa5b5d54ed7db">"ウォレットのバックグラウンド処理を行う前に、初期設定を完了してください"</string>
   <string name="gt_25cc2b0e08f9d856">"QRコードを共有する前に、ライトニングアドレスの設定を完了してください。"</string>
+  <string name="gt_feb81c547b248d40">"別の支払いリクエストを開く前に、現在の支払いを完了してください。"</string>
   <string name="gt_b7657804c2b4cf70">"別のリクエストを読み取る前に、現在の支払いを完了してください。"</string>
   <string name="gt_7804f7a79a9eee32">"完了"</string>
   <string name="gt_45650656cfdd8260">"初回の支払い"</string>

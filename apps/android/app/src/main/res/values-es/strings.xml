@@ -592,6 +592,7 @@
   <string name="gt_280918c59094fc48">"Buscando tu bitcoin"</string>
   <string name="gt_ff8fa5b5d54ed7db">"Completa la configuración inicial antes de realizar tareas de la billetera en segundo plano"</string>
   <string name="gt_25cc2b0e08f9d856">"Termina de configurar tu dirección Lightning antes de compartir tu código QR."</string>
+  <string name="gt_feb81c547b248d40">"Termina el pago actual antes de abrir otra solicitud de pago."</string>
   <string name="gt_b7657804c2b4cf70">"Termina el pago actual antes de escanear otra solicitud."</string>
   <string name="gt_7804f7a79a9eee32">"Terminadas"</string>
   <string name="gt_45650656cfdd8260">"Primer pago"</string>
