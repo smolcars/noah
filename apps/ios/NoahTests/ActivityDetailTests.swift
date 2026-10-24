@@ -478,3 +478,19 @@ struct ActivityRenewalAndBoardTests {
         }
     }
 }
+
+/// A board's fees (Sol's second Android round).
+@MainActor
+struct ActivityBoardFeeTests {
+    /// A successful board keeps its recorded Ark fee, with or without a network fee (the metadata-less board fixture).
+    @Test func aBoardKeepsItsArkFee() {
+        var board = HomeRulesTests.row("movement-b", type: "Onchain", amount: 50_000, kind: "onboard", effective: 49_500, offchainFee: 500)
+        board.metadataJson = "{}"
+        #expect(board.isInternalTransfer)
+        #expect(ActivityDetail(board, ownDomain: "noahwallet.io").fee == .amount(500))
+        board.onchainFeeSat = 300
+        #expect(ActivityDetail(board, ownDomain: "noahwallet.io").fee == .split(ark: 500, network: 300))
+        board.offchainFeeSat = 0
+        #expect(ActivityDetail(board, ownDomain: "noahwallet.io").fee == .network(300))
+    }
+}
