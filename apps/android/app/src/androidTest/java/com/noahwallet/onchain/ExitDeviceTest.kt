@@ -101,7 +101,9 @@ class ExitDeviceTest {
         } } }
         compose.mainClock.advanceTimeBy(1_000)
         for (tag in listOf("exit-to-other", "exit-to-phone")) compose.onNodeWithTag(tag).assertIsNotEnabled()
-        compose.onNode(hasSetTextAction() and (hasTestTag("exit-claim-address") or hasAnyAncestor(hasTestTag("exit-claim-address")))).assertIsNotEnabled()
+        // A disabled field drops its SetText action: find it by its editable text.
+        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.EditableText) and
+            (hasTestTag("exit-claim-address") or hasAnyAncestor(hasTestTag("exit-claim-address")))).assertIsNotEnabled()
         compose.onNodeWithTag("exit-to-phone").performClick()
         compose.runOnIdle { assertTrue("no switch mid-review", chosen.isEmpty()) }
         compose.runOnUiThread { busy = false }
