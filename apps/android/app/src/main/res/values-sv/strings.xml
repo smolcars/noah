@@ -116,7 +116,6 @@
   <string name="gt_168ae9aa2da9e959">"Den automatiska betalningen till %1$s hoppades över. Öppna schemat för att granska avgiften och betala manuellt."</string>
   <string name="gt_40ffd8e019ebd77e">"Automatiska betalningar från ditt Ark-saldo. Gränserna för Lightning-avgifter baseras på Arks publicerade avgifter, upp till 2 % eller 200 sats, beroende på vilket som är högst. Betalningar över gränsen kräver manuellt godkännande. Låt aviseringarna vara aktiverade."</string>
   <string name="gt_e674447337e83c13">"Tillgängligt"</string>
-  <string name="gt_4e8ab9ee2ebee825">"Tillgängliga säkerhetskopior"</string>
   <string name="gt_83f44152274f9e00">"Tillgängligt belopp"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12-erbjudande"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
@@ -134,16 +133,14 @@
   <string name="gt_b77fead35a79fc03">"En bakgrundsuppgift pågår..."</string>
   <string name="gt_f30a86f86c64f448">"Säkerhetskopierar plånboken"</string>
   <string name="gt_bc51147d52aba178">"Säkerhetskopierar…"</string>
+  <string name="gt_8d7524455efc817a">"Backs up when your wallet changes"</string>
   <string name="gt_838557924a5cdfb2">"Säkerhetskopiering"</string>
-  <string name="gt_f5b526c5f899bdc2">"Säkerhetskopiera nu"</string>
   <string name="gt_5618590eea28d6d7">"Säkerhetskopiering slutförd"</string>
   <string name="gt_2e0257c2eab324c7">"Säkerhetskopian har raderats"</string>
   <string name="gt_effe557f24b31ca1">"Hämtningen av säkerhetskopian överskrider gränsen"</string>
   <string name="gt_0e7112ced3c8c26b">"Säkerhetskopieringen misslyckades"</string>
-  <string name="gt_f8d7552b0873aa28">"Säkerhetskopieringen misslyckades. Försök igen."</string>
   <string name="gt_7218b3a881ce16c6">"Säkerhetskopiering väntar"</string>
   <string name="gt_3334fee2c77fef82">"Säkerhetskopior"</string>
-  <string name="gt_7e080320fa21ef56">"Säkerhetskopiorna krypteras med din återställningsfras och lagras säkert på våra servrar. Vi kan aldrig komma åt dina tillgångar eller dina data."</string>
   <string name="gt_d05e07b7c14e596a">"Saldo"</string>
   <string name="gt_415dbb79e7e425e7">"Saldoförändring"</string>
   <string name="gt_82f7047c9e44772d">"Bakgrundskartan är inte tillgänglig · Försök igen"</string>
@@ -315,7 +312,6 @@
   <string name="gt_b721dd0d15ee7130">"Det gick inte att radera plånboken. Starta om Noah och försök igen."</string>
   <string name="gt_2c85d11b048956b3">"Kunde inte radera plånboken. Starta om Noah om en återställning väntar och försök sedan igen."</string>
   <string name="gt_22dad4fc40178cdc">"Kunde inte exportera transaktioner. Försök igen."</string>
-  <string name="gt_8acad106e0a474ba">"Kunde inte exportera din databas. Försök igen."</string>
   <string name="gt_f41da471fbfdefcb">"Det gick inte att slutföra konfigurationen. Försök igen."</string>
   <string name="gt_1d8505ecfe54e3ec">"Kunde inte slutföra återställningen av plånboken. Dina plånboksfiler finns kvar. Försök igen."</string>
   <string name="gt_75433c45038e4e69">"Kunde inte lista säkerhetskopior."</string>
@@ -352,7 +348,6 @@
   <string name="gt_7bcc035ddf337589">"Kunde inte uppdatera återkommande betalningar. Försök igen."</string>
   <string name="gt_f9e607b9f67deda1">"Det gick inte att uppdatera den här inställningen. Försök igen."</string>
   <string name="gt_3cb296f54acaa925">"Det gick inte att skapa en begäran"</string>
-  <string name="gt_c840c095b7c7c8ef">"Skapa en krypterad säkerhetskopia som innehåller din plånboksdatabas."</string>
   <string name="gt_40a49ea198affe13">"Skapa plånbok"</string>
   <string name="gt_7bef2fbf3b783bfe">"Skapar betalningsbegäran…"</string>
   <string name="gt_2d011af498ebd5ea">"Skapar dina nycklar"</string>
@@ -383,11 +378,9 @@
   <string name="gt_a53809d541246272">"Standardslutpunkt"</string>
   <string name="gt_2779c4ad1afd496e">"Delegerat underhåll slutfört"</string>
   <string name="gt_e2d0a54968ead24e">"Radera"</string>
-  <string name="gt_030cfc390829811a">"Radera säkerhetskopia"</string>
   <string name="gt_0f660a06f09eb8b2">"Radera plånbok"</string>
   <string name="gt_86cf366a184ec4d3">"Radera säkerhetskopia"</string>
   <string name="gt_8c643f5a37c9c83e">"Radera siffra"</string>
-  <string name="gt_eb1bbaf775e6c7ab">"Ta bort krypterad säkerhetskopia?"</string>
   <string name="gt_f335ba3fdc3a04b5">"Radera den här säkerhetskopian?"</string>
   <string name="gt_65684f308cb12bf2">"Radera plånbok"</string>
   <string name="gt_21ed2f9e00a509be">"Raderar"</string>
@@ -430,9 +423,8 @@
   <string name="gt_a9214c2e38df7318">"Nöduttag"</string>
   <string name="gt_b8eea92a324ae5b4">"Nöduttag"</string>
   <string name="gt_cade2f4efb6f7c99">"Emulator"</string>
-  <string name="gt_ae08e4962577a7b8">"Aktivera automatisk säkerhetskopiering"</string>
   <string name="gt_1cd009ba27e712a8">"Aktivera autentisering för plånboken"</string>
-  <string name="gt_2941322d77d0f67a">"Krypterad ögonblicksbild av plånboken"</string>
+  <string name="gt_732891401030ce05">"Encrypted with your recovery phrase before it leaves this phone."</string>
   <string name="gt_3d5044351caf9c70">"Krypteras med din återställningsfras innan den lämnar telefonen. Återställ genom att ange återställningsfrasen när du konfigurerar Noah på en telefon."</string>
   <string name="gt_1e1e7aaa734a1633">"Krypterar och laddar upp"</string>
   <string name="gt_14303aa0c4a08d39">"Slutdatum"</string>
@@ -535,11 +527,11 @@
   <string name="gt_3664895579f0a7e6">"Exportera"</string>
   <string name="gt_91f71c14c8d6cc64">"Exportera CSV"</string>
   <string name="gt_4e1bb930def7915b">"Exporten är klar"</string>
-  <string name="gt_eb42aff5f2d19617">"Exportera Databas"</string>
   <string name="gt_50757c7bc28c5d13">"Exportera aktivitet"</string>
   <string name="gt_d9d979c63132b44e">"Exportera fil"</string>
   <string name="gt_c640fca7c7010571">"Exportera transaktioner"</string>
   <string name="gt_1517e5f3d4d648e3">"Exportera plånboksfil"</string>
+  <string name="gt_391065e4dc23592a">"Exported"</string>
   <string name="gt_a2dd9cbb7013bb70">"Exporterar…"</string>
   <string name="gt_a3b205a9ee2b931f">"FIAT"</string>
   <string name="gt_33811c75989f1198">"Face ID"</string>
@@ -692,7 +684,6 @@
   <string name="gt_a4fe65264ef7dbb3">"Språk"</string>
   <string name="gt_aef7c5afac4b70b8">"Största VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"Senaste"</string>
-  <string name="gt_2d90a7570f22b14c">"Senaste säkerhetskopian"</string>
   <string name="gt_d947f5e87db8d3fd">"Senaste försöket: %1$s (%2$s)"</string>
   <string name="gt_8462b632f3ab7913">"Senaste säkerhetskopia"</string>
   <string name="gt_fb6ee42c1c065f89">"Senaste säkerhetskopia %1$s"</string>
@@ -721,7 +712,6 @@
   <string name="gt_ca7eb2b925786eb2">"Lightning-erbjudande"</string>
   <string name="gt_b93018eee5c09c88">"Lightning-mottagning %1$s. Skapa en ny betalningsbegäran och försök igen."</string>
   <string name="gt_abbfcd250b826648">"Lightning-sändningsdelta"</string>
-  <string name="gt_0ceef1fc78ab9b23">"Visa säkerhetskopior"</string>
   <string name="gt_5d3789ebb7f966b3">"Lyssna på bibelberättelsen som gav vår plånbok dess namn"</string>
   <string name="gt_de1a03ce5fcc3be8">"Aktuell information är inte tillgänglig. De medföljande platserna fungerar fortfarande offline."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -817,7 +807,6 @@
   <string name="gt_4ec7b343f853db36">"Det finns ingen app som kan dela den här platsen."</string>
   <string name="gt_802629b9d02d308e">"Ingen säkerhetskopia hittades för den här återställningsfrasen. Kontrollera orden och att säkerhetskopiering var aktiverad för plånboken."</string>
   <string name="gt_e6de0cc02416ad14">"Inga säkerhetskopior hittades"</string>
-  <string name="gt_bb7381f312f9b38b">"Inga säkerhetskopior än"</string>
   <string name="gt_d42128b50335bf93">"Ingen webbläsare är tillgänglig för att öppna blockutforskaren."</string>
   <string name="gt_b51ac248f2fcdf56">"Ingen kamera hittades."</string>
   <string name="gt_d3f355f33a058f16">"Ingen kamera är tillgänglig. Du kan klistra in betalningsbegäran i stället."</string>
@@ -1407,6 +1396,7 @@
   <string name="gt_d9302348c16e07a5">"Den här transaktionen kan inte bekräftas på den aktuella kedjan: en annan bekräftad transaktion (%1$s) förbrukar en av dess indata."</string>
   <string name="gt_124b7359d4adc8aa">"Den här transaktionen kan vara din betalning: %1$s"</string>
   <string name="gt_f4b06ef6d3c81436">"Till"</string>
+  <string name="gt_11cae96bf25946de">"To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_2b065c7c9ce466e5">"I dag"</string>
   <string name="gt_d5cdfcf7ff75338f">"Överst"</string>
   <string name="gt_c9b3c38247f744e1">"Totalt"</string>
@@ -1468,7 +1458,6 @@
   <string name="gt_cd815000e69f78a3">"Mottagaren stöds inte"</string>
   <string name="gt_8c1c051923c4b6b2">"Versionen av journalen för återkommande betalningar stöds inte. Inga betalningar skickas tills vidare."</string>
   <string name="gt_e693d8441d19b569">"Den här versionen av återkommande betalningar stöds inte. Det går inte att skicka betalningar."</string>
-  <string name="gt_5cdbe6c5df81af71">"Uppdaterad eller väntar på ändringar"</string>
   <string name="gt_7652c992b14f72a5">"Upp till %1$s"</string>
   <string name="gt_c945161e74e60f7f">"Kommande återkommande betalning"</string>
   <string name="gt_c1c1009d3f37ec05">"Uppdatera"</string>
@@ -1558,7 +1547,6 @@
   <string name="gt_aaff5794a03433b0">"Du kan råka betala två gånger"</string>
   <string name="gt_0e5467ac43335fc4">"Du behåller"</string>
   <string name="gt_357f1a2fdf17bb53">"Du har fått %1$s"</string>
-  <string name="gt_97636ba0ac2890ee">"Du behöver din återställningsfras för att återställa den här säkerhetskopian. Förvara den säkert och dela den aldrig med någon."</string>
   <string name="gt_04dc7cb10406d3ac">"Du får en påminnelse dagen före och en avisering efter varje betalning. Om en betalning missas medan telefonen är avstängd hoppar Noah över den i stället för att betala dubbelt."</string>
   <string name="gt_723022dbd02fce20">"Du har nått gränsen för antalet återkommande betalningar."</string>
   <string name="gt_3d26c2347422ac51">"Det går inte att överföra hela ditt Ark-saldo till den här plånbokens egen adress på kedjan. Använd en extern Bitcoin-adress."</string>
@@ -1569,11 +1557,9 @@
   <string name="gt_7f359127750635a9">"Din nuvarande e-postadress är aktiv tills den nya e-postadressen har verifierats."</string>
   <string name="gt_28b86cda15decf55">"Din nuvarande e-postadress, %1$s, är aktiv tills den nya e-postadressen har verifierats."</string>
   <string name="gt_886bc67a71fe0f83">"Din e-post används bara för brådskande varningar om din plånbok."</string>
-  <string name="gt_460464d863bb054a">"Din krypterade säkerhetskopia av databasen har exporterats."</string>
   <string name="gt_0d9a2c325358aee0">"Dina synpunkter har skickats till Noah-teamet."</string>
   <string name="gt_2c6b2e253c01fb2e">"Ditt namn"</string>
   <string name="gt_d9a846242ed7a22f">"Din återställningsfras är fortfarande säkert lagrad på den här enheten. Använd den för att återställa plånboken från säkerhetskopian."</string>
-  <string name="gt_fda0b967abcc3d16">"Din plånbok har säkerhetskopierats."</string>
   <string name="gt_50720c8f08138a5e">"Din plånbok är för närvarande avstängd. Alla plånboksfunktioner är inaktiverade."</string>
   <string name="gt_09233d973ee617bd">"Din plånbok är klar."</string>
   <string name="gt_a672c47ec618d7b7">"Din plånbok är pausad. Återuppta den för att visa transaktioner."</string>

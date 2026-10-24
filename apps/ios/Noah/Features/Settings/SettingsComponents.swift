@@ -171,6 +171,8 @@ struct SettingsRow: View {
     var bold = false
     var trailing = Trailing.chevron
     var selected = false
+    /// A row that expands in place turns its chevron down.
+    var expanded = false
     var hairline = true
     var id = ""
     let action: () -> Void
@@ -191,6 +193,7 @@ struct SettingsRow: View {
                 switch trailing {
                 case .chevron:
                     Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
                 case .external:
                     Image(systemName: "arrow.up.right.square").font(.system(size: 16)).foregroundStyle(NoahTokens.Colors.muted)
                 case .none:

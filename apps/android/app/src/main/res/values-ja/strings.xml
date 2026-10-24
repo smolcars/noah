@@ -116,7 +116,6 @@
   <string name="gt_168ae9aa2da9e959">"%1$sへの自動支払いはスキップされました。スケジュールを開いて手数料を確認し、手動で支払ってください。"</string>
   <string name="gt_40ffd8e019ebd77e">"Ark残高から自動で支払います。ライトニング手数料はArkの公表手数料に基づき、上限は支払額の2%または200 satsのいずれか高い方です。上限を超える支払いには手動での承認が必要です。通知は有効にしておいてください。"</string>
   <string name="gt_e674447337e83c13">"利用可能"</string>
-  <string name="gt_4e8ab9ee2ebee825">"利用可能なバックアップ"</string>
   <string name="gt_83f44152274f9e00">"利用可能額"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12オファー"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
@@ -134,16 +133,14 @@
   <string name="gt_b77fead35a79fc03">"バックグラウンド処理を実行中..."</string>
   <string name="gt_f30a86f86c64f448">"ウォレットをバックアップ中"</string>
   <string name="gt_bc51147d52aba178">"バックアップ中…"</string>
+  <string name="gt_8d7524455efc817a">"Backs up when your wallet changes"</string>
   <string name="gt_838557924a5cdfb2">"バックアップ"</string>
-  <string name="gt_f5b526c5f899bdc2">"今すぐバックアップ"</string>
   <string name="gt_5618590eea28d6d7">"バックアップ完了"</string>
   <string name="gt_2e0257c2eab324c7">"バックアップを削除しました"</string>
   <string name="gt_effe557f24b31ca1">"バックアップのダウンロードが上限を超えています"</string>
   <string name="gt_0e7112ced3c8c26b">"バックアップに失敗"</string>
-  <string name="gt_f8d7552b0873aa28">"バックアップに失敗しました。もう一度お試しください。"</string>
   <string name="gt_7218b3a881ce16c6">"バックアップ待ち"</string>
   <string name="gt_3334fee2c77fef82">"バックアップ"</string>
-  <string name="gt_7e080320fa21ef56">"バックアップはお客様のシードフレーズで暗号化され、当社のサーバーに安全に保存されます。当社がお客様の資金やデータにアクセスすることはできません。"</string>
   <string name="gt_d05e07b7c14e596a">"残高"</string>
   <string name="gt_415dbb79e7e425e7">"残高の変動"</string>
   <string name="gt_82f7047c9e44772d">"ベースマップを利用できません · 再試行"</string>
@@ -315,7 +312,6 @@
   <string name="gt_b721dd0d15ee7130">"ウォレットを削除できませんでした。Noahを再起動して再試行してください。"</string>
   <string name="gt_2c85d11b048956b3">"ウォレットを削除できませんでした。復元が保留中の場合はNoahを再起動してから再試行してください。"</string>
   <string name="gt_22dad4fc40178cdc">"取引履歴をエクスポートできませんでした。もう一度お試しください。"</string>
-  <string name="gt_8acad106e0a474ba">"データベースをエクスポートできませんでした。もう一度お試しください。"</string>
   <string name="gt_f41da471fbfdefcb">"設定を完了できませんでした。もう一度お試しください。"</string>
   <string name="gt_1d8505ecfe54e3ec">"ウォレットの復旧を完了できませんでした。ウォレットのファイルは保持されています。もう一度お試しください。"</string>
   <string name="gt_75433c45038e4e69">"バックアップの一覧を取得できませんでした。"</string>
@@ -352,7 +348,6 @@
   <string name="gt_7bcc035ddf337589">"定期支払いを更新できませんでした。もう一度お試しください。"</string>
   <string name="gt_f9e607b9f67deda1">"この設定を更新できませんでした。もう一度お試しください。"</string>
   <string name="gt_3cb296f54acaa925">"リクエストを作成できませんでした"</string>
-  <string name="gt_c840c095b7c7c8ef">"ウォレットのデータベースを含む暗号化済みバックアップファイルを作成します。"</string>
   <string name="gt_40a49ea198affe13">"ウォレットを作成"</string>
   <string name="gt_7bef2fbf3b783bfe">"請求書を作成中…"</string>
   <string name="gt_2d011af498ebd5ea">"鍵を作成しています"</string>
@@ -383,11 +378,9 @@
   <string name="gt_a53809d541246272">"デフォルトのエンドポイント"</string>
   <string name="gt_2779c4ad1afd496e">"委任したメンテナンスが完了しました"</string>
   <string name="gt_e2d0a54968ead24e">"削除"</string>
-  <string name="gt_030cfc390829811a">"バックアップを削除"</string>
   <string name="gt_0f660a06f09eb8b2">"ウォレットを削除"</string>
   <string name="gt_86cf366a184ec4d3">"バックアップを削除"</string>
   <string name="gt_8c643f5a37c9c83e">"数字を削除"</string>
-  <string name="gt_eb1bbaf775e6c7ab">"暗号化されたバックアップを削除しますか？"</string>
   <string name="gt_f335ba3fdc3a04b5">"このバックアップを削除しますか？"</string>
   <string name="gt_65684f308cb12bf2">"ウォレットを削除"</string>
   <string name="gt_21ed2f9e00a509be">"削除中"</string>
@@ -430,9 +423,8 @@
   <string name="gt_a9214c2e38df7318">"緊急出金"</string>
   <string name="gt_b8eea92a324ae5b4">"緊急出金"</string>
   <string name="gt_cade2f4efb6f7c99">"エミュレーター"</string>
-  <string name="gt_ae08e4962577a7b8">"自動バックアップを有効にする"</string>
   <string name="gt_1cd009ba27e712a8">"ウォレット認証を有効にする"</string>
-  <string name="gt_2941322d77d0f67a">"暗号化されたウォレットのスナップショット"</string>
+  <string name="gt_732891401030ce05">"Encrypted with your recovery phrase before it leaves this phone."</string>
   <string name="gt_3d5044351caf9c70">"この端末から送信する前に復元フレーズで暗号化されます。復元するには、端末でNoahを設定するときに復元フレーズを入力してください。"</string>
   <string name="gt_1e1e7aaa734a1633">"暗号化してアップロード中"</string>
   <string name="gt_14303aa0c4a08d39">"終了日"</string>
@@ -535,11 +527,11 @@
   <string name="gt_3664895579f0a7e6">"エクスポート"</string>
   <string name="gt_91f71c14c8d6cc64">"CSVをエクスポート"</string>
   <string name="gt_4e1bb930def7915b">"エクスポート完了"</string>
-  <string name="gt_eb42aff5f2d19617">"データベースをエクスポート"</string>
   <string name="gt_50757c7bc28c5d13">"アクティビティをエクスポート"</string>
   <string name="gt_d9d979c63132b44e">"ファイルをエクスポート"</string>
   <string name="gt_c640fca7c7010571">"取引をエクスポート"</string>
   <string name="gt_1517e5f3d4d648e3">"ウォレットファイルをエクスポート"</string>
+  <string name="gt_391065e4dc23592a">"Exported"</string>
   <string name="gt_a2dd9cbb7013bb70">"エクスポート中…"</string>
   <string name="gt_a3b205a9ee2b931f">"法定通貨"</string>
   <string name="gt_33811c75989f1198">"Face ID"</string>
@@ -692,7 +684,6 @@
   <string name="gt_a4fe65264ef7dbb3">"言語"</string>
   <string name="gt_aef7c5afac4b70b8">"最大VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"前回"</string>
-  <string name="gt_2d90a7570f22b14c">"最終バックアップ"</string>
   <string name="gt_d947f5e87db8d3fd">"最後に支払いを試みた日時：%1$s（%2$s）"</string>
   <string name="gt_8462b632f3ab7913">"最終バックアップ"</string>
   <string name="gt_fb6ee42c1c065f89">"最終バックアップ：%1$s"</string>
@@ -721,7 +712,6 @@
   <string name="gt_ca7eb2b925786eb2">"ライトニングオファー"</string>
   <string name="gt_b93018eee5c09c88">"ライトニング受け取り：%1$s。新しい支払いリクエストを作成して再試行してください。"</string>
   <string name="gt_abbfcd250b826648">"ライトニング送金の待機ブロック数"</string>
-  <string name="gt_0ceef1fc78ab9b23">"バックアップ一覧"</string>
   <string name="gt_5d3789ebb7f966b3">"ウォレットの名前の由来となった聖書の物語を聴く"</string>
   <string name="gt_de1a03ce5fcc3be8">"最新の詳細情報を取得できません。アプリに含まれる場所情報は引き続きオフラインで利用できます。"</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -817,7 +807,6 @@
   <string name="gt_4ec7b343f853db36">"この場所を共有できるアプリがありません。"</string>
   <string name="gt_802629b9d02d308e">"この復元フレーズに対応するバックアップが見つかりませんでした。単語を確認し、このウォレットでバックアップが有効になっていたか確認してください。"</string>
   <string name="gt_e6de0cc02416ad14">"バックアップが見つかりません"</string>
-  <string name="gt_bb7381f312f9b38b">"バックアップはまだありません"</string>
   <string name="gt_d42128b50335bf93">"エクスプローラーを開くためのブラウザーがありません。"</string>
   <string name="gt_b51ac248f2fcdf56">"カメラが見つかりません。"</string>
   <string name="gt_d3f355f33a058f16">"カメラを利用できません。代わりに支払いリクエストを貼り付けてください。"</string>
@@ -1407,6 +1396,7 @@
   <string name="gt_d9302348c16e07a5">"このトランザクションは現在のチェーンでは確認済みになりません。入力の1つが、確認済みの別のトランザクション（%1$s）ですでに使用されています。"</string>
   <string name="gt_124b7359d4adc8aa">"この取引は、ご自身の支払いに該当する可能性があります：%1$s"</string>
   <string name="gt_f4b06ef6d3c81436">"送信先"</string>
+  <string name="gt_11cae96bf25946de">"To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_2b065c7c9ce466e5">"今日"</string>
   <string name="gt_d5cdfcf7ff75338f">"先頭"</string>
   <string name="gt_c9b3c38247f744e1">"合計"</string>
@@ -1468,7 +1458,6 @@
   <string name="gt_cd815000e69f78a3">"対応していない受取人"</string>
   <string name="gt_8c1c051923c4b6b2">"この定期支払い記録のバージョンには対応していません。送信は引き続き停止されています。"</string>
   <string name="gt_e693d8441d19b569">"この定期支払いのバージョンには対応していません。送金は停止しています。"</string>
-  <string name="gt_5cdbe6c5df81af71">"最新の状態、または変更待ち"</string>
   <string name="gt_7652c992b14f72a5">"最大 %1$s"</string>
   <string name="gt_c945161e74e60f7f">"次回の定期支払い"</string>
   <string name="gt_c1c1009d3f37ec05">"アップデート"</string>
@@ -1558,7 +1547,6 @@
   <string name="gt_aaff5794a03433b0">"二重に支払う可能性があります"</string>
   <string name="gt_0e5467ac43335fc4">"受け取る金額"</string>
   <string name="gt_357f1a2fdf17bb53">"%1$sを受け取りました"</string>
-  <string name="gt_97636ba0ac2890ee">"このバックアップの復元にはシードフレーズが必要です。安全に保管し、決して他人と共有しないでください。"</string>
   <string name="gt_04dc7cb10406d3ac">"支払いの前日にリマインダーが届き、支払い後に毎回通知が届きます。スマートフォンの電源が切れていて支払いができなかった場合、Noahはその回の支払いをスキップし、2回分をまとめて支払うことはありません。"</string>
   <string name="gt_723022dbd02fce20">"定期支払いの登録数が上限に達しました。"</string>
   <string name="gt_3d26c2347422ac51">"Ark残高をこのウォレット自身のオンチェーンアドレスに全額送金することはできません。外部のBitcoinアドレスを使用してください。"</string>
@@ -1569,11 +1557,9 @@
   <string name="gt_7f359127750635a9">"新しいメールアドレスの確認が完了するまで、現在のメールアドレスが引き続き有効です。"</string>
   <string name="gt_28b86cda15decf55">"新しいメールアドレスの確認が完了するまで、現在のメールアドレス %1$s が引き続き有効です。"</string>
   <string name="gt_886bc67a71fe0f83">"メールアドレスはウォレットに関する緊急の通知にのみ使います。"</string>
-  <string name="gt_460464d863bb054a">"暗号化されたデータベースのバックアップをエクスポートしました。"</string>
   <string name="gt_0d9a2c325358aee0">"ご意見をNoahチームに送信しました。"</string>
   <string name="gt_2c6b2e253c01fb2e">"あなたの名前"</string>
   <string name="gt_d9a846242ed7a22f">"復元フレーズは引き続きこの端末に安全に保存されています。このフレーズを使って、バックアップからウォレットを復元してください。"</string>
-  <string name="gt_fda0b967abcc3d16">"ウォレットのバックアップが正常に完了しました。"</string>
   <string name="gt_50720c8f08138a5e">"ウォレットは現在停止中です。すべてのウォレット操作が無効になっています。"</string>
   <string name="gt_09233d973ee617bd">"ウォレットの準備ができました。"</string>
   <string name="gt_a672c47ec618d7b7">"ウォレットは一時停止中です。取引を表示するには再開してください。"</string>

@@ -116,7 +116,6 @@
   <string name="gt_168ae9aa2da9e959">"%1$s님에게 보낼 자동 결제를 건너뛰었습니다. 일정을 열어 수수료를 확인하고 직접 결제하세요."</string>
   <string name="gt_40ffd8e019ebd77e">"Ark 잔액에서 자동으로 결제합니다. Lightning 수수료 한도는 Ark가 공개한 수수료를 기준으로 하며, 2%와 200 sats 중 더 큰 금액까지 허용됩니다. 한도를 초과하는 결제는 수동 승인이 필요합니다. 알림을 켜 두세요."</string>
   <string name="gt_e674447337e83c13">"사용 가능"</string>
-  <string name="gt_4e8ab9ee2ebee825">"사용 가능한 백업"</string>
   <string name="gt_83f44152274f9e00">"사용 가능 금액"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12 오퍼"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
@@ -134,16 +133,14 @@
   <string name="gt_b77fead35a79fc03">"백그라운드 작업 진행 중..."</string>
   <string name="gt_f30a86f86c64f448">"지갑 백업 중"</string>
   <string name="gt_bc51147d52aba178">"백업 중…"</string>
+  <string name="gt_8d7524455efc817a">"Backs up when your wallet changes"</string>
   <string name="gt_838557924a5cdfb2">"백업"</string>
-  <string name="gt_f5b526c5f899bdc2">"지금 백업"</string>
   <string name="gt_5618590eea28d6d7">"백업 완료"</string>
   <string name="gt_2e0257c2eab324c7">"백업이 삭제됨"</string>
   <string name="gt_effe557f24b31ca1">"백업 다운로드가 한도를 초과했습니다"</string>
   <string name="gt_0e7112ced3c8c26b">"백업 실패"</string>
-  <string name="gt_f8d7552b0873aa28">"백업에 실패했습니다. 다시 시도하세요."</string>
   <string name="gt_7218b3a881ce16c6">"백업 대기 중"</string>
   <string name="gt_3334fee2c77fef82">"백업"</string>
-  <string name="gt_7e080320fa21ef56">"백업은 사용자의 시드 문구로 암호화되어 저희 서버에 안전하게 저장됩니다. 저희는 사용자의 자금이나 데이터에 절대 접근할 수 없습니다."</string>
   <string name="gt_d05e07b7c14e596a">"잔액"</string>
   <string name="gt_415dbb79e7e425e7">"잔액 변동"</string>
   <string name="gt_82f7047c9e44772d">"기본 지도를 사용할 수 없습니다 · 재시도"</string>
@@ -315,7 +312,6 @@
   <string name="gt_b721dd0d15ee7130">"지갑을 삭제하지 못했습니다. Noah를 다시 시작한 후 다시 시도하세요."</string>
   <string name="gt_2c85d11b048956b3">"지갑을 삭제하지 못했습니다. 복원이 대기 중이라면 Noah를 다시 시작한 후 다시 시도해 주세요."</string>
   <string name="gt_22dad4fc40178cdc">"거래를 내보내지 못했습니다. 다시 시도해 주세요."</string>
-  <string name="gt_8acad106e0a474ba">"데이터베이스를 내보내지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_f41da471fbfdefcb">"설정을 완료하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_1d8505ecfe54e3ec">"지갑 복구를 완료하지 못했습니다. 지갑 파일은 그대로 보관되어 있습니다. 다시 시도하세요."</string>
   <string name="gt_75433c45038e4e69">"백업 목록을 불러오지 못했습니다."</string>
@@ -352,7 +348,6 @@
   <string name="gt_7bcc035ddf337589">"정기 결제를 업데이트하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_f9e607b9f67deda1">"이 설정을 변경하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_3cb296f54acaa925">"요청을 생성하지 못했습니다"</string>
-  <string name="gt_c840c095b7c7c8ef">"지갑 데이터베이스가 포함된 암호화된 백업 파일을 만드세요."</string>
   <string name="gt_40a49ea198affe13">"지갑 만들기"</string>
   <string name="gt_7bef2fbf3b783bfe">"결제 요청서 생성 중…"</string>
   <string name="gt_2d011af498ebd5ea">"키를 만드는 중"</string>
@@ -383,11 +378,9 @@
   <string name="gt_a53809d541246272">"기본 엔드포인트"</string>
   <string name="gt_2779c4ad1afd496e">"위임된 유지 관리 완료"</string>
   <string name="gt_e2d0a54968ead24e">"삭제"</string>
-  <string name="gt_030cfc390829811a">"백업 삭제"</string>
   <string name="gt_0f660a06f09eb8b2">"지갑 삭제"</string>
   <string name="gt_86cf366a184ec4d3">"백업 삭제"</string>
   <string name="gt_8c643f5a37c9c83e">"숫자 지우기"</string>
-  <string name="gt_eb1bbaf775e6c7ab">"암호화된 백업을 삭제할까요?"</string>
   <string name="gt_f335ba3fdc3a04b5">"이 백업을 삭제할까요?"</string>
   <string name="gt_65684f308cb12bf2">"지갑 삭제"</string>
   <string name="gt_21ed2f9e00a509be">"삭제 중"</string>
@@ -430,9 +423,8 @@
   <string name="gt_a9214c2e38df7318">"긴급 출금"</string>
   <string name="gt_b8eea92a324ae5b4">"긴급 출금"</string>
   <string name="gt_cade2f4efb6f7c99">"에뮬레이터"</string>
-  <string name="gt_ae08e4962577a7b8">"자동 백업 켜기"</string>
   <string name="gt_1cd009ba27e712a8">"지갑 인증 활성화"</string>
-  <string name="gt_2941322d77d0f67a">"암호화된 지갑 스냅샷"</string>
+  <string name="gt_732891401030ce05">"Encrypted with your recovery phrase before it leaves this phone."</string>
   <string name="gt_3d5044351caf9c70">"이 휴대폰을 떠나기 전에 복구 문구로 암호화됩니다. 복원하려면 휴대폰에서 Noah를 설정할 때 복구 문구를 입력하세요."</string>
   <string name="gt_1e1e7aaa734a1633">"암호화 후 업로드 중"</string>
   <string name="gt_14303aa0c4a08d39">"종료일"</string>
@@ -535,11 +527,11 @@
   <string name="gt_3664895579f0a7e6">"내보내기"</string>
   <string name="gt_91f71c14c8d6cc64">"CSV 내보내기"</string>
   <string name="gt_4e1bb930def7915b">"내보내기 완료"</string>
-  <string name="gt_eb42aff5f2d19617">"데이터베이스 내보내기"</string>
   <string name="gt_50757c7bc28c5d13">"활동 내보내기"</string>
   <string name="gt_d9d979c63132b44e">"파일 내보내기"</string>
   <string name="gt_c640fca7c7010571">"거래 내보내기"</string>
   <string name="gt_1517e5f3d4d648e3">"지갑 파일 내보내기"</string>
+  <string name="gt_391065e4dc23592a">"Exported"</string>
   <string name="gt_a2dd9cbb7013bb70">"내보내는 중…"</string>
   <string name="gt_a3b205a9ee2b931f">"법정화폐"</string>
   <string name="gt_33811c75989f1198">"Face ID"</string>
@@ -692,7 +684,6 @@
   <string name="gt_a4fe65264ef7dbb3">"언어"</string>
   <string name="gt_aef7c5afac4b70b8">"최대 VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"최근"</string>
-  <string name="gt_2d90a7570f22b14c">"최근 백업"</string>
   <string name="gt_d947f5e87db8d3fd">"마지막 시도: %1$s (%2$s)"</string>
   <string name="gt_8462b632f3ab7913">"마지막 백업"</string>
   <string name="gt_fb6ee42c1c065f89">"마지막 백업: %1$s"</string>
@@ -721,7 +712,6 @@
   <string name="gt_ca7eb2b925786eb2">"라이트닝 오퍼"</string>
   <string name="gt_b93018eee5c09c88">"Lightning 수신 %1$s. 새 결제 요청을 만든 후 다시 시도하세요."</string>
   <string name="gt_abbfcd250b826648">"라이트닝 송금 대기 블록 수"</string>
-  <string name="gt_0ceef1fc78ab9b23">"백업 목록 보기"</string>
   <string name="gt_5d3789ebb7f966b3">"지갑 이름에 영감을 준 성경 이야기를 들어보세요"</string>
   <string name="gt_de1a03ce5fcc3be8">"실시간 상세 정보를 불러올 수 없습니다. 기본 제공되는 장소 정보는 오프라인에서도 이용할 수 있습니다."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -817,7 +807,6 @@
   <string name="gt_4ec7b343f853db36">"이 장소를 공유할 수 있는 앱이 없습니다."</string>
   <string name="gt_802629b9d02d308e">"이 복구 문구에 해당하는 백업을 찾지 못했습니다. 단어가 올바른지, 이 지갑에서 백업을 활성화했는지 확인하세요."</string>
   <string name="gt_e6de0cc02416ad14">"백업을 찾을 수 없습니다"</string>
-  <string name="gt_bb7381f312f9b38b">"아직 백업이 없습니다"</string>
   <string name="gt_d42128b50335bf93">"탐색기를 열 수 있는 브라우저가 없습니다."</string>
   <string name="gt_b51ac248f2fcdf56">"카메라를 찾을 수 없습니다."</string>
   <string name="gt_d3f355f33a058f16">"사용 가능한 카메라가 없습니다. 대신 결제 요청을 붙여넣을 수 있습니다."</string>
@@ -1407,6 +1396,7 @@
   <string name="gt_d9302348c16e07a5">"이미 확정된 다른 거래(%1$s)가 이 거래의 입력 중 하나를 사용했으므로 현재 체인에서는 이 거래가 확정될 수 없습니다."</string>
   <string name="gt_124b7359d4adc8aa">"이 거래가 본인의 결제일 수 있습니다: %1$s"</string>
   <string name="gt_f4b06ef6d3c81436">"받는 사람"</string>
+  <string name="gt_11cae96bf25946de">"To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_2b065c7c9ce466e5">"오늘"</string>
   <string name="gt_d5cdfcf7ff75338f">"맨 위"</string>
   <string name="gt_c9b3c38247f744e1">"합계"</string>
@@ -1468,7 +1458,6 @@
   <string name="gt_cd815000e69f78a3">"지원하지 않는 수신자"</string>
   <string name="gt_8c1c051923c4b6b2">"지원하지 않는 정기 결제 기록 버전입니다. 송금이 중지된 상태로 유지됩니다."</string>
   <string name="gt_e693d8441d19b569">"지원하지 않는 정기 결제 버전입니다. 전송이 중지되었습니다."</string>
-  <string name="gt_5cdbe6c5df81af71">"최신 상태이거나 변경 사항을 기다리는 중"</string>
   <string name="gt_7652c992b14f72a5">"최대 %1$s"</string>
   <string name="gt_c945161e74e60f7f">"예정된 정기 결제"</string>
   <string name="gt_c1c1009d3f37ec05">"업데이트"</string>
@@ -1558,7 +1547,6 @@
   <string name="gt_aaff5794a03433b0">"이중 결제가 발생할 수 있습니다"</string>
   <string name="gt_0e5467ac43335fc4">"남는 금액"</string>
   <string name="gt_357f1a2fdf17bb53">"%1$s 받았습니다"</string>
-  <string name="gt_97636ba0ac2890ee">"이 백업을 복원하려면 시드 구문이 필요합니다. 안전하게 보관하고 절대 공유하지 마세요."</string>
   <string name="gt_04dc7cb10406d3ac">"결제 하루 전과 각 결제 후에 알림을 보내드립니다. 휴대전화가 꺼져 있어 결제가 누락되면 Noah는 두 번 결제하는 대신 해당 회차를 건너뜁니다."</string>
   <string name="gt_723022dbd02fce20">"정기 결제를 최대 개수만큼 등록했습니다."</string>
   <string name="gt_3d26c2347422ac51">"Ark 잔액 전액을 이 지갑의 온체인 주소로 보낼 수 없습니다. 외부 Bitcoin 주소를 사용해 주세요."</string>
@@ -1569,11 +1557,9 @@
   <string name="gt_7f359127750635a9">"새 이메일 인증이 완료될 때까지 기존 이메일이 계속 사용됩니다."</string>
   <string name="gt_28b86cda15decf55">"새 이메일 인증이 완료될 때까지 기존 이메일(%1$s)이 계속 사용됩니다."</string>
   <string name="gt_886bc67a71fe0f83">"이메일은 지갑에 관한 긴급 알림에만 사용합니다."</string>
-  <string name="gt_460464d863bb054a">"암호화된 데이터베이스 백업을 내보냈습니다."</string>
   <string name="gt_0d9a2c325358aee0">"의견이 Noah 팀에 전달되었습니다."</string>
   <string name="gt_2c6b2e253c01fb2e">"내 이름"</string>
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
-  <string name="gt_fda0b967abcc3d16">"지갑이 안전하게 백업되었습니다."</string>
   <string name="gt_50720c8f08138a5e">"현재 지갑 사용이 중지되어 있습니다. 모든 지갑 기능을 사용할 수 없습니다."</string>
   <string name="gt_09233d973ee617bd">"지갑이 준비되었습니다."</string>
   <string name="gt_a672c47ec618d7b7">"지갑이 일시 중지되었습니다. 거래를 보려면 지갑을 재개하세요."</string>

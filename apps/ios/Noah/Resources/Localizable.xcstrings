@@ -4093,42 +4093,6 @@
         }
       }
     },
-    "Available Backups": {
-      "comment": "GT gt_4e8ab9ee2ebee825; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Available Backups"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copias de seguridad disponibles"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "利用可能なバックアップ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "사용 가능한 백업"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tillgängliga säkerhetskopior"
-          }
-        }
-      }
-    },
     "Available Value": {
       "comment": "GT gt_83f44152274f9e00; arguments: none",
       "extractionState": "manual",
@@ -4741,6 +4705,42 @@
         }
       }
     },
+    "Backs up when your wallet changes": {
+      "comment": "GT gt_8d7524455efc817a; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backs up when your wallet changes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backs up when your wallet changes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backs up when your wallet changes"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backs up when your wallet changes"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backs up when your wallet changes"
+          }
+        }
+      }
+    },
     "Backup": {
       "comment": "GT gt_838557924a5cdfb2; arguments: none",
       "extractionState": "manual",
@@ -4773,42 +4773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopiering"
-          }
-        }
-      }
-    },
-    "Backup Now": {
-      "comment": "GT gt_f5b526c5f899bdc2; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backup Now"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear copia de seguridad ahora"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今すぐバックアップ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금 백업"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Säkerhetskopiera nu"
           }
         }
       }
@@ -4957,42 +4921,6 @@
         }
       }
     },
-    "Backup failed. Please try again.": {
-      "comment": "GT gt_f8d7552b0873aa28; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backup failed. Please try again."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falló la copia de seguridad. Inténtalo de nuevo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップに失敗しました。もう一度お試しください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업에 실패했습니다. 다시 시도하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Säkerhetskopieringen misslyckades. Försök igen."
-          }
-        }
-      }
-    },
     "Backup pending": {
       "comment": "GT gt_7218b3a881ce16c6; arguments: none",
       "extractionState": "manual",
@@ -5061,42 +4989,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopior"
-          }
-        }
-      }
-    },
-    "Backups are encrypted with your seed phrase and stored securely on our servers. We can never access your funds or data.": {
-      "comment": "GT gt_7e080320fa21ef56; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backups are encrypted with your seed phrase and stored securely on our servers. We can never access your funds or data."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las copias de seguridad se cifran con tu frase semilla y se almacenan de forma segura en nuestros servidores. Nunca podremos acceder a tus fondos ni a tus datos."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップはお客様のシードフレーズで暗号化され、当社のサーバーに安全に保存されます。当社がお客様の資金やデータにアクセスすることはできません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업은 사용자의 시드 문구로 암호화되어 저희 서버에 안전하게 저장됩니다. 저희는 사용자의 자금이나 데이터에 절대 접근할 수 없습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Säkerhetskopiorna krypteras med din återställningsfras och lagras säkert på våra servrar. Vi kan aldrig komma åt dina tillgångar eller dina data."
           }
         }
       }
@@ -11257,42 +11149,6 @@
         }
       }
     },
-    "Couldn't export your database. Please try again.": {
-      "comment": "GT gt_8acad106e0a474ba; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't export your database. Please try again."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo exportar tu base de datos. Inténtalo de nuevo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "データベースをエクスポートできませんでした。もう一度お試しください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "데이터베이스를 내보내지 못했습니다. 다시 시도해 주세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunde inte exportera din databas. Försök igen."
-          }
-        }
-      }
-    },
     "Couldn't finish setup. Please try again.": {
       "comment": "GT gt_f41da471fbfdefcb; arguments: none",
       "extractionState": "manual",
@@ -12589,42 +12445,6 @@
         }
       }
     },
-    "Create an encrypted backup file containing your wallet database.": {
-      "comment": "GT gt_c840c095b7c7c8ef; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create an encrypted backup file containing your wallet database."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crea un archivo de copia de seguridad cifrado con la base de datos de tu billetera."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのデータベースを含む暗号化済みバックアップファイルを作成します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 데이터베이스가 포함된 암호화된 백업 파일을 만드세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skapa en krypterad säkerhetskopia som innehåller din plånboksdatabas."
-          }
-        }
-      }
-    },
     "Create wallet": {
       "comment": "GT gt_40a49ea198affe13; arguments: none",
       "extractionState": "manual",
@@ -13705,42 +13525,6 @@
         }
       }
     },
-    "Delete Backup": {
-      "comment": "GT gt_030cfc390829811a; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete Backup"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eliminar copia de seguridad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップを削除"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업 삭제"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Radera säkerhetskopia"
-          }
-        }
-      }
-    },
     "Delete Wallet": {
       "comment": "GT gt_0f660a06f09eb8b2; arguments: none",
       "extractionState": "manual",
@@ -13845,42 +13629,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Radera siffra"
-          }
-        }
-      }
-    },
-    "Delete encrypted backup?": {
-      "comment": "GT gt_eb1bbaf775e6c7ab; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete encrypted backup?"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Eliminar la copia de seguridad cifrada?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暗号化されたバックアップを削除しますか？"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "암호화된 백업을 삭제할까요?"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ta bort krypterad säkerhetskopia?"
           }
         }
       }
@@ -15397,42 +15145,6 @@
         }
       }
     },
-    "Enable Automatic Backups": {
-      "comment": "GT gt_ae08e4962577a7b8; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enable Automatic Backups"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activar copias de seguridad automáticas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動バックアップを有効にする"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 백업 켜기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktivera automatisk säkerhetskopiering"
-          }
-        }
-      }
-    },
     "Enable wallet authentication": {
       "comment": "GT gt_1cd009ba27e712a8; arguments: none",
       "extractionState": "manual",
@@ -15469,38 +15181,38 @@
         }
       }
     },
-    "Encrypted wallet snapshot": {
-      "comment": "GT gt_2941322d77d0f67a; arguments: none",
+    "Encrypted with your recovery phrase before it leaves this phone.": {
+      "comment": "GT gt_732891401030ce05; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Encrypted wallet snapshot"
+            "value": "Encrypted with your recovery phrase before it leaves this phone."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instantánea cifrada de la billetera"
+            "value": "Encrypted with your recovery phrase before it leaves this phone."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "暗号化されたウォレットのスナップショット"
+            "value": "Encrypted with your recovery phrase before it leaves this phone."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "암호화된 지갑 스냅샷"
+            "value": "Encrypted with your recovery phrase before it leaves this phone."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Krypterad ögonblicksbild av plånboken"
+            "value": "Encrypted with your recovery phrase before it leaves this phone."
           }
         }
       }
@@ -19081,42 +18793,6 @@
         }
       }
     },
-    "Export Database": {
-      "comment": "GT gt_eb42aff5f2d19617; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Export Database"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportar base de datos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "データベースをエクスポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "데이터베이스 내보내기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportera Databas"
-          }
-        }
-      }
-    },
     "Export activity": {
       "comment": "GT gt_50757c7bc28c5d13; arguments: none",
       "extractionState": "manual",
@@ -19257,6 +18933,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exportera plånboksfil"
+          }
+        }
+      }
+    },
+    "Exported": {
+      "comment": "GT gt_391065e4dc23592a; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported"
           }
         }
       }
@@ -24685,42 +24397,6 @@
         }
       }
     },
-    "Last Backup": {
-      "comment": "GT gt_2d90a7570f22b14c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last Backup"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Última copia de seguridad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最終バックアップ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최근 백업"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senaste säkerhetskopian"
-          }
-        }
-      }
-    },
     "Last attempt: {_gt_value_2} ({_gt_value_3})": {
       "comment": "GT gt_d947f5e87db8d3fd; arguments: _gt_value_2, _gt_value_3",
       "extractionState": "manual",
@@ -25725,42 +25401,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lightning-sändningsdelta"
-          }
-        }
-      }
-    },
-    "List Backups": {
-      "comment": "GT gt_0ceef1fc78ab9b23; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "List Backups"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ver copias de seguridad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップ一覧"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업 목록 보기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visa säkerhetskopior"
           }
         }
       }
@@ -29181,42 +28821,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga säkerhetskopior hittades"
-          }
-        }
-      }
-    },
-    "No backups yet": {
-      "comment": "GT gt_bb7381f312f9b38b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No backups yet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aún no hay copias de seguridad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップはまだありません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 백업이 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inga säkerhetskopior än"
           }
         }
       }
@@ -50377,6 +49981,42 @@
         }
       }
     },
+    "To restore, enter your recovery phrase when you set up Noah on a phone.": {
+      "comment": "GT gt_11cae96bf25946de; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        }
+      }
+    },
     "Today": {
       "comment": "GT gt_2b065c7c9ce466e5; arguments: none",
       "extractionState": "manual",
@@ -52569,42 +52209,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den här versionen av återkommande betalningar stöds inte. Det går inte att skicka betalningar."
-          }
-        }
-      }
-    },
-    "Up to date or waiting for changes": {
-      "comment": "GT gt_5cdbe6c5df81af71; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Up to date or waiting for changes"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actualizado o a la espera de cambios"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最新の状態、または変更待ち"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최신 상태이거나 변경 사항을 기다리는 중"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uppdaterad eller väntar på ändringar"
           }
         }
       }
@@ -55813,42 +55417,6 @@
         }
       }
     },
-    "You will need your seed phrase to restore this backup. Keep it safe and never share it.": {
-      "comment": "GT gt_97636ba0ac2890ee; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You will need your seed phrase to restore this backup. Keep it safe and never share it."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Necesitarás tu frase semilla para restaurar esta copia de seguridad. Guárdala en un lugar seguro y nunca la compartas."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このバックアップの復元にはシードフレーズが必要です。安全に保管し、決して他人と共有しないでください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 백업을 복원하려면 시드 구문이 필요합니다. 안전하게 보관하고 절대 공유하지 마세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Du behöver din återställningsfras för att återställa den här säkerhetskopian. Förvara den säkert och dela den aldrig med någon."
-          }
-        }
-      }
-    },
     "You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice.": {
       "comment": "GT gt_04dc7cb10406d3ac; arguments: none",
       "extractionState": "manual",
@@ -56209,42 +55777,6 @@
         }
       }
     },
-    "Your encrypted database backup was exported.": {
-      "comment": "GT gt_460464d863bb054a; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your encrypted database backup was exported."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se ha exportado la copia de seguridad cifrada de tu base de datos."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暗号化されたデータベースのバックアップをエクスポートしました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "암호화된 데이터베이스 백업을 내보냈습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Din krypterade säkerhetskopia av databasen har exporterats."
-          }
-        }
-      }
-    },
     "Your feedback was sent to the Noah team.": {
       "comment": "GT gt_0d9a2c325358aee0; arguments: none",
       "extractionState": "manual",
@@ -56349,42 +55881,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Din återställningsfras är fortfarande säkert lagrad på den här enheten. Använd den för att återställa plånboken från säkerhetskopian."
-          }
-        }
-      }
-    },
-    "Your wallet has been backed up successfully.": {
-      "comment": "GT gt_fda0b967abcc3d16; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your wallet has been backed up successfully."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La copia de seguridad de tu billetera se ha creado correctamente."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのバックアップが正常に完了しました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑이 안전하게 백업되었습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Din plånbok har säkerhetskopierats."
           }
         }
       }

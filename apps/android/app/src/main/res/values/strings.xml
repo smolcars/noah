@@ -116,7 +116,6 @@
   <string name="gt_168ae9aa2da9e959">"Automatic payment to %1$s was skipped. Open the schedule to review its fee and pay manually."</string>
   <string name="gt_40ffd8e019ebd77e">"Automatic payments from your Ark balance. Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval. Keep notifications enabled."</string>
   <string name="gt_e674447337e83c13">"Available"</string>
-  <string name="gt_4e8ab9ee2ebee825">"Available Backups"</string>
   <string name="gt_83f44152274f9e00">"Available Value"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12 offer"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
@@ -134,16 +133,14 @@
   <string name="gt_b77fead35a79fc03">"Background task in progress..."</string>
   <string name="gt_f30a86f86c64f448">"Backing up wallet"</string>
   <string name="gt_bc51147d52aba178">"Backing up…"</string>
+  <string name="gt_8d7524455efc817a">"Backs up when your wallet changes"</string>
   <string name="gt_838557924a5cdfb2">"Backup"</string>
-  <string name="gt_f5b526c5f899bdc2">"Backup Now"</string>
   <string name="gt_5618590eea28d6d7">"Backup completed"</string>
   <string name="gt_2e0257c2eab324c7">"Backup deleted"</string>
   <string name="gt_effe557f24b31ca1">"Backup download exceeds limit"</string>
   <string name="gt_0e7112ced3c8c26b">"Backup failed"</string>
-  <string name="gt_f8d7552b0873aa28">"Backup failed. Please try again."</string>
   <string name="gt_7218b3a881ce16c6">"Backup pending"</string>
   <string name="gt_3334fee2c77fef82">"Backups"</string>
-  <string name="gt_7e080320fa21ef56">"Backups are encrypted with your seed phrase and stored securely on our servers. We can never access your funds or data."</string>
   <string name="gt_d05e07b7c14e596a">"Balance"</string>
   <string name="gt_415dbb79e7e425e7">"Balance change"</string>
   <string name="gt_82f7047c9e44772d">"Basemap unavailable · Retry"</string>
@@ -315,7 +312,6 @@
   <string name="gt_b721dd0d15ee7130">"Couldn\'t delete wallet. Restart Noah and try again."</string>
   <string name="gt_2c85d11b048956b3">"Couldn\'t delete wallet. Restart Noah if a restore is pending, then try again."</string>
   <string name="gt_22dad4fc40178cdc">"Couldn\'t export transactions. Please try again."</string>
-  <string name="gt_8acad106e0a474ba">"Couldn\'t export your database. Please try again."</string>
   <string name="gt_f41da471fbfdefcb">"Couldn\'t finish setup. Please try again."</string>
   <string name="gt_1d8505ecfe54e3ec">"Couldn\'t finish wallet recovery. Your wallet files have been kept. Please try again."</string>
   <string name="gt_75433c45038e4e69">"Couldn\'t list backups."</string>
@@ -352,7 +348,6 @@
   <string name="gt_7bcc035ddf337589">"Couldn\'t update recurring payments. Try again."</string>
   <string name="gt_f9e607b9f67deda1">"Couldn\'t update this setting. Please try again."</string>
   <string name="gt_3cb296f54acaa925">"Couldn’t create a request"</string>
-  <string name="gt_c840c095b7c7c8ef">"Create an encrypted backup file containing your wallet database."</string>
   <string name="gt_40a49ea198affe13">"Create wallet"</string>
   <string name="gt_7bef2fbf3b783bfe">"Creating invoice…"</string>
   <string name="gt_2d011af498ebd5ea">"Creating your keys"</string>
@@ -383,11 +378,9 @@
   <string name="gt_a53809d541246272">"Default endpoint"</string>
   <string name="gt_2779c4ad1afd496e">"Delegated maintenance completed"</string>
   <string name="gt_e2d0a54968ead24e">"Delete"</string>
-  <string name="gt_030cfc390829811a">"Delete Backup"</string>
   <string name="gt_0f660a06f09eb8b2">"Delete Wallet"</string>
   <string name="gt_86cf366a184ec4d3">"Delete backup"</string>
   <string name="gt_8c643f5a37c9c83e">"Delete digit"</string>
-  <string name="gt_eb1bbaf775e6c7ab">"Delete encrypted backup?"</string>
   <string name="gt_f335ba3fdc3a04b5">"Delete this backup?"</string>
   <string name="gt_65684f308cb12bf2">"Delete wallet"</string>
   <string name="gt_21ed2f9e00a509be">"Deleting"</string>
@@ -430,9 +423,8 @@
   <string name="gt_a9214c2e38df7318">"Emergency Exit"</string>
   <string name="gt_b8eea92a324ae5b4">"Emergency exit"</string>
   <string name="gt_cade2f4efb6f7c99">"Emulator"</string>
-  <string name="gt_ae08e4962577a7b8">"Enable Automatic Backups"</string>
   <string name="gt_1cd009ba27e712a8">"Enable wallet authentication"</string>
-  <string name="gt_2941322d77d0f67a">"Encrypted wallet snapshot"</string>
+  <string name="gt_732891401030ce05">"Encrypted with your recovery phrase before it leaves this phone."</string>
   <string name="gt_3d5044351caf9c70">"Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_1e1e7aaa734a1633">"Encrypting and uploading"</string>
   <string name="gt_14303aa0c4a08d39">"End date"</string>
@@ -535,11 +527,11 @@
   <string name="gt_3664895579f0a7e6">"Export"</string>
   <string name="gt_91f71c14c8d6cc64">"Export CSV"</string>
   <string name="gt_4e1bb930def7915b">"Export Complete"</string>
-  <string name="gt_eb42aff5f2d19617">"Export Database"</string>
   <string name="gt_50757c7bc28c5d13">"Export activity"</string>
   <string name="gt_d9d979c63132b44e">"Export file"</string>
   <string name="gt_c640fca7c7010571">"Export transactions"</string>
   <string name="gt_1517e5f3d4d648e3">"Export wallet file"</string>
+  <string name="gt_391065e4dc23592a">"Exported"</string>
   <string name="gt_a2dd9cbb7013bb70">"Exporting…"</string>
   <string name="gt_a3b205a9ee2b931f">"FIAT"</string>
   <string name="gt_33811c75989f1198">"Face ID"</string>
@@ -692,7 +684,6 @@
   <string name="gt_a4fe65264ef7dbb3">"Language"</string>
   <string name="gt_aef7c5afac4b70b8">"Largest VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"Last"</string>
-  <string name="gt_2d90a7570f22b14c">"Last Backup"</string>
   <string name="gt_d947f5e87db8d3fd">"Last attempt: %1$s (%2$s)"</string>
   <string name="gt_8462b632f3ab7913">"Last backup"</string>
   <string name="gt_fb6ee42c1c065f89">"Last backup %1$s"</string>
@@ -721,7 +712,6 @@
   <string name="gt_ca7eb2b925786eb2">"Lightning offer"</string>
   <string name="gt_b93018eee5c09c88">"Lightning receive %1$s. Generate a new payment request and try again."</string>
   <string name="gt_abbfcd250b826648">"Lightning send delta"</string>
-  <string name="gt_0ceef1fc78ab9b23">"List Backups"</string>
   <string name="gt_5d3789ebb7f966b3">"Listen to the biblical story that inspired our wallet\'s name"</string>
   <string name="gt_de1a03ce5fcc3be8">"Live details are unavailable. The bundled places still work offline."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -817,7 +807,6 @@
   <string name="gt_4ec7b343f853db36">"No app is available to share this place."</string>
   <string name="gt_802629b9d02d308e">"No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled."</string>
   <string name="gt_e6de0cc02416ad14">"No backups found"</string>
-  <string name="gt_bb7381f312f9b38b">"No backups yet"</string>
   <string name="gt_d42128b50335bf93">"No browser available to open the explorer."</string>
   <string name="gt_b51ac248f2fcdf56">"No camera device found."</string>
   <string name="gt_d3f355f33a058f16">"No camera is available. You can paste the payment request instead."</string>
@@ -1407,6 +1396,7 @@
   <string name="gt_d9302348c16e07a5">"This transaction cannot confirm on the current chain: a confirmed different transaction (%1$s) spends one of its inputs."</string>
   <string name="gt_124b7359d4adc8aa">"This transaction may be your payment: %1$s"</string>
   <string name="gt_f4b06ef6d3c81436">"To"</string>
+  <string name="gt_11cae96bf25946de">"To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_2b065c7c9ce466e5">"Today"</string>
   <string name="gt_d5cdfcf7ff75338f">"Top"</string>
   <string name="gt_c9b3c38247f744e1">"Total"</string>
@@ -1468,7 +1458,6 @@
   <string name="gt_cd815000e69f78a3">"Unsupported recipient"</string>
   <string name="gt_8c1c051923c4b6b2">"Unsupported recurring journal version. Sending remains stopped."</string>
   <string name="gt_e693d8441d19b569">"Unsupported recurring payment version. Sending is stopped."</string>
-  <string name="gt_5cdbe6c5df81af71">"Up to date or waiting for changes"</string>
   <string name="gt_7652c992b14f72a5">"Up to %1$s"</string>
   <string name="gt_c945161e74e60f7f">"Upcoming recurring payment"</string>
   <string name="gt_c1c1009d3f37ec05">"Update"</string>
@@ -1558,7 +1547,6 @@
   <string name="gt_aaff5794a03433b0">"You could pay twice"</string>
   <string name="gt_0e5467ac43335fc4">"You keep"</string>
   <string name="gt_357f1a2fdf17bb53">"You received %1$s"</string>
-  <string name="gt_97636ba0ac2890ee">"You will need your seed phrase to restore this backup. Keep it safe and never share it."</string>
   <string name="gt_04dc7cb10406d3ac">"You\'ll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice."</string>
   <string name="gt_723022dbd02fce20">"You\'ve reached the maximum number of recurring payments."</string>
   <string name="gt_3d26c2347422ac51">"Your Ark balance cannot be swept to this wallet\'s own onchain address. Use an external Bitcoin address."</string>
@@ -1569,11 +1557,9 @@
   <string name="gt_7f359127750635a9">"Your current email will stay active until the new email is verified."</string>
   <string name="gt_28b86cda15decf55">"Your current email, %1$s, will stay active until the new email is verified."</string>
   <string name="gt_886bc67a71fe0f83">"Your email is only for urgent alerts about your wallet."</string>
-  <string name="gt_460464d863bb054a">"Your encrypted database backup was exported."</string>
   <string name="gt_0d9a2c325358aee0">"Your feedback was sent to the Noah team."</string>
   <string name="gt_2c6b2e253c01fb2e">"Your name"</string>
   <string name="gt_d9a846242ed7a22f">"Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."</string>
-  <string name="gt_fda0b967abcc3d16">"Your wallet has been backed up successfully."</string>
   <string name="gt_50720c8f08138a5e">"Your wallet is currently suspended. All wallet operations are disabled."</string>
   <string name="gt_09233d973ee617bd">"Your wallet is ready."</string>
   <string name="gt_a672c47ec618d7b7">"Your wallet is suspended. Resume it to view transactions."</string>

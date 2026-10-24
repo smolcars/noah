@@ -23,48 +23,6 @@ struct FileShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
-struct ExportDatabaseView: View {
-    @State private var file: SharedFile?
-    @State private var sharing = false
-    @State private var busy = false
-    @State private var error: String?
-    @State private var sharedSuccessfully = false
-    @State private var exported = false
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("Create an encrypted backup file containing your wallet database.")
-                Text("You will need your seed phrase to restore this backup. Keep it safe and never share it.")
-                    .foregroundStyle(NoahColor.mutedForeground)
-                if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
-                NoahButton(title: "Export Database", isLoading: busy) {
-                    busy = true; error = nil; sharedSuccessfully = false
-                    Task {
-                        defer { busy = false }
-                        do {
-                            file = try await ScratchSpace.shared.withOperation {
-                                let folder = try ScratchSpace.shared.makeFolder("share-backup")
-                                do {
-                                    let url = folder.appending(path: ExportFilename.database())
-                                    _ = try await AppServices.shared.backupService.exportEncryptedBackup(to: url)
-                                    return SharedFile(url: url, folder: folder)
-                                } catch { ScratchSpace.shared.discard(folder); throw error }
-                            }
-                            sharing = true
-                        } catch { self.error = "Couldn't export your database. Please try again." }
-                    }
-                }
-            }.padding(24).frame(maxWidth: 640).frame(maxWidth: .infinity)
-        }
-        .settingsStyle("Export Database")
-        .sheet(isPresented: $sharing, onDismiss: { file?.discard(); file = nil; exported = sharedSuccessfully }) {
-            if let file { FileShareSheet(file: file) { sharedSuccessfully = $0 } }
-        }
-        .alert("Export Complete", isPresented: $exported) { Button("OK", role: .cancel) {} }
-            message: { Text("Your encrypted database backup was exported.") }
-    }
-}
-
 struct LogView: View {
     @Environment(\.locale) private var locale
     @State private var snapshot = LogSnapshot()
