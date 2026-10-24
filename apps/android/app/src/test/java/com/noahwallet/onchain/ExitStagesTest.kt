@@ -2,6 +2,7 @@ package com.noahwallet.onchain
 
 import org.junit.Assert.*
 import org.junit.Test
+import com.noahwallet.onchain.ExitActions.Action as a
 
 /** exit.md, Testing: bark's states map to phases, the inferred rules, and what the list and Settings show. */
 class ExitStagesTest {
@@ -46,6 +47,47 @@ class ExitStagesTest {
         assertEquals(ExitStage.Phase.canceled, canceled.phase); assertEquals(1, canceled.inBlocks); assertEquals(4, canceled.total)
         assertEquals(ExitStage.Phase.spent, ExitStages.of(exit("VtxoAlreadySpent", ExitDetails(tip_height = 100)), 100).phase)
         assertEquals(ExitStage.Phase.swept, ExitStages.of(exit("VtxoSwept", ExitDetails(tip_height = 100)), 100).phase)
+    }
+
+    @Test fun cancelAppearsOnlyWhileBarkAllowsIt() {
+        val sending = ExitStages.of(exit("Processing", processing(100, *path("awaiting-cpfp-broadcast", "verify-inputs"))), 100)
+        assertEquals(listOf(a.cancel, a.check), ExitActions.of(sending, cancelable = true))
+        assertEquals("the last transaction is out", listOf(a.check), ExitActions.of(sending, cancelable = false))
+        assertEquals(listOf(a.cancel, a.addFunds), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = true))
+        assertEquals(listOf(a.addFunds), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = false))
+        assertEquals(listOf(a.claim), ExitActions.of(ExitStage(ExitStage.Phase.claimable), cancelable = false))
+        assertEquals(emptyList<ExitActions.Action>(), ExitActions.of(ExitStage(ExitStage.Phase.claiming), cancelable = false))
+        for (phase in listOf(ExitStage.Phase.claimed, ExitStage.Phase.canceled, ExitStage.Phase.spent, ExitStage.Phase.swept))
+            assertEquals(phase.name, listOf(a.done), ExitActions.of(ExitStage(phase), cancelable = true))
+        // bark's own rule decides cancelable: Start, or Processing until the last transaction is broadcast.
+        assertTrue(exit("Start", ExitDetails()).cancelable)
+        assertTrue(exit("Processing", processing(100, *path("confirmed", "confirmed", "confirmed", "awaiting-cpfp-broadcast"))).cancelable)
+        assertFalse(exit("Processing", processing(100, *path("confirmed", "confirmed", "confirmed", "awaiting-confirmation"))).cancelable)
+        assertFalse(exit("AwaitingDelta", ExitDetails()).cancelable)
+    }
+
+    @Test fun thePictureFollowsEachState() {
+        fun pose(e: ExitModel, tip: Long = 100, needsFunds: Boolean = false) = ExitPose.of(e, ExitStages.of(e, tip, needsFunds), tip)
+        val packages = listOf(ExitPackage("root", outputs = 5), ExitPackage("l2", outputs = 5, spends = 2), ExitPackage("l1", outputs = 5, spends = 2),
+            ExitPackage("leaf", outputs = 2, spends = 1))
+        val lift = pose(exit("Start", ExitDetails(tip_height = 100), packages = packages))
+        assertEquals(4, lift.n); assertEquals(listOf(3, 3, 3, 0), lift.branches); assertEquals(listOf(2, 2, 1, 0), lift.ours)
+        assertEquals(0f, PictureMotion.rest(lift).unroll)
+        val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs")), packages = packages)
+        pose(parked).let { assertTrue(it.dropped); assertFalse(it.fee); assertEquals(listOf(99L, null, null, null), it.mined); assertEquals(1, it.current) }
+        pose(parked, needsFunds = true).let { assertFalse("it waits in the branch, ringed", it.dropped); assertEquals(ExitStage.Attention.needsFunds, it.attention) }
+        val paying = exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c", origin = "mempool"), tx("leaf", "verify-inputs")))
+        pose(paying).let { assertTrue(it.dropped && it.fee); assertEquals(listOf(true, false), it.theirs); assertEquals(listOf(true, false), it.paid) }
+        val wait = exit("AwaitingDelta", ExitDetails(tip_height = 150, confirmed_block = ExitDetails.Block(104), claimable_height = 248),
+            history = listOf(processing(104, *four.mapIndexed { i, id -> tx(id, "confirmed", block = 101L + i) }.toTypedArray())))
+        pose(wait, 150).let { assertTrue(it.zoomed); assertFalse(it.claiming); assertEquals(104L, it.lockedFrom); assertEquals(248L, it.claimableHeight)
+            assertEquals(listOf(101L, 102, 103, 104), it.mined); assertEquals(1f, PictureMotion.rest(it).zoom); assertEquals(0f, PictureMotion.rest(it).open) }
+        val claimable = wait.copy(state = "Claimable", details = ExitDetails(tip_height = 248, claimable_since = ExitDetails.Block(248)))
+        assertEquals(1f, PictureMotion.rest(pose(claimable, 248)).open)
+        val claimed = wait.copy(state = "Claimed", details = ExitDetails(tip_height = 249, block = ExitDetails.Block(249), txid = "claim"))
+        PictureMotion.rest(pose(claimed, 249)).let { assertEquals(1f, it.claim); assertEquals(1f, it.fin) }
+        val canceled = exit("Canceled", ExitDetails(tip_height = 101), history = listOf(processing(101, tx("root", "confirmed", block = 101), tx("leaf", "awaiting-cpfp-broadcast"))))
+        pose(canceled, 101).let { assertEquals(listOf(101L, null), it.mined); assertEquals(1f, PictureMotion.rest(it).cancel) }
     }
 
     @Test fun anotherWalletsChildIsSharedAndCostsNothing() {

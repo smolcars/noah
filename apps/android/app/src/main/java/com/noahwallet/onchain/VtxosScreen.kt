@@ -158,7 +158,7 @@ private fun groupName(group: VtxoRules.Group) = when (group) {
 }
 
 @Composable
-private fun timeLeft(blocks: Long) = when (val left = VtxoRules.left(blocks)) {
+internal fun timeLeft(blocks: Long) = when (val left = VtxoRules.left(blocks)) {
     VtxoRules.Left.UnderAnHour -> tr("under an hour")
     is VtxoRules.Left.Hours -> trPlural("{n} hours", left.hours)
     is VtxoRules.Left.Days -> trPlural("{n} days", left.days)

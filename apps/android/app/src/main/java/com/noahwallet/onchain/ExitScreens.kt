@@ -46,11 +46,13 @@ import kotlinx.coroutines.withContext
  * An exit page (exit.md, Wide and foldable): one column on a phone; on a wide window or a book fold the explanation and
  * picture ([leading]) sit before the hinge and the details and actions ([trailing], [foot]) after it; on a tabletop fold
  * the picture sits above and the details below. [title] is a large title unless the page is a [hero] with its own header.
- * The foot is fixed and the content scrolls above it, so it never covers a row.
+ * The foot is fixed and the content scrolls above it, so it never covers a row. [pictureLeads]: the leading pane doesn't
+ * scroll, so a picture there can fill it ([exitPicture]).
  */
 @Composable
 internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false, foot: (@Composable RowScope.() -> Unit)? = null,
                        scroll: ScrollState = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {}, footFade: Float = .46f,
+                       pictureLeads: Boolean = false,
                        leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
@@ -61,8 +63,8 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
                 is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
                 else -> Modifier.height((pose as OnboardingPose.Tabletop).top).fillMaxWidth()
             }.testTag("exit-leading").padding(start = 24.dp, end = 24.dp, top = 56.dp, bottom = if (split) 24.dp else 8.dp)
-                .then(if (split) Modifier.verticalScroll(rememberScrollState()) else Modifier),
-                verticalArrangement = if (split) Arrangement.Center else Arrangement.Top) {
+                .then(if (split && !pictureLeads) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+                verticalArrangement = if (split && !pictureLeads) Arrangement.Center else Arrangement.Top) {
                 if (!hero) Text(title, Modifier.semantics { heading() }, style = ActivityType.large.copy(fontSize = if (split) 36.sp else 30.sp,
                     lineHeight = if (split) 42.sp else 36.sp), color = palette.foreground)
                 leading()
@@ -82,6 +84,11 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
         else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade) { leading(); trailing() }
     }
 }
+
+/** The picture's size: 300 dp in a column (prototype `.stage`), the rest of the leading pane when split. */
+@Composable
+internal fun ColumnScope.exitPicture(): Modifier =
+    if (LocalPose.current is OnboardingPose.Compact) Modifier.fillMaxWidth().height(300.dp) else Modifier.fillMaxWidth().weight(1f)
 
 /** The server's exit delta: the blocks an exit waits on-chain before it can be claimed. */
 @Composable
@@ -129,6 +136,7 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
             SettingsRow(tr("All exits"), SettingsIcons.exit, value = if (live.isEmpty()) null else tr("{n} in progress", live.size.toString()),
                 divider = false, modifier = Modifier.testTag("exit-all"), onClick = all)
         }
+        ExitPicture(ExitPose.sample(), tr("Your VTXO's path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
     }) {
         if (suspended) FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
         Column(Modifier.padding(top = 20.dp)) {

@@ -302,8 +302,9 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         SettingsDestination.Exits -> com.noahwallet.onchain.ExitWarningPage(model, nav)
         ExitChoosePage -> com.noahwallet.onchain.ExitChoosePage(model, nav)
         is ExitStartPage -> com.noahwallet.onchain.ExitStartPage(model, nav, key.ids)
-        // Today's exit screens until their redesign lands: progress, claim and the list.
-        is ExitPage, ExitClaimPage, ExitsPage -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
+        is ExitPage -> com.noahwallet.onchain.ExitProgressPage(model, nav, key.id)
+        // Today's exit screens until their redesign lands: claim and the list.
+        ExitClaimPage, ExitsPage -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
             legacy { com.noahwallet.onchain.UnilateralExitScreen(model) }
         }
         SettingsDestination.Notifications -> NotificationsPage(model, nav, live, preview?.unifiedPush ?: PlatformAccess.unifiedPush(LocalContext.current))

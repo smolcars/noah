@@ -109,6 +109,18 @@ internal object ExitStages {
     }
 }
 
+/** The exit page's bottom actions for a stage (prototype `pFoot`); Cancel exit only while bark allows it. */
+internal object ExitActions {
+    enum class Action { done, claim, addFunds, cancel, check }
+    fun of(stage: ExitStage, cancelable: Boolean): List<Action> = when {
+        !stage.live -> listOf(Action.done)
+        stage.phase == ExitStage.Phase.claimable -> listOf(Action.claim)
+        stage.phase == ExitStage.Phase.claiming -> emptyList()
+        stage.attention == ExitStage.Attention.needsFunds -> listOfNotNull(Action.cancel.takeIf { cancelable }, Action.addFunds)
+        else -> listOfNotNull(Action.cancel.takeIf { cancelable }, Action.check)
+    }
+}
+
 /**
  * "Needs on-chain funds" is inferred (exit.md, Decision 3): bark 0.8 leaves a transaction it can't pay for in
  * AwaitingCpfpBroadcast and only logs a warning. It shows once the transaction has waited there past one progress cycle

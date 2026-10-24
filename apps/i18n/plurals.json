@@ -78,5 +78,17 @@
   "{n} VTXOs": {
     "one": "{n} VTXO",
     "other": "{n} VTXOs"
+  },
+  "Not in a block yet · {n} blocks": {
+    "one": "Not in a block yet · {n} block",
+    "other": "Not in a block yet · {n} blocks"
+  },
+  "{n} transactions to the chain": {
+    "one": "{n} transaction to the chain",
+    "other": "{n} transactions to the chain"
+  },
+  "Your bitcoin sits at the end of a path of {n} transactions in the round's tree. The round's own transaction is already on-chain.": {
+    "one": "Your bitcoin sits at the end of a path of one transaction in the round's tree. The round's own transaction is already on-chain.",
+    "other": "Your bitcoin sits at the end of a path of {n} transactions in the round's tree. The round's own transaction is already on-chain."
   }
 }

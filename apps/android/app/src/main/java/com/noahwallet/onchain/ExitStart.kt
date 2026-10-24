@@ -66,7 +66,8 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
     var current by remember(quote) { mutableStateOf(quote?.current() ?: false) }
     LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote?.current() ?: false } }
     val known = quote?.takeIf { it.fee != null && it.chainFee != null }
-    ExitFrame(tr("Review"), back, hero = true, foot = {
+    val wide = com.noahwallet.ui.onboarding.LocalPose.current !is com.noahwallet.ui.onboarding.OnboardingPose.Compact
+    ExitFrame(tr("Review"), back, hero = true, pictureLeads = true, foot = {
         when {
             quote != null && current -> HoldToConfirm(tr("Hold to start exit"), tr("Starting"), tr("Start exit"), tr("Start exit"),
                 enabled = !busy && !suspended, sending = busy, modifier = Modifier.weight(1f), tag = "exit-hold-start", onConfirm = start)
@@ -81,6 +82,8 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
                 Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
+        if (wide) ExitPicture(ExitPose.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4), tr("Your VTXO's path to the chain"),
+            exitPicture().padding(top = 14.dp))
     }) {
         Column(Modifier.padding(top = 18.dp)) {
             DetailRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number, toasts = toasts)
