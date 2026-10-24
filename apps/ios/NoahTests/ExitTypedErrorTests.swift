@@ -216,6 +216,29 @@ struct ExitTypedErrorTests {
         #expect(OnchainModel.refused["run-chain"] == nil)
     }
 
+    /// Compact All hides the VTXO list, so it lists what it leaves out to renew first, an `.other` exclusion
+    /// too: unselectable, "Renew first" with the line on how. Choose and wide windows list every VTXO.
+    @MainActor @Test func compactAllListsExcludedCoinsToRenewFirst() async throws {
+        let calls = OnchainModelTests.Calls()
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.exclusions = {
+            [.init(vtxoId: "ca-other", amountSats: 24_500, code: .other, message: "private"),
+             .init(vtxoId: "ca-standard", amountSats: 18_000, code: .exitNonStandardVtxo, message: "private")]
+        }
+        let excluded = await OnchainModel(dependencies: dependencies).exitExclusions()
+        let vtxos = [ExitProgressTests.vtxo("ca-a", 31_000), ExitProgressTests.vtxo("ca-other", 24_500),
+                     ExitProgressTests.vtxo("ca-standard", 18_000), ExitProgressTests.vtxo("ca-dust", 290),
+                     ExitProgressTests.vtxo("ca-swept", 20_000)]
+        var costs: [String: ExitEconomics.Cost] = ["ca-a": .worthIt, "ca-swept": .refused(.init(code: .exitVtxoSwept, vtxoID: "ca-swept"))]
+        for (id, refusal) in excluded { costs[id] = .refused(refusal) }
+        #expect(ExitEconomics.rows(vtxos, costs: costs, compactAll: true).map(\.id) == ["ca-other", "ca-standard"])
+        #expect(ExitEconomics.rows(vtxos, costs: costs, compactAll: false).count == vtxos.count)
+        #expect(ExitEconomics.all(vtxos, costs: costs).map(\.id) == ["ca-a"])
+        let other = try #require(excluded["ca-other"])
+        #expect(other.label == "Renew first" && other.detail == "Renew this VTXO in Settings → VTXOs before exiting it.")
+        #expect(ExitRefusal(code: .exitVtxoSwept, vtxoID: nil).label == "Swept" && ExitRefusal(code: .exitVtxoSwept, vtxoID: nil).detail == nil)
+    }
+
     @Test func progressReadsEachExitsErrorByItsCode() {
         func status(_ id: String, _ error: BarkError?) -> ExitProgressStatus {
             .init(vtxoId: id, state: .processing(tipHeight: 101, transactions: []), error: error)

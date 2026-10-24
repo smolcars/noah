@@ -269,6 +269,10 @@ struct ExitRefusal: LocalizedError, Equatable, Sendable {
         }
     }
 
+    /// Its row on Choose VTXOs: the label, and the line under it for one to renew first.
+    var label: String { renewFirst ? "Renew first" : errorDescription! }
+    var detail: String? { renewFirst ? "Renew this VTXO in Settings → VTXOs before exiting it." : nil }
+
     /// The exit screens' words for FFI 0.7.0's typed exit errors; nil for any other error.
     static func message(_ error: any Error) -> String? {
         if let refusal = Self(error) { return refusal.errorDescription }

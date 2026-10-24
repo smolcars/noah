@@ -230,8 +230,8 @@ struct ExitVtxoRow: View {
                     Text(verbatim: money(vtxo.amount)).noahText(HomeText.amount).monospacedDigit()
                     Text(verbatim: line(money)).noahText(HomeText.footnote)
                         .foregroundStyle(selectable && uneconomic ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
-                    if vtxo.eligible, refusal?.renewFirst == true {
-                        Text(verbatim: L10n.text("Renew this VTXO in Settings → VTXOs before exiting it.", locale: language))
+                    if vtxo.eligible, let detail = refusal?.detail {
+                        Text(verbatim: L10n.text(detail, locale: language))
                             .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).lineLimit(2)
                     }
                 }
@@ -253,7 +253,7 @@ struct ExitVtxoRow: View {
     private func line(_ money: ExitMoney) -> String {
         if vtxo.state == "Locked" { return L10n.text("In use right now", locale: language) }
         if vtxo.amount < ExitRules.dust { return L10n.text("Too small to exit · under {amount}", money(ExitRules.dust), locale: language) }
-        if let refusal { return L10n.text(refusal.renewFirst ? "Renew first" : refusal.errorDescription!, locale: language) }
+        if let refusal { return L10n.text(refusal.label, locale: language) }
         if uneconomic { return L10n.text("Fees more than it’s worth", locale: language) }
         return VtxoList.expiresIn(Int64(vtxo.expiry) - Int64(vtxo.tip), locale: language)
     }

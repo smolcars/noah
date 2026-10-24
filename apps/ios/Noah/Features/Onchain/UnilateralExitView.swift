@@ -184,14 +184,16 @@ struct ExitChooseView: View {
         }
     }
 
-    /// All / Choose and the VTXOs: in Choose they're checkboxes; wide windows list them in All too.
+    /// All / Choose and the VTXOs: in Choose they're checkboxes; wide windows list them in All too, and
+    /// compact All lists the ones it leaves out to renew first.
     @ViewBuilder private var picker: some View {
         ExitSegment(all: $all)
-        if !all || settings.wide {
+        let rows = ExitEconomics.rows(vtxos, costs: costs, compactAll: all && !settings.wide)
+        if !rows.isEmpty {
             VStack(spacing: 0) {
-                ForEach(Array(vtxos.enumerated()), id: \.element.id) { index, vtxo in
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, vtxo in
                     ExitVtxoRow(vtxo: vtxo, uneconomic: costs[vtxo.id] == .uneconomic, refusal: costs[vtxo.id]?.refusal,
-                                selected: all ? nil : selected.contains(vtxo.id), hairline: index < vtxos.count - 1) { toggle(vtxo) }
+                                selected: all ? nil : selected.contains(vtxo.id), hairline: index < rows.count - 1) { toggle(vtxo) }
                 }
             }
             .padding(.top, 6)

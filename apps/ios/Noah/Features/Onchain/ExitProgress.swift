@@ -309,6 +309,12 @@ enum ExitEconomics {
         vtxos.filter { $0.eligible && costs[$0.id] == .worthIt }
     }
 
+    /// The rows Choose VTXOs lists: every VTXO, but compact All lists only those it leaves out to renew first,
+    /// so their funds never leave the total unexplained.
+    static func rows(_ vtxos: [VtxoModel], costs: [String: Cost], compactAll: Bool) -> [VtxoModel] {
+        compactAll ? vtxos.filter { $0.eligible && costs[$0.id]?.refusal?.renewFirst == true } : vtxos
+    }
+
     /// All can be reviewed only once every eligible VTXO is classified.
     static func classified(_ vtxos: [VtxoModel], costs: [String: Cost]) -> Bool {
         vtxos.filter(\.eligible).allSatisfy { costs[$0.id].map { $0 != .failed } ?? false }
