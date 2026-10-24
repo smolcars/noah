@@ -1,6 +1,8 @@
 package com.noahwallet.onchain
 
 import io.github.niteshbalusu11.bark.*
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Native access exists only while WalletSession owns a counted, shielded call. */
 internal interface OnchainWalletAccess {
@@ -88,11 +90,9 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     // Transactions come from bark's own store (no chain query): the picture, Details and fees read them.
     override suspend fun allExits() = wallet.listAllExits(includeHistory = true, includeTransactions = true)
     override suspend fun transactionStatus(txid: String) = wallet.transactionStatus(txid)
-    override suspend fun boardTransactionIDs(): Set<String> = wallet.pendingBoards().map { it.txid }.toSet() +
-        wallet.history().filter { it.subsystemName == "bark.board" }.flatMap { movement ->
-            // Board movement output IDs identify the funding transaction, never its amount.
-            movement.outputVtxoIds.mapNotNull { id -> runCatching { wallet.getVtxoById(id).anchorPoint.txid }.getOrNull() }
-        }
+    override suspend fun boardTransactionIDs(): Set<String> = boardFundingTxids(wallet.pendingBoards().map { it.txid }, wallet.history()) { id ->
+        runCatching { wallet.getVtxoById(id).anchorPoint.txid }.getOrNull()
+    }
     override suspend fun refresh(ids: List<String>) = wallet.refreshVtxosDelegated(ids)
     override suspend fun start(ids: List<String>) = wallet.startExitForVtxos(ids)
     override suspend fun progress(feeRate: Long?) = wallet.progressExits(feeRate?.toULong())
@@ -101,6 +101,21 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun broadcastClaim(psbt: String) = wallet.broadcastTx(extractTxFromPsbt(psbt))
     override suspend fun cancel(id: String) = wallet.cancelExit(id).canceled
 }
+
+/**
+ * The funding txids bark knows as boards: its pending boards', and each BOARD movement's own `chain_anchor` (bark writes the
+ * movement before its checkpoint and the VTXO, as the SDK's uncertain check reads it) or its stored VTXO's anchor. Board
+ * movement output IDs identify the funding transaction, never its amount.
+ */
+internal suspend fun boardFundingTxids(pending: List<String>, history: List<Movement>, anchor: suspend (String) -> String?): Set<String> =
+    pending.toSet() + history.filter { it.subsystemName == "bark.board" }.flatMap { movement ->
+        listOfNotNull(chainAnchorTxid(movement.metadataJson)) + movement.outputVtxoIds.mapNotNull { anchor(it) }
+    }
+
+/** The txid of a movement's `chain_anchor` outpoint ("txid:vout"), exactly; null when it has none. */
+internal fun chainAnchorTxid(metadataJson: String): String? =
+    runCatching { kotlinx.serialization.json.Json.parseToJsonElement(metadataJson).jsonObject["chain_anchor"]?.jsonPrimitive?.content }
+        .getOrNull()?.let { Regex("([0-9a-f]{64}):[0-9]+").matchEntire(it)?.groupValues?.get(1) }
 
 internal fun vtxoModel(value: Vtxo, tip: Long, expiring: Set<String>): VtxoModel = VtxoModel(
     value.id, value.amountSats.toLong(), value.expiryHeight.toLong(), vtxoState(value.state), value.kind,

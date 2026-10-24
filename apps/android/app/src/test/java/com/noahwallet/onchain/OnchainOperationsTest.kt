@@ -14,7 +14,8 @@ class OnchainOperationsTest {
         runCatching { journal.perform(reviewed) { record -> record("board-tx"); error("process died before checkpoint") } }
         wallet.fundingTransactions = emptyList()
         wallet.chainStatus = TransactionStatus.NotFound
-        // An orphan movement has no persisted output VTXO to resolve; Android never reads chain_anchor.
+        // No pending board, BOARD movement or transaction names it, and the process died before the SDK answered (no
+        // Uncertain outcome), so the explicit override stays available.
         assertTrue(wallet.boardTransactionIDs().isEmpty())
         assertFalse(ops.check(reviewed.id))
         assertNull(ops.autoBoardFunding())
@@ -1002,6 +1003,18 @@ class OnchainOperationsTest {
         assertEquals("a fresh review boards", 2, wallet.calls.count { it.startsWith("submit:") })
         assertNotNull(journal.loadAll().single().receipt)
     } }
+    @Test fun aBoardMovementIsFoundByItsChainAnchorWithoutAPendingBoardOrStoredVtxo() = runBlocking {
+        val txid = "8052815cfc4cfce003689ae6bdc6d6feea531577cb6732e98e335d959a4b5fc9"
+        fun movement(subsystem: String, metadata: String, outputs: List<String> = listOf("unstored:0")) = Movement(4u, "pending", subsystem, "board",
+            metadata, 30_000, 29_670, 330u, emptyList(), emptyList(), emptyList(), outputs, emptyList(), "now", "now", null, null, null, null)
+        // Written before bark's checkpoint: no pending board, no stored VTXO, no chain transaction.
+        val partial = movement("bark.board", """{"chain_anchor":"$txid:0","onchain_fee_sat":155}""")
+        assertEquals(setOf(txid), boardFundingTxids(emptyList(), listOf(partial)) { null })
+        // Only BOARD movements, only a well-formed anchor; a stored VTXO's anchor and pending boards still count.
+        assertTrue(boardFundingTxids(emptyList(), listOf(movement("bark.arkoor", """{"chain_anchor":"$txid:0"}"""),
+            movement("bark.board", """{"chain_anchor":"not-an-outpoint"}"""), movement("bark.board", "{")), { null }).isEmpty())
+        assertEquals(setOf("pending-tx", "vtxo-anchor"), boardFundingTxids(listOf("pending-tx"), listOf(movement("bark.board", "{}"))) { "vtxo-anchor" })
+    }
     @Test fun aReorgedOrUnverifiableParentAtSubmitReadsAsBeforeSubmission() = runBlocking {
         // SDK 0.7.0's confirmed-only re-check: a parent back in the mempool, or a chain source it can't reach.
         for ((code, reason) in listOf(BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE to OnchainFailure.reserved, BarkErrorCode.OTHER to OnchainFailure.boardNotAttempted)) fixture { wallet, ops, journal, _ ->
