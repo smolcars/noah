@@ -162,6 +162,26 @@ class ActivityRulesTest {
         assertEquals(emptyList<ActivityRules.FeeLine>() to null, fees(record("c", Date(), type = "Onchain", source = "onchain-wallet", confirmed = true)))
     }
 
+    @Test fun anAmountlessRetryShowsOnlyWhatLeftTheWallet() {
+        // Failed at 1,000, then paid at 2,000: bark's reused movement keeps the first attempt's destination amount.
+        val proof = "ab".repeat(32)
+        val retried = record("ln", Date(), type = "Bolt11", amount = 1_000).copy(subsystemName = "bark.lightning_send", effectiveBalanceSat = -2_010,
+            sentTo = listOf(HistoryTransaction.Destination(ActivityFixtures.invoice("Tea", 1), 1_000, "invoice")), preimage = proof)
+        val row = rows(retried).single()
+        assertEquals("Sent", ActivityRules.status(row).first)
+        assertEquals(2_010L, row.home.amount)
+        assertTrue(ActivityRules.receipt(row, "−2,010 sats", "Today", null, words).startsWith("Sent −2,010 sats\n"))
+        // Nothing proves a debit: no amount, in the row or the receipt.
+        val unproven = rows(retried.copy(effectiveBalanceSat = 0)).single()
+        assertNull(unproven.home.amount)
+        assertEquals("", rowAmount(unproven.home, false, BitcoinAmountUnit.sats, Locale.US))
+        assertEquals("Sent\nDate: Today\nVia: Lightning\nProof of payment: $proof", ActivityRules.receipt(unproven, null, "Today", null, words))
+        // An invoice that sets its amount, and anything still in flight, keep the recorded amount.
+        val fixed = "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
+        assertEquals(1_000L, rows(retried.copy(sentTo = listOf(HistoryTransaction.Destination(fixed, 1_000, "invoice")))).single().home.amount)
+        assertEquals(1_000L, rows(retried.copy(movementStatus = "pending")).single().home.amount)
+    }
+
     @Test fun aLightningAddressPaidByInvoiceKeepsItsRecipient() {
         val invoice = ActivityFixtures.invoice("Pizza", 4)
         // bark records the invoice Noah fetched; Noah's repeat metadata records the address.

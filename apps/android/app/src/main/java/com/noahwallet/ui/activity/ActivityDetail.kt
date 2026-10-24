@@ -176,9 +176,10 @@ private fun fiatLine(ui: ActivityUi, row: ActivityRules.Row): String? {
     val date = home.date
     val today = date != null && HomeDays.day(date, ui.now) == HomeDays.Day.Today
     val currency = ui.currency.takeIf { it in FiatCurrency.supported } ?: return null
+    val amount = home.amount ?: return null
     return if (!home.pending && date != null && !today) row.record.btcPrice?.takeIf { it.isFinite() && it > 0 }?.let {
-        tr("{value} at the time", FiatCurrency.display(row.record.amount, it, currency, ui.locale))
-    } else ui.price?.takeIf { it.isFinite() && it > 0 }?.let { FiatCurrency.display(row.record.amount, it, currency, ui.locale) }
+        tr("{value} at the time", FiatCurrency.display(amount, it, currency, ui.locale))
+    } else ui.price?.takeIf { it.isFinite() && it > 0 }?.let { FiatCurrency.display(amount, it, currency, ui.locale) }
 }
 
 /**
@@ -436,7 +437,7 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
 @Composable
 private fun receiptText(ui: ActivityUi, row: ActivityRules.Row): String {
     val context = LocalContext.current
-    val amount = row.home.sign + BitcoinAmount.format(row.record.amount, ui.unit, ui.locale)
+    val amount = row.home.amount?.let { row.home.sign + BitcoinAmount.format(it, ui.unit, ui.locale) }
     val date = longDate(row.home.date, ui).takeIf { row.home.date != null || row.record.hasConfirmation != true }
     val resources = androidx.compose.ui.platform.LocalResources.current
     return remember(row, amount, date, resources) {

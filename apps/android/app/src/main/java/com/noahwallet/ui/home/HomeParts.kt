@@ -335,7 +335,7 @@ internal fun dayLabel(date: java.util.Date, locale: java.util.Locale, now: java.
 
 /** The row's signed amount, or dots while amounts are hidden. */
 internal fun rowAmount(row: HomeRow, hidden: Boolean, unit: com.noahwallet.formatting.BitcoinAmountUnit, locale: java.util.Locale) =
-    if (hidden) "••••" else row.sign + BitcoinAmount.format(row.amount, unit, locale)
+    if (hidden) "••••" else row.amount?.let { row.sign + BitcoinAmount.format(it, unit, locale) }.orEmpty()
 
 /**
  * One Recent/Activity row (66 dp): avatar, title, subtitle and a monochrome amount. Activity adds its [selected]

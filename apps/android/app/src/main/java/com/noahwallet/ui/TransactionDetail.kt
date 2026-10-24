@@ -55,9 +55,11 @@ internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat:
             Icon(painterResource(transactionIcon(row)), null, Modifier.size(36.dp), tint = transactionColor(row))
             Text(com.noahwallet.ui.activity.statusText(summary.status, row),
                 color = if (summary.tone == com.noahwallet.ui.activity.ActivityRules.Tone.failed) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Unspecified)
-            Text(tr(BitcoinAmount.format(row.amount, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
-            Text(tr(row.btcPrice?.let { FiatCurrency.display(row.amount, it, app.preferredCurrency, locale) } ?: "Historical value unavailable"),
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            row.provenAmount?.let { amount ->
+                Text(tr(BitcoinAmount.format(amount, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
+                Text(tr(row.btcPrice?.let { FiatCurrency.display(amount, it, app.preferredCurrency, locale) } ?: "Historical value unavailable"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Text(tr(row.receiptStatus))
             row.destination?.takeIf(String::isNotEmpty)?.let { destination ->
                 Text(tr(destination), maxLines = 2, overflow = TextOverflow.Ellipsis)

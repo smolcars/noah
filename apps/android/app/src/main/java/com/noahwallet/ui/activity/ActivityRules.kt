@@ -217,12 +217,12 @@ object ActivityRules {
      * The plain-text receipt Share sends: amount, date, To, rail, and the transaction ID (on-chain) or proof of payment
      * (successful Lightning sends). Never Details, the raw transaction or a receive's preimage. [t] translates.
      */
-    fun receipt(row: Row, amount: String, date: String?, txid: String?, t: (String, Array<out Any>) -> String): String {
+    fun receipt(row: Row, amount: String?, date: String?, txid: String?, t: (String, Array<out Any>) -> String): String {
         val record = row.record
         val status = status(row).first
         fun line(label: String, value: String) = t(label, emptyArray()) + ": " + value
         return listOfNotNull(
-            t(status, if (status == renewed) arrayOf(record.inputVtxos.orEmpty().size.toString()) else emptyArray()) + " " + amount,
+            t(status, if (status == renewed) arrayOf(record.inputVtxos.orEmpty().size.toString()) else emptyArray()) + amount?.let { " $it" }.orEmpty(),
             date?.let { line("Date", it) },
             recipient(record)?.let { line("To", it) },
             line("Via", t(rail(record).label, emptyArray())),

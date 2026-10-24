@@ -36,6 +36,14 @@ data class HistoryTransaction(
     /** What the payee wrote in the offer or invoice; null when there's none. */
     val description: String? get() = offer?.let(com.noahwallet.send.PaymentEncoding::offerDescription)
         ?: invoice?.let { com.noahwallet.send.PaymentEncoding.invoice(it)?.description }
+    /**
+     * The amount the record proves. An invoice without its own amount may have been retried for another amount, and
+     * bark's reused movement keeps the first attempt's destination amount, so a settled send to one proves only what
+     * left the wallet: its effective debit, fee included. Null when it proves none.
+     */
+    val provenAmount: Long? get() = if (subsystemName == "bark.lightning_send" && movementStatus == "successful" &&
+        invoice?.let { !com.noahwallet.send.SendReconciliation.fixesAmount(it) } == true)
+        effectiveBalanceSat?.takeIf { it < 0 && it != Long.MIN_VALUE }?.let { -it } else amount
     /** A Lightning send that failed after leaving the wallet and whose coins bark revoked back (SendProgressRules.refund). */
     val isRefunded get() = movementStatus == "failed" && subsystemName == "bark.lightning_send" &&
         !outputVtxos.isNullOrEmpty() && exitedVtxos.isNullOrEmpty()

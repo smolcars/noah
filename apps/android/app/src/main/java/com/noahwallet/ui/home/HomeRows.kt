@@ -14,7 +14,7 @@ import java.util.Locale
  */
 data class HomeRow(
     val id: String, val avatar: Avatar, val title: String, val kind: String?, val date: Date?,
-    val amount: Long, val sign: String, val pending: Boolean, val failed: Boolean, val canceled: Boolean,
+    val amount: Long?, val sign: String, val pending: Boolean, val failed: Boolean, val canceled: Boolean,
     val unchanged: Boolean, val incoming: Boolean, val counterparty: String?, val refunded: Boolean = false,
     /** The pending word when it isn't Home's plain "Sending" / "Confirming": "Exiting", "In a round". */
     val pendingState: String? = null,
@@ -87,7 +87,7 @@ data class HomeRow(
                 else -> null
             }
             return HomeRow(row.id, avatar, title, kind?.takeIf { it != title },
-                row.timestamp?.takeIf { it.time > 0 && row.dateLabel == null }, row.amount, sign, pending, failed, row.isCanceled,
+                row.timestamp?.takeIf { it.time > 0 && row.dateLabel == null }, row.provenAmount, sign, pending, failed, row.isCanceled,
                 unchanged = (failed || row.isCanceled) && provesNothingLeft(row),
                 incoming = !outgoing, counterparty = address, refunded = row.isRefunded, pendingState = pendingState)
         }
