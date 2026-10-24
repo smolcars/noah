@@ -26,6 +26,7 @@ import com.noahwallet.ui.send.clipboardText
 import com.noahwallet.ui.settings.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -62,14 +63,20 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
     // Today's claim review for this destination: read-only, fresh for 30 s, asked again when the destination changes and when
     // the page comes back (pausing drops it), so Claim never stays off.
     val resumed = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    var pending by remember { mutableStateOf(false) }
     LaunchedEffect(destination, ids, resumed) {
         model.invalidate()
         if (destination == null || ids.isEmpty() || !resumed) return@LaunchedEffect
-        delay(300)
-        model.review(OnchainAction.claim, ids, destination = destination)
+        pending = true
+        try {
+            delay(300)
+            // A review still running (from before a pause, say) would drop this one: wait for it; its answer is already stale.
+            snapshotFlow { model.busy }.first { !it }
+            model.review(OnchainAction.claim, ids, destination = destination)
+        } finally { pending = false }
     }
     ExitClaimContent(exits, model.overview?.tip ?: 0, model.quote?.takeIf { it.destination == destination }, model.estimateFallback?.takeIf { it.destination == destination },
-        to, typed, address, phone, phoneError, model.busy, suspended, money, nav.back,
+        to, typed, address, phone, phoneError, model.busy, suspended, money, nav.back, reviewing = pending,
         choose = { to = it }, type = { typed = it }, reviewAgain = { destination?.let { scope.launch { model.review(OnchainAction.claim, ids, destination = it) } } },
         withoutEstimate = model::continueWithoutEstimate,
         claim = {
@@ -88,7 +95,7 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
 internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQuote?, fallback: OnchainQuote?, to: ClaimTo, typed: String, address: String?,
                               phone: String?, phoneError: Boolean, busy: Boolean, suspended: Boolean, money: (Long) -> String, back: (() -> Unit)?,
                               choose: (ClaimTo) -> Unit, type: (String) -> Unit, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, claim: () -> Unit,
-                              status: @Composable () -> Unit = {}) {
+                              reviewing: Boolean = false, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val toasts = LocalSettingsToasts.current
     val context = LocalContext.current
@@ -103,7 +110,9 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
     ExitFrame(tr("Claim"), back, hero = true, pictureLeads = true, foot = {
         when {
             fallback != null && quote == null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), enabled = !busy, onClick = withoutEstimate)
-            quote != null && !current -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), enabled = !busy && !suspended, onClick = reviewAgain)
+            // An expired review, or none while idle (a changed fee or failed submit dropped it): ask again rather than leave Claim off.
+            (quote != null && !current) || (quote == null && destination != null && exits.isNotEmpty() && !busy && !reviewing) ->
+                FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), enabled = !busy && !suspended, onClick = reviewAgain)
             else -> HoldToConfirm(known?.let { tr("Hold to claim {amount}", money(it.net)) } ?: tr("Hold to claim"), tr("Claiming"),
                 known?.let { tr("Claim {amount}", money(it.net)) } ?: tr("Claim"), tr("Claim"),
                 enabled = current && ExitClaim.ready(destination, quote) && !busy && !suspended, sending = busy, modifier = Modifier.weight(1f),

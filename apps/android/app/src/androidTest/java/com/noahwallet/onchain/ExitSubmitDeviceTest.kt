@@ -49,6 +49,10 @@ class ExitSubmitDeviceTest {
         val calls: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
         /** Holds a start or claim broadcast in flight until released. */
         @Volatile var gate: CompletableDeferred<Unit>? = null
+        /** Holds an estimate until released; [estimating] says one is waiting. */
+        @Volatile var estimateGate: CompletableDeferred<Unit>? = null
+        @Volatile var estimating = false
+        @Volatile var drainFee = 262uL
         private fun record() = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, 31_000u, (tip + 4_176).toUInt(), "round",
             if (spendable) VtxoState.Spendable else VtxoState.Exited, 4u, 1_620u, true)
         override suspend fun tip() = tip.toLong()
@@ -63,13 +67,16 @@ class ExitSubmitDeviceTest {
         override suspend fun exits() = listOfNotNull(exit?.let { ExitVtxo(id, 31_000u, it, it is ExitState.Claimable) })
         override suspend fun status(id: String) = exit?.let { ExitTransactionStatus(id, 31_000u, it, listOf(ExitState.Start(tip.toUInt())), 0u, emptyList()) }
         override suspend fun allExits() = listOfNotNull(status(id))
-        override suspend fun exitFee(ids: List<String>, destination: String?) = EmergencyExitFeeEstimate(5_533u, 262u, 5_795u, 3u, 4u)
+        override suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate {
+            estimating = true; try { estimateGate?.await() } finally { estimating = false }
+            return EmergencyExitFeeEstimate(5_533u, 262u, 5_795u, 3u, 4u)
+        }
         override suspend fun destinationIsMine(address: String) = false
         override suspend fun start(ids: List<String>) {
             calls += "start"; gate?.await()
             spendable = false; exit = ExitState.Start(tip.toUInt())
         }
-        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { calls += "drain"; return ExitClaimTransaction("psbt", 262u) }
+        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { calls += "drain"; return ExitClaimTransaction("psbt", drainFee) }
         override suspend fun broadcastClaim(psbt: String): String {
             calls += "broadcast"; gate?.await()
             exit = ExitState.ClaimInProgress(tip.toUInt(), BlockRef(tip.toUInt(), "block"), "claim-tx"); return "claim-tx"
@@ -222,6 +229,41 @@ class ExitSubmitDeviceTest {
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
         settle("the review again") { enabled("exit-hold-claim") }
         assertTrue("nothing was submitted", bark.calls.isEmpty())
+    }
+
+    @Test fun aPauseDuringASlowEstimateStillEndsInAClaimable() {
+        val bark = Bark(id).apply { spendable = false; exit = ExitState.Claimable(921_493u, BlockRef(921_493u, "block"), null) }
+        process = launch(bark)
+        host { model -> ExitClaimScreen(model, nav, { error("unused") }, false, f.money) {} }
+        settle("the claimable exit") { exists("exit-claim-address") }
+        bark.estimateGate = CompletableDeferred()
+        compose.onNode(hasSetTextAction() and (hasTestTag("exit-claim-address") or hasAnyAncestor(hasTestTag("exit-claim-address")))).performTextInput(regtest)
+        settle("the slow estimate") { bark.estimating }
+        // Paused and back while bark still estimates: the replacement waits for it rather than being dropped.
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+        compose.mainClock.advanceTimeBy(500)
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        compose.mainClock.advanceTimeBy(1_000)
+        assertTrue("bark is still estimating the first review", bark.estimating)
+        checkNotNull(bark.estimateGate).complete(Unit)
+        settle("the replacement review") { enabled("exit-hold-claim") }
+    }
+
+    @Test fun aChangedClaimFeeOffersReviewAgain() {
+        val bark = Bark(id).apply { spendable = false; exit = ExitState.Claimable(921_493u, BlockRef(921_493u, "block"), null) }
+        process = launch(bark)
+        host { model -> ExitClaimScreen(model, nav, { error("unused") }, false, f.money) {} }
+        settle("the claimable exit") { exists("exit-claim-address") }
+        compose.onNode(hasSetTextAction() and (hasTestTag("exit-claim-address") or hasAnyAncestor(hasTestTag("exit-claim-address")))).performTextInput(regtest)
+        settle("the review") { enabled("exit-hold-claim") }
+        bark.drainFee = 300u
+        hold("exit-hold-claim")
+        // The drain's fee differs from the review's: nothing is sent, and the same destination can be reviewed again.
+        settle("Review again") { enabled("exit-review-again") }
+        assertEquals(listOf("drain"), bark.calls)
+        bark.drainFee = 262u
+        compose.onNodeWithTag("exit-review-again").performClick()
+        settle("the new review") { enabled("exit-hold-claim") }
     }
 
     @Test fun claimingAsksBarkOnceThroughAPostureChangeAndProcessDeath() {

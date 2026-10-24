@@ -112,6 +112,27 @@ class ExitDeviceTest {
         compose.runOnIdle { assertEquals(listOf(ClaimTo.phone), chosen) }
     }
 
+    @Test fun aClaimWithNoReviewOffersReviewAgainOnceIdle() {
+        compose.mainClock.autoAdvance = false
+        var reviewing by mutableStateOf(true)
+        var busy by mutableStateOf(false)
+        var reviews = 0
+        compose.setContent { NoahTheme { ExitPreviewHost {
+            ExitClaimContent(listOf(f.claimable), f.tip, null, null, ClaimTo.other, regtest, regtest, null, false, busy, false,
+                f.money, {}, {}, {}, { reviews++ }, {}, {}, reviewing = reviewing)
+        } } }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithTag("exit-review-again").assertDoesNotExist()
+        compose.runOnUiThread { reviewing = false; busy = true }
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithTag("exit-review-again").assertDoesNotExist()
+        // Idle, a valid address, nothing reviewed (a changed fee dropped it, say): Review again, not a Claim that stays off.
+        compose.runOnUiThread { busy = false }
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithTag("exit-review-again").assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(1, reviews) }
+    }
+
     @Test fun cancelExitShowsOnlyWhileBarkAllowsIt() {
         compose.mainClock.autoAdvance = false
         var exit by mutableStateOf(f.mempool)
