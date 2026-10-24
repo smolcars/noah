@@ -11,10 +11,15 @@ Started 2026-10-24 (TODO backlog: "OS deep links (`bitcoin:`, `lightning:`, `lnu
 ## Behaviour
 1. **Same as scanning.** A link takes exactly the path a scanned QR takes: Send opens on the To step, and the request is applied by the existing route (iOS `QRScanRoute.apply`, and Android's equivalent). Parsing, network checks, amount rules (fixed-amount offers, `req-amount`) and every error message are today's. There's no separate parser.
 2. **Never pays by itself.** The user still reviews and holds to send.
-3. **A payment in flight blocks it.** If Send is locked by an in-flight payment, the link doesn't replace it. Show "Payment in progress" with "Finish the current payment before opening another payment request." The message is the same on both platforms. Other cases, such as a draft on Amount, follow what scanning does today.
+3. **A payment in progress blocks it.** The link is rejected and the current payment is left exactly as it is when:
+   - Send is locked by an in-flight payment;
+   - Send is preparing or showing a review;
+   - a recurring payment approval is open.
+
+   Show "Payment in progress" with "Finish the current payment before opening another payment request." The message is the same on both platforms. A link from another app must never discard or replace something the user is reviewing (Sol review, 2026-10-24). Only a draft before review, such as the To or Amount step, follows what scanning does today.
 4. **Gates:**
    - **App lock:** while the app is locked, hold the link in memory and apply it after unlock.
-   - **No wallet:** with no wallet yet (onboarding), or behind a launch gate (suspended, recovery, notifications required), ignore it.
+   - **No wallet:** with no wallet yet (onboarding), or behind a launch gate (suspended, recovery, notifications required), ignore it. Decide this when the link arrives, even if the app is also locked: a link that arrived behind a gate is dropped, and doesn't come back after the gate clears and the user unlocks.
    - **Nothing persisted:** a link is never saved to disk, so if the app is killed before unlock, it's gone.
 5. **Applied once.** A cold start and a warm start both work. A link is applied once only: a rotation, fold, recreation or process restore must not apply it again.
 6. **Privacy:** never log the link. It holds addresses, invoices and amounts. Logging the scheme alone is fine.
