@@ -9,7 +9,7 @@ struct QRMatrix: Equatable, Sendable {
     let count: Int
     private let modules: [Bool]
 
-    static func correction(for text: String) -> String { text.utf8.count > 90 ? "M" : "H" }
+    static func correction(for text: String) -> String { text.utf8.count > 90 ? #"M"# : #"H"# }
 
     init?(_ text: String) {
         let filter = CIFilter.qrCodeGenerator()

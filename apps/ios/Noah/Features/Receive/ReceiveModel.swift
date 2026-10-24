@@ -137,6 +137,6 @@ final class ReceiveModel {
     private func recordFailure(_ error: Error) {
         // SDK errors can embed a full invoice/address; log the type, never its message.
         struct ReceiveOperationFailed: Error {}
-        log.w("Receive operation failed (\(String(describing: type(of: error)))): \(SafeErrorDescription.of(ReceiveOperationFailed()))")
+        log.w(#"Receive operation failed (\#(String(describing: type(of: error)))): \#(SafeErrorDescription.of(ReceiveOperationFailed()))"#)
     }
 }

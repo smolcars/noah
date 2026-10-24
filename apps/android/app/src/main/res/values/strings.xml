@@ -33,7 +33,6 @@
   <string name="gt_b5ff9ca4a77d7d6e">"Add about %1$s on-chain. Noah sends the next transaction once it confirms."</string>
   <string name="gt_223e44268146e60d">"Add amount"</string>
   <string name="gt_82767841e4f8c995">"Add an amount first"</string>
-  <string name="gt_00df1293cf6d241b">"Add an amount to receive over Lightning"</string>
   <string name="gt_7bf06b339959a3be">"Add on-chain funds"</string>
   <string name="gt_ef61c03bbcda7402">"Add screenshot"</string>
   <string name="gt_fcdcc9c0caf001eb">"Add your email"</string>
@@ -315,7 +314,6 @@
   <string name="gt_df377616065c56fa">"Copy support message"</string>
   <string name="gt_5d9172fe6bc675da">"Copy transaction ID"</string>
   <string name="gt_63ba394601c5c4aa">"Copy %1$s"</string>
-  <string name="gt_2cbe9c9f6490fc8c">"Copy %1$s"</string>
   <string name="gt_3c0179f73e2f914c">"Copy %1$s"</string>
   <string name="gt_8e71221ac7fa5a0e">"Costs on-chain fees"</string>
   <string name="gt_18abee57c90f531e">"Could not generate a Lightning invoice. Please try again."</string>
@@ -409,7 +407,6 @@
   <string name="gt_472b52f016214da3">"Deliver with"</string>
   <string name="gt_906115657390f367">"Delivered"</string>
   <string name="gt_a0760d3dd093f263">"Delivering"</string>
-  <string name="gt_526e0087cc3f254d">"Description"</string>
   <string name="gt_293d404a500f5f9a">"Destination"</string>
   <string name="gt_45989de49fb7f66d">"Details"</string>
   <string name="gt_268f14bbfe119c1e">"Diagnostics"</string>
@@ -578,7 +575,6 @@
   <string name="gt_ea3a58f8b849ff21">"Fees rose. Paying more"</string>
   <string name="gt_e410ef7cc3869d69">"Fees rose. Paying more · waiting for block %1$s"</string>
   <string name="gt_2a246cca8735d1b7">"Fewer"</string>
-  <string name="gt_1369793595356d9d">"Fiat rate unavailable: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
   <string name="gt_f4ed8fa656b74c5d">"Final"</string>
   <string name="gt_b4221133c0166c16">"Final claim transaction was broadcast and is waiting for confirmation."</string>
@@ -617,7 +613,6 @@
   <string name="gt_83047f2bb98b251f">"Give this payment a short name (max 64 characters)."</string>
   <string name="gt_0c3587820d4cdb77">"Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy)."</string>
   <string name="gt_5ad3dbd1242a4cea">"Got it"</string>
-  <string name="gt_44bd7ae60f478fae">"H"</string>
   <string name="gt_c02479b6e3bd01fb">"HTTP failure"</string>
   <string name="gt_0a5639302aa6c182">"Have you checked?"</string>
   <string name="gt_b79cac926e0b2e34">"Help"</string>
@@ -742,7 +737,6 @@
   <string name="gt_31312f51a5df40b4">"Lightning invoices can only be paid once. Use a Lightning address or offer"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightning is still finding a route. You can leave this screen; Noah finishes it in the background."</string>
   <string name="gt_ca7eb2b925786eb2">"Lightning offer"</string>
-  <string name="gt_b93018eee5c09c88">"Lightning receive %1$s. Generate a new payment request and try again."</string>
   <string name="gt_abbfcd250b826648">"Lightning send delta"</string>
   <string name="gt_de1a03ce5fcc3be8">"Live details are unavailable. The bundled places still work offline."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -762,7 +756,6 @@
   <string name="gt_050a9630d2132c97">"Locking %1$s"</string>
   <string name="gt_ea2100dc89ae9fe2">"Logs"</string>
   <string name="gt_f1ed28c3c824a793">"Logs are redacted before you share them."</string>
-  <string name="gt_08f271887ce94707">"M"</string>
   <string name="gt_2d9c014a222db12a">"MAX"</string>
   <string name="gt_0cf896b378674f75">"MAX requires an on-chain address without a fixed amount."</string>
   <string name="gt_6f3359083a6fca2d">"MAX uses confirmed funds only and deducts the onchain fee from that balance."</string>
@@ -923,7 +916,6 @@
   <string name="gt_15133907259330da">"Not verified"</string>
   <string name="gt_d8da2c49df39d91d">"Note"</string>
   <string name="gt_f9b73e1abc37cf5b">"Note (optional)"</string>
-  <string name="gt_0f03e776ef5cf27e">"Note must be 639 characters or fewer"</string>
   <string name="gt_045f910e6b3ce120">"Note must be 639 characters or fewer."</string>
   <string name="gt_788011833a5a0f22">"Notifications"</string>
   <string name="gt_54ee6b72ca5e79e6">"Notifications are required"</string>
@@ -1059,9 +1051,7 @@
   <string name="gt_f476330a673de0fa">"Ready to claim"</string>
   <string name="gt_77311249a7d249bf">"Ready to send"</string>
   <string name="gt_bac9d15ad9f1ca0c">"Receive"</string>
-  <string name="gt_050e3ec1aa394826">"Receive amount must be a positive whole number of sats"</string>
   <string name="gt_85cf80c2abc7c5f1">"Receive anti-DoS"</string>
-  <string name="gt_09ce4246d5463e45">"Receive operation failed (%1$s): %2$s"</string>
   <string name="gt_49f19beeecf442ef">"Received"</string>
   <string name="gt_076d920ee7b4ec38">"Received on"</string>
   <string name="gt_690dbe9dc0993c42">"Recent"</string>

@@ -33,7 +33,6 @@
   <string name="gt_b5ff9ca4a77d7d6e">"Lägg till ungefär %1$s på blockkedjan. Noah skickar nästa transaktion när den har bekräftats."</string>
   <string name="gt_223e44268146e60d">"Lägg till belopp"</string>
   <string name="gt_82767841e4f8c995">"Lägg till ett belopp först"</string>
-  <string name="gt_00df1293cf6d241b">"Ange ett belopp att ta emot via Lightning"</string>
   <string name="gt_7bf06b339959a3be">"Lägg till pengar på blockkedjan"</string>
   <string name="gt_ef61c03bbcda7402">"Lägg till skärmbild"</string>
   <string name="gt_fcdcc9c0caf001eb">"Lägg till din e-post"</string>
@@ -315,7 +314,6 @@
   <string name="gt_df377616065c56fa">"Kopiera supportmeddelande"</string>
   <string name="gt_5d9172fe6bc675da">"Kopiera transaktions-ID"</string>
   <string name="gt_63ba394601c5c4aa">"Kopiera %1$s"</string>
-  <string name="gt_2cbe9c9f6490fc8c">"Kopiera %1$s"</string>
   <string name="gt_3c0179f73e2f914c">"Kopiera %1$s"</string>
   <string name="gt_8e71221ac7fa5a0e">"Kostar avgifter på blockkedjan"</string>
   <string name="gt_18abee57c90f531e">"Kunde inte skapa en Lightning-faktura. Försök igen."</string>
@@ -409,7 +407,6 @@
   <string name="gt_472b52f016214da3">"Leverera med"</string>
   <string name="gt_906115657390f367">"Levererad"</string>
   <string name="gt_a0760d3dd093f263">"Levereras"</string>
-  <string name="gt_526e0087cc3f254d">"Beskrivning"</string>
   <string name="gt_293d404a500f5f9a">"Destination"</string>
   <string name="gt_45989de49fb7f66d">"Detaljer"</string>
   <string name="gt_268f14bbfe119c1e">"Diagnostik"</string>
@@ -578,7 +575,6 @@
   <string name="gt_ea3a58f8b849ff21">"Avgifterna steg. Betalar mer"</string>
   <string name="gt_e410ef7cc3869d69">"Avgifterna steg. Betalar mer · väntar på block %1$s"</string>
   <string name="gt_2a246cca8735d1b7">"Färre"</string>
-  <string name="gt_1369793595356d9d">"Fiatkurs inte tillgänglig: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
   <string name="gt_f4ed8fa656b74c5d">"Slutgiltig"</string>
   <string name="gt_b4221133c0166c16">"Den slutliga inlösentransaktionen har sänts och väntar på bekräftelse."</string>
@@ -617,7 +613,6 @@
   <string name="gt_83047f2bb98b251f">"Ge betalningen ett kort namn (max 64 tecken)."</string>
   <string name="gt_0c3587820d4cdb77">"Google Play Services är inte tillgängligt. Använd en UnifiedPush-distributör (till exempel ntfy) för att få aviseringar."</string>
   <string name="gt_5ad3dbd1242a4cea">"Uppfattat"</string>
-  <string name="gt_44bd7ae60f478fae">"H"</string>
   <string name="gt_c02479b6e3bd01fb">"HTTP-fel"</string>
   <string name="gt_0a5639302aa6c182">"Har du kontrollerat?"</string>
   <string name="gt_b79cac926e0b2e34">"Hjälp"</string>
@@ -742,7 +737,6 @@
   <string name="gt_31312f51a5df40b4">"Lightning-fakturor kan bara betalas en gång. Använd en Lightning-adress eller ett Lightning-erbjudande"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightning letar fortfarande efter en väg. Du kan lämna skärmen; Noah gör klart det i bakgrunden."</string>
   <string name="gt_ca7eb2b925786eb2">"Lightning-erbjudande"</string>
-  <string name="gt_b93018eee5c09c88">"Lightning-mottagning %1$s. Skapa en ny betalningsbegäran och försök igen."</string>
   <string name="gt_abbfcd250b826648">"Delta för Lightning-sändning"</string>
   <string name="gt_de1a03ce5fcc3be8">"Aktuell information är inte tillgänglig. De medföljande platserna fungerar fortfarande offline."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -762,7 +756,6 @@
   <string name="gt_050a9630d2132c97">"Låser %1$s"</string>
   <string name="gt_ea2100dc89ae9fe2">"Loggar"</string>
   <string name="gt_f1ed28c3c824a793">"Loggarna maskeras innan du delar dem."</string>
-  <string name="gt_08f271887ce94707">"M"</string>
   <string name="gt_2d9c014a222db12a">"MAX"</string>
   <string name="gt_0cf896b378674f75">"MAX kräver en on-chain-adress utan fast belopp."</string>
   <string name="gt_6f3359083a6fca2d">"MAX använder bara bekräftade medel och drar avgiften på blockkedjan från det saldot."</string>
@@ -923,7 +916,6 @@
   <string name="gt_15133907259330da">"Inte verifierad"</string>
   <string name="gt_d8da2c49df39d91d">"Anteckning"</string>
   <string name="gt_f9b73e1abc37cf5b">"Meddelande (valfritt)"</string>
-  <string name="gt_0f03e776ef5cf27e">"Anteckningen får vara högst 639 tecken"</string>
   <string name="gt_045f910e6b3ce120">"Anteckningen får vara högst 639 tecken."</string>
   <string name="gt_788011833a5a0f22">"Aviseringar"</string>
   <string name="gt_54ee6b72ca5e79e6">"Aviseringar krävs"</string>
@@ -1059,9 +1051,7 @@
   <string name="gt_f476330a673de0fa">"Klar att lösa in"</string>
   <string name="gt_77311249a7d249bf">"Klar att skickas"</string>
   <string name="gt_bac9d15ad9f1ca0c">"Ta emot"</string>
-  <string name="gt_050e3ec1aa394826">"Beloppet att ta emot måste vara ett positivt helt antal sats"</string>
   <string name="gt_85cf80c2abc7c5f1">"DoS-skydd vid mottagning"</string>
-  <string name="gt_09ce4246d5463e45">"Mottagningen misslyckades (%1$s): %2$s"</string>
   <string name="gt_49f19beeecf442ef">"Mottaget"</string>
   <string name="gt_076d920ee7b4ec38">"Mottaget på"</string>
   <string name="gt_690dbe9dc0993c42">"Senaste"</string>

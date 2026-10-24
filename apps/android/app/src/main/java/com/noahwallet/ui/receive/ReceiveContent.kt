@@ -114,13 +114,13 @@ private fun formatRows(ui: ReceiveUi): List<FormatRow> {
     val amount = ui.amount
     fun preview(format: ReceiveFormat) = ReceiveFormats.payload(format, ui.request, ui.address)?.let(ReceiveFormats::preview) ?: ""
     return listOf(
-        FormatRow(ReceiveFormat.lightningAddress, tr("Lightning address"), ui.address ?: tr("Lightning address unavailable"), tr("Scan with any Lightning wallet"), !ui.address.isNullOrEmpty()),
+        FormatRow(ReceiveFormat.lightningAddress, tr("Lightning address"), ui.address ?: tr("Lightning address unavailable"), tr("From any Lightning wallet"), !ui.address.isNullOrEmpty()),
         FormatRow(ReceiveFormat.request, tr("Payment request"), preview(ReceiveFormat.request),
             if (amount != null) tr("Bitcoin, Ark and Lightning for {amount}", ui.sats(amount)) else tr("Bitcoin and Ark in one code. Add an amount for Lightning"), ui.request != null),
-        FormatRow(ReceiveFormat.invoice, tr("Lightning invoice"), preview(ReceiveFormat.invoice),
-            if (amount != null) tr("Scan with any Lightning wallet") else tr("Add an amount to receive over Lightning"), amount != null),
+        FormatRow(ReceiveFormat.invoice, tr("Lightning invoice"), preview(ReceiveFormat.invoice).ifEmpty { tr("Add an amount first") },
+            if (amount != null) tr("For {amount} only", ui.sats(amount)) else tr("Invoices need an amount"), amount != null),
         FormatRow(ReceiveFormat.ark, tr("Ark address"), preview(ReceiveFormat.ark), tr("Instant and free from Ark wallets"), ui.request != null),
-        FormatRow(ReceiveFormat.onchain, tr("Bitcoin address"), preview(ReceiveFormat.onchain), tr("Scan with any bitcoin wallet"), ui.request != null),
+        FormatRow(ReceiveFormat.onchain, tr("Bitcoin address"), preview(ReceiveFormat.onchain), tr("From any bitcoin wallet, about 20 min"), ui.request != null),
     )
 }
 
@@ -337,7 +337,7 @@ private fun FormatList(ui: ReceiveUi, rows: List<FormatRow>, onSelect: (ReceiveF
         rows.forEachIndexed { index, row ->
             val selected = row.format == ui.format
             val dot by animateFloatAsState(if (selected) 1f else 0f, tween(200), label = "radio")
-            val copyLabel = tr("Copy {name}", row.name)
+            val copyLabel = tr("Copy {label}", row.name)
             Row(Modifier.fillMaxWidth().heightIn(min = 66.dp).graphicsLayer { alpha = if (row.enabled || row.format == ReceiveFormat.invoice) (if (row.enabled) 1f else .35f) else .35f }
                 .drawBehind { if (index < rows.lastIndex) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
                 .clickable(enabled = row.enabled || row.format == ReceiveFormat.invoice, role = Role.RadioButton) { onSelect(row.format) }

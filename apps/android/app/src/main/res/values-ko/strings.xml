@@ -33,7 +33,6 @@
   <string name="gt_b5ff9ca4a77d7d6e">"온체인에 약 %1$s을 추가하세요. 확정되면 Noah가 다음 트랜잭션을 보내요."</string>
   <string name="gt_223e44268146e60d">"금액 추가"</string>
   <string name="gt_82767841e4f8c995">"먼저 금액을 추가하세요"</string>
-  <string name="gt_00df1293cf6d241b">"Lightning으로 받을 금액을 입력하세요"</string>
   <string name="gt_7bf06b339959a3be">"온체인 자금 추가"</string>
   <string name="gt_ef61c03bbcda7402">"스크린샷 추가"</string>
   <string name="gt_fcdcc9c0caf001eb">"이메일 추가"</string>
@@ -315,7 +314,6 @@
   <string name="gt_df377616065c56fa">"지원 문의 메시지 복사"</string>
   <string name="gt_5d9172fe6bc675da">"거래 ID 복사"</string>
   <string name="gt_63ba394601c5c4aa">"%1$s 복사"</string>
-  <string name="gt_2cbe9c9f6490fc8c">"%1$s 복사"</string>
   <string name="gt_3c0179f73e2f914c">"%1$s 복사"</string>
   <string name="gt_8e71221ac7fa5a0e">"온체인 수수료가 들어요"</string>
   <string name="gt_18abee57c90f531e">"라이트닝 인보이스를 생성하지 못했습니다. 다시 시도하세요."</string>
@@ -409,7 +407,6 @@
   <string name="gt_472b52f016214da3">"전달 앱"</string>
   <string name="gt_906115657390f367">"전달됨"</string>
   <string name="gt_a0760d3dd093f263">"전달 중"</string>
-  <string name="gt_526e0087cc3f254d">"설명"</string>
   <string name="gt_293d404a500f5f9a">"수신 주소"</string>
   <string name="gt_45989de49fb7f66d">"세부 정보"</string>
   <string name="gt_268f14bbfe119c1e">"진단"</string>
@@ -578,7 +575,6 @@
   <string name="gt_ea3a58f8b849ff21">"수수료가 올랐습니다. 더 지불하는 중"</string>
   <string name="gt_e410ef7cc3869d69">"수수료가 올랐어요. 더 지불하는 중 · 블록 %1$s 대기 중"</string>
   <string name="gt_2a246cca8735d1b7">"줄이기"</string>
-  <string name="gt_1369793595356d9d">"법정 화폐 환율을 확인할 수 없음: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"필터"</string>
   <string name="gt_f4ed8fa656b74c5d">"최종"</string>
   <string name="gt_b4221133c0166c16">"최종 청구 거래가 전파되어 확정을 기다리고 있습니다."</string>
@@ -617,7 +613,6 @@
   <string name="gt_83047f2bb98b251f">"이 결제에 사용할 짧은 이름을 입력하세요(최대 64자)."</string>
   <string name="gt_0c3587820d4cdb77">"Google Play 서비스를 사용할 수 없습니다. 알림을 받으려면 UnifiedPush 배포 앱(예: ntfy)을 사용하세요."</string>
   <string name="gt_5ad3dbd1242a4cea">"확인"</string>
-  <string name="gt_44bd7ae60f478fae">"H"</string>
   <string name="gt_c02479b6e3bd01fb">"HTTP 오류"</string>
   <string name="gt_0a5639302aa6c182">"확인하셨나요?"</string>
   <string name="gt_b79cac926e0b2e34">"도움말"</string>
@@ -742,7 +737,6 @@
   <string name="gt_31312f51a5df40b4">"라이트닝 인보이스는 한 번만 결제할 수 있습니다. 라이트닝 주소나 라이트닝 오퍼를 사용하세요"</string>
   <string name="gt_49ae83f26e5d0d93">"라이트닝이 아직 경로를 찾고 있어요. 이 화면을 나가도 Noah가 백그라운드에서 마무리해요."</string>
   <string name="gt_ca7eb2b925786eb2">"라이트닝 오퍼"</string>
-  <string name="gt_b93018eee5c09c88">"Lightning 수신 %1$s. 새 결제 요청을 만든 후 다시 시도하세요."</string>
   <string name="gt_abbfcd250b826648">"Lightning 전송 만료 간격"</string>
   <string name="gt_de1a03ce5fcc3be8">"실시간 상세 정보를 불러올 수 없습니다. 기본 제공되는 장소 정보는 오프라인에서도 이용할 수 있습니다."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -762,7 +756,6 @@
   <string name="gt_050a9630d2132c97">"%1$s 잠그는 중"</string>
   <string name="gt_ea2100dc89ae9fe2">"로그"</string>
   <string name="gt_f1ed28c3c824a793">"로그는 공유하기 전에 민감한 정보가 가려져요."</string>
-  <string name="gt_08f271887ce94707">"M"</string>
   <string name="gt_2d9c014a222db12a">"최대"</string>
   <string name="gt_0cf896b378674f75">"MAX를 사용하려면 금액이 지정되지 않은 온체인 주소가 필요합니다."</string>
   <string name="gt_6f3359083a6fca2d">"최대는 확정된 자금만 사용하며 그 잔액에서 온체인 수수료를 차감해요."</string>
@@ -923,7 +916,6 @@
   <string name="gt_15133907259330da">"확인되지 않음"</string>
   <string name="gt_d8da2c49df39d91d">"메모"</string>
   <string name="gt_f9b73e1abc37cf5b">"메모(선택 사항)"</string>
-  <string name="gt_0f03e776ef5cf27e">"메모는 639자 이하여야 합니다"</string>
   <string name="gt_045f910e6b3ce120">"메모는 639자 이하여야 합니다."</string>
   <string name="gt_788011833a5a0f22">"알림"</string>
   <string name="gt_54ee6b72ca5e79e6">"알림이 필요합니다"</string>
@@ -1059,9 +1051,7 @@
   <string name="gt_f476330a673de0fa">"청구 준비 완료"</string>
   <string name="gt_77311249a7d249bf">"보낼 준비 완료"</string>
   <string name="gt_bac9d15ad9f1ca0c">"받기"</string>
-  <string name="gt_050e3ec1aa394826">"받을 금액은 사토시 단위의 양의 정수여야 합니다"</string>
   <string name="gt_85cf80c2abc7c5f1">"수신 DoS 방어"</string>
-  <string name="gt_09ce4246d5463e45">"받기 작업 실패 (%1$s): %2$s"</string>
   <string name="gt_49f19beeecf442ef">"받음"</string>
   <string name="gt_076d920ee7b4ec38">"수신 주소"</string>
   <string name="gt_690dbe9dc0993c42">"최근"</string>

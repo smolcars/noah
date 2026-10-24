@@ -467,7 +467,7 @@ struct ReceiveView: View {
             if let rate, rate.isFinite, rate > 0 { btcPrice = rate }
         } catch {
             guard !Task.isCancelled else { return }
-            AppLog("receive").w("Fiat rate unavailable: \(SafeErrorDescription.forLogging(error))")
+            AppLog("receive").w(#"Fiat rate unavailable: \#(SafeErrorDescription.forLogging(error))"#)
         }
     }
 }
@@ -493,7 +493,7 @@ struct ReceiveQRCode: View {
     static func image(uri: String) -> UIImage? {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(uri.utf8)
-        filter.correctionLevel = "H"
+        filter.correctionLevel = #"H"#
         guard let output = filter.outputImage,
               let image = CIContext().createCGImage(output.transformed(by: .init(scaleX: 6, y: 6)),
                                                    from: output.extent.applying(.init(scaleX: 6, y: 6))) else { return nil }

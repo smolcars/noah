@@ -116,7 +116,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
                     }
                     is ReceiveCompletion.LightningFailed -> {
                         request = null; format = ReceiveFormats.afterAmount(format, false)
-                        error = "Lightning receive ${if (event.canceled) "canceled" else "failed"}. Generate a new payment request and try again."
+                        error = "The Lightning payment could not be received. Generate a new payment request and try again."
                         return@LaunchedEffect
                     }
                     null -> Unit

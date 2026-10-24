@@ -27,8 +27,8 @@ data class ReceiveRequest(
     }
     companion object {
         fun validate(amountSat: Long, description: String = "") {
-            require(amountSat in 1..9_007_199_254_740_991) { "Receive amount must be a positive whole number of sats" }
-            require(description.trim().length <= 639) { "Note must be 639 characters or fewer" }
+            require(amountSat in 1..9_007_199_254_740_991) { """Receive amount must be a positive whole number of sats""" }
+            require(description.trim().length <= 639) { """Note must be 639 characters or fewer""" }
         }
         private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
             .replace("+", "%20").replace("%21", "!").replace("%27", "'")

@@ -33,7 +33,6 @@
   <string name="gt_b5ff9ca4a77d7d6e">"オンチェーンに約%1$sを追加してください。承認されると、Noahが次のトランザクションを送信します。"</string>
   <string name="gt_223e44268146e60d">"金額を追加"</string>
   <string name="gt_82767841e4f8c995">"先に金額を追加してください"</string>
-  <string name="gt_00df1293cf6d241b">"Lightningで受け取る金額を入力"</string>
   <string name="gt_7bf06b339959a3be">"オンチェーン資金を追加"</string>
   <string name="gt_ef61c03bbcda7402">"スクリーンショットを追加"</string>
   <string name="gt_fcdcc9c0caf001eb">"メールアドレスを追加"</string>
@@ -315,7 +314,6 @@
   <string name="gt_df377616065c56fa">"サポート用メッセージをコピー"</string>
   <string name="gt_5d9172fe6bc675da">"取引IDをコピー"</string>
   <string name="gt_63ba394601c5c4aa">"%1$sをコピー"</string>
-  <string name="gt_2cbe9c9f6490fc8c">"%1$sをコピー"</string>
   <string name="gt_3c0179f73e2f914c">"%1$sをコピー"</string>
   <string name="gt_8e71221ac7fa5a0e">"オンチェーン手数料がかかります"</string>
   <string name="gt_18abee57c90f531e">"ライトニング請求書を生成できませんでした。もう一度お試しください。"</string>
@@ -409,7 +407,6 @@
   <string name="gt_472b52f016214da3">"配信アプリ"</string>
   <string name="gt_906115657390f367">"届きました"</string>
   <string name="gt_a0760d3dd093f263">"お届け中"</string>
-  <string name="gt_526e0087cc3f254d">"説明"</string>
   <string name="gt_293d404a500f5f9a">"送金先"</string>
   <string name="gt_45989de49fb7f66d">"詳細"</string>
   <string name="gt_268f14bbfe119c1e">"診断"</string>
@@ -578,7 +575,6 @@
   <string name="gt_ea3a58f8b849ff21">"手数料が上がりました。多めに支払っています"</string>
   <string name="gt_e410ef7cc3869d69">"手数料が上がりました。追加で支払い中 · ブロック %1$s を待機中"</string>
   <string name="gt_2a246cca8735d1b7">"減らす"</string>
-  <string name="gt_1369793595356d9d">"法定通貨の換算レートを取得できません：%1$s"</string>
   <string name="gt_638e249f4a15ebb8">"絞り込み"</string>
   <string name="gt_f4ed8fa656b74c5d">"確定済み"</string>
   <string name="gt_b4221133c0166c16">"最終受け取りトランザクションをブロードキャストし、確認を待っています。"</string>
@@ -617,7 +613,6 @@
   <string name="gt_83047f2bb98b251f">"この支払いに短い名前を付けてください（最大64文字）。"</string>
   <string name="gt_0c3587820d4cdb77">"Google Play開発者サービスを利用できません。通知を受け取るには、ntfyなどのUnifiedPush配信アプリを使用してください。"</string>
   <string name="gt_5ad3dbd1242a4cea">"わかりました"</string>
-  <string name="gt_44bd7ae60f478fae">"H"</string>
   <string name="gt_c02479b6e3bd01fb">"HTTPエラー"</string>
   <string name="gt_0a5639302aa6c182">"確認しましたか？"</string>
   <string name="gt_b79cac926e0b2e34">"ヘルプ"</string>
@@ -742,7 +737,6 @@
   <string name="gt_31312f51a5df40b4">"ライトニング請求書は一度しか支払えません。ライトニングアドレスまたはオファーを使用してください"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightningがまだ経路を探しています。この画面を閉じても、Noahがバックグラウンドで完了させます。"</string>
   <string name="gt_ca7eb2b925786eb2">"ライトニングオファー"</string>
-  <string name="gt_b93018eee5c09c88">"ライトニング受け取り：%1$s。新しい支払いリクエストを作成して再試行してください。"</string>
   <string name="gt_abbfcd250b826648">"ライトニング送信の期限差分"</string>
   <string name="gt_de1a03ce5fcc3be8">"最新の詳細情報を取得できません。アプリに含まれる場所情報は引き続きオフラインで利用できます。"</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
@@ -762,7 +756,6 @@
   <string name="gt_050a9630d2132c97">"%1$s をロック中"</string>
   <string name="gt_ea2100dc89ae9fe2">"ログ"</string>
   <string name="gt_f1ed28c3c824a793">"ログは共有する前に機密情報が伏せられます。"</string>
-  <string name="gt_08f271887ce94707">"M"</string>
   <string name="gt_2d9c014a222db12a">"最大"</string>
   <string name="gt_0cf896b378674f75">"MAXを使うには、金額が指定されていないオンチェーンアドレスが必要です。"</string>
   <string name="gt_6f3359083a6fca2d">"「最大」は承認済みの資金のみを使い、その残高からオンチェーン手数料を差し引きます。"</string>
@@ -923,7 +916,6 @@
   <string name="gt_15133907259330da">"未検証"</string>
   <string name="gt_d8da2c49df39d91d">"メモ"</string>
   <string name="gt_f9b73e1abc37cf5b">"メモ（任意）"</string>
-  <string name="gt_0f03e776ef5cf27e">"メモは639文字以内にしてください"</string>
   <string name="gt_045f910e6b3ce120">"メモは639文字以内にしてください。"</string>
   <string name="gt_788011833a5a0f22">"通知"</string>
   <string name="gt_54ee6b72ca5e79e6">"通知が必要です"</string>
@@ -1059,9 +1051,7 @@
   <string name="gt_f476330a673de0fa">"受け取り可能"</string>
   <string name="gt_77311249a7d249bf">"送信待ち"</string>
   <string name="gt_bac9d15ad9f1ca0c">"受け取る"</string>
-  <string name="gt_050e3ec1aa394826">"受取額はsats単位の正の整数である必要があります"</string>
   <string name="gt_85cf80c2abc7c5f1">"受信時のDoS対策"</string>
-  <string name="gt_09ce4246d5463e45">"受け取り処理に失敗しました（%1$s）：%2$s"</string>
   <string name="gt_49f19beeecf442ef">"受取済み"</string>
   <string name="gt_076d920ee7b4ec38">"受取経路"</string>
   <string name="gt_690dbe9dc0993c42">"最近"</string>
