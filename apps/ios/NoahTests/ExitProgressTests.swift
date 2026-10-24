@@ -232,7 +232,7 @@ struct ExitProgressTests {
         let store = ExitSightings.Store(read: { disk.value }, write: { disk.value = $0 })
         try store.save(sightings, walletID: "a")
         #expect(ExitSightings.Store(read: { disk.value }, write: { _ in }).load(walletID: "a") == sightings)
-        #expect(store.load(walletID: "b") == ExitSightings())
+        #expect(store.load(walletID: "b") == nil)
     }
 
     final class Disk: @unchecked Sendable { var value: String? }
@@ -452,6 +452,65 @@ struct ExitClaimLedgerTests {
         let before = disk
         try AutoBoardFunding.markClaimed([], walletID: "wallet", store: store)
         #expect(disk == before)
+    }
+}
+
+/// Sol I: the claim's display record. Written before broadcast, so an uncertain broadcast keeps the
+/// fee; never blocks the claim; and Done reads it after the journal entry is acknowledged.
+@MainActor
+struct ExitClaimRecordTests {
+    actor Records {
+        var all: [String: ExitClaimRecord] = [:]
+        func add(_ txid: String, _ record: ExitClaimRecord) { all[txid] = record }
+    }
+
+    @Test func aClaimsFeeIsRecordedBeforeItsSentAndNeverBlocksIt() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let wallet = ExitClaimExecutionTests.Wallet(), records = Records()
+        var access = wallet.access()
+        access.recorded = { await records.add($0, $1) }
+        access.broadcast = { _ in
+            #expect(await records.all[ExitClaimExecutionTests.claimTxid] != nil, "Recorded before it's sent")
+            throw URLError(.timedOut)
+        }
+        let reviewed = try await WalletSession.claimQuote(ids: ["a"], destination: ExitClaimExecutionTests.ownAddress, access: access)
+        await #expect(throws: OnchainFailure.uncertain) {
+            try await WalletSession.executeClaim(reviewed, journal: OnchainOperationJournal(file: file), access: access)
+        }
+        #expect(await records.all == [ExitClaimExecutionTests.claimTxid: .init(ids: ["a"], fee: 1295, toPhone: true)])
+
+        // A record that can't be written doesn't stop the claim.
+        let other = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: other) }
+        var failing = wallet.access()
+        failing.recorded = { _, _ in throw OnchainFailure.unavailable }
+        _ = try await WalletSession.executeClaim(reviewed, journal: OnchainOperationJournal(file: other), access: failing)
+        #expect(await wallet.broadcasts.count == 1)
+    }
+
+    @Test func doneKeepsTheNetAndFeeAfterTheJournalEntryIsAcknowledged() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "exit-claim-record-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let money = ExitMoney(app: AppModel(settings: try SettingsStorage(rootPath: root.path)), locale: Locale(identifier: "en"))
+        func claimed(_ id: String, _ amount: UInt64) -> ExitModel {
+            ExitModel(id: id, amount: amount, state: "Claimed", details: .init(kind: "claimed", tip_height: 250, block: .init(height: 250, hash: "h"), txid: "claim"),
+                      history: [], historyDetails: [], claimable: false)
+        }
+        let a = claimed("a", 31_000), b = claimed("b", 24_500)
+        var overview = OnchainOverview(walletID: "wallet", vtxos: [], exits: [a], confirmed: 0, tip: 250, pendingTotal: 0, claimableHeight: nil)
+        func text(_ exit: ExitModel) -> ExitText {
+            ExitText(progress: ExitProgress(exit, tip: 250), exit: exit, tip: 250, overview: overview, attempts: [], money: money, language: "en")
+        }
+        // No journal entry and nothing received here: only the record knows the fee.
+        #expect(text(a).claimFee == nil && text(a).amount == 31_000)
+        overview.claimRecords = ["claim": .init(ids: ["a"], fee: 262, toPhone: false)]
+        #expect(text(a).claimFee == 262 && text(a).amount == 30_738)
+        // One claim for two exits: the record's fee, split so the parts add up.
+        overview.exits = [a, b]
+        overview.claimRecords = ["claim": .init(ids: ["a", "b"], fee: 262, toPhone: false)]
+        #expect(text(a).batch.map(\.id) == ["a", "b"] && text(a).claimFee! + text(b).claimFee! == 262)
+        #expect(text(a).batchLine != nil)
     }
 }
 

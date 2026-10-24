@@ -200,26 +200,42 @@ struct ExitSightings: Codable, Equatable, Sendable {
 
     var tips: [String: UInt32] { seen.mapValues(\.tip) }
 
-    struct Store: Sendable {
-        static let key = "native-exit-sightings-v1"
-        var read: @Sendable () -> String?
-        var write: @Sendable (String) throws -> Void
-        init(storage: SettingsStorage = .shared) {
-            read = { storage.string(forKey: Self.key) }
-            write = { try storage.setDurably($0, forKey: Self.key) }
-        }
-        init(read: @escaping @Sendable () -> String?, write: @escaping @Sendable (String) throws -> Void) {
-            self.read = read; self.write = write
-        }
-        private func all() -> [String: ExitSightings] {
-            read().flatMap { try? JSONDecoder().decode([String: ExitSightings].self, from: Data($0.utf8)) } ?? [:]
-        }
-        func load(walletID: String) -> ExitSightings { all()[walletID] ?? .init() }
-        func save(_ sightings: ExitSightings, walletID: String) throws {
-            var all = all()
-            all[walletID] = sightings
-            try write(String(decoding: JSONEncoder().encode(all), as: UTF8.self))
-        }
+    static let key = "native-exit-sightings-v1"
+    typealias Store = ExitWalletStore<ExitSightings>
+}
+
+/// A claim Noah built (Sol I): its drain's fee, the exits it covers and where it went, by claim
+/// txid. Written before broadcast, so an uncertain broadcast or an acknowledged journal entry still
+/// shows the fee. Display only: not a journal entry, it never blocks anything, and bark's state
+/// still decides Claimed.
+struct ExitClaimRecord: Codable, Equatable, Sendable {
+    var ids: [String]
+    var fee: UInt64
+    var toPhone: Bool
+
+    static let key = "native-exit-claim-records-v1"
+    typealias Store = ExitWalletStore<[String: ExitClaimRecord]>
+}
+
+/// One value per wallet in settings storage, written durably.
+struct ExitWalletStore<Value: Codable & Sendable>: Sendable {
+    var read: @Sendable () -> String?
+    var write: @Sendable (String) throws -> Void
+    init(key: String, storage: SettingsStorage = .shared) {
+        read = { storage.string(forKey: key) }
+        write = { try storage.setDurably($0, forKey: key) }
+    }
+    init(read: @escaping @Sendable () -> String?, write: @escaping @Sendable (String) throws -> Void) {
+        self.read = read; self.write = write
+    }
+    private func all() -> [String: Value] {
+        read().flatMap { try? JSONDecoder().decode([String: Value].self, from: Data($0.utf8)) } ?? [:]
+    }
+    func load(walletID: String) -> Value? { all()[walletID] }
+    func save(_ value: Value, walletID: String) throws {
+        var all = all()
+        all[walletID] = value
+        try write(String(decoding: JSONEncoder().encode(all), as: UTF8.self))
     }
 }
 

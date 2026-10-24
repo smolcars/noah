@@ -44,7 +44,7 @@ final class OnchainModel {
                 claimOwnership: { try await session.exitClaimDestinationIsMine($0) },
                 discardReview: { await session.discardBoard($0) },
                 estimate: { try await session.exitEstimate($0) },
-                sightings: .init())
+                sightings: .init(key: ExitSightings.key))
         }
 
         /// Home's Renew: the same review, submitted through the renewal path that rechecks

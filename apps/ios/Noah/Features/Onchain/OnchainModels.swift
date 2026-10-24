@@ -64,11 +64,13 @@ struct OnchainOverview: Sendable {
     var childFees: [String: UInt64] = [:]
     /// What this wallet received, by claim txid (claims to this phone).
     var received: [String: UInt64] = [:]
-    /// Decision 3: a parked exit's next package fee (bark's estimate without its margin, per transaction).
+    /// Decision 3: a parked exit's package fee (its parent and bark's canonical child), by exit.
     var packageFees: [String: UInt64] = [:]
+    /// The claims Noah built, by claim txid (`ExitClaimRecord`).
+    var claimRecords: [String: ExitClaimRecord] = [:]
     /// Since when bark's daemon has been progressing exits in this session; nil without it.
     var daemonSince: Date? = .distantPast
-    /// The app's own last exit progress (Check the chain): its tip, the transactions it left waiting
+    /// The app's own last exit progress (Check the chain): its tip, the parking episodes it left waiting
     /// for a fee child after trying to fund them, and whether it failed.
     var checkedTip: UInt32?
     var provenParked: Set<String> = []

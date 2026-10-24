@@ -296,17 +296,19 @@ struct ExitStatusLine: View {
     /// This exit's claim, as journaled (its reviewed destination and fee).
     private var claim: OnchainQuote? { attempts.first { $0.quote.action == .claim && $0.quote.ids.contains(exit.id) }?.quote }
     private var claimTxid: String? { exit.details.claimTxid }
+    /// What Noah recorded when it built that claim; kept after the journal entry is acknowledged.
+    private var record: ExitClaimRecord? { claimTxid.flatMap { overview?.claimRecords[$0] } }
     /// Every exit the same claim transaction covered (bark records its txid on each).
     var batch: [ExitModel] {
         guard let claimTxid else { return [exit] }
-        let covered = (overview?.exits ?? []).filter { $0.details.claimTxid == claimTxid }
+        let covered = (overview?.exits ?? []).filter { $0.details.claimTxid == claimTxid || record?.ids.contains($0.id) == true }
         return covered.contains { $0.id == exit.id } ? covered : covered + [exit]
     }
     private var batchAmount: UInt64 { batch.reduce(0) { $0 + $1.amount } }
     /// What the whole claim paid this wallet (a claim to this phone).
     private var received: UInt64? { claimTxid.flatMap { overview?.received[$0] } }
-    /// The claim's one fee, as reviewed, or what didn't arrive here.
-    var batchFee: UInt64? { claim?.fee ?? received.map { batchAmount - min(batchAmount, $0) } }
+    /// The claim's one fee: the drain's, as reviewed, or what didn't arrive here.
+    var batchFee: UInt64? { record?.fee ?? claim?.fee ?? received.map { batchAmount - min(batchAmount, $0) } }
     /// This exit's part of that fee, so the parts add up to the claim.
     var claimFee: UInt64? {
         batchFee.map { ExitClaimSplit.fees(Dictionary(batch.map { ($0.id, $0.amount) }, uniquingKeysWith: { a, _ in a }), fee: $0)[exit.id] ?? 0 }
@@ -480,8 +482,9 @@ struct ExitStatusLine: View {
 
     var scene: ExitStageScene {
         var wallet: String? = overview.map { money($0.confirmed) }
-        if [.claiming, .claimed].contains(progress.phase), let claim {
-            wallet = claim.destinationIsMine == true ? tr("This phone") : claim.destination.map { $0.prefix(6) + "…" + $0.suffix(4) }
+        if [.claiming, .claimed].contains(progress.phase), claim != nil || record != nil {
+            wallet = (record?.toPhone ?? claim?.destinationIsMine) == true ? tr("This phone")
+                : claim?.destination.map { $0.prefix(6) + "…" + $0.suffix(4) } ?? tr("Another wallet")
         }
         return ExitStageScene(progress, tip: tip, wallet: wallet, delta: overview?.exitDelta, txids: exit.path.map(\.txid))
     }

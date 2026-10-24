@@ -23,6 +23,7 @@ extension WalletSession {
                 claimableHeight: try await handles.wallet.allExitsClaimableAtHeight())
             // What the exit screens add; optional, so a failed read never hides the exits themselves.
             overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
+            overview.claimRecords = ExitClaimRecord.Store(key: ExitClaimRecord.key).load(walletID: overview.walletID) ?? [:]
             overview.daemonSince = await self.daemonSince
             if let check = await self.exitChecks[overview.walletID] {
                 overview.checkedTip = check.tip
@@ -264,6 +265,8 @@ extension WalletSession {
         var broadcast: @Sendable (String) async throws -> String
         /// A claim to this phone: its output (the drain's only one) joins auto-board's handled ledger.
         var claimedToPhone: @Sendable (String) async throws -> Void = { _ in }
+        /// Keeps what the screens show of a claim (`ExitClaimRecord`), by its txid.
+        var recorded: @Sendable (String, ExitClaimRecord) async throws -> Void = { _, _ in }
     }
 
     private static func claimAccess(_ handles: Handles) -> OnchainClaimAccess {
@@ -278,6 +281,12 @@ extension WalletSession {
             broadcast: { try await handles.wallet.broadcastTx(txHex: $0) },
             claimedToPhone: { [walletID = handles.wallet.fingerprint()] txid in
                 try await MainActor.run { try AutoBoardFunding.markClaimed(["\(txid):0"], walletID: walletID) }
+            },
+            recorded: { [walletID = handles.wallet.fingerprint()] txid, record in
+                let store = ExitClaimRecord.Store(key: ExitClaimRecord.key)
+                var records = store.load(walletID: walletID) ?? [:]
+                records[txid] = record
+                try store.save(records, walletID: walletID)
             })
     }
 
@@ -330,9 +339,13 @@ extension WalletSession {
                 guard let expected else { throw OnchainFailure.constructionFailed }
                 do { try await access.claimedToPhone(expected) } catch { throw OnchainFailure.constructionFailed }
             }
+            // Its fee for the screens, before it's sent, so an uncertain broadcast still shows it. Never blocks.
+            let record = ExitClaimRecord(ids: quote.ids, fee: claim.feeSats, toPhone: quote.destinationIsMine == true)
+            if let expected { try? await access.recorded(expected, record) }
             let txid: String
             do { txid = try await access.broadcast(tx) }
             catch { throw OnchainFailure.uncertain }
+            if txid != expected { try? await access.recorded(txid, record) }
             // Auto-board's own read also marks claims bark has seen.
             if quote.destinationIsMine == true, txid != expected { try? await access.claimedToPhone(txid) }
             return OnchainReceipt(message: "Claim submitted. Refresh to check confirmation.", txid: txid)
