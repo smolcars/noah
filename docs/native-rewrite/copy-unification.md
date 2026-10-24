@@ -891,7 +891,7 @@ Reviewed on 2026-10-24. Accepted as chosen:
 
 Changed after review:
 
-6. **Home, automatic boarding:** both platforms toast iOS's "{amount} available in Ark". Android formats the amount as Home does, so a hidden balance reads "••••"; its "Boarding completed" title stays only as the toast's key.
+6. **Home, automatic boarding:** both platforms toast iOS's "{amount} available in Ark". Android formats the amount as Home does, so a hidden balance reads "••••"; its "Boarding completed" title stays only as the toast's key. Hiding amounts while the toast shows masks it at once on both platforms and leaves its end time unchanged (Android re-texts the active toast in place; iOS recomputes it on every render).
 9. **Activity, exit status:** "Exiting" on both. The spec's status list says "Exiting", and where the spec and the prototype differ, the spec wins.
 11. **Receive, Lightning failure:** Android now shows iOS's "Lightning Receive Canceled" or "Lightning Receive Failed" title above the shared message, so both say which it was in shared, translated strings.
 
@@ -925,7 +925,7 @@ A string one platform switched onto keeps its existing translations, so each was
 ## Verification
 
 - **iOS:** `NoahTests` (scheme `Noah-Regtest`, `-only-testing:NoahTests`, `-parallel-testing-enabled NO`) on an iPhone SE (3rd generation) simulator, iOS 27.0: 1,178 tests in 233 suites passed (after the review changes).
-- **Android:** `./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest`: 4,220 JVM tests in 197 suites, 0 failures; the instrumented test APK builds. The instrumented suites themselves weren't run, apart from the screenshot galleries below.
+- **Android:** `./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest`: 4,221 JVM tests in 198 suites, 0 failures; the instrumented test APK builds. Of the instrumented suites, only the screenshot galleries below and `HomeToastTest` (the masked boarding toast keeps its schedule) were run.
 - **Tool:** `bun test apps/tools/translations.test.mjs` passes (19 tests, including the gate, typed-delete and submitted-vs-sent tests), and `bun apps/tools/translations.mjs --check` is clean with the gate on: 0 untranslated in es, ja, ko and sv.
 - **Tests that asserted old text** were updated: `SendOfferTests`, `ProfileNameDraftTests`, `SettingsSafetyTests`, the Home and Onboarding shot fixtures (iOS) and `ExitDeviceTest` (Android). No test tag or accessibility identifier changed.
 
