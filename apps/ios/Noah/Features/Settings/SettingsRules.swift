@@ -113,8 +113,13 @@ enum VtxoList {
 
     static func due(_ vtxos: [VtxoModel]) -> [VtxoModel] { vtxos.filter(isDue) }
 
-    /// Select mode starts with the expiring ones.
+    /// Select mode starts with the expiring ones (today's Select expiring).
     static func preselected(_ vtxos: [VtxoModel]) -> Set<String> { Set(due(vtxos).map(\.id)) }
+
+    /// Today's Select visible: every renewable VTXO the filter shows.
+    static func visibleSelection(_ vtxos: [VtxoModel], filter: Filter) -> Set<String> {
+        Set(vtxos.filter { includes(filter, $0) && $0.refreshable }.map(\.id))
+    }
 
     /// Only spendable VTXOs can be renewed; a locked one never joins the selection.
     static func toggle(_ id: String, in selection: Set<String>, vtxos: [VtxoModel]) -> Set<String> {

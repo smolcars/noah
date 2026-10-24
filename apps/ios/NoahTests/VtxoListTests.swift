@@ -52,6 +52,13 @@ struct VtxoListTests {
         #expect(VtxoList.renewable(selection, in: locked) == ["gone"])
     }
 
+    @Test func bulkSelectionTakesWhatTheFilterShowsOrTheExpiringOnes() {
+        #expect(VtxoList.visibleSelection(Self.vtxos, filter: .all) == ["soon", "later", "gone", "next"], "never the locked one")
+        #expect(VtxoList.visibleSelection(Self.vtxos, filter: .active) == ["later", "next"])
+        #expect(VtxoList.visibleSelection(Self.vtxos, filter: .locked).isEmpty)
+        #expect(VtxoList.preselected(Self.vtxos) == ["soon", "gone"])
+    }
+
     @Test func expiryWords() {
         #expect(VtxoList.expiresIn(0, locale: "en") == "Expired")
         #expect(VtxoList.expiresIn(4, locale: "en") == "Expires in under an hour")

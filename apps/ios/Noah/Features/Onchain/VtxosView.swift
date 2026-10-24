@@ -37,6 +37,7 @@ struct VtxosView: View {
                 empty
             } else {
                 header
+                if selecting { selectionControls.padding(.top, 14) }
                 ForEach(VtxoList.groups(vtxos, filter: filter)) { section in
                     let rows = section.rows
                     Text(L10n.text(section.group.title, locale: language))
@@ -117,6 +118,28 @@ struct VtxosView: View {
             .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
             .padding(.top, 6)
         }
+    }
+
+    /// Today's bulk controls while selecting: what the filter shows, the expiring ones, or none.
+    private var selectionControls: some View {
+        GlassGroup(spacing: NoahTokens.Space.s) {
+            WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: NoahTokens.Space.s) {
+                Button(L10n.text("Select visible", locale: language)) { choose(VtxoList.visibleSelection(vtxos, filter: filter)) }
+                    .accessibilityIdentifier("vtxos-select-visible")
+                Button(L10n.text("Select expiring", locale: language)) { choose(VtxoList.preselected(vtxos)) }
+                    .accessibilityIdentifier("vtxos-select-expiring")
+                Button(L10n.text("Clear selection", locale: language)) { choose([]) }
+                    .disabled(selected.isEmpty)
+                    .accessibilityIdentifier("vtxos-clear-selection")
+            }
+            .buttonStyle(OnboardingChipStyle())
+        }
+        .disabled(model.locked)
+    }
+
+    private func choose(_ ids: Set<String>) {
+        haptics.play(.selection)
+        selected = ids
     }
 
     private var empty: some View {
