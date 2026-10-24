@@ -710,6 +710,25 @@ class OnchainOperationsTest {
             assertNull("another exit isn't in it", records.of("b", null))
         }
     }
+    @Test fun anUncertainBroadcastStillKeepsWhatTheClaimPays() = runBlocking { fixture { wallet, ops, journal, _ ->
+        var disk: String? = null
+        val records = ExitClaimRecords({ disk }, { disk = it })
+        wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+        wallet.mine = false
+        wallet.estimateError = java.net.SocketTimeoutException("estimator offline")
+        val unknown = (runCatching { ops.quote(OnchainAction.claim, listOf("a"), destination = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn") }.exceptionOrNull() as ExitEstimateUnavailable).review
+        wallet.claimFee = 1_310
+        // The node takes the claim, but its answer times out.
+        wallet.broadcastError = java.net.SocketTimeoutException("no answer")
+        val failure = runCatching { ops.execute(unknown.copy(unknownFeeConsent = unknown.id), recordClaim = records::add) }.exceptionOrNull()
+        assertEquals(OnchainFailure.uncertain, (failure as OnchainException).reason)
+        val txid = checkNotNull(ExitTransactions.parse(wallet.claimTransaction("psbt"))).txid
+        // Written before broadcast, from the signed claim: once bark reports it claimed by this txid, Done has its real fee.
+        assertEquals(ExitClaimRecords.Record(txid, 1_310, listOf("a"), false, "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"), records.of("a", txid))
+        assertEquals(30_000L - 1_310, ExitRules.received(30_000, checkNotNull(ExitContext(0, null, null).claimed(records.of("a", txid), null).claimShare("a"))))
+        assertNull("bark names another claim: this record isn't it", records.of("a", "other-claim"))
+        assertNull("still uncertain in the journal", journal.loadAll().single().receipt)
+    } }
     @Test fun aClaimToThisPhoneIsRecordedWithoutItsAddressAndARecordFailureChangesNothing() = runBlocking { fixture { wallet, ops, journal, _ ->
         wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
         var record: ExitClaimRecords.Record? = null

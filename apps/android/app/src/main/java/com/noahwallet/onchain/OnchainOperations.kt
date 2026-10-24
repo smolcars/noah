@@ -204,7 +204,7 @@ internal class OnchainOperations(
      * [keepOnchain]: a claim to this wallet records its outputs in auto-board's handled ledger (exit.md, Decision 8)
      * before it's broadcast, so auto-board never offers them back to Ark.
      */
-    /** [recordClaim]: where a broadcast claim's fee, exits and destination are kept for its exits' pages; a failure there changes nothing. */
+    /** [recordClaim]: where a claim's fee, exits and destination are kept for its exits' pages, before it's broadcast; a failure there changes nothing. */
     suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
                         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
                         recordClaim: (ExitClaimRecords.Record) -> Unit = {}): String {
@@ -255,15 +255,21 @@ internal class OnchainOperations(
                 OnchainAction.claim -> {
                     val claim = wallet.drain(reviewed.ids, checkNotNull(reviewed.destination))
                     if (!reviewed.hasUnknownFeeConsent && claim.feeSats.toLong() != reviewed.fee) fail(OnchainFailure.claimFeeChanged)
-                    if (reviewed.destinationIsMine == true) try {
-                        val tx = checkNotNull(ExitTransactions.parse(wallet.claimTransaction(claim.psbtBase64)))
+                    val mine = reviewed.destinationIsMine == true
+                    // The signed claim, before it's sent: its outputs for this phone's wallet, its txid for the display record.
+                    val signed = try { ExitTransactions.parse(wallet.claimTransaction(claim.psbtBase64)) }
+                        catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+                    if (mine) try {
+                        val tx = checkNotNull(signed)
                         keepOnchain((0 until tx.outputs).map { "${tx.txid}:$it" }.toSet())
                     } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { fail(OnchainFailure.keepFailed) }
+                    // Kept before broadcast, so a broadcast that went through but timed out still shows what it paid; display only.
+                    fun record(txid: String) = runCatching { recordClaim(ExitClaimRecords.Record(txid, claim.feeSats.toLong(), reviewed.ids, mine, reviewed.destination.takeIf { !mine })) }
+                    signed?.let { record(it.txid) }
                     // Every error after entering broadcast remains uncertain, including typed BDK errors.
                     val txid = try { wallet.broadcastClaim(claim.psbtBase64) } catch (_: Exception) { fail(OnchainFailure.uncertain) }
                     recordTransaction(txid)
-                    val mine = reviewed.destinationIsMine == true
-                    runCatching { recordClaim(ExitClaimRecords.Record(txid, claim.feeSats.toLong(), reviewed.ids, mine, reviewed.destination.takeIf { !mine })) }
+                    if (txid != signed?.txid) record(txid)
                     OnchainReceipt("Claim submitted. Refresh to check confirmation.", txid)
                 }
                 OnchainAction.cancel -> {

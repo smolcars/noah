@@ -77,6 +77,7 @@ class ExitSubmitDeviceTest {
             spendable = false; exit = ExitState.Start(tip.toUInt())
         }
         override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { calls += "drain"; return ExitClaimTransaction("psbt", drainFee) }
+        override suspend fun claimTransaction(psbt: String) = ExitFixtures.signedClaim
         override suspend fun broadcastClaim(psbt: String): String {
             calls += "broadcast"; gate?.await()
             exit = ExitState.ClaimInProgress(tip.toUInt(), BlockRef(tip.toUInt(), "block"), "claim-tx"); return "claim-tx"
