@@ -148,7 +148,7 @@ struct LightningAddressPage: View {
     @Environment(\.settings) private var settings
     @Environment(\.settingsPage) private var currentPage
     @Environment(\.locale) private var locale
-    @State private var name = NameAvailability(lookup: NameAvailability.liveLookup(variant: .current))
+    @State private var name = NameAvailability(rules: .edit, lookup: NameAvailability.liveLookup(variant: .current))
     @State private var npub = ""
     @State private var busy = false
     @State private var error: String?
@@ -163,15 +163,18 @@ struct LightningAddressPage: View {
     }
     private var key: String { npub.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var privateKeyPasted: Bool { key.lowercased().hasPrefix("nsec") }
-    private var unchanged: Bool { name.text == assigned && key == Nostr.npub(from: model.server.state.nostrPubkey) }
-    private var canSave: Bool { !busy && !privateKeyPasted && !unchanged && name.status == .available }
+    private var edit: LightningAddressEdit {
+        LightningAddressEdit(name: name.text, assigned: assigned, status: name.status, npub: npub,
+                             currentNpub: Nostr.npub(from: model.server.state.nostrPubkey))
+    }
+    private var canSave: Bool { !busy && edit.saves }
 
     var body: some View {
         SettingsScroll(line: L10n.text("How people pay you.", locale: language)) {
             NameHandleField(name: name, domain: domain, focused: $focused, label: "Lightning address") { if canSave { save() } }
                 .padding(.top, 30)
                 .disabled(busy)
-            NameStatusLine(status: name.status, message: statusMessage, failure: privateKeyPasted || error != nil)
+            NameStatusLine(status: name.status, message: statusMessage, failure: privateKeyPasted || error != nil || edit.problem != nil)
                 .padding(.top, 14)
             NameSuggestionChips(name: name, haptics: haptics).padding(.top, 12)
             // The name this wallet already has, after editing it (today's reserved-name chip).
@@ -223,6 +226,7 @@ struct LightningAddressPage: View {
     private var statusMessage: String? {
         if privateKeyPasted { return L10n.text("Never paste a private key. Use your npub.", locale: language) }
         if let error { return L10n.text(error, locale: language) }
+        if let problem = edit.problem { return L10n.text(problem, locale: language) }
         if name.text == assigned && name.status == .available { return L10n.text("Your address", locale: language) }
         return nil
     }
@@ -235,7 +239,7 @@ struct LightningAddressPage: View {
         Task {
             defer { busy = false }
             do {
-                try await model.server.saveIdentity(username: name.text, npub: key)
+                try await model.server.saveIdentity(username: edit.username, npub: key)
                 haptics.play(.success)
                 settings.toast("Saved")
                 settings.leave(currentPage)
@@ -244,6 +248,35 @@ struct LightningAddressPage: View {
                 self.error = ServerFailure.message(for: error, fallback: "Failed to update Lightning address. Please try again.")
             }
         }
+    }
+}
+
+/// What saving the Lightning address page would send. The wallet's own name goes back exactly as
+/// the server has it; an edit passes today's validation (`LightningIdentity.payload`), not onboarding's
+/// new-name rules; the availability lookup is only a hint.
+struct LightningAddressEdit: Equatable {
+    let name: String
+    let assigned: String
+    let status: NameAvailability.Status
+    let npub: String
+    let currentNpub: String
+
+    private var key: String { npub.trimmingCharacters(in: .whitespacesAndNewlines) }
+    var renames: Bool { name != assigned }
+    var username: String { renames ? LightningIdentity.normalizeUsername(name) : assigned }
+
+    /// Today's validation message for the name or key, if any.
+    var problem: String? {
+        guard !username.isEmpty else { return nil }
+        do { _ = try LightningIdentity.payload(username: username, npub: key); return nil }
+        catch let validation as IdentityValidationError { return validation.errorDescription }
+        catch { return nil }
+    }
+
+    var saves: Bool {
+        guard !username.isEmpty, problem == nil else { return false }
+        if renames { return status == .available }
+        return key != currentNpub
     }
 }
 

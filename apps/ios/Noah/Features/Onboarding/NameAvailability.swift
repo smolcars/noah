@@ -21,6 +21,18 @@ final class NameAvailability {
     nonisolated static let minLength = 3
     nonisolated private static let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789_.-")
 
+    /// How typed names are cleaned up and how short they may be.
+    struct Rules: Sendable {
+        var normalize: @Sendable (String) -> String
+        var minLength: Int
+
+        /// Onboarding's new names: a-z, 0-9, "_", "." and "-", 3 to 24 characters.
+        static let newName = Rules(normalize: { NameAvailability.normalize($0) }, minLength: NameAvailability.minLength)
+        /// Settings' edits of an existing address: trimmed and lowercased as before. Saving validates the
+        /// rest, so a migrated name the server accepts (longer or shorter) is never cut down.
+        static let edit = Rules(normalize: { LightningIdentity.normalizeUsername($0) }, minLength: 1)
+    }
+
     /// Bound to the field; `textChanged()` normalizes it.
     var text = ""
     private(set) var status = Status.hint
@@ -31,12 +43,14 @@ final class NameAvailability {
 
     @ObservationIgnored private let lookup: @Sendable (String) async throws -> Bool
     @ObservationIgnored private let debounce: Duration
+    @ObservationIgnored private let rules: Rules
     @ObservationIgnored private var check: Task<Void, Never>?
     @ObservationIgnored private var checked = ""
 
     /// `lookup` answers whether a name is taken.
-    init(debounce: Duration = .milliseconds(500), lookup: @escaping @Sendable (String) async throws -> Bool) {
+    init(debounce: Duration = .milliseconds(500), rules: Rules = .newName, lookup: @escaping @Sendable (String) async throws -> Bool) {
         self.debounce = debounce
+        self.rules = rules
         self.lookup = lookup
     }
 
@@ -55,7 +69,8 @@ final class NameAvailability {
     /// Call when `text` changes. Returns false if it rewrote `text` (the next change does the work).
     @discardableResult
     func textChanged() -> Bool {
-        let normalized = Self.normalize(text)
+        // The name this wallet has is kept exactly as the server has it.
+        let normalized = text == assigned ? text : rules.normalize(text)
         if normalized != text {
             text = normalized
             return false
@@ -65,8 +80,8 @@ final class NameAvailability {
         check?.cancel()
         suggestions = []
         if normalized.isEmpty { status = .hint; return true }
-        if normalized.count < Self.minLength { status = .tooShort; return true }
         if normalized == assigned { status = .available; return true }
+        if normalized.count < rules.minLength { status = .tooShort; return true }
         status = .checking
         check = Task { [debounce, lookup] in
             try? await Task.sleep(for: debounce)
