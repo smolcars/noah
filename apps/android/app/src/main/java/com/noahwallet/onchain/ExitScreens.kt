@@ -63,7 +63,7 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
                 is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
                 else -> Modifier.height((pose as OnboardingPose.Tabletop).top).fillMaxWidth()
             }.testTag("exit-leading").padding(start = 24.dp, end = 24.dp, top = 56.dp, bottom = if (split) 24.dp else 8.dp)
-                .then(if (split && !pictureLeads) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+                .then(if (!pictureLeads) Modifier.verticalScroll(rememberScrollState()) else Modifier),
                 verticalArrangement = if (split && !pictureLeads) Arrangement.Center else Arrangement.Top) {
                 if (!hero) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(title, Modifier.semantics { heading() }, style = ActivityType.large.copy(fontSize = if (split) 36.sp else 30.sp,
@@ -72,11 +72,6 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
                 }
                 leading()
             }
-            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                back?.let { BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() } }
-                Spacer(Modifier.weight(1f))
-                actions()
-            }
             Box(when (pose) {
                 is OnboardingPose.Wide -> Modifier.padding(start = pose.end)
                 else -> Modifier.padding(top = (pose as OnboardingPose.Tabletop).bottom)
@@ -84,6 +79,12 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
                 CompositionLocalProvider(LocalSettingsPane provides SettingsPane.trailing) {
                     SettingsFrame(title, null, hero = true, foot = foot, scroll = scroll, footFade = footFade, content = trailing)
                 }
+            }
+            // The bar across the top, above both panes: Back leads, ⋯ trails.
+            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                back?.let { BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() } }
+                Spacer(Modifier.weight(1f))
+                actions()
             }
         }
         else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade, chip = chip) { leading(); trailing() }

@@ -99,7 +99,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scroll = rememberScrollState()
-    var details by remember { mutableStateOf(false) }
+    var details by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val wide = LocalPose.current !is OnboardingPose.Compact
     if (exit == null || stage == null) {
         ExitFrame(tr("Exit"), back, hero = true, leading = {}) { FinePrint(tr("Exit status is unavailable. Pull to refresh.")); status() }
