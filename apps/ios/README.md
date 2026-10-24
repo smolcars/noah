@@ -97,7 +97,7 @@ Settings follows [`docs/native-rewrite/design/settings.md`](../../docs/native-re
   - `RecoveryPhrasePage`: `PhraseGate` reads the words only after authentication;
   - `DeleteWalletSheet`: `WalletDeletion` keeps a running delete locked across pose changes.
 
-  VTXOs and On-chain live in `Features/Onchain`, and Recurring in `Features/Recurring`. The emergency exit screens are unchanged.
+  VTXOs and On-chain live in `Features/Onchain`, and Recurring in `Features/Recurring`. The emergency exit has its own section below.
 - **Fixtures:** `NoahTests/SettingsShotTests` (opt-in, `TEST_RUNNER_NOAH_SET_SHOTS=1`). Write a state to the app's `Documents/set-shot`: `root`, `profile`, `lightning-address`, `email`, `backup`, `recovery-gated`, `recovery-shown`, `vtxos`, `vtxo`, `onchain`, `recurring`, `schedule`, `editor`, `notifications`, `advanced`, `ark-server`, `esplora`, `logs`, `debug`, `feedback`, `about`, `delete`, `unit`, `currency` or `language`. The phrase is the prototype's sample phrase. Light and dark follow the simulator's appearance; the Duo open shows the panes.
 - **Tests:** `SettingsNavigationTests`, `SettingsDebugSuspendTests`, `SettingsSafetyTests`, `RecoveryPhraseGateTests`, `BackupStatusTests` and `VtxoListTests`.
 - **Live on `noah-bark08`** (blocks 890–894 mined for these checks):
@@ -107,6 +107,52 @@ Settings follows [`docs/native-rewrite/design/settings.md`](../../docs/native-re
   - Backup now: the server answered 500 for the upload (no S3 credentials on this stack) and the page showed the failure. Listing backups worked.
   - Export file: the share sheet offered the encrypted `.noahbackup` file (57 KB).
   - Delete wallet: a throwaway wallet ended back in onboarding.
+
+## Emergency exit (2026-10-24)
+
+The emergency exit follows [`docs/native-rewrite/design/exit.md`](../../docs/native-rewrite/design/exit.md). bark drives exits; the app keeps today's calls: the estimate and "Continue without estimate", all or selected VTXOs, the dust rule, the repeat-protection journal and its override, cancel while bark allows it, `listAllExits`, the claim call, and bark's daemon for automatic progress. No new polling, no amount matching.
+
+- **Code:** `Features/Onchain`:
+  - `ExitProgress`: bark's states mapped to a phase and a picture; `ExitSightings`, `ExitFunds`, `ExitEconomics`, `ExitClaimSplit` and `ExitSharing`;
+  - `UnilateralExitView`: the warning, Choose and Review (hold to start);
+  - `ExitProgressView`: one exit (the picture, rows, Details, Check the chain, Cancel exit) and its copy (`ExitText`);
+  - `ExitStage`: the picture, one still per bark state, sprung between stills only when the wallet reads a new one;
+  - `ExitClaimView`: Claim; `ExitListView`: the list and the shared-path picture; `ExitViews`: shared pieces.
+
+  The pages are `SettingsPage` routes under `.exit`; on wide windows they take both panes (`ownsPanes`).
+- **Progress evidence:** bark's daemon reports nothing back, and bark keeps a state, height included, until something changes.
+  - Noah persists, per wallet, the tip and time at which it first saw each exit transaction in its status (`native-exit-sightings-v1`). "Not in a block yet" counts from there.
+  - "Needs on-chain funds" requires a confirmed balance below the package fee (bark's estimate without its margin, per transaction). It also needs evidence bark has tried: a completed Check the chain, or 75 s (bark's 60 s daemon interval plus a margin) of a running daemon since Noah first saw the transaction parked.
+  - Stale shows only when the last Check the chain failed, or the wallet is open without the daemon.
+- **Claim (Decision 8):** "Another wallet" takes only this network's on-chain addresses. A claim to this phone writes its output into auto-board's ledger before broadcast; the txid comes from the signed transaction (`BitcoinTransaction`). That write adds it to the handled set and to a claims set.
+  - Auto-board leaves claimed outputs that are still unspent and confirmed on-chain, for both its threshold and its amount.
+  - It discards a preparation that spends one, and submitting re-checks both rules.
+  - Its funding read also marks any exit claim bark has seen. Manual Move to Ark is unchanged.
+- **"Fees more than it's worth":** each VTXO is priced on its own (`shortcut:` until bark-bolt-ffi exposes per-transaction estimate data). All leaves those out and waits for every classification.
+- **Fixtures:** `NoahTests/ExitShotTests` (opt-in, `TEST_RUNNER_NOAH_EXIT_SHOTS=1`). Write a state to the app's `Documents/exit-shot`, as with Settings. The states are:
+  - `warn`, `warn-live`;
+  - `choose`, `choose-all`, `choose-unfunded`;
+  - `review`, `review-unfunded`, `review-unknown`;
+  - `progress-<lift|publish|sending|mempool|confirm|onchain|wait|claimable|claiming|claimed|nofunds|feesrose|stuck|shared|stale|canceled|spent>`;
+  - `claim-other`, `claim-phone`, `claim-invalid`;
+  - `list`, `list-plain`.
+
+  Light, dark and Reduce Motion follow the simulator; the Duo open shows the panes.
+- **Tests:**
+  - `ExitProgressTests`: states to phases and pictures, needs-funds, sightings, stale, the fee rule and its All, the Settings row, sharing, claim addresses and the batched claim split;
+  - `ExitHoldTests` and `ExitRestartTests`: one submission per hold, also across a restart from the durable journal;
+  - `ExitClaimLedgerTests` and `ExitClaimAutoBoardTests`: the claimed set, held value, the input guard and the submit re-check.
+- **Live on `noah-bark08`:**
+  - two boards, a delegated renew, and a self-send to make two arkoor VTXOs on one round's path;
+  - exit A (₿118,863, 4 transactions) started with no on-chain funds. It showed "Sending 1 of 4", then "Needs on-chain funds" (₿3,186 short). After a ₿19,000 deposit it went "Anchor + ₿3,165 fee · 2 of 4" through to "Waiting for the timelock".
+  - exit B (₿60,000) shared three of its four transactions with A; the list drew them once ("2 exits from one round: 5 transactions, not 8");
+  - A was claimed to LND (₿117,688 received, block 1,276), and B to this phone (₿58,705, block 1,278);
+  - with only B's claim on-chain, auto-board stayed quiet. A ₿40,000 deposit then got an offer of ₿38,222 from one funding input, leaving ₿63,821 on-chain.
+
+  I mined 157 blocks (tip 902 to 1,280; the rest were the Android agent's), including the 141-block timelock after approval.
+- **Limits:**
+  - pages with no title (Review, an exit, Claim) expose SwiftUI's internal type name as the navigation bar's accessibility label, as Profile and other untitled pages already do;
+  - Android's book and tabletop poses are Android's.
 
 ## Direct native backup compatibility (2026-10-20)
 
