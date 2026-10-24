@@ -143,7 +143,7 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
             haptics.success(); toasts.show(copied)
         }
         if (!model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {
-            model.action("Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); haptics.success(); toasts.show(backedUp); nav.pop() }
+            nav.save(model, "Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); haptics.success(); toasts.show(backedUp); nav.pop() }
         }
     })) {
         PhraseGrid(words, holder.shownAt, authenticating = model.walletLock.authenticating) { scope.launch { reveal() } }

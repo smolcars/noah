@@ -93,11 +93,12 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     }
     val scheduled = tr("Scheduled"); val saved = tr("Saved")
     fun save() {
-        focus.clearFocus(); error = null; saving = true
+        // Saving leaves the editor when it ends, so Settings' navigation waits for it (SettingsNav.save).
+        focus.clearFocus(); error = null; saving = true; nav?.hold(true)
         scope.launch {
             try { RecurringRecipient.resolve(recipient); executor.save(draft(), original != null); haptics.success(); toasts.show(if (original == null) scheduled else saved); done() }
             catch (e: Exception) { error = e.message ?: "Couldn't save this payment. Try again." }
-            finally { saving = false }
+            finally { saving = false; nav?.hold(false) }
         }
     }
     SettingsFrame(if (original == null) tr("New payment") else tr("Edit payment"), nav?.back ?: done, foot = {

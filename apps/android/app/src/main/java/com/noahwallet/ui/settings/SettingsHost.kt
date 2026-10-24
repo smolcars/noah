@@ -48,8 +48,28 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
-/** How a page moves: push a page, leave this one, open My code, or close Settings for Home. */
-internal class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit)
+/** How a page moves: push a page, leave this one, open My code, or close Settings for Home; [hold] is [save]'s. */
+internal class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
+                           val hold: (Boolean) -> Unit = {})
+
+/**
+ * A save whose completion navigates (the Lightning address, "I wrote it down"): [AppModel.action] that holds Back, list
+ * picks and links until it ends, so its page is still there when it finishes. Long work that doesn't navigate (Back up
+ * now) calls model.action directly: you can leave while it carries on.
+ */
+internal fun SettingsNav.save(model: AppModel, fallback: String, useServerMessage: Boolean = false, block: suspend () -> Unit) {
+    if (model.busy) return
+    hold(true)
+    model.action(fallback, useServerMessage) { try { block() } finally { hold(false) } }
+}
+
+/** How many saves that navigate when they finish are running; Settings' navigation waits while any is. */
+@Stable
+internal class NavigationHold {
+    private var count by mutableIntStateOf(0)
+    val held get() = count > 0
+    fun set(on: Boolean) { count = (count + if (on) 1 else -1).coerceAtLeast(0) }
+}
 
 /** What the list and its pages read live: backup state, the wallet's VTXOs and exits, notification access and debug. */
 @Stable
@@ -131,7 +151,7 @@ private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boole
  */
 @Composable
 internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: () -> Unit, myCode: () -> Unit,
-                          preview: SettingsPreview? = null) {
+                          preview: SettingsPreview? = null, hold: NavigationHold = remember { NavigationHold() }) {
     val initialSheet = preview?.sheet
     val appColors = MaterialTheme.colorScheme
     val appTypography = MaterialTheme.typography
@@ -176,9 +196,9 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
             if (drawnWide != wide) SideEffect { drawnWide = wide; poseSwap = true }
             fun transition(forward: Boolean) = if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else pageTransition(forward, reduceMotion, wide, density)
             fun pop() { poseSwap = false; if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
-            // While a save runs (busy), you can't move away from its page: Back, the bar's back, list picks and links
-            // wait. Its completion leaves only its own page, so it can't dismiss another one.
-            val idle = { !model.busy }
+            // While a save that navigates runs (SettingsNav.save), you can't move away from its page: Back, the bar's back,
+            // list picks and links wait. Its completion leaves only its own page, so it can't dismiss another one.
+            val idle = { !hold.held }
             fun open(page: NavKey, fromList: Boolean) {
                 if (!idle()) return
                 poseSwap = false
@@ -196,7 +216,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         else -> Modifier
                     }.testTag("settings-list-pane")) {
                         CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading) {
-                            root(SettingsNav(leave, { open(it, true) }, leave, code, leave), pages.firstOrNull())
+                            root(SettingsNav(leave, { open(it, true) }, leave, code, leave, hold::set), pages.firstOrNull())
                         }
                     }
                     Box(when (pose) {
@@ -214,7 +234,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                     NavEntry(key) {
                                         val index = pages.indexOf(key)
                                         val back = if (wide && index <= 0) null else ({ if (idle()) pop() })
-                                        val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave)
+                                        val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave, hold::set)
                                         @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview) { content ->
                                             MaterialTheme(appColors, appShapes, appTypography, content)
                                         }
@@ -224,10 +244,10 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         }
                     }
                 }
-                // With one page NavDisplay passes Back on to Home (which would close Settings): that waits for a running save too.
+                // With one page NavDisplay passes Back on to Home (which would close Settings): that waits for such a save too.
                 androidx.navigationevent.compose.NavigationBackHandler(
                     androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
-                    isBackEnabled = model.busy, onBackCompleted = {})
+                    isBackEnabled = hold.held, onBackCompleted = {})
             }
         }
     }

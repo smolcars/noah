@@ -93,6 +93,17 @@ class SettingsRulesTest {
         assertEquals(listOf(settings, SettingsDestination.Recurring, EditorPage(null)), SettingsRoutes.chain(EditorPage(null)))
     }
 
+    @Test fun navigationIsHeldWhileAnySaveThatNavigatesRuns() {
+        val hold = NavigationHold()
+        assertFalse(hold.held)
+        hold.set(true); hold.set(true); hold.set(false)
+        assertTrue("one save still running", hold.held)
+        hold.set(false); hold.set(false)
+        assertFalse("never below none", hold.held)
+        hold.set(true)
+        assertTrue(hold.held)
+    }
+
     @Test fun aFinishingSaveLeavesOnlyItsOwnPage() {
         assertTrue(SettingsRoutes.top(SettingsRoutes.chain(SettingsDestination.Lightning), SettingsDestination.Lightning))
         // A recurring notification replaced Settings' stack while the save ran: its completion leaves that page alone.

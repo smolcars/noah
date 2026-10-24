@@ -147,12 +147,12 @@ internal fun LightningAddressPage(model: AppModel, nav: SettingsNav) {
         if (unchanged || nsec || !availability.canContinue || model.busy) return
         try { LightningIdentity.payload(name, npub) } catch (failure: IllegalArgumentException) { error = failure.message; return }
         focusManager.clearFocus()
-        model.action("Failed to update Lightning address. Please try again.", useServerMessage = true) {
+        nav.save(model, "Failed to update Lightning address. Please try again.", useServerMessage = true) {
             try { model.server.saveIdentity(name, npub) }
             catch (failure: Exception) {
                 if (!NameRules.takenByServer(failure)) throw failure
                 availability = NameAvailability.taken; haptics.warning()
-                return@action
+                return@save
             }
             haptics.success(); toasts.show(saved); nav.pop()
         }

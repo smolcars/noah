@@ -49,6 +49,8 @@ class SettingsDeviceTest {
     private var hosts by mutableIntStateOf(0)
     /** A narrow window (compact Settings) on a wide device; null fills the window. */
     private var width by mutableStateOf<androidx.compose.ui.unit.Dp?>(null)
+    /** The host's hold on navigation, which a save that navigates sets (SettingsNav.save). */
+    private val hold = NavigationHold()
 
     @Before fun model() {
         compose.runOnUiThread { model = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application) }
@@ -65,7 +67,7 @@ class SettingsDeviceTest {
                         stack = rememberNavBackStack(*SettingsRoutes.chain(page).toTypedArray())
                         // Home's own Back under Settings: it leaves Settings once no page can pop.
                         androidx.activity.compose.BackHandler { closed++ }
-                        Box(width?.let { Modifier.fillMaxHeight().width(it) } ?: Modifier.fillMaxSize()) { SettingsHost(model, stack, close = { closed++ }, myCode = {}, preview = SettingsPreview(sheet, phrase)) }
+                        Box(width?.let { Modifier.fillMaxHeight().width(it) } ?: Modifier.fillMaxSize()) { SettingsHost(model, stack, close = { closed++ }, myCode = {}, preview = SettingsPreview(sheet, phrase), hold = hold) }
                     }
                 } }
             }
@@ -182,15 +184,25 @@ class SettingsDeviceTest {
         compose.onNode(hasText("After 3,000,000,001 payments") and !hasTestTag("ends")).assertExists()
     }
 
-    @Test fun navigationWaitsForARunningSave() {
+    @Test fun navigationWaitsOnlyForASaveThatNavigates() {
+        val page = SettingsRoutes.chain(SettingsDestination.Lightning)
+        // Long work that doesn't navigate (Back up now): Back still leaves the page while it carries on.
         val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
         host(SettingsDestination.Lightning)
-        val page = SettingsRoutes.chain(SettingsDestination.Lightning)
+        try {
+            compose.runOnUiThread { model.action("Couldn't back up your wallet.") { gate.await() } }
+            compose.waitUntil(5_000) { model.busy }
+            back(false)
+            compose.waitForIdle()
+            assertEquals("Back during Back up now", page.dropLast(1), stack.toList())
+        } finally { compose.runOnUiThread { gate.complete(Unit) } }
+        compose.waitUntil(5_000) { !model.busy }
+
+        // A save whose completion navigates (the Lightning address) holds navigation until it ends.
+        host(SettingsDestination.Lightning)
         val before = closed
         try {
-            // A save in flight: the model is busy until it ends.
-            compose.runOnUiThread { model.action("Couldn't save.") { gate.await() } }
-            compose.waitUntil(5_000) { model.busy }
+            compose.runOnUiThread { hold.set(true) }
             for (predictive in listOf(false, true)) {
                 back(predictive); compose.waitForIdle()
                 assertEquals("Back (predictive=$predictive)", page, stack.toList())
@@ -199,7 +211,6 @@ class SettingsDeviceTest {
             compose.onNode(hasTestTag("settings-back") and hasAnyAncestor(hasTestTag("settings-page-pane"))).performClick()
             compose.waitForIdle()
             assertEquals("the bar's back", page, stack.toList())
-            assertEquals("Settings stays open", before, closed)
             // In a split, picking another page from the list waits too.
             pose(book)
             compose.onNodeWithTag("settings-backup").performScrollTo().performClick()
@@ -211,8 +222,7 @@ class SettingsDeviceTest {
             back(false)
             compose.waitForIdle()
             assertEquals("Settings stays open", before, closed)
-        } finally { compose.runOnUiThread { gate.complete(Unit) } }
-        compose.waitUntil(5_000) { !model.busy }
+        } finally { compose.runOnUiThread { hold.set(false) } }
         host(SettingsDestination.Lightning)
         back(false)
         compose.waitForIdle()
