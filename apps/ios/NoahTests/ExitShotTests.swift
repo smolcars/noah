@@ -173,6 +173,8 @@ struct ExitShotTests {
         overview.provenParked = [episode("l2", "awaiting-cpfp-broadcast"), episode("r3-l2", "awaiting-cpfp-broadcast")]
         overview.childFees = Dictionary(uniqueKeysWithValues: ["c0", "c1", "c2", "c3", "rbf0", "rbf1"].map { (ActivityShotTests.hex($0), $0.hasPrefix("rbf") ? 2_916 : 1_215) })
         overview.received = [ActivityShotTests.hex("claim"): 30_738]
+        // What Noah recorded when it built that claim, to this phone.
+        overview.claimRecords = [ActivityShotTests.hex("claim"): .init(ids: [vtxos[0].id], fee: 262, toPhone: true)]
         return overview
     }
 
