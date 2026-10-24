@@ -1,0 +1,187 @@
+import SwiftUI
+
+/// Every page Settings opens (docs/native-rewrite/design/settings.md). Pages live in Home's
+/// navigation stack after `HomeView.Route.settings`, so deep links land on a page with Settings beneath.
+enum SettingsPage: Hashable {
+    case profile, lightningAddress, email
+    case backup, recovery
+    case vtxos, vtxo(String), onchain
+    case recurring, schedule(String), editor(String?)
+    case exit
+    case notifications, advanced, arkServer, esplora, logs, debug
+    case feedback, about
+
+    /// The root row a page belongs to: wide windows highlight it in the list.
+    var root: SettingsPage {
+        switch self {
+        case .lightningAddress, .email: .profile
+        case .vtxo: .vtxos
+        case .schedule, .editor: .recurring
+        case .arkServer, .esplora, .logs, .debug: .advanced
+        default: self
+        }
+    }
+
+    /// A page opened from another page (not from the list) gets Back in the wide trailing pane.
+    var isSubpage: Bool { root != self }
+}
+
+/// Home's stack around Settings: what's under it, where a row or a deep link leads.
+enum SettingsPath {
+    typealias Route = HomeView.Route
+
+    /// What's under Settings (Home itself, usually).
+    static func base(_ path: [Route]) -> [Route] { Array(path.prefix { !$0.isSettings }) }
+
+    /// A deep link (Home's nudges, notifications): the page with Settings beneath it.
+    static func deepLink(_ page: SettingsPage, from path: [Route] = []) -> [Route] { base(path) + [.settings, .page(page)] }
+
+    /// A root row on a wide window replaces the trailing page and anything opened from it.
+    static func select(_ page: SettingsPage, in path: [Route], wide: Bool) -> [Route] {
+        guard path.last != .page(page) else { return path }
+        return wide ? deepLink(page, from: path) : path + [.page(page)]
+    }
+}
+
+/// How pages move. Home builds it: phones push with the platform slide; wide windows swap the
+/// trailing page without moving the list, and sheets stay in the trailing pane.
+struct SettingsNavigator {
+    var wide = false
+    /// The leading pane's width on wide windows.
+    var leadingWidth: CGFloat = 0
+    /// A root row: phones push it; wide windows replace the trailing page.
+    var select: (SettingsPage) -> Void = { _ in }
+    /// A page from a page.
+    var open: (SettingsPage) -> Void = { _ in }
+    /// Back from a page.
+    var back: () -> Void = {}
+    /// Leaves Settings for Home.
+    var close: () -> Void = {}
+    var myCode: () -> Void = {}
+    var receive: () -> Void = {}
+    /// A short confirmation over Settings that outlives the page that shows it.
+    var toast: (String) -> Void = { _ in }
+}
+
+extension EnvironmentValues {
+    @Entry var settings = SettingsNavigator()
+    /// The page was opened from another page: the wide trailing pane shows Back.
+    @Entry var settingsSubpage = false
+}
+
+/// One Settings screen in Home's stack. Phones show the list (root) or one page. Wide windows show
+/// the list leading and the page trailing, each with its own bar so nothing crosses the fold.
+/// The page sits in the same place in both layouts, so a pose change keeps its state.
+struct SettingsHost: View {
+    /// nil is Settings itself.
+    let page: SettingsPage?
+    @Environment(\.settings) private var settings
+    /// Display's pickers and Delete wallet, opened from the list; wide windows show them in the trailing pane.
+    @State private var sheet: SettingsRootSheet?
+    @State private var sheetLocked = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if settings.wide {
+                SettingsList(selected: (page ?? .profile).root, sheet: $sheet, leading: true)
+                    .frame(width: settings.leadingWidth)
+                    .safeAreaPadding(.bottom, 90)
+            }
+            content
+                .modifier(SettingsPaneEntrance(wide: settings.wide))
+                .frame(maxWidth: .infinity)
+                .settingsSheet(item: $sheet, locked: sheetLocked) { item in
+                    SettingsRootSheetView(sheet: item, current: $sheet, locked: $sheetLocked)
+                }
+        }
+        .background(NoahTokens.Colors.background.ignoresSafeArea())
+        .navigationBarBackButtonHidden(settings.wide)
+        .foregroundStyle(NoahTokens.Colors.foreground)
+        .tint(NoahTokens.Colors.foreground)
+    }
+
+    @ViewBuilder private var content: some View {
+        if let page {
+            SettingsPageView(page: page).environment(\.settingsSubpage, page.isSubpage)
+        } else if settings.wide {
+            SettingsPageView(page: .profile)
+        } else {
+            SettingsList(selected: nil, sheet: $sheet)
+        }
+    }
+}
+
+/// Wide windows: the trailing page fades and rises in once (prototype `wideSwap`); a pose change doesn't replay it.
+private struct SettingsPaneEntrance: ViewModifier {
+    let wide: Bool
+    @State private var shown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown || !wide ? 1 : 0)
+            .offset(y: shown || !wide || reduceMotion ? 0 : 10)
+            .onAppear {
+                guard !shown else { return }
+                withAnimation(NoahTokens.Motion.travel(reduceMotion).delay(0.06)) { shown = true }
+            }
+    }
+}
+
+extension View {
+    /// The page's bar. Phones: the system bar with a large title (inline and empty for pages
+    /// with their own header). Wide: the pane's own bar. Modifiers don't branch on the layout,
+    /// so the page keeps its identity and state through a pose change.
+    func settingsChrome<Trailing: View>(_ title: LocalizedStringKey?, @ViewBuilder trailing: () -> Trailing = { EmptyView() }) -> some View {
+        modifier(SettingsChrome(title: title, trailing: trailing()))
+    }
+}
+
+private struct SettingsChrome<Trailing: View>: ViewModifier {
+    let title: LocalizedStringKey?
+    let trailing: Trailing
+    @Environment(\.settings) private var settings
+    @Environment(\.settingsSubpage) private var subpage
+
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(title ?? "")
+            .navigationBarTitleDisplayMode(title == nil || settings.wide ? .inline : .large)
+            .toolbar {
+                if !settings.wide {
+                    ToolbarItem(placement: .topBarTrailing) { trailing }
+                }
+            }
+            .toolbarVisibility(settings.wide ? .hidden : .automatic, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if settings.wide { SettingsPaneBar(title: title, back: settings.back, showsBack: subpage) { trailing } }
+            }
+    }
+}
+
+/// A wide pane's own bar: Back, the title at 28 pt, then the pane's buttons.
+struct SettingsPaneBar<Trailing: View>: View {
+    let title: LocalizedStringKey?
+    let back: () -> Void
+    var showsBack = true
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if showsBack {
+                Button(action: back) { ActivityCircleIcon(systemName: "chevron.left") }
+                    .buttonStyle(HomePressStyle())
+                    .accessibilityLabel(Text("Back"))
+                    .accessibilityIdentifier("settings-pane-back")
+            }
+            if let title {
+                Text(title).noahText(ActivityText.wideTitle).lineLimit(1).accessibilityAddTraits(.isHeader)
+            }
+            Spacer(minLength: 0)
+            GlassGroup(spacing: 8) { HStack(spacing: 8) { trailing } }
+        }
+        .frame(minHeight: NoahTokens.Size.hitTarget)
+        .padding(.leading, 20).padding(.trailing, 16).padding(.top, 14).padding(.bottom, 6)
+        .background(NoahTokens.Colors.background)
+    }
+}

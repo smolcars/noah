@@ -73,7 +73,7 @@ struct AdaptivePresentationTests {
                 case "email": view = AnyView(NavigationStack { EmergencyEmailView(onContinue: {}) })
                 case "lightning": view = AnyView(NavigationStack { LightningAddressView(onContinue: {}) })
                 case "debug": view = AnyView(NavigationStack { DebugView() })
-                case "settings": view = AnyView(NavigationStack { SettingsView() })
+                case "settings": view = AnyView(NavigationStack { SettingsHost(page: nil) }.environment(SettingsSummary()))
                 case "profile": view = AnyView(NavigationStack { ProfileView() })
                 case "backup": view = AnyView(NavigationStack { BackupSettingsView() })
                 case "boarding": view = AnyView(NavigationStack { BoardArkView() })

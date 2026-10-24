@@ -60,7 +60,7 @@ struct RootView: View {
                     .padding()
             }
         }
-        .sheet(isPresented: $showingDelete) { DeleteWalletSheet() }
+        .sheet(isPresented: $showingDelete) { DeleteWalletSheet().padding(.top, 22).presentationDetents([.medium]) }
         .modifier(WalletContentProtection(covered: model.phase == .wallet && lock.policy.locked))
         .environment(lock)
         .environment(\.locale, Locale(identifier: model.localeIdentifier))
@@ -116,6 +116,8 @@ struct WalletTabs: View {
     /// Home's in-memory "new" set; Activity shares it.
     @State private var tracker = HomeActivityTracker()
     @State private var activityHidesBar = false
+    /// Settings, pushed on Home, hides the phone's tab bar.
+    @State private var homeHidesBar = false
     /// Home's and Receive's models; screenshot fixtures pass fakes for these and Send's.
     private let home: HomeModel?
     private let receive: ReceiveModel?
@@ -140,8 +142,9 @@ struct WalletTabs: View {
         TabView(selection: $selection) {
             SwiftUI.Tab(Tab.home.title, systemImage: Tab.home.symbol, value: .home) {
                 HomeView(isActive: selection == .home, onScan: scanned, onOpenHistory: { selection = .history },
-                         onRepeatPayment: repeatPayment, home: home)
-                    .modifier(WideTabContent(wide: window.wide, padsForBar: false))
+                         onRepeatPayment: repeatPayment, onReceive: { selection = .receive }, home: home)
+                    .onPreferenceChange(ActivityHidesTabBar.self) { homeHidesBar = $0 }
+                    .modifier(WideTabContent(wide: window.wide, padsForBar: false, barHidden: homeHidesBar))
             }
             SwiftUI.Tab(Tab.receive.title, systemImage: Tab.receive.symbol, value: .receive) {
                 NavigationStack { ReceiveView(isActive: selection == .receive, model: receive) }
@@ -174,12 +177,8 @@ struct WalletTabs: View {
         } message: { Text("Finish the current payment before scanning another request.") }
         .environment(history)
         .environment(tracker)
-        .sheet(isPresented: $recurringRoute.presented) {
-            NavigationStack {
-                RecurringPaymentsView()
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { recurringRoute.presented = false } } }
-            }
-        }
+        // A recurring payment notification: Home opens Recurring payments with Settings beneath.
+        .onChange(of: recurringRoute.presented, initial: true) { _, presented in if presented { selection = .home } }
         .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {
             guard app.summary != nil else { return }
             await history.observe(currency: app.preferredCurrency)

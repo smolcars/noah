@@ -41,6 +41,8 @@ struct HomeTopBar: View {
     let variant: AppVariant
     var tucked: String?
     var tuckShown = false
+    /// Settings zooms out of the gear on phones.
+    var settingsZoom: Namespace.ID?
     let onCodes: () -> Void
     let onScan: () -> Void
     let onSettings: () -> Void
@@ -100,6 +102,7 @@ struct HomeTopBar: View {
                 HStack(spacing: 8) {
                     iconButton(systemName: "qrcode.viewfinder", label: "Scan QR code", id: "home-scan-button", action: onScan)
                     iconButton(systemName: "gearshape", label: "Open settings", id: "home-settings-button", action: onSettings)
+                        .modifier(SettingsZoomSource(namespace: settingsZoom))
                 }
             }
         }
@@ -119,6 +122,18 @@ struct HomeTopBar: View {
         .buttonStyle(HomePressStyle())
         .accessibilityLabel(Text(label))
         .accessibilityIdentifier(id)
+    }
+}
+
+private struct SettingsZoomSource: ViewModifier {
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedTransitionSource(id: "settings", in: namespace) { $0.clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous)) }
+        } else {
+            content
+        }
     }
 }
 
@@ -599,6 +614,9 @@ struct HomePaneSheet<Content: View>: View {
 
 /// Today's suspended state, restyled: nothing else on Home.
 struct HomeSuspendedView: View {
+    /// Settings → Advanced, where Suspend wallet is.
+    var onOpenSettings: () -> Void = {}
+
     var body: some View {
         VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
             Image(systemName: "pause.circle")
@@ -609,12 +627,16 @@ struct HomeSuspendedView: View {
             Text("Wallet Suspended").noahText(NoahTokens.Typography.title).foregroundStyle(NoahTokens.Colors.foreground)
             Text("Your wallet is currently suspended. All wallet operations are disabled.")
                 .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
-            Text("Go to Settings → Danger Zone to resume your wallet.")
+            Text("Resume your wallet in Settings → Advanced.")
                 .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                 .padding(.top, NoahTokens.Space.xs)
+            Button("Open Settings", action: onOpenSettings)
+                .buttonStyle(HomePillStyle(height: 44))
+                .padding(.top, NoahTokens.Space.s)
+                .accessibilityIdentifier("home-suspended-settings")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }

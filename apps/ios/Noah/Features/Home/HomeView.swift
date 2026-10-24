@@ -6,7 +6,16 @@ import SwiftUI
 /// existing flow; nothing here changes wallet, payment or backup behaviour.
 struct HomeView: View {
     enum Route: Hashable {
-        case settings, codes(QRHubModel.Mode), map, email, backup, profile
+        case settings, codes(QRHubModel.Mode), map
+        /// A Settings page: after `.settings` when it's a deep link with Settings beneath.
+        case page(SettingsPage)
+
+        var isSettings: Bool {
+            switch self {
+            case .settings, .page: true
+            default: false
+            }
+        }
     }
 
     enum Sheet: Hashable, Identifiable {
@@ -34,8 +43,11 @@ struct HomeView: View {
     @State private var sheet: Sheet?
     @State private var toast: HomeToast?
     @State private var alert: String?
-    @State private var backupError: String?
     @State private var emailFlowOpened = false
+    @State private var settingsSummary = SettingsSummary()
+    @State private var settingsToast: HomeToast?
+    @State private var recurringRoute = RecurringNotificationRoute.shared
+    @Namespace private var settingsZoom
     @State private var scrollY: CGFloat = 0
     @State private var scrollMemory = HomeScrollMemory()
     @State private var entrancePlayed = false
@@ -47,13 +59,15 @@ struct HomeView: View {
     let onScan: (String) -> Void
     let onOpenHistory: () -> Void
     let onRepeatPayment: (RepeatPayment) -> Void
+    let onReceive: () -> Void
 
     init(isActive: Bool, onScan: @escaping (String) -> Void, onOpenHistory: @escaping () -> Void,
-         onRepeatPayment: @escaping (RepeatPayment) -> Void, home: HomeModel? = nil) {
+         onRepeatPayment: @escaping (RepeatPayment) -> Void, onReceive: @escaping () -> Void = {}, home: HomeModel? = nil) {
         self.isActive = isActive
         self.onScan = onScan
         self.onOpenHistory = onOpenHistory
         self.onRepeatPayment = onRepeatPayment
+        self.onReceive = onReceive
         _home = State(initialValue: home ?? HomeModel())
     }
 
@@ -76,6 +90,22 @@ struct HomeView: View {
             root
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: Route.self, destination: destination)
+        }
+        // The phone's tab bar hides while Settings is open.
+        .preference(key: ActivityHidesTabBar.self, value: !window.wide && path.contains(where: \.isSettings))
+        .environment(\.settings, settingsNavigator)
+        .environment(settingsSummary)
+        .overlay(alignment: .top) { settingsToastLayer }
+        // A recurring payment notification opens Recurring payments with Settings beneath.
+        .onChange(of: recurringRoute.presented && isActive, initial: true) { _, presented in
+            guard presented else { return }
+            recurringRoute.presented = false
+            path = SettingsPath.deepLink(.recurring)
+        }
+        .task(id: settingsToast?.id) {
+            guard let current = settingsToast else { return }
+            do { try await Task.sleep(for: .seconds(current.seconds)) } catch { return }
+            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { if settingsToast?.id == current.id { settingsToast = nil } }
         }
     }
 
@@ -115,7 +145,7 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if model.isWalletSuspended {
-                    HomeSuspendedView().padding(.top, 24).modifier(appear(1))
+                    HomeSuspendedView { openSettings(.advanced) }.padding(.top, 24).modifier(appear(1))
                 } else {
                     balanceBlock(tuck: tuck)
                     switch tracker.shown {
@@ -152,7 +182,7 @@ struct HomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         if model.isWalletSuspended {
-                            HomeSuspendedView().padding(.top, 24).modifier(appear(1))
+                            HomeSuspendedView { openSettings(.advanced) }.padding(.top, 24).modifier(appear(1))
                         } else {
                             balanceBlock(tuck: 0)
                             HomeMapRow { open(.map) }.padding(.top, 22).modifier(appear(6))
@@ -255,6 +285,7 @@ struct HomeView: View {
     private func topBar(tucked: Bool) -> some View {
         HomeTopBar(address: address, variant: model.variant,
                    tucked: tucked && !model.isWalletSuspended ? tuckedBalance : nil, tuckShown: tuck > 0.7,
+                   settingsZoom: window.wide ? nil : settingsZoom,
                    onCodes: { open(.codes(.myCode)) }, onScan: { open(.codes(.scan)) }, onSettings: { open(.settings) })
     }
 
@@ -273,7 +304,7 @@ struct HomeView: View {
     private func getPaidCard(qrSide: CGFloat) -> some View {
         HomeGetPaidCard(address: address, qrSide: qrSide, celebration: tracker.celebration, animateQR: !qrRevealed,
                         unit: model.amountUnit, hidden: model.isBalanceHidden,
-                        onCopy: copyAddress, onShare: { haptics.play(.light) }, onProfile: { open(.profile) })
+                        onCopy: copyAddress, onShare: { haptics.play(.light) }, onProfile: { open(.page(.profile)) })
             .opacity(folding ? 0 : 1)
             .scaleEffect(folding && !reduceMotion ? 0.96 : 1)
             // Reduce Motion fades the card without folding it; Recent then fades in on its own.
@@ -449,8 +480,14 @@ struct HomeView: View {
 
     private func open(_ route: Route) {
         haptics.play(.light)
-        if route == .email { emailFlowOpened = true }
+        if route == .page(.email) { emailFlowOpened = true }
         path.append(route)
+    }
+
+    /// A nudge's page, with Settings beneath it.
+    private func openSettings(_ page: SettingsPage) {
+        haptics.play(.light)
+        path = SettingsPath.deepLink(page, from: path)
     }
 
     private func openBalance() {
@@ -509,8 +546,8 @@ struct HomeView: View {
         case .backupFailed:
             haptics.play(.light)
             Task { await home.retryBackup() }
-        case .backUp: open(.backup)
-        case .email: open(.email)
+        case .backUp: openSettings(.recovery)
+        case .email: open(.page(.email))
         case .update:
             haptics.play(.light)
             openURL(AppVersionCheck.updateURL(variant: model.variant))
@@ -535,15 +572,6 @@ struct HomeView: View {
             if let error = renew.error { alert = error }
             await home.refreshRenewal()
         }
-    }
-
-    private func confirmBackup() {
-        do {
-            try model.confirmRecoveryPhraseBackedUp()
-            path.removeAll { $0 == .backup }
-            haptics.play(.success)
-            showToast("Backed up")
-        } catch { backupError = "Couldn't save your preference. Please try again." }
     }
 
     private func retryHistory() {
@@ -576,17 +604,59 @@ struct HomeView: View {
 
     @ViewBuilder private func destination(_ route: Route) -> some View {
         switch route {
-        case .settings: SettingsView()
+        case .settings:
+            // Phones zoom out of the gear; wide windows swap the panes.
+            SettingsHost(page: nil).navigationTransition(.zoom(sourceID: "settings", in: settingsZoom))
         case .codes(let mode): QRHubView(isActive: isActive, initialMode: mode, onScan: onScan)
         case .map: BtcMapView()
-        case .email: EmergencyEmailView(onContinue: { path.removeAll { $0 == .email } })
-        case .backup:
-            MnemonicView(onConfirmBackup: confirmBackup)
-                .alert("Error", isPresented: Binding(get: { backupError != nil }, set: { if !$0 { backupError = nil } })) {
-                    Button("OK", role: .cancel) {}
-                } message: { Text(LocalizedStringKey(backupError ?? "")) }
-        case .profile: ProfileView()
+        case .page(let page): SettingsHost(page: page)
         }
+    }
+
+    // MARK: Settings
+
+    /// Phones push Settings' pages with the platform slide. Wide windows keep the list where it
+    /// is and swap the trailing page, so those moves skip the push animation.
+    private var settingsNavigator: SettingsNavigator {
+        SettingsNavigator(
+            wide: window.wide, leadingWidth: leadingWidth,
+            select: { page in
+                let next = SettingsPath.select(page, in: path, wide: window.wide)
+                if window.wide { quietly { path = next } } else { path = next }
+            },
+            open: { page in
+                if window.wide { quietly { path.append(.page(page)) } } else { path.append(.page(page)) }
+            },
+            back: {
+                guard !path.isEmpty else { return }
+                if window.wide { quietly { _ = path.removeLast() } } else { path.removeLast() }
+            },
+            close: { path = SettingsPath.base(path) },
+            myCode: { path.append(.codes(.myCode)) },
+            receive: onReceive,
+            toast: { text in withAnimation(NoahTokens.Motion.travel(reduceMotion)) { settingsToast = HomeToast(text: text) } })
+    }
+
+    private func quietly(_ change: () -> Void) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction, change)
+    }
+
+    /// Settings' toasts sit over the page (the trailing pane on wide windows) and outlive it.
+    private var settingsToastLayer: some View {
+        HStack(spacing: 0) {
+            if window.wide { Color.clear.frame(width: leadingWidth) }
+            VStack {
+                if let settingsToast {
+                    HomeToastView(text: settingsToast.text).id(settingsToast.id).transition(.homeToast(reduceMotion))
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.top, 8)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: settingsToast)
+        .allowsHitTesting(false)
     }
 
     // MARK: Moments

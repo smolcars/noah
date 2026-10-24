@@ -1,0 +1,164 @@
+import SwiftUI
+import UIKit
+import UserNotifications
+
+/// App → Notifications: whether notifications are on, the mailbox switch, and the way to iOS Settings.
+/// The launch push gate is unchanged.
+struct NotificationsPage: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var on: Bool?
+    @State private var busy = false
+    @State private var error: String?
+
+    private var language: String { locale.identifier }
+
+    var body: some View {
+        SettingsScroll {
+            if let on {
+                SettingsStatusHeader(mark: on ? .on("bell") : .failedIcon,
+                                     title: L10n.text(on ? "On" : "Off", locale: language),
+                                     detail: L10n.text(on ? "Noah can receive and renew while closed."
+                                                       : "Noah can’t receive payments or renew your bitcoin.", locale: language),
+                                     failure: !on)
+            }
+            SettingsGroup {
+                SettingsToggleRow(icon: "bolt", title: L10n.text("Claim payments in the background", locale: language),
+                                  sub: L10n.text("Lets Noah wake up for Lightning", locale: language),
+                                  isOn: Binding(get: { app.server.state.isMailboxAuthorizationEnabled != false }, set: setMailbox),
+                                  id: "settings-mailbox")
+                SettingsRow(icon: "gearshape", title: L10n.text("System settings", locale: language), trailing: .external, hairline: false,
+                            id: "settings-system-notifications", action: openSystemSettings)
+            }
+            .disabled(busy)
+            if on == false {
+                SettingsFine(text: L10n.text("Turn them on in Settings. Noah checks again when you come back.", locale: language))
+            }
+            if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
+        }
+        .settingsChrome("Notifications")
+        .settingsFooter {
+            if on == false {
+                Button(L10n.text("Open Settings", locale: language), action: openSystemSettings)
+                    .buttonStyle(SettingsActionStyle())
+            }
+        }
+        .task(id: scenePhase == .active) {
+            guard scenePhase == .active else { return }
+            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+            on = [.authorized, .provisional, .ephemeral].contains(status)
+        }
+    }
+
+    private func setMailbox(_ enabled: Bool) {
+        guard !busy else { return }
+        busy = true
+        error = nil
+        Task {
+            defer { busy = false }
+            do { try await app.server.setMailboxEnabled(enabled) } catch { self.error = "Couldn't update this setting. Please try again." }
+        }
+    }
+
+    private func openSystemSettings() {
+        if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
+    }
+}
+
+private extension SettingsStatusMark.Kind {
+    static let failedIcon = SettingsStatusMark.Kind.idle("bell.slash")
+}
+
+/// App → Advanced: the Ark server and Esplora, logs, reset registration, debug, and suspend.
+struct AdvancedPage: View {
+    private enum Sheet: String, Identifiable { case reset; var id: Self { self } }
+
+    @Environment(AppModel.self) private var app
+    @Environment(SettingsSummary.self) private var summary
+    @Environment(\.settings) private var settings
+    @Environment(\.locale) private var locale
+    @State private var sheet: Sheet?
+    @State private var busy = false
+    @State private var error: String?
+    @State private var haptics = OnboardingHaptics()
+    @State private var esplora = EsploraSettings().selection(for: .current)
+
+    private var language: String { locale.identifier }
+    private var configuration: WalletConfiguration { .effective(for: .current, endpoint: esplora.endpoint) }
+
+    var body: some View {
+        SettingsScroll {
+            SettingsGroup(label: "Network", first: true) {
+                row("server.rack", "Ark server", value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer, page: .arkServer,
+                    id: "settings-ark-server")
+                row("link", "Esplora", value: AppVariant.current == .regtest ? "Bitcoin Core"
+                        : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language),
+                    page: .esplora, last: true, id: "settings-esplora")
+            }
+            SettingsGroup(label: "Diagnostics") {
+                row("doc.text", "Logs", page: .logs, id: "settings-logs")
+                SettingsRow(icon: "arrow.clockwise", title: L10n.text("Reset registration", locale: language), hairline: summary.debug,
+                            id: "settings-reset-registration") {
+                    haptics.play(.light)
+                    sheet = .reset
+                }
+                .disabled(busy || app.isWalletSuspended)
+                if summary.debug { row("ladybug", "Debug", page: .debug, last: true, id: "settings-debug") }
+            }
+            SettingsGroup(label: "Wallet") {
+                SettingsToggleRow(icon: "stop.circle", title: L10n.text("Suspend wallet", locale: language),
+                                  sub: L10n.text("Pauses all wallet activity", locale: language),
+                                  isOn: Binding(get: { app.isWalletSuspended }, set: setSuspended), hairline: false, id: "settings-suspend")
+                    .disabled(busy)
+            }
+            if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
+        }
+        .settingsChrome("Advanced")
+        .onboardingHaptics(haptics)
+        .onAppear { esplora = EsploraSettings().selection(for: .current) }
+        .settingsSheet(item: $sheet, locked: busy) { _ in
+            SettingsSheetBody(title: L10n.text("Reset registration?", locale: language),
+                              line: L10n.text("Noah registers this wallet with the server again. Your wallet stays.", locale: language)) {
+                EmptyView()
+            } actions: {
+                SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Reset", locale: language), busy: busy,
+                                     actionID: "settings-reset-confirm", onCancel: { sheet = nil }, onAction: reset)
+            }
+        }
+    }
+
+    private func row(_ icon: String, _ title: String, value: String? = nil, page: SettingsPage, last: Bool = false, id: String) -> some View {
+        SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, hairline: !last, id: id) {
+            haptics.play(.light)
+            settings.open(page)
+        }
+    }
+
+    private func reset() {
+        run {
+            try await app.reRegisterWithServer()
+            sheet = nil
+            haptics.play(.success)
+            settings.toast("Registered again")
+        }
+    }
+
+    private func setSuspended(_ suspend: Bool) {
+        run { suspend ? try await app.suspendWallet() : try await app.resumeWallet() }
+    }
+
+    private func run(_ action: @escaping @MainActor () async throws -> Void) {
+        guard !busy else { return }
+        busy = true
+        error = nil
+        Task {
+            defer { busy = false }
+            do { try await action() } catch {
+                self.error = (error as? WalletLifecycle.Failure) == .restoreSettingsUnavailable
+                    ? error.localizedDescription : "Couldn't update this setting. Please try again."
+            }
+        }
+    }
+}

@@ -1,229 +1,551 @@
+import LocalAuthentication
 import SwiftUI
+import UserNotifications
 
-struct SettingsView: View {
-    @Environment(\.locale) private var locale
+/// The live values on Settings' rows. One instance under Home, shared by the list in every pane.
+@MainActor @Observable
+final class SettingsSummary {
+    struct Dependencies {
+        var overview: () async throws -> OnchainOverview
+        var notificationsOn: () async -> Bool
+        var storage: SettingsStorage
 
-    @Environment(AppModel.self) private var model
+        static var live: Self {
+            Self(overview: { try await WalletSession.shared.onchainOverview() },
+                 notificationsOn: {
+                     let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+                     return [.authorized, .provisional, .ephemeral].contains(status)
+                 },
+                 storage: .shared)
+        }
+    }
+
+    private(set) var overview: OnchainOverview?
+    private(set) var notificationsOn: Bool?
+    private(set) var backup = PersistedBackupState()
+    private(set) var displayName = ""
+    private(set) var debug = false
+    @ObservationIgnored private let dependencies: Dependencies
+    @ObservationIgnored private var loadedAt = Date.distantPast
+    @ObservationIgnored private var loading = false
+
+    init(dependencies: Dependencies = .live) {
+        self.dependencies = dependencies
+        reloadLocal()
+    }
+
+    /// Wallet reads at most every 10 s unless forced (after a renew or a board).
+    func refresh(suspended: Bool, force: Bool = false) async {
+        reloadLocal()
+        guard !loading, force || Date().timeIntervalSince(loadedAt) > 10 else { return }
+        loading = true
+        defer { loading = false }
+        notificationsOn = await dependencies.notificationsOn()
+        if suspended { overview = nil }
+        else if let latest = try? await dependencies.overview() { overview = latest }
+        loadedAt = Date()
+    }
+
+    /// Settings storage only: backup state, your name, debug mode.
+    func reloadLocal() {
+        let storage = dependencies.storage
+        backup = storage.persistedState(PersistedBackupState.self, key: PersistedBackupState.key) ?? .init()
+        displayName = storage.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName ?? ""
+        debug = DebugMode.isOn(storage)
+    }
+
+    func setDebug(_ on: Bool) throws {
+        try DebugMode.set(on, dependencies.storage)
+        debug = on
+    }
+}
+
+/// Root sheets: Display's three pickers and Delete wallet.
+enum SettingsRootSheet: String, Identifiable, Equatable {
+    case unit, currency, language, delete
+    var id: Self { self }
+}
+
+/// Settings itself: you, then Security, Bitcoin, Display, App, Help and Delete wallet, then the
+/// version. Rows are a title and a live value; their explanations live on the pages they open.
+struct SettingsList: View {
+    /// Wide windows highlight the open page's row.
+    let selected: SettingsPage?
+    @Binding var sheet: SettingsRootSheet?
+    /// In a wide window's leading pane, with its own bar.
+    var leading = false
+
+    @Environment(AppModel.self) private var app
     @Environment(WalletLock.self) private var lock
-    @State private var wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
-    @State private var transaction = PersistedTransactionState.load(from: .shared)
-    @State private var taps = 0
-    @State private var lastTap = Date.distantPast
-    @State private var busy = false
+    @Environment(SettingsSummary.self) private var summary
+    @Environment(\.settings) private var settings
+    @Environment(\.locale) private var locale
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var executor = RecurringExecutor.shared
+    @State private var unlock = DebugUnlock()
+    @State private var haptics = OnboardingHaptics()
     @State private var error: String?
-    @State private var threshold: UInt64?
-    @State private var confirmingReset = false
-    @State private var resetDone = false
-    @State private var showingDelete = false
-    private enum Route: Hashable { case logs, feedback, debug, export }
-    @State private var destination: Route?
+
+    private var language: String { locale.identifier }
 
     var body: some View {
-        AdaptiveForm {
-            NavigationLink { NoahStoryView() } label: {
-                Image("SplashScreenLogo").resizable().scaledToFit().frame(height: 100).frame(maxWidth: .infinity)
-                    .accessibilityLabel("Noah's Ark Story")
-            }
-            Section("Account") {
-                row("Profile", "Manage your name, Lightning address, emergency email, and public key.") { ProfileView() }.accessibilityIdentifier("settings-profile")
-                row("Language", "Choose the language used in Noah.", value: PreferenceView.summary(kind: .language, code: model.localeIdentifier, locale: locale)) { PreferenceView(kind: .language) }
-                row("Currency", "Choose the fiat currency used for balances and payment amounts.", value: PreferenceView.summary(kind: .currency, code: model.preferredCurrency, locale: locale)) { PreferenceView(kind: .currency) }.accessibilityIdentifier("settings-currency")
-                row("Bitcoin Unit", "Choose how bitcoin amounts are displayed.", value: PreferenceView.summary(kind: .unit, code: model.amountUnit.rawValue, locale: locale)) { PreferenceView(kind: .unit) }.accessibilityIdentifier("settings-bitcoinUnit")
-            }
-            Section("Info") {
-                row("Ark Info", "View Ark server, wallet, and explorer configuration.") { ArkInfoView() }
-            }
-            Section("Wallet") {
-                row("Show Seed Phrase", "Never share your seed phrase with anyone. It is important to keep it safe and secure.") { MnemonicView() }
-                row("Show VTXOs", "VTXOs are to Ark like UTXOs are to Bitcoin") { VtxosView() }.accessibilityIdentifier("settings-vtxos")
-                row("Emergency Exit", "Recover funds if the Ark server is unavailable.") { UnilateralExitView() }.accessibilityIdentifier("settings-emergencyExit")
-                row("Recurring Payments", "Schedule automatic weekly or monthly payments, and pause or cancel them.") { RecurringPaymentsView() }.accessibilityIdentifier("settings-recurring-payments")
-                row("Backup & Restore", "Automatically or manually backup your wallet after encrypting it.") { BackupSettingsView() }.accessibilityIdentifier("settings-backup")
-                row("Board to Ark", "Manually move onchain bitcoin into Ark.") { BoardArkView() }.accessibilityIdentifier("settings-board-ark")
-                Toggle(isOn: Binding(get: { transaction.isAutoBoardingEnabled }, set: setAutoBoard)) {
-                    SettingsLabel(title: "Auto-Board to Ark", detail: threshold.map {
-                        "Ask to board to Ark when onchain balance can cover \(max($0, 20_000)) sats plus fees while leaving at least 5,000 sats onchain. Confirm the exact fees and reserve before boarding."
-                    } ?? "Auto-board threshold unavailable")
+        let list = ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                me
+                security
+                bitcoin
+                display
+                SettingsGroup(label: "App") {
+                    row("bell", "Notifications", value: notificationsValue, dot: summary.notificationsOn == false ? .failure : .none,
+                        failure: summary.notificationsOn == false, page: .notifications, id: "settings-notifications")
+                    row("slider.horizontal.3", "Advanced", value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
+                        failure: app.isWalletSuspended, page: .advanced, last: true, id: "settings-advanced")
                 }
-                if WalletLock.available || lock.policy.enabled {
-                    Toggle(isOn: Binding(get: { lock.policy.enabled }, set: { value in
-                        run { try await lock.setEnabled(value) }
-                    })) {
-                        SettingsLabel(title: "Biometric Authentication", detail: "Require biometric authentication to unlock your wallet")
-                    }.disabled(busy)
+                SettingsGroup(label: "Help") {
+                    row("bubble.left", "Feedback", page: .feedback, id: "settings-feedback")
+                    row("sailboat", "About Noah", page: .about, last: true, id: "settings-about")
                 }
-                Toggle(isOn: Binding(get: { model.server.state.isMailboxAuthorizationEnabled != false }, set: { value in
-                    run { try await model.server.setMailboxEnabled(value) }
-                })) {
-                    SettingsLabel(title: "Mailbox Notifications", detail: "Allow Noah to monitor your Ark mailbox so it can wake this app to claim Lightning payments in the background.")
-                }.disabled(busy)
+                SettingsGroup {
+                    SettingsRow(icon: "trash", title: L10n.text("Delete wallet", locale: language), danger: true, hairline: false,
+                                id: "settings-delete-wallet") { open(.delete) }
+                }
+                if let error {
+                    Text(LocalizedStringKey(error)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.failure).padding(.top, 12)
+                }
+                versionMark
             }
-        } secondary: {
-            Section("Debug") {
-                route("Show Logs", "View application logs for debugging purposes", to: .logs)
-                Button { confirmingReset = true } label: {
-                    SettingsLabel(title: "Reset Server Registration", detail: "Clear your registration with the server. You will need to register again.")
-                }
-                .disabled(busy || model.isWalletSuspended)
-                route("Send Feedback", "Report bugs or share feedback with the Noah team", to: .feedback)
-                if wallet.isDebugModeEnabled == true {
-                    route("Debug Screen", "Advanced debug actions for developers", to: .debug)
-                }
-            }
-            Section("Danger Zone") {
-                Toggle(isOn: Binding(get: { model.isWalletSuspended }, set: { suspend in
-                    run { suspend ? try await model.suspendWallet() : try await model.resumeWallet() }
-                })) {
-                    SettingsLabel(title: "Suspend Wallet", detail: "Disable all wallet operations. The wallet will be closed and won't load until re-enabled.")
-                }.disabled(busy)
-                route("Export Database", "Create an encrypted backup file containing your wallet database.", to: .export)
-                Button(role: .destructive) { showingDelete = true } label: {
-                    SettingsLabel(title: "Delete Wallet", detail: "Permanently remove this wallet and its recovery phrase from this device.")
-                        .foregroundStyle(NoahColor.destructive)
-                }
-                .disabled(busy)
-            }
-            Section {
-                Button {
-                    guard wallet.isDebugModeEnabled != true else { return }
-                    taps = Date().timeIntervalSince(lastTap) < 2 ? taps + 1 : 1
-                    lastTap = Date()
-                    if taps >= 5 {
-                        wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
-                        wallet.isDebugModeEnabled = true
-                        do { try SettingsStorage.shared.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version) }
-                        catch { self.error = "Couldn't save debug setting." }
-                        taps = 0
-                    }
-                } label: {
-                    Text("v\(AppServices.shared.appVersion)" + (taps > 0 ? L10n.text(" ({count} taps to unlock debug)", 5 - taps, locale: locale.identifier) : ""))
-                }
-                Text("Made with ❤️ from Noah team").font(NoahFont.footnote)
-                Link("Open Telegram support chat", destination: URL(string: "https://t.me/blixtwallet/605026")!)
-                Link("Open Noah GitHub repository", destination: URL(string: "https://github.com/smolcars/noah")!)
-            }
-            if let error { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
+            .padding(.horizontal, leading ? 32 : NoahTokens.Space.screen)
+            .padding(.top, leading ? 6 : 0)
+            .padding(.bottom, 40)
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
         }
-        .settingsStyle("Settings", maximumWidth: AdaptiveLayout.pairedWidth)
-        .navigationDestination(item: $destination) { route in
-            switch route {
-            case .logs: LogView()
-            case .feedback: FeedbackView()
-            case .debug: DebugView()
-            case .export: ExportDatabaseView()
+        .background(NoahTokens.Colors.background.ignoresSafeArea())
+        .onboardingHaptics(haptics)
+        .task(id: scenePhase == .active) {
+            guard scenePhase == .active else { return }
+            await summary.refresh(suspended: app.isWalletSuspended)
+            // Backup runs in the background; its row follows it.
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(2)) } catch { return }
+                summary.reloadLocal()
             }
         }
-        .alert("Reset Server Registration", isPresented: $confirmingReset) {
-            Button("Cancel", role: .cancel) {}
-            Button("Reset", role: .destructive) {
-                run {
-                    try await model.reRegisterWithServer()
-                    resetDone = true
-                }
+        .task { await executor.reload() }
+        .accessibilityIdentifier("settings-list")
+        if leading {
+            list.safeAreaInset(edge: .top, spacing: 0) {
+                SettingsPaneBar(title: "Settings", back: settings.close) { EmptyView() }
             }
-        } message: {
-            Text("Are you sure you want to reset your server registration? This will not delete your wallet, but you will need to register with the server again.")
-        }
-        .alert("Registered with the server again", isPresented: $resetDone) { Button("OK") {} }
-        .sheet(isPresented: $showingDelete) { DeleteWalletSheet() }
-        .task(id: taps) {
-            guard taps > 0 else { return }
-            do { try await Task.sleep(for: .seconds(2)); taps = 0 } catch {}
-        }
-        .task(id: model.isWalletSuspended) {
-            guard !model.isWalletSuspended else { return }
-            threshold = try? await model.session.boardingMinimum()
+        } else {
+            list.settingsChrome("Settings")
         }
     }
 
-    private func row<Content: View>(_ title: String, _ detail: String, value: String? = nil, @ViewBuilder destination: () -> Content) -> some View {
-        NavigationLink(destination: destination) { SettingsLabel(title: title, detail: detail, value: value) }
-    }
-    private func route(_ title: String, _ detail: String, to route: Route) -> some View {
-        Button { destination = route } label: {
-            HStack {
-                SettingsLabel(title: title, detail: detail)
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-            }.contentShape(Rectangle())
-        }.buttonStyle(.plain)
-    }
-    private func setAutoBoard(_ enabled: Bool) {
-        transaction.setAutoBoarding(enabled)
-        do { try SettingsStorage.shared.setPersistedState(transaction, key: PersistedTransactionState.key, version: PersistedTransactionState.version) }
-        catch { self.error = "Couldn't save auto-board setting." }
-    }
-    private func run(_ action: @escaping @MainActor () async throws -> Void) {
-        guard !busy else { return }; busy = true; error = nil
-        Task {
-            defer { busy = false }
-            do { try await action() }
-            catch {
-                self.error = (error as? WalletLifecycle.Failure) == .restoreSettingsUnavailable
-                    ? error.localizedDescription : "Couldn't update this setting. Please try again."
+    // MARK: You
+
+    private var username: String? { app.server.state.lightningAddress?.split(separator: "@").first.map(String.init) }
+
+    private var me: some View {
+        Button { open(.profile) } label: {
+            HStack(spacing: 16) {
+                SettingsInitial(name: username, size: 52)
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 8) {
+                        Text(verbatim: summary.displayName.isEmpty ? (username ?? L10n.text("Profile", locale: language)) : summary.displayName)
+                            .noahText(SettingsText.name).lineLimit(1)
+                        if let badge = app.variant.badge {
+                            Text(verbatim: badge).noahText(HomeText.badge)
+                                .foregroundStyle(NoahTokens.Colors.orangeText)
+                                .padding(.horizontal, 7).padding(.vertical, 2)
+                                .background(NoahTokens.Colors.orangeTint, in: Capsule())
+                        }
+                    }
+                    if let address = app.server.state.lightningAddress {
+                        Text(verbatim: address).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
             }
+            .padding(.top, 8).padding(.bottom, 10)
+            .background {
+                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(NoahTokens.Colors.soft)
+                    .padding(.horizontal, -12)
+                    .opacity(selected == .profile ? 1 : 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SettingsRowPressStyle())
+        .accessibilityLabel(Text("Profile"))
+        .accessibilityIdentifier("settings-profile")
+    }
+
+    // MARK: Groups
+
+    private var security: some View {
+        SettingsGroup(label: "Security") {
+            let backup = BackupStatus(summary.backup, enabled: app.server.state.isBackupEnabled == true)
+            row("icloud.and.arrow.up", "Backup", value: L10n.text(backup.rowValue(enabled: app.server.state.isBackupEnabled == true), locale: language),
+                dot: backup.mark == .failed ? .failure : .none, failure: backup.mark == .failed, page: .backup, id: "settings-backup")
+            row("key", "Recovery phrase", value: app.needsRecoveryPhraseBackup ? L10n.text("Not saved", locale: language) : nil,
+                dot: app.needsRecoveryPhraseBackup ? .attention : .none, page: .recovery,
+                last: !(WalletLock.available || lock.policy.enabled), id: "settings-recovery")
+            if WalletLock.available || lock.policy.enabled {
+                SettingsToggleRow(icon: WalletLock.biometry.symbol, title: L10n.text(WalletLock.biometry.title, locale: language),
+                                  isOn: Binding(get: { lock.policy.enabled }, set: setLock), hairline: false, id: "settings-app-lock")
+            }
+        }
+        .padding(.top, 16)
+    }
+
+    private var bitcoin: some View {
+        SettingsGroup(label: "Bitcoin") {
+            let vtxos = summary.overview?.vtxos ?? []
+            let due = !VtxoList.due(vtxos).isEmpty
+            row("cylinder.split.1x2", "VTXOs", value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
+                dot: due ? .attention : .none, page: .vtxos, id: "settings-vtxos")
+            row("link", "On-chain", value: app.summary.map { money($0.balance.onchain.confirmed) }, numeric: true, page: .onchain, id: "settings-onchain")
+            let approvals = executor.schedules.filter { $0.status == "needs_approval" }.count
+            let active = executor.schedules.filter { $0.status == "active" }.count
+            row("arrow.triangle.2.circlepath", "Recurring payments",
+                value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
+                dot: approvals > 0 ? .attention : .none, page: .recurring, id: "settings-recurring-payments")
+            row("rectangle.portrait.and.arrow.right", "Emergency exit",
+                value: summary.overview?.exits.isEmpty == false ? L10n.text("In progress", locale: language) : nil, page: .exit, last: true,
+                id: "settings-emergencyExit")
+        }
+    }
+
+    private var display: some View {
+        SettingsGroup(label: "Display") {
+            SettingsRow(icon: "₿", title: L10n.text("Bitcoin unit", locale: language), value: app.amountUnit == .bip177 ? "₿" : "sats",
+                        id: "settings-bitcoinUnit") { open(.unit) }
+            SettingsRow(icon: "banknote", title: L10n.text("Currency", locale: language), value: app.preferredCurrency,
+                        id: "settings-currency") { open(.currency) }
+            SettingsRow(icon: "globe", title: L10n.text("Language", locale: language), value: SettingsLanguageSheet.name(app.localeIdentifier),
+                        id: "settings-language") { open(.language) }
+            SettingsToggleRow(icon: "eye.slash", title: L10n.text("Hide amounts", locale: language),
+                              isOn: Binding(get: { app.isBalanceHidden }, set: { hidden in
+                                  haptics.play(.medium)
+                                  withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy)) { app.isBalanceHidden = hidden }
+                              }), hairline: false, id: "settings-hide-amounts")
+        }
+    }
+
+    private var notificationsValue: String? {
+        summary.notificationsOn.map { L10n.text($0 ? "On" : "Off", locale: language) }
+    }
+
+    /// The small wordmark and version; five taps turn debug mode on.
+    private var versionMark: some View {
+        Button(action: versionTapped) {
+            VStack(spacing: 4) {
+                Text(verbatim: "Noah").noahText(HomeText.tucked)
+                Text(verbatim: SettingsList.version + (summary.debug ? " · " + L10n.text("debug", locale: language) : ""))
+                    .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 30)
+        .accessibilityIdentifier("settings-version")
+    }
+
+    static var version: String {
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        return AppServices.shared.appVersion + (build.map { " (\($0))" } ?? "")
+    }
+
+    // MARK: Actions
+
+    private func row(_ icon: String, _ title: String, value: String? = nil, numeric: Bool = false, dot: SettingsRow.Dot = .none,
+                     failure: Bool = false, page: SettingsPage, last: Bool = false, id: String) -> some View {
+        SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, numeric: numeric, dot: dot, failure: failure,
+                    selected: selected == page, hairline: !last, id: id) {
+            haptics.play(.light)
+            settings.select(page)
+        }
+    }
+
+    private func open(_ sheet: SettingsRootSheet) {
+        haptics.play(.light)
+        withAnimation(settings.wide ? NoahTokens.Motion.travel(reduceMotion) : nil) { self.sheet = sheet }
+    }
+
+    private func open(_ page: SettingsPage) {
+        haptics.play(.light)
+        settings.select(page)
+    }
+
+    private func money(_ sats: UInt64) -> String {
+        app.isBalanceHidden ? (app.amountUnit == .bip177 ? "₿••••" : "•••• sats")
+            : BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale)
+    }
+
+    /// The switch flips only after Face ID (or the passcode) succeeds.
+    private func setLock(_ enabled: Bool) {
+        error = nil
+        Task {
+            do { try await lock.setEnabled(enabled) } catch { self.error = "Couldn't update this setting. Please try again." }
+        }
+    }
+
+    private func versionTapped() {
+        haptics.play(.selection)
+        guard !summary.debug else { settings.toast("Debug is on"); return }
+        if unlock.tap() {
+            do {
+                try summary.setDebug(true)
+                haptics.play(.success)
+                settings.toast("Debug on")
+            } catch { self.error = "Couldn't save debug setting." }
+        } else if unlock.count > 1 {
+            settings.toast(L10n.text("{n} more to turn on debug", unlock.remaining, locale: language))
         }
     }
 }
 
-/// RN's delete confirmation: type "delete" to enable the button.
-struct DeleteWalletSheet: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    @State private var confirmation = ""
-    @State private var deleting = false
-    @State private var failure: String?
-
-    private var confirmed: Bool { confirmation.trimmingCharacters(in: .whitespaces).lowercased() == "delete" }
+/// Your initial in an orange ring (Home's name chip, larger).
+struct SettingsInitial: View {
+    let name: String?
+    var size: CGFloat = 52
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("This action is irreversible. Your wallet and its recovery phrase will be removed from this device. Make sure you have your recovery phrase or a backup before you continue.")
-                        .font(NoahFont.body)
-                        .foregroundStyle(NoahColor.mutedForeground)
-                    Text("To confirm, please type \"delete\" in the box below.")
-                        .font(NoahFont.body)
-                    TextField("delete", text: $confirmation)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
-                        .accessibilityIdentifier("delete-wallet-input")
-                    if let failure {
-                        Text(LocalizedStringKey(failure)).font(NoahFont.footnote).foregroundStyle(NoahColor.destructive)
-                    }
-                    Button(role: .destructive) {
-                        deleting = true
-                        failure = nil
-                        Task {
-                            do {
-                                try await model.deleteWallet()
-                                dismiss()
-                            } catch {
-                                failure = (error as? WalletLifecycle.Failure)?.errorDescription
-                                    ?? "The wallet couldn't be deleted. Restart Noah and try again."
-                                deleting = false
-                            }
-                        }
-                    } label: {
-                        Group {
-                            if deleting { ProgressView() } else { Text("Delete Wallet").font(NoahFont.headline) }
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(NoahColor.destructive)
-                    .disabled(!confirmed || deleting)
-                    .accessibilityIdentifier("delete-wallet-confirm")
-                }
-                .padding(24).readableWidth()
+        ZStack {
+            Circle().strokeBorder(NoahTokens.Colors.orange, lineWidth: size > 60 ? 2.5 : 2)
+            if let initial = name?.first {
+                Text(verbatim: String(initial).lowercased())
+                    .font(NoahTokens.Typography.amount.font(size: size * 0.42))
+            } else {
+                Image(systemName: "person").font(.system(size: size * 0.38, weight: .medium))
             }
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Delete Wallet")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(deleting) } }
         }
-        .interactiveDismissDisabled(deleting)
+        .foregroundStyle(NoahTokens.Colors.foreground)
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+extension WalletLock {
+    /// The device's biometric, for the Security row: Face ID, Touch ID or Optic ID, else the passcode lock.
+    static var biometry: (title: String, symbol: String) {
+        let context = LAContext()
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        switch context.biometryType {
+        case .faceID: return ("Face ID", "faceid")
+        case .touchID: return ("Touch ID", "touchid")
+        case .opticID: return ("Optic ID", "opticid")
+        default: return ("App lock", "lock")
+        }
+    }
+}
+
+// MARK: Root sheets
+
+struct SettingsRootSheetView: View {
+    let sheet: SettingsRootSheet
+    @Binding var current: SettingsRootSheet?
+    @Binding var locked: Bool
+
+    var body: some View {
+        switch sheet {
+        case .unit: SettingsUnitSheet(close: close)
+        case .currency: SettingsCurrencySheet(close: close)
+        case .language: SettingsLanguageSheet(close: close)
+        case .delete: DeleteWalletSheet(locked: $locked, close: close)
+        }
+    }
+
+    private func close() { current = nil }
+}
+
+/// Two cards with your balance written both ways.
+private struct SettingsUnitSheet: View {
+    let close: () -> Void
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
+    @State private var haptics = OnboardingHaptics()
+
+    var body: some View {
+        SettingsSheetBody(title: L10n.text("Bitcoin unit", locale: locale.identifier), line: L10n.text("How amounts are written.", locale: locale.identifier)) {
+            VStack(spacing: 10) {
+                ForEach(BitcoinAmountUnit.allCases, id: \.self) { unit in
+                    Button { pick(unit) } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(verbatim: BitcoinAmount.format(sats: Int64(clamping: app.summary?.balance.totalSats ?? 152_742), unit: unit, locale: locale))
+                                    .noahText(NoahTokens.Typography.code).monospacedDigit()
+                                Text(LocalizedStringKey(unit == .bip177 ? "Bitcoin (BIP-177)" : "Satoshis"))
+                                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                            }
+                            Spacer()
+                            SettingsCheck(on: app.amountUnit == unit)
+                        }
+                        .padding(18)
+                        .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .strokeBorder(NoahTokens.Colors.foreground, lineWidth: 2).opacity(app.amountUnit == unit ? 1 : 0)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(app.amountUnit == unit ? .isSelected : [])
+                    .accessibilityIdentifier("preference-\(unit.rawValue)")
+                }
+            }
+            .padding(.top, 16)
+        } actions: { EmptyView() }
+        .onboardingHaptics(haptics)
+    }
+
+    private func pick(_ unit: BitcoinAmountUnit) {
+        haptics.play(.selection)
+        try? app.updateProfile { $0.bitcoinAmountUnit = unit.rawValue }
+        Task { try? await Task.sleep(for: .milliseconds(260)); close() }
+    }
+}
+
+private struct SettingsCurrencySheet: View {
+    let close: () -> Void
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
+    @State private var haptics = OnboardingHaptics()
+
+    var body: some View {
+        SettingsSheetBody(title: L10n.text("Currency", locale: locale.identifier),
+                          line: L10n.text("For prices next to your bitcoin.", locale: locale.identifier)) {
+            VStack(spacing: 0) {
+                ForEach(FiatCurrency.supported, id: \.self) { code in
+                    SettingsOption(title: locale.localizedString(forCurrencyCode: code) ?? code, detail: "\(code) · \(symbol(code))",
+                                   on: app.preferredCurrency == code, id: "preference-\(code)") {
+                        haptics.play(.selection)
+                        try? app.updateProfile { $0.preferredCurrency = code }
+                        Task { try? await Task.sleep(for: .milliseconds(260)); close() }
+                    }
+                }
+            }
+            .padding(.top, 10)
+        } actions: { EmptyView() }
+        .onboardingHaptics(haptics)
+    }
+
+    private func symbol(_ code: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = locale
+        formatter.currencyCode = code
+        return formatter.currencySymbol ?? code
+    }
+}
+
+struct SettingsLanguageSheet: View {
+    static let codes = ["en", "es", "ja", "ko", "sv"]
+    let close: () -> Void
+    @Environment(AppModel.self) private var app
+    @State private var haptics = OnboardingHaptics()
+
+    /// Each language in its own words.
+    static func name(_ code: String) -> String {
+        let base = String(code.prefix(2))
+        let own = Locale(identifier: base)
+        return own.localizedString(forLanguageCode: base)?.capitalized(with: own) ?? base
+    }
+
+    var body: some View {
+        SettingsSheetBody(title: L10n.text("Language", locale: app.localeIdentifier)) {
+            VStack(spacing: 0) {
+                ForEach(Self.codes, id: \.self) { code in
+                    SettingsOption(title: Self.name(code), detail: code.uppercased(), on: app.localeIdentifier.hasPrefix(code), id: "preference-\(code)") {
+                        haptics.play(.selection)
+                        app.setLanguage(code)
+                        Task { try? await Task.sleep(for: .milliseconds(260)); close() }
+                    }
+                    .environment(\.locale, Locale(identifier: code))
+                }
+            }
+            .padding(.top, 10)
+        } actions: { EmptyView() }
+        .onboardingHaptics(haptics)
+    }
+}
+
+/// A radio row: title, a small line, and a check when chosen.
+struct SettingsOption: View {
+    let title: String
+    var detail: String?
+    let on: Bool
+    var failure = false
+    var id = ""
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: title).noahText(SettingsText.value)
+                        .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+                    if let detail { Text(verbatim: detail).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted) }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                SettingsCheck(on: on)
+            }
+            .frame(minHeight: 54)
+            .overlay(alignment: .bottom) { HomeHairline() }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SettingsRowPressStyle())
+        .accessibilityAddTraits(on ? [.isSelected, .isButton] : .isButton)
+        .accessibilityIdentifier(id)
+    }
+}
+
+struct SettingsCheck: View {
+    let on: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Image(systemName: "checkmark").font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .scaleEffect(on || reduceMotion ? 1 : 0.5)
+            .opacity(on ? 1 : 0)
+            .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: on)
+            .accessibilityHidden(true)
+    }
+}
+
+// MARK: Pages
+
+/// Each page by route.
+struct SettingsPageView: View {
+    let page: SettingsPage
+
+    var body: some View {
+        switch page {
+        case .profile: ProfileView()
+        case .lightningAddress: LightningAddressView {}
+        case .email: EmergencyEmailView {}
+        case .backup: BackupSettingsView()
+        case .recovery: MnemonicView()
+        case .vtxos: VtxosView()
+        case .vtxo(let id): VtxosView().id(id)
+        case .onchain: BoardArkView()
+        case .recurring: RecurringPaymentsView()
+        case .schedule(let id): RecurringPaymentsView(scheduleID: id)
+        case .editor: RecurringPaymentEditorView(executor: .shared)
+        case .exit: UnilateralExitView()
+        case .notifications: NotificationsPage()
+        case .advanced: AdvancedPage()
+        case .arkServer: ArkInfoView()
+        case .esplora: EsploraSettingsScreen()
+        case .logs: LogView()
+        case .debug: DebugView()
+        case .feedback: FeedbackView()
+        case .about: NoahStoryView()
+        }
     }
 }

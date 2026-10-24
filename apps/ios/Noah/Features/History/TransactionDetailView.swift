@@ -524,7 +524,8 @@ enum ActivityDetailText {
 }
 
 /// One row of the table: a muted label, then the value with its glyph, copy, explorer or chevron.
-private struct DetailLine: View {
+/// Settings' detail rows use it too.
+struct DetailLine: View {
     let label: String
     let value: String
     var compact = false
@@ -537,6 +538,7 @@ private struct DetailLine: View {
     var onCopy: (() -> Void)?
     var explorer: URL?
     var hairline = true
+    var failure = false
 
     var body: some View {
         HStack(alignment: wraps ? .firstTextBaseline : .center, spacing: 18) {
@@ -547,7 +549,7 @@ private struct DetailLine: View {
             Spacer(minLength: 0)
             HStack(spacing: 8) {
                 if let glyph { Image(systemName: glyph).font(.system(size: 14, weight: .medium)) }
-                valueText
+                valueText.foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
                 if let onCopy {
                     Button(action: onCopy) {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
