@@ -10,6 +10,7 @@ on:
       - "scripts/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - "rust-toolchain.toml"
       - ".github/workflows/**"
       - "!**/*.md"
 
@@ -32,6 +33,7 @@ jobs:
               - 'scripts/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
+              - 'rust-toolchain.toml'
               - '.github/workflows/**'
 
       - name: 🧭 Set server change output

@@ -201,14 +201,12 @@
         in
         pkgs.mkShell {
           buildInputs = with pkgs; [
-            (rust-bin.stable."1.95.0".default.override {
+            (rust-bin.stable."1.99.1".default.override {
               extensions = [
                 "rust-src"
                 "rust-analyzer"
               ];
             })
-            cargo
-            clippy
             pkg-config
             openssl
           ];

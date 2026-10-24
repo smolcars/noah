@@ -1,6 +1,6 @@
 # Keep builder and runtime on the same Debian release so the compiled
 # binaries do not require a newer glibc than the runtime image provides.
-ARG RUST_VERSION=1.95
+ARG RUST_VERSION=1.99.1
 ARG DEBIAN_RELEASE=bookworm
 
 # Stage 1: cargo-chef base image
