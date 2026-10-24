@@ -243,3 +243,67 @@ struct ActivityDetailTests {
         #expect(!failed.contains("Proof of payment"))
     }
 }
+
+/// The detail's reads in a wide pane that moves between selections.
+@MainActor
+struct ActivityDetailReadsTests {
+    /// A chain-status read that waits until the test releases it.
+    final class Gate: @unchecked Sendable {
+        let (stream, continuation) = AsyncStream<ChainTransactionStatus>.makeStream()
+    }
+
+    static func pending(_ id: String, txid: String) -> HistoryTransaction {
+        var row = ActivityDetailTests.onchainSend(status: "pending")
+        row.id = id
+        row.txid = txid
+        row.metadataJson = #"{"offboard_txid":"\#(txid)"}"#
+        return row
+    }
+
+    @Test func aLateReadNeverLandsOnTheNextSelection() async throws {
+        let gate = Gate()
+        let slow = String(repeating: "aa", count: 32), fast = String(repeating: "bb", count: 32)
+        let history = HistoryModel(dependencies: .init(
+            load: { [] }, sync: {}, changes: { AsyncThrowingStream { $0.finish() } }, blockTime: { _ in nil },
+            price: { _, _ in nil }, currentPrice: { _ in 100_000 }, chainTip: { 120 },
+            chainStatus: { txid in
+                guard txid == slow else { return .inMempool }
+                for await status in gate.stream { return status }
+                return nil
+            }))
+        let reads = ActivityDetailReads()
+        let a = Self.pending("movement-a", txid: slow), b = Self.pending("movement-b", txid: fast)
+        // A's read is still out when B is selected.
+        let first = Task { await reads.load(a, blockTxid: slow, currency: "USD", history: history) }
+        while reads.price(for: a.id) == nil { await Task.yield() }
+        // Not cancelled: the record check alone keeps A's answer off B.
+        await reads.load(b, blockTxid: fast, currency: "USD", history: history)
+        #expect(reads.status(for: b.id) == .inMempool && reads.tip(for: b.id) == 120)
+        // A finishes late: B keeps its own state, and nothing reads as A's.
+        gate.continuation.yield(.confirmed(100))
+        await first.value
+        #expect(reads.status(for: b.id) == .inMempool)
+        #expect(reads.status(for: a.id) == nil && reads.price(for: a.id) == nil)
+        // Selecting another payment clears what was read for the last one.
+        reads.select("movement-c")
+        #expect(reads.status(for: b.id) == nil && reads.price(for: "movement-c") == nil)
+    }
+
+    /// A cancelled read writes nothing even when the selection didn't change.
+    @Test func aCancelledReadWritesNothing() async throws {
+        let gate = Gate()
+        let slow = String(repeating: "cc", count: 32)
+        let history = HistoryModel(dependencies: .init(
+            load: { [] }, sync: {}, changes: { AsyncThrowingStream { $0.finish() } }, blockTime: { _ in nil },
+            price: { _, _ in nil }, currentPrice: { _ in 100_000 }, chainTip: { 120 },
+            chainStatus: { _ in for await status in gate.stream { return status }; return nil }))
+        let reads = ActivityDetailReads()
+        let a = Self.pending("movement-a", txid: slow)
+        let task = Task { await reads.load(a, blockTxid: slow, currency: "USD", history: history) }
+        while reads.price(for: a.id) == nil { await Task.yield() }
+        task.cancel()
+        gate.continuation.yield(.confirmed(100))
+        await task.value
+        #expect(reads.status(for: a.id) == nil)
+    }
+}

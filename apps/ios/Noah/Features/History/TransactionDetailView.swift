@@ -25,9 +25,8 @@ struct TransactionDetailView: View {
     /// Activity keeps Details open across pose changes; Home's sheet keeps its own.
     private let externalDetails: Binding<Bool>?
     @State private var localDetails = false
-    @State private var price: Double?
-    @State private var chainTip: UInt32?
-    @State private var chainStatus: ChainTransactionStatus?
+    /// The current price and the block row's chain reads, for the record shown.
+    @State private var reads = ActivityDetailReads()
     @State private var copied: String?
     @State private var toast: HomeToast?
     @State private var shareAnchor: CGRect?
@@ -89,6 +88,12 @@ struct TransactionDetailView: View {
         .navigationDestination(for: Link.self, destination: destination)
         // Each completed history read re-reads the block row's chain status, as wallet events arrive.
         .task(id: "\(transaction.id):\(history.revision)") { await load() }
+        // Wide panes reuse this view for the next selection: nothing of the last payment carries over.
+        .onChange(of: transaction.id) { _, id in
+            copied = nil
+            toast = nil
+            reads.select(id)
+        }
         .onboardingHaptics(haptics)
         .accessibilityIdentifier("transaction-detail")
     }
@@ -146,12 +151,13 @@ struct TransactionDetailView: View {
             let amount = FiatCurrency.display(sats: transaction.amount, btcPrice: historical, currency: app.preferredCurrency, locale: locale)
             return L10n.text("{amount} at the time", amount, locale: language)
         }
-        guard let price = price ?? transaction.btcPrice else { return nil }
+        guard let price = reads.price(for: transaction.id) ?? transaction.btcPrice else { return nil }
         return FiatCurrency.display(sats: transaction.amount, btcPrice: price, currency: app.preferredCurrency, locale: locale)
     }
 
     @ViewBuilder private func blockRow(_ txid: String) -> some View {
-        let confirmed: UInt32? = if case .confirmed(let height) = chainStatus { height } else { transaction.confirmationHeight }
+        let confirmed: UInt32? = if case .confirmed(let height) = reads.status(for: transaction.id) { height } else { transaction.confirmationHeight }
+        let chainTip = reads.tip(for: transaction.id)
         let required = ActivityDetail.requiredConfirmations(transaction)
         ActivityBlockRow(tip: chainTip, confirmedHeight: confirmed)
             .frame(width: 204, height: 62)
@@ -165,6 +171,7 @@ struct TransactionDetailView: View {
     }
 
     private func phaseLine(confirmed: UInt32?, required: Int) -> String? {
+        let chainTip = reads.tip(for: transaction.id)
         if let confirmed {
             let line = L10n.text("Confirmed in block {height}", confirmed.formatted(.number.locale(locale)), locale: language)
             guard required > 1 else { return line }
@@ -436,14 +443,7 @@ struct TransactionDetailView: View {
     // MARK: Actions
 
     private func load() async {
-        let today = transaction.timestamp.map { Calendar.current.isDateInToday($0) } ?? true
-        if transaction.isPending || today || transaction.btcPrice == nil {
-            price = await history.currentPrice(currency: app.preferredCurrency)
-        }
-        guard let txid = detail.blockTxid else { return }
-        let state = await history.chainState(txid: transaction.source == "onchain-wallet" ? nil : txid)
-        chainTip = state.tip
-        chainStatus = state.status
+        await reads.load(transaction, blockTxid: detail.blockTxid, currency: app.preferredCurrency, history: history)
     }
 
     /// Local-only with a two-minute expiry, as before.
@@ -480,6 +480,47 @@ private struct DetailChrome<Bar: ToolbarContent>: ViewModifier {
         } else {
             content.toolbar(content: toolbar)
         }
+    }
+}
+
+/// A payment's current price and chain reads, tied to the record they were read for. Wide panes reuse one
+/// detail for every selection, so a read that finishes after the selection moved on, or after its task was
+/// cancelled, never lands on another payment.
+@MainActor @Observable
+final class ActivityDetailReads {
+    private(set) var recordID: String?
+    private var price: Double?
+    private var tip: UInt32?
+    private var status: ChainTransactionStatus?
+
+    func price(for id: String) -> Double? { recordID == id ? price : nil }
+    func tip(for id: String) -> UInt32? { recordID == id ? tip : nil }
+    func status(for id: String) -> ChainTransactionStatus? { recordID == id ? status : nil }
+
+    /// A new selection starts with nothing.
+    func select(_ id: String) {
+        guard recordID != id else { return }
+        recordID = id
+        price = nil
+        tip = nil
+        status = nil
+    }
+
+    func load(_ transaction: HistoryTransaction, blockTxid: String?, currency: String, history: HistoryModel) async {
+        let id = transaction.id
+        select(id)
+        func current() -> Bool { !Task.isCancelled && recordID == id }
+        let today = transaction.timestamp.map { Calendar.current.isDateInToday($0) } ?? true
+        if transaction.isPending || today || transaction.btcPrice == nil {
+            let quote = await history.currentPrice(currency: currency)
+            guard current() else { return }
+            price = quote
+        }
+        guard let blockTxid else { return }
+        let state = await history.chainState(txid: transaction.source == "onchain-wallet" ? nil : blockTxid)
+        guard current() else { return }
+        tip = state.tip
+        status = state.status
     }
 }
 
