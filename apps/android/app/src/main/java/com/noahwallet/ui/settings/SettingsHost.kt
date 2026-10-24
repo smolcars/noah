@@ -154,6 +154,10 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
         OnboardingFrame(null, splitAtWindowCentre = true) {
             val pose = LocalPose.current
             val holder = rememberSaveableStateHolder()
+            // The list's own state (its sheet, its scroll), outside NavDisplay's: the list beside a page (split) and the
+            // list as the first page (compact) share it, so folding or unfolding keeps both. A pose change recreates the
+            // activity, so the two are never composed at once.
+            val list = rememberSaveableStateHolder()
             val toasts = remember { HomeToasts() }
             val live = rememberSettingsLive(model)
             val wide = pose !is OnboardingPose.Compact
@@ -179,7 +183,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         else -> Modifier
                     }.testTag("settings-list-pane")) {
                         CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading) {
-                            holder.SaveableStateProvider(SettingsDestination.Settings.toString()) {
+                            list.SaveableStateProvider(SettingsDestination.Settings) {
                                 SettingsRoot(model, live, SettingsNav(leave, { open(it, true) }, leave, code, leave),
                                     selected = pages.firstOrNull(), initialSheet = initialSheet)
                             }
@@ -201,9 +205,10 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                         val index = pages.indexOf(key)
                                         val back = if (wide && index <= 0) null else ({ if (idle()) pop() })
                                         val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave)
-                                        SettingsPageContent(model, key, nav, live, preview) { content ->
+                                        @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview) { content ->
                                             MaterialTheme(appColors, appShapes, appTypography, content)
                                         }
+                                        if (key == SettingsDestination.Settings) list.SaveableStateProvider(SettingsDestination.Settings) { Page() } else Page()
                                     }
                                 })
                         }

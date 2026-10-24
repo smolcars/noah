@@ -4,7 +4,10 @@ import android.app.Application
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -44,6 +47,8 @@ class SettingsDeviceTest {
     private lateinit var stack: NavBackStack<NavKey>
     private var closed = 0
     private var hosts by mutableIntStateOf(0)
+    /** A narrow window (compact Settings) on a wide device; null fills the window. */
+    private var width by mutableStateOf<androidx.compose.ui.unit.Dp?>(null)
 
     @Before fun model() {
         compose.runOnUiThread { model = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application) }
@@ -60,7 +65,7 @@ class SettingsDeviceTest {
                         stack = rememberNavBackStack(*SettingsRoutes.chain(page).toTypedArray())
                         // Home's own Back under Settings: it leaves Settings once no page can pop.
                         androidx.activity.compose.BackHandler { closed++ }
-                        Box(Modifier.fillMaxSize()) { SettingsHost(model, stack, close = { closed++ }, myCode = {}, preview = SettingsPreview(sheet, phrase)) }
+                        Box(width?.let { Modifier.fillMaxHeight().width(it) } ?: Modifier.fillMaxSize()) { SettingsHost(model, stack, close = { closed++ }, myCode = {}, preview = SettingsPreview(sheet, phrase)) }
                     }
                 } }
             }
@@ -339,6 +344,30 @@ class SettingsDeviceTest {
         pose(null)
         compose.onNodeWithText("npub1posechange").assertExists()
         assertEquals(SettingsRoutes.chain(SettingsDestination.Lightning), stack.toList())
+    }
+
+    @Test fun foldingAndUnfoldingKeepTheListsSheetAndScroll() {
+        // Folded: one column, scrolled to the bottom, with the delete sheet open (nothing is deleted).
+        width = 400.dp
+        host(SettingsDestination.Settings)
+        compose.onNodeWithTag("settings-delete-wallet").performScrollTo().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("delete-wallet-sheet").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("settings-profile").assertIsNotDisplayed()
+        // Unfolding recreates the activity into the split: the list beside the page keeps both.
+        compose.activityRule.scenario.recreate()
+        val region = compose.activity.window.decorView.let { book(it.width, it.height) }
+        compose.runOnUiThread { width = null; fold = region }
+        hosts--; host(SettingsDestination.Settings)
+        compose.onNodeWithTag("settings-list-pane").assertExists()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("delete-wallet-sheet").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("settings-profile").assertIsNotDisplayed()
+        // And folding again brings both back to the one column.
+        compose.activityRule.scenario.recreate()
+        compose.runOnUiThread { width = 400.dp; fold = null }
+        hosts--; host(SettingsDestination.Settings)
+        compose.onNodeWithTag("settings-list-pane").assertDoesNotExist()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("delete-wallet-sheet").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("settings-profile").assertIsNotDisplayed()
     }
 
     @Test fun recreationKeepsThePageAndTheRevealedPhraseButNeverReShowsIt() {

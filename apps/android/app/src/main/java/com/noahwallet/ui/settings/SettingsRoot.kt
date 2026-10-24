@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
@@ -111,7 +112,10 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
     val context = LocalContext.current
     val activity = context as? FragmentActivity
     val toasts = LocalSettingsToasts.current
-    var sheet by rememberSaveable { mutableStateOf(initialSheet?.takeIf { it in setOf("unit", "currency", "language", "delete") }) }
+    // Keyed by name in the list's own holder (SettingsHost): compact and split compose the list from different places, so
+    // positional keys wouldn't carry its sheet and scroll across a fold.
+    var sheet by rememberSaveable(key = "settings-sheet") { mutableStateOf(initialSheet?.takeIf { it in setOf("unit", "currency", "language", "delete") }) }
+    val scroll = rememberSaveable(saver = ScrollState.Saver, key = "settings-scroll") { ScrollState(0) }
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     val schedules = com.noahwallet.recurring.RecurringRuntime.shared(context).executor.schedules
     LaunchedEffect(Unit) { runCatching { com.noahwallet.recurring.RecurringRuntime.shared(context).executor.reload() } }
@@ -122,7 +126,7 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
     val tap = rememberDebugTaps(model, live)
     fun money(sats: Long) = if (model.hidden) BitcoinAmount.format(0, model.amountUnit, locale).replace("0", "••••") else BitcoinAmount.format(sats, model.amountUnit, locale)
     val open = nav.open
-    SettingsFrame(tr("Settings"), nav.back) {
+    SettingsFrame(tr("Settings"), nav.back, scroll = scroll) {
         Me(name ?: tr("Profile"), address, selected == SettingsDestination.Profile) { open(SettingsDestination.Profile) }
         val backup = SettingsRules.backup(model.server.state.isBackupEnabled == true, live.backup.lastBackupStatus)
         SettingsGroup(tr("Security"), rows = listOfNotNull(
@@ -312,7 +316,7 @@ internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, onRecovery: 
     val palette = LocalPalette.current
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     val toasts = LocalSettingsToasts.current
-    var typed by rememberSaveable { mutableStateOf("") }
+    var typed by rememberSaveable(key = "delete-typed") { mutableStateOf("") }
     // From the model: a fold or rotation mid-delete keeps the sheet locked and still hears how it ended.
     val deleting = model.deletingWallet
     val error = model.deleteWalletError
