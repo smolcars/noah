@@ -25,6 +25,11 @@ enum SecureCopy {
     }
 }
 
+/// Ends whichever field is editing (fields keep their own focus).
+@MainActor func endEditing() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+}
+
 // MARK: Page
 
 /// A page's scrolling body: the optional one line under the title, then the content, at the
@@ -57,7 +62,7 @@ struct SettingsScroll<Content: View>: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                Button("Done", action: endEditing)
             }
         }
     }
@@ -547,6 +552,7 @@ struct SettingsField: View {
                 .noahText(NoahTokens.Typography.body)
                 .tint(NoahTokens.Colors.orange)
                 .keyboardType(keyboard)
+                .submitLabel(.done)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .focused($focused)

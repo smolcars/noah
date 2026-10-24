@@ -40,7 +40,12 @@ struct DeleteWalletSheet: View {
                                  destructive: true, enabled: confirmed, busy: deleting, actionID: "delete-wallet-confirm",
                                  onCancel: leave, onAction: delete)
         }
-        .onChange(of: confirmed) { _, matches in if matches { haptics.play(.selection) } }
+        // The word typed: the keyboard steps aside so the red Delete is in reach.
+        .onChange(of: confirmed) { _, matches in
+            guard matches else { return }
+            haptics.play(.selection)
+            endEditing()
+        }
         .onboardingHaptics(haptics)
         .interactiveDismissDisabled(deleting)
     }

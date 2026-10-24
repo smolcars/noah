@@ -104,6 +104,7 @@ struct DebugView: View {
                 SettingsSheetBody(title: L10n.text(action == .drop ? "Dangerously remove this VTXO?" : "Offboard all funds?", locale: language),
                                   line: L10n.text("This action changes your wallet. Type delete to confirm.", locale: language)) {
                     SettingsField(placeholder: L10n.text("Type delete to confirm", locale: language), text: $confirmation, id: "debug-delete-input")
+                        .onChange(of: DeleteChecklist.confirms(confirmation)) { _, matches in if matches { endEditing() } }
                 } actions: {
                     SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Confirm", locale: language), destructive: true,
                                          enabled: DeleteChecklist.confirms(confirmation), actionID: "debug-confirm",
