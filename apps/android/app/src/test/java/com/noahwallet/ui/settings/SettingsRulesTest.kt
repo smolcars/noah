@@ -104,6 +104,16 @@ class SettingsRulesTest {
         assertFalse(PhraseClip.ours(clipboard, "noah-recovery-other"))
     }
 
+    @Test fun theCopiedClipKeepsItsDeadlineOutsideThePage() {
+        val phrase = RevealedPhrase()
+        phrase.clipDeadline = 1_000 + PhraseClip.clearAfterMillis
+        // Leaving Noah clears the words, not the clip's deadline; a page recreated later waits only what's left.
+        phrase.clear()
+        assertEquals(121_000L, phrase.clipDeadline)
+        assertEquals(30_000L, PhraseClip.remaining(phrase.clipDeadline!!, now = 91_000))
+        assertEquals(0L, PhraseClip.remaining(phrase.clipDeadline!!, now = 200_000))
+    }
+
     @Test fun revealedWordsLiveInMemoryAndClear() {
         val phrase = RevealedPhrase()
         assertTrue(phrase.words.isEmpty())

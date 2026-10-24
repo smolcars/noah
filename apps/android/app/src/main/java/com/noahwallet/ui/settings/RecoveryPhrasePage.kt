@@ -5,8 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.PersistableBundle
 import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
@@ -52,6 +50,8 @@ internal class RevealedPhrase : ViewModel() {
     /** The lock generation the words were shown in; another generation means Noah left the screen since. */
     var generation = -1; private set
     var shownAt = 0L; private set
+    /** When our copied clip clears (elapsedRealtime); kept here so a fold or rotation reschedules it rather than dropping it. */
+    var clipDeadline by mutableStateOf<Long?>(null)
     fun show(words: List<String>, generation: Int) { this.words = words; this.generation = generation; shownAt = SystemClock.elapsedRealtime() }
     fun clear() { words = emptyList(); generation = -1 }
     override fun onCleared() { clear() }
@@ -65,6 +65,8 @@ internal object PhraseClip {
         description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
     }
     fun ours(clipboard: ClipboardManager, label: String) = clipboard.primaryClipDescription?.label == label
+    /** How long until [deadline]; a recreated page waits only what's left. */
+    fun remaining(deadline: Long, now: Long) = (deadline - now).coerceAtLeast(0L)
 }
 
 /**
@@ -81,7 +83,6 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     val toasts = LocalSettingsToasts.current
     val holder = androidx.lifecycle.viewmodel.compose.viewModel<RevealedPhrase>()
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
-    val handler = remember { Handler(Looper.getMainLooper()) }
     val label = rememberSaveable { "noah-recovery-${java.util.UUID.randomUUID()}" }
     val clear = remember(label) { Runnable {
         if (PhraseClip.ours(clipboard, label)) {
@@ -92,13 +93,17 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
         val release = model.walletLock.showSecret(activity.window)
         onDispose {
             release()
-            handler.removeCallbacks(clear)
             // Leaving the page (not a fold) forgets the words and our clip.
-            if (!activity.isChangingConfigurations) { clear.run(); holder.clear() }
+            if (!activity.isChangingConfigurations) { clear.run(); holder.clipDeadline = null; holder.clear() }
         }
     }
     val generation = model.walletLock.generation
-    LaunchedEffect(generation) { if (holder.generation != generation) { holder.clear(); clear.run() } }
+    LaunchedEffect(generation) { if (holder.generation != generation) { holder.clear(); clear.run(); holder.clipDeadline = null } }
+    LaunchedEffect(holder.clipDeadline) {
+        val deadline = holder.clipDeadline ?: return@LaunchedEffect
+        delay(PhraseClip.remaining(deadline, SystemClock.elapsedRealtime()))
+        clear.run(); holder.clipDeadline = null
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
@@ -134,7 +139,7 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     SettingsFrame(tr("Recovery phrase"), nav.back, line = tr("12 words that restore your wallet."), foot = if (words.isEmpty()) null else ({
         FootPill(tr("Copy"), Modifier.testTag("recovery-copy"), outlined = true, icon = SettingsIcons.copy) {
             clipboard.setPrimaryClip(PhraseClip.clip(label, words.joinToString(" ")))
-            handler.removeCallbacks(clear); handler.postDelayed(clear, PhraseClip.clearAfterMillis)
+            holder.clipDeadline = SystemClock.elapsedRealtime() + PhraseClip.clearAfterMillis
             haptics.success(); toasts.show(copied)
         }
         if (!model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {

@@ -122,6 +122,28 @@ class SettingsDeviceTest {
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
     }
 
+    @Test fun aCopiedPhraseStillClearsAtItsDeadlineAfterRecreation() {
+        val sample = "sample phrase only never use this example test word copy nothing real".split(' ')
+        host(SettingsDestination.Seed)
+        lateinit var revealed: RevealedPhrase
+        compose.activityRule.scenario.onActivity { revealed = ViewModelProvider(it)[RevealedPhrase::class.java]; revealed.show(sample, model.walletLock.generation) }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("recovery-copy").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("recovery-copy").performClick()
+        compose.waitForIdle()
+        val clipboard = compose.activity.getSystemService(android.content.ClipboardManager::class.java)
+        fun ours() = clipboard.primaryClipDescription?.label?.startsWith("noah-recovery-") == true
+        val deadline = checkNotNull(revealed.clipDeadline)
+        assertTrue(ours())
+        compose.activityRule.scenario.recreate()
+        hosts--; host(SettingsDestination.Seed)
+        assertEquals("a rotation keeps the original deadline", deadline, revealed.clipDeadline)
+        assertTrue(ours())
+        // Bring the deadline close: the recreated page still clears the clip on it.
+        compose.runOnUiThread { revealed.clipDeadline = android.os.SystemClock.elapsedRealtime() + 300 }
+        compose.waitUntil(5_000) { !ours() }
+        assertNull(revealed.clipDeadline)
+    }
+
     @Test fun suspendWalletAsksFirst() {
         assumeNotSuspended()
         host(SettingsDestination.Advanced)
