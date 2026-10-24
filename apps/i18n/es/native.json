@@ -1578,6 +1578,7 @@
   "gt_cade2f4efb6f7c99": "Emulador",
   "gt_cae7d57bc067a514": "Detener",
   "gt_caed8de2afc3776f": "Cámara no disponible. Cierra el escáner y vuelve a intentarlo.",
+  "gt_cb11dae84f992f25": "No se pudieron estimar las comisiones de algunos VTXO, así que Todos los espera. Aún puedes elegir los VTXO uno a uno.",
   "gt_cb1838ea58a69336": "Consultar esta pantalla y estimar las comisiones no provoca la difusión de ninguna transacción de salida.",
   "gt_cb24f22aa3099c53": "Último bloque sincronizado",
   "gt_cb3a722bd933b8ca": "La verificación falló",

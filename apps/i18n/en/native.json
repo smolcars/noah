@@ -1341,6 +1341,7 @@
   "gt_ca985bb90dcf0a7b": "Cannot read staged files",
   "gt_cade2f4efb6f7c99": "Emulator",
   "gt_caed8de2afc3776f": "Camera unavailable. Close the scanner and try again.",
+  "gt_cb11dae84f992f25": "Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one.",
   "gt_cb1838ea58a69336": "Reading this screen and estimating fees never broadcasts an exit.",
   "gt_cb24f22aa3099c53": "Synced tip",
   "gt_cb736bbe0310b99e": "Invoice amount is less than 1 satoshi.",

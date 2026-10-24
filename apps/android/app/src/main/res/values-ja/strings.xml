@@ -1284,6 +1284,7 @@
   <string name="gt_28d03596d24eeb4e">"スキップ"</string>
   <string name="gt_12698ce1ea5cd4ab">"スキップ済み"</string>
   <string name="gt_44d27a286f01669e">"最小移動額"</string>
+  <string name="gt_cb11dae84f992f25">"一部のVTXOの手数料を見積もれなかったため、「すべて」はそれを待っています。VTXOを個別に選択することはできます。"</string>
   <string name="gt_bf046c7395cb38ee">"ソースコード"</string>
   <string name="gt_83d21eddee267cd8">"近くでビットコインを使う"</string>
   <string name="gt_8e8252533cde7bc4">"使用可能"</string>

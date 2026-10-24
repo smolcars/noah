@@ -240,6 +240,20 @@ class ExitDeviceTest {
         compose.runOnIdle { assertEquals(listOf(f.vtxos.filter { it.amount > 7_500 && it.eligible }.map { it.id }), reviewed) }
     }
 
+    @Test fun aVtxoBarkCouldNotEstimateKeepsAllWaitingWithATryAgain() {
+        var costs by mutableStateOf<Map<String, ExitCosts.Cost?>?>(f.costs + (f.vtxos[2].id to null))
+        var retries = 0
+        compose.setContent { NoahTheme { ExitPreviewHost {
+            ExitChooseContent(f.vtxos, costs, 18_400, false, true, false, false, f.money, {}, { null }, {}, {}, retry = { retries++ })
+        } } }
+        compose.onNodeWithTag("exit-review").assertIsNotEnabled()
+        compose.onNodeWithTag("exit-costs-retry").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(1, retries) }
+        compose.runOnUiThread { costs = f.costs }
+        compose.onNodeWithTag("exit-review").assertIsEnabled()
+        compose.onNodeWithTag("exit-costs-retry").assertDoesNotExist()
+    }
+
     @Test fun recreatingTheWindowKeepsTheChosenVtxos() {
         val restoration = StateRestorationTester(compose)
         val reviewed = mutableListOf<List<String>>()

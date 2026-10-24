@@ -245,11 +245,14 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
     var deposit by rememberSaveable { mutableStateOf<Long?>(null) }
     val vtxos = model.overview?.vtxos.orEmpty()
     val eligible = vtxos.filter { it.eligible }.map { it.id }
-    // Each VTXO's own estimate, once per set of VTXOs: not on every periodic read. Kept with the set it classified, so a
-    // new set reads as unclassified until its own estimates arrive.
-    val classified by produceState<Pair<List<String>, Map<String, ExitCosts.Cost?>>?>(null, eligible) {
-        value = eligible to if (eligible.isEmpty()) emptyMap() else try { withContext(Dispatchers.IO) { app.session.exitCosts(eligible) } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { emptyMap() }
+    var retries by remember { mutableIntStateOf(0) }
+    // Each VTXO's own estimate, once per set of VTXOs (not on every periodic read); one bark couldn't estimate stays unknown
+    // (null) and Try again asks for those. Kept with the set it classified, so a new set reads as unclassified.
+    val classified by produceState<Pair<List<String>, Map<String, ExitCosts.Cost?>>?>(null, eligible, retries) {
+        val known = value?.takeIf { it.first == eligible }?.second.orEmpty().filterValues { it != null }
+        val missing = eligible.filter { it !in known }
+        value = eligible to known + if (missing.isEmpty()) emptyMap() else try { withContext(Dispatchers.IO) { app.session.exitCosts(missing) } }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { missing.associateWith { null } }
     }
     val costs = classified?.takeIf { it.first == eligible }?.second
     ExitChooseContent(vtxos, costs, model.overview?.confirmed, loading = model.overview == null && model.loading, ready = model.overview != null,
@@ -257,7 +260,7 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
         // bark's estimate for exactly the selection (shared transactions once); read-only.
         estimate = { ids -> try { withContext(Dispatchers.IO) { app.session.quoteOnchain(OnchainAction.startExit, ids) } }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } },
-        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }) { OnchainStatus(app, model) }
+        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }) { OnchainStatus(app, model) }
     deposit?.let { need -> if (!app.isWalletSuspended) ExitDepositSheet(app, need) { deposit = null } }
 }
 
@@ -265,19 +268,22 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
 internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCosts.Cost?>?, confirmed: Long?, loading: Boolean, ready: Boolean,
                                suspended: Boolean, busy: Boolean, money: (Long) -> String, back: (() -> Unit)?,
                                estimate: suspend (List<String>) -> OnchainQuote?, review: (List<String>) -> Unit, deposit: (Long) -> Unit,
-                               initial: List<String>? = null, status: @Composable () -> Unit = {}) {
+                               initial: List<String>? = null, retry: () -> Unit = {}, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current
     var everything by rememberSaveable { mutableStateOf(initial == null) }
     var picked by rememberSaveable { mutableStateOf(initial.orEmpty()) }
     val vtxos = all.sortedByDescending { it.amount }
+    // "All" is fixed only once every VTXO is classified: until then it might hold one that costs more than it's worth.
+    val unknown = if (costs == null) 0 else vtxos.count { it.eligible && costs[it.id] == null }
+    val classified = costs != null && unknown == 0
     val chosen = if (everything) ExitCosts.all(vtxos, costs.orEmpty()) else vtxos.filter { it.id in picked && it.eligible }
     val ids = chosen.map { it.id }
     // Only when the selection changes: never on the page's periodic read.
-    val quote by produceState<OnchainQuote?>(null, ids, costs != null) {
+    val quote by produceState<OnchainQuote?>(null, ids, classified) {
         value = null
-        if (ids.isEmpty() || (everything && costs == null)) return@produceState
+        if (ids.isEmpty() || (everything && !classified)) return@produceState
         delay(250)
         value = estimate(ids)
     }
@@ -289,9 +295,8 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             if (!everything) Text(if (chosen.isEmpty()) tr("Choose the VTXOs to exit") else fees?.chainFee?.let { tr("{amount} · fees ~{fee}", money(value), money(it)) }
                 ?: money(value), Modifier.padding(bottom = 8.dp), style = HomeType.amount.copy(fontSize = 15.sp), color = palette.foreground)
-            // "All" is fixed only once every VTXO is classified: until then it might hold one that costs more than it's worth.
             SendPill(tr("Review exit"), Modifier.fillMaxWidth().testTag("exit-review"), height = 56.dp,
-                enabled = chosen.isNotEmpty() && !busy && !suspended && (!everything || costs != null)) { haptics.light(); review(ids) }
+                enabled = chosen.isNotEmpty() && !busy && !suspended && (!everything || classified)) { haptics.light(); review(ids) }
         }
     }, leading = {
         Segmented(listOf(true to tr("All"), false to tr("Choose")), everything, Modifier.padding(top = 10.dp).testTag("exit-mode")) { everything = it }
@@ -321,9 +326,13 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
             SettingsLink(tr("Add on-chain funds"), Modifier.padding(top = 4.dp).testTag("exit-add-funds")) { deposit(short) }
         } else if (fees != null && confirmed != null) FinePrint(tr("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
             money(confirmed), fees.feeRate.toString()))
-        else if (chosen.isNotEmpty() && (costs != null || !everything) && quote == null) FinePrint(tr("Fee estimate unavailable"))
+        else if (chosen.isNotEmpty() && (classified || !everything) && quote == null) FinePrint(tr("Fee estimate unavailable"))
         if (fees != null && value > 0 && fees.totalFee >= value) Warning(tr("Fees are more than these VTXOs are worth."), failed = true)
         if (everything) {
+            if (unknown > 0) {
+                FinePrint(tr("Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one."), failed = true)
+                SettingsLink(tr("Try again"), Modifier.testTag("exit-costs-retry"), enabled = !busy, onClick = retry)
+            }
             val out = ExitCosts.leftOut(vtxos, costs.orEmpty())
             if (out.dust > 0) FinePrint(tr("Left out, too small to exit: {amount}.", money(out.dust)))
             if (out.locked > 0) FinePrint(tr("Left out, in use right now: {amount}.", money(out.locked)))

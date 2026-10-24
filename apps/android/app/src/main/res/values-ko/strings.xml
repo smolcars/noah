@@ -1284,6 +1284,7 @@
   <string name="gt_28d03596d24eeb4e">"건너뛰기"</string>
   <string name="gt_12698ce1ea5cd4ab">"건너뜀"</string>
   <string name="gt_44d27a286f01669e">"최소 이동 금액"</string>
+  <string name="gt_cb11dae84f992f25">"일부 VTXO의 수수료를 추정하지 못해 전체는 이를 기다립니다. VTXO를 하나씩 선택할 수는 있습니다."</string>
   <string name="gt_bf046c7395cb38ee">"소스 코드"</string>
   <string name="gt_83d21eddee267cd8">"근처에서 비트코인 쓰기"</string>
   <string name="gt_8e8252533cde7bc4">"사용 가능"</string>

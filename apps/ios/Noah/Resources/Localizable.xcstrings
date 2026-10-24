@@ -45757,6 +45757,42 @@
         }
       }
     },
+    "Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one.": {
+      "comment": "GT gt_cb11dae84f992f25; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudieron estimar las comisiones de algunos VTXO, así que Todos los espera. Aún puedes elegir los VTXO uno a uno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部のVTXOの手数料を見積もれなかったため、「すべて」はそれを待っています。VTXOを個別に選択することはできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일부 VTXO의 수수료를 추정하지 못해 전체는 이를 기다립니다. VTXO를 하나씩 선택할 수는 있습니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avgifterna för vissa VTXO:er kunde inte uppskattas, så Alla väntar på dem. Du kan fortfarande välja VTXO:er en och en."
+          }
+        }
+      }
+    },
     "Source code": {
       "comment": "GT gt_bf046c7395cb38ee; arguments: none",
       "extractionState": "manual",

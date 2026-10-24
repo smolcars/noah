@@ -1284,6 +1284,7 @@
   <string name="gt_28d03596d24eeb4e">"Hoppa över"</string>
   <string name="gt_12698ce1ea5cd4ab">"Överhoppad"</string>
   <string name="gt_44d27a286f01669e">"Minsta belopp att flytta"</string>
+  <string name="gt_cb11dae84f992f25">"Avgifterna för vissa VTXO:er kunde inte uppskattas, så Alla väntar på dem. Du kan fortfarande välja VTXO:er en och en."</string>
   <string name="gt_bf046c7395cb38ee">"Källkod"</string>
   <string name="gt_83d21eddee267cd8">"Spendera bitcoin i närheten"</string>
   <string name="gt_8e8252533cde7bc4">"Kan användas"</string>

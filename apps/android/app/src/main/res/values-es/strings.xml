@@ -1284,6 +1284,7 @@
   <string name="gt_28d03596d24eeb4e">"Omitir"</string>
   <string name="gt_12698ce1ea5cd4ab">"Omitido"</string>
   <string name="gt_44d27a286f01669e">"Mínimo para mover"</string>
+  <string name="gt_cb11dae84f992f25">"No se pudieron estimar las comisiones de algunos VTXO, así que Todos los espera. Aún puedes elegir los VTXO uno a uno."</string>
   <string name="gt_bf046c7395cb38ee">"Código fuente"</string>
   <string name="gt_83d21eddee267cd8">"Gasta bitcoin cerca de ti"</string>
   <string name="gt_8e8252533cde7bc4">"Disponible para gastar"</string>

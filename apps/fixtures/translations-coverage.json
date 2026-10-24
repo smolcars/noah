@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1691,
-  "sourceKeys": 1715,
+  "catalogEntries": 1692,
+  "sourceKeys": 1716,
   "coverage": {
     "ios": {
       "used": [
@@ -2294,6 +2294,7 @@
         "Skip",
         "Skipped",
         "Smallest move",
+        "Some VTXOs' fees couldn't be estimated, so All waits for them. You can still choose VTXOs one by one.",
         "Source code",
         "Spend bitcoin nearby",
         "Spendable",

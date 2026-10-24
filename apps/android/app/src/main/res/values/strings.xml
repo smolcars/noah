@@ -1284,6 +1284,7 @@
   <string name="gt_28d03596d24eeb4e">"Skip"</string>
   <string name="gt_12698ce1ea5cd4ab">"Skipped"</string>
   <string name="gt_44d27a286f01669e">"Smallest move"</string>
+  <string name="gt_cb11dae84f992f25">"Some VTXOs\' fees couldn\'t be estimated, so All waits for them. You can still choose VTXOs one by one."</string>
   <string name="gt_bf046c7395cb38ee">"Source code"</string>
   <string name="gt_83d21eddee267cd8">"Spend bitcoin nearby"</string>
   <string name="gt_8e8252533cde7bc4">"Spendable"</string>
