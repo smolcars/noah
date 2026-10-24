@@ -611,6 +611,20 @@ On regtest, bark finishes an Ark-funded on-chain send once it's in the mempool (
 is 0 off mainnet), so "Confirmed in block N · 1 of 2" only shows on mainnet; on-chain wallet payments show the
 block row until their block.
 
+## Settings
+
+Settings follows [its redesign](../../docs/native-rewrite/design/settings.md) on today's models and services. On
+Home's stack it is one entry (`SettingsDestination.Settings`) holding its own page stack; deep links (Home's Renew,
+backup and suspended nudges, Activity's VTXO, schedule and exit links, recurring notifications) go through
+`SettingsRoutes.open`, which puts the page on top of its parents. The list leads and the page trails on wide windows
+and at a book fold (tabletop: list above, page below). The recovery phrase is shown only after authentication (or the
+"No screen lock" sheet), lives in memory (`RevealedPhrase`) and clears when Noah leaves the screen. The emergency
+exit screens are today's, unchanged.
+`SettingsDeviceTest` (gates, Back and predictive back on every page, synthetic folds, recreation) runs unconditionally.
+Opt-in gallery on an owned, disposable regtest AVD with its throwaway wallet open:
+`-e class com.noahwallet.ui.SettingsGalleryTest -e noahSettingsShots <label>` (optionally `-e noahSettingsOnly root,delete`),
+then pull `files/settings-shots/<label>` with `run-as`. Its recovery phrase is the public sample, never the wallet's.
+
 `lintRegtestDebug` remains blocked by the pre-existing camera permission lacking
 an optional `android.hardware.camera` feature declaration
 (`PermissionImpliesUnsupportedChromeOsHardware`). Push's deliberate RN-compatible
