@@ -19,12 +19,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import com.noahwallet.ui.LaunchGateView
 import com.noahwallet.ui.NoahTheme
 
 class MainActivity : FragmentActivity() {
     private var credentialRequestCode: Int? = null
     private var model: AppModel? = null
+    private val links: com.noahwallet.ui.PaymentLinks by viewModels()
     private var invalidatedBeforeReady = false
     private fun invalidateLock() {
         model?.walletLock?.background() ?: run { invalidatedBeforeReady = true }
@@ -62,6 +64,7 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.getBooleanExtra("recurring", false)) model?.recurringNotification = true
+        links.receive(intent)
     }
 
     override fun onStart() {
@@ -97,6 +100,7 @@ class MainActivity : FragmentActivity() {
         if (BuildConfig.DEBUG) android.os.StrictMode.setThreadPolicy(android.os.StrictMode.ThreadPolicy.Builder()
             .detectDiskReads().detectDiskWrites().detectNetwork().penaltyLog().build())
         super.onCreate(savedInstanceState)
+        links.receive(intent, savedInstanceState)
         if (Build.VERSION.SDK_INT < 29) ContextCompat.registerReceiver(this, backgroundReceiver,
             IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS) },
             ContextCompat.RECEIVER_EXPORTED)

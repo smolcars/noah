@@ -44,7 +44,7 @@ internal fun mainTabEntries(tab: Destination, homeStack: List<NavKey>): List<Nav
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun NoahApp(model: AppModel) {
+fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     val backStack = rememberNavBackStack(Destination.Home)
     // Settings' own pages: on Home's stack, Settings is one entry over Home.
     val settingsStack = rememberNavBackStack(SettingsDestination.Settings)
@@ -53,6 +53,8 @@ fun NoahApp(model: AppModel) {
     val tabState = rememberSaveableStateHolder()
     fun showHome() { backStack.clear(); backStack.add(Destination.Home); selectedTab = Destination.Home }
     fun showSend() { backStack.clear(); backStack.add(Destination.Home); selectedTab = Destination.Send }
+    /** A scanned code, a QR hub paste or an OS link: Send applies it on To once no payment holds it. */
+    fun scanned(value: String) { model.scannedDestination = value; showSend() }
     fun goBack() {
         if (!model.busy) {
             if (selectedTab != Destination.Home) selectedTab = Destination.Home
@@ -66,6 +68,14 @@ fun NoahApp(model: AppModel) {
         SettingsRoutes.open(backStack, settingsStack, page)
     }
     BackHandler(enabled = selectedTab != Destination.Home) { goBack() }
+    if (links != null) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val send = remember(context) { com.noahwallet.send.SendRuntime.shared(context).controller }
+        LaunchedEffect(links.pending, send.loading) { links.deliver(send, ::scanned, ::showSend) }
+        if (links.blocked) WalletAlertDialog(onDismissRequest = { links.blocked = false },
+            title = { Text(tr("Payment in progress")) }, text = { Text(tr(PaymentLinks.blockedMessage)) },
+            confirmButton = { androidx.compose.material3.TextButton({ links.blocked = false }) { Text(tr("OK")) } })
+    }
     LaunchedEffect(model.recurringNotification) {
         if (model.recurringNotification) { openSettings(SettingsDestination.Recurring); model.recurringNotification = false }
     }
@@ -119,10 +129,7 @@ fun NoahApp(model: AppModel) {
                             com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
                             onBack = { backStack.removeAt(backStack.lastIndex) },
                             onProfile = { openSettings(SettingsDestination.Profile) },
-                            onScan = { value ->
-                                model.scannedDestination = value
-                                showSend()
-                            }, startScanning = destination.scan)
+                            onScan = ::scanned, startScanning = destination.scan)
                     }
                     entry<SettingsDestination>(metadata = settingsZoom()) {
                         CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {

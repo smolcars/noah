@@ -146,6 +146,9 @@ fun LaunchGateView(model: AppModel) {
         state == LaunchState.onboarding || (model.open && !model.onboarded) -> LaunchRoute.onboarding
         else -> LaunchRoute.message
     }
+    val links = androidx.lifecycle.viewmodel.compose.viewModel<PaymentLinks>()
+    val linkStep = linkStep(route, covered, state, model.error != null, model.isWalletSuspended)
+    LaunchedEffect(linkStep, links.pending) { if (linkStep == LinkStep.ignore) links.drop() }
     // Onboarding and its gate screens split the whole window at a fold themselves; everything else keeps one pane.
     // The wallet app applies that per screen: Home splits the window itself, other tabs keep one pane.
     val fullWindow = route in setOf(LaunchRoute.onboarding, LaunchRoute.push, LaunchRoute.battery)
@@ -171,7 +174,7 @@ fun LaunchGateView(model: AppModel) {
                 LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)
                 LaunchRoute.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission)
                 LaunchRoute.battery -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { BatteryOptimizationScreen(model) { gateRevision++ } }
-                LaunchRoute.app -> NoahApp(model)
+                LaunchRoute.app -> NoahApp(model, links.takeIf { linkStep == LinkStep.open })
                 LaunchRoute.onboarding -> Onboarding(model)
             }
         }
@@ -197,7 +200,14 @@ fun LaunchGateView(model: AppModel) {
 
 }
 
-private enum class LaunchRoute { customServer, message, loading, push, battery, app, onboarding }
+internal enum class LaunchRoute { customServer, message, loading, push, battery, app, onboarding }
+
+/** A link waits out loading and App lock, opens Send in the wallet's tabs, and is dropped by onboarding, suspension and every gate. */
+internal fun linkStep(route: LaunchRoute, covered: Boolean, state: LaunchState?, openFailed: Boolean, suspended: Boolean) = when {
+    covered || route == LaunchRoute.loading || route == LaunchRoute.message && (state == null || state == LaunchState.existingWallet && !openFailed) -> LinkStep.wait
+    route == LaunchRoute.app && !suspended -> LinkStep.open
+    else -> LinkStep.ignore
+}
 
 /** Modifier-only shielding preserves remember/NavDisplay state in the covered subtree. */
 internal fun Modifier.walletContentProtection(covered: Boolean): Modifier =
