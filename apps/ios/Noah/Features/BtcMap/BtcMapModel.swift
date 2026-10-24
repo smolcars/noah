@@ -167,7 +167,7 @@ final class BtcMapModel {
             guard !initial, !Task.isCancelled else { return }
             alert = error as? BtcMapLocation.Failure == .denied
                 ? "You can still browse the full map. Enable location in Settings to see nearby places."
-                : "Noah could not determine your current location. Try again."
+                : "Location is unavailable. You can still search for a city and browse the full map."
         }
     }
 }

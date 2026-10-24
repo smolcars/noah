@@ -32,7 +32,7 @@ struct BtcMapDetailView: View {
                         if let verified = merchant.verified_at { Text(L10n.text("Verified {date}", dateLabel(verified), locale: locale.identifier)).font(NoahFont.footnote).foregroundStyle(.secondary) }
                     }
                     Spacer(minLength: 4)
-                    Button("Close place details", systemImage: "xmark", action: onClose)
+                    Button("Close", systemImage: "xmark", action: onClose)
                         .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).glassButtonStyle()
                 }
                 ViewThatFits(in: .horizontal) {
@@ -103,7 +103,7 @@ struct BtcMapDetailView: View {
                 openURL(url) { if !$0 { linkFailed = true } }
             }
         }
-        ShareLink(item: L10n.text("{value1}\nhttps://btcmap.org/merchant/{value2}", place.name, place.id, locale: locale.identifier)) { Label("Share", systemImage: "square.and.arrow.up") }
+        ShareLink(item: "\(place.name)\nhttps://btcmap.org/merchant/\(place.id)") { Label("Share", systemImage: "square.and.arrow.up") }
     }
 
     private var paymentMethods: [String] {

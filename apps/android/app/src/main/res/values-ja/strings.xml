@@ -117,7 +117,6 @@
   <string name="gt_e674447337e83c13">"利用可能"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12オファー"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
-  <string name="gt_4216000d31d4c4e3">"BTC Map"</string>
   <string name="gt_7ad0b90f9a8069c4">"BTC価格（%1$s）"</string>
   <string name="gt_7adadfe2ad44793b">"BTC価格（%1$s）"</string>
   <string name="gt_76900f1bfd16c8d4">"戻る"</string>
@@ -266,7 +265,6 @@
   <string name="gt_3b7ea51793e9d906">"検索をクリア"</string>
   <string name="gt_cea4d2e010b8fd52">"選択を解除"</string>
   <string name="gt_7d9eb7acb13e2462">"閉じる"</string>
-  <string name="gt_dfc885030d22671d">"施設の詳細を閉じる"</string>
   <string name="gt_55656b5e434f4c06">"検索を閉じる"</string>
   <string name="gt_54cb4b725a66af16">"コイン%1$s"</string>
   <string name="gt_b322b65227bc3ec9">"折りたたみ済み"</string>
@@ -542,9 +540,7 @@
   <string name="gt_638e249f4a15ebb8">"絞り込み"</string>
   <string name="gt_f4ed8fa656b74c5d">"確定済み"</string>
   <string name="gt_b4221133c0166c16">"最終受け取りトランザクションをブロードキャストし、確認を待っています。"</string>
-  <string name="gt_d4531989954eac5c">"近くの施設を探す"</string>
   <string name="gt_664fa279a9ee2f99">"ビットコインが使えるお店を探す"</string>
-  <string name="gt_6dfc37f56766e503">"位置情報を取得中"</string>
   <string name="gt_280918c59094fc48">"ビットコインを探しています"</string>
   <string name="gt_ff8fa5b5d54ed7db">"ウォレットのバックグラウンド処理を行う前に、初期設定を完了してください"</string>
   <string name="gt_25cc2b0e08f9d856">"QRコードを共有する前に、ライトニングアドレスの設定を完了してください。"</string>
@@ -568,7 +564,6 @@
   <string name="gt_e32bf7f648769c22">"資金をオンチェーンアドレスにまとめて送金できます。"</string>
   <string name="gt_f0d4041b0de73f9b">"資金をオンチェーンに回収しました。"</string>
   <string name="gt_402419e92096bd4a">"GBP"</string>
-  <string name="gt_71efbb90cdf5b89b">"GeoNames"</string>
   <string name="gt_7ff998b8021274e7">"Ark情報を取得"</string>
   <string name="gt_74871a4c5c4bbd05">"デバッグ情報を取得"</string>
   <string name="gt_b31f9ded6ae4d5f1">"プッシュトークンを取得"</string>
@@ -633,7 +628,6 @@
   <string name="gt_7f89a8b29b034582">"金額の形式が無効です"</string>
   <string name="gt_dfc5950db71330cf">"無効なBitcoinアドレス"</string>
   <string name="gt_809d321d74b3c7ba">"エクスポート名が無効です"</string>
-  <string name="gt_db04a7fc75316e40">"無効な地図データ"</string>
   <string name="gt_b9b0e9e85d5ed074">"確認コードが無効か、有効期限が切れています。"</string>
   <string name="gt_97ce5ac8121480ec">"確認コードが無効か、有効期限が切れています。もう一度お試しください。"</string>
   <string name="gt_9aecdf7b7354577b">"サーバートークンの有効期限が無効です"</string>
@@ -679,7 +673,6 @@
   <string name="gt_4f14b3e9b20d43a4">"除外: 価値より手数料が高い%1$s。それでも出金するには個別に選択してください。"</string>
   <string name="gt_a3b3e07f52c173b1">"除外: %1$s、現在使用中。"</string>
   <string name="gt_1d78b52b9fdeac1c">"除外: %1$s、出金するには少なすぎます。"</string>
-  <string name="gt_68dc9d6d2e2e87ef">"旧式のAndroidコールバック"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Noah をバックグラウンドで動かす"</string>
   <string name="gt_e085922bf6346107">"Lightningの受け取りのためにNoahを起動できます"</string>
   <string name="gt_17968e6e1b20c79e">"英字と数字"</string>
@@ -725,9 +718,6 @@
   <string name="gt_2f59b03b1a5e43b2">"メンテナンス更新"</string>
   <string name="gt_6c2f89a9a33e0770">"メンテナンスが完了しました"</string>
   <string name="gt_5926f9770e915ee6">"メンテナンス更新が完了しました"</string>
-  <string name="gt_ac2e1982d49531a4">"地図のキャッシュを保存できませんでした"</string>
-  <string name="gt_720dd69ca94e571b">"地図データがリソースの上限を超えています"</string>
-  <string name="gt_f51dc83e58497522">"地図のリクエストに失敗しました"</string>
   <string name="gt_a1a5936d3b0f8a69">"最大"</string>
   <string name="gt_f62bb082d169c40c">"利用可能な最大額"</string>
   <string name="gt_2f77668a9dfbf8d5">"メッセージ"</string>
@@ -822,7 +812,6 @@
   <string name="gt_69015317a2b04485">"ウォレットの同期に合わせて、Noahが自動的に再確認します。"</string>
   <string name="gt_c2fe2ee25b70bb73">"切り替える前に、Noahが正しいネットワークかどうかを確認します。"</string>
   <string name="gt_5a00f75927a33884">"これをオフにするまで、Noahはウォレットを閉じて支払いを停止します。"</string>
-  <string name="gt_7db88997746b5ec1">"Noahが現在地を特定できませんでした。もう一度お試しください。"</string>
   <string name="gt_c1f6e702ec74583d">"Noahは支払い試行の記録を読み取るか保存する際に失敗しました。状況を復元できるまで送信は無効になります。"</string>
   <string name="gt_34c9cafb61bbac7d">"Noahが安全な保存領域にアクセスできませんでした。端末のロックを解除して再試行してください。"</string>
   <string name="gt_e107aa3075b29c81">"Noahは復元フレーズが保存されたことを確認できませんでした。再試行しないでください。安全に復旧するため、端末のロックを解除してから、Noahを閉じて再起動してください。"</string>
@@ -1376,7 +1365,6 @@
   <string name="gt_ae9c99bb67325b70">"設定でオンにしてください。戻ってきたときにNoahがもう一度確認します。"</string>
   <string name="gt_baaddf70fb5d432b">"種類"</string>
   <string name="gt_11f461fc56ac26c4">"確認のためdeleteと入力"</string>
-  <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
   <string name="gt_ed8e5311ed8b968a">"この支払いを確認できません。送金は引き続き停止しています。"</string>
   <string name="gt_107e6e5754590692">"この支払いを確認できません。すでに処理中の可能性があります。再送信する前に状況を確認してください。"</string>
@@ -1414,7 +1402,6 @@
   <string name="gt_ff8b555d818f0b25">"アップデートがあります"</string>
   <string name="gt_9f725ecf91f1aaf9">"更新時刻：%1$s"</string>
   <string name="gt_a7a68b529b93080a">"Noahウォレットを更新中"</string>
-  <string name="gt_b1a5d49f22607423">"場所の情報を更新中"</string>
   <string name="gt_77a11d005b310667">"ウォレットを更新中"</string>
   <string name="gt_a769cedc799260e8">"デフォルトを使用"</string>
   <string name="gt_330cc4388c5218a4">"デフォルトのサーバーを使用"</string>
@@ -1647,9 +1634,6 @@
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB（手数料率が上がると引き上げ）"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · 共有"</string>
-  <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
-  <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· ウォレットからの出金はありません"</string>
   <string name="home">"ホーム"</string>
   <string name="receive">"受け取る"</string>

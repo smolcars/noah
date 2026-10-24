@@ -4129,42 +4129,6 @@
         }
       }
     },
-    "BTC Map": {
-      "comment": "GT gt_4216000d31d4c4e3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BTC Map"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BTC Map"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BTC Map"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BTC Map"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BTC Map"
-          }
-        }
-      }
-    },
     "BTC Price ({currency})": {
       "comment": "GT gt_7ad0b90f9a8069c4; arguments: currency",
       "extractionState": "manual",
@@ -9441,42 +9405,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stäng"
-          }
-        }
-      }
-    },
-    "Close place details": {
-      "comment": "GT gt_dfc885030d22671d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Close place details"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cerrar detalles del lugar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "施設の詳細を閉じる"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "장소 상세 정보 닫기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stäng platsinformationen"
           }
         }
       }
@@ -19141,42 +19069,6 @@
         }
       }
     },
-    "Find places near me": {
-      "comment": "GT gt_d4531989954eac5c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Find places near me"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar lugares cerca de mí"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "近くの施設を探す"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주변 장소 찾기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hitta platser nära mig"
-          }
-        }
-      }
-    },
     "Find places that accept bitcoin": {
       "comment": "GT gt_664fa279a9ee2f99; arguments: none",
       "extractionState": "manual",
@@ -19209,42 +19101,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hitta ställen som tar emot bitcoin"
-          }
-        }
-      }
-    },
-    "Finding location": {
-      "comment": "GT gt_6dfc37f56766e503; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finding location"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscando ubicación"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "位置情報を取得中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "위치 찾는 중"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Söker efter din plats"
           }
         }
       }
@@ -20073,42 +19929,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "GBP"
-          }
-        }
-      }
-    },
-    "GeoNames": {
-      "comment": "GT gt_71efbb90cdf5b89b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GeoNames"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GeoNames"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GeoNames"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GeoNames"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GeoNames"
           }
         }
       }
@@ -22369,42 +22189,6 @@
         }
       }
     },
-    "Invalid map data": {
-      "comment": "GT gt_db04a7fc75316e40; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid map data"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Datos del mapa no válidos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無効な地図データ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "잘못된 지도 데이터"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ogiltiga kartdata"
-          }
-        }
-      }
-    },
     "Invalid or expired verification code.": {
       "comment": "GT gt_b9b0e9e85d5ed074; arguments: none",
       "extractionState": "manual",
@@ -24025,42 +23809,6 @@
         }
       }
     },
-    "Legacy Android callback": {
-      "comment": "GT gt_68dc9d6d2e2e87ef; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Legacy Android callback"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Función de retorno heredada de Android"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "旧式のAndroidコールバック"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "레거시 Android 콜백"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Äldre Android-återanrop"
-          }
-        }
-      }
-    },
     "Let Noah run in the background": {
       "comment": "GT gt_6e2d65a1c9f1b6a6; arguments: none",
       "extractionState": "manual",
@@ -25677,114 +25425,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Underhållsförnyelse slutförd"
-          }
-        }
-      }
-    },
-    "Map cache could not be saved": {
-      "comment": "GT gt_ac2e1982d49531a4; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Map cache could not be saved"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo guardar la caché del mapa"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "地図のキャッシュを保存できませんでした"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지도 캐시를 저장하지 못했습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kartans cache kunde inte sparas"
-          }
-        }
-      }
-    },
-    "Map data exceeds resource limits": {
-      "comment": "GT gt_720dd69ca94e571b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Map data exceeds resource limits"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los datos del mapa superan los límites de recursos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "地図データがリソースの上限を超えています"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지도 데이터가 리소스 한도를 초과합니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kartdata överskrider resursgränserna"
-          }
-        }
-      }
-    },
-    "Map request failed": {
-      "comment": "GT gt_f51dc83e58497522; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Map request failed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falló la solicitud del mapa"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "地図のリクエストに失敗しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지도 요청 실패"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kartförfrågan misslyckades"
           }
         }
       }
@@ -29169,42 +28809,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah stänger plånboken och stoppar betalningar tills du stänger av det här."
-          }
-        }
-      }
-    },
-    "Noah could not determine your current location. Try again.": {
-      "comment": "GT gt_7db88997746b5ec1; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah could not determine your current location. Try again."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah no pudo determinar tu ubicación actual. Inténtalo de nuevo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahが現在地を特定できませんでした。もう一度お試しください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah가 현재 위치를 확인하지 못했습니다. 다시 시도하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah kunde inte fastställa din nuvarande plats. Försök igen."
           }
         }
       }
@@ -48925,42 +48529,6 @@
         }
       }
     },
-    "US": {
-      "comment": "GT gt_9b202ecbc6d45c6d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "US"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "US"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "US"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "US"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "US"
-          }
-        }
-      }
-    },
     "USD": {
       "comment": "GT gt_a26cdf3a6e709124; arguments: none",
       "extractionState": "manual",
@@ -50289,42 +49857,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uppdaterar Noah-plånboken"
-          }
-        }
-      }
-    },
-    "Updating places": {
-      "comment": "GT gt_b1a5d49f22607423; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Updating places"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actualizando lugares"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "場所の情報を更新中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "장소 업데이트 중"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uppdaterar platser"
           }
         }
       }
@@ -57813,114 +57345,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · delad"
-          }
-        }
-      }
-    },
-    "{value1}\nhttps://btcmap.org/merchant/{value2}": {
-      "comment": "GT gt_2584890305b6f218; arguments: value1, value2",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@\nhttps://btcmap.org/merchant/%2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@\nhttps://btcmap.org/merchant/%2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@\nhttps://btcmap.org/merchant/%2$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@\nhttps://btcmap.org/merchant/%2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@\nhttps://btcmap.org/merchant/%2$@"
-          }
-        }
-      }
-    },
-    "© OpenMapTiles": {
-      "comment": "GT gt_a6ba31bfc3177217; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenMapTiles"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenMapTiles"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenMapTiles"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenMapTiles"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenMapTiles"
-          }
-        }
-      }
-    },
-    "© OpenStreetMap": {
-      "comment": "GT gt_130a00dae48562a4; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenStreetMap"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenStreetMap"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenStreetMap"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenStreetMap"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "© OpenStreetMap"
           }
         }
       }

@@ -117,7 +117,6 @@
   <string name="gt_e674447337e83c13">"Disponible"</string>
   <string name="gt_7f0f933db2ac9622">"Oferta BOLT12"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
-  <string name="gt_4216000d31d4c4e3">"BTC Map"</string>
   <string name="gt_7ad0b90f9a8069c4">"Precio de BTC (%1$s)"</string>
   <string name="gt_7adadfe2ad44793b">"Precio de BTC (%1$s)"</string>
   <string name="gt_76900f1bfd16c8d4">"Volver"</string>
@@ -266,7 +265,6 @@
   <string name="gt_3b7ea51793e9d906">"Borrar búsqueda"</string>
   <string name="gt_cea4d2e010b8fd52">"Borrar selección"</string>
   <string name="gt_7d9eb7acb13e2462">"Cerrar"</string>
-  <string name="gt_dfc885030d22671d">"Cerrar detalles del lugar"</string>
   <string name="gt_55656b5e434f4c06">"Cerrar búsqueda"</string>
   <string name="gt_54cb4b725a66af16">"Moneda %1$s"</string>
   <string name="gt_b322b65227bc3ec9">"Contraído"</string>
@@ -542,9 +540,7 @@
   <string name="gt_638e249f4a15ebb8">"Filtrar"</string>
   <string name="gt_f4ed8fa656b74c5d">"Final"</string>
   <string name="gt_b4221133c0166c16">"La transacción final de reclamación se difundió y está pendiente de confirmación."</string>
-  <string name="gt_d4531989954eac5c">"Buscar lugares cerca de mí"</string>
   <string name="gt_664fa279a9ee2f99">"Encuentra lugares que acepten bitcoin"</string>
-  <string name="gt_6dfc37f56766e503">"Buscando ubicación"</string>
   <string name="gt_280918c59094fc48">"Buscando tu bitcoin"</string>
   <string name="gt_ff8fa5b5d54ed7db">"Completa la configuración inicial antes de realizar tareas de la billetera en segundo plano"</string>
   <string name="gt_25cc2b0e08f9d856">"Termina de configurar tu dirección Lightning antes de compartir tu código QR."</string>
@@ -568,7 +564,6 @@
   <string name="gt_e32bf7f648769c22">"Los fondos pueden transferirse a una dirección en cadena."</string>
   <string name="gt_f0d4041b0de73f9b">"Los fondos se recuperaron en la cadena."</string>
   <string name="gt_402419e92096bd4a">"GBP"</string>
-  <string name="gt_71efbb90cdf5b89b">"GeoNames"</string>
   <string name="gt_7ff998b8021274e7">"Obtener información de Ark"</string>
   <string name="gt_74871a4c5c4bbd05">"Obtener información de depuración"</string>
   <string name="gt_b31f9ded6ae4d5f1">"Obtener token de notificaciones push"</string>
@@ -633,7 +628,6 @@
   <string name="gt_7f89a8b29b034582">"Formato de importe no válido"</string>
   <string name="gt_dfc5950db71330cf">"Dirección Bitcoin no válida"</string>
   <string name="gt_809d321d74b3c7ba">"Nombre de exportación no válido"</string>
-  <string name="gt_db04a7fc75316e40">"Datos del mapa no válidos"</string>
   <string name="gt_b9b0e9e85d5ed074">"Código de verificación no válido o caducado."</string>
   <string name="gt_97ce5ac8121480ec">"Código de verificación no válido o caducado. Inténtalo de nuevo."</string>
   <string name="gt_9aecdf7b7354577b">"Fecha de caducidad del token del servidor no válida"</string>
@@ -679,7 +673,6 @@
   <string name="gt_4f14b3e9b20d43a4">"Excluidos: %1$s que cuestan más en comisiones de lo que valen. Elígelos para sacarlos igualmente."</string>
   <string name="gt_a3b3e07f52c173b1">"Excluidos: %1$s, en uso ahora mismo."</string>
   <string name="gt_1d78b52b9fdeac1c">"Excluidos: %1$s, demasiado poco para salir."</string>
-  <string name="gt_68dc9d6d2e2e87ef">"Función de retorno heredada de Android"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Deja que Noah funcione en segundo plano"</string>
   <string name="gt_e085922bf6346107">"Permite que Noah se active para Lightning"</string>
   <string name="gt_17968e6e1b20c79e">"Letras y números"</string>
@@ -725,9 +718,6 @@
   <string name="gt_2f59b03b1a5e43b2">"Renovación de mantenimiento"</string>
   <string name="gt_6c2f89a9a33e0770">"Mantenimiento completado"</string>
   <string name="gt_5926f9770e915ee6">"Renovación de mantenimiento completada"</string>
-  <string name="gt_ac2e1982d49531a4">"No se pudo guardar la caché del mapa"</string>
-  <string name="gt_720dd69ca94e571b">"Los datos del mapa superan los límites de recursos"</string>
-  <string name="gt_f51dc83e58497522">"Falló la solicitud del mapa"</string>
   <string name="gt_a1a5936d3b0f8a69">"Máx."</string>
   <string name="gt_f62bb082d169c40c">"Máximo disponible"</string>
   <string name="gt_2f77668a9dfbf8d5">"Mensaje"</string>
@@ -822,7 +812,6 @@
   <string name="gt_69015317a2b04485">"Noah vuelve a comprobarlo automáticamente mientras se sincroniza tu billetera."</string>
   <string name="gt_c2fe2ee25b70bb73">"Noah comprueba que esté en la red correcta antes de cambiar."</string>
   <string name="gt_5a00f75927a33884">"Noah cierra la billetera y detiene los pagos hasta que desactives esta opción."</string>
-  <string name="gt_7db88997746b5ec1">"Noah no pudo determinar tu ubicación actual. Inténtalo de nuevo."</string>
   <string name="gt_c1f6e702ec74583d">"Noah no pudo leer ni guardar el intento de pago. El envío está desactivado hasta que se pueda recuperar su estado."</string>
   <string name="gt_34c9cafb61bbac7d">"Noah no pudo acceder al almacenamiento seguro. Desbloquea tu dispositivo e inténtalo de nuevo."</string>
   <string name="gt_e107aa3075b29c81">"Noah no pudo confirmar que tu frase de recuperación se hubiera guardado. No lo intentes de nuevo. Desbloquea tu dispositivo y luego cierra y reinicia Noah para realizar la recuperación de forma segura."</string>
@@ -1376,7 +1365,6 @@
   <string name="gt_ae9c99bb67325b70">"Actívalas en Ajustes. Noah volverá a comprobarlo cuando regreses."</string>
   <string name="gt_baaddf70fb5d432b">"Tipo"</string>
   <string name="gt_11f461fc56ac26c4">"Escribe delete para confirmar"</string>
-  <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
   <string name="gt_ed8e5311ed8b968a">"No se puede comprobar este pago. Los envíos siguen detenidos."</string>
   <string name="gt_107e6e5754590692">"No se puede comprobar este pago. Es posible que ya esté en curso. Comprueba su estado antes de enviarlo de nuevo."</string>
@@ -1414,7 +1402,6 @@
   <string name="gt_ff8b555d818f0b25">"Actualización disponible"</string>
   <string name="gt_9f725ecf91f1aaf9">"Actualizado a las %1$s"</string>
   <string name="gt_a7a68b529b93080a">"Actualizando la billetera Noah"</string>
-  <string name="gt_b1a5d49f22607423">"Actualizando lugares"</string>
   <string name="gt_77a11d005b310667">"Actualizando billetera"</string>
   <string name="gt_a769cedc799260e8">"Usar predeterminado"</string>
   <string name="gt_330cc4388c5218a4">"Usar servidor predeterminado"</string>
@@ -1647,9 +1634,6 @@
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, sube cuando suben las tasas"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · compartida"</string>
-  <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
-  <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· no salió nada de tu billetera"</string>
   <string name="home">"Inicio"</string>
   <string name="receive">"Recibir"</string>

@@ -86,7 +86,7 @@ struct BtcMapView: View {
                 .accessibilityIdentifier("btc-map-places-in-view")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Find places near me", systemImage: "location") {
+                Button("My location", systemImage: "location") {
                     searchFocused = false
                     locatingTask = Task { await model.locate() }
                 }
@@ -217,8 +217,8 @@ struct BtcMapView: View {
             } else {
                 HStack {
                     Text(L10n.plural("{_gt_value_4} places{_gt_value_3}", count: model.filtered.count, "", locale: locale.identifier)).font(NoahFont.footnote)
-                    if model.isSyncing { ProgressView().controlSize(.small).accessibilityLabel("Updating places") }
-                    if model.isLocating { ProgressView().controlSize(.small).accessibilityLabel("Finding location") }
+                    if model.isSyncing { ProgressView().controlSize(.small).accessibilityLabel("Syncing…") }
+                    if model.isLocating { ProgressView().controlSize(.small).accessibilityLabel("Locating…") }
                     if model.syncUnavailable {
                         Button("Offline · Retry") { Task { await model.refresh() } }.font(NoahFont.footnote)
                     }
@@ -226,10 +226,10 @@ struct BtcMapView: View {
                 .padding(.horizontal, 12).padding(.vertical, 8).glassCompat(in: Capsule())
             }
             HStack(spacing: 6) {
-                Link("© OpenStreetMap", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
-                Link("© OpenMapTiles", destination: URL(string: "https://openmaptiles.org")!)
-                Link("BTC Map", destination: URL(string: "https://btcmap.org")!)
-                Link("GeoNames", destination: URL(string: "https://www.geonames.org")!)
+                Link(#"© OpenStreetMap"#, destination: URL(string: "https://www.openstreetmap.org/copyright")!)
+                Link(#"© OpenMapTiles"#, destination: URL(string: "https://openmaptiles.org")!)
+                Link(#"BTC Map"#, destination: URL(string: "https://btcmap.org")!)
+                Link(#"GeoNames"#, destination: URL(string: "https://www.geonames.org")!)
             }
             .font(.caption2).foregroundStyle(NoahColor.foreground)
             .padding(8).background(NoahColor.background, in: RoundedRectangle(cornerRadius: 8))

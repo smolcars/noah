@@ -36,7 +36,7 @@ object BtcMapLocation {
                 }
                 override fun onProviderEnabled(provider: String) = Unit
                 override fun onProviderDisabled(provider: String) = Unit
-                @Deprecated("Legacy Android callback")
+                @Deprecated("""Legacy Android callback""")
                 override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
             }
             continuation.invokeOnCancellation { manager.removeUpdates(listener) }

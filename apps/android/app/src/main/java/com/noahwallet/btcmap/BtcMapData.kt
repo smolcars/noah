@@ -11,7 +11,7 @@ import kotlin.math.*
 internal val mapJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
 internal fun JsonObject.string(key: String): String? = (get(key) as? JsonPrimitive)
     ?.takeIf { it.isString }?.content?.also(BtcMapLimits::checkString)?.takeIf { it.isNotEmpty() }
-internal fun JsonObject.requiredString(key: String) = requireNotNull(string(key)) { "Invalid map data" }
+internal fun JsonObject.requiredString(key: String) = requireNotNull(string(key)) { """Invalid map data""" }
 internal fun JsonElement.number(): Double = (this as JsonPrimitive).let {
     require(!it.isString); requireNotNull(it.doubleOrNull).also { n -> require(n.isFinite()) }
 }

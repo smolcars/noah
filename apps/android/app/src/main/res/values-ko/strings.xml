@@ -117,7 +117,6 @@
   <string name="gt_e674447337e83c13">"사용 가능"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12 오퍼"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
-  <string name="gt_4216000d31d4c4e3">"BTC Map"</string>
   <string name="gt_7ad0b90f9a8069c4">"BTC 가격 (%1$s)"</string>
   <string name="gt_7adadfe2ad44793b">"BTC 가격(%1$s)"</string>
   <string name="gt_76900f1bfd16c8d4">"뒤로"</string>
@@ -266,7 +265,6 @@
   <string name="gt_3b7ea51793e9d906">"검색어 지우기"</string>
   <string name="gt_cea4d2e010b8fd52">"선택 해제"</string>
   <string name="gt_7d9eb7acb13e2462">"닫기"</string>
-  <string name="gt_dfc885030d22671d">"장소 상세 정보 닫기"</string>
   <string name="gt_55656b5e434f4c06">"검색 닫기"</string>
   <string name="gt_54cb4b725a66af16">"코인 %1$s"</string>
   <string name="gt_b322b65227bc3ec9">"접힘"</string>
@@ -542,9 +540,7 @@
   <string name="gt_638e249f4a15ebb8">"필터"</string>
   <string name="gt_f4ed8fa656b74c5d">"최종"</string>
   <string name="gt_b4221133c0166c16">"최종 청구 거래가 전파되어 확정을 기다리고 있습니다."</string>
-  <string name="gt_d4531989954eac5c">"주변 장소 찾기"</string>
   <string name="gt_664fa279a9ee2f99">"Bitcoin 결제가 가능한 곳 찾기"</string>
-  <string name="gt_6dfc37f56766e503">"위치 찾는 중"</string>
   <string name="gt_280918c59094fc48">"비트코인을 찾는 중"</string>
   <string name="gt_ff8fa5b5d54ed7db">"지갑 백그라운드 작업을 시작하기 전에 초기 설정을 완료하세요"</string>
   <string name="gt_25cc2b0e08f9d856">"QR 코드를 공유하기 전에 라이트닝 주소 설정을 완료하세요."</string>
@@ -568,7 +564,6 @@
   <string name="gt_e32bf7f648769c22">"온체인 주소로 자금 전액을 이체할 수 있습니다."</string>
   <string name="gt_f0d4041b0de73f9b">"자금이 온체인으로 복구되었습니다."</string>
   <string name="gt_402419e92096bd4a">"GBP"</string>
-  <string name="gt_71efbb90cdf5b89b">"GeoNames"</string>
   <string name="gt_7ff998b8021274e7">"Ark 정보 가져오기"</string>
   <string name="gt_74871a4c5c4bbd05">"디버그 정보 가져오기"</string>
   <string name="gt_b31f9ded6ae4d5f1">"푸시 토큰 가져오기"</string>
@@ -633,7 +628,6 @@
   <string name="gt_7f89a8b29b034582">"잘못된 금액 형식"</string>
   <string name="gt_dfc5950db71330cf">"잘못된 Bitcoin 주소"</string>
   <string name="gt_809d321d74b3c7ba">"잘못된 내보내기 이름"</string>
-  <string name="gt_db04a7fc75316e40">"잘못된 지도 데이터"</string>
   <string name="gt_b9b0e9e85d5ed074">"인증 코드가 잘못되었거나 만료되었습니다."</string>
   <string name="gt_97ce5ac8121480ec">"인증 코드가 유효하지 않거나 만료되었습니다. 다시 시도해 주세요."</string>
   <string name="gt_9aecdf7b7354577b">"서버 토큰 만료 정보가 유효하지 않습니다"</string>
@@ -679,7 +673,6 @@
   <string name="gt_4f14b3e9b20d43a4">"제외: 가치보다 수수료가 더 드는 %1$s. 그래도 출금하려면 직접 선택하세요."</string>
   <string name="gt_a3b3e07f52c173b1">"제외: %1$s, 지금 사용 중."</string>
   <string name="gt_1d78b52b9fdeac1c">"제외: %1$s, 출금하기에 너무 적음."</string>
-  <string name="gt_68dc9d6d2e2e87ef">"레거시 Android 콜백"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Noah가 백그라운드에서 실행되게 하세요"</string>
   <string name="gt_e085922bf6346107">"라이트닝 결제를 받을 때 Noah가 깨어날 수 있어요"</string>
   <string name="gt_17968e6e1b20c79e">"영문자와 숫자"</string>
@@ -725,9 +718,6 @@
   <string name="gt_2f59b03b1a5e43b2">"유지 관리 갱신"</string>
   <string name="gt_6c2f89a9a33e0770">"유지 관리 완료"</string>
   <string name="gt_5926f9770e915ee6">"유지 관리 갱신 완료"</string>
-  <string name="gt_ac2e1982d49531a4">"지도 캐시를 저장하지 못했습니다"</string>
-  <string name="gt_720dd69ca94e571b">"지도 데이터가 리소스 한도를 초과합니다"</string>
-  <string name="gt_f51dc83e58497522">"지도 요청 실패"</string>
   <string name="gt_a1a5936d3b0f8a69">"최대"</string>
   <string name="gt_f62bb082d169c40c">"사용 가능한 최대 금액"</string>
   <string name="gt_2f77668a9dfbf8d5">"메시지"</string>
@@ -822,7 +812,6 @@
   <string name="gt_69015317a2b04485">"지갑이 동기화되는 동안 Noah가 자동으로 다시 확인합니다."</string>
   <string name="gt_c2fe2ee25b70bb73">"전환하기 전에 Noah가 올바른 네트워크인지 확인해요."</string>
   <string name="gt_5a00f75927a33884">"이 설정을 끌 때까지 Noah가 지갑을 닫고 결제를 중지해요."</string>
-  <string name="gt_7db88997746b5ec1">"Noah가 현재 위치를 확인하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_c1f6e702ec74583d">"Noah가 결제 시도 내역을 읽거나 저장하지 못했습니다. 상태를 복구할 때까지 전송이 비활성화됩니다."</string>
   <string name="gt_34c9cafb61bbac7d">"Noah가 보안 저장소에 접근하지 못했습니다. 기기 잠금을 해제하고 다시 시도해 주세요."</string>
   <string name="gt_e107aa3075b29c81">"Noah가 복구 문구의 저장 여부를 확인하지 못했습니다. 다시 시도하지 마세요. 안전하게 복구하려면 기기 잠금을 해제한 다음 Noah를 종료하고 다시 시작하세요."</string>
@@ -1376,7 +1365,6 @@
   <string name="gt_ae9c99bb67325b70">"설정에서 켜세요. 돌아오면 Noah가 다시 확인해요."</string>
   <string name="gt_baaddf70fb5d432b">"유형"</string>
   <string name="gt_11f461fc56ac26c4">"확인하려면 delete를 입력하세요"</string>
-  <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
   <string name="gt_ed8e5311ed8b968a">"이 결제를 확인할 수 없습니다. 전송 중지 상태가 유지됩니다."</string>
   <string name="gt_107e6e5754590692">"이 결제를 확인할 수 없습니다. 이미 진행 중일 수 있습니다. 다시 보내기 전에 상태를 확인하세요."</string>
@@ -1414,7 +1402,6 @@
   <string name="gt_ff8b555d818f0b25">"업데이트 가능"</string>
   <string name="gt_9f725ecf91f1aaf9">"%1$s에 업데이트됨"</string>
   <string name="gt_a7a68b529b93080a">"Noah 지갑 업데이트 중"</string>
-  <string name="gt_b1a5d49f22607423">"장소 업데이트 중"</string>
   <string name="gt_77a11d005b310667">"지갑 업데이트 중"</string>
   <string name="gt_a769cedc799260e8">"기본값 사용"</string>
   <string name="gt_330cc4388c5218a4">"기본 서버 사용"</string>
@@ -1647,9 +1634,6 @@
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, 수수료율이 오르면 인상"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · 공유"</string>
-  <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
-  <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· 지갑에서 빠져나간 금액 없음"</string>
   <string name="home">"홈"</string>
   <string name="receive">"받기"</string>

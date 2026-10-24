@@ -16,7 +16,7 @@ struct CitySearchEntry: Identifiable, Sendable {
 
     var secondaryLabel: String { [regionName, countryName].compactMap { $0 }.joined(separator: ", ") }
     var displayLabel: String {
-        let region = countryCode == "US" ? admin1Code : regionName ?? ""
+        let region = countryCode == #"US"# ? admin1Code : regionName ?? ""
         return "\(name), \(region.isEmpty ? countryName : region)"
     }
 }

@@ -117,7 +117,6 @@
   <string name="gt_e674447337e83c13">"Tillgängligt"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12-erbjudande"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
-  <string name="gt_4216000d31d4c4e3">"BTC Map"</string>
   <string name="gt_7ad0b90f9a8069c4">"BTC-pris (%1$s)"</string>
   <string name="gt_7adadfe2ad44793b">"BTC-pris (%1$s)"</string>
   <string name="gt_76900f1bfd16c8d4">"Tillbaka"</string>
@@ -266,7 +265,6 @@
   <string name="gt_3b7ea51793e9d906">"Rensa sökning"</string>
   <string name="gt_cea4d2e010b8fd52">"Rensa val"</string>
   <string name="gt_7d9eb7acb13e2462">"Stäng"</string>
-  <string name="gt_dfc885030d22671d">"Stäng platsinformationen"</string>
   <string name="gt_55656b5e434f4c06">"Stäng sökningen"</string>
   <string name="gt_54cb4b725a66af16">"Mynt %1$s"</string>
   <string name="gt_b322b65227bc3ec9">"Hopfälld"</string>
@@ -542,9 +540,7 @@
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
   <string name="gt_f4ed8fa656b74c5d">"Slutgiltig"</string>
   <string name="gt_b4221133c0166c16">"Den slutliga inlösentransaktionen har sänts och väntar på bekräftelse."</string>
-  <string name="gt_d4531989954eac5c">"Hitta platser nära mig"</string>
   <string name="gt_664fa279a9ee2f99">"Hitta ställen som tar emot bitcoin"</string>
-  <string name="gt_6dfc37f56766e503">"Söker efter din plats"</string>
   <string name="gt_280918c59094fc48">"Letar efter din bitcoin"</string>
   <string name="gt_ff8fa5b5d54ed7db">"Slutför introduktionen innan plånboken kan arbeta i bakgrunden"</string>
   <string name="gt_25cc2b0e08f9d856">"Slutför konfigurationen av din Lightning-adress innan du delar din QR-kod."</string>
@@ -568,7 +564,6 @@
   <string name="gt_e32bf7f648769c22">"Medlen kan överföras till en on-chain-adress."</string>
   <string name="gt_f0d4041b0de73f9b">"Medlen återfördes till blockkedjan."</string>
   <string name="gt_402419e92096bd4a">"GBP"</string>
-  <string name="gt_71efbb90cdf5b89b">"GeoNames"</string>
   <string name="gt_7ff998b8021274e7">"Hämta Ark-information"</string>
   <string name="gt_74871a4c5c4bbd05">"Hämta felsökningsinformation"</string>
   <string name="gt_b31f9ded6ae4d5f1">"Hämta push-token"</string>
@@ -633,7 +628,6 @@
   <string name="gt_7f89a8b29b034582">"Ogiltigt beloppsformat"</string>
   <string name="gt_dfc5950db71330cf">"Ogiltig bitcoin-adress"</string>
   <string name="gt_809d321d74b3c7ba">"Ogiltigt exportnamn"</string>
-  <string name="gt_db04a7fc75316e40">"Ogiltiga kartdata"</string>
   <string name="gt_b9b0e9e85d5ed074">"Verifieringskoden är ogiltig eller har gått ut."</string>
   <string name="gt_97ce5ac8121480ec">"Verifieringskoden är ogiltig eller har gått ut. Försök igen."</string>
   <string name="gt_9aecdf7b7354577b">"Ogiltig utgångstid för servertoken"</string>
@@ -679,7 +673,6 @@
   <string name="gt_4f14b3e9b20d43a4">"Utelämnat: %1$s som kostar mer i avgifter än det är värt. Välj det för att ta ut det ändå."</string>
   <string name="gt_a3b3e07f52c173b1">"Utelämnat: %1$s, används just nu."</string>
   <string name="gt_1d78b52b9fdeac1c">"Utelämnat: %1$s, för litet för uttag."</string>
-  <string name="gt_68dc9d6d2e2e87ef">"Äldre Android-återanrop"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Låt Noah köras i bakgrunden"</string>
   <string name="gt_e085922bf6346107">"Låter Noah vakna för Lightning"</string>
   <string name="gt_17968e6e1b20c79e">"Bokstäver och siffror"</string>
@@ -725,9 +718,6 @@
   <string name="gt_2f59b03b1a5e43b2">"Underhållsuppdatering"</string>
   <string name="gt_6c2f89a9a33e0770">"Underhåll slutfört"</string>
   <string name="gt_5926f9770e915ee6">"Underhållsförnyelse slutförd"</string>
-  <string name="gt_ac2e1982d49531a4">"Kartans cache kunde inte sparas"</string>
-  <string name="gt_720dd69ca94e571b">"Kartdata överskrider resursgränserna"</string>
-  <string name="gt_f51dc83e58497522">"Kartförfrågan misslyckades"</string>
   <string name="gt_a1a5936d3b0f8a69">"Max"</string>
   <string name="gt_f62bb082d169c40c">"Högsta tillgängliga belopp"</string>
   <string name="gt_2f77668a9dfbf8d5">"Meddelande"</string>
@@ -822,7 +812,6 @@
   <string name="gt_69015317a2b04485">"Noah kontrollerar automatiskt igen när din plånbok synkroniseras."</string>
   <string name="gt_c2fe2ee25b70bb73">"Noah kontrollerar att den är på rätt nätverk innan bytet."</string>
   <string name="gt_5a00f75927a33884">"Noah stänger plånboken och stoppar betalningar tills du stänger av det här."</string>
-  <string name="gt_7db88997746b5ec1">"Noah kunde inte fastställa din nuvarande plats. Försök igen."</string>
   <string name="gt_c1f6e702ec74583d">"Noah kunde inte läsa eller spara betalningsförsöket. Det går inte att skicka förrän dess status kan återställas."</string>
   <string name="gt_34c9cafb61bbac7d">"Noah kunde inte komma åt den säkra lagringen. Lås upp enheten och försök igen."</string>
   <string name="gt_e107aa3075b29c81">"Noah kunde inte bekräfta att din återställningsfras sparades. Försök inte igen. Lås upp enheten. Stäng sedan Noah och starta om appen för en säker återställning."</string>
@@ -1376,7 +1365,6 @@
   <string name="gt_ae9c99bb67325b70">"Slå på dem i Inställningar. Noah kollar igen när du kommer tillbaka."</string>
   <string name="gt_baaddf70fb5d432b">"Typ"</string>
   <string name="gt_11f461fc56ac26c4">"Skriv delete för att bekräfta"</string>
-  <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
   <string name="gt_ed8e5311ed8b968a">"Kan inte kontrollera den här betalningen. Det går fortfarande inte att skicka betalningar."</string>
   <string name="gt_107e6e5754590692">"Det går inte att kontrollera den här betalningen. Den kan redan pågå. Kontrollera status innan du skickar igen."</string>
@@ -1414,7 +1402,6 @@
   <string name="gt_ff8b555d818f0b25">"Uppdatering tillgänglig"</string>
   <string name="gt_9f725ecf91f1aaf9">"Uppdaterad kl. %1$s"</string>
   <string name="gt_a7a68b529b93080a">"Uppdaterar Noah-plånboken"</string>
-  <string name="gt_b1a5d49f22607423">"Uppdaterar platser"</string>
   <string name="gt_77a11d005b310667">"Uppdaterar plånboken"</string>
   <string name="gt_a769cedc799260e8">"Använd standard"</string>
   <string name="gt_330cc4388c5218a4">"Använd standardserver"</string>
@@ -1647,9 +1634,6 @@
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, höjs när satserna stiger"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · delad"</string>
-  <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
-  <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· inget lämnade din plånbok"</string>
   <string name="home">"Hem"</string>
   <string name="receive">"Ta emot"</string>

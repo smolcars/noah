@@ -117,11 +117,11 @@ class BtcMapRepository(
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    if (continuation.isActive) continuation.resumeWithException(IOException("Map request failed"))
+                    if (continuation.isActive) continuation.resumeWithException(IOException("""Map request failed"""))
                 }
                 override fun onResponse(call: Call, response: Response) {
                     val result = runCatching { response.use {
-                        if (!it.isSuccessful) throw IOException("Map request failed")
+                        if (!it.isSuccessful) throw IOException("""Map request failed""")
                         it.body.byteStream().use { stream -> BtcMapLimits.read(stream, it.body.contentLength()) }
                     } }
                     if (continuation.isActive) result.fold(continuation::resume, continuation::resumeWithException)
@@ -133,7 +133,7 @@ class BtcMapRepository(
             val temp = File.createTempFile("btcmap-", ".tmp", file.parentFile)
             try {
                 FileOutputStream(temp).use { it.write(value.toByteArray(Charsets.UTF_8)); it.fd.sync() }
-                if (!temp.renameTo(file)) throw IOException("Map cache could not be saved")
+                if (!temp.renameTo(file)) throw IOException("""Map cache could not be saved""")
             } finally { temp.delete() }
         }
     }

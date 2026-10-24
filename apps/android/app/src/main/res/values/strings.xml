@@ -117,7 +117,6 @@
   <string name="gt_e674447337e83c13">"Available"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12 offer"</string>
   <string name="gt_3ad8f16115107caa">"BRL"</string>
-  <string name="gt_4216000d31d4c4e3">"BTC Map"</string>
   <string name="gt_7ad0b90f9a8069c4">"BTC Price (%1$s)"</string>
   <string name="gt_7adadfe2ad44793b">"BTC Price (%1$s)"</string>
   <string name="gt_76900f1bfd16c8d4">"Back"</string>
@@ -266,7 +265,6 @@
   <string name="gt_3b7ea51793e9d906">"Clear search"</string>
   <string name="gt_cea4d2e010b8fd52">"Clear selection"</string>
   <string name="gt_7d9eb7acb13e2462">"Close"</string>
-  <string name="gt_dfc885030d22671d">"Close place details"</string>
   <string name="gt_55656b5e434f4c06">"Close search"</string>
   <string name="gt_54cb4b725a66af16">"Coin %1$s"</string>
   <string name="gt_b322b65227bc3ec9">"Collapsed"</string>
@@ -542,9 +540,7 @@
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
   <string name="gt_f4ed8fa656b74c5d">"Final"</string>
   <string name="gt_b4221133c0166c16">"Final claim transaction was broadcast and is waiting for confirmation."</string>
-  <string name="gt_d4531989954eac5c">"Find places near me"</string>
   <string name="gt_664fa279a9ee2f99">"Find places that accept bitcoin"</string>
-  <string name="gt_6dfc37f56766e503">"Finding location"</string>
   <string name="gt_280918c59094fc48">"Finding your bitcoin"</string>
   <string name="gt_ff8fa5b5d54ed7db">"Finish onboarding before background wallet work"</string>
   <string name="gt_25cc2b0e08f9d856">"Finish setting up your Lightning address before sharing your QR."</string>
@@ -568,7 +564,6 @@
   <string name="gt_e32bf7f648769c22">"Funds are sweepable to an on-chain address."</string>
   <string name="gt_f0d4041b0de73f9b">"Funds were recovered on-chain."</string>
   <string name="gt_402419e92096bd4a">"GBP"</string>
-  <string name="gt_71efbb90cdf5b89b">"GeoNames"</string>
   <string name="gt_7ff998b8021274e7">"Get Ark Info"</string>
   <string name="gt_74871a4c5c4bbd05">"Get Debug Info"</string>
   <string name="gt_b31f9ded6ae4d5f1">"Get Push Token"</string>
@@ -633,7 +628,6 @@
   <string name="gt_7f89a8b29b034582">"Invalid amount format"</string>
   <string name="gt_dfc5950db71330cf">"Invalid bitcoin address"</string>
   <string name="gt_809d321d74b3c7ba">"Invalid export name"</string>
-  <string name="gt_db04a7fc75316e40">"Invalid map data"</string>
   <string name="gt_b9b0e9e85d5ed074">"Invalid or expired verification code."</string>
   <string name="gt_97ce5ac8121480ec">"Invalid or expired verification code. Please try again."</string>
   <string name="gt_9aecdf7b7354577b">"Invalid server token expiry"</string>
@@ -679,7 +673,6 @@
   <string name="gt_4f14b3e9b20d43a4">"Left out: %1$s that costs more in fees than it’s worth. Choose it to exit anyway."</string>
   <string name="gt_a3b3e07f52c173b1">"Left out: %1$s, in use right now."</string>
   <string name="gt_1d78b52b9fdeac1c">"Left out: %1$s, too small to exit."</string>
-  <string name="gt_68dc9d6d2e2e87ef">"Legacy Android callback"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Let Noah run in the background"</string>
   <string name="gt_e085922bf6346107">"Lets Noah wake up for Lightning"</string>
   <string name="gt_17968e6e1b20c79e">"Letters and numbers"</string>
@@ -725,9 +718,6 @@
   <string name="gt_2f59b03b1a5e43b2">"Maintenance Refresh"</string>
   <string name="gt_6c2f89a9a33e0770">"Maintenance completed"</string>
   <string name="gt_5926f9770e915ee6">"Maintenance refresh completed"</string>
-  <string name="gt_ac2e1982d49531a4">"Map cache could not be saved"</string>
-  <string name="gt_720dd69ca94e571b">"Map data exceeds resource limits"</string>
-  <string name="gt_f51dc83e58497522">"Map request failed"</string>
   <string name="gt_a1a5936d3b0f8a69">"Max"</string>
   <string name="gt_f62bb082d169c40c">"Maximum available"</string>
   <string name="gt_2f77668a9dfbf8d5">"Message"</string>
@@ -822,7 +812,6 @@
   <string name="gt_69015317a2b04485">"Noah checks again automatically as your wallet syncs."</string>
   <string name="gt_c2fe2ee25b70bb73">"Noah checks it’s on the right network before switching."</string>
   <string name="gt_5a00f75927a33884">"Noah closes the wallet and stops payments until you turn this off."</string>
-  <string name="gt_7db88997746b5ec1">"Noah could not determine your current location. Try again."</string>
   <string name="gt_c1f6e702ec74583d">"Noah could not read or save the payment attempt. Sending is disabled until its status can be recovered."</string>
   <string name="gt_34c9cafb61bbac7d">"Noah couldn\'t access secure storage. Unlock your device and try again."</string>
   <string name="gt_e107aa3075b29c81">"Noah couldn\'t confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely."</string>
@@ -1376,7 +1365,6 @@
   <string name="gt_ae9c99bb67325b70">"Turn them on in Settings. Noah checks again when you come back."</string>
   <string name="gt_baaddf70fb5d432b">"Type"</string>
   <string name="gt_11f461fc56ac26c4">"Type delete to confirm"</string>
-  <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
   <string name="gt_ed8e5311ed8b968a">"Unable to check this payment. Sending remains stopped."</string>
   <string name="gt_107e6e5754590692">"Unable to inspect this payment. It may already be in progress. Check status before sending again."</string>
@@ -1414,7 +1402,6 @@
   <string name="gt_ff8b555d818f0b25">"Update available"</string>
   <string name="gt_9f725ecf91f1aaf9">"Updated at %1$s"</string>
   <string name="gt_a7a68b529b93080a">"Updating Noah wallet"</string>
-  <string name="gt_b1a5d49f22607423">"Updating places"</string>
   <string name="gt_77a11d005b310667">"Updating wallet"</string>
   <string name="gt_a769cedc799260e8">"Use default"</string>
   <string name="gt_330cc4388c5218a4">"Use default server"</string>
@@ -1647,8 +1634,5 @@
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, raised when rates rise"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · shared"</string>
-  <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
-  <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· nothing left your wallet"</string>
 </resources>

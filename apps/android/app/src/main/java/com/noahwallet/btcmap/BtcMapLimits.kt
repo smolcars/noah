@@ -10,7 +10,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 
-internal class BtcMapResourceLimit : IOException("Map data exceeds resource limits")
+internal class BtcMapResourceLimit : IOException("""Map data exceeds resource limits""")
 
 /** Same limits as iOS; the measured full v4 list is 7.49 MB / 43,178 records. */
 internal object BtcMapLimits {
