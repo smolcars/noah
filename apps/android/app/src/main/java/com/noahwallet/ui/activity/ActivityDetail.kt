@@ -66,11 +66,14 @@ private val detailNav = 56.dp
 /**
  * One payment: the header (avatar, amount, status, value at the time, the block row while it confirms), the rows,
  * the collapsed Details, Share and Pay again. On phones it opens out of its row ([shared]); wide, it fills the pane.
+ * In Home's [sheet] it has the sheet's colour and × instead of Back.
  */
 @Composable
 internal fun ActivityDetail(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityActions, state: ActivityState, toasts: HomeToasts,
-                            wide: Boolean, shared: Shared?, close: () -> Unit) {
+                            wide: Boolean, shared: Shared?, sheet: Boolean = false, close: () -> Unit) {
     val palette = LocalPalette.current
+    val background = if (sheet) palette.sheet else palette.background
+    val closable = wide || sheet
     val haptics = rememberHaptics()
     val record = row.record
     val scroll = rememberScrollState()
@@ -78,10 +81,10 @@ internal fun ActivityDetail(ui: ActivityUi, row: ActivityRules.Row, actions: Act
     val receipt = receiptText(ui, row)
     val opened = remember(row.id) { SystemClock.elapsedRealtime() }
     val elapsed = rememberElapsed(opened, 1_000)
-    Box(Modifier.fillMaxSize().shared("row-${row.id}", shared, container = true).background(palette.background).testTag("activity-detail")) {
+    Box(Modifier.fillMaxSize().shared("row-${row.id}", shared, container = true).background(background).testTag("activity-detail")) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
             Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.CenterHorizontally)
-                .padding(start = if (wide) 32.dp else 24.dp, end = if (wide) 32.dp else 24.dp, top = if (wide) 18.dp else detailNav + 8.dp,
+                .padding(start = if (wide) 32.dp else 24.dp, end = if (wide) 32.dp else 24.dp, top = if (closable) 18.dp else detailNav + 8.dp,
                     bottom = if (pay) 150.dp else 60.dp)) {
                 Header(ui, row, wide, shared, elapsed)
                 Column(Modifier.padding(top = 24.dp).enter(4, wide, shared, elapsed)) {
@@ -93,15 +96,15 @@ internal fun ActivityDetail(ui: ActivityUi, row: ActivityRules.Row, actions: Act
         // Content fades under the bar once it scrolls.
         val edge by animateFloatAsState(if (scroll.value > 2) 1f else 0f, tween(200), label = "edge")
         Box(Modifier.fillMaxWidth().height(detailNav).graphicsLayer { alpha = edge }
-            .background(Brush.verticalGradient(0f to palette.background, .78f to palette.background, 1f to palette.background.copy(alpha = 0f))))
+            .background(Brush.verticalGradient(0f to background, .78f to background, 1f to background.copy(alpha = 0f))))
         Row(Modifier.fillMaxWidth().height(detailNav).padding(horizontal = 4.dp).enter(0, wide, shared, elapsed), verticalAlignment = Alignment.CenterVertically) {
-            if (!wide) BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("activity-detail-back")) { haptics.light(); close() }
+            if (!closable) BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("activity-detail-back")) { haptics.light(); close() }
             Spacer(Modifier.weight(1f))
             BarButton(R.drawable.ic_activity_share, tr("Share"), Modifier.testTag("activity-detail-share")) { haptics.light(); actions.share(receipt) }
-            if (wide) BarButton(HomeIcons.close, tr("Close"), Modifier.testTag("activity-detail-close")) { haptics.light(); close() }
+            if (closable) BarButton(HomeIcons.close, tr("Close"), Modifier.testTag("activity-detail-close")) { haptics.light(); close() }
         }
         if (pay) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), .46f to palette.background))
+            .background(Brush.verticalGradient(0f to background.copy(alpha = 0f), .46f to background))
             .padding(start = if (wide) 32.dp else 24.dp, end = 24.dp, top = 48.dp, bottom = if (wide) 24.dp else 28.dp).enter(6, wide, shared, elapsed)) {
             Pill(tr("Pay again"), Modifier.fillMaxWidth().testTag("activity-pay-again"), height = 56.dp, style = ActivityType.pill) {
                 haptics.light(); record.repeatPayment?.let(actions.repeat)

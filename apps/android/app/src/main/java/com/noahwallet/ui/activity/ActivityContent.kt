@@ -113,7 +113,7 @@ data class ActivityUi(
 )
 
 /** What Activity's controls do. Every action is today's: refresh, export, Pay again, the explorer and Settings' screens. */
-class ActivityActions(
+data class ActivityActions(
     val refresh: () -> Unit = {}, val retry: () -> Unit = {}, val receive: () -> Unit = {},
     val repeat: (RepeatPayment) -> Unit = {}, val share: (String) -> Unit = {},
     /** Writes the CSV and opens the share sheet; returns today's error message, or null once the sheet is open. */

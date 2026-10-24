@@ -72,6 +72,8 @@ fun NoahApp(model: AppModel) {
         model.repeatPayment = it
         showSend()
     }
+    // A payment's coin, exit and recurring links, from Activity and Home alike.
+    val openSettings: (SettingsDestination) -> Unit = { selectedTab = Destination.Home; backStack.add(it) }
     // Home, Send, Receive and Activity split the whole window at a fold themselves; every other screen, and Home's
     // map and email flows, keep one pane.
     var homeOverlay by rememberSaveable { mutableStateOf<String?>(null) }
@@ -121,13 +123,13 @@ fun NoahApp(model: AppModel) {
                     entry<Destination> { destination ->
                         if (destination == Destination.Home || model.isWalletSuspended) HomeScreen(model, homeOverlay, { homeOverlay = it }, onViewAll = {
                             selectedTab = Destination.History
-                        }, onRepeatPayment = repeat, onQR = { scan -> backStack.add(QRDestination(scan)) }, onBackup = { backStack.add(SettingsDestination.Seed) },
+                        }, onRepeatPayment = repeat, onSettings = openSettings, onQR = { scan -> backStack.add(QRDestination(scan)) }, onBackup = { backStack.add(SettingsDestination.Seed) },
                             onProfile = { backStack.add(SettingsDestination.Profile) },
                             onRenew = { ids -> model.renewVtxos = ids; backStack.add(SettingsDestination.Vtxos) }) {
                             backStack.add(SettingsDestination.Settings)
                         }
                         else if (destination == Destination.History) ActivityScreen(model, repeat, onReceive = { selectedTab = Destination.Receive },
-                            onSettings = { selectedTab = Destination.Home; backStack.add(it) }, barHidden = { activityBarHidden = it })
+                            onSettings = openSettings, barHidden = { activityBarHidden = it })
                         else if (destination == Destination.Receive) ReceiveScreen(model, onProfile = {
                             selectedTab = Destination.Home; backStack.add(SettingsDestination.Profile)
                         }) {

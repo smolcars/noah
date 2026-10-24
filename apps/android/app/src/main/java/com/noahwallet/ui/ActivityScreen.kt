@@ -50,30 +50,51 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
         } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
     }
     var refreshing by remember { mutableStateOf(false) }
-    var tip by remember { mutableStateOf<Long?>(null) }
-    val confirmedAt = remember { mutableStateMapOf<String, Long>() }
-    val chainReads = remember { ChainReads() }
     var seen by remember { mutableStateOf(memory.seenRows) }
-    val rows = history.transactions
-    val ui = ActivityUi(
-        records = rows, loading = history.isLoading, error = history.error, refreshing = refreshing, unit = app.amountUnit,
-        locale = Locale.forLanguageTag(app.localeIdentifier), hidden = app.hidden,
-        ownDomain = app.server.state.lightningAddress?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }, variant = BuildConfig.APP_VARIANT,
-        currency = currency, price = price, newRows = ActivityRules.newRows(rows, seen), tip = tip, confirmedAt = confirmedAt.toMap(),
-        chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(), revision = history.revision, now = Date(),
-    )
-    val actions = ActivityActions(
+    val (detailUi, detailActions) = paymentDetail(app, state, price, onRepeatPayment, onSettings)
+    val ui = detailUi.copy(refreshing = refreshing, newRows = ActivityRules.newRows(history.transactions, seen))
+    val actions = detailActions.copy(
         refresh = {
             scope.launch { refreshing = true; try { history.refresh(app.preferredCurrency, true) } finally { refreshing = false } }
         },
         retry = { scope.launch { history.refresh(app.preferredCurrency) } },
         receive = onReceive,
+        export = { records -> exportCSV(app, context, records) },
+        barHidden = barHidden,
+        seen = { id -> memory.seenRows = ActivityRules.seen(memory.seenRows, id); seen = memory.seenRows },
+    )
+    com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
+        ActivityContent(ui, actions, state, toasts)
+    }
+}
+
+/**
+ * A payment's detail as Activity and Home's sheet both show it: the wallet's records, amounts and the block row's
+ * chain reads, with Pay again, Share, the explorer and Settings' coin, exit and recurring screens. [state]'s selection
+ * is the payment open.
+ */
+@Composable
+internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, onRepeatPayment: (RepeatPayment) -> Unit,
+                           onSettings: (SettingsDestination) -> Unit): Pair<ActivityUi, ActivityActions> {
+    val history = app.history
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var tip by remember { mutableStateOf<Long?>(null) }
+    val confirmedAt = remember { mutableStateMapOf<String, Long>() }
+    val chainReads = remember { ChainReads() }
+    val ui = ActivityUi(
+        records = history.transactions, loading = history.isLoading, error = history.error, refreshing = false, unit = app.amountUnit,
+        locale = Locale.forLanguageTag(app.localeIdentifier), hidden = app.hidden,
+        ownDomain = app.server.state.lightningAddress?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }, variant = BuildConfig.APP_VARIANT,
+        currency = app.preferredCurrency.takeIf { it in FiatCurrency.supported } ?: "USD", price = price, tip = tip, confirmedAt = confirmedAt.toMap(),
+        chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(), revision = history.revision, now = Date(),
+    )
+    val actions = ActivityActions(
         repeat = { state.selected = null; onRepeatPayment(it) },
         share = { text ->
             // The receipt only goes where the reader sends it; it's never logged.
             context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null))
         },
-        export = { records -> exportCSV(app, context, records) },
         explorer = { url ->
             try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))); true }
             catch (_: android.content.ActivityNotFoundException) { false }
@@ -81,17 +102,13 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
         recurring = { id -> app.recurringSchedule = id; onSettings(SettingsDestination.Recurring) },
         exits = { onSettings(SettingsDestination.Exits) },
         coin = { id -> app.vtxoDetail = id; onSettings(SettingsDestination.Vtxos) },
-        barHidden = barHidden,
-        seen = { id -> memory.seenRows = ActivityRules.seen(memory.seenRows, id); seen = memory.seenRows },
         shown = { record ->
             val request = chainReads.begin(record.id, app.summary?.fingerprint)
             fun current() = chainReads.current(request, state.selected, app.summary?.fingerprint)
             scope.launch { readChain(app, record, { if (current()) tip = it }) { txid, height -> if (current()) confirmedAt[txid] = height } }
         },
     )
-    com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
-        ActivityContent(ui, actions, state, toasts)
-    }
+    return ui to actions
 }
 
 /**

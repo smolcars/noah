@@ -13,7 +13,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.noahwallet.BuildConfig
 import com.noahwallet.history.RepeatPayment
+import com.noahwallet.ui.activity.*
 import com.noahwallet.ui.home.*
+import com.noahwallet.ui.onboarding.LocalPose
+import com.noahwallet.ui.onboarding.OnboardingPose
+import com.noahwallet.ui.settings.SettingsDestination
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
@@ -29,12 +33,12 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, onViewAll: () -> Unit,
-               onRepeatPayment: (RepeatPayment) -> Unit, onQR: (scan: Boolean) -> Unit, onBackup: () -> Unit = {},
+               onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (SettingsDestination) -> Unit, onQR: (scan: Boolean) -> Unit, onBackup: () -> Unit = {},
                onProfile: () -> Unit = {}, onRenew: (List<String>) -> Unit = {}, settings: () -> Unit) {
     val appColors = MaterialTheme.colorScheme
     val appTypography = MaterialTheme.typography
     val appShapes = MaterialTheme.shapes
-    var selectedID by rememberSaveable { mutableStateOf<String?>(null) }
+    val detail = rememberActivityState()
     var showRounds by rememberSaveable { mutableStateOf(false) }
     var price by remember { mutableStateOf<Double?>(null) }
     var refreshRevision by remember { mutableIntStateOf(0) }
@@ -89,6 +93,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     val boarding = model.autoBoardSuccessBanner
     val boardingBanner = boarding?.let { (amount, created) -> HomeRules.boarding(amount, created, signals.now, locale) }
     val emailVerified = model.server.state.isEmailVerified == true
+    val (detailUi, detailActions) = paymentDetail(model, detail, price, onRepeatPayment, onSettings)
 
     // "New" marks incoming rows that arrived since Home was last shown; in memory only.
     val historyLoaded = !model.history.isLoading
@@ -157,7 +162,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     )
     val actions = HomeActions(
         myCode = { onQR(false) }, scan = { onQR(true) }, settings = settings, map = { onOverlay("map") },
-        toggleHidden = model::toggleBalance, seeAll = onViewAll, openRow = { selectedID = it }, profile = onProfile,
+        toggleHidden = model::toggleBalance, seeAll = onViewAll, openRow = { detail.open(it) }, profile = onProfile,
         nudge = { nudge ->
             when (nudge) {
                 is HomeRules.Nudge.Notice -> {}
@@ -182,15 +187,28 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
     )
     com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
         HomeContent(ui, actions, memory, toasts, refreshing)
-        // Today's transaction detail and Pending Rounds sheets, in today's look, kept inside the trailing pane.
-        val selected = rows.firstOrNull { it.id == selectedID }
-        if (selected != null) MaterialTheme(appColors, appShapes, appTypography) {
-            com.noahwallet.ui.onboarding.OnboardingSheet({ selectedID = null }, rememberModalBottomSheetState(skipPartiallyExpanded = true), padded = false) {
-                TransactionDetail(model, selected, { selectedID = null; onRepeatPayment(it) }, { selectedID = null })
-            }
-        }
+        HomePaymentSheet(detailUi, detail, detailActions)
+        // Today's Pending Rounds sheet, in today's look, kept inside the trailing pane.
         if (showRounds && signals.active.isNotEmpty()) MaterialTheme(appColors, appShapes, appTypography) {
             PendingRoundsSheet(signals.active) { showRounds = false }
+        }
+    }
+}
+
+/** A row's payment: Activity's detail in a sheet, kept inside the trailing pane on wide windows and the fold. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun HomePaymentSheet(ui: ActivityUi, state: ActivityState, actions: ActivityActions) {
+    val record = ui.records.firstOrNull { it.id == state.selected } ?: return
+    val row = remember(record, ui.ownDomain) { ActivityRules.Row(record, HomeRow.of(record, ui.ownDomain)) }
+    val toasts = remember { HomeToasts() }
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    // As in Activity: the block row reads the chain as the payment opens and on each history read.
+    LaunchedEffect(record, ui.revision) { actions.shown(record) }
+    com.noahwallet.ui.onboarding.OnboardingSheet({ state.selected = null }, sheet, padded = false) {
+        ActivityDetail(ui, row, actions, state, toasts, wide = LocalPose.current != OnboardingPose.Compact, shared = null, sheet = true) {
+            scope.launch { sheet.hide() }.invokeOnCompletion { state.selected = null }
         }
     }
 }
