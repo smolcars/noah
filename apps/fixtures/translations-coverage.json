@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1688,
-  "sourceKeys": 1711,
+  "catalogEntries": 1689,
+  "sourceKeys": 1712,
   "coverage": {
     "ios": {
       "used": [
@@ -2615,6 +2615,7 @@
         "{amount} to {recipient} will be sent tomorrow.",
         "{amount} · fees ~{fee}",
         "{amount} · in Ark",
+        "{amount} · share of {total} for {n} exits",
         "{date} · {size}. Your other backups stay.",
         "{day} at {time}",
         "{interval} · next {date}",

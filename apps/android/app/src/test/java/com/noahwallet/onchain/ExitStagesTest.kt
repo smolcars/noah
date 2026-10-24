@@ -178,6 +178,17 @@ class ExitStagesTest {
         assertEquals(listOf(ExitList.Shared(listOf(a, c, b, d, e), 6, 10)), ExitList.shared(listOf(a, c, b, d, e)))
     }
 
+    @Test fun aBatchedClaimsExitsAddUpToWhatArrived() {
+        val ids = listOf("b", "a")
+        assertEquals(listOf(131L, 131L), ids.map { ExitClaim.share(262, ids, it) })
+        assertEquals("the spare sat goes to the first id", listOf(131L, 132L), ids.map { ExitClaim.share(263, ids, it) })
+        assertEquals(262L, ExitClaim.share(262, listOf("a"), "a"))
+        assertEquals("unknown inputs: this exit carries the fee", 262L, ExitClaim.share(262, emptyList(), "a"))
+        val claim = ExitContext(0, null, null, claimFee = 262, claimIds = listOf("a", "b"))
+        assertEquals(55_238L, ExitRules.received(31_000, claim.claimShare("a")!!) + ExitRules.received(24_500, claim.claimShare("b")!!))
+        assertNull(ExitContext(0, null, null).claimShare("a"))
+    }
+
     @Test fun theListsRailAndSharedTreeFollowEachExit() {
         assertEquals(listOf(s.now, s.todo, s.todo, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.lift)))
         assertEquals(listOf(s.done, s.now, s.todo, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.bump)))

@@ -1683,6 +1683,7 @@
   <string name="gt_e4687b2d37b4a9a5">"%1$s skickas till %2$s i morgon."</string>
   <string name="gt_643409a7df643204">"%1$s · avgifter ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · i Ark"</string>
+  <string name="gt_59d264482aee8976">"%1$s · andel av %2$s för %3$s nöduttag"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s block"</string>
   <string name="gt_1ad21324d7fd6678">"%1$s block"</string>
   <string name="gt_d8c81b717fe6d90e">"Växelkurs för %1$s saknas"</string>

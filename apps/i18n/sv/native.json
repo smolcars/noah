@@ -731,6 +731,7 @@
   "gt_5926f9770e915ee6": "Underhållsförnyelse slutförd",
   "gt_5954f39fc8781bfa": "Starta om Noah för att slutföra den väntande återställningen innan du raderar",
   "gt_598ce3ccc02e5890": "Nätverksavgifter",
+  "gt_59d264482aee8976": "{{amount}} · andel av {{total}} för {{n}} nöduttag",
   "gt_5a00f75927a33884": "Noah stänger plånboken och stoppar betalningar tills du stänger av det här.",
   "gt_5a4dc83c4c46cd47": "Dina betalningar visas här.",
   "gt_5a531e363a276b20": "Kopiera slutpunkt",

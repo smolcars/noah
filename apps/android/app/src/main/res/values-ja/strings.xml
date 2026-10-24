@@ -1683,6 +1683,7 @@
   <string name="gt_e4687b2d37b4a9a5">"明日、%2$sに%1$sを送金します。"</string>
   <string name="gt_643409a7df643204">"%1$s · 手数料 ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · Ark内"</string>
+  <string name="gt_59d264482aee8976">"%1$s · %3$s件の出金で%2$sを分担"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s ブロック"</string>
   <string name="gt_1ad21324d7fd6678">"%1$s ブロック"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>

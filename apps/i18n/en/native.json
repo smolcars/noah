@@ -611,6 +611,7 @@
   "gt_5926f9770e915ee6": "Maintenance refresh completed",
   "gt_5954f39fc8781bfa": "Restart Noah to settle the pending restore before deleting",
   "gt_598ce3ccc02e5890": "Network fees",
+  "gt_59d264482aee8976": "{{amount}} · share of {{total}} for {{n}} exits",
   "gt_5a00f75927a33884": "Noah closes the wallet and stops payments until you turn this off.",
   "gt_5a531e363a276b20": "Copy Endpoint",
   "gt_5a64d52da0a50d6e": "Unable to save recurring payments",

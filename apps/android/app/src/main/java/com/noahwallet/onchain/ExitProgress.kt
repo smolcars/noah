@@ -41,9 +41,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** What the exit page needs beyond bark's exit: the wallet's tip and balance, the server's delta, and its last claim. */
-internal data class ExitContext(val tip: Long, val confirmed: Long?, val delta: Long?, val claimFee: Long? = null, val claimedAlone: Boolean = false,
-                                val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false)
+/**
+ * What the exit page needs beyond bark's exit: the wallet's tip and balance, the server's delta, and its last claim: the
+ * claim transaction's whole fee and every exit it claimed.
+ */
+internal data class ExitContext(val tip: Long, val confirmed: Long?, val delta: Long?, val claimFee: Long? = null, val claimIds: List<String> = emptyList(),
+                                val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false) {
+    /** This exit's part of [claimFee]; see [ExitClaim.share]. */
+    fun claimShare(id: String) = claimFee?.let { ExitClaim.share(it, claimIds, id) }
+}
 
 /**
  * One exit (prototype `SCR.progress`): the picture follows bark's state as Noah progresses it by itself; the rows, Details
@@ -70,7 +76,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
     }
     var deposit by remember { mutableStateOf<Long?>(null) }
-    val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claim?.quote?.fee, claim?.quote?.ids?.size == 1,
+    val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claim?.quote?.fee, claim?.quote?.ids.orEmpty(),
         claim?.quote?.destination?.takeIf { claim.quote.destinationIsMine == false }, claimEstimate, exit?.cancelable == true)
     ExitProgressContent(exit, stage, context, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back, loaded = model.revision > 0,
         check = { scope.launch { model.review(OnchainAction.progress, overview?.exits.orEmpty().filter { it.state !in ExitTimeline.terminal }.map { it.id }) } },
@@ -122,7 +128,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         }
     }
     val actions = ExitActions.of(stage, context.cancelable)
-    val received = if (stage.phase == ExitStage.Phase.claimed && context.claimFee != null && context.claimedAlone) ExitRules.received(exit.amount, context.claimFee) else exit.amount
+    val received = context.claimShare(exit.id)?.takeIf { stage.phase == ExitStage.Phase.claimed }?.let { ExitRules.received(exit.amount, it) } ?: exit.amount
     val need = exit.nextPackageFee?.let { fee -> context.confirmed?.let { fee - it } }?.coerceAtLeast(0) ?: 0
     ExitFrame(tr("Exit"), back, hero = true, scroll = scroll, pictureLeads = true, foot = if (actions.isEmpty()) null else ({
         for (action in actions) when (action) {
@@ -270,7 +276,9 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
             ExitStage.Phase.claimed -> {
                 DetailRow(tr("Claimed in"), tr("Block {height}", number(stage.claimedBlock ?: 0)), toasts = toasts)
                 DetailRow(tr("Network fees"), money(stage.feesPaid), ValueKind.number, toasts = toasts)
-                context.claimFee?.let { DetailRow(tr("Claim fee"), money(it), ValueKind.number, toasts = toasts) }
+                // A batched claim's fee is paid once: this exit shows its share, and the whole fee and how many it covered.
+                context.claimShare(exit.id)?.let { share -> DetailRow(tr("Claim fee"), if (context.claimIds.size > 1) tr("{amount} · share of {total} for {n} exits",
+                    money(share), money(checkNotNull(context.claimFee)), context.claimIds.size.toString()) else money(share), ValueKind.number, toasts = toasts) }
                 val began = exit.historyDetails.firstOrNull()?.tip_height
                 DetailRow(tr("Took about"), if (began != null && stage.claimedBlock != null) timeLeft(stage.claimedBlock - began) else tr("Unknown"), toasts = toasts, last = true)
             }

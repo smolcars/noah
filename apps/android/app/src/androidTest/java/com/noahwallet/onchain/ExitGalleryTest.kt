@@ -74,7 +74,7 @@ class ExitGalleryTest {
         progress("progress-wait", f.wait)
         progress("progress-claimable", f.claimable)
         progress("progress-claiming", f.claiming)
-        progress("progress-claimed", f.claimed, context = ExitContext(f.tip + 149, 18_400, 144, claimFee = 262, claimedAlone = true,
+        progress("progress-claimed", f.claimed, context = ExitContext(f.tip + 149, 18_400, 144, claimFee = 262, claimIds = listOf(f.claimed.id),
             claimedTo = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg"))
         progress("state-nofunds", f.nofunds, needsFunds = true, confirmed = 310)
         progress("state-feesrose", f.feesrose)

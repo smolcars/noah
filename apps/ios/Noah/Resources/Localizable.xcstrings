@@ -59977,6 +59977,42 @@
         }
       }
     },
+    "{amount} · share of {total} for {n} exits": {
+      "comment": "GT gt_59d264482aee8976; arguments: amount, total, n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · share of %2$@ for %3$@ exits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · parte de %2$@ para %3$@ salidas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %3$@件の出金で%2$@を分担"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 출금 %3$@건의 %2$@ 중 분담분"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · andel av %2$@ för %3$@ nöduttag"
+          }
+        }
+      }
+    },
     "{count} block": {
       "comment": "GT gt_4ace755a59e3c6fc; arguments: count",
       "extractionState": "manual",

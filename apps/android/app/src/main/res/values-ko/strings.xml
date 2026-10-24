@@ -1683,6 +1683,7 @@
   <string name="gt_e4687b2d37b4a9a5">"내일 %2$s에게 %1$s 전송 예정입니다."</string>
   <string name="gt_643409a7df643204">"%1$s · 수수료 ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · Ark에 있음"</string>
+  <string name="gt_59d264482aee8976">"%1$s · 출금 %3$s건의 %2$s 중 분담분"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s 블록"</string>
   <string name="gt_1ad21324d7fd6678">"%1$s 블록"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s 환율을 확인할 수 없음"</string>

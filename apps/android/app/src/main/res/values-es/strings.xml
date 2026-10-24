@@ -1683,6 +1683,7 @@
   <string name="gt_e4687b2d37b4a9a5">"Mañana se enviará %1$s a %2$s."</string>
   <string name="gt_643409a7df643204">"%1$s · comisiones ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · en Ark"</string>
+  <string name="gt_59d264482aee8976">"%1$s · parte de %2$s para %3$s salidas"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s bloque"</string>
   <string name="gt_1ad21324d7fd6678">"%1$s bloques"</string>
   <string name="gt_d8c81b717fe6d90e">"Tipo de cambio de %1$s no disponible"</string>

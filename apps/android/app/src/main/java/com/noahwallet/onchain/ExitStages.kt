@@ -268,6 +268,15 @@ internal object ExitClaim {
     /** The claim's destination: the typed address once it's valid for [network], or this phone's fresh address. */
     fun destination(to: ClaimTo, typed: String, phone: String?, network: String) = if (to == ClaimTo.phone) phone else address(typed, network)
 
+    /**
+     * An exit's part of its claim's fee. Every input weighs the same, so a batched claim's fee splits evenly, spare sats to
+     * the first of [ids] in order: the exits it claimed then add up to what arrived. An exit outside [ids] carries it all.
+     */
+    fun share(fee: Long, ids: List<String>, id: String): Long {
+        val i = ids.sorted().indexOf(id)
+        return if (i < 0) fee else fee / ids.size + if (i < fee % ids.size) 1 else 0
+    }
+
     /** Hold to claim works only with a valid destination and today's review of exactly it, still fresh. */
     fun ready(destination: String?, quote: OnchainQuote?, now: Long = System.currentTimeMillis()) =
         destination != null && quote != null && quote.action == OnchainAction.claim && quote.destination == destination && quote.current(now)
