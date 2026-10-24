@@ -13,7 +13,6 @@
   <string name="gt_36d7ac7edaf6eeeb">"Recibirás un recordatorio el día anterior. Un pago perdido se omite, nunca se paga dos veces."</string>
   <string name="gt_ffc027edcc0ef3f2">"Cajero automático"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
-  <string name="gt_d58fd353bb1b174f">"Unos 20 min · comisión estimada de %1$s"</string>
   <string name="gt_388e5f8e82667507">"Unos 20 min · %1$s de comisión"</string>
   <string name="gt_962a08a8878d9a42">"Acerca de Noah"</string>
   <string name="gt_16b406f63254167c">"Hacia el bloque %1$s"</string>
@@ -232,7 +231,6 @@
   <string name="gt_d0e3a822635c961f">"Revisa en Actividad el último intento de este pago y pregunta al destinatario si le llegó."</string>
   <string name="gt_fb7099ad8e818d42">"Volver a comprobar"</string>
   <string name="gt_c52a96b66db5c212">"Comprobar estado de la operación"</string>
-  <string name="gt_ae1b6f51f5f5da9f">"Comprobar estado del pago"</string>
   <string name="gt_69cd3590300a68c6">"Comprobar estado"</string>
   <string name="gt_ed8367c6e1178cba">"Revisa la dirección. Esto no se puede deshacer."</string>
   <string name="gt_44cb983669c9d0a9">"Revisa la dirección. Esto no se puede deshacer."</string>
@@ -289,7 +287,6 @@
   <string name="gt_55656b5e434f4c06">"Cerrar búsqueda"</string>
   <string name="gt_54cb4b725a66af16">"Moneda %1$s"</string>
   <string name="gt_b322b65227bc3ec9">"Contraído"</string>
-  <string name="gt_5a7b1979437abf8d">"Los errores combinados muestran sus elementos secundarios"</string>
   <string name="gt_bc1dbb36faac6cf7">"Próximamente en la aplicación nativa."</string>
   <string name="gt_22a970d2e5b1cc23">"Completado"</string>
   <string name="gt_eebdd24a77d9ad32">"Confirmar"</string>
@@ -647,7 +644,6 @@
   <string name="gt_9e0f9b800b0db2b0">"Entiendo que esto puede repetir la operación"</string>
   <string name="gt_806f6591e2359170">"No compartiré mi frase de recuperación."</string>
   <string name="gt_cd65f6dcab984750">"Ya la anoté"</string>
-  <string name="gt_306becc0aba824d9">"Ya revisé mi historial. Iniciar un nuevo pago"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Si Ark funciona, envía a una dirección de Bitcoin."</string>
   <string name="gt_1d93f10792a18bf1">"Sin madurar"</string>
@@ -671,7 +667,6 @@
   <string name="gt_2304400f597b8734">"Instala ntfy desde F-Droid y vuelve."</string>
   <string name="gt_ddd409663e0a1d7b">"Instantáneo y gratis desde billeteras Ark"</string>
   <string name="gt_cf9ea7f321c15e4b">"Instantáneo · gratis"</string>
-  <string name="gt_bb3e30521a8bd6d0">"Instantáneo · comisión estimada de %1$s"</string>
   <string name="gt_121639f0d7604797">"Instantáneo · %1$s de comisión"</string>
   <string name="gt_136f8bedf0a24121">"Al instante"</string>
   <string name="gt_9464444aff9626f4">"Fondos insuficientes para este método de pago."</string>
@@ -680,7 +675,6 @@
   <string name="gt_d6e896cee6f715fd">"Restauración interrumpida aún sin resolver"</string>
   <string name="gt_50bc71f591bfa3ff">"URI BIP-321 no válido"</string>
   <string name="gt_ec21cf0f83a4a7de">"Oferta BOLT12 no válida"</string>
-  <string name="gt_f08e31597342ce58">"Oferta BOLT12 no válida: suma de verificación no válida"</string>
   <string name="gt_7f89a8b29b034582">"Formato de importe no válido"</string>
   <string name="gt_dfc5950db71330cf">"Dirección Bitcoin no válida"</string>
   <string name="gt_809d321d74b3c7ba">"Nombre de exportación no válido"</string>
@@ -706,7 +700,6 @@
   <string name="gt_a1487c34b5c577e1">"Uniéndote al Ark"</string>
   <string name="gt_8ddd9ab865d79c7c">"Se une a la próxima ronda de Ark para seguir disponible."</string>
   <string name="gt_3e0916d27e6bf4cf">"Se unen a la próxima ronda de Ark para seguir disponibles."</string>
-  <string name="gt_6c9c568abe67785a">"Cuarentena del registro no disponible"</string>
   <string name="gt_78bc8448cb3e1be8">"KRW"</string>
   <string name="gt_9cbf9327c3a565fc">"Mantén Noah activo"</string>
   <string name="gt_48d1780a0dd94191">"Conservar intento"</string>
@@ -715,7 +708,6 @@
   <string name="gt_263743ebe703e2e0">"Mantén las notificaciones activadas para que los pagos se realicen aunque Noah esté cerrado."</string>
   <string name="gt_942c9e0587fb1e92">"Conservar pago"</string>
   <string name="gt_1223a5e3f6a37070">"Mantener detenido"</string>
-  <string name="gt_b9ad2e4e8954b13e">"Seguir esperando"</string>
   <string name="gt_4993449490bbc0ac">"El hash de la descripción de la solicitud de pago LNURL no se corresponde con los metadatos del punto de acceso"</string>
   <string name="gt_a4fe65264ef7dbb3">"Idioma"</string>
   <string name="gt_aef7c5afac4b70b8">"VTXO máximo"</string>
@@ -726,7 +718,6 @@
   <string name="gt_1a196f3801a01458">"Última copia de seguridad: %1$s"</string>
   <string name="gt_0c0c351a971353b5">"Última consulta"</string>
   <string name="gt_ec3b8bf1e0261664">"Última copia correcta: %1$s"</string>
-  <string name="gt_fc6e4a408d56be96">"Salir"</string>
   <string name="gt_e85039a1d8fa0011">"Saliendo de Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"Restante"</string>
   <string name="gt_8d889b2a0398edd9">"Excluidos porque las comisiones superan su valor: %1$s. Elígelos para sacarlos de todos modos."</string>
@@ -846,7 +837,6 @@
   <string name="gt_802629b9d02d308e">"No se encontró ninguna copia de seguridad para esta frase de recuperación. Revisa las palabras y asegúrate de que esta billetera tuviera las copias de seguridad activadas."</string>
   <string name="gt_e6de0cc02416ad14">"No se encontraron copias de seguridad"</string>
   <string name="gt_d42128b50335bf93">"No hay ningún navegador disponible para abrir el explorador."</string>
-  <string name="gt_b51ac248f2fcdf56">"No se encontró ninguna cámara."</string>
   <string name="gt_d3f355f33a058f16">"No hay ninguna cámara disponible. Puedes pegar la solicitud de pago en su lugar."</string>
   <string name="gt_992a290f2761d516">"No se encontró ningún distribuidor"</string>
   <string name="gt_99b13b050691cd88">"No se detectaron distribuidores. Instala ntfy u otro distribuidor de UnifiedPush."</string>
@@ -990,7 +980,6 @@
   <string name="gt_f893fab7e39f5540">"Si no, Android puede pausar Noah y los pagos podrían dejar de llegar."</string>
   <string name="gt_3619cf0b90923a4b">"Saliente"</string>
   <string name="gt_84c9bc73297ace6e">"Intento anulado"</string>
-  <string name="gt_c11409e54af3960d">"Almacenamiento de auditoría de anulaciones no disponible"</string>
   <string name="gt_b896460456edd89b">"Confirmación de anulación"</string>
   <string name="gt_33a067f2594b14e7">"¿Anular la protección contra repeticiones?"</string>
   <string name="gt_51a87000f35dc875">"Omitir la protección contra pagos repetidos…"</string>
@@ -1012,7 +1001,6 @@
   <string name="gt_fef5813efef1e50a">"Pagando %1$s sat/vB · esperando el bloque %2$s"</string>
   <string name="gt_d9c9afd836811e5a">"ID del pago"</string>
   <string name="gt_3450b635b99ae5ff">"Pago confirmado"</string>
-  <string name="gt_bc38541e91fe8160">"El pago no se completó"</string>
   <string name="gt_17aadc092fe66088">"El pago falló"</string>
   <string name="gt_096045f8f17f3bad">"Hash del pago"</string>
   <string name="gt_21e360b26e1793bf">"Pago en curso"</string>
@@ -1080,7 +1068,6 @@
   <string name="gt_aa815083375c5f6e">"Importe para el destinatario pendiente"</string>
   <string name="gt_fdbcd05664b4ce23">"El destinatario recibe aproximadamente %1$s sats"</string>
   <string name="gt_3fed24d17905877f">"Destinatario verificado"</string>
-  <string name="gt_c8233e7b49d45fa5">"Pago conciliado; no se pudieron guardar los metadatos de repetición"</string>
   <string name="gt_c7175fa7a0db0d3c">"Registrado"</string>
   <string name="gt_e4cea0827a11aed0">"Registrado en"</string>
   <string name="gt_41edd3f47328da5a">"Frase de recuperación"</string>
@@ -1090,7 +1077,6 @@
   <string name="gt_c0c06e547b1b55e1">"Recurrente"</string>
   <string name="gt_f1edc38f48fa8c1a">"Tareas recurrentes en segundo plano detenidas."</string>
   <string name="gt_49a97d74c6bb00c8">"Los datos que acreditan el consumo recurrente están incompletos. El envío sigue detenido."</string>
-  <string name="gt_de5aca532e062c99">"Almacenamiento de evidencias de pagos recurrentes no disponible"</string>
   <string name="gt_52934e493cb2d4f5">"Pago recurrente"</string>
   <string name="gt_e96cc9747bde094a">"No se pudieron leer los datos de pagos recurrentes. Se han conservado tus programaciones guardadas. Los envíos están detenidos."</string>
   <string name="gt_7bca5b89bad58cde">"El historial de pagos recurrentes requiere atención. Se han conservado los registros guardados; el envío sigue detenido."</string>
@@ -1214,7 +1200,6 @@
   <string name="gt_ea1c510d1ddb7264">"Escanear"</string>
   <string name="gt_e5c7478bbce26eb7">"Escanear código QR"</string>
   <string name="gt_83793a1453350630">"Escanea un código QR de Bitcoin, Lightning o Ark y realiza el envío desde Noah."</string>
-  <string name="gt_268a655c8f30bcfc">"Escanear QR de pago"</string>
   <string name="gt_df14ab305157e03c">"Escanea para pagar"</string>
   <string name="gt_11663c3ffc2ca513">"Escanea con una billetera Ark"</string>
   <string name="gt_ff900d6ce1964530">"Escanea con cualquier billetera Lightning"</string>
@@ -1227,7 +1212,6 @@
   <string name="gt_a451c45fca000d8c">"La captura de pantalla debe ser una imagen JPEG o PNG."</string>
   <string name="gt_49c266baaaa70981">"Buscar"</string>
   <string name="gt_08cf22a9053129c5">"Buscar lugares o ciudades"</string>
-  <string name="gt_d15f6395fe6e788c">"Segundos · comisión estimada de %1$s"</string>
   <string name="gt_fa0e0b90eef384a2">"Segundos · %1$s de comisión"</string>
   <string name="gt_26a08e3cf397b095">"No se puede leer el archivo seguro"</string>
   <string name="gt_6e5835bc30b172d3">"Clave segura no disponible"</string>
@@ -1296,7 +1280,6 @@
   <string name="gt_e4bb9f1ece9af926">"Iniciar"</string>
   <string name="gt_aa2acac2758fc7b9">"Iniciar salida de emergencia"</string>
   <string name="gt_f12e78a057cfb199">"Iniciar salida seleccionada"</string>
-  <string name="gt_ecd0abf6250c1885">"Iniciar un nuevo pago"</string>
   <string name="gt_d65d3a6d1c27a19c">"Iniciar un nuevo pago tras revisar el historial"</string>
   <string name="gt_8a565d98b83e392b">"Iniciar un nuevo pago de todos modos"</string>
   <string name="gt_499f9885f21d51cb">"Iniciar salida"</string>
@@ -1372,7 +1355,6 @@
   <string name="gt_7652d8144d735a2c">"La comisión de este pago de Ark debe ser de 0 sats para que se realice automáticamente. Revisa el pago para realizarlo manualmente."</string>
   <string name="gt_6f582ba484a97acc">"La comisión de este pago (%1$s sats) supera tu límite automático de %2$s sats. Revisa el pago para realizarlo manualmente."</string>
   <string name="gt_cbd4e5347458e235">"La comisión de este pago (%1$s sats) supera tu límite automático de %2$s sats. Revísalo para pagar manualmente."</string>
-  <string name="gt_3653831cba86de7c">"La comisión es una estimación. La comisión final puede cambiar antes del envío."</string>
   <string name="gt_5f97e174b6c50b9d">"La fecha del primer pago no puede estar en el pasado."</string>
   <string name="gt_4ce7d56e24aef58c">"La solicitud de pago debe indicar un importe en satoshis enteros."</string>
   <string name="gt_03401b1fd160f1c8">"La factura fija el importe en %1$s"</string>
@@ -1439,7 +1421,6 @@
   <string name="gt_40db1d4d49d0c277">"No se pudo desbloquear la copia de seguridad con esta frase, o la copia está dañada. Comprueba las 12 o 24 palabras y su orden."</string>
   <string name="gt_7d13ecdf60d28aa9">"Puede que necesites otra aplicación de pago en este lugar"</string>
   <string name="gt_44f3e818daadd169">"El enlace proporcionado por este lugar no es válido."</string>
-  <string name="gt_6d745107d2d026a2">"Este pago recurrente se detuvo antes de enviarse."</string>
   <string name="gt_5d5cfeffe0f4ad97">"Esta acción renueva los VTXOs seleccionados en una ronda delegada de Ark."</string>
   <string name="gt_01d7d06401b5eaad">"Esto elimina la billetera y su frase de recuperación de este teléfono. No se puede deshacer."</string>
   <string name="gt_e3475188c78e15ad">"Esto elimina tu billetera y tu frase de recuperación de este dispositivo. Asegúrate de haber guardado tu frase de recuperación. Escribe delete para confirmar."</string>
@@ -1486,15 +1467,10 @@
   <string name="gt_2ae7ac464e48b75b">"No se puede preparar el depósito. Ve a Configuración → Depositar en Ark para intentarlo de nuevo."</string>
   <string name="gt_a2ddae769021f756">"No se pudo preparar el pago. No se envió ningún pago."</string>
   <string name="gt_8280328a66bc882e">"No se pudo preparar este pago. Revisa el destino y los fondos disponibles."</string>
-  <string name="gt_de70f9d2e9dc5ae5">"No se pueden conservar las evidencias de envío ilegibles"</string>
   <string name="gt_4b5be5a8514a9fd7">"No se puede conectar con el punto de acceso de Esplora. Comprueba la URL e inténtalo de nuevo."</string>
   <string name="gt_1c7201294e18b007">"No se pueden consultar los saldos disponibles."</string>
-  <string name="gt_29e3b5af9a77e7c2">"No se puede reservar la billetera para comprobar el estado del pago."</string>
   <string name="gt_ad846ebf4373a7ba">"No se pudo reservar la billetera. Comprueba el estado del pago antes de volver a enviarlo."</string>
-  <string name="gt_4c61caccfb372364">"No se puede reservar la billetera. No se envió ningún pago."</string>
-  <string name="gt_150d6547814b6d9d">"No se puede identificar a este destinatario de Lightning. Comprueba la dirección."</string>
   <string name="gt_1a1e3d6ed0b1c82d">"No se puede identificar a este destinatario. Comprueba la dirección."</string>
-  <string name="gt_a60daedccd3ceb10">"No se pudo guardar el registro de auditoría de la anulación"</string>
   <string name="gt_40318f0066870db5">"No se puede guardar el estado del pago."</string>
   <string name="gt_96eea85fe300825b">"No se pudo guardar la evidencia del pago recurrente"</string>
   <string name="gt_5a64d52da0a50d6e">"No se pueden guardar los pagos recurrentes"</string>
@@ -1667,12 +1643,10 @@
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats cada vez"</string>
   <string name="gt_a4d26868017c0ccf">"compartida"</string>
-  <string name="gt_688897c430ce4d33">"a %1$s"</string>
   <string name="gt_43cfd880a046a5da">"a %1$s"</string>
   <string name="gt_4e45ea730a8e0eba">"menos de una hora"</string>
   <string name="gt_3e4443e52275a9a0">"error desconocido"</string>
   <string name="gt_d23af78db5816527">"hasta %1$s"</string>
-  <string name="gt_8eca82bae0ce426b">"hasta %1$s"</string>
   <string name="gt_464da15709a11412">"por Ark · ahora mismo"</string>
   <string name="gt_dfe9c9f8e8e77181">"por Lightning · ahora mismo"</string>
   <string name="gt_53e6cdc30765aade">"tu@ejemplo.com"</string>
@@ -1686,7 +1660,6 @@
   <string name="gt_05421802af3d82be">"%1$s disponible"</string>
   <string name="gt_07af0226de4cedc3">"%1$s disponible en Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s ha vuelto a tu billetera."</string>
-  <string name="gt_2e0090829ec144ef">"%1$s ha vuelto a tu billetera. Lightning no pudo llegar a %2$s."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s ha vuelto a tu billetera. Lightning no pudo llegar a %2$s."</string>
   <string name="gt_3152898f21ae93dc">"Quedan %1$s"</string>
   <string name="gt_1cfd3ae82c2e9be1">"Se ha enviado %1$s a %2$s."</string>

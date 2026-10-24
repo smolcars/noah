@@ -70,7 +70,7 @@ import kotlinx.serialization.json.*
 }
 class SendFailure(val reason: Reason) : Exception(reason.message) {
     enum class Reason(val message: String) {
-        recurringStopped("This recurring payment was stopped before submission."),
+        recurringStopped("Recurring payment stopped before submission. No payment was sent."),
         invalid("Enter a valid destination and a whole-satoshi amount greater than zero."),
         insufficient("The selected balance cannot cover this payment and its fee."),
         expired("This Lightning invoice has expired. Request a new invoice."),

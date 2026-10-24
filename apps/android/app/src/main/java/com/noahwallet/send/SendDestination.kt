@@ -192,7 +192,7 @@ sealed class SendDestinationError : Exception() {
         is AddressNetworkMismatch -> "Address network mismatch for {parameter} parameter" to listOf(key)
         is UnknownRequiredParameter -> "Unknown required parameter: {key}" to listOf(key)
         LnurlAuth -> "This is a login link, not a payment request" to emptyList()
-        is InvalidMethods -> error("Combined errors render their children")
+        is InvalidMethods -> error("""Combined errors render their children""")
     }
     override val message: String get() {
         if (this is InvalidMethods) return errors.joinToString(", ") { it.message }

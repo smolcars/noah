@@ -171,7 +171,7 @@ private fun Key(key: String?, enabled: Boolean, modifier: Modifier, onClick: () 
     val pressed by interaction.collectIsPressedAsState()
     val grow = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
-    val label = if (key == null) tr("Delete") else key
+    val label = if (key == null) tr("Delete digit") else key
     Box(modifier.clip(RoundedCornerShape(30.dp)).background(if (pressed && enabled) palette.soft else Color.Transparent)
         .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClickLabel = label) {
             haptics.selection()

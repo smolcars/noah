@@ -299,7 +299,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                 if generation == self.generation {
                     await dependencies.discard(quote)
                     state = .ready
-                    message = "Unable to reserve the wallet. No payment was submitted."
+                    message = "Unable to reserve the wallet. Check payment status before sending again."
                 }
             }
         }
@@ -387,7 +387,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             guard generation == self.generation else { return }
             await self.reconcileCurrentAttempt()
         } }
-        catch { if generation == self.generation { message = "Unable to reserve the wallet to check payment status." } }
+        catch { if generation == self.generation { message = "Couldn't check the latest status. Showing the last known status." } }
     }
     private func reconcileCurrentAttempt() async {
         guard let attempt else { return }

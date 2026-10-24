@@ -295,7 +295,7 @@ extension WalletSession {
             if case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
                let id = SendReconciliation.metadataMovementID(receipt, snapshot: attempt.snapshot) {
                 do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
-                catch { AppLog("send").w("Reconciled payment; repeat metadata could not be saved") }
+                catch { AppLog("send").w(#"Reconciled payment; repeat metadata could not be saved"#) }
             }
             return resolution
         }

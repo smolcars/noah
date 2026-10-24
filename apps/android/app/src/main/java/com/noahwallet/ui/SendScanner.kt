@@ -82,7 +82,7 @@ import java.util.concurrent.atomic.AtomicBoolean
                 future.addListener({
                     if (active.get()) try {
                         val provider = future.get()
-                        if (!provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) cameraError = "No camera device found."
+                        if (!provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) cameraError = "No camera is available. You can paste the payment request instead."
                         else provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, cameraPreview, analysis)
                     } catch (_: Exception) { cameraError = "Camera unavailable. Close the scanner and try again." }
                 }, main)

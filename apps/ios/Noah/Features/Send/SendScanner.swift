@@ -20,7 +20,7 @@ struct SendScanner: View {
             .overlay(alignment: .bottom) {
                 if authorized, let message { Text(LocalizedStringKey(message)).padding().background(.regularMaterial) }
             }
-            .navigationTitle("Scan payment QR")
+            .navigationTitle("Scan QR code")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .task {
                 authorized = await AVCaptureDevice.requestAccess(for: .video)

@@ -121,7 +121,7 @@ struct SendOutcomeView: View {
         .task(id: resultKey) { await revealResult() }
         .task(id: hapticKey) { await playHaptics() }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
-            Button("Keep waiting", role: .cancel) {}
+            Button("Keep checking", role: .cancel) {}
             Button(LocalizedStringKey(SendOverrideAudit.confirmationText), role: .destructive) {
                 controller.startNewPaymentAfterHistoryCheck(confirmed: true)
                 if !controller.locked { done() }
@@ -143,14 +143,14 @@ struct SendOutcomeView: View {
         case .stillSending: return L10n.text("Still sending {amount}", format(sendingAmount), locale: language)
         case .sent:
             guard let receipt else { return L10n.text("Payment sent", locale: language) }
-            if receipt.amountIsPending == true { return L10n.text("Payment sent", locale: language) }
+            if receipt.amountIsPending == true { return L10n.text("Payment submitted", locale: language) }
             return L10n.text("Sent {amount}", (receipt.amountIsEstimated == true ? "≈ " : "") + format(receipt.amount), locale: language)
         case .refunded: return L10n.text("Payment failed", locale: language)
-        case .failed: return L10n.text(refund == .untied ? "Payment failed" : "Payment did not complete", locale: language)
+        case .failed: return L10n.text(refund == .untied ? "Payment failed" : "Payment not sent", locale: language)
         case .alreadyPaid: return L10n.text("Invoice already paid", locale: language)
         case .uncertain: return L10n.text("Payment may have been sent", locale: language)
         case .unavailable: return L10n.text("Payment status unavailable", locale: language)
-        case .awaitingBroadcast: return L10n.text("Submitted", locale: language)
+        case .awaitingBroadcast: return L10n.text("Payment submitted", locale: language)
         }
     }
 
@@ -456,7 +456,7 @@ struct SendOutcomeView: View {
                 switch action {
                 case .check: checkButton
                 case .acknowledge: pill("Done", id: "send-success-done", action: acknowledge)
-                case .newPayment: pill("Start a new payment", id: "send-new-payment", action: acknowledge)
+                case .newPayment: pill("Done", id: "send-new-payment", action: acknowledge)
                 case .retry: pill("Retry", id: "send-retry") { Task { await controller.checkStatus() } }
                 // Leaving keeps the attempt and the send lock exactly as they are.
                 case .leave: pill("Done", id: "send-success-done") { onLeave() }
@@ -464,7 +464,7 @@ struct SendOutcomeView: View {
                 }
             }
             if controller.canOverride {
-                Button("I've checked my history, start a new payment", role: .destructive) { confirmOverride = true }
+                Button("Start a new payment after checking history", role: .destructive) { confirmOverride = true }
                     .noahText(HomeText.strong)
                     .foregroundStyle(NoahTokens.Colors.failure)
                     .frame(minHeight: NoahTokens.Size.hitTarget)
@@ -479,7 +479,7 @@ struct SendOutcomeView: View {
             Task { await controller.checkStatus() }
         } label: {
             ZStack {
-                Text("Check payment status").opacity(controller.checking ? 0 : 1)
+                Text("Check status").opacity(controller.checking ? 0 : 1)
                 if controller.checking { ProgressView().tint(NoahTokens.Colors.foreground) }
             }
             .frame(maxWidth: .infinity)

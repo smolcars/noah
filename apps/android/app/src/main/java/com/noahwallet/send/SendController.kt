@@ -10,8 +10,8 @@ class SendController(private val dependencies: Dependencies,
     internal var persistRecurringEvidence: ((SendAttempt, Int, Int, State, String?) -> Unit)? = dependencies.recurringEvidence
     private var recurringEvidenceDurable = false
     class Dependencies(val read: suspend () -> SendAttempt?, val write: (SendAttempt?) -> Unit,
-        val quarantineUnreadable: () -> Unit = { error("Journal quarantine unavailable") },
-        val auditOverride: (SendOverrideAudit) -> Unit = { error("Override audit storage unavailable") },
+        val quarantineUnreadable: () -> Unit = { error("""Journal quarantine unavailable""") },
+        val auditOverride: (SendOverrideAudit) -> Unit = { error("""Override audit storage unavailable""") },
         val recurringReservation: (suspend (suspend (SendWallet) -> Unit) -> Unit)? = null,
         val recurringEvidence: ((SendAttempt, Int, Int, State, String?) -> Unit)? = null,
         val reservation: suspend (suspend (SendWallet) -> Unit) -> Unit)
@@ -210,7 +210,7 @@ class SendController(private val dependencies: Dependencies,
         // Done may hide this receipt before the reservation returns to recurring settlement.
         if (saved.recurringOccurrenceKey != null) {
             try {
-                val persist = persistRecurringEvidence ?: error("Recurring evidence storage unavailable")
+                val persist = persistRecurringEvidence ?: error("""Recurring evidence storage unavailable""")
                 persist(saved, generation, walletGeneration, outcome, message)
                 recurringEvidenceDurable = true
             } catch (_: Exception) {
@@ -261,7 +261,7 @@ class SendController(private val dependencies: Dependencies,
                     audited = true
                     if (attempt?.recurringOccurrenceKey != null && !recurringEvidenceDurable) {
                         val saved = attempt!!
-                        val persist = persistRecurringEvidence ?: error("Recurring evidence storage unavailable")
+                        val persist = persistRecurringEvidence ?: error("""Recurring evidence storage unavailable""")
                         persist(saved, generation, walletGeneration, state, message)
                         recurringEvidenceDurable = true
                     }

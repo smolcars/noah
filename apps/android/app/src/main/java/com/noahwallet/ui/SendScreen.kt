@@ -221,7 +221,7 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
                 payment.source?.let { ReviewRow("From", it.label) }
                 if (payment.comment.isNotEmpty()) ReviewRow("Note", payment.comment)
                 quote.checkpoint?.let { Text(tr("An existing Lightning payment will be checked. No new payment will be created.")) }
-                if (quote.approximate) Text(tr("The fee is an estimate. The final fee may change before submission."), style = MaterialTheme.typography.bodySmall)
+                if (quote.approximate) Text(tr("The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed."), style = MaterialTheme.typography.bodySmall)
                 NoahButton("Confirm", !controller.locked, modifier = Modifier.testTag("send-confirm"), onClick = confirm)
                 NoahButton("Back", !controller.locked, secondary = true, modifier = Modifier.testTag("send-review-back"), onClick = cancel)
             }

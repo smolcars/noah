@@ -257,7 +257,7 @@ indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
         case .networkMismatch(let expected, let actual):
             L10n.text("Network mismatch: expected {expected}, got {actual}", expected, actual, locale: locale)
         case .subSatoshiInvoice: L10n.text("Invoice amount is less than 1 satoshi.", locale: locale)
-        case .invalidOffer: L10n.text("Invalid BOLT12 offer: Invalid checksum", locale: locale)
+        case .invalidOffer: L10n.text("Invalid BOLT12 offer", locale: locale)
         case .invalidBitcoinAddress: L10n.text("Invalid bitcoin address", locale: locale)
         case .invalidURI: L10n.text("Invalid BIP-321 URI", locale: locale)
         case .invalidAmount: L10n.text("Invalid amount format", locale: locale)

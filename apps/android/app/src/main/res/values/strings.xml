@@ -13,7 +13,6 @@
   <string name="gt_36d7ac7edaf6eeeb">"A reminder comes the day before. A missed payment is skipped, never paid twice."</string>
   <string name="gt_ffc027edcc0ef3f2">"ATM"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
-  <string name="gt_d58fd353bb1b174f">"About 20 min · %1$s estimated fee"</string>
   <string name="gt_388e5f8e82667507">"About 20 min · %1$s fee"</string>
   <string name="gt_962a08a8878d9a42">"About Noah"</string>
   <string name="gt_16b406f63254167c">"About block %1$s"</string>
@@ -232,7 +231,6 @@
   <string name="gt_d0e3a822635c961f">"Check Activity for this payment\'s last attempt and ask the recipient whether it arrived."</string>
   <string name="gt_fb7099ad8e818d42">"Check again"</string>
   <string name="gt_c52a96b66db5c212">"Check operation status"</string>
-  <string name="gt_ae1b6f51f5f5da9f">"Check payment status"</string>
   <string name="gt_69cd3590300a68c6">"Check status"</string>
   <string name="gt_ed8367c6e1178cba">"Check the address. This can\'t be undone."</string>
   <string name="gt_44cb983669c9d0a9">"Check the address. This can’t be undone."</string>
@@ -289,7 +287,6 @@
   <string name="gt_55656b5e434f4c06">"Close search"</string>
   <string name="gt_54cb4b725a66af16">"Coin %1$s"</string>
   <string name="gt_b322b65227bc3ec9">"Collapsed"</string>
-  <string name="gt_5a7b1979437abf8d">"Combined errors render their children"</string>
   <string name="gt_bc1dbb36faac6cf7">"Coming soon in the native app."</string>
   <string name="gt_22a970d2e5b1cc23">"Completed"</string>
   <string name="gt_eebdd24a77d9ad32">"Confirm"</string>
@@ -647,7 +644,6 @@
   <string name="gt_9e0f9b800b0db2b0">"I understand this may repeat the operation"</string>
   <string name="gt_806f6591e2359170">"I will not share my recovery phrase."</string>
   <string name="gt_cd65f6dcab984750">"I wrote it down"</string>
-  <string name="gt_306becc0aba824d9">"I\'ve checked my history, start a new payment"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"If Ark works, send to a Bitcoin address instead."</string>
   <string name="gt_1d93f10792a18bf1">"Immature"</string>
@@ -671,7 +667,6 @@
   <string name="gt_2304400f597b8734">"Install ntfy from F-Droid, then come back."</string>
   <string name="gt_ddd409663e0a1d7b">"Instant and free from Ark wallets"</string>
   <string name="gt_cf9ea7f321c15e4b">"Instant · free"</string>
-  <string name="gt_bb3e30521a8bd6d0">"Instant · %1$s estimated fee"</string>
   <string name="gt_121639f0d7604797">"Instant · %1$s fee"</string>
   <string name="gt_136f8bedf0a24121">"Instantly"</string>
   <string name="gt_9464444aff9626f4">"Insufficient funds for this payment method."</string>
@@ -680,7 +675,6 @@
   <string name="gt_d6e896cee6f715fd">"Interrupted restore not settled yet"</string>
   <string name="gt_50bc71f591bfa3ff">"Invalid BIP-321 URI"</string>
   <string name="gt_ec21cf0f83a4a7de">"Invalid BOLT12 offer"</string>
-  <string name="gt_f08e31597342ce58">"Invalid BOLT12 offer: Invalid checksum"</string>
   <string name="gt_7f89a8b29b034582">"Invalid amount format"</string>
   <string name="gt_dfc5950db71330cf">"Invalid bitcoin address"</string>
   <string name="gt_809d321d74b3c7ba">"Invalid export name"</string>
@@ -706,7 +700,6 @@
   <string name="gt_a1487c34b5c577e1">"Joining the Ark"</string>
   <string name="gt_8ddd9ab865d79c7c">"Joins the next Ark round, so it stays spendable."</string>
   <string name="gt_3e0916d27e6bf4cf">"Joins the next Ark round, so they stay spendable."</string>
-  <string name="gt_6c9c568abe67785a">"Journal quarantine unavailable"</string>
   <string name="gt_78bc8448cb3e1be8">"KRW"</string>
   <string name="gt_9cbf9327c3a565fc">"Keep Noah awake"</string>
   <string name="gt_48d1780a0dd94191">"Keep attempt"</string>
@@ -715,7 +708,6 @@
   <string name="gt_263743ebe703e2e0">"Keep notifications on so payments can go through while Noah is closed."</string>
   <string name="gt_942c9e0587fb1e92">"Keep payment"</string>
   <string name="gt_1223a5e3f6a37070">"Keep stopped"</string>
-  <string name="gt_b9ad2e4e8954b13e">"Keep waiting"</string>
   <string name="gt_4993449490bbc0ac">"LNURL invoice description hash does not commit to endpoint metadata"</string>
   <string name="gt_a4fe65264ef7dbb3">"Language"</string>
   <string name="gt_aef7c5afac4b70b8">"Largest VTXO"</string>
@@ -726,7 +718,6 @@
   <string name="gt_1a196f3801a01458">"Last backup %1$s"</string>
   <string name="gt_0c0c351a971353b5">"Last checked"</string>
   <string name="gt_ec3b8bf1e0261664">"Last good backup %1$s"</string>
-  <string name="gt_fc6e4a408d56be96">"Leave"</string>
   <string name="gt_e85039a1d8fa0011">"Leaving Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
   <string name="gt_8d889b2a0398edd9">"Left out, fees more than they\'re worth: %1$s. Choose them to exit them anyway."</string>
@@ -846,7 +837,6 @@
   <string name="gt_802629b9d02d308e">"No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled."</string>
   <string name="gt_e6de0cc02416ad14">"No backups found"</string>
   <string name="gt_d42128b50335bf93">"No browser available to open the explorer."</string>
-  <string name="gt_b51ac248f2fcdf56">"No camera device found."</string>
   <string name="gt_d3f355f33a058f16">"No camera is available. You can paste the payment request instead."</string>
   <string name="gt_992a290f2761d516">"No distributor found"</string>
   <string name="gt_99b13b050691cd88">"No distributors detected. Install ntfy or another UnifiedPush distributor."</string>
@@ -990,7 +980,6 @@
   <string name="gt_f893fab7e39f5540">"Otherwise Android may pause Noah, and payments could stop arriving."</string>
   <string name="gt_3619cf0b90923a4b">"Outgoing"</string>
   <string name="gt_84c9bc73297ace6e">"Overridden attempt"</string>
-  <string name="gt_c11409e54af3960d">"Override audit storage unavailable"</string>
   <string name="gt_b896460456edd89b">"Override confirmation"</string>
   <string name="gt_33a067f2594b14e7">"Override repeat protection?"</string>
   <string name="gt_51a87000f35dc875">"Override repeat protection…"</string>
@@ -1012,7 +1001,6 @@
   <string name="gt_fef5813efef1e50a">"Paying %1$s sat/vB · waiting for block %2$s"</string>
   <string name="gt_d9c9afd836811e5a">"Payment ID"</string>
   <string name="gt_3450b635b99ae5ff">"Payment confirmed"</string>
-  <string name="gt_bc38541e91fe8160">"Payment did not complete"</string>
   <string name="gt_17aadc092fe66088">"Payment failed"</string>
   <string name="gt_096045f8f17f3bad">"Payment hash"</string>
   <string name="gt_21e360b26e1793bf">"Payment in progress"</string>
@@ -1080,7 +1068,6 @@
   <string name="gt_aa815083375c5f6e">"Recipient amount pending"</string>
   <string name="gt_fdbcd05664b4ce23">"Recipient receives about %1$s sats"</string>
   <string name="gt_3fed24d17905877f">"Recipient verified"</string>
-  <string name="gt_c8233e7b49d45fa5">"Reconciled payment; repeat metadata could not be saved"</string>
   <string name="gt_c7175fa7a0db0d3c">"Recorded"</string>
   <string name="gt_e4cea0827a11aed0">"Recorded at"</string>
   <string name="gt_41edd3f47328da5a">"Recovery phrase"</string>
@@ -1090,7 +1077,6 @@
   <string name="gt_c0c06e547b1b55e1">"Recurring"</string>
   <string name="gt_f1edc38f48fa8c1a">"Recurring background work stopped."</string>
   <string name="gt_49a97d74c6bb00c8">"Recurring consumption evidence is incomplete. Sending remains stopped."</string>
-  <string name="gt_de5aca532e062c99">"Recurring evidence storage unavailable"</string>
   <string name="gt_52934e493cb2d4f5">"Recurring payment"</string>
   <string name="gt_e96cc9747bde094a">"Recurring payment data couldn\'t be read. Your saved schedules have been preserved. Sending is stopped."</string>
   <string name="gt_7bca5b89bad58cde">"Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."</string>
@@ -1214,7 +1200,6 @@
   <string name="gt_ea1c510d1ddb7264">"Scan"</string>
   <string name="gt_e5c7478bbce26eb7">"Scan QR code"</string>
   <string name="gt_83793a1453350630">"Scan a Bitcoin, Lightning, or Ark QR code and send from Noah."</string>
-  <string name="gt_268a655c8f30bcfc">"Scan payment QR"</string>
   <string name="gt_df14ab305157e03c">"Scan to pay"</string>
   <string name="gt_11663c3ffc2ca513">"Scan with an Ark wallet"</string>
   <string name="gt_ff900d6ce1964530">"Scan with any Lightning wallet"</string>
@@ -1227,7 +1212,6 @@
   <string name="gt_a451c45fca000d8c">"Screenshot must be a JPEG or PNG image."</string>
   <string name="gt_49c266baaaa70981">"Search"</string>
   <string name="gt_08cf22a9053129c5">"Search places or cities"</string>
-  <string name="gt_d15f6395fe6e788c">"Seconds · %1$s estimated fee"</string>
   <string name="gt_fa0e0b90eef384a2">"Seconds · %1$s fee"</string>
   <string name="gt_26a08e3cf397b095">"Secure file unreadable"</string>
   <string name="gt_6e5835bc30b172d3">"Secure key unavailable"</string>
@@ -1296,7 +1280,6 @@
   <string name="gt_e4bb9f1ece9af926">"Start"</string>
   <string name="gt_aa2acac2758fc7b9">"Start Emergency Exit"</string>
   <string name="gt_f12e78a057cfb199">"Start Selected Exit"</string>
-  <string name="gt_ecd0abf6250c1885">"Start a new payment"</string>
   <string name="gt_d65d3a6d1c27a19c">"Start a new payment after checking history"</string>
   <string name="gt_8a565d98b83e392b">"Start a new payment anyway"</string>
   <string name="gt_499f9885f21d51cb">"Start exit"</string>
@@ -1372,7 +1355,6 @@
   <string name="gt_7652d8144d735a2c">"The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually."</string>
   <string name="gt_6f582ba484a97acc">"The fee for this payment (%1$s sats) is above your automatic limit of %2$s sats. Review it to pay manually."</string>
   <string name="gt_cbd4e5347458e235">"The fee for this payment (%1$s sats) is above your automatic limit of %2$s sats. Review it to pay manually."</string>
-  <string name="gt_3653831cba86de7c">"The fee is an estimate. The final fee may change before submission."</string>
   <string name="gt_5f97e174b6c50b9d">"The first payment can\'t be in the past."</string>
   <string name="gt_4ce7d56e24aef58c">"The invoice must request whole satoshis."</string>
   <string name="gt_03401b1fd160f1c8">"The invoice sets the amount to %1$s"</string>
@@ -1439,7 +1421,6 @@
   <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
   <string name="gt_7d13ecdf60d28aa9">"This place may require another payment app"</string>
   <string name="gt_44f3e818daadd169">"This place provided an invalid link."</string>
-  <string name="gt_6d745107d2d026a2">"This recurring payment was stopped before submission."</string>
   <string name="gt_5d5cfeffe0f4ad97">"This refreshes the selected VTXOs in a delegated Ark round."</string>
   <string name="gt_01d7d06401b5eaad">"This removes the wallet and its recovery phrase from this phone. It can’t be undone."</string>
   <string name="gt_e3475188c78e15ad">"This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."</string>
@@ -1486,15 +1467,10 @@
   <string name="gt_2ae7ac464e48b75b">"Unable to prepare boarding. Use Settings → Board to Ark to try again."</string>
   <string name="gt_a2ddae769021f756">"Unable to prepare payment. No payment was submitted."</string>
   <string name="gt_8280328a66bc882e">"Unable to prepare this payment. Check the destination and available funds."</string>
-  <string name="gt_de70f9d2e9dc5ae5">"Unable to preserve unreadable Send evidence"</string>
   <string name="gt_4b5be5a8514a9fd7">"Unable to reach the Esplora endpoint. Check the URL and try again."</string>
   <string name="gt_1c7201294e18b007">"Unable to read available balances."</string>
-  <string name="gt_29e3b5af9a77e7c2">"Unable to reserve the wallet to check payment status."</string>
   <string name="gt_ad846ebf4373a7ba">"Unable to reserve the wallet. Check payment status before sending again."</string>
-  <string name="gt_4c61caccfb372364">"Unable to reserve the wallet. No payment was submitted."</string>
-  <string name="gt_150d6547814b6d9d">"Unable to resolve this Lightning recipient. Please check the address."</string>
   <string name="gt_1a1e3d6ed0b1c82d">"Unable to resolve this recipient. Please check the address."</string>
-  <string name="gt_a60daedccd3ceb10">"Unable to save override audit"</string>
   <string name="gt_40318f0066870db5">"Unable to save payment status."</string>
   <string name="gt_96eea85fe300825b">"Unable to save recurring payment evidence"</string>
   <string name="gt_5a64d52da0a50d6e">"Unable to save recurring payments"</string>
@@ -1667,12 +1643,10 @@
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats each time"</string>
   <string name="gt_a4d26868017c0ccf">"shared"</string>
-  <string name="gt_688897c430ce4d33">"to %1$s"</string>
   <string name="gt_43cfd880a046a5da">"to %1$s"</string>
   <string name="gt_4e45ea730a8e0eba">"under an hour"</string>
   <string name="gt_3e4443e52275a9a0">"unknown error"</string>
   <string name="gt_d23af78db5816527">"up to %1$s"</string>
-  <string name="gt_8eca82bae0ce426b">"up to %1$s"</string>
   <string name="gt_464da15709a11412">"via Ark · just now"</string>
   <string name="gt_dfe9c9f8e8e77181">"via Lightning · just now"</string>
   <string name="gt_53e6cdc30765aade">"you@example.com"</string>
@@ -1686,7 +1660,6 @@
   <string name="gt_05421802af3d82be">"%1$s available"</string>
   <string name="gt_07af0226de4cedc3">"%1$s available in Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s is back in your wallet."</string>
-  <string name="gt_2e0090829ec144ef">"%1$s is back in your wallet. Lightning couldn’t reach %2$s."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s is back in your wallet. Lightning couldn’t reach %2$s."</string>
   <string name="gt_3152898f21ae93dc">"%1$s left"</string>
   <string name="gt_1cfd3ae82c2e9be1">"%1$s sent to %2$s."</string>

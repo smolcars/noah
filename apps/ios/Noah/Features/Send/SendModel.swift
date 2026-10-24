@@ -212,7 +212,7 @@ import Observation
                 if let fixed { parsed.amount = Decimal(fixed); parsed.isAmountEditable = false }
             } catch {
                 guard revision == recipientRevision else { return }
-                self.error = "Unable to resolve this Lightning recipient. Please check the address."
+                self.error = "Unable to resolve this recipient. Please check the address."
                 return
             }
         }
@@ -236,7 +236,7 @@ import Observation
                 guard matchingRoute != nil else { throw SendFailure.invalid }
             } catch {
                 guard revision == recipientRevision else { return }
-                self.error = "Unable to resolve this Lightning recipient. Please check the address."
+                self.error = "Unable to resolve this recipient. Please check the address."
                 return
             }
         }

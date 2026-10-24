@@ -359,7 +359,7 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
         // Recipient-first (a scan or paste without an amount): who it's for while you type the amount.
         if (model.progress.recipientConfirmed && !model.isMax) {
             val who = SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain)
-            Text(tr("to {name}", tr(who.name)), Modifier.fillMaxWidth().padding(top = 10.dp).testTag("send-amount-recipient"), style = SendType.body,
+            Text(tr("to {recipient}", tr(who.name)), Modifier.fillMaxWidth().padding(top = 10.dp).testTag("send-amount-recipient"), style = SendType.body,
                 color = palette.muted, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(Modifier.fillMaxWidth().padding(top = 16.dp).height(32.dp), horizontalArrangement = Arrangement.Center) {
@@ -502,9 +502,9 @@ private fun railIcon(rail: SendRail) = when (rail) { SendRail.ark -> SendIcons.a
 /** A card's line: the SDK's fee estimate, labelled as one; without an estimate, just the timing (never a zero fee). */
 @Composable
 private fun railLine(rail: SendRail, fee: Long?, env: SendEnv): String = when (rail) {
-    SendRail.ark -> when (fee) { null -> tr("Instantly"); 0L -> tr("Instant · free"); else -> tr("Instant · {fee} estimated fee", formatted(fee, env)) }
-    SendRail.lightning -> fee?.let { tr("Seconds · {fee} estimated fee", formatted(it, env)) } ?: tr("In seconds")
-    SendRail.onchain -> fee?.let { tr("About 20 min · {fee} estimated fee", formatted(it, env)) } ?: tr("In about 20 minutes")
+    SendRail.ark -> when (fee) { null -> tr("Instantly"); 0L -> tr("Instant · free"); else -> tr("Instant · {fee} fee", formatted(fee, env)) }
+    SendRail.lightning -> fee?.let { tr("Seconds · {fee} fee", formatted(it, env)) } ?: tr("In seconds")
+    SendRail.onchain -> fee?.let { tr("About 20 min · {fee} fee", formatted(it, env)) } ?: tr("In about 20 minutes")
 }
 
 @Composable
@@ -610,7 +610,7 @@ private fun ReviewRows(model: SendModel, quote: SendQuote?, payment: SendPayment
                 ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark)
                 payment?.source?.let { ValueRow(tr("From"), tr(it.label)) }
                 if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment)
-                ValueRow(tr(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false)
+                ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false)
             }
         }
 }
@@ -633,7 +633,7 @@ private fun reviewNote(model: SendModel, quote: SendQuote?, env: SendEnv, typedB
     model.parsed.amount != null && typedBefore != null && typedBefore > 0 && typedBefore != quote?.amount ->
         tr("The invoice sets the amount to {amount}", formatted(model.parsed.amount!!.toLong(), env))
     !quote?.vtxoIDs.isNullOrEmpty() -> tr("The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.")
-    quote?.approximate == true -> tr("The fee is an estimate. The final fee may change before submission.")
+    quote?.approximate == true -> tr("The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed.")
     else -> null
 }
 
@@ -698,7 +698,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     LaunchedEffect(resultShown) { if (resultShown) show.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) }
     StepPanes(nav = { }, leadingCentred = false, trailingAt = Alignment.CenterVertically, leading = {
         SwapTitle(title, SendType.big, Modifier.padding(top = 6.dp).testTag("send-title"))
-        if (who.name.isNotEmpty()) Text(tr("to {name}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (who.name.isNotEmpty()) Text(tr("to {recipient}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt, Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
         PhaseText(line?.let { phase ->
             val text = if (phase.argument != null) tr(phase.source, phase.argument) else tr(phase.source)
@@ -714,7 +714,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
             SendEnding.failed, SendEnding.notSent, SendEnding.alreadyPaid, SendEnding.pending)
         // Today's broadcast retry can't be acknowledged, and the phone hides the tab bar: Leave goes back with the
         // attempt and the send lock exactly as they are.
-        if (doneShown && receipt?.broadcastRetryPending == true) SendPill(tr("Leave"),
+        if (doneShown && receipt?.broadcastRetryPending == true) SendPill(tr("Close"),
             Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }) {
             haptics.light(); actions.leave()
         } else if (doneShown) SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) },
@@ -779,7 +779,7 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
         }
         SendEnding.pending -> tr("Lightning is still finding a route. You can leave this screen; Noah finishes it in the background.")
         // Only a person or address can be "reached"; an invoice just gets the refund line.
-        SendEnding.refunded -> if (who.initial != null) tr("{amount} is back in your wallet. Lightning couldn’t reach {name}.", formatted(amount, env), who.name)
+        SendEnding.refunded -> if (who.initial != null) tr("{amount} is back in your wallet. Lightning couldn’t reach {recipient}.", formatted(amount, env), who.name)
             else tr("{amount} is back in your wallet.", formatted(amount, env))
         // A retried invoice: bark's records can't say this attempt's coins came back, so no "back in your wallet".
         SendEnding.failed -> tr("That payment didn’t go through.")
@@ -791,8 +791,8 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
         val rows = mutableListOf<@Composable (Boolean) -> Unit>()
         if (rail != null) rows += { divider -> ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), divider = divider) }
         when (ending) {
-            SendEnding.pending -> attempt?.existingLightning?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {fee}", formatted(fee, env)), number = true, divider = d) } }
-                ?: attempt?.quote?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {fee}", formatted(fee, env)), number = true, divider = d) } }
+            SendEnding.pending -> attempt?.existingLightning?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {amount}", formatted(fee, env)), number = true, divider = d) } }
+                ?: attempt?.quote?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {amount}", formatted(fee, env)), number = true, divider = d) } }
             SendEnding.refunded -> rows += { d -> ValueRow(tr("Fee"), tr("None"), divider = d) }
             SendEnding.arkSent -> {
                 val fee = receipt?.fee ?: attempt?.quote?.fee ?: 0
@@ -801,7 +801,7 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
             SendEnding.failed, SendEnding.notSent, SendEnding.unavailable -> Unit
             else -> receipt?.let { r ->
                 when {
-                    r.fee != null -> rows += { d -> ValueRow(tr(if (ending == SendEnding.lightningSent || ending == SendEnding.chainSent) "Fee" else "Actual fee"), formatted(r.fee, env), number = true, divider = d) }
+                    r.fee != null -> rows += { d -> ValueRow(tr("Fee"), formatted(r.fee, env), number = true, divider = d) }
                     r.amountIsPending -> rows += { d -> ValueRow(tr("Fee"), tr("Actual fee pending"), divider = d) }
                     else -> attempt?.quote?.takeIf { it.approximate }?.let { quote ->
                         rows += { d -> ValueRow(tr("Estimated fee"), formatted(quote.fee, env), number = true, divider = d) }
@@ -823,7 +823,7 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
     // Today's notes, in the order today's receipt showed them.
     val notes = buildList {
         receipt?.conflictDescription?.let { add(tr(it) to false) }
-        if (ending == SendEnding.alreadyPaid || ending == SendEnding.unknown) attempt?.existingLightning?.let { add(tr(it.message) to false) }
+        if (ending == SendEnding.alreadyPaid || ending == SendEnding.unknown) attempt?.existingLightning?.let { add(tr("A payment of {amount} sats for this invoice is already in progress. Do not pay again.", java.text.NumberFormat.getIntegerInstance(env.locale).format(it.amount)) to false) }
         receipt?.chainStatus?.takeIf { it.kind == com.noahwallet.services.wallet.ChainStatus.Kind.notFound }?.let { add(tr(it.text) to false) }
         if (ending != SendEnding.chainSent && receipt?.broadcastRetryPending == true) add(tr(SendReceipt.broadcastPendingMessage) to false)
         controller.message?.let { add(tr(it) to true) }

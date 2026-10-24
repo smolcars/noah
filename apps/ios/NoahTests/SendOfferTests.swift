@@ -11,7 +11,7 @@ import Testing
     /// The mainnet send-utils offer, which fixes 1,000 sats.
     let offer: String
     let onchain = "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22"
-    let unableToResolve = "Unable to resolve this Lightning recipient. Please check the address."
+    let unableToResolve = "Unable to resolve this recipient. Please check the address."
 
     init() throws {
         offer = try #require(try Fixtures.load("send-utils", input: ParseInput.self, expected: Ignored.self)

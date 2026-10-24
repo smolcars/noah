@@ -37,7 +37,7 @@ class SendOverrideAuditStore(private val file: File, private val sync: (File) ->
                 stream.write(json.encodeToString((previous + audit).takeLast(100)).toByteArray())
                 stream.fd.sync()
             }
-            check(temporary.renameTo(file)) { "Unable to save override audit" }
+            check(temporary.renameTo(file)) { """Unable to save override audit""" }
             sync(file.parentFile!!)
         } finally { temporary.delete() }
     }
@@ -45,7 +45,7 @@ class SendOverrideAuditStore(private val file: File, private val sync: (File) ->
 
 internal fun quarantineSendEvidence(file: File, sync: (File) -> Unit): File {
     val quarantine = File(file.parentFile, "${file.name}.unreadable-${UUID.randomUUID()}")
-    check(file.renameTo(quarantine)) { "Unable to preserve unreadable Send evidence" }
+    check(file.renameTo(quarantine)) { """Unable to preserve unreadable Send evidence""" }
     sync(file.parentFile!!)
     return quarantine
 }
