@@ -87,7 +87,7 @@ enum RecurringRecipient {
         do {
             if let fees = try await fetch() { return fees }
         } catch { /* Use the published fallback for unavailable ArkInfo. */ }
-        AppLog("recurring").d("ArkInfo unavailable; using the published Lightning fee schedule")
+        AppLog("recurring").d(#"ArkInfo unavailable; using the published Lightning fee schedule"#)
         return RecurringFeePolicy.fallback
     }
 

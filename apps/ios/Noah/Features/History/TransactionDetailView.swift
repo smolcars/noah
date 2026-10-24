@@ -178,7 +178,7 @@ struct TransactionDetailView: View {
         if let entered = enteredAs { line("Entered as", hidden ? "••••" : entered) }
         if let note = detail.note { line("Note", note, wraps: true) }
         if let recurring = transaction.recurring {
-            link(.schedule(recurring.scheduleID), "Repeats", L10n.text(recurring.interval.description, locale: language))
+            link(.schedule(recurring.scheduleID), "Repeats", recurring.interval.text(locale: language))
         }
         if transaction.movementKind == "exit" { link(.exit, "Progress", L10n.text("Exit details", locale: language)) }
         if let proof = detail.proof {

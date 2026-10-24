@@ -100,7 +100,6 @@
   <string name="gt_d2047b1c7d8dd813">"Ark signerar tillbaka den till dig"</string>
   <string name="gt_1a5b92522bb6c9c8">"Arks publicerade Lightning-avgifter för det här beloppet kan uppgå till %1$s sats, vilket överstiger din gräns för automatiska betalningar på %2$s sats. Granska betalningen för att betala manuellt."</string>
   <string name="gt_325d3644954c9188">"Arks publicerade Lightning-avgifter för det här beloppet kan uppgå till %1$s sats, vilket överstiger din gräns för automatiska betalningar på %2$s sats. Granska betalningen för att betala manuellt."</string>
-  <string name="gt_fd1aab50cfb65421">"ArkInfo är inte tillgängligt; den publicerade avgiftstabellen för Lightning används"</string>
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_72c7f155f1532f44">"Kommer fram"</string>
   <string name="gt_859a013e803dbdc6">"Kommer fram i Ark"</string>
@@ -109,7 +108,6 @@
   <string name="gt_c6dd438b37364cad">"Frågar när du har %1$s eller mer"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"Minst 3 tecken"</string>
   <string name="gt_0d04eed763c98c70">"Minst %1$s."</string>
-  <string name="gt_4c9ce17646b28614">"Granskning inte tillgänglig"</string>
   <string name="gt_c8271c0bafb7c1eb">"Verifiera din identitet för att komma åt din plånbok"</string>
   <string name="gt_4190475b52357e7a">"Autentiseringen misslyckades. Försök igen."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Tröskelvärdet för Auto-board är inte tillgängligt"</string>
@@ -223,7 +221,6 @@
   <string name="gt_c31be569a492274b">"Kontrollera beloppet, valda VTXO:er och destinationen. Det kanske inte finns tillräckligt med bekräftade medel."</string>
   <string name="gt_0a4944369b913265">"Kontrollera blockkedjan"</string>
   <string name="gt_5b08e343d8089308">"Kontrollera blockkedjan?"</string>
-  <string name="gt_756e44ed7badc707">"Kontrollera den aktuella betalningen innan du gör en ny betalning."</string>
   <string name="gt_ff65032d5e881811">"Kontrollera resultatet av den här betalningen innan du godkänner den igen."</string>
   <string name="gt_6f113ce35347ffe6">"Kontrollera resultatet av den här betalningen innan du redigerar den."</string>
   <string name="gt_710d52f182321f4a">"Kontrollera ord %1$s"</string>
@@ -394,7 +391,6 @@
   <string name="gt_34e108c0896d0158">"Visning"</string>
   <string name="gt_11a6767d5674c7e4">"Klart"</string>
   <string name="gt_5655e4c5f2e921a8">"Ta bort VTXO"</string>
-  <string name="gt_d003d9b4e9041e93">"Duplicerad egenskap för återkommande betalning"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
   <string name="gt_a8652bad1788fdd8">"Var och en skickas först när den före är med i ett block."</string>
   <string name="gt_5888c65ca705318d">"Avgiften för varje transaktion tas från din bekräftade bitcoin på blockkedjan. Noah skickar nästa när en insättning har bekräftats."</string>
@@ -495,7 +491,6 @@
   <string name="gt_db5f066a21225f71">"Nöduttagen har förts vidare. Transaktioner kan ha sänts eller fått höjda avgifter."</string>
   <string name="gt_26377ba9c6b97926">"Uttag använder det när det har bekräftats."</string>
   <string name="gt_e72d5d8d0b167d21">"Utökad"</string>
-  <string name="gt_ed051741d4064ad6">"Förväntade en heltalstoken"</string>
   <string name="gt_424a2551d356754c">"Utgången"</string>
   <string name="gt_f6725f3af08a06a2">"Löper ut"</string>
   <string name="gt_96ca72eafe792fdf">"Löper ut inom en timme"</string>
@@ -1036,7 +1031,6 @@
   <string name="gt_0d00701668397fb3">"Underlaget för reglerna för återkommande betalningar behöver ses över. Sparade scheman finns kvar. Redigera eller återuppta dem för att godkänna en ny version. Betalningar är fortfarande stoppade."</string>
   <string name="gt_9cdf20057327ea75">"Reglerna för återkommande betalningar har återställts till en tidigare version eller underlaget är otillgängligt. Inga betalningar skickas."</string>
   <string name="gt_2359c00c2b579c81">"Återkommande betalningar har stoppats."</string>
-  <string name="gt_4898c0337b6b7003">"Synkroniseringen av schemat för återkommande väckningar misslyckades; schemat sparades för ett nytt försök"</string>
   <string name="gt_84667ee20bc5ea45">"Plånboksidentiteten för återkommande betalningar kunde inte läsas. Inga betalningar skickas."</string>
   <string name="gt_1e5abacf65e5532e">"Återkommande %1$s, tillfälle %2$s"</string>
   <string name="gt_0e91610117029a62">"Förnya"</string>
@@ -1061,7 +1055,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Regtest-plånböcker använder Bitcoin Core i stället för Esplora."</string>
   <string name="gt_addcab98b516c661">"Regtest-plånböcker använder Bitcoin Core."</string>
-  <string name="gt_c3812fc4acb861d5">"Ta bort"</string>
   <string name="gt_4e9ea48ffbfb99b0">"Ta bort betalning"</string>
   <string name="gt_ed14fa72453957ca">"Ta bort skärmbild"</string>
   <string name="gt_90c1689b0b74f032">"Förnya"</string>
@@ -1127,7 +1120,6 @@
   <string name="gt_3a14761aebfa65eb">"SGD"</string>
   <string name="gt_2148880a298d5e8f">"Satoshis"</string>
   <string name="gt_1509f561f2416598">"Spara"</string>
-  <string name="gt_2d8b0a7ed3fce80e">"Spara betalning"</string>
   <string name="gt_e0d94a676bb91ff5">"Spara din återställningsfras"</string>
   <string name="gt_b5c120b316c237a0">"Sparat"</string>
   <string name="gt_08f39fae202e1c5c">"Återkommande betalning sparad"</string>
@@ -1398,8 +1390,6 @@
   <string name="gt_ad846ebf4373a7ba">"Det gick inte att reservera plånboken. Kontrollera betalningens status innan du skickar igen."</string>
   <string name="gt_1a1e3d6ed0b1c82d">"Det går inte att identifiera den här mottagaren. Kontrollera adressen."</string>
   <string name="gt_40318f0066870db5">"Det går inte att spara betalningens status."</string>
-  <string name="gt_96eea85fe300825b">"Det går inte att spara underlag för återkommande betalning"</string>
-  <string name="gt_5a64d52da0a50d6e">"Kunde inte spara återkommande betalningar"</string>
   <string name="gt_29eb38153481ec5c">"Det går inte att spara bekräftelsen på åsidosättandet. Det är fortfarande spärrat att skicka betalningar."</string>
   <string name="gt_3229d16ca643cb86">"Obekräftad"</string>
   <string name="gt_08af79cb5523570f">"UnifiedPush"</string>
@@ -1418,7 +1408,6 @@
   <string name="gt_b38065110f2bd113">"Osignerad transaktion %1$s"</string>
   <string name="gt_cd815000e69f78a3">"Mottagaren stöds inte"</string>
   <string name="gt_8c1c051923c4b6b2">"Versionen av journalen för återkommande betalningar stöds inte. Inga betalningar skickas tills vidare."</string>
-  <string name="gt_e693d8441d19b569">"Den här versionen av återkommande betalningar stöds inte. Det går inte att skicka betalningar."</string>
   <string name="gt_7652c992b14f72a5">"Upp till %1$s"</string>
   <string name="gt_c945161e74e60f7f">"Kommande återkommande betalning"</string>
   <string name="gt_c1c1009d3f37ec05">"Uppdatera"</string>
@@ -1506,7 +1495,6 @@
   <string name="gt_4cd8ef2093993de6">"Du får"</string>
   <string name="gt_0e5467ac43335fc4">"Du behåller"</string>
   <string name="gt_357f1a2fdf17bb53">"Du har fått %1$s"</string>
-  <string name="gt_04dc7cb10406d3ac">"Du får en påminnelse dagen före och en avisering efter varje betalning. Om en betalning missas medan telefonen är avstängd hoppar Noah över den i stället för att betala dubbelt."</string>
   <string name="gt_723022dbd02fce20">"Du har nått gränsen för antalet återkommande betalningar."</string>
   <string name="gt_3d26c2347422ac51">"Det går inte att överföra hela ditt Ark-saldo till den här plånbokens egen adress på kedjan. Använd en extern Bitcoin-adress."</string>
   <string name="gt_f9f55c49d8421334">"Din VTXO"</string>
@@ -1548,13 +1536,10 @@
   <string name="gt_0b8e9e995d8d77f1">"felsökning"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_308e322df797ff25">"t.ex. Hyra"</string>
-  <string name="gt_7d7894104be6c089">"t.ex. hyra, donation, VPN"</string>
   <string name="gt_5092d17899730925">"varje gång"</string>
   <string name="gt_ac13979d20e7673e">"från %1$s"</string>
   <string name="gt_82a3537ff0dbce7e">"namn"</string>
-  <string name="gt_7749eed65c4e3535">"name@domain.com, ark1… eller lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"nästa"</string>
-  <string name="gt_6b2251347446a4b2">"nästa %1$s"</string>
   <string name="gt_df384ae97c77ad30">"betalningar"</string>
   <string name="gt_a97b0931730e83fb">"runda"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>

@@ -17,7 +17,7 @@ class RecurringExecutor(private val d: Dependencies,
         val now: () -> Long = System::currentTimeMillis, val zone: () -> TimeZone = TimeZone::getDefault,
         val sync: suspend (List<RecurringPaymentScheduleEntry>) -> Unit = {},
         val notify: (List<RecurringPayment>, RecurringPayment?) -> Unit = { _, _ -> },
-        val audit: (RecurringPayment, RecurringJournal.Entry?, String, String) -> Unit = { _, _, _, _ -> error("Audit unavailable") },
+        val audit: (RecurringPayment, RecurringJournal.Entry?, String, String) -> Unit = { _, _, _, _ -> error("""Audit unavailable""") },
         val refresh: suspend () -> Unit = {},
         val withWalletMutation: suspend (suspend () -> Unit) -> Unit = { it() })
     init {
@@ -305,7 +305,7 @@ class RecurringExecutor(private val d: Dependencies,
         reload()
     }
     suspend fun review(id: String): Review {
-        check(!running && !controller.locked) { "Check the current payment before making another payment." }
+        check(!running && !controller.locked) { "This payment may have been sent. Check its status before making another payment." }
         ensureOpen()
         val schedule = boundState().schedules.getValue(id)
         check(schedule.status == "needs_approval")

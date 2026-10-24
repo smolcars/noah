@@ -3517,42 +3517,6 @@
         }
       }
     },
-    "ArkInfo unavailable; using the published Lightning fee schedule": {
-      "comment": "GT gt_fd1aab50cfb65421; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArkInfo unavailable; using the published Lightning fee schedule"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArkInfo no disponible; se usa la tabla publicada de comisiones de Lightning"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArkInfoを取得できないため、公開されているライトニングの手数料表を使用します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArkInfo 이용 불가 · 공개된 Lightning 수수료표 사용 중"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArkInfo är inte tillgängligt; den publicerade avgiftstabellen för Lightning används"
-          }
-        }
-      }
-    },
     "Arkoor": {
       "comment": "GT gt_10bfe7004be4452e; arguments: none",
       "extractionState": "manual",
@@ -3837,42 +3801,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Minst %1$@."
-          }
-        }
-      }
-    },
-    "Audit unavailable": {
-      "comment": "GT gt_4c9ce17646b28614; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Audit unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auditoría no disponible"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "監査を利用できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "감사 불가"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Granskning inte tillgänglig"
           }
         }
       }
@@ -7941,42 +7869,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontrollera blockkedjan?"
-          }
-        }
-      }
-    },
-    "Check the current payment before making another payment.": {
-      "comment": "GT gt_756e44ed7badc707; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check the current payment before making another payment."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comprueba el pago actual antes de realizar otro."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "別の支払いを行う前に、現在の支払いを確認してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다른 결제를 하기 전에 현재 결제를 확인하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrollera den aktuella betalningen innan du gör en ny betalning."
           }
         }
       }
@@ -14005,42 +13897,6 @@
         }
       }
     },
-    "Duplicate recurring property": {
-      "comment": "GT gt_d003d9b4e9041e93; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Duplicate recurring property"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Propiedad de recurrencia duplicada"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "定期支払いのプロパティが重複しています"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "중복된 정기 결제 속성"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Duplicerad egenskap för återkommande betalning"
-          }
-        }
-      }
-    },
     "EUR": {
       "comment": "GT gt_57d4846cecee3fdd; arguments: none",
       "extractionState": "manual",
@@ -17541,42 +17397,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Utökad"
-          }
-        }
-      }
-    },
-    "Expected an integer token": {
-      "comment": "GT gt_ed051741d4064ad6; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expected an integer token"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se esperaba un token de número entero"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整数トークンが必要です"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정수 토큰이 필요합니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Förväntade en heltalstoken"
           }
         }
       }
@@ -36781,42 +36601,6 @@
         }
       }
     },
-    "Recurring wake schedule sync failed; retained for retry": {
-      "comment": "GT gt_4898c0337b6b7003; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recurring wake schedule sync failed; retained for retry"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo sincronizar la programación de activaciones recurrentes; se conserva para volver a intentarlo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "定期起動スケジュールの同期に失敗しました。再試行のため保持しています"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정기 실행 일정 동기화 실패. 재시도를 위해 보관됨"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Synkroniseringen av schemat för återkommande väckningar misslyckades; schemat sparades för ett nytt försök"
-          }
-        }
-      }
-    },
     "Recurring wallet identity couldn't be read. Sending is stopped.": {
       "comment": "GT gt_84667ee20bc5ea45; arguments: none",
       "extractionState": "manual",
@@ -37677,42 +37461,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Regtest-plånböcker använder Bitcoin Core."
-          }
-        }
-      }
-    },
-    "Remove": {
-      "comment": "GT gt_c3812fc4acb861d5; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eliminar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "削除"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "삭제"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ta bort"
           }
         }
       }
@@ -39957,42 +39705,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spara"
-          }
-        }
-      }
-    },
-    "Save payment": {
-      "comment": "GT gt_2d8b0a7ed3fce80e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save payment"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar pago"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払いを保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결제 저장"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spara betalning"
           }
         }
       }
@@ -49717,78 +49429,6 @@
         }
       }
     },
-    "Unable to save recurring payment evidence": {
-      "comment": "GT gt_96eea85fe300825b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to save recurring payment evidence"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo guardar la evidencia del pago recurrente"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "定期支払いの証跡を保存できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정기 결제 증빙을 저장할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det går inte att spara underlag för återkommande betalning"
-          }
-        }
-      }
-    },
-    "Unable to save recurring payments": {
-      "comment": "GT gt_5a64d52da0a50d6e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to save recurring payments"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pueden guardar los pagos recurrentes"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "定期支払いを保存できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정기 결제를 저장할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunde inte spara återkommande betalningar"
-          }
-        }
-      }
-    },
     "Unable to save the override confirmation. Sending remains locked.": {
       "comment": "GT gt_29eb38153481ec5c; arguments: none",
       "extractionState": "manual",
@@ -50433,42 +50073,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Versionen av journalen för återkommande betalningar stöds inte. Inga betalningar skickas tills vidare."
-          }
-        }
-      }
-    },
-    "Unsupported recurring payment version. Sending is stopped.": {
-      "comment": "GT gt_e693d8441d19b569; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unsupported recurring payment version. Sending is stopped."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Versión de pagos recurrentes no compatible. Los envíos están detenidos."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この定期支払いのバージョンには対応していません。送金は停止しています。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지원하지 않는 정기 결제 버전입니다. 전송이 중지되었습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den här versionen av återkommande betalningar stöds inte. Det går inte att skicka betalningar."
           }
         }
       }
@@ -53557,42 +53161,6 @@
         }
       }
     },
-    "You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice.": {
-      "comment": "GT gt_04dc7cb10406d3ac; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recibirás un recordatorio el día anterior y una notificación después de cada pago. Si un pago no se realiza porque tu teléfono está apagado, Noah lo omite en lugar de realizarlo dos veces."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払いの前日にリマインダーが届き、支払い後に毎回通知が届きます。スマートフォンの電源が切れていて支払いができなかった場合、Noahはその回の支払いをスキップし、2回分をまとめて支払うことはありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결제 하루 전과 각 결제 후에 알림을 보내드립니다. 휴대전화가 꺼져 있어 결제가 누락되면 Noah는 두 번 결제하는 대신 해당 회차를 건너뜁니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Du får en påminnelse dagen före och en avisering efter varje betalning. Om en betalning missas medan telefonen är avstängd hoppar Noah över den i stället för att betala dubbelt."
-          }
-        }
-      }
-    },
     "You've reached the maximum number of recurring payments.": {
       "comment": "GT gt_723022dbd02fce20; arguments: none",
       "extractionState": "manual",
@@ -54925,42 +54493,6 @@
         }
       }
     },
-    "e.g. Rent, Donation, VPN": {
-      "comment": "GT gt_7d7894104be6c089; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "e.g. Rent, Donation, VPN"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "P. ej., alquiler, donación, VPN"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "例：家賃、寄付、VPN"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예: 임대료, 기부, VPN"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "t.ex. hyra, donation, VPN"
-          }
-        }
-      }
-    },
     "each time": {
       "comment": "GT gt_5092d17899730925; arguments: none",
       "extractionState": "manual",
@@ -55069,42 +54601,6 @@
         }
       }
     },
-    "name@domain.com, ark1… or lno1…": {
-      "comment": "GT gt_7749eed65c4e3535; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "name@domain.com, ark1… or lno1…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "name@domain.com, ark1… o lno1…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "name@domain.com、ark1… または lno1…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "name@domain.com, ark1… 또는 lno1…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "name@domain.com, ark1… eller lno1…"
-          }
-        }
-      }
-    },
     "next": {
       "comment": "GT gt_c6c1c9a9c8543f1e; arguments: none",
       "extractionState": "manual",
@@ -55137,42 +54633,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "nästa"
-          }
-        }
-      }
-    },
-    "next {date}": {
-      "comment": "GT gt_6b2251347446a4b2; arguments: date",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "next %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "próximo %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "次回 %1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "nästa %1$@"
           }
         }
       }

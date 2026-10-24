@@ -52,8 +52,8 @@ internal fun findSchedule(schedules: List<RecurringPayment>, id: String): Recurr
 internal fun intervalText(interval: RecurringInterval): String = when {
     interval.every == 1 -> when (interval.unit) { "day" -> tr("Daily"); "week" -> tr("Weekly"); else -> tr("Monthly") }
     interval.unit == "day" -> tr("Every {n} days", interval.every.toString())
-    interval.unit == "week" -> tr("Every {n} weeks", interval.every.toString())
-    else -> tr("Every {n} months", interval.every.toString())
+    interval.unit == "week" -> trPlural("Every {n} weeks", interval.every)
+    else -> trPlural("Every {n} months", interval.every)
 }
 
 /** A schedule's line in the list: "Monthly · next Nov 20", or its status word; failures read in red. */
@@ -232,20 +232,20 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executo
             modifier = Modifier.testTag("recurring-check")) { act { executor.checkStatus(s.id) } } }
         if (attention && !s.requiresPolicyApproval) rows += { d -> SettingsRow(tr("Resume after checking history"), divider = d, enabled = !executor.running,
             modifier = Modifier.testTag("recurring-override")) { overrideStep = 1 } }
-        rows += { d -> SettingsRow(if (s.status == "completed") tr("Remove") else tr("Cancel payment"), danger = true, divider = d,
+        rows += { d -> SettingsRow(if (s.status == "completed") tr("Remove payment") else tr("Cancel payment"), danger = true, divider = d,
             modifier = Modifier.testTag("recurring-cancel")) { cancelling = true } }
         SettingsGroup(rows = rows)
         actionError?.let { FinePrint(tr(it), failed = true) }
     }
     if (cancelling) SettingsSheet({ cancelling = false }, tr("Cancel {name}?", s.label),
         tr("No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.")) { close ->
-        SheetActions(tr("Keep payment"), if (s.status == "completed") tr("Remove") else tr("Cancel payment"), onCancel = close, danger = true,
+        SheetActions(tr("Keep payment"), if (s.status == "completed") tr("Remove payment") else tr("Cancel payment"), onCancel = close, danger = true,
             confirmTag = "recurring-cancel-confirm", onConfirm = { close(); act(canceled) { executor.cancel(s.id) } })
     }
     // Both resume steps stay: "Have you checked?", then "You could pay twice".
     if (overrideStep == 1) SettingsSheet({ overrideStep = 0 }, tr("Have you checked?"),
-        tr("Check your history and confirm with the recipient. This payment may already have been sent.")) { close ->
-        SheetActions(tr("Keep stopped"), tr("I checked history"), onCancel = close, confirmTag = "recurring-override-checked", onConfirm = { overrideStep = 2 })
+        tr("Check Activity for this payment's last attempt and ask the recipient whether it arrived.")) { close ->
+        SheetActions(tr("Keep stopped"), tr("I checked"), onCancel = close, confirmTag = "recurring-override-checked", onConfirm = { overrideStep = 2 })
     }
     if (overrideStep == 2) SettingsSheet({ overrideStep = 0 }, tr("You could pay twice"), tr(RecurringExecutor.overrideWarning)) { close ->
         SheetActions(tr("Keep stopped"), tr(RecurringExecutor.overrideConfirmation), onCancel = close, danger = true, confirmTag = "recurring-override-confirm",

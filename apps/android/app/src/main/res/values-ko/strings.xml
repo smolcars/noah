@@ -100,7 +100,6 @@
   <string name="gt_d2047b1c7d8dd813">"Ark가 서명해 돌려줘요"</string>
   <string name="gt_1a5b92522bb6c9c8">"이 금액에 대해 Ark가 공개한 Lightning 수수료는 최대 %1$s sats로, 자동 결제 수수료 한도인 %2$s sats를 초과할 수 있습니다. 확인 후 직접 결제하세요."</string>
   <string name="gt_325d3644954c9188">"이 금액에 대해 Ark가 공개한 Lightning 수수료는 최대 %1$s sats로, 자동 결제 수수료 한도인 %2$s sats를 초과할 수 있습니다. 검토 후 수동으로 결제하세요."</string>
-  <string name="gt_fd1aab50cfb65421">"ArkInfo 이용 불가 · 공개된 Lightning 수수료표 사용 중"</string>
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_72c7f155f1532f44">"도착"</string>
   <string name="gt_859a013e803dbdc6">"Ark에 도착"</string>
@@ -109,7 +108,6 @@
   <string name="gt_c6dd438b37364cad">"%1$s 이상이 되면 물어봐요"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"3자 이상"</string>
   <string name="gt_0d04eed763c98c70">"최소 %1$s."</string>
-  <string name="gt_4c9ce17646b28614">"감사 불가"</string>
   <string name="gt_c8271c0bafb7c1eb">"지갑을 사용하려면 인증해 주세요"</string>
   <string name="gt_4190475b52357e7a">"인증에 실패했습니다. 다시 시도해 주세요."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"자동 입금 기준 금액을 확인할 수 없습니다"</string>
@@ -223,7 +221,6 @@
   <string name="gt_c31be569a492274b">"금액, 선택한 VTXO, 목적지를 확인하세요. 확정된 자금이 부족할 수 있습니다."</string>
   <string name="gt_0a4944369b913265">"체인 확인"</string>
   <string name="gt_5b08e343d8089308">"체인을 확인할까요?"</string>
-  <string name="gt_756e44ed7badc707">"다른 결제를 하기 전에 현재 결제를 확인하세요."</string>
   <string name="gt_ff65032d5e881811">"다시 승인하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_6f113ce35347ffe6">"수정하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_710d52f182321f4a">"%1$s번째 단어를 확인하세요"</string>
@@ -394,7 +391,6 @@
   <string name="gt_34e108c0896d0158">"표시"</string>
   <string name="gt_11a6767d5674c7e4">"완료"</string>
   <string name="gt_5655e4c5f2e921a8">"VTXO 삭제"</string>
-  <string name="gt_d003d9b4e9041e93">"중복된 정기 결제 속성"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
   <string name="gt_a8652bad1788fdd8">"각 트랜잭션은 이전 트랜잭션이 블록에 들어간 뒤에만 보내져요."</string>
   <string name="gt_5888c65ca705318d">"각 거래의 수수료는 확정된 온체인 비트코인에서 지불됩니다. 입금이 확정되면 Noah가 다음 거래를 보냅니다."</string>
@@ -495,7 +491,6 @@
   <string name="gt_db5f066a21225f71">"출금이 진행되었습니다. 거래가 전파되었거나 수수료가 인상되었을 수 있습니다."</string>
   <string name="gt_26377ba9c6b97926">"확정되면 출금에 사용돼요."</string>
   <string name="gt_e72d5d8d0b167d21">"펼쳐짐"</string>
-  <string name="gt_ed051741d4064ad6">"정수 토큰이 필요합니다"</string>
   <string name="gt_424a2551d356754c">"만료됨"</string>
   <string name="gt_f6725f3af08a06a2">"만료"</string>
   <string name="gt_96ca72eafe792fdf">"1시간 이내 만료"</string>
@@ -1036,7 +1031,6 @@
   <string name="gt_0d00701668397fb3">"정기 결제 정책의 증빙을 확인해야 합니다. 저장된 일정은 유지됩니다. 일정을 수정하거나 재개하여 새 버전을 승인하세요. 전송은 계속 중지된 상태입니다."</string>
   <string name="gt_9cdf20057327ea75">"정기 결제 정책이 이전 상태로 되돌아갔거나 증빙을 이용할 수 없어 송금이 중지되었습니다"</string>
   <string name="gt_2359c00c2b579c81">"정기 전송이 중지되었습니다."</string>
-  <string name="gt_4898c0337b6b7003">"정기 실행 일정 동기화 실패. 재시도를 위해 보관됨"</string>
   <string name="gt_84667ee20bc5ea45">"정기 결제의 지갑 식별 정보를 읽지 못했습니다. 전송이 중지되었습니다."</string>
   <string name="gt_1e5abacf65e5532e">"정기 결제 %1$s, %2$s회차"</string>
   <string name="gt_0e91610117029a62">"갱신"</string>
@@ -1061,7 +1055,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Regtest 지갑은 Esplora 대신 Bitcoin Core를 사용합니다."</string>
   <string name="gt_addcab98b516c661">"Regtest 지갑은 Bitcoin Core를 사용합니다."</string>
-  <string name="gt_c3812fc4acb861d5">"삭제"</string>
   <string name="gt_4e9ea48ffbfb99b0">"결제 삭제"</string>
   <string name="gt_ed14fa72453957ca">"화면 캡처 삭제"</string>
   <string name="gt_90c1689b0b74f032">"갱신"</string>
@@ -1127,7 +1120,6 @@
   <string name="gt_3a14761aebfa65eb">"SGD"</string>
   <string name="gt_2148880a298d5e8f">"사토시"</string>
   <string name="gt_1509f561f2416598">"저장"</string>
-  <string name="gt_2d8b0a7ed3fce80e">"결제 저장"</string>
   <string name="gt_e0d94a676bb91ff5">"복구 문구를 저장하세요"</string>
   <string name="gt_b5c120b316c237a0">"저장됨"</string>
   <string name="gt_08f39fae202e1c5c">"정기 결제 저장됨"</string>
@@ -1398,8 +1390,6 @@
   <string name="gt_ad846ebf4373a7ba">"지갑을 예약할 수 없습니다. 다시 보내기 전에 결제 상태를 확인하세요."</string>
   <string name="gt_1a1e3d6ed0b1c82d">"받는 사람을 확인할 수 없습니다. 주소를 확인하세요."</string>
   <string name="gt_40318f0066870db5">"결제 상태를 저장할 수 없습니다."</string>
-  <string name="gt_96eea85fe300825b">"정기 결제 증빙을 저장할 수 없습니다"</string>
-  <string name="gt_5a64d52da0a50d6e">"정기 결제를 저장할 수 없습니다"</string>
   <string name="gt_29eb38153481ec5c">"보호 해제 확인을 저장할 수 없습니다. 전송은 계속 차단됩니다."</string>
   <string name="gt_3229d16ca643cb86">"미확정"</string>
   <string name="gt_08af79cb5523570f">"UnifiedPush"</string>
@@ -1418,7 +1408,6 @@
   <string name="gt_b38065110f2bd113">"미서명 거래 %1$s"</string>
   <string name="gt_cd815000e69f78a3">"지원하지 않는 수신자"</string>
   <string name="gt_8c1c051923c4b6b2">"지원하지 않는 정기 결제 기록 버전입니다. 송금이 중지된 상태로 유지됩니다."</string>
-  <string name="gt_e693d8441d19b569">"지원하지 않는 정기 결제 버전입니다. 전송이 중지되었습니다."</string>
   <string name="gt_7652c992b14f72a5">"최대 %1$s"</string>
   <string name="gt_c945161e74e60f7f">"예정된 정기 결제"</string>
   <string name="gt_c1c1009d3f37ec05">"업데이트"</string>
@@ -1506,7 +1495,6 @@
   <string name="gt_4cd8ef2093993de6">"받는 금액"</string>
   <string name="gt_0e5467ac43335fc4">"남는 금액"</string>
   <string name="gt_357f1a2fdf17bb53">"%1$s 받았습니다"</string>
-  <string name="gt_04dc7cb10406d3ac">"결제 하루 전과 각 결제 후에 알림을 보내드립니다. 휴대전화가 꺼져 있어 결제가 누락되면 Noah는 두 번 결제하는 대신 해당 회차를 건너뜁니다."</string>
   <string name="gt_723022dbd02fce20">"정기 결제를 최대 개수만큼 등록했습니다."</string>
   <string name="gt_3d26c2347422ac51">"Ark 잔액 전액을 이 지갑의 온체인 주소로 보낼 수 없습니다. 외부 Bitcoin 주소를 사용해 주세요."</string>
   <string name="gt_f9f55c49d8421334">"내 VTXO"</string>
@@ -1548,13 +1536,10 @@
   <string name="gt_0b8e9e995d8d77f1">"디버그"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_308e322df797ff25">"예: 월세"</string>
-  <string name="gt_7d7894104be6c089">"예: 임대료, 기부, VPN"</string>
   <string name="gt_5092d17899730925">"매회"</string>
   <string name="gt_ac13979d20e7673e">"보낸 사람: %1$s"</string>
   <string name="gt_82a3537ff0dbce7e">"이름"</string>
-  <string name="gt_7749eed65c4e3535">"name@domain.com, ark1… 또는 lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"다음"</string>
-  <string name="gt_6b2251347446a4b2">"다음 %1$s"</string>
   <string name="gt_df384ae97c77ad30">"회"</string>
   <string name="gt_a97b0931730e83fb">"라운드"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>

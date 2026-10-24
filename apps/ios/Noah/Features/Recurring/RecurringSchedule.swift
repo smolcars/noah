@@ -8,6 +8,15 @@ struct RecurringInterval: Codable, Equatable, Sendable {
         if every == 1 { return unit == "day" ? "Daily" : unit == "week" ? "Weekly" : "Monthly" }
         return "Every \(every) \(unit)s"
     }
+    /// The same, translated: "Monthly", "Every 2 weeks".
+    func text(locale: String) -> String {
+        if every == 1 { return L10n.text(description, locale: locale) }
+        switch unit {
+        case "day": return L10n.text("Every {n} days", every, locale: locale)
+        case "week": return L10n.plural("Every {n} weeks", count: every, locale: locale)
+        default: return L10n.plural("Every {n} months", count: every, locale: locale)
+        }
+    }
     var valid: Bool { ["day", "week", "month"].contains(unit) && every >= 1 && every <= (unit == "day" ? 365 : 12) }
 }
 

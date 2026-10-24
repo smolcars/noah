@@ -54,11 +54,11 @@ struct RecurringPaymentEditorView: View {
                 SettingsFine(text: L10n.text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.", locale: language))
             }
             amountField.padding(.top, 14)
-            SettingsField(label: L10n.text("To", locale: language), placeholder: L10n.text("name@domain.com, ark1… or lno1…", locale: language),
+            SettingsField(label: L10n.text("To", locale: language), placeholder: L10n.text("Name, address or offer", locale: language),
                           text: $recipient, failure: recipientError != nil, tag: recipientTag, id: "recurring-recipient-input",
                           focusChanged: { editingRecipient = $0 })
             if let recipientError { SettingsFine(text: recipientError, failure: true).padding(.top, -8) }
-            SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("e.g. Rent, Donation, VPN", locale: language), text: $label,
+            SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("e.g. Rent", locale: language), text: $label,
                           id: "recurring-label-input")
                 .onChange(of: label) { _, value in label = Self.limitedText(value, limit: 64) }
             if destination?.type == "lnurl" {
@@ -79,7 +79,8 @@ struct RecurringPaymentEditorView: View {
                               tag: L10n.text("days", locale: language))
                     .padding(.top, -10)
             } else {
-                stepper(frequency == "week" ? L10n.plural("Every {n} weeks", count: periodEvery, locale: language)
+                stepper(periodEvery == 1 ? L10n.text(frequency == "week" ? "Every week" : "Every month", locale: language)
+                            : frequency == "week" ? L10n.plural("Every {n} weeks", count: periodEvery, locale: language)
                             : L10n.plural("Every {n} months", count: periodEvery, locale: language),
                         value: $periodEvery, range: 1...12)
             }
@@ -106,7 +107,7 @@ struct RecurringPaymentEditorView: View {
                     .padding(.top, -10)
             }
             if interval.valid {
-                label(L10n.text(interval.description, locale: language))
+                label(interval.text(locale: language))
                 WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: NoahTokens.Space.s) {
                     ForEach(preview, id: \.self) { next in
                         Text(verbatim: Date(timeIntervalSince1970: next / 1000).formatted(.dateTime.month(.abbreviated).day().hour().minute().locale(locale)))
@@ -116,7 +117,7 @@ struct RecurringPaymentEditorView: View {
                     }
                 }
                 .padding(.top, 8)
-                SettingsFine(text: L10n.text("You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice.", locale: language))
+                SettingsFine(text: L10n.text("A reminder comes the day before. A missed payment is skipped, never paid twice.", locale: language))
             }
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
         }
@@ -125,7 +126,7 @@ struct RecurringPaymentEditorView: View {
             Button(action: { focus = nil; save() }) {
                 HStack(spacing: 8) {
                     if saving { ProgressView().tint(NoahTokens.Colors.background) }
-                    Text(L10n.text(original == nil ? "Schedule payment" : "Save payment", locale: language))
+                    Text(L10n.text(original == nil ? "Schedule payment" : "Save", locale: language))
                 }
             }
             .buttonStyle(SettingsActionStyle())

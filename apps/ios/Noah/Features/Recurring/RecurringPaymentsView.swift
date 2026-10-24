@@ -107,10 +107,10 @@ extension RecurringPayment {
 
     /// "Monthly · next Nov 20".
     func nextLine(locale: Locale) -> String {
-        let repeats = L10n.text(interval.description, locale: locale.identifier)
+        let repeats = interval.text(locale: locale.identifier)
         guard let next = nextRunAt else { return repeats }
         let date = Date(timeIntervalSince1970: next / 1000).formatted(.dateTime.month(.abbreviated).day().locale(locale))
-        return repeats + " · " + L10n.text("next {date}", date, locale: locale.identifier)
+        return L10n.text("{interval} · next {date}", repeats, date, locale: locale.identifier)
     }
 
     var via: String {
@@ -208,7 +208,7 @@ struct RecurringSchedulePage: View {
                 SettingsDetailRow(label: L10n.text("To", locale: language), value: schedule.destination, mono: schedule.destination.count > 40,
                                   copy: schedule.destination)
                 SettingsDetailRow(label: L10n.text("Via", locale: language), value: L10n.text(schedule.via, locale: language))
-                SettingsDetailRow(label: L10n.text("Repeats", locale: language), value: L10n.text(schedule.interval.description, locale: language))
+                SettingsDetailRow(label: L10n.text("Repeats", locale: language), value: schedule.interval.text(locale: language))
                 if schedule.status == "active", let next = schedule.nextRunAt {
                     SettingsDetailRow(label: L10n.text("Next", locale: language),
                                       value: Date(timeIntervalSince1970: next / 1000).formatted(date: .abbreviated, time: .shortened))

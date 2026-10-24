@@ -100,7 +100,6 @@
   <string name="gt_d2047b1c7d8dd813">"Ark te lo devuelve firmado"</string>
   <string name="gt_1a5b92522bb6c9c8">"Las comisiones de Lightning publicadas por Ark para este importe pueden alcanzar %1$s sats y superar tu límite automático de %2$s sats. Revisa el pago para realizarlo manualmente."</string>
   <string name="gt_325d3644954c9188">"Las comisiones Lightning publicadas por Ark para este importe pueden alcanzar los %1$s sats y superar tu límite automático de %2$s sats. Revisa el pago para realizarlo manualmente."</string>
-  <string name="gt_fd1aab50cfb65421">"ArkInfo no disponible; se usa la tabla publicada de comisiones de Lightning"</string>
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_72c7f155f1532f44">"Llega"</string>
   <string name="gt_859a013e803dbdc6">"Llega a Ark"</string>
@@ -109,7 +108,6 @@
   <string name="gt_c6dd438b37364cad">"Pregunta cuando tengas %1$s o más"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"Al menos 3 caracteres"</string>
   <string name="gt_0d04eed763c98c70">"Al menos %1$s."</string>
-  <string name="gt_4c9ce17646b28614">"Auditoría no disponible"</string>
   <string name="gt_c8271c0bafb7c1eb">"Autentícate para acceder a tu billetera"</string>
   <string name="gt_4190475b52357e7a">"Error de autenticación. Inténtalo de nuevo."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Umbral de transferencia automática a Ark no disponible"</string>
@@ -223,7 +221,6 @@
   <string name="gt_c31be569a492274b">"Comprueba el importe, los VTXO seleccionados y el destino. Puede que no haya suficientes fondos confirmados."</string>
   <string name="gt_0a4944369b913265">"Consultar la cadena"</string>
   <string name="gt_5b08e343d8089308">"¿Consultar la cadena?"</string>
-  <string name="gt_756e44ed7badc707">"Comprueba el pago actual antes de realizar otro."</string>
   <string name="gt_ff65032d5e881811">"Comprueba el resultado de este pago antes de aprobarlo de nuevo."</string>
   <string name="gt_6f113ce35347ffe6">"Comprueba el resultado de este pago antes de editarlo."</string>
   <string name="gt_710d52f182321f4a">"Revisa la palabra %1$s"</string>
@@ -394,7 +391,6 @@
   <string name="gt_34e108c0896d0158">"Visualización"</string>
   <string name="gt_11a6767d5674c7e4">"Listo"</string>
   <string name="gt_5655e4c5f2e921a8">"Eliminar VTXO"</string>
-  <string name="gt_d003d9b4e9041e93">"Propiedad de recurrencia duplicada"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
   <string name="gt_a8652bad1788fdd8">"Cada una se envía solo cuando la anterior está en un bloque."</string>
   <string name="gt_5888c65ca705318d">"La comisión de cada transacción sale de tu bitcoin en cadena confirmado. Noah envía la siguiente cuando se confirme un depósito."</string>
@@ -495,7 +491,6 @@
   <string name="gt_db5f066a21225f71">"Se ha avanzado en las salidas. Es posible que se hayan difundido transacciones o aumentado sus comisiones."</string>
   <string name="gt_26377ba9c6b97926">"Las salidas lo usan cuando se confirma."</string>
   <string name="gt_e72d5d8d0b167d21">"Expandido"</string>
-  <string name="gt_ed051741d4064ad6">"Se esperaba un token de número entero"</string>
   <string name="gt_424a2551d356754c">"Vencido"</string>
   <string name="gt_f6725f3af08a06a2">"Vence"</string>
   <string name="gt_96ca72eafe792fdf">"Vence en menos de una hora"</string>
@@ -1036,7 +1031,6 @@
   <string name="gt_0d00701668397fb3">"Los datos de respaldo de la política de pagos recurrentes requieren atención. Las programaciones guardadas se conservan; edítalas o reanúdalas para aprobar una nueva versión. Los envíos siguen detenidos."</string>
   <string name="gt_9cdf20057327ea75">"Se detectó una reversión de la política de pagos recurrentes o falta de evidencia; envío detenido"</string>
   <string name="gt_2359c00c2b579c81">"El envío recurrente está detenido."</string>
-  <string name="gt_4898c0337b6b7003">"No se pudo sincronizar la programación de activaciones recurrentes; se conserva para volver a intentarlo"</string>
   <string name="gt_84667ee20bc5ea45">"No se pudo leer la identidad de la billetera para pagos recurrentes. El envío está detenido."</string>
   <string name="gt_1e5abacf65e5532e">"Pago recurrente %1$s, pago %2$s"</string>
   <string name="gt_0e91610117029a62">"Renovar"</string>
@@ -1061,7 +1055,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Las billeteras Regtest usan Bitcoin Core en lugar de Esplora."</string>
   <string name="gt_addcab98b516c661">"Las billeteras de regtest usan Bitcoin Core."</string>
-  <string name="gt_c3812fc4acb861d5">"Eliminar"</string>
   <string name="gt_4e9ea48ffbfb99b0">"Eliminar pago"</string>
   <string name="gt_ed14fa72453957ca">"Quitar captura"</string>
   <string name="gt_90c1689b0b74f032">"Renovar"</string>
@@ -1127,7 +1120,6 @@
   <string name="gt_3a14761aebfa65eb">"SGD"</string>
   <string name="gt_2148880a298d5e8f">"Satoshis"</string>
   <string name="gt_1509f561f2416598">"Guardar"</string>
-  <string name="gt_2d8b0a7ed3fce80e">"Guardar pago"</string>
   <string name="gt_e0d94a676bb91ff5">"Guarda tu frase de recuperación"</string>
   <string name="gt_b5c120b316c237a0">"Guardado"</string>
   <string name="gt_08f39fae202e1c5c">"Pago recurrente guardado"</string>
@@ -1398,8 +1390,6 @@
   <string name="gt_ad846ebf4373a7ba">"No se pudo reservar la billetera. Comprueba el estado del pago antes de volver a enviarlo."</string>
   <string name="gt_1a1e3d6ed0b1c82d">"No se puede identificar a este destinatario. Comprueba la dirección."</string>
   <string name="gt_40318f0066870db5">"No se puede guardar el estado del pago."</string>
-  <string name="gt_96eea85fe300825b">"No se pudo guardar la evidencia del pago recurrente"</string>
-  <string name="gt_5a64d52da0a50d6e">"No se pueden guardar los pagos recurrentes"</string>
   <string name="gt_29eb38153481ec5c">"No se puede guardar la confirmación de anulación de la protección. El envío sigue bloqueado."</string>
   <string name="gt_3229d16ca643cb86">"Sin confirmar"</string>
   <string name="gt_08af79cb5523570f">"UnifiedPush"</string>
@@ -1418,7 +1408,6 @@
   <string name="gt_b38065110f2bd113">"Transacción sin firmar %1$s"</string>
   <string name="gt_cd815000e69f78a3">"Destinatario no compatible"</string>
   <string name="gt_8c1c051923c4b6b2">"Versión del registro de pagos recurrentes no compatible. El envío sigue detenido."</string>
-  <string name="gt_e693d8441d19b569">"Versión de pagos recurrentes no compatible. Los envíos están detenidos."</string>
   <string name="gt_7652c992b14f72a5">"Hasta %1$s"</string>
   <string name="gt_c945161e74e60f7f">"Próximo pago recurrente"</string>
   <string name="gt_c1c1009d3f37ec05">"Actualizar"</string>
@@ -1506,7 +1495,6 @@
   <string name="gt_4cd8ef2093993de6">"Recibes"</string>
   <string name="gt_0e5467ac43335fc4">"Conservas"</string>
   <string name="gt_357f1a2fdf17bb53">"Has recibido %1$s"</string>
-  <string name="gt_04dc7cb10406d3ac">"Recibirás un recordatorio el día anterior y una notificación después de cada pago. Si un pago no se realiza porque tu teléfono está apagado, Noah lo omite en lugar de realizarlo dos veces."</string>
   <string name="gt_723022dbd02fce20">"Has alcanzado el número máximo de pagos recurrentes."</string>
   <string name="gt_3d26c2347422ac51">"No puedes transferir todo tu saldo Ark a la dirección en cadena de esta misma billetera. Usa una dirección Bitcoin externa."</string>
   <string name="gt_f9f55c49d8421334">"Tu VTXO"</string>
@@ -1548,13 +1536,10 @@
   <string name="gt_0b8e9e995d8d77f1">"depuración"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_308e322df797ff25">"p. ej., Alquiler"</string>
-  <string name="gt_7d7894104be6c089">"P. ej., alquiler, donación, VPN"</string>
   <string name="gt_5092d17899730925">"cada vez"</string>
   <string name="gt_ac13979d20e7673e">"de %1$s"</string>
   <string name="gt_82a3537ff0dbce7e">"nombre"</string>
-  <string name="gt_7749eed65c4e3535">"name@domain.com, ark1… o lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"siguiente"</string>
-  <string name="gt_6b2251347446a4b2">"próximo %1$s"</string>
   <string name="gt_df384ae97c77ad30">"pagos"</string>
   <string name="gt_a97b0931730e83fb">"ronda"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>

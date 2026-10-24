@@ -14,7 +14,7 @@ import java.util.UUID
 /** RN's version-0 Zustand envelope. Unsupported rows stay visible; invalid envelopes stop mutations. */
 class RecurringStore(private val read: () -> String?, private val write: (String) -> Unit, private val policyWarning: () -> Unit = {}) {
     constructor(settings: SettingsStorage, policyWarning: () -> Unit = {}) : this({ settings.requireHealthy(); settings.string(key) }, { raw ->
-        settings.set(raw, key); settings.sync(); check(settings.string(key) == raw) { "Unable to save recurring payments" }
+        settings.set(raw, key); settings.sync(); check(settings.string(key) == raw) { "Recurring payment storage failed. Restart Noah; sending is stopped." }
     }, policyWarning)
     @Serializable data class Binding(val wallet: SendIdentity, val instance: String)
     data class State(val schedules: Map<String, RecurringPayment>, val pending: Boolean, val binding: Binding?)
@@ -45,7 +45,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         val stored = raw ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
         return json.parseToJsonElement(stored).jsonObject.also {
             val version = it["version"]
-            require(version == null || version is JsonPrimitive && !version.isString && version.content == "0") { "Unsupported recurring payment version. Sending is stopped." }
+            require(version == null || version is JsonPrimitive && !version.isString && version.content == "0") { "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped." }
             it.getValue("state").jsonObject.getValue("schedules").jsonObject
         }
     }
@@ -131,7 +131,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         fun number(value: JsonElement, minimum: Long, maximum: Long) {
             require(value is JsonPrimitive && !value.isString && integerToken.matches(value.content))
             // Parse the original integer token: kotlinx longOrNull can wrap overflowing literals.
-            val exact = value.content.toBigIntegerOrNull() ?: error("Expected an integer token")
+            val exact = value.content.toBigIntegerOrNull() ?: error("""Expected an integer token""")
             require(exact >= minimum.toBigInteger() && exact <= maximum.toBigInteger())
         }
         fun numbers(fields: JsonObject, minimum: Long, maximum: Long, vararg keys: String) {
@@ -215,7 +215,7 @@ internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) ->
     val temporary = File(file.parentFile, ".recurring-${UUID.randomUUID()}")
     try {
         FileOutputStream(temporary).use { it.write(bytes); syncFile(it.fd) }
-        check(temporary.renameTo(file)) { "Unable to save recurring payment evidence" }
+        check(temporary.renameTo(file)) { "Recurring payment storage failed. Restart Noah; sending is stopped." }
         sync(file.parentFile!!)
     } finally { temporary.delete() }
 }
@@ -270,7 +270,7 @@ private fun requireUniqueRecurringProperties(raw: String) {
                 while (index < raw.length && raw[index].isWhitespace()) index++
                 if (index < raw.length && raw[index] == ':') {
                     val key = RecurringStore.json.decodeFromString<String>(raw.substring(start, end))
-                    require(objects.last()!!.add(key)) { "Duplicate recurring property" }
+                    require(objects.last()!!.add(key)) { """Duplicate recurring property""" }
                 }
                 continue
             }

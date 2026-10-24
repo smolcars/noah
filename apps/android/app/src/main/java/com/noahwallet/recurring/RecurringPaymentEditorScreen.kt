@@ -126,8 +126,8 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         Segmented(listOf("week" to tr("Weekly"), "month" to tr("Monthly"), "day" to tr("Custom")), unit, enabled = !saving) { unit = it; every = recurringDefaultEvery(it) }
         val n = every.toIntOrNull() ?: 1
         Stepper(when (unit) {
-            "week" -> if (n == 1) tr("Every week") else tr("Every {n} weeks", n.toString())
-            "month" -> if (n == 1) tr("Every month") else tr("Every {n} months", n.toString())
+            "week" -> if (n == 1) tr("Every week") else trPlural("Every {n} weeks", n)
+            "month" -> if (n == 1) tr("Every month") else trPlural("Every {n} months", n)
             else -> if (n == 1) tr("Every day") else tr("Every {n} days", n.toString())
         }, n.toLong(), 1L..(if (unit == "day") 365L else 12L), enabled = !saving) { every = it.toString() }
         FieldLabel(tr("First payment"))

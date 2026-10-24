@@ -100,7 +100,6 @@
   <string name="gt_d2047b1c7d8dd813">"Ark signs it back to you"</string>
   <string name="gt_1a5b92522bb6c9c8">"Ark\'s published Lightning fees for this amount can reach %1$s sats, above your automatic limit of %2$s sats. Review it to pay manually."</string>
   <string name="gt_325d3644954c9188">"Ark\'s published Lightning fees for this amount can reach %1$s sats, above your automatic limit of %2$s sats. Review it to pay manually."</string>
-  <string name="gt_fd1aab50cfb65421">"ArkInfo unavailable; using the published Lightning fee schedule"</string>
   <string name="gt_10bfe7004be4452e">"Arkoor"</string>
   <string name="gt_72c7f155f1532f44">"Arrives"</string>
   <string name="gt_859a013e803dbdc6">"Arrives in Ark"</string>
@@ -109,7 +108,6 @@
   <string name="gt_c6dd438b37364cad">"Asks when you have %1$s or more"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"At least 3 characters"</string>
   <string name="gt_0d04eed763c98c70">"At least %1$s."</string>
-  <string name="gt_4c9ce17646b28614">"Audit unavailable"</string>
   <string name="gt_c8271c0bafb7c1eb">"Authenticate to access your wallet"</string>
   <string name="gt_4190475b52357e7a">"Authentication failed. Please try again."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Auto-board threshold unavailable"</string>
@@ -223,7 +221,6 @@
   <string name="gt_c31be569a492274b">"Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."</string>
   <string name="gt_0a4944369b913265">"Check the chain"</string>
   <string name="gt_5b08e343d8089308">"Check the chain?"</string>
-  <string name="gt_756e44ed7badc707">"Check the current payment before making another payment."</string>
   <string name="gt_ff65032d5e881811">"Check this payment\'s outcome before approving it again."</string>
   <string name="gt_6f113ce35347ffe6">"Check this payment\'s outcome before editing it."</string>
   <string name="gt_710d52f182321f4a">"Check word %1$s"</string>
@@ -394,7 +391,6 @@
   <string name="gt_34e108c0896d0158">"Display"</string>
   <string name="gt_11a6767d5674c7e4">"Done"</string>
   <string name="gt_5655e4c5f2e921a8">"Drop VTXO"</string>
-  <string name="gt_d003d9b4e9041e93">"Duplicate recurring property"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
   <string name="gt_a8652bad1788fdd8">"Each one is sent only after the one before it is in a block."</string>
   <string name="gt_5888c65ca705318d">"Each transaction\'s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms."</string>
@@ -495,7 +491,6 @@
   <string name="gt_db5f066a21225f71">"Exits progressed. Transactions may have been broadcast or fee-bumped."</string>
   <string name="gt_26377ba9c6b97926">"Exits use it once it confirms."</string>
   <string name="gt_e72d5d8d0b167d21">"Expanded"</string>
-  <string name="gt_ed051741d4064ad6">"Expected an integer token"</string>
   <string name="gt_424a2551d356754c">"Expired"</string>
   <string name="gt_f6725f3af08a06a2">"Expires"</string>
   <string name="gt_96ca72eafe792fdf">"Expires in under an hour"</string>
@@ -1036,7 +1031,6 @@
   <string name="gt_0d00701668397fb3">"Recurring policy evidence needs attention. Saved schedules are preserved; edit or resume them to approve a new revision. Sending remains stopped."</string>
   <string name="gt_9cdf20057327ea75">"Recurring policy rollback or unavailable evidence detected; sending stopped"</string>
   <string name="gt_2359c00c2b579c81">"Recurring sending is stopped."</string>
-  <string name="gt_4898c0337b6b7003">"Recurring wake schedule sync failed; retained for retry"</string>
   <string name="gt_84667ee20bc5ea45">"Recurring wallet identity couldn\'t be read. Sending is stopped."</string>
   <string name="gt_1e5abacf65e5532e">"Recurring %1$s, occurrence %2$s"</string>
   <string name="gt_0e91610117029a62">"Refresh"</string>
@@ -1061,7 +1055,6 @@
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Regtest wallets use Bitcoin Core instead of Esplora."</string>
   <string name="gt_addcab98b516c661">"Regtest wallets use Bitcoin Core."</string>
-  <string name="gt_c3812fc4acb861d5">"Remove"</string>
   <string name="gt_4e9ea48ffbfb99b0">"Remove payment"</string>
   <string name="gt_ed14fa72453957ca">"Remove screenshot"</string>
   <string name="gt_90c1689b0b74f032">"Renew"</string>
@@ -1127,7 +1120,6 @@
   <string name="gt_3a14761aebfa65eb">"SGD"</string>
   <string name="gt_2148880a298d5e8f">"Satoshis"</string>
   <string name="gt_1509f561f2416598">"Save"</string>
-  <string name="gt_2d8b0a7ed3fce80e">"Save payment"</string>
   <string name="gt_e0d94a676bb91ff5">"Save your recovery phrase"</string>
   <string name="gt_b5c120b316c237a0">"Saved"</string>
   <string name="gt_08f39fae202e1c5c">"Saved recurring payment"</string>
@@ -1398,8 +1390,6 @@
   <string name="gt_ad846ebf4373a7ba">"Unable to reserve the wallet. Check payment status before sending again."</string>
   <string name="gt_1a1e3d6ed0b1c82d">"Unable to resolve this recipient. Please check the address."</string>
   <string name="gt_40318f0066870db5">"Unable to save payment status."</string>
-  <string name="gt_96eea85fe300825b">"Unable to save recurring payment evidence"</string>
-  <string name="gt_5a64d52da0a50d6e">"Unable to save recurring payments"</string>
   <string name="gt_29eb38153481ec5c">"Unable to save the override confirmation. Sending remains locked."</string>
   <string name="gt_3229d16ca643cb86">"Unconfirmed"</string>
   <string name="gt_08af79cb5523570f">"UnifiedPush"</string>
@@ -1418,7 +1408,6 @@
   <string name="gt_b38065110f2bd113">"Unsigned tx %1$s"</string>
   <string name="gt_cd815000e69f78a3">"Unsupported recipient"</string>
   <string name="gt_8c1c051923c4b6b2">"Unsupported recurring journal version. Sending remains stopped."</string>
-  <string name="gt_e693d8441d19b569">"Unsupported recurring payment version. Sending is stopped."</string>
   <string name="gt_7652c992b14f72a5">"Up to %1$s"</string>
   <string name="gt_c945161e74e60f7f">"Upcoming recurring payment"</string>
   <string name="gt_c1c1009d3f37ec05">"Update"</string>
@@ -1506,7 +1495,6 @@
   <string name="gt_4cd8ef2093993de6">"You get"</string>
   <string name="gt_0e5467ac43335fc4">"You keep"</string>
   <string name="gt_357f1a2fdf17bb53">"You received %1$s"</string>
-  <string name="gt_04dc7cb10406d3ac">"You\'ll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice."</string>
   <string name="gt_723022dbd02fce20">"You\'ve reached the maximum number of recurring payments."</string>
   <string name="gt_3d26c2347422ac51">"Your Ark balance cannot be swept to this wallet\'s own onchain address. Use an external Bitcoin address."</string>
   <string name="gt_f9f55c49d8421334">"Your VTXO"</string>
@@ -1548,13 +1536,10 @@
   <string name="gt_0b8e9e995d8d77f1">"debug"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_308e322df797ff25">"e.g. Rent"</string>
-  <string name="gt_7d7894104be6c089">"e.g. Rent, Donation, VPN"</string>
   <string name="gt_5092d17899730925">"each time"</string>
   <string name="gt_ac13979d20e7673e">"from %1$s"</string>
   <string name="gt_82a3537ff0dbce7e">"name"</string>
-  <string name="gt_7749eed65c4e3535">"name@domain.com, ark1… or lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"next"</string>
-  <string name="gt_6b2251347446a4b2">"next %1$s"</string>
   <string name="gt_df384ae97c77ad30">"payments"</string>
   <string name="gt_a97b0931730e83fb">"round"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>

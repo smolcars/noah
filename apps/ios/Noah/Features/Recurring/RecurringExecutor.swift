@@ -585,7 +585,7 @@ import Observation
                 if synced { syncPending = false; return }
             }
         } catch is NoWallet { return }
-        catch { syncPending = true; AppLog("recurring").w("Recurring wake schedule sync failed; retained for retry") }
+        catch { syncPending = true; AppLog("recurring").w(#"Recurring wake schedule sync failed; retained for retry"#) }
     }
     static func entries(_ schedules: [RecurringPayment]) -> [Components.Schemas.RecurringPaymentScheduleEntry] {
         schedules.filter { $0.status == "active" && $0.inFlight == nil && $0.nextRunAt != nil }
