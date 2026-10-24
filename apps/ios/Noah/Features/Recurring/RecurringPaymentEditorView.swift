@@ -131,7 +131,6 @@ struct RecurringPaymentEditorView: View {
             .disabled(saving)
             .accessibilityIdentifier("recurring-save-button")
         }
-        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
     }
 
     private var language: String { locale.identifier }

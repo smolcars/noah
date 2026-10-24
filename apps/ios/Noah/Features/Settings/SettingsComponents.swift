@@ -53,6 +53,13 @@ struct SettingsScroll<Content: View>: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(NoahTokens.Colors.background.ignoresSafeArea())
+        // Number pads have no return key; Done ends whichever field is editing.
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+            }
+        }
     }
 }
 
