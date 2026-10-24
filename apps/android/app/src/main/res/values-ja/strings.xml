@@ -25,7 +25,6 @@
   <string name="gt_f7c8b432caa9e1b4">"実際の手数料は未確定"</string>
   <string name="gt_a301e27dce0ce4cd">"実際のオンチェーン手数料"</string>
   <string name="gt_9fd728c66c9a256b">"追加"</string>
-  <string name="gt_513965a561a4018e">"スクリーンショットを追加"</string>
   <string name="gt_322c0e13ef4fa485">"メモを追加"</string>
   <string name="gt_223e44268146e60d">"金額を追加"</string>
   <string name="gt_82767841e4f8c995">"先に金額を追加してください"</string>
@@ -400,7 +399,6 @@
   <string name="gt_02f81f1a5a7297bd">"実質的な残高の変動"</string>
   <string name="gt_5bee7e5f24d7af00">"実質的な変動"</string>
   <string name="gt_969ccbd3cf6300ec">"メールアドレス"</string>
-  <string name="gt_1cae6dbd59729da3">"メールアドレス（任意）"</string>
   <string name="gt_6eea8608c452711b">"メールアドレス（任意）"</string>
   <string name="gt_09bf25ef30833633">"メールアドレス"</string>
   <string name="gt_de101ec2a9081a8b">"メールアドレスを追加しました"</string>
@@ -689,7 +687,6 @@
   <string name="gt_ca7eb2b925786eb2">"ライトニングオファー"</string>
   <string name="gt_b93018eee5c09c88">"ライトニング受け取り：%1$s。新しい支払いリクエストを作成して再試行してください。"</string>
   <string name="gt_abbfcd250b826648">"ライトニング送金の待機ブロック数"</string>
-  <string name="gt_5d3789ebb7f966b3">"ウォレットの名前の由来となった聖書の物語を聴く"</string>
   <string name="gt_de1a03ce5fcc3be8">"最新の詳細情報を取得できません。アプリに含まれる場所情報は引き続きオフラインで利用できます。"</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
   <string name="gt_0acd8adfdd7a6796">"アクティビティを読み込み中"</string>
@@ -838,7 +835,6 @@
   <string name="gt_4ad1be4370f0322f">"Noahサポート"</string>
   <string name="gt_ddecc0272120b4ba">"Noahユーザー"</string>
   <string name="gt_f802f9f1257fc080">"この支払いの送信中にNoahの動作が中断されました。再開する前に取引履歴を確認してください。"</string>
-  <string name="gt_dca2f6eb0cf5a388">"ノアの箱舟の物語"</string>
   <string name="gt_f02d150579902f58">"Info.plistにNoahAppVariantがないか、値が無効です"</string>
   <string name="gt_dc937b59892604f5">"なし"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr鍵"</string>
@@ -1066,7 +1062,6 @@
   <string name="gt_0e878c81671aa8dc">"重複防止を解除："</string>
   <string name="gt_92ee0233f01396ac">"繰り返し"</string>
   <string name="gt_8b535099834c9d05">"不具合の報告やアイデアの共有はこちら。"</string>
-  <string name="gt_c084c45b8820459d">"不具合の報告や、Noahをより良くするためのご意見をお寄せください。"</string>
   <string name="gt_fae09a4a2a5c48bb">"カメラへのアクセスをリクエスト中…"</string>
   <string name="gt_4850b174b713d88c">"必須"</string>
   <string name="gt_1f94843777aed851">"再送信"</string>
@@ -1151,7 +1146,6 @@
   <string name="gt_ba6afbdcb15d6321">"対象のVTXOをすべて選択"</string>
   <string name="gt_3b18955703b2ebc3">"選択したスクリーンショット"</string>
   <string name="gt_f6f4688ff23d50c6">"送る"</string>
-  <string name="gt_84195de9375af87c">"フィードバックを送信"</string>
   <string name="gt_2bd7bfd7b3314b9b">"確認コードを送信"</string>
   <string name="gt_66a5b4090d14cb41">"コードを送信"</string>
   <string name="gt_dad3741faaf71ced">"%1$s を送る"</string>
@@ -1160,7 +1154,6 @@
   <string name="gt_5485623750e9453e">"送金中 · 経路を探しています"</string>
   <string name="gt_c5fb1b5d6362edc0">"送金中 · Arkのラウンド待ち"</string>
   <string name="gt_a38ba37fd4f8a52a">"送金中 · 承認待ち"</string>
-  <string name="gt_286a3af7348e8312">"送信中..."</string>
   <string name="gt_b8ed5279e897be5d">"送信中…"</string>
   <string name="gt_c16bc82bf1f04ede">"送金済み"</string>
   <string name="gt_4e7201c7b8985a98">"送金先"</string>
@@ -1217,7 +1210,6 @@
   <string name="gt_08fd1de4b04df4a2">"宿泊施設"</string>
   <string name="gt_127c180ccbd3ec94">"支払い中です。数分かかることがあります。"</string>
   <string name="gt_52b93ab03323ca98">"%1$s を送金中です"</string>
-  <string name="gt_cae7d57bc067a514">"停止"</string>
   <string name="gt_f8276fb5b67f85bb">"道路地図は利用できません · 場所や都市の検索は引き続き利用できます"</string>
   <string name="gt_68971283841aecdf">"件名"</string>
   <string name="gt_1af1dbb07ecbb25a">"取引が記録される前に送信が停止しました。再試行する前に金額と手数料を確認してください。"</string>
@@ -1249,10 +1241,8 @@
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"使用済み"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
-  <string name="gt_55c7eb36ed47d5f6">"Telegramサポート"</string>
   <string name="gt_be8494fb38fef6d7">"テストして保存"</string>
   <string name="gt_e806a291cfc3e61f">"テスト中"</string>
-  <string name="gt_2034ce6155036f8a">"ありがとうございます"</string>
   <string name="gt_268bc1833e83306f">"ありがとうございます"</string>
   <string name="gt_2e48454ee6ef8e0a">"このコードは使えませんでした。もう一度お試しください。"</string>
   <string name="gt_b3a72229e9eb3cc3">"その支払いは完了しませんでした"</string>
@@ -1261,7 +1251,6 @@
   <string name="gt_0ac08a81559f95ee">"Esploraエンドポイントに認証情報は含められません。"</string>
   <string name="gt_96100ca2d23b8821">"Esploraエンドポイントが別のBitcoinネットワーク用です。"</string>
   <string name="gt_9dc2f0b60de257af">"Lightning支払いを受け取れませんでした。新しい支払いリクエストを作成して再試行してください。"</string>
-  <string name="gt_bd8c17324588f2d6">"ノアの箱舟の物語"</string>
   <string name="gt_c58153172e51db2e">"実際の手数料はまだ確認できません。%1$s"</string>
   <string name="gt_f663d0d5c263a46c">"Arkが受け取る金額が最低額を下回っています。Arkへの入金額を増やしてください。"</string>
   <string name="gt_1f7124b49af4bb0c">"金額または手数料が変更されました。支払い内容を再確認してください。"</string>
@@ -1503,7 +1492,6 @@
   <string name="gt_7f359127750635a9">"新しいメールアドレスの確認が完了するまで、現在のメールアドレスが引き続き有効です。"</string>
   <string name="gt_28b86cda15decf55">"新しいメールアドレスの確認が完了するまで、現在のメールアドレス %1$s が引き続き有効です。"</string>
   <string name="gt_886bc67a71fe0f83">"メールアドレスはウォレットに関する緊急の通知にのみ使います。"</string>
-  <string name="gt_0d9a2c325358aee0">"ご意見をNoahチームに送信しました。"</string>
   <string name="gt_2c6b2e253c01fb2e">"あなたの名前"</string>
   <string name="gt_d9a846242ed7a22f">"復元フレーズは引き続きこの端末に安全に保存されています。このフレーズを使って、バックアップからウォレットを復元してください。"</string>
   <string name="gt_50720c8f08138a5e">"ウォレットは現在停止中です。すべてのウォレット操作が無効になっています。"</string>

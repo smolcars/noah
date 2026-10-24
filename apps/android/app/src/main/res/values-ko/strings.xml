@@ -25,7 +25,6 @@
   <string name="gt_f7c8b432caa9e1b4">"실제 수수료 확정 대기 중"</string>
   <string name="gt_a301e27dce0ce4cd">"실제 온체인 수수료"</string>
   <string name="gt_9fd728c66c9a256b">"추가"</string>
-  <string name="gt_513965a561a4018e">"스크린샷 추가"</string>
   <string name="gt_322c0e13ef4fa485">"메모 추가"</string>
   <string name="gt_223e44268146e60d">"금액 추가"</string>
   <string name="gt_82767841e4f8c995">"먼저 금액을 추가하세요"</string>
@@ -400,7 +399,6 @@
   <string name="gt_02f81f1a5a7297bd">"실제 잔액 변동"</string>
   <string name="gt_5bee7e5f24d7af00">"실제 변동"</string>
   <string name="gt_969ccbd3cf6300ec">"이메일"</string>
-  <string name="gt_1cae6dbd59729da3">"이메일(선택 사항)"</string>
   <string name="gt_6eea8608c452711b">"이메일(선택 사항)"</string>
   <string name="gt_09bf25ef30833633">"이메일 주소"</string>
   <string name="gt_de101ec2a9081a8b">"이메일 추가됨"</string>
@@ -689,7 +687,6 @@
   <string name="gt_ca7eb2b925786eb2">"라이트닝 오퍼"</string>
   <string name="gt_b93018eee5c09c88">"Lightning 수신 %1$s. 새 결제 요청을 만든 후 다시 시도하세요."</string>
   <string name="gt_abbfcd250b826648">"라이트닝 송금 대기 블록 수"</string>
-  <string name="gt_5d3789ebb7f966b3">"지갑 이름에 영감을 준 성경 이야기를 들어보세요"</string>
   <string name="gt_de1a03ce5fcc3be8">"실시간 상세 정보를 불러올 수 없습니다. 기본 제공되는 장소 정보는 오프라인에서도 이용할 수 있습니다."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
   <string name="gt_0acd8adfdd7a6796">"활동을 불러오는 중"</string>
@@ -838,7 +835,6 @@
   <string name="gt_4ad1be4370f0322f">"Noah 지원"</string>
   <string name="gt_ddecc0272120b4ba">"Noah 사용자"</string>
   <string name="gt_f802f9f1257fc080">"이 결제를 전송하는 중 Noah가 중단되었습니다. 계속하기 전에 거래 내역을 확인해 주세요."</string>
-  <string name="gt_dca2f6eb0cf5a388">"Noah의 방주 이야기"</string>
   <string name="gt_f02d150579902f58">"Info.plist에 NoahAppVariant가 없거나 유효하지 않습니다"</string>
   <string name="gt_dc937b59892604f5">"없음"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr 키"</string>
@@ -1066,7 +1062,6 @@
   <string name="gt_0e878c81671aa8dc">"중복 방지 무시됨: "</string>
   <string name="gt_92ee0233f01396ac">"반복"</string>
   <string name="gt_8b535099834c9d05">"버그를 신고하거나 아이디어를 공유하세요."</string>
-  <string name="gt_c084c45b8820459d">"오류를 신고하거나 Noah를 더 좋게 만들 아이디어를 알려주세요."</string>
   <string name="gt_fae09a4a2a5c48bb">"카메라 접근 권한 요청 중…"</string>
   <string name="gt_4850b174b713d88c">"필수"</string>
   <string name="gt_1f94843777aed851">"다시 보내기"</string>
@@ -1151,7 +1146,6 @@
   <string name="gt_ba6afbdcb15d6321">"조건에 맞는 모든 VTXO 선택"</string>
   <string name="gt_3b18955703b2ebc3">"선택한 화면 캡처"</string>
   <string name="gt_f6f4688ff23d50c6">"보내기"</string>
-  <string name="gt_84195de9375af87c">"의견 보내기"</string>
   <string name="gt_2bd7bfd7b3314b9b">"인증 코드 보내기"</string>
   <string name="gt_66a5b4090d14cb41">"코드 보내기"</string>
   <string name="gt_dad3741faaf71ced">"%1$s 보내기"</string>
@@ -1160,7 +1154,6 @@
   <string name="gt_5485623750e9453e">"전송 중 · 아직 경로를 찾는 중"</string>
   <string name="gt_c5fb1b5d6362edc0">"전송 중 · Ark 라운드 대기 중"</string>
   <string name="gt_a38ba37fd4f8a52a">"전송 중 · 확인 대기 중"</string>
-  <string name="gt_286a3af7348e8312">"전송 중..."</string>
   <string name="gt_b8ed5279e897be5d">"전송 중…"</string>
   <string name="gt_c16bc82bf1f04ede">"보냄"</string>
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>
@@ -1217,7 +1210,6 @@
   <string name="gt_08fd1de4b04df4a2">"숙박"</string>
   <string name="gt_127c180ccbd3ec94">"아직 결제 중이에요. 몇 분 걸릴 수 있어요."</string>
   <string name="gt_52b93ab03323ca98">"%1$s 아직 보내는 중"</string>
-  <string name="gt_cae7d57bc067a514">"중지"</string>
   <string name="gt_f8276fb5b67f85bb">"거리 지도 이용 불가 · 장소 및 도시 검색은 계속 이용 가능"</string>
   <string name="gt_68971283841aecdf">"제목"</string>
   <string name="gt_1af1dbb07ecbb25a">"거래가 기록되기 전에 제출이 중단되었습니다. 다시 시도하기 전에 금액과 수수료를 확인하세요."</string>
@@ -1249,10 +1241,8 @@
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"사용 중"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
-  <string name="gt_55c7eb36ed47d5f6">"Telegram 지원"</string>
   <string name="gt_be8494fb38fef6d7">"테스트 후 저장"</string>
   <string name="gt_e806a291cfc3e61f">"테스트 중"</string>
-  <string name="gt_2034ce6155036f8a">"감사합니다"</string>
   <string name="gt_268bc1833e83306f">"감사합니다"</string>
   <string name="gt_2e48454ee6ef8e0a">"코드가 맞지 않습니다. 다시 시도하세요."</string>
   <string name="gt_b3a72229e9eb3cc3">"결제가 완료되지 않았어요"</string>
@@ -1261,7 +1251,6 @@
   <string name="gt_0ac08a81559f95ee">"Esplora 엔드포인트에는 인증 정보를 포함할 수 없습니다."</string>
   <string name="gt_96100ca2d23b8821">"Esplora 엔드포인트가 다른 Bitcoin 네트워크용입니다."</string>
   <string name="gt_9dc2f0b60de257af">"Lightning 결제를 받지 못했습니다. 새 결제 요청을 만들고 다시 시도해 주세요."</string>
-  <string name="gt_bd8c17324588f2d6">"Noah의 방주 이야기"</string>
   <string name="gt_c58153172e51db2e">"실제 수수료는 아직 확인할 수 없습니다. %1$s"</string>
   <string name="gt_f663d0d5c263a46c">"Ark에 입금되는 금액이 최소 금액보다 적습니다. 입금 금액을 늘리세요."</string>
   <string name="gt_1f7124b49af4bb0c">"금액 또는 수수료가 변경되었습니다. 결제 내용을 다시 확인하세요."</string>
@@ -1503,7 +1492,6 @@
   <string name="gt_7f359127750635a9">"새 이메일 인증이 완료될 때까지 기존 이메일이 계속 사용됩니다."</string>
   <string name="gt_28b86cda15decf55">"새 이메일 인증이 완료될 때까지 기존 이메일(%1$s)이 계속 사용됩니다."</string>
   <string name="gt_886bc67a71fe0f83">"이메일은 지갑에 관한 긴급 알림에만 사용합니다."</string>
-  <string name="gt_0d9a2c325358aee0">"의견이 Noah 팀에 전달되었습니다."</string>
   <string name="gt_2c6b2e253c01fb2e">"내 이름"</string>
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
   <string name="gt_50720c8f08138a5e">"현재 지갑 사용이 중지되어 있습니다. 모든 지갑 기능을 사용할 수 없습니다."</string>

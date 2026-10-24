@@ -865,42 +865,6 @@
         }
       }
     },
-    "Add Screenshot": {
-      "comment": "GT gt_513965a561a4018e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add Screenshot"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añadir captura de pantalla"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スクリーンショットを追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스크린샷 추가"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lägg till skärmbild"
-          }
-        }
-      }
-    },
     "Add a note": {
       "comment": "GT gt_322c0e13ef4fa485; arguments: none",
       "extractionState": "manual",
@@ -14317,42 +14281,6 @@
         }
       }
     },
-    "Email (Optional)": {
-      "comment": "GT gt_1cae6dbd59729da3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Email (Optional)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correo (opcional)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メールアドレス（任意）"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이메일(선택 사항)"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-post (valfritt)"
-          }
-        }
-      }
-    },
     "Email (optional)": {
       "comment": "GT gt_6eea8608c452711b; arguments: none",
       "extractionState": "manual",
@@ -24481,42 +24409,6 @@
         }
       }
     },
-    "Listen to the biblical story that inspired our wallet's name": {
-      "comment": "GT gt_5d3789ebb7f966b3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Listen to the biblical story that inspired our wallet's name"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escucha la historia bíblica que inspiró el nombre de nuestra billetera"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットの名前の由来となった聖書の物語を聴く"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 이름에 영감을 준 성경 이야기를 들어보세요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lyssna på bibelberättelsen som gav vår plånbok dess namn"
-          }
-        }
-      }
-    },
     "Live details are unavailable. The bundled places still work offline.": {
       "comment": "GT gt_de1a03ce5fcc3be8; arguments: none",
       "extractionState": "manual",
@@ -29841,42 +29733,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah avbröts medan betalningen skickades. Kontrollera din transaktionshistorik innan du fortsätter."
-          }
-        }
-      }
-    },
-    "Noah's Ark Story": {
-      "comment": "GT gt_dca2f6eb0cf5a388; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah's Ark Story"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Historia del arca de Noé"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ノアの箱舟の物語"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah의 방주 이야기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Berättelsen om Noahs ark"
           }
         }
       }
@@ -37957,42 +37813,6 @@
         }
       }
     },
-    "Report a bug or share what would make Noah better.": {
-      "comment": "GT gt_c084c45b8820459d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Report a bug or share what would make Noah better."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Informa de un error o comparte ideas para mejorar Noah."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不具合の報告や、Noahをより良くするためのご意見をお寄せください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오류를 신고하거나 Noah를 더 좋게 만들 아이디어를 알려주세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rapportera ett fel eller berätta hur Noah kan bli bättre."
-          }
-        }
-      }
-    },
     "Requesting camera access…": {
       "comment": "GT gt_fae09a4a2a5c48bb; arguments: none",
       "extractionState": "manual",
@@ -41017,42 +40837,6 @@
         }
       }
     },
-    "Send Feedback": {
-      "comment": "GT gt_84195de9375af87c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send Feedback"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviar comentarios"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "フィードバックを送信"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "의견 보내기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skicka Återkoppling"
-          }
-        }
-      }
-    },
     "Send Verification Code": {
       "comment": "GT gt_2bd7bfd7b3314b9b; arguments: none",
       "extractionState": "manual",
@@ -41337,42 +41121,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skickar · väntar på bekräftelser"
-          }
-        }
-      }
-    },
-    "Sending...": {
-      "comment": "GT gt_286a3af7348e8312; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sending..."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviando..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送信中..."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전송 중..."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skickar..."
           }
         }
       }
@@ -43393,42 +43141,6 @@
         }
       }
     },
-    "Stop": {
-      "comment": "GT gt_cae7d57bc067a514; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stop"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Detener"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "停止"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "중지"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stoppa"
-          }
-        }
-      }
-    },
     "Street map unavailable · places and city search still work": {
       "comment": "GT gt_f8276fb5b67f85bb; arguments: none",
       "extractionState": "manual",
@@ -44545,42 +44257,6 @@
         }
       }
     },
-    "Telegram Support": {
-      "comment": "GT gt_55c7eb36ed47d5f6; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Telegram Support"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Asistencia en Telegram"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Telegramサポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Telegram 지원"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Support via Telegram"
-          }
-        }
-      }
-    },
     "Test and save": {
       "comment": "GT gt_be8494fb38fef6d7; arguments: none",
       "extractionState": "manual",
@@ -44649,42 +44325,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Testar"
-          }
-        }
-      }
-    },
-    "Thank You": {
-      "comment": "GT gt_2034ce6155036f8a; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thank You"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gracias"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ありがとうございます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "감사합니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tack"
           }
         }
       }
@@ -44973,42 +44613,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lightning-betalningen kunde inte tas emot. Skapa en ny betalningsbegäran och försök igen."
-          }
-        }
-      }
-    },
-    "The Story of Noah's Ark": {
-      "comment": "GT gt_bd8c17324588f2d6; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Story of Noah's Ark"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La historia del arca de Noé"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ノアの箱舟の物語"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah의 방주 이야기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Berättelsen om Noahs ark"
           }
         }
       }
@@ -53685,42 +53289,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Din e-post används bara för brådskande varningar om din plånbok."
-          }
-        }
-      }
-    },
-    "Your feedback was sent to the Noah team.": {
-      "comment": "GT gt_0d9a2c325358aee0; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your feedback was sent to the Noah team."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus comentarios se han enviado al equipo de Noah."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ご意見をNoahチームに送信しました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "의견이 Noah 팀에 전달되었습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dina synpunkter har skickats till Noah-teamet."
           }
         }
       }

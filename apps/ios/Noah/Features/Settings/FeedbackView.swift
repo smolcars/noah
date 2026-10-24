@@ -1,50 +1,72 @@
 import SwiftUI
 
+/// Help → Feedback: today's fields, screenshot and limits, then Send; Telegram for a chat.
 struct FeedbackView: View {
+    @Environment(\.settings) private var settings
+    @Environment(\.openURL) private var openURL
+    @Environment(\.locale) private var locale
     @State private var draft = FeedbackDraft()
     @State private var pickingPhoto = false
     @State private var busy = false
     @State private var success = false
     @State private var error: String?
-    private enum Field { case name, email, subject, body }
-    @FocusState private var focus: Field?
+    @State private var haptics = OnboardingHaptics()
+
+    private var language: String { locale.identifier }
+    private var ready: Bool {
+        ![draft.name, draft.subject, draft.body].contains { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
 
     var body: some View {
-        Form {
+        SettingsScroll(line: success ? nil : L10n.text("Report a bug or share an idea.", locale: language)) {
             if success {
-                Section {
-                    Label("Thank You", systemImage: "checkmark.circle").font(NoahFont.title)
-                    Text("Your feedback was sent to the Noah team.")
+                VStack(alignment: .leading, spacing: 0) {
+                    VerifiedCheck().frame(width: 72, height: 72).padding(.top, 10)
+                    Text(L10n.text("Thank you", locale: language)).noahText(SettingsText.heroName).padding(.top, 16)
+                    Text(L10n.text("It’s with the Noah team.", locale: language)).noahText(NoahTokens.Typography.sub)
+                        .foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
                 }
+                .accessibilityElement(children: .combine)
             } else {
-                Section {
-                    Text("Report a bug or share what would make Noah better.")
-                    TextField("Name", text: $draft.name).focused($focus, equals: .name)
-                    TextField("Email (Optional)", text: $draft.email).keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .email)
-                    TextField("Subject", text: $draft.subject).focused($focus, equals: .subject)
-                    TextField("Message", text: $draft.body, axis: .vertical).lineLimit(5...12).focused($focus, equals: .body)
-                }.disabled(busy)
-                Section("Screenshot (optional)") {
-                    Button { pickingPhoto = true } label: { Label("Add Screenshot", systemImage: "photo") }
-                        .disabled(busy)
-                    if let data = draft.screenshot, let uiImage = UIImage(data: data) {
-                        Image(uiImage: uiImage).resizable().scaledToFit().frame(maxHeight: 180).accessibilityLabel("Selected screenshot")
-                        Button("Remove Screenshot", role: .destructive) { draft.screenshot = nil }.disabled(busy)
-                    }
-                    Text("JPEG or PNG, 5 MB or smaller").font(NoahFont.footnote)
+                Group {
+                    SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("Your name", locale: language), text: $draft.name)
+                    SettingsField(label: L10n.text("Email (optional)", locale: language), placeholder: "you@example.com", text: $draft.email,
+                                  keyboard: .emailAddress)
+                    SettingsField(label: L10n.text("Subject", locale: language), placeholder: L10n.text("Short summary", locale: language), text: $draft.subject)
+                    SettingsField(label: L10n.text("Message", locale: language), placeholder: L10n.text("What happened, or what would help?", locale: language),
+                                  text: $draft.body, multiline: true)
                 }
-                if let error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
-                Section {
-                    Button(busy ? "Sending..." : "Send Feedback", action: submit)
-                        .disabled(busy || draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.subject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(busy)
+                Text(L10n.text("Screenshot (optional)", locale: language)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+                    .padding(.top, 20)
+                screenshot.padding(.top, 8)
+                SettingsFine(text: L10n.text("JPEG or PNG, 5 MB or smaller", locale: language) + ". "
+                             + L10n.text("Your app version and phone model are attached.", locale: language))
+                if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
+            }
+            SettingsGroup {
+                SettingsRow(icon: "paperplane", title: L10n.text("Chat on Telegram", locale: language), trailing: .external, hairline: false) {
+                    openURL(NoahStoryView.telegram)
                 }
             }
-            Section { Link("Telegram Support", destination: URL(string: "https://t.me/blixtwallet/605026")!) }
         }
-        .settingsStyle("Send Feedback")
-        .scrollDismissesKeyboard(.interactively)
-        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
+        .settingsChrome("Feedback")
+        .settingsFooter {
+            if success {
+                Button(L10n.text("Done", locale: language)) { settings.back() }.buttonStyle(SettingsActionStyle())
+            } else {
+                Button(action: submit) {
+                    HStack(spacing: 8) {
+                        if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                        Text(L10n.text("Send", locale: language))
+                    }
+                }
+                .buttonStyle(SettingsActionStyle())
+                .disabled(busy || !ready)
+                .accessibilityIdentifier("feedback-send")
+            }
+        }
+        .onboardingHaptics(haptics)
         .sheet(isPresented: $pickingPhoto) {
             FeedbackImagePicker { image in
                 error = nil
@@ -57,14 +79,44 @@ struct FeedbackView: View {
             }
         }
     }
+
+    @ViewBuilder private var screenshot: some View {
+        if let data = draft.screenshot, let image = UIImage(data: data) {
+            HStack(spacing: 14) {
+                Image(uiImage: image).resizable().scaledToFill().frame(width: 64, height: 84)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .accessibilityLabel(Text("Selected screenshot"))
+                Button(L10n.text("Remove Screenshot", locale: language), role: .destructive) { draft.screenshot = nil }
+                    .buttonStyle(HomePillStyle(prominent: false, height: 40))
+                    .disabled(busy)
+                Spacer()
+            }
+        } else {
+            Button { pickingPhoto = true } label: {
+                Label(L10n.text("Add screenshot", locale: language), systemImage: "photo")
+                    .noahText(NoahTokens.Typography.control)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .frame(maxWidth: .infinity, minHeight: 84)
+                    .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1.5) }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(busy)
+        }
+    }
+
     private func submit() {
-        guard !busy else { return }; focus = nil; busy = true; error = nil
+        guard !busy else { return }
+        busy = true
+        error = nil
         Task {
             defer { busy = false }
             do {
                 let payload = try draft.payload(device: DeviceInfo.current())
                 _ = try await AppServices.shared.client.submitSupportTicket(body: .json(payload)).ok
-                success = true; draft = .init()
+                haptics.play(.success)
+                success = true
+                draft = .init()
             } catch let validation as IdentityValidationError { error = validation.errorDescription }
             catch { self.error = "Failed to submit feedback. Please try again." }
         }

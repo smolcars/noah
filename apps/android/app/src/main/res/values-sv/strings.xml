@@ -25,7 +25,6 @@
   <string name="gt_f7c8b432caa9e1b4">"Väntar på faktisk avgift"</string>
   <string name="gt_a301e27dce0ce4cd">"Faktisk avgift på blockkedjan"</string>
   <string name="gt_9fd728c66c9a256b">"Lägg till"</string>
-  <string name="gt_513965a561a4018e">"Lägg till skärmbild"</string>
   <string name="gt_322c0e13ef4fa485">"Lägg till en anteckning"</string>
   <string name="gt_223e44268146e60d">"Lägg till belopp"</string>
   <string name="gt_82767841e4f8c995">"Lägg till ett belopp först"</string>
@@ -400,7 +399,6 @@
   <string name="gt_02f81f1a5a7297bd">"Faktisk saldoförändring"</string>
   <string name="gt_5bee7e5f24d7af00">"Faktisk förändring"</string>
   <string name="gt_969ccbd3cf6300ec">"E-post"</string>
-  <string name="gt_1cae6dbd59729da3">"E-post (valfritt)"</string>
   <string name="gt_6eea8608c452711b">"E-post (valfritt)"</string>
   <string name="gt_09bf25ef30833633">"E-postadress"</string>
   <string name="gt_de101ec2a9081a8b">"E-post tillagd"</string>
@@ -689,7 +687,6 @@
   <string name="gt_ca7eb2b925786eb2">"Lightning-erbjudande"</string>
   <string name="gt_b93018eee5c09c88">"Lightning-mottagning %1$s. Skapa en ny betalningsbegäran och försök igen."</string>
   <string name="gt_abbfcd250b826648">"Lightning-sändningsdelta"</string>
-  <string name="gt_5d3789ebb7f966b3">"Lyssna på bibelberättelsen som gav vår plånbok dess namn"</string>
   <string name="gt_de1a03ce5fcc3be8">"Aktuell information är inte tillgänglig. De medföljande platserna fungerar fortfarande offline."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
   <string name="gt_0acd8adfdd7a6796">"Läser in aktivitet"</string>
@@ -838,7 +835,6 @@
   <string name="gt_4ad1be4370f0322f">"Noahs support"</string>
   <string name="gt_ddecc0272120b4ba">"Noah-användare"</string>
   <string name="gt_f802f9f1257fc080">"Noah avbröts medan betalningen skickades. Kontrollera din transaktionshistorik innan du fortsätter."</string>
-  <string name="gt_dca2f6eb0cf5a388">"Berättelsen om Noahs ark"</string>
   <string name="gt_f02d150579902f58">"NoahAppVariant saknas eller är ogiltig i Info.plist"</string>
   <string name="gt_dc937b59892604f5">"Ingen"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr-nyckel"</string>
@@ -1066,7 +1062,6 @@
   <string name="gt_0e878c81671aa8dc">"Skydd mot upprepning åsidosatt: "</string>
   <string name="gt_92ee0233f01396ac">"Upprepas"</string>
   <string name="gt_8b535099834c9d05">"Rapportera ett fel eller dela en idé."</string>
-  <string name="gt_c084c45b8820459d">"Rapportera ett fel eller berätta hur Noah kan bli bättre."</string>
   <string name="gt_fae09a4a2a5c48bb">"Begär åtkomst till kameran…"</string>
   <string name="gt_4850b174b713d88c">"Krävs"</string>
   <string name="gt_1f94843777aed851">"Skicka igen"</string>
@@ -1151,7 +1146,6 @@
   <string name="gt_ba6afbdcb15d6321">"Välj alla valbara VTXO:er"</string>
   <string name="gt_3b18955703b2ebc3">"Vald skärmbild"</string>
   <string name="gt_f6f4688ff23d50c6">"Skicka"</string>
-  <string name="gt_84195de9375af87c">"Skicka Återkoppling"</string>
   <string name="gt_2bd7bfd7b3314b9b">"Skicka verifieringskod"</string>
   <string name="gt_66a5b4090d14cb41">"Skicka kod"</string>
   <string name="gt_dad3741faaf71ced">"Skicka %1$s"</string>
@@ -1160,7 +1154,6 @@
   <string name="gt_5485623750e9453e">"Skickar · letar fortfarande efter en väg"</string>
   <string name="gt_c5fb1b5d6362edc0">"Skickar · väntar på en Ark-omgång"</string>
   <string name="gt_a38ba37fd4f8a52a">"Skickar · väntar på bekräftelser"</string>
-  <string name="gt_286a3af7348e8312">"Skickar..."</string>
   <string name="gt_b8ed5279e897be5d">"Skickar…"</string>
   <string name="gt_c16bc82bf1f04ede">"Skickat"</string>
   <string name="gt_4e7201c7b8985a98">"Skickat till"</string>
@@ -1217,7 +1210,6 @@
   <string name="gt_08fd1de4b04df4a2">"Boende"</string>
   <string name="gt_127c180ccbd3ec94">"Betalar fortfarande. Det kan ta några minuter."</string>
   <string name="gt_52b93ab03323ca98">"Skickar fortfarande %1$s"</string>
-  <string name="gt_cae7d57bc067a514">"Stoppa"</string>
   <string name="gt_f8276fb5b67f85bb">"Gatukartan är inte tillgänglig · platser och sökning efter städer fungerar fortfarande"</string>
   <string name="gt_68971283841aecdf">"Ämne"</string>
   <string name="gt_1af1dbb07ecbb25a">"Sändningen stoppades innan en transaktion kunde registreras. Granska beloppet och avgiften innan du försöker igen."</string>
@@ -1249,10 +1241,8 @@
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"Upptaget"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
-  <string name="gt_55c7eb36ed47d5f6">"Support via Telegram"</string>
   <string name="gt_be8494fb38fef6d7">"Testa och spara"</string>
   <string name="gt_e806a291cfc3e61f">"Testar"</string>
-  <string name="gt_2034ce6155036f8a">"Tack"</string>
   <string name="gt_268bc1833e83306f">"Tack"</string>
   <string name="gt_2e48454ee6ef8e0a">"Koden fungerade inte. Försök igen."</string>
   <string name="gt_b3a72229e9eb3cc3">"Betalningen gick inte igenom"</string>
@@ -1261,7 +1251,6 @@
   <string name="gt_0ac08a81559f95ee">"Esplora-slutpunkten får inte innehålla inloggningsuppgifter."</string>
   <string name="gt_96100ca2d23b8821">"Esplora-slutpunkten är avsedd för ett annat Bitcoin-nätverk."</string>
   <string name="gt_9dc2f0b60de257af">"Lightning-betalningen kunde inte tas emot. Skapa en ny betalningsbegäran och försök igen."</string>
-  <string name="gt_bd8c17324588f2d6">"Berättelsen om Noahs ark"</string>
   <string name="gt_c58153172e51db2e">"Den faktiska avgiften är inte tillgänglig än. %1$s"</string>
   <string name="gt_f663d0d5c263a46c">"Beloppet som Ark tar emot är lägre än minimibeloppet. Öka insättningsbeloppet."</string>
   <string name="gt_1f7124b49af4bb0c">"Beloppet eller avgiften har ändrats. Granska betalningen igen."</string>
@@ -1503,7 +1492,6 @@
   <string name="gt_7f359127750635a9">"Din nuvarande e-postadress är aktiv tills den nya e-postadressen har verifierats."</string>
   <string name="gt_28b86cda15decf55">"Din nuvarande e-postadress, %1$s, är aktiv tills den nya e-postadressen har verifierats."</string>
   <string name="gt_886bc67a71fe0f83">"Din e-post används bara för brådskande varningar om din plånbok."</string>
-  <string name="gt_0d9a2c325358aee0">"Dina synpunkter har skickats till Noah-teamet."</string>
   <string name="gt_2c6b2e253c01fb2e">"Ditt namn"</string>
   <string name="gt_d9a846242ed7a22f">"Din återställningsfras är fortfarande säkert lagrad på den här enheten. Använd den för att återställa plånboken från säkerhetskopian."</string>
   <string name="gt_50720c8f08138a5e">"Din plånbok är för närvarande avstängd. Alla plånboksfunktioner är inaktiverade."</string>
