@@ -331,6 +331,19 @@ this screen with its error. The old step messages ("Validating backup…" and th
 suspended branch, blocked Back, `RestoreShield`, `restore-error` and `restore-progress` (now Restoring's phase
 text) all stay.
 
+Review fix: with App lock off, each restore screen's `RestoreShield` used to leave with the screen, so Restoring
+and Ready ran without FLAG_SECURE. That affected both the stored-phrase and the typed-phrase paths. Onboarding now
+holds one shield and clipboard across Restore or "Recovery phrase found", Restoring and Ready. It ends when Home or
+a launch gate replaces onboarding. On recreation, the old shield releases one main-thread message later, so
+`MainActivity` makes the new window secure before it is first shown.
+
+`RestoreShieldDeviceTest` samples the resumed window's FLAG_SECURE:
+- **Opt-in run** (`-e noahRestoreShield disposable-emulator`, MainActivity, the silent server): 0 of 242 samples
+  were unshielded, across Restoring, a recreation and the failure return. The code before this fix had 228 of 244;
+  the fix without the delayed release on recreation had 1 of 241.
+- **Hosted run** (always on): Restoring stays secure on both paths, and a Home stand-in replacing onboarding is not
+  shielded.
+
 Opt-in captures of the suspended, idle, restoring and error states run on a disposable regtest emulator. Point the
 server at a host port that accepts connections and never answers, so Restore holds and then fails:
 
@@ -348,9 +361,15 @@ with animator scale 0.
 
 Results:
 - `OnboardingFoldTest`, which now includes this screen, passed 3/3.
+- `RestoreShieldDeviceTest` passed 2/2.
+- `StoredSeedShotsTest` passed. It now asserts that a failure returns to "Recovery phrase found" with the error
+  shown and Restore Wallet enabled.
+- `AdaptiveStateRestorationTest.restoreInputSurvivesRecreationButStillClearsOnBackground` passed.
 - `RestoreUIDeviceTest.seedOnlyLaunchCanConfirmDeletionAndStartOver` passed.
 - The live successful stored-phrase restore (`liveBackupWipePasteRestoreAndMissingBackup`) wasn't rerun to the
-  end. Neither local server could store a backup, so it stops at "upload backup".
+  end. Neither local server could store a backup, so it stops at "upload backup". Its stored-phrase stage now
+  asserts a visible "Ready", then Home, with FLAG_SECURE on until Home and off at Home. It exempts the app from
+  battery optimisation so Home follows rather than the battery prompt. That stage compiles but hasn't run.
 - Two failures are unrelated to this screen and predate it:
   - `platformWordFieldsAreVisibleAndKeepTheKeyboardPrivate` expects no transformation method, but the field sets
     `isSingleLine`.
