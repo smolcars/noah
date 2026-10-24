@@ -1,5 +1,7 @@
 import Foundation
 import Testing
+import UIKit
+import SwiftUI
 @testable import Noah
 
 /// activity.md "List" and "Export": grouping, search, the filter, CSV rows, hidden amounts and
@@ -122,5 +124,29 @@ struct ActivityListTests {
         #expect(tracker.unseen(later) == ["later"])
         tracker.update(state: .everyday, transactions: later, balanceSats: 6_300, visible: true, walletKey: "w")
         #expect(tracker.newIDs == ["later"])
+    }
+}
+
+/// The title row's reflow at large Dynamic Type (wide header on an iPhone in landscape, phone large title).
+@MainActor
+struct ActivityTitleRowTests {
+    static func size(_ view: some View, _ type: DynamicTypeSize, width: CGFloat) -> CGSize {
+        UIHostingController(rootView: view.environment(\.dynamicTypeSize, type))
+            .sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+    }
+
+    @Test func theChipMovesUnderTheTitleInsteadOfShrinking() {
+        let row = ActivityTitleRow(style: ActivityText.wideTitle) { ActivityFilterChip(filter: .lightning, onClear: {}) }
+        let title = Text("Activity").noahText(ActivityText.wideTitle)
+        let chip = ActivityFilterChip(filter: .lightning, onClear: {})
+        // Default text: side by side, one line tall.
+        let regular = Self.size(row, .large, width: 340)
+        #expect(regular.height < Self.size(title, .large, width: 340).height + 1)
+        // The largest accessibility size in a 340-pt leading pane: the chip gets its own line, at full width.
+        let largest = Self.size(row, .accessibility5, width: 340)
+        let titleHeight = Self.size(title, .accessibility5, width: 340).height
+        let chipSize = Self.size(chip, .accessibility5, width: 340)
+        #expect(largest.height >= titleHeight + chipSize.height)
+        #expect(chipSize.width > 60, "the chip keeps its name, not just ×")
     }
 }

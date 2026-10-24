@@ -279,15 +279,16 @@ private struct ActivityListPane: View {
 
     /// The leading pane's own bar (prototype `.ph.wide .nav`): the title and chip, then search and ⋯.
     private var wideHeader: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             if searching {
                 ActivitySearchField(query: $query) {
                     withAnimation(NoahTokens.Motion.travel(reduceMotion)) { query = ""; searching = false }
                 }
                 .transition(.opacity)
             } else {
-                Text("Activity").noahText(ActivityText.wideTitle).accessibilityAddTraits(.isHeader).fixedSize()
-                chip.padding(.leading, 2)
+                ActivityTitleRow(style: ActivityText.wideTitle) { chip }
+                    .frame(minHeight: NoahTokens.Size.hitTarget)
+                    .layoutPriority(1)
                 Spacer(minLength: 8)
                 GlassGroup(spacing: 8) {
                     HStack(spacing: 8) {
@@ -303,7 +304,7 @@ private struct ActivityListPane: View {
                 }
             }
         }
-        .frame(height: NoahTokens.Size.hitTarget)
+        .frame(minHeight: NoahTokens.Size.hitTarget)
         .padding(.leading, pad).padding(.trailing, 16)
         .padding(.top, 14).padding(.bottom, 6)
         .background {
@@ -319,31 +320,15 @@ private struct ActivityListPane: View {
     // MARK: Header
 
     private var largeTitle: some View {
-        HStack(spacing: 10) {
-            Text("Activity").noahText(ActivityText.largeTitle).accessibilityAddTraits(.isHeader)
-            chip
-        }
-        .frame(height: 46, alignment: .leading)
-        .padding(.bottom, 2)
+        ActivityTitleRow(style: ActivityText.largeTitle) { chip }
+            .frame(minHeight: 46, alignment: .leading)
+            .padding(.bottom, 2)
     }
 
     @ViewBuilder private var chip: some View {
         if filter != .all {
-            Button { setFilter(.all) } label: {
-                HStack(spacing: 4) {
-                    Text(LocalizedStringKey(filter.title)).noahText(ActivityText.chip)
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
-                }
-                .foregroundStyle(NoahTokens.Colors.foreground)
-                .padding(.leading, 12).padding(.trailing, 9)
-                .frame(height: 30)
-                .glassCompat(in: Capsule(), interactive: true)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(LocalizedStringKey(filter.title)))
-            .accessibilityHint(Text("Clear filter"))
-            .accessibilityIdentifier("activity-filter-chip")
-            .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
+            ActivityFilterChip(filter: filter) { setFilter(.all) }
+                .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
         }
     }
 
@@ -706,6 +691,48 @@ private struct ActivityNoneView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 56)
+    }
+}
+
+/// "Activity" and the filter chip side by side, or the chip on its own line when large text can't fit both:
+/// the chip never shrinks to its ×.
+struct ActivityTitleRow<Chip: View>: View {
+    let style: NoahTokens.TextStyle
+    @ViewBuilder let chip: Chip
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) { title; chip }
+            VStack(alignment: .leading, spacing: 6) { title; chip }
+        }
+    }
+
+    private var title: some View {
+        Text("Activity").noahText(style).accessibilityAddTraits(.isHeader).fixedSize()
+    }
+}
+
+/// The active filter's name with ×; tapping it clears the filter.
+struct ActivityFilterChip: View {
+    let filter: HistoryFilter
+    let onClear: () -> Void
+
+    var body: some View {
+        Button(action: onClear) {
+            HStack(spacing: 4) {
+                Text(LocalizedStringKey(filter.title)).noahText(ActivityText.chip)
+                Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+            }
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .padding(.leading, 12).padding(.trailing, 9)
+            .frame(minHeight: 30)
+            .fixedSize()
+            .glassCompat(in: Capsule(), interactive: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(LocalizedStringKey(filter.title)))
+        .accessibilityHint(Text("Clear filter"))
+        .accessibilityIdentifier("activity-filter-chip")
     }
 }
 
