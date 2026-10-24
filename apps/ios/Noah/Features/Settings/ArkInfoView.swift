@@ -36,13 +36,13 @@ struct ArkInfoView: View {
                 SettingsSection(title: "Moving to Ark")
                 row("Smallest move", money(info.minBoardAmountSats), numeric: true)
                 row("Largest VTXO", info.maxVtxoAmountSats.map(money) ?? L10n.text("No limit", locale: language))
-                row("Confirmations", L10n.text("{count} blocks", info.requiredBoardConfirmations, locale: language), last: true)
+                row("Confirmations", L10n.text("{n} blocks", info.requiredBoardConfirmations, locale: language), last: true)
                 SettingsSection(title: "Rounds and expiry")
                 row("Round every", Duration.seconds(Int64(info.roundIntervalSecs)).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .wide)))
                 row("Round nonces", String(info.nbRoundNonces), numeric: true)
-                row("VTXO lifetime", L10n.text("{count} blocks", info.vtxoLifetime, locale: language))
-                row("Exit delta", L10n.text("{count} blocks", info.vtxoExitDelta, locale: language))
-                row("Lightning send delta", L10n.text("{count} blocks", info.htlcSendExpiryDelta, locale: language), last: true)
+                row("VTXO lifetime", L10n.text("{n} blocks", info.vtxoLifetime, locale: language))
+                row("Exit delta", L10n.text("{n} blocks", info.vtxoExitDelta, locale: language))
+                row("Lightning send delta", L10n.text("{n} blocks", info.htlcSendExpiryDelta, locale: language), last: true)
                 SettingsSection(title: "Lightning")
                 row("Receive anti-DoS", L10n.text(info.lnReceiveAntiDosRequired ? "Required" : "Not required", locale: language), last: true)
             }
@@ -83,7 +83,7 @@ struct ArkInfoView: View {
         defer { loading = false }
         do {
             info = try await WalletSession.shared.withOpenWallet { try await $0.wallet.arkInfo() }
-            if info == nil { error = "Ark server info is unavailable. Pull to refresh." }
-        } catch { self.error = "Couldn't load Ark info. Pull to refresh." }
+            if info == nil { error = "Ark server info is unavailable. Try refreshing." }
+        } catch { self.error = "Ark server info is unavailable. Try refreshing." }
     }
 }

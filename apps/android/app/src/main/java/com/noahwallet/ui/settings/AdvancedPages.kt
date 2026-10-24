@@ -99,7 +99,7 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
     }
     when (sheet) {
         "reset" -> {
-            val registered = tr("Registered with the server again")
+            val registered = tr("Registered again")
             SettingsSheet({ sheet = null }, tr("Reset registration?"), tr("Noah registers this wallet with the server again. Your wallet stays.")) { close ->
                 SheetActions(tr("Cancel"), tr("Reset"), onCancel = close, enabled = !model.busy && !model.isWalletSuspended, loading = model.busy,
                     confirmTag = "advanced-reset-confirm", onConfirm = {
@@ -283,7 +283,7 @@ private fun logLine(line: String, palette: com.noahwallet.ui.design.NoahTokens.P
     if (parts == null) { append(line); return@buildAnnotatedString }
     withStyle(SpanStyle(color = palette.muted)) { append(parts[1].substringAfter(' ').take(12)) }
     append(' ')
-    withStyle(SpanStyle(color = if (parts[2].startsWith("E")) palette.failure else palette.muted)) { append(parts[2].padEnd(5)) }
+    withStyle(SpanStyle(color = if (parts[2].startsWith("""E""")) palette.failure else palette.muted)) { append(parts[2].padEnd(5)) }
     append(' '); append(parts[3])
 }
 
@@ -334,7 +334,7 @@ internal fun DebugPage(model: AppModel, nav: SettingsNav) {
                     .testTag("debug-result"), style = SettingsType.result, color = palette.foreground)
             }
             val copied = tr("Copied")
-            SettingsLink(tr("Copy result")) {
+            SettingsLink(tr("Copy")) {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Result", value))
                 toasts.show(copied)
             }

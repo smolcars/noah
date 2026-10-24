@@ -101,8 +101,8 @@ struct DebugView: View {
                     .padding(.top, 6)
                 } actions: { EmptyView() }
             case .confirm:
-                SettingsSheetBody(title: L10n.text(action == .drop ? "Dangerously remove this VTXO?" : "Offboard all funds?", locale: language),
-                                  line: L10n.text("This action changes your wallet. Type delete to confirm.", locale: language)) {
+                SettingsSheetBody(title: L10n.text("{action}?", L10n.text(action.rawValue, locale: language), locale: language),
+                                  line: L10n.text("This changes your wallet and can lose funds.", locale: language)) {
                     SettingsField(placeholder: L10n.text("Type delete to confirm", locale: language), text: $confirmation, id: "debug-delete-input")
                         .onChange(of: DeleteChecklist.confirms(confirmation)) { _, matches in if matches { endEditing() } }
                 } actions: {
@@ -138,18 +138,17 @@ struct DebugView: View {
                     case .ark: return try DebugJSON.ark(try await handles.wallet.arkInfo())
                     // Shown only here for support; the xpub must never reach logs or Sentry.
                     case .debugInfo: return try DebugJSON.debugInfo(try await handles.wallet.debugInfo())
-                    case .refresh: try await handles.wallet.refreshServer()
-                    case .maintenance: try await handles.wallet.maintenance()
+                    case .refresh: try await handles.wallet.refreshServer(); return "Server refreshed"
+                    case .maintenance: try await handles.wallet.maintenance(); return "Maintenance completed"
                     case .maintenanceRefresh: return try await handles.wallet.maintenanceRefresh() ?? "Maintenance refresh completed"
-                    case .delegated: try await handles.wallet.maintenanceDelegated()
+                    case .delegated: try await handles.wallet.maintenanceDelegated(); return "Delegated maintenance completed"
                     case .offboard: return String(describing: try await handles.wallet.offboardAll(bitcoinAddress: input))
                     case .decode: return try DebugJSON.decoded(try decodeVtxo(hexOrBase64: input))
                     case .importVtxo: return try DebugJSON.imported(try await handles.wallet.importVtxos(encodedVtxos: [input]))
-                    case .drop: try await handles.wallet.dangerousDropVtxo(id: input)
-                    case .unlock: try await handles.wallet.unlockVtxos(vtxoIds: [input], expectedHolder: nil)
-                    case .push: break
+                    case .drop: try await handles.wallet.dangerousDropVtxo(id: input); return "VTXO removed"
+                    case .unlock: try await handles.wallet.unlockVtxos(vtxoIds: [input], expectedHolder: nil); return "VTXO unlocked"
+                    case .push: return ""
                     }
-                    return "Action completed successfully"
                 }
             } catch { result = SafeErrorDescription.of(error) }
         }

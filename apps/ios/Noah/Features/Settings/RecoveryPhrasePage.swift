@@ -139,7 +139,7 @@ struct RecoveryPhrasePage: View {
         .accessibilityIdentifier("recovery-phrase")
     }
 
-    private var reason: String { L10n.text("Authenticate to view your seed phrase", locale: language) }
+    private var reason: String { L10n.text("View your seed phrase", locale: language) }
 
     /// Two columns of numbered cells. Bars until authenticated; then the words, blurring in one after another.
     private var grid: some View {
@@ -206,7 +206,7 @@ struct RecoveryPhrasePage: View {
             haptics.play(.success)
             settings.toast("Backed up")
             settings.back()
-        } catch { self.error = "Couldn't save your preference. Please try again." }
+        } catch { self.error = "Couldn't save your preference." }
     }
 }
 

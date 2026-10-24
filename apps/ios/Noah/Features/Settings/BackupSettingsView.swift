@@ -61,8 +61,7 @@ struct BackupSettingsView: View {
                 .disabled(busy)
             }
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
-            SettingsFine(text: L10n.text("Encrypted with your recovery phrase before it leaves this phone.", locale: language)
-                         + " " + L10n.text("To restore, enter your recovery phrase when you set up Noah on a phone.", locale: language))
+            SettingsFine(text: L10n.text("Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone.", locale: language))
         }
         .settingsChrome("Backup")
         .onboardingHaptics(haptics)
@@ -106,7 +105,7 @@ struct BackupSettingsView: View {
         case .done: return last ?? ""
         case .running: return L10n.text("Encrypting and uploading", locale: language)
         case .failed: return last.map { L10n.text("Last good backup {date}", $0, locale: language) } ?? L10n.text("Try again", locale: language)
-        case .pending: return L10n.text("Waiting to back up", locale: language)
+        case .pending: return L10n.text("Backup pending", locale: language)
         case .off: return last.map { L10n.text("Last backup {date}", $0, locale: language) } ?? ""
         case .never: return L10n.text(enabled ? "Backs up when your wallet changes" : "Turn it on or back up now", locale: language)
         }
@@ -204,7 +203,7 @@ struct BackupSettingsView: View {
         } actions: {
             SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Delete", locale: language), destructive: true,
                                  busy: busy, actionID: "backup-delete-confirm", onCancel: { sheet = nil }) {
-                run {
+                run("Couldn't delete backup.") {
                     _ = try await AppServices.shared.client.deleteBackupObject(body: .json(.init(backupId: backup.backupId))).ok
                     await AppServices.shared.backupCoordinator.forgetUploadedBackup(backup.backupId)
                     sheet = nil
@@ -220,7 +219,7 @@ struct BackupSettingsView: View {
 
     private func backUp() {
         haptics.play(.light)
-        run {
+        run("Couldn't back up your wallet. Please try again.") {
             let refreshed = try await Self.backUpAndRefresh(backup: {
                 try await AppServices.shared.backupCoordinator.flush(.manual, requireEnabled: false)
             }, refresh: { try await list() })
@@ -231,7 +230,7 @@ struct BackupSettingsView: View {
     }
 
     private func setEnabled(_ enabled: Bool) {
-        run {
+        run("Couldn't update backup settings.") {
             try await model.server.setBackupEnabled(enabled)
             await model.backupSettingsChanged()
         }
@@ -239,7 +238,7 @@ struct BackupSettingsView: View {
 
     /// The export is today's: an encrypted database in a scratch folder, then the share sheet.
     private func export() {
-        run {
+        run("Couldn't prepare the file for sharing. Please try again.") {
             file = try await ScratchSpace.shared.withOperation {
                 let folder = try ScratchSpace.shared.makeFolder("share-backup")
                 do {
@@ -276,7 +275,7 @@ struct BackupSettingsView: View {
         do { try await refresh(); return true } catch { return false }
     }
 
-    private func run(_ action: @escaping @MainActor () async throws -> Void) {
+    private func run(_ failure: String, _ action: @escaping @MainActor () async throws -> Void) {
         guard !busy else { return }
         busy = true
         error = nil
@@ -285,7 +284,7 @@ struct BackupSettingsView: View {
             do { try await action() } catch {
                 if !BackupCoordinator.isCancellation(error), !Task.isCancelled {
                     haptics.play(.error)
-                    self.error = "Couldn't complete the backup operation. Please try again."
+                    self.error = failure
                 }
             }
         }

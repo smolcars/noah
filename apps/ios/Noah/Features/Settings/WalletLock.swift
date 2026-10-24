@@ -80,7 +80,7 @@ final class WalletLock {
 
     func unlock() async {
         let generation = policy.generation
-        if await authenticate(L10n.text("Authenticate to unlock Noah")) {
+        if await authenticate(L10n.text("Unlock Noah")) {
             policy.authenticated(generation: generation)
         }
     }
@@ -100,8 +100,8 @@ final class WalletLock {
 
     func setEnabled(_ enabled: Bool) async throws {
         let generation = policy.generation
-        guard await authenticate(enabled ? L10n.text("Authenticate to enable biometrics")
-                                 : L10n.text("Authenticate to disable biometrics")) else { return }
+        guard await authenticate(enabled ? L10n.text("Enable wallet authentication")
+                                 : L10n.text("Disable wallet authentication")) else { return }
         guard generation == policy.generation else { return }
         var wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isBiometricsEnabled = enabled

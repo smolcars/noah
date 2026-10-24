@@ -36,7 +36,7 @@ object ServerEndpoint {
         "mainnet" -> "https://noahwallet.io"
         "signet" -> "https://signet.noahwallet.io"
         "regtest" -> regtestOverride ?: "http://10.0.2.2:3000"
-        else -> error("Unknown app variant")
+        else -> error("""Unknown app variant""")
     }
 }
 

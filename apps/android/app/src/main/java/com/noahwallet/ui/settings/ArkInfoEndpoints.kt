@@ -10,7 +10,7 @@ internal object ArkInfoEndpoints {
             "mainnet" -> "https://mempool.second.tech/api/blocks/tip/height"
             "signet" -> "https://mempool.space/signet/api/blocks/tip/height"
             "regtest" -> regtestBitcoindURL ?: "http://$regtestHost:18443"
-            else -> error("Unknown app variant")
+            else -> error("""Unknown app variant""")
         }
     }
 }

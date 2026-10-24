@@ -21,7 +21,7 @@ struct EsploraSettingsScreen: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: regtest ? "Bitcoin Core" : effectiveEndpoint).noahText(SettingsText.current).lineLimit(2).truncationMode(.middle)
                     .textSelection(.enabled)
-                Text(L10n.text(regtest ? "Regtest wallets use Bitcoin Core instead of Esplora." : selection.endpoint == nil ? "Noah default" : "Custom server",
+                Text(L10n.text(regtest ? "Regtest wallets use Bitcoin Core." : selection.endpoint == nil ? "Noah default" : "Custom server",
                                locale: language))
                     .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
             }
@@ -32,7 +32,7 @@ struct EsploraSettingsScreen: View {
                               id: "esplora-endpoint-input")
                     .disabled(busy)
                 if let error {
-                    SettingsFine(text: L10n.text("Not changed.", locale: language) + " " + error, failure: true)
+                    SettingsFine(text: L10n.text(error, locale: language), failure: true)
                 } else {
                     SettingsFine(text: L10n.text("Noah checks it’s on the right network before switching.", locale: language))
                 }
@@ -64,8 +64,8 @@ struct EsploraSettingsScreen: View {
             selection = EsploraSettings().selection(for: .current)
             Task {
                 error = await model.session.isOpen
-                    ? L10n.text("The wallet is using the previous endpoint.", locale: language)
-                    : L10n.text("Restart Noah to reopen the previous endpoint.", locale: language)
+                    ? L10n.text("Endpoint not changed. The wallet is using the previous endpoint.", locale: language)
+                    : L10n.text("Endpoint not changed. Restart Noah to reopen the previous endpoint.", locale: language)
             }
         }
     }

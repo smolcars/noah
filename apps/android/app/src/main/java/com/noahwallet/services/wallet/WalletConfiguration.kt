@@ -46,7 +46,7 @@ data class WalletConfiguration(
             "regtest" -> WalletConfiguration(Network.REGTEST, regtestArkURL ?: "http://$regtestHost:3535",
                 bitcoind = regtestBitcoindURL ?: "http://$regtestHost:18443", bitcoindUser = "second", bitcoindPass = "ark",
                 vtxoRefreshExpiryThreshold = 24u, roundTxRequiredConfirmations = 1u)
-            else -> error("Unknown app variant")
+            else -> error("""Unknown app variant""")
         }
 
         fun effective(variant: String, endpoint: String?): WalletConfiguration {

@@ -20,7 +20,7 @@ class AppLog(private val tag: String, private val file: LogFile) {
 
     enum class Level(val symbol: String, val priority: Int) {
         verbose("V", Log.VERBOSE), debug("D", Log.DEBUG), info("I", Log.INFO),
-        warn("W", Log.WARN), error("E", Log.ERROR),
+        warn("W", Log.WARN), error("""E""", Log.ERROR),
     }
     fun v(message: String) = log(Level.verbose, message)
     fun d(message: String) = log(Level.debug, message)

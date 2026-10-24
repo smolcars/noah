@@ -308,7 +308,7 @@ struct SettingsList: View {
     private func setLock(_ enabled: Bool) {
         error = nil
         Task {
-            do { try await lock.setEnabled(enabled) } catch { self.error = "Couldn't update this setting. Please try again." }
+            do { try await lock.setEnabled(enabled) } catch { self.error = "Couldn't save authentication preference." }
         }
     }
 

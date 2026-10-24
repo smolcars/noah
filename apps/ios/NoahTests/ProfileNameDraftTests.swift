@@ -36,7 +36,7 @@ import Testing
         draft.text = "New name"
         struct Offline: Error {}
         #expect(await draft.save { _ in throw Offline() } == nil)
-        #expect(draft.text == "New name" && draft.error == "Couldn't save your name. Please try again." && !draft.busy)
+        #expect(draft.text == "New name" && draft.error == "Couldn't save your name." && !draft.busy)
     }
 }
 

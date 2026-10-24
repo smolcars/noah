@@ -58,7 +58,7 @@ struct NotificationsPage: View {
         error = nil
         Task {
             defer { busy = false }
-            do { try await app.server.setMailboxEnabled(enabled) } catch { self.error = "Couldn't update this setting. Please try again." }
+            do { try await app.server.setMailboxEnabled(enabled) } catch { self.error = "Couldn't update mailbox notifications." }
         }
     }
 
@@ -141,7 +141,7 @@ struct AdvancedPage: View {
                     SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Suspend", locale: language),
                                          destructive: true, busy: busy, actionID: "settings-suspend-confirm", onCancel: { self.sheet = nil }) {
                         haptics.play(.warning)
-                        run {
+                        run("Couldn't change wallet suspension. Please try again.") {
                             try await app.suspendWallet()
                             self.sheet = nil
                             settings.toast("Wallet suspended")
@@ -160,7 +160,7 @@ struct AdvancedPage: View {
     }
 
     private func reset() {
-        run {
+        run("Couldn't register again. Please retry.") {
             try await app.reRegisterWithServer()
             sheet = nil
             haptics.play(.success)
@@ -174,7 +174,7 @@ struct AdvancedPage: View {
         case .confirm:
             haptics.play(.light)
             sheet = .suspend
-        case .resume: run { try await app.resumeWallet() }
+        case .resume: run("Couldn't change wallet suspension. Please try again.") { try await app.resumeWallet() }
         case .none: break
         }
     }
@@ -186,7 +186,7 @@ struct AdvancedPage: View {
         } catch { self.error = "Couldn't save debug setting." }
     }
 
-    private func run(_ action: @escaping @MainActor () async throws -> Void) {
+    private func run(_ failure: String, _ action: @escaping @MainActor () async throws -> Void) {
         guard !busy else { return }
         busy = true
         error = nil
@@ -194,7 +194,7 @@ struct AdvancedPage: View {
             defer { busy = false }
             do { try await action() } catch {
                 self.error = (error as? WalletLifecycle.Failure) == .restoreSettingsUnavailable
-                    ? error.localizedDescription : "Couldn't update this setting. Please try again."
+                    ? error.localizedDescription : failure
             }
         }
     }

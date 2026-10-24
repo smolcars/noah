@@ -27,7 +27,7 @@ import Testing
         struct Boom: Error {}
         #expect(!(await deletion.delete { throw Boom() }))
         #expect(!deletion.deleting)
-        #expect(deletion.failure == "The wallet couldn't be deleted. Restart Noah and try again.")
+        #expect(deletion.failure == "Couldn't delete wallet. Restart Noah and try again.")
     }
 
     @Test func moveToArkTakesWholePositiveSatsAsTyped() {

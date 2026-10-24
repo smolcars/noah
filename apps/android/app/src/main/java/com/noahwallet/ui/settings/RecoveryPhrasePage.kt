@@ -139,7 +139,7 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     }
     val copied = tr("Copied · clears in 2 minutes")
     val backedUp = tr("Backed up")
-    SettingsFrame(tr("Recovery phrase"), nav.back, line = tr("12 words that restore your wallet."), foot = if (words.isEmpty()) null else ({
+    SettingsFrame(tr("Recovery phrase"), nav.back, line = if (words.isEmpty()) tr("The words that restore your wallet.") else tr("{n} words that restore your wallet.", words.size), foot = if (words.isEmpty()) null else ({
         FootPill(tr("Copy"), Modifier.testTag("recovery-copy"), outlined = true, icon = SettingsIcons.copy) {
             clipboard.setPrimaryClip(PhraseClip.clip(label, words.joinToString(" ")))
             holder.clipDeadline = SystemClock.elapsedRealtime() + PhraseClip.clearAfterMillis

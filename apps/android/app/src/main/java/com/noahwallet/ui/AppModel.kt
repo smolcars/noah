@@ -186,7 +186,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     fun startDeletingWallet() {
         if (busy || deletingWallet) return
         deletingWallet = true
-        action("Couldn't delete wallet. Restart Noah if a restore is pending, then try again.", inline = { message ->
+        action("Couldn't delete wallet. Restart Noah and try again.", inline = { message ->
             deleteWalletError = message
             if (message != null) deletingWallet = false
         }) { deleteWallet(); deletingWallet = false }

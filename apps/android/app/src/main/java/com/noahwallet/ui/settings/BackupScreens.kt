@@ -146,7 +146,7 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
         previous = kind
     }
     val backedUp = tr("Backed up")
-    val exported = tr("Export Complete")
+    val exported = tr("Exported")
     val share = rememberFileShare(model, tr("Export file"), "application/octet-stream") { toasts.show(exported) }
     SettingsFrame(tr("Backup"), nav.back) {
         val never = state.lastBackupAt == null
@@ -158,7 +158,7 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
                 if (never) tr("Not backed up yet") else tr("Automatic backups off"),
                 if (never) tr("Turn it on or back up now") else tr("Last backup {date}", last!!))
             SettingsRules.Backup.on -> if (never) StatusHeader({ StatusMark(MarkKind.idle, SettingsIcons.cloud) }, tr("Not backed up yet"),
-                if (state.backupPending) tr("Backup pending") else tr("Back up now or wait for the next change"))
+                if (state.backupPending) tr("Backup pending") else tr("Backs up when your wallet changes"))
             else StatusHeader({ StatusMark(MarkKind.ok, check = check.value) }, tr("Backed up"), if (state.backupPending) tr("Backup pending") else last)
         }
         SettingsGroup(rows = listOf(

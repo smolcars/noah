@@ -25,7 +25,7 @@ object LightningIdentity {
         "mainnet" -> "noahwallet.io"
         "signet" -> "signet.noahwallet.io"
         "regtest" -> regtestDomain
-        else -> error("Unknown app variant")
+        else -> error("""Unknown app variant""")
     }
 }
 

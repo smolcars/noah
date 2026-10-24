@@ -55,7 +55,7 @@ struct LogView: View {
                     Color.clear.frame(height: 1).id("latest")
                 }
                 .padding(.top, 14)
-                SettingsFine(text: L10n.text("Logs are redacted before you share them.", locale: language))
+                SettingsFine(text: L10n.text("Shared logs never include your phrase or keys.", locale: language))
             }
             .onChange(of: snapshot.updatedAt) { _, _ in
                 Task { await Task.yield(); reader.scrollTo("latest", anchor: .bottom) }
@@ -87,7 +87,7 @@ struct LogView: View {
                     } catch { ScratchSpace.shared.discard(folder); throw error }
                 }
                 sharing = true
-            } catch { self.error = "Couldn't share logs. Please try again." }
+            } catch { self.error = "Couldn't prepare the file for sharing. Please try again." }
         }
     }
 }

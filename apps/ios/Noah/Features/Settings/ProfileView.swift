@@ -144,7 +144,7 @@ final class ProfileNameDraft {
             try await action(text)
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            self.error = "Couldn't save your name. Please try again."
+            self.error = "Couldn't save your name."
             return nil
         }
     }
@@ -408,7 +408,7 @@ struct EmailPage: View {
         switch email.stage {
         case .entry, .sending: L10n.text("Only for urgent alerts about your wallet.", locale: language)
         case .verified: nil
-        default: L10n.text("Enter the code we sent to {email}.", email.email, locale: language)
+        default: L10n.text("Enter the code we sent to {email}", email.email, locale: language)
         }
     }
 

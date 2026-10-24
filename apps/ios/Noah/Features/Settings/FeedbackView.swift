@@ -86,7 +86,7 @@ struct FeedbackView: View {
                 Image(uiImage: image).resizable().scaledToFill().frame(width: 64, height: 84)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .accessibilityLabel(Text("Selected screenshot"))
-                Button(L10n.text("Remove Screenshot", locale: language), role: .destructive) { draft.screenshot = nil }
+                Button(L10n.text("Remove screenshot", locale: language), role: .destructive) { draft.screenshot = nil }
                     .buttonStyle(HomePillStyle(prominent: false, height: 40))
                     .disabled(busy)
                 Spacer()

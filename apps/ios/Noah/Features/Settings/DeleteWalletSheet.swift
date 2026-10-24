@@ -22,7 +22,7 @@ final class WalletDeletion {
             try await action()
             return true
         } catch {
-            failure = (error as? WalletLifecycle.Failure)?.errorDescription ?? "The wallet couldn't be deleted. Restart Noah and try again."
+            failure = (error as? WalletLifecycle.Failure)?.errorDescription ?? "Couldn't delete wallet. Restart Noah and try again."
             return false
         }
     }

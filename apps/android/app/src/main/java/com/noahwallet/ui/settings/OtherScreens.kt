@@ -84,7 +84,7 @@ internal fun FeedbackPage(model: AppModel, nav: SettingsNav) {
             loading = true; error = null
             try {
                 cropImage = withContext(Dispatchers.IO) {
-                    val bytes = context.contentResolver.openInputStream(picked)?.use(FeedbackDraft::readScreenshot) ?: error("Unreadable image")
+                    val bytes = context.contentResolver.openInputStream(picked)?.use(FeedbackDraft::readScreenshot) ?: error("""Unreadable image""")
                     decodeScreenshot(bytes)
                 }
             } catch (validation: IllegalArgumentException) { error = validation.message }
