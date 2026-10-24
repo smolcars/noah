@@ -1,0 +1,30 @@
+{
+  "revision": {
+    "revision": "b0f3a0fb9ac2231886e0cf6002dc7df2f95cc257",
+    "version": "0.7.0"
+  },
+  "artifactSource": {
+    "checksum": "fe1b17f7308f8fa473e4e55040e4bbfb5bad2120b117947ace4ae5af649fa435",
+    "type": "remote",
+    "url": "https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.7.0/BarkBoltFFI.xcframework.zip"
+  },
+  "artifactSha256": "fe1b17f7308f8fa473e4e55040e4bbfb5bad2120b117947ace4ae5af649fa435",
+  "manifestSha256": "dda94992f58ef53f85e7ed85dbb2b46faac0d793cefe4ba912bb49ff7918f82f",
+  "releaseSha256Sums": {
+    "BarkBoltFFI.xcframework.zip": "fe1b17f7308f8fa473e4e55040e4bbfb5bad2120b117947ace4ae5af649fa435",
+    "Package.swift": "dda94992f58ef53f85e7ed85dbb2b46faac0d793cefe4ba912bb49ff7918f82f",
+    "BUILD-INFO.json": "10578e72a790702ce7a1e356422d0dc5e77549c6bbd37173dd86987a5392054e"
+  },
+  "buildInfo": {
+    "nativeSourceCommit": "6961e82508a52d297a4c72d65131e0f5f8871bdc",
+    "ciRun": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/40132677901",
+    "ciJobs": { "android": "success", "apple": "success", "rust": "success" }
+  },
+  "bark": {
+    "tag": "lib-0.8.0",
+    "commit": "959a489ff4934b181783b41c7d3ee68d85b95cbf",
+    "sqliteMigrationsChangedSince": "959a489ff4934b181783b41c7d3ee68d85b95cbf",
+    "sqliteMigrationsDiffLines": 0,
+    "latestMigration": "m0042_vtxo_registered"
+  }
+}

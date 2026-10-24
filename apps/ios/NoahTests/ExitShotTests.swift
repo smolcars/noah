@@ -157,7 +157,7 @@ struct ExitShotTests {
         }
         let broadcast = UInt64((Double(vbytes * 3) * 1.2).rounded()), claim = UInt64((54 + 77 * ids.count) * 2)
         return .init(exitBroadcastFeeSats: broadcast, claimFeeSats: claim, totalFeeSats: broadcast + claim, feeRateSatPerVb: 3,
-                     txsToBroadcast: UInt64(txs.count))
+                     txsToBroadcast: UInt64(txs.count), excludedVtxos: [])
     }
 
     nonisolated static func overview(exits: [ExitModel], confirmed: UInt64 = 18_400, tip at: UInt32 = tip, packageFees: [String: UInt64] = [:],

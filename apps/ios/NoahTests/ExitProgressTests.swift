@@ -805,7 +805,7 @@ struct ExitRestartTests {
         func failEstimates() { estimatorFails = true }
         func estimate() throws -> EmergencyExitFeeEstimate {
             if estimatorFails { throw OnchainFailure.unavailable }
-            return .init(exitBroadcastFeeSats: 5_533, claimFeeSats: 262, totalFeeSats: 5_795, feeRateSatPerVb: 3, txsToBroadcast: 4)
+            return .init(exitBroadcastFeeSats: 5_533, claimFeeSats: 262, totalFeeSats: 5_795, feeRateSatPerVb: 3, txsToBroadcast: 4, excludedVtxos: [])
         }
         /// bark still lists the VTXO as spendable: only the journal stops a second start.
         nonisolated func access() -> WalletSession.OnchainStartAccess {

@@ -483,6 +483,69 @@ struct BoardPreparedTests {
         #expect(await calls.discarded == [quote.id])
         #expect(await session.boardPreparations.isEmpty)
     }
+    /// FFI 0.7.0: Bark failed after it may have recorded the board. The attempt stays uncertain and locked
+    /// with its funding txid, nothing resubmits it, and only evidence of that txid resolves it.
+    @Test func uncertainOutcomeStaysLockedAndIsNeverResubmitted() async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let quote = Self.quote
+        await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+            await calls.submit(.init(txid: "exact", broadcast: .uncertain(reason: "private diagnostic"), vtxoIds: []))
+        })
+        await #expect(throws: OnchainFailure.uncertain) {
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
+        }
+        let saved = try #require(try await OnchainOperationJournal(file: file).load())
+        #expect(saved.receipt == nil && saved.txid == "exact" && saved.blocks(.board, ids: []))
+        // The spent preparation is released, and the same review can't be submitted again.
+        #expect(await calls.discarded == [quote.id])
+        #expect(await session.boardPreparations.isEmpty)
+        await #expect(throws: OnchainFailure.changed) {
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
+        }
+        var other = Self.quote
+        other.id = UUID()
+        await #expect(throws: OnchainFailure.busy) { try await journal.perform(other) { "second board" } }
+        #expect(await calls.submitted == 1)
+        // Check status: no record of the funding txid leaves it uncertain; a pending board resolves it.
+        func check(_ ids: Set<String>) async throws -> Bool {
+            try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: .init(
+                walletID: "wallet", transactionIDs: { ids }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
+                transactionStatus: { _ in .notFound }))
+        }
+        #expect(try await !check([]))
+        #expect(try await journal.load()?.receipt == nil)
+        #expect(try await check(["exact"]))
+        #expect(try await journal.load()?.receipt?.broadcastRetryPending == true)
+    }
+    /// `notAttempted` still means nothing was recorded: the lock is released and a new review submits.
+    @Test func notAttemptedOutcomeAllowsAFreshBoard() async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        var outcomes: [BroadcastOutcome] = [.notAttempted(reason: "private diagnostic"), .accepted]
+        for _ in 0..<2 {
+            var fresh = Self.quote
+            fresh.id = UUID()
+            let quote = fresh, outcome = outcomes.removeFirst()
+            await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+                await calls.submit(.init(txid: "exact", broadcast: outcome, vtxoIds: []))
+            })
+            if case .notAttempted = outcome {
+                await #expect(throws: OnchainFailure.boardNotAttempted) {
+                    try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
+                }
+                #expect(try await journal.loadAll().isEmpty)
+            } else {
+                _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
+                #expect(try await journal.load()?.receipt?.txid == "exact")
+            }
+        }
+        #expect(await calls.submitted == 2)
+    }
     @Test func persistenceFailureRetriesOnlyTheAcceptedIDBeforeDiscard() async throws {
         let (journal, file) = journal()
         defer { try? FileManager.default.removeItem(at: file) }

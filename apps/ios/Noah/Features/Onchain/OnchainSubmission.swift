@@ -30,6 +30,9 @@ enum OnchainSubmission {
         guard result.txid == quote.prepared?.txid else { throw OnchainFailure.uncertain }
         switch result.broadcast {
         case .notAttempted: throw OnchainFailure.boardNotAttempted
+        // Bark may have recorded it and the preparation is spent: the attempt stays uncertain and locked,
+        // never resubmitted, until Check status finds its funding txid (pending boards, wallet history, chain).
+        case .uncertain: throw OnchainFailure.uncertain
         case .accepted, .failed:
             var receipt = OnchainReceipt(message: OnchainReceipt.boardingMessage(fee: quote.chainFee),
                 txid: result.txid, onchainFee: quote.chainFee)

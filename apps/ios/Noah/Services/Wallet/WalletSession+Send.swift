@@ -363,6 +363,7 @@ enum SendOnchainSubmission {
         guard let prepared = quote.prepared, result.txid == prepared.txid else { throw SendFailure.unresolved }
         switch result.broadcast {
         case .notAttempted: throw SendNotSubmitted(reason: .constructionFailed)
+        case .uncertain: throw SendFailure.unresolved // Boards only (FFI 0.7.0); never treated as unsent.
         case .accepted, .failed:
             var receipt = SendReceipt(amount: quote.amount, txid: result.txid, status: .submitted,
                                       fee: quote.fee, proof: .preparedTxid)

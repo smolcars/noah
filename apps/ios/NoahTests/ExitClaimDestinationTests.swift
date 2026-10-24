@@ -201,7 +201,7 @@ struct ExitClaimExecutionTests {
         func estimate() throws -> EmergencyExitFeeEstimate {
             estimateCalls += 1
             if estimatorFails { throw OnchainFailure.unavailable }
-            return .init(exitBroadcastFeeSats: 7630, claimFeeSats: 1295, totalFeeSats: 8925, feeRateSatPerVb: 10, txsToBroadcast: 2)
+            return .init(exitBroadcastFeeSats: 7630, claimFeeSats: 1295, totalFeeSats: 8925, feeRateSatPerVb: 10, txsToBroadcast: 2, excludedVtxos: [])
         }
         func change(_ change: String) {
             switch change {
