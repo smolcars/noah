@@ -94,7 +94,8 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     if (fixture == null && activity != null) DisposableEffect(activity) {
         val release = model.walletLock.showSecret(activity.window)
         onDispose {
-            release()
+            // A fold or rotation hands the count to the recreated page, so its new window is never unshielded.
+            model.walletLock.releaseSecret(activity.isChangingConfigurations, release)
             // Leaving the page (not a fold) forgets the words and our clip.
             if (!activity.isChangingConfigurations) { clear.run(); holder.clipDeadline = null; holder.clear() }
         }

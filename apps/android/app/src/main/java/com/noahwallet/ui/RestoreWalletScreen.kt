@@ -54,10 +54,8 @@ internal fun RestoreShield(activity: Activity, lock: com.noahwallet.ui.settings.
         onDispose {
             lifecycle.removeObserver(observer)
             clipboard.clearIfUnchanged()
-            // Recreation builds the new activity in this same main-thread message, and MainActivity applies FLAG_SECURE
-            // from the lock's count before its window is shown; release afterwards so that count still includes this.
-            if (activity.isChangingConfigurations) android.os.Handler(android.os.Looper.getMainLooper()).post { release() }
-            else { clear(); release() }
+            if (!activity.isChangingConfigurations) clear()
+            lock.releaseSecret(activity.isChangingConfigurations, release)
         }
     }
 }

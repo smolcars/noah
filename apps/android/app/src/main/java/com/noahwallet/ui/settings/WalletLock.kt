@@ -111,13 +111,30 @@ class WalletLock(private val settings: SettingsStorage) {
     /** Keeps [window] secure while a secret is on screen; the returned release (idempotent) ends it. */
     fun showSecret(window: Window): () -> Unit {
         secrets++; applySecure(window)
+        // A recreated screen is back: what its old activity handed over can go now.
+        handoffs.toList().also { handoffs.clear() }.forEach { it() }
         var released = false
         return { if (!released) { released = true; secrets--; applySecure(window) } }
+    }
+
+    /** Releases a fold or rotation handed over, kept until the replacement shows a secret again. */
+    private val handoffs = mutableListOf<() -> Unit>()
+
+    /**
+     * Ends a secret as its screen leaves. When [recreating] (a fold or rotation), LaunchGateView's loading pass can come
+     * before the screen returns, so the count stays up until a secret is shown again: MainActivity and LaunchGateView then
+     * keep the new window secure from its first frame. [handoffMillis] releases it if no secret screen comes back.
+     */
+    fun releaseSecret(recreating: Boolean, release: () -> Unit) {
+        if (!recreating) return release()
+        handoffs += release
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (handoffs.remove(release)) release() }, handoffMillis)
     }
 
     fun reset() { prompt?.cancelAuthentication(); policy.setEnabled(false); enabled = false; locked = false }
 
     companion object {
+        const val handoffMillis = 5_000L
         const val authenticators = BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
         fun hasNoScreenLock(activity: FragmentActivity): Boolean =
             !(activity.getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isDeviceSecure

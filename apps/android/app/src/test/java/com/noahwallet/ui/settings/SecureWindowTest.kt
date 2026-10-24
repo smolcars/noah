@@ -51,4 +51,30 @@ class SecureWindowTest {
             assertFalse(secure())
         }
     }
+
+    @Test fun aFoldOrRotationHandsTheSecretToTheRecreatedScreen() {
+        Robolectric.buildActivity(ComponentActivity::class.java).setup().use { old ->
+            Robolectric.buildActivity(ComponentActivity::class.java).setup().use { new ->
+                val lock = lock(enabled = false)
+                val window = new.get().window
+                // A rotation: the leaving screen hands over, so the replacement window starts secure (MainActivity's applySecure).
+                lock.releaseSecret(recreating = true, lock.showSecret(old.get().window))
+                lock.applySecure(window)
+                assertTrue("the replacement starts secure", window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+                // The recreated screen shows its secret again: the handed-over count goes and only its own remains.
+                val again = lock.showSecret(window)
+                assertTrue(lock.secure)
+                again()
+                assertFalse("only the recreated screen held it", lock.secure)
+                // No secret screen comes back: the fallback lets go.
+                lock.releaseSecret(recreating = true, lock.showSecret(window))
+                assertTrue(lock.secure)
+                org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(WalletLock.handoffMillis))
+                assertFalse(lock.secure)
+                // Leaving (no recreation) releases at once.
+                lock.releaseSecret(recreating = false, lock.showSecret(window))
+                assertFalse(lock.secure)
+            }
+        }
+    }
 }

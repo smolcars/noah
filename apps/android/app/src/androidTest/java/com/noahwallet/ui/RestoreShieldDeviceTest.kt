@@ -23,7 +23,6 @@ import kotlinx.coroutines.withContext
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * With App lock off, the restore shield alone keeps FLAG_SECURE on from "Recovery phrase found" through Restoring and
@@ -63,25 +62,6 @@ class RestoreShieldDeviceTest {
         return on
     }
 
-    /** Samples the resumed activity's window on the main thread until closed; every sample must be secure. */
-    private inner class Sampler : AutoCloseable {
-        @Volatile private var running = true
-        val samples = AtomicInteger()
-        val gaps = AtomicInteger()
-        private val thread = kotlin.concurrent.thread {
-            while (running) {
-                instrumentation.runOnMainSync {
-                    ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).firstOrNull()?.let {
-                        samples.incrementAndGet()
-                        if (it.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE == 0) gaps.incrementAndGet()
-                    }
-                }
-                Thread.sleep(8)
-            }
-        }
-        override fun close() { running = false; thread.join() }
-    }
-
     @Test fun storedPhraseRestoreStaysSecure() = runBlocking<Unit> {
         assumeTrue(InstrumentationRegistry.getArguments().getString("noahRestoreShield") == "disposable-emulator")
         assertEquals("regtest", BuildConfig.APP_VARIANT)
@@ -100,7 +80,7 @@ class RestoreShieldDeviceTest {
             waitFor("Restore offered") { model.canRestoreWallet && button("Restore Wallet") != null }
             assertFalse("App lock is off, so only the restore shield secures the window", model.walletLock.enabled)
             assertTrue("Recovery phrase found is secure", secure(first))
-            Sampler().use { sampler ->
+            SecureWindowSampler(instrumentation).use { sampler ->
                 assertTrue(checkNotNull(button("Restore Wallet")).performAction(AccessibilityNodeInfo.ACTION_CLICK))
                 waitFor("Restoring shown") { model.restore.running && text("Restoring your wallet") != null }
                 // Well past the screen's exit animation, which used to take FLAG_SECURE with it.
@@ -125,6 +105,57 @@ class RestoreShieldDeviceTest {
         }
     }
 
+    /**
+     * The typed path: LaunchGateView's loading pass comes before onboarding after a recreation, so the shield is handed to
+     * the recreated screen rather than released. The phrase is the public BIP-39 test vector.
+     */
+    @Test fun typedPhraseRestoreStaysSecure() = runBlocking<Unit> {
+        assumeTrue(InstrumentationRegistry.getArguments().getString("noahRestoreShield") == "disposable-emulator")
+        assertEquals("regtest", BuildConfig.APP_VARIANT)
+        val location = WalletDataLocation(context.filesDir, "regtest")
+        assertFalse("Requires a disposable app without wallet data", location.hasAnyData)
+        var activity: Activity? = null
+        try {
+            val first = instrumentation.startActivitySync(Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+            activity = first
+            val model = withContext(Dispatchers.Main) { loadAppModel(first) }
+            waitFor("Onboarding") { model.launchState == LaunchState.onboarding }
+            assertFalse("App lock is off, so only the restore shield secures the window", model.walletLock.enabled)
+            fun click(title: String) {
+                waitFor("$title appears") { text(title) != null }
+                var target = text(title)
+                while (target != null && !target.isClickable) target = target.parent
+                assertTrue(target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true)
+            }
+            click("I already have a wallet")
+            val word = { find(automation.rootInActiveWindow) { it.isEditable && it.hintText?.toString()?.startsWith("Word ") == true } }
+            waitFor("Word fields") { word() != null }
+            assertTrue(checkNotNull(word()).performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, List(11) { "abandon" }.plus("about").joinToString(" "))
+            }))
+            waitFor("Restore enabled") { button("Restore") != null }
+            SecureWindowSampler(instrumentation).use { sampler ->
+                assertTrue(checkNotNull(button("Restore")).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                waitFor("Restoring shown") { model.restore.running && text("Restoring your wallet") != null }
+                Thread.sleep(2_000)
+                instrumentation.runOnMainSync { first.recreate() }
+                waitFor("Recreated in Restoring") { resumed().let { it != null && it !== first } && text("Restoring your wallet") != null }
+                activity = resumed()
+                Thread.sleep(2_000)
+                assertTrue("Still restoring after recreation", model.restore.running)
+                waitFor("The silent server fails the restore", 120_000) { model.restore.issue != null && !model.busy }
+                assertTrue("Never unshielded: ${sampler.gaps.get()} of ${sampler.samples.get()} samples", sampler.gaps.get() == 0)
+                assertTrue("Sampled throughout: ${sampler.samples.get()}", sampler.samples.get() > 100)
+                instrumentation.sendStatus(0, android.os.Bundle().apply { putString("typedShieldSamples", "${sampler.samples.get()}") })
+            }
+        } finally {
+            instrumentation.runOnMainSync { activity?.finish() }
+            SettingsStorage(context).removeAll()
+            location.directory.deleteRecursively(); location.restoreDirectory.deleteRecursively()
+        }
+    }
+
     /** Leaving onboarding for Home (or a launch gate) is what ends the shield; Restoring keeps it. */
     @Test fun shieldLastsThroughRestoringUntilHomeReplacesOnboarding() {
         val app = context.applicationContext as Application
@@ -143,7 +174,7 @@ class RestoreShieldDeviceTest {
             // The tree animates continuously, so wait on time rather than Compose idleness.
             Thread.sleep(1_500)
             assertTrue("Recovery phrase found is secure", secure(activity))
-            Sampler().use { sampler ->
+            SecureWindowSampler(instrumentation).use { sampler ->
                 // Stored phrase into Restoring, then the typed path (Restore into Restoring), each past its exit animation.
                 for (step in listOf("restoring", "restore", "restoring")) {
                     instrumentation.runOnMainSync { model.step = step }

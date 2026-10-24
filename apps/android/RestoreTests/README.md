@@ -334,13 +334,20 @@ text) all stay.
 Review fix: with App lock off, each restore screen's `RestoreShield` used to leave with the screen, so Restoring
 and Ready ran without FLAG_SECURE. That affected both the stored-phrase and the typed-phrase paths. Onboarding now
 holds one shield and clipboard across Restore or "Recovery phrase found", Restoring and Ready. It ends when Home or
-a launch gate replaces onboarding. On recreation, the old shield releases one main-thread message later, so
-`MainActivity` makes the new window secure before it is first shown.
+a launch gate replaces onboarding.
+
+Recreation: on a fold or rotation, a leaving secret hands its count to the lock (`WalletLock.releaseSecret`) instead of
+releasing it. The next `showSecret`, from the screen coming back, takes it over. This keeps `MainActivity`'s first
+`applySecure` and `LaunchGateView`'s loading pass (its gate state resets on recreation) from ever seeing a zero count.
+If no secret screen returns, a 5-second fallback releases the count. The Settings recovery-phrase page uses the same
+handover; before, it released immediately.
 
 `RestoreShieldDeviceTest` samples the resumed window's FLAG_SECURE:
-- **Opt-in run** (`-e noahRestoreShield disposable-emulator`, MainActivity, the silent server): 0 of 242 samples
-  were unshielded, across Restoring, a recreation and the failure return. The code before this fix had 228 of 244;
-  the fix without the delayed release on recreation had 1 of 241.
+- **Opt-in runs** (`-e noahRestoreShield disposable-emulator`, MainActivity, the silent server): 0 unshielded
+  samples, across Restoring, a recreation and the failure return.
+  - Stored phrase: 0 of 237. The code before this fix had 228 of 244; the fix without any delay on recreation had
+    1 of 241.
+  - Typed phrase: 0 of 232. Its route passes `LaunchGateView`'s loading pass.
 - **Hosted run** (always on): Restoring stays secure on both paths, and a Home stand-in replacing onboarding is not
   shielded.
 
@@ -361,7 +368,12 @@ with animator scale 0.
 
 Results:
 - `OnboardingFoldTest`, which now includes this screen, passed 3/3.
-- `RestoreShieldDeviceTest` passed 2/2.
+- `RestoreShieldDeviceTest` passed 3/3.
+- `RecoveryPhraseShieldDeviceTest` passed: 0 of 220 samples unshielded. It is opt-in
+  (`-e noahPhraseShield disposable-emulator`), creates a throwaway wallet and shows sample words, then rotates the
+  revealed Settings page; the rotation still hides the words. With only a one-message delay it found 2 of 207.
+- `SettingsDeviceTest`: 14 of 15 passed. The one failure, `aMigratedPaymentLimitShowsAndEditsItsLongCount`, is
+  on the recurring-payments path, which was already failing before this work.
 - `StoredSeedShotsTest` passed. It now asserts that a failure returns to "Recovery phrase found" with the error
   shown and Restore Wallet enabled.
 - `AdaptiveStateRestorationTest.restoreInputSurvivesRecreationButStillClearsOnBackground` passed.
@@ -375,4 +387,4 @@ Results:
     `isSingleLine`.
   - `interruptedJournalAndWaitingSecretNeverOfferCreation` waits for "Unlock your device", but that screen reads
     "Wallet recovery required".
-- Full JVM suite: 4,215 tests in 197 suites, 0 failures; the instrumentation APK builds.
+- Full JVM suite: 4,216 tests in 197 suites, 0 failures; the instrumentation APK builds.
