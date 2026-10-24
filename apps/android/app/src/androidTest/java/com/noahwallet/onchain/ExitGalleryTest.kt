@@ -55,6 +55,9 @@ class ExitGalleryTest {
         show("warn-exits") { ExitWarningContent(f.list, f.tip, 144, 5_533, false, f.money, {}, {}, {}, {}) }
         show("choose-all") { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, f.money, {}, estimate, {}, {}) }
         show("choose-pick") { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, f.money, {}, estimate, {}, {}, initial = listOf(f.vtxos[0].id, f.vtxos[8].id)) }
+        // bark's All estimate left c02 and dust c13 out; it refused c03. Picked ones that can't exit leave the total.
+        show("choose-renew") { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, f.money, {}, estimate, {}, {},
+            initial = f.vtxos.take(3).map { it.id }, refused = mapOf(f.vtxos[2].id to "Already spent"), excluded = setOf(f.vtxos[1].id, f.vtxos[12].id)) }
         show("choose-unfunded") { ExitChooseContent(f.vtxos, f.costs, 1_000, false, true, false, false, f.money, {}, estimate, {}, {}, initial = listOf(f.vtxos[0].id)) }
         val review = OnchainQuote(OnchainAction.startExit, "fixture", listOf(f.vtxos[0].id), amount = 31_000, fee = 262, chainFee = 5_533,
             confirmed = 18_400, feeRate = 3, transactions = 4)
