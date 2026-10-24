@@ -77,7 +77,8 @@ android {
     // Map limit tests build caches near the 32 MiB cap; Gradle's default 512 MiB worker can run out.
     testOptions {
         unitTests.isIncludeAndroidResources = true
-        unitTests.all { it.maxHeapSize = "2g" }
+        // Three forks halve the JVM suite (93 s to about 45 s) with no flakes in three runs (2026-10-24).
+        unitTests.all { it.maxHeapSize = "2g"; it.maxParallelForks = 3 }
     }
     namespace = "com.noahwallet"
     compileSdk = 37
