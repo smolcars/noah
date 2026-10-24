@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 
 /// Profile: you, then Name, Lightning address, Email, your Nostr key, the wallet key and My code.
@@ -10,6 +11,8 @@ struct ProfileView: View {
     @State private var name = ""
     @State private var key = ""
     @State private var sheet: Sheet?
+    /// The name being edited lives here, not in the sheet: rotating rebuilds the sheet.
+    @State private var nameDraft = ProfileNameDraft()
     @State private var message: String?
     @State private var haptics = OnboardingHaptics()
     @Environment(\.settingsFixture) private var fixture
@@ -33,6 +36,7 @@ struct ProfileView: View {
             VStack(spacing: 0) {
                 SettingsDetailRow(label: L10n.text("Name", locale: language), value: name.isEmpty ? L10n.text("Add", locale: language) : name) {
                     haptics.play(.light)
+                    nameDraft.begin(name)
                     sheet = .name
                 }
                 .accessibilityIdentifier("profile-name")
@@ -60,8 +64,8 @@ struct ProfileView: View {
         }
         .settingsChrome(nil)
         .onboardingHaptics(haptics)
-        .settingsSheet(item: $sheet) { _ in
-            ProfileNameSheet(initial: name) { saved in
+        .settingsSheet(item: $sheet, locked: nameDraft.busy) { _ in
+            ProfileNameSheet(draft: nameDraft) { saved in
                 sheet = nil
                 if let saved { name = saved }
             }
@@ -96,47 +100,71 @@ struct ProfileView: View {
     }
 }
 
+/// The name sheet's draft, busy state and error. Profile owns it, so a rotation or a pose change,
+/// which rebuilds the sheet, keeps what was typed and a save in progress.
+@MainActor @Observable
+final class ProfileNameDraft {
+    var text = "" {
+        didSet { if text != ProfileView.limitedName(text) { text = ProfileView.limitedName(text) } }
+    }
+    private(set) var busy = false
+    private(set) var error: String?
+
+    /// A fresh edit of the current name.
+    func begin(_ current: String) {
+        guard !busy else { return }
+        text = current
+        error = nil
+    }
+
+    /// Saves once at a time; the saved name (trimmed), or nil after a failure.
+    func save(_ action: (String) async throws -> Void) async -> String? {
+        guard !busy else { return nil }
+        busy = true
+        error = nil
+        defer { busy = false }
+        do {
+            try await action(text)
+            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            self.error = "Couldn't save your name. Please try again."
+            return nil
+        }
+    }
+}
+
 /// Profile → Name: today's 80-character name, saved to the server.
 private struct ProfileNameSheet: View {
-    let initial: String
+    let draft: ProfileNameDraft
     /// The saved name, or nil when cancelled.
     let done: (String?) -> Void
     @Environment(AppModel.self) private var model
     @Environment(SettingsSummary.self) private var summary: SettingsSummary?
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
-    @State private var name = ""
-    @State private var busy = false
-    @State private var error: String?
     @State private var haptics = OnboardingHaptics()
 
     var body: some View {
+        @Bindable var draft = draft
         SettingsSheetBody(title: L10n.text("Name", locale: locale.identifier), line: L10n.text("Shown to people you pay.", locale: locale.identifier)) {
-            SettingsField(placeholder: L10n.text("Name", locale: locale.identifier), text: $name, id: "profile-name-input")
-                .onChange(of: name) { _, value in name = ProfileView.limitedName(value) }
-                .disabled(busy)
-            if let error { SettingsFine(text: L10n.text(error, locale: locale.identifier), failure: true) }
+            SettingsField(placeholder: L10n.text("Name", locale: locale.identifier), text: $draft.text, id: "profile-name-input")
+                .disabled(draft.busy)
+            if let error = draft.error { SettingsFine(text: L10n.text(error, locale: locale.identifier), failure: true) }
         } actions: {
-            SettingsSheetButtons(cancel: L10n.text("Cancel", locale: locale.identifier), action: L10n.text("Save", locale: locale.identifier), busy: busy,
-                                 actionID: "profile-name-save", onCancel: { done(nil) }, onAction: save)
+            SettingsSheetButtons(cancel: L10n.text("Cancel", locale: locale.identifier), action: L10n.text("Save", locale: locale.identifier),
+                                 busy: draft.busy, actionID: "profile-name-save", onCancel: { done(nil) }, onAction: save)
         }
         .onboardingHaptics(haptics)
-        .onAppear { name = initial }
+        .interactiveDismissDisabled(draft.busy)
     }
 
     private func save() {
-        guard !busy else { return }
-        busy = true
-        error = nil
         Task {
-            defer { busy = false }
-            do {
-                try await model.server.saveDisplayName(name)
-                summary?.reloadLocal()
-                haptics.play(.success)
-                settings.toast("Saved")
-                done(name.trimmingCharacters(in: .whitespacesAndNewlines))
-            } catch { self.error = "Couldn't save your name. Please try again." }
+            guard let saved = await draft.save({ try await model.server.saveDisplayName($0) }) else { return }
+            summary?.reloadLocal()
+            haptics.play(.success)
+            settings.toast("Saved")
+            done(saved)
         }
     }
 }
