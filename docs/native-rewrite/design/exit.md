@@ -132,17 +132,18 @@ The user made these on 2026-10-24:
 
 Both platforms were built and reviewed to this spec, with these deviations. The user's later decisions and the reviews on 2026-10-24 settled them:
 
-1. **"Fees more than it's worth" uses each VTXO's standalone estimate,** not its deduplicated share (Decision 4). bark-bolt-ffi 0.6.0's estimate returns only set totals. Standalone errs on the safe side: "All" never includes an uneconomic VTXO, and at worst leaves out siblings that are only economic together, which the user can still choose. "All" can't be reviewed until every VTXO in the current set is classified. Replace this once the FFI gives per-transaction estimate data.
+1. **"Fees more than it's worth" uses each VTXO's standalone estimate,** not its deduplicated share (Decision 4). bark-bolt-ffi 0.6.0's estimate returns only set totals. Standalone errs on the safe side: "All" never includes an uneconomic VTXO, and at worst leaves out siblings that are only economic together, which the user can still choose. "All" can't be reviewed until every VTXO in the current set is classified. Replace this once the FFI gives per-transaction estimate data. (still open after 0.7.0: bark keeps the per-transaction breakdown private, so it needs a bark change).
 2. **"Needs on-chain funds" evidence (Decision 3).** bark's daemon reports nothing back, and Noah adds no progress calls of its own, because two callers of `progress_exits_with_cpfp` can each build a fee child (`bark/src/exit/bdk.rs:33-84`).
    - **The rule:** the label shows when the confirmed balance is below the parked package's fee (its own weight plus the fee child, at bark's exit fee rate).
    - **Required evidence:** a completed Check the chain, or one daemon sync interval (60 s) plus a margin within the current parking episode.
    - **Resets:** the waiting time restarts when the app returns from the background, and starting or cancelling an exit clears that exit's evidence.
+   - **Typed evidence (0.7.0):** when progress reports `exitInsufficientConfirmedFunds`, its `neededSats` is used directly. bark lib-0.8.0 never emits it during CPFP (bark write-up item 1), so the inference above is what users see today.
 3. **Waiting and "stuck"** count from the wallet tip at which Noah first saw each transaction in its current status, keyed by exit run and status episode. bark keeps a state's `tip_height` frozen while nothing changes (`bark/src/exit/progress/states.rs:169-173`), so its height can't be used.
 4. **"Stale"** shows only after a failed Check the chain, or when the wallet is open without the daemon (no path does that today). "Fees rose" counts only fee children from the transaction's current stay in the mempool.
 5. **Claim to this phone and auto-board (Decision 8).**
    - **The claimed set:** the claimed outpoints go into the handled ledger and into a separate claimed set, both written before broadcast. If the write fails, nothing is sent.
    - **What auto-board offers:** its threshold and amount leave out the value of claimed outpoints that are still unspent and confirmed.
-   - **The retry:** bark picks a board's inputs itself, so a preparation that spends a claimed coin is discarded and retried at 1% less (at least 1,000 sats less), up to 3 times. After that, there's no prompt. Replace this once `prepare_board` takes excluded outpoints.
+   - **Exclusions (bark-bolt-ffi 0.7.0, 2026-10-24):** auto-board passes the claimed outpoints to `prepareBoard(excludedOutpoints:)`, so bark's coin selection never spends them, and it prepares once. This replaced the earlier discard-and-retry-lower loop. A final input guard and the re-check at submit stay as defence.
    - **Unchanged:** manual Move to Ark.
 6. **A batched claim** splits its one fee evenly across the exits it covers, so the parts add up. The receipt (txid, actual fee, exits, destination) is written before broadcast, so a broadcast whose answer is lost still shows the net amount. bark's state still decides "Claimed".
 7. **Layout and missing data:**
