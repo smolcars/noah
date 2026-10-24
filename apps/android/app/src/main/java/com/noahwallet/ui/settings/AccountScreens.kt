@@ -10,18 +10,11 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import com.noahwallet.BuildConfig
-import com.noahwallet.services.server.Nostr
-import com.noahwallet.services.storage.SettingsPreferences
 import com.noahwallet.services.wallet.WalletConfiguration
 import com.noahwallet.ui.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.*
 import java.util.Locale
 
 @Composable
@@ -31,39 +24,6 @@ fun CopyRow(title: String, value: String) {
     SettingRow(title, if (copied) "Copied" else value) {
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(title, value))
         copied = true
-    }
-}
-
-@Composable
-fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
-    var name by rememberSaveable { mutableStateOf(limitedProfileName(SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.contentOrNull ?: "")) }
-    var server by remember { mutableStateOf(model.server.state) }
-    var key by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
-        try {
-            key = withContext(Dispatchers.IO) { com.noahwallet.services.server.ServerClient.loginKey(BuildConfig.APP_VARIANT, model.mnemonic().joinToString(" ")) }
-            model.server.refreshProfile(); server = model.server.state
-        } catch (_: Exception) { message = "Couldn't refresh your profile. Please try again." }
-    }
-    SettingsColumn {
-        SectionTitle("Name")
-        OutlinedTextField(name, { name = limitedProfileName(it) }, label = { Text(tr("Name")) }, modifier = Modifier.fillMaxWidth().testTag("profile-name-input"), singleLine = true, enabled = !model.busy)
-        NoahButton("Save", !model.busy) {
-            model.action("Couldn't save your name.") { model.server.saveDisplayName(name); name = name.trim(); message = "Saved" }
-        }
-        message?.let { Text(tr(it)) }
-        SectionTitle("Lightning Address")
-        server.lightningAddress?.let { CopyRow("Lightning Address", it) }
-        SettingRow("Edit Lightning Address") { navigate(SettingsDestination.Lightning) }
-        SectionTitle("Emergency Email")
-        if (server.isEmailVerified == true && server.emailAddress != null) CopyRow("Address", server.emailAddress!!)
-        else Text(tr(server.emailAddress ?: "No emergency email set"))
-        Text(tr(if (server.isEmailVerified == true) "Verified" else "Not verified"))
-        SettingRow("Edit Emergency Email") { navigate(SettingsDestination.Email) }
-        SectionTitle("Public Keys")
-        if (key.isNotEmpty()) CopyRow("Wallet public key", key)
-        Nostr.npub(server.nostrPubkey).takeIf { it.isNotEmpty() }?.let { CopyRow("Nostr Public Key", it) }
     }
 }
 

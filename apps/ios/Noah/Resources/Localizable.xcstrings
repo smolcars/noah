@@ -1297,6 +1297,42 @@
         }
       }
     },
+    "Adds a NIP-05 identity to the same address. Never paste an nsec.": {
+      "comment": "GT gt_04eb3a8bed8492d0; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a NIP-05 identity to the same address. Never paste an nsec."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a NIP-05 identity to the same address. Never paste an nsec."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a NIP-05 identity to the same address. Never paste an nsec."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a NIP-05 identity to the same address. Never paste an nsec."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a NIP-05 identity to the same address. Never paste an nsec."
+          }
+        }
+      }
+    },
     "Advanced": {
       "comment": "GT gt_9f088dbebd6c3c70; arguments: none",
       "extractionState": "manual",
@@ -7881,6 +7917,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ändra belopp"
+          }
+        }
+      }
+    },
+    "Change email": {
+      "comment": "GT gt_ff2ec2618b91b367; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change email"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change email"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change email"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change email"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change email"
           }
         }
       }
@@ -21589,6 +21661,42 @@
         }
       }
     },
+    "How people pay you.": {
+      "comment": "GT gt_f835827028c69977; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How people pay you."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How people pay you."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How people pay you."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How people pay you."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How people pay you."
+          }
+        }
+      }
+    },
     "How to send {amount}": {
       "comment": "GT gt_d6b7a9baccadd4b1; arguments: amount",
       "extractionState": "manual",
@@ -27421,6 +27529,42 @@
         }
       }
     },
+    "Never paste a private key. Use your npub.": {
+      "comment": "GT gt_9058de98f9840c3e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never paste a private key. Use your npub."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never paste a private key. Use your npub."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never paste a private key. Use your npub."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never paste a private key. Use your npub."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never paste a private key. Use your npub."
+          }
+        }
+      }
+    },
     "Never share your seed phrase with anyone. It is important to keep it safe and secure.": {
       "comment": "GT gt_290be13116ba7713; arguments: none",
       "extractionState": "manual",
@@ -30049,6 +30193,78 @@
         }
       }
     },
+    "Nostr key": {
+      "comment": "GT gt_5e2edf7902eab86b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key"
+          }
+        }
+      }
+    },
+    "Nostr key (optional)": {
+      "comment": "GT gt_e3df4eceed29d5f4; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key (optional)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key (optional)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key (optional)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key (optional)"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostr key (optional)"
+          }
+        }
+      }
+    },
     "Nostr public key (optional)": {
       "comment": "GT gt_51d97932518a114f; arguments: none",
       "extractionState": "manual",
@@ -31881,6 +32097,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Öppnar myntets detaljer"
+          }
+        }
+      }
+    },
+    "Optional. We only write when your bitcoin needs you.": {
+      "comment": "GT gt_4c48892477df67f4; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. We only write when your bitcoin needs you."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. We only write when your bitcoin needs you."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. We only write when your bitcoin needs you."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. We only write when your bitcoin needs you."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. We only write when your bitcoin needs you."
           }
         }
       }
@@ -42133,6 +42385,42 @@
         }
       }
     },
+    "Shown to people you pay.": {
+      "comment": "GT gt_07f7360db556274d; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown to people you pay."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown to people you pay."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown to people you pay."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown to people you pay."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown to people you pay."
+          }
+        }
+      }
+    },
     "Signed transaction size": {
       "comment": "GT gt_6e65049bf16d9dc9; arguments: none",
       "extractionState": "manual",
@@ -51961,6 +52249,42 @@
         }
       }
     },
+    "Wallet key": {
+      "comment": "GT gt_a30be676284ee1f2; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet key"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet key"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet key"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet key"
+          }
+        }
+      }
+    },
     "Wallet not open": {
       "comment": "GT gt_1db6ba4dfd2bc628; arguments: none",
       "extractionState": "manual",
@@ -53221,6 +53545,42 @@
         }
       }
     },
+    "Your address": {
+      "comment": "GT gt_aa7eb8c4c9ef6410; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your address"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your address"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your address"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your address"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your address"
+          }
+        }
+      }
+    },
     "Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.": {
       "comment": "GT gt_978433e18203431a; arguments: none",
       "extractionState": "manual",
@@ -53253,6 +53613,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Din säkerhetskopia återställdes, men konfigurationen kunde inte slutföras. Gör inte en ny återställning. Stäng och starta om Noah för att fortsätta."
+          }
+        }
+      }
+    },
+    "Your current email stays until the new one is verified.": {
+      "comment": "GT gt_8074a7762dd1f578; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your current email stays until the new one is verified."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your current email stays until the new one is verified."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your current email stays until the new one is verified."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your current email stays until the new one is verified."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your current email stays until the new one is verified."
           }
         }
       }
@@ -53361,6 +53757,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Din e-postadress har verifierats."
+          }
+        }
+      }
+    },
+    "Your email is only for urgent alerts about your wallet.": {
+      "comment": "GT gt_886bc67a71fe0f83; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your email is only for urgent alerts about your wallet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your email is only for urgent alerts about your wallet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your email is only for urgent alerts about your wallet."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your email is only for urgent alerts about your wallet."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your email is only for urgent alerts about your wallet."
           }
         }
       }
@@ -55353,42 +55785,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@: %2$@"
-          }
-        }
-      }
-    },
-    "{nativeValue1}@{nativeValue2}": {
-      "comment": "GT gt_6f9665f75e53113c; arguments: nativeValue1, nativeValue2",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@@%2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@@%2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@@%2$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@@%2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@@%2$@"
           }
         }
       }

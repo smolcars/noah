@@ -25,9 +25,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import androidx.compose.animation.togetherWith
-import com.noahwallet.BuildConfig
-import com.noahwallet.services.server.LightningIdentity
-import com.noahwallet.services.server.Nostr
 
 /**
  * The redesigned onboarding: Welcome → Creating → Name → Email → Notifications (→ battery) → Done, or
@@ -235,36 +232,6 @@ fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
             if (!registered) NoahButton("Retry registration", !model.busy, secondary = true) { register() }
             NoahButton(if (model.busy) "Please wait…" else "Send Verification Code", registered && email.isNotBlank() && !model.busy) { send() }
         }
-    }
-}
-
-@Composable
-fun LightningScreen(model: AppModel, onContinue: suspend () -> Unit) {
-    var username by rememberSaveable { mutableStateOf(model.server.state.lightningAddress?.substringBefore('@') ?: "") }
-    var npub by rememberSaveable { mutableStateOf(Nostr.npub(model.server.state.nostrPubkey)) }
-    val focus = LocalFocusManager.current
-    val domain = LightningIdentity.domain(BuildConfig.APP_VARIANT)
-    val unchanged = LightningIdentity.unchanged(username, npub, model.server.state.lightningAddress, model.server.state.nostrPubkey, domain)
-    fun finish() { focus.clearFocus(); model.action("Couldn't finish setup. Please try again.") { onContinue() } }
-    NoahForm("Choose your Lightning Address") {
-        Text(tr("Choose a Lightning username. You can optionally link a Nostr public key so the same address also works as a NIP-05 identifier."))
-        OutlinedTextField(username, { username = LightningIdentity.normalizeUsername(it) }, label = { Text(tr("Username")) },
-            modifier = Modifier.fillMaxWidth().testTag("lightning-username-input"), enabled = !model.busy, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-        Text(tr("$username@$domain"))
-        OutlinedTextField(npub, { npub = it }, label = { Text(tr("Nostr public key (optional)")) },
-            modifier = Modifier.fillMaxWidth(), enabled = !model.busy, singleLine = true)
-        Text(tr("Leave this blank to use Lightning without NIP-05. Only npub public keys are accepted; never paste an nsec private key."), style = MaterialTheme.typography.bodySmall)
-        NoahButton(if (unchanged) "Continue" else "Save", !model.busy && username.isNotBlank()) {
-            if (unchanged) { finish(); return@NoahButton }
-            try { LightningIdentity.payload(username, npub) }
-            catch (failure: IllegalArgumentException) { model.error = failure.message; return@NoahButton }
-            focus.clearFocus()
-            model.action("Failed to update Lightning address. Please try again.", useServerMessage = true) {
-                model.server.saveIdentity(username, npub); onContinue()
-            }
-        }
-        NoahButton("Skip", !model.busy, secondary = true) { finish() }
     }
 }
 

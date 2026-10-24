@@ -37,6 +37,7 @@
   <string name="gt_56ef8f20955f2564">"주소"</string>
   <string name="gt_a2617581771209f9">"주소 복사됨"</string>
   <string name="gt_abab57a3c4edabb6">"%1$s 매개변수의 주소 네트워크가 일치하지 않습니다"</string>
+  <string name="gt_04eb3a8bed8492d0">"Adds a NIP-05 identity to the same address. Never paste an nsec."</string>
   <string name="gt_9f088dbebd6c3c70">"Advanced"</string>
   <string name="gt_60784a76bfa6f1e6">"개발자용 고급 디버그 기능"</string>
   <string name="gt_eb6c016d2a3f5c97">"고급 개발자 작업"</string>
@@ -220,6 +221,7 @@
   <string name="gt_1478662458cf20d0">"체인 앵커"</string>
   <string name="gt_70cc1886428b724b">"체인 상태"</string>
   <string name="gt_028afe3eebb92266">"금액 변경"</string>
+  <string name="gt_ff2ec2618b91b367">"Change email"</string>
   <string name="gt_dd16e499335d3a53">"이메일 주소 변경"</string>
   <string name="gt_c52a96b66db5c212">"작업 상태 확인"</string>
   <string name="gt_ae1b6f51f5f5da9f">"결제 상태 확인"</string>
@@ -602,6 +604,7 @@
   <string name="gt_3a78695388b38b5c">"홈"</string>
   <string name="gt_28b8708f20cec955">"시간: %1$s"</string>
   <string name="gt_44f51ff976b00dd3">"How amounts are written."</string>
+  <string name="gt_f835827028c69977">"How people pay you."</string>
   <string name="gt_d6b7a9baccadd4b1">"%1$s 보내는 방법"</string>
   <string name="gt_4c2a3b5df96f8af7">"이미 지갑이 있어요"</string>
   <string name="gt_ef9a2be3b826ee15">"내역을 확인했습니다"</string>
@@ -764,6 +767,7 @@
   <string name="gt_e5cff1be1c0e3c93">"네트워크 불일치: 예상값 %1$s, 실제값 %2$s"</string>
   <string name="gt_6300ef800bb88429">"종료 없음"</string>
   <string name="gt_0d559c8d4e9ab250">"Nostr 개인 키를 절대 붙여넣지 마세요. npub 공개 키를 입력해 주세요."</string>
+  <string name="gt_9058de98f9840c3e">"Never paste a private key. Use your npub."</string>
   <string name="gt_290be13116ba7713">"시드 문구를 누구에게도 알려주지 마세요. 반드시 안전하게 보관하세요."</string>
   <string name="gt_87d5d56d886e2a24">"새 코인"</string>
   <string name="gt_5774c62707b2a954">"새 정기 결제"</string>
@@ -837,6 +841,8 @@
   <string name="gt_f02d150579902f58">"Info.plist에 NoahAppVariant가 없거나 유효하지 않습니다"</string>
   <string name="gt_dc937b59892604f5">"없음"</string>
   <string name="gt_00ae83d39713e4e0">"Nostr 공개 키"</string>
+  <string name="gt_5e2edf7902eab86b">"Nostr key"</string>
+  <string name="gt_e3df4eceed29d5f4">"Nostr key (optional)"</string>
   <string name="gt_51d97932518a114f">"Nostr 공개 키(선택 사항)"</string>
   <string name="gt_b94b03f4cd232a39">"Nostr 공개 키는 npub 인코딩을 사용해야 합니다"</string>
   <string name="gt_ca374c23ed92ea82">"등록되지 않음"</string>
@@ -888,6 +894,7 @@
   <string name="gt_f4ce6b8f22a13fe1">"브라우저에서 %1$s 열기"</string>
   <string name="gt_557d3ad870771176">"내장 BTC Map 여는 중…"</string>
   <string name="gt_eb4bbb3d312d0b21">"코인 상세 정보를 엽니다"</string>
+  <string name="gt_4c48892477df67f4">"Optional. We only write when your bitcoin needs you."</string>
   <string name="gt_f893fab7e39f5540">"그렇지 않으면 Android가 Noah를 일시 중지해 결제가 도착하지 않을 수 있습니다."</string>
   <string name="gt_3619cf0b90923a4b">"송신"</string>
   <string name="gt_84c9bc73297ace6e">"재정의된 시도"</string>
@@ -1174,6 +1181,7 @@
   <string name="gt_4aa5f4cd7ecfd4da">"결제 상세 정보 표시"</string>
   <string name="gt_93749012e2444865">"복구 구문 보기"</string>
   <string name="gt_d8425d416f6d496d">"지갑 잔액 표시"</string>
+  <string name="gt_07f7360db556274d">"Shown to people you pay."</string>
   <string name="gt_6e65049bf16d9dc9">"서명된 거래 크기"</string>
   <string name="gt_4f5664161ec4f520">"Ark와 서명 중"</string>
   <string name="gt_28d03596d24eeb4e">"건너뛰기"</string>
@@ -1447,6 +1455,7 @@
   <string name="gt_416b15a97bb7cb55">"지갑 엔드포인트"</string>
   <string name="gt_6a728f849818223b">"지갑 기록에서 이 결제가 실패했거나 취소된 것으로 확인됩니다."</string>
   <string name="gt_d5af5b7c0524458c">"아직 지갑을 백업할 준비가 되지 않았습니다"</string>
+  <string name="gt_a30be676284ee1f2">"Wallet key"</string>
   <string name="gt_1db6ba4dfd2bc628">"지갑이 열려 있지 않음"</string>
   <string name="gt_24a1e5675ef33e7c">"지갑 공개 키"</string>
   <string name="gt_157e2e4d3fa7c80a">"지갑 복구 필요"</string>
@@ -1482,10 +1491,13 @@
   <string name="gt_023163a6c1689601">"NIP-05 없이 라이트닝 주소가 업데이트되었습니다."</string>
   <string name="gt_c55213b20c1c4658">"사용할 라이트닝 주소"</string>
   <string name="gt_cc46cdc66a73235d">"내 복구 문구"</string>
+  <string name="gt_aa7eb8c4c9ef6410">"Your address"</string>
   <string name="gt_978433e18203431a">"백업은 복원되었지만 설정을 완료하지 못했습니다. 다시 복원하지 마세요. 계속하려면 Noah를 종료한 후 다시 시작하세요."</string>
+  <string name="gt_8074a7762dd1f578">"Your current email stays until the new one is verified."</string>
   <string name="gt_7f359127750635a9">"새 이메일 인증이 완료될 때까지 기존 이메일이 계속 사용됩니다."</string>
   <string name="gt_28b86cda15decf55">"새 이메일 인증이 완료될 때까지 기존 이메일(%1$s)이 계속 사용됩니다."</string>
   <string name="gt_d6b59de9fddcf2df">"이메일 인증이 완료되었습니다."</string>
+  <string name="gt_886bc67a71fe0f83">"Your email is only for urgent alerts about your wallet."</string>
   <string name="gt_460464d863bb054a">"암호화된 데이터베이스 백업을 내보냈습니다."</string>
   <string name="gt_0d9a2c325358aee0">"의견이 Noah 팀에 전달되었습니다."</string>
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
@@ -1544,7 +1556,6 @@
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s 결제됨"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
-  <string name="gt_6f9665f75e53113c">"%1$s@%2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"Ark 결제 %1$s건을 CSV 파일로 내보냅니다."</item>

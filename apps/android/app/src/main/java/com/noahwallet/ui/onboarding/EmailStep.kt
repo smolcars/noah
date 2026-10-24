@@ -147,7 +147,7 @@ private fun CodeHeadline(presentation: OnboardingPresentation, large: Boolean, v
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, enabled: Boolean, send: () -> Unit) {
+internal fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, enabled: Boolean, send: () -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val focus = remember { FocusRequester() }
@@ -201,7 +201,7 @@ private fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, enab
 
 /** "Send code" morphs into a spinner while sending. */
 @Composable
-private fun SendButton(enabled: Boolean, sending: Boolean, onClick: () -> Unit) {
+internal fun SendButton(enabled: Boolean, sending: Boolean, onClick: () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         val width by animateDpAsState(if (sending) NoahTokens.Size.button else maxWidth, NoahTokens.Motion.snappy(), label = "send")
         PillButton(tr("Send code"), Modifier.width(width), enabled = enabled, loading = sending, onClick = onClick)
@@ -209,7 +209,7 @@ private fun SendButton(enabled: Boolean, sending: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun CodeEntry(model: AppModel, presentation: OnboardingPresentation, onTyped: (String) -> Unit, resend: () -> Unit) {
+internal fun CodeEntry(model: AppModel, presentation: OnboardingPresentation, onTyped: (String) -> Unit, resend: () -> Unit) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val otp = presentation.otp

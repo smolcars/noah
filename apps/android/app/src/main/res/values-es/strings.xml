@@ -37,6 +37,7 @@
   <string name="gt_56ef8f20955f2564">"Dirección"</string>
   <string name="gt_a2617581771209f9">"Dirección copiada"</string>
   <string name="gt_abab57a3c4edabb6">"La red de la dirección no coincide con la esperada para el parámetro %1$s"</string>
+  <string name="gt_04eb3a8bed8492d0">"Adds a NIP-05 identity to the same address. Never paste an nsec."</string>
   <string name="gt_9f088dbebd6c3c70">"Advanced"</string>
   <string name="gt_60784a76bfa6f1e6">"Acciones avanzadas de depuración para desarrolladores"</string>
   <string name="gt_eb6c016d2a3f5c97">"Acciones avanzadas para desarrolladores"</string>
@@ -220,6 +221,7 @@
   <string name="gt_1478662458cf20d0">"Anclaje en la cadena"</string>
   <string name="gt_70cc1886428b724b">"Estado en la cadena"</string>
   <string name="gt_028afe3eebb92266">"Cambiar importe"</string>
+  <string name="gt_ff2ec2618b91b367">"Change email"</string>
   <string name="gt_dd16e499335d3a53">"Cambiar dirección de correo electrónico"</string>
   <string name="gt_c52a96b66db5c212">"Comprobar estado de la operación"</string>
   <string name="gt_ae1b6f51f5f5da9f">"Comprobar estado del pago"</string>
@@ -602,6 +604,7 @@
   <string name="gt_3a78695388b38b5c">"Inicio"</string>
   <string name="gt_28b8708f20cec955">"Horas: %1$s"</string>
   <string name="gt_44f51ff976b00dd3">"How amounts are written."</string>
+  <string name="gt_f835827028c69977">"How people pay you."</string>
   <string name="gt_d6b7a9baccadd4b1">"Cómo enviar %1$s"</string>
   <string name="gt_4c2a3b5df96f8af7">"Ya tengo una billetera"</string>
   <string name="gt_ef9a2be3b826ee15">"He revisado el historial"</string>
@@ -764,6 +767,7 @@
   <string name="gt_e5cff1be1c0e3c93">"La red no coincide: se esperaba %1$s, pero se obtuvo %2$s"</string>
   <string name="gt_6300ef800bb88429">"Nunca"</string>
   <string name="gt_0d559c8d4e9ab250">"Nunca pegues una clave privada de Nostr. Introduce una clave pública npub."</string>
+  <string name="gt_9058de98f9840c3e">"Never paste a private key. Use your npub."</string>
   <string name="gt_290be13116ba7713">"Nunca compartas tu frase semilla con nadie. Es importante guardarla en un lugar seguro."</string>
   <string name="gt_87d5d56d886e2a24">"Monedas nuevas"</string>
   <string name="gt_5774c62707b2a954">"Nuevo pago recurrente"</string>
@@ -837,6 +841,8 @@
   <string name="gt_f02d150579902f58">"Falta NoahAppVariant o no es válido en Info.plist"</string>
   <string name="gt_dc937b59892604f5">"Ninguno"</string>
   <string name="gt_00ae83d39713e4e0">"Clave pública de Nostr"</string>
+  <string name="gt_5e2edf7902eab86b">"Nostr key"</string>
+  <string name="gt_e3df4eceed29d5f4">"Nostr key (optional)"</string>
   <string name="gt_51d97932518a114f">"Clave pública de Nostr (opcional)"</string>
   <string name="gt_b94b03f4cd232a39">"Las claves públicas de Nostr deben usar la codificación npub"</string>
   <string name="gt_ca374c23ed92ea82">"Sin registrar"</string>
@@ -888,6 +894,7 @@
   <string name="gt_f4ce6b8f22a13fe1">"Abrir %1$s en el navegador"</string>
   <string name="gt_557d3ad870771176">"Abriendo BTC Map integrado…"</string>
   <string name="gt_eb4bbb3d312d0b21">"Abre los detalles de la moneda"</string>
+  <string name="gt_4c48892477df67f4">"Optional. We only write when your bitcoin needs you."</string>
   <string name="gt_f893fab7e39f5540">"Si no, Android puede pausar Noah y los pagos podrían dejar de llegar."</string>
   <string name="gt_3619cf0b90923a4b">"Saliente"</string>
   <string name="gt_84c9bc73297ace6e">"Intento anulado"</string>
@@ -1174,6 +1181,7 @@
   <string name="gt_4aa5f4cd7ecfd4da">"Mostrar detalles del pago"</string>
   <string name="gt_93749012e2444865">"Mostrar frase de recuperación"</string>
   <string name="gt_d8425d416f6d496d">"Mostrar saldo de la billetera"</string>
+  <string name="gt_07f7360db556274d">"Shown to people you pay."</string>
   <string name="gt_6e65049bf16d9dc9">"Tamaño de la transacción firmada"</string>
   <string name="gt_4f5664161ec4f520">"Firmando con Ark"</string>
   <string name="gt_28d03596d24eeb4e">"Omitir"</string>
@@ -1447,6 +1455,7 @@
   <string name="gt_416b15a97bb7cb55">"Puntos de conexión de la billetera"</string>
   <string name="gt_6a728f849818223b">"El historial de la billetera confirma que este pago falló o se canceló."</string>
   <string name="gt_d5af5b7c0524458c">"La billetera no está lista para crear una copia de seguridad"</string>
+  <string name="gt_a30be676284ee1f2">"Wallet key"</string>
   <string name="gt_1db6ba4dfd2bc628">"La billetera no está abierta"</string>
   <string name="gt_24a1e5675ef33e7c">"Clave pública de la billetera"</string>
   <string name="gt_157e2e4d3fa7c80a">"Es necesario recuperar la billetera"</string>
@@ -1482,10 +1491,13 @@
   <string name="gt_023163a6c1689601">"Tu dirección Lightning se ha actualizado sin NIP-05."</string>
   <string name="gt_c55213b20c1c4658">"Tu dirección Lightning será"</string>
   <string name="gt_cc46cdc66a73235d">"Tu frase de recuperación"</string>
+  <string name="gt_aa7eb8c4c9ef6410">"Your address"</string>
   <string name="gt_978433e18203431a">"Tu copia de seguridad se restauró, pero no se pudo completar la configuración. No vuelvas a restaurarla. Cierra y reinicia Noah para continuar."</string>
+  <string name="gt_8074a7762dd1f578">"Your current email stays until the new one is verified."</string>
   <string name="gt_7f359127750635a9">"Tu correo actual seguirá activo hasta que se verifique el nuevo correo."</string>
   <string name="gt_28b86cda15decf55">"Tu correo actual, %1$s, seguirá activo hasta que se verifique el nuevo correo."</string>
   <string name="gt_d6b59de9fddcf2df">"Tu correo electrónico se ha verificado correctamente."</string>
+  <string name="gt_886bc67a71fe0f83">"Your email is only for urgent alerts about your wallet."</string>
   <string name="gt_460464d863bb054a">"Se ha exportado la copia de seguridad cifrada de tu base de datos."</string>
   <string name="gt_0d9a2c325358aee0">"Tus comentarios se han enviado al equipo de Noah."</string>
   <string name="gt_d9a846242ed7a22f">"Tu frase de recuperación sigue guardada de forma segura en este dispositivo. Úsala para restaurar tu billetera desde su copia de seguridad."</string>
@@ -1544,7 +1556,6 @@
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s pagados"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
-  <string name="gt_6f9665f75e53113c">"%1$s@%2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"%1$s pago de Ark como archivo CSV."</item>

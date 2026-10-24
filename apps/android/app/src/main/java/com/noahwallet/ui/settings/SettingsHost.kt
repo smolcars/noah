@@ -196,9 +196,9 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
     @Composable fun Today(title: String, content: @Composable () -> Unit) = SettingsFrame(title, nav.back, bare = true) { legacy(content) }
     when (key) {
         SettingsDestination.Settings -> SettingsRoot(model, live, nav, selected = null, initialSheet = initialSheet)
-        SettingsDestination.Profile -> Today(tr("Profile")) { ProfileScreen(model) { nav.open(it) } }
-        SettingsDestination.Lightning -> Today(tr("Lightning address")) { com.noahwallet.ui.LightningScreen(model) { nav.pop() } }
-        SettingsDestination.Email -> Today(tr("Email")) { com.noahwallet.ui.EmergencyEmailScreen(model) { nav.pop() } }
+        SettingsDestination.Profile -> ProfilePage(model, nav)
+        SettingsDestination.Lightning -> LightningAddressPage(model, nav)
+        SettingsDestination.Email -> EmailPage(model, nav)
         SettingsDestination.Seed -> Today(tr("Recovery phrase")) { com.noahwallet.ui.MnemonicScreen(model, onBackedUp = nav.pop) }
         SettingsDestination.Backup -> Today(tr("Backup")) { BackupSettingsScreen(model) }
         SettingsDestination.Export -> Today(tr("Export file")) { ExportScreen(model) }

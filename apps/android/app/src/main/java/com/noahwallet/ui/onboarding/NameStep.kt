@@ -40,7 +40,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /** The public LNURL lookup only hints; `update_lightning_identity` decides. */
-private suspend fun lookup(model: AppModel, name: String): NameLookup = withContext(Dispatchers.IO) {
+internal suspend fun lookup(model: AppModel, name: String): NameLookup = withContext(Dispatchers.IO) {
     try {
         when (val result = WellKnownLnurlpClient(model.services.client).lnurlpRequest(name)) {
             is NetworkResult.Success -> NameLookup.found
@@ -58,7 +58,6 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
     val play = remember { presentation.firstShow("name") }
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    var focused by remember { mutableStateOf(false) }
     val domain = LightningIdentity.domain(BuildConfig.APP_VARIANT)
     val name = presentation.name
     val availability = presentation.availability
@@ -100,31 +99,8 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
     }, headline = { large ->
         Headline(tr("Pick a name"), tr("This is how people pay you."), large, modifier = Modifier.entrance(0, play))
     }, form = {
-        Column(Modifier.padding(top = formGap(NoahTokens.Space.xxxl)).entrance(2, play)) {
-            FlowRow(verticalArrangement = Arrangement.Bottom, itemVerticalAlignment = Alignment.Bottom) {
-                val label = tr("Pick a name")
-                BasicTextField(name, { presentation.name = NameRules.normalize(it) },
-                    Modifier.width(IntrinsicSize.Min).focusRequester(focus).onFocusChanged { focused = it.isFocused }
-                        .semantics { contentDescription = label },
-                    enabled = !model.busy,
-                    textStyle = NoahTokens.Typography.handle.copy(color = palette.foreground),
-                    cursorBrush = SolidColor(palette.orange), singleLine = true,
-                    keyboardOptions = KeyboardOptions(KeyboardCapitalization.None, autoCorrectEnabled = false,
-                        keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { save() }),
-                    decorationBox = { inner ->
-                        Box {
-                            if (name.isEmpty()) Text(tr("name"), style = NoahTokens.Typography.handle, color = palette.muted.copy(alpha = .4f),
-                                modifier = Modifier.clearAndSetSemantics { })
-                            inner()
-                        }
-                    })
-                Text("@$domain", Modifier.padding(start = 3.dp, bottom = 6.dp),
-                    style = NoahTokens.Typography.body.copy(fontWeight = FontWeight.Medium), color = palette.muted)
-            }
-            Spacer(Modifier.height(NoahTokens.Space.m))
-            Underline(focused)
-        }
+        NameField(name, { presentation.name = it }, domain, !model.busy, focus, tr("Pick a name"), { save() },
+            Modifier.padding(top = formGap(NoahTokens.Space.xxxl)).entrance(2, play))
         AvailabilityRow(availability, Modifier.padding(top = 14.dp).entrance(3, play))
         if (availability == NameAvailability.taken) FlowRow(Modifier.padding(top = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(NoahTokens.Space.s), verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.s)) {
@@ -137,8 +113,42 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
     })
 }
 
+/** The handle field (onboarding's name, Settings' Lightning address): the name, "@domain" and the orange underline. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AvailabilityRow(state: NameAvailability, modifier: Modifier) {
+internal fun NameField(name: String, onName: (String) -> Unit, domain: String, enabled: Boolean, focus: FocusRequester, label: String,
+                       onDone: () -> Unit, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    var focused by remember { mutableStateOf(false) }
+    Column(modifier) {
+        FlowRow(verticalArrangement = Arrangement.Bottom, itemVerticalAlignment = Alignment.Bottom) {
+            BasicTextField(name, { onName(NameRules.normalize(it)) },
+                Modifier.width(IntrinsicSize.Min).focusRequester(focus).onFocusChanged { focused = it.isFocused }
+                    .semantics { contentDescription = label },
+                enabled = enabled,
+                textStyle = NoahTokens.Typography.handle.copy(color = palette.foreground),
+                cursorBrush = SolidColor(palette.orange), singleLine = true,
+                keyboardOptions = KeyboardOptions(KeyboardCapitalization.None, autoCorrectEnabled = false,
+                    keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onDone() }),
+                decorationBox = { inner ->
+                    Box {
+                        if (name.isEmpty()) Text(tr("name"), style = NoahTokens.Typography.handle, color = palette.muted.copy(alpha = .4f),
+                            modifier = Modifier.clearAndSetSemantics { })
+                        inner()
+                    }
+                })
+            Text("@$domain", Modifier.padding(start = 3.dp, bottom = 6.dp),
+                style = NoahTokens.Typography.body.copy(fontWeight = FontWeight.Medium), color = palette.muted)
+        }
+        Spacer(Modifier.height(NoahTokens.Space.m))
+        Underline(focused)
+    }
+}
+
+/** The availability line under a name; [mine] reads "Your address" for the name you already have. */
+@Composable
+internal fun AvailabilityRow(state: NameAvailability, modifier: Modifier, mine: Boolean = false) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val pop = remember { Animatable(1f) }
@@ -147,7 +157,7 @@ private fun AvailabilityRow(state: NameAvailability, modifier: Modifier) {
         NameAvailability.empty, NameAvailability.unknown -> tr("Letters and numbers")
         NameAvailability.tooShort -> tr("At least 3 characters")
         NameAvailability.checking -> tr("Checking")
-        NameAvailability.available -> tr("Available")
+        NameAvailability.available -> if (mine) tr("Your address") else tr("Available")
         NameAvailability.taken -> tr("Taken")
     }
     Row(modifier.heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically) {
