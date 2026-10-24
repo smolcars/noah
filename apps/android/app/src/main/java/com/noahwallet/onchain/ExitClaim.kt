@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.currentStateAsState
 import com.noahwallet.BuildConfig
 import com.noahwallet.localization.tr
 import com.noahwallet.ui.AppModel
@@ -58,10 +59,12 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
         if (to == ClaimTo.phone && phone == null) try { phone = phoneAddress() }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { phoneError = true }
     }
-    // Today's claim review for this destination: read-only, fresh for 30 s, asked again when the destination changes.
-    LaunchedEffect(destination, ids) {
+    // Today's claim review for this destination: read-only, fresh for 30 s, asked again when the destination changes and when
+    // the page comes back (pausing drops it), so Claim never stays off.
+    val resumed = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    LaunchedEffect(destination, ids, resumed) {
         model.invalidate()
-        if (destination == null || ids.isEmpty()) return@LaunchedEffect
+        if (destination == null || ids.isEmpty() || !resumed) return@LaunchedEffect
         delay(300)
         model.review(OnchainAction.claim, ids, destination = destination)
     }

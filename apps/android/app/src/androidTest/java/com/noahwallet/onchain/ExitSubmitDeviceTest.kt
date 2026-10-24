@@ -209,6 +209,21 @@ class ExitSubmitDeviceTest {
         assertEquals(1, journal().count { it.quote.action == OnchainAction.startExit })
     }
 
+    @Test fun aClaimReviewDroppedByPausingIsAskedForAgain() {
+        val bark = Bark(id).apply { spendable = false; exit = ExitState.Claimable(921_493u, BlockRef(921_493u, "block"), null) }
+        process = launch(bark)
+        host { model -> ExitClaimScreen(model, nav, { error("unused") }, false, f.money) {} }
+        settle("the claimable exit") { exists("exit-claim-address") }
+        compose.onNode(hasSetTextAction() and (hasTestTag("exit-claim-address") or hasAnyAncestor(hasTestTag("exit-claim-address")))).performTextInput(regtest)
+        settle("the review") { enabled("exit-hold-claim") }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+        settle("pausing to drop it") { models.last().quote == null }
+        assertFalse(enabled("exit-hold-claim"))
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        settle("the review again") { enabled("exit-hold-claim") }
+        assertTrue("nothing was submitted", bark.calls.isEmpty())
+    }
+
     @Test fun claimingAsksBarkOnceThroughAPostureChangeAndProcessDeath() {
         val bark = Bark(id).apply { spendable = false; exit = ExitState.Claimable(921_493u, BlockRef(921_493u, "block"), null) }
         process = launch(bark)
