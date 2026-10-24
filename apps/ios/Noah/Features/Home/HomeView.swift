@@ -90,6 +90,8 @@ struct HomeView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: Route.self, destination: destination)
         }
+        // Measured on the stack, which stays on screen while Settings is pushed over Home.
+        .onboardingWindow($window)
         // The phone's tab bar hides while Settings is open.
         .preference(key: ActivityHidesTabBar.self, value: !window.wide && path.contains(where: \.isSettings))
         .environment(\.settings, settingsNavigator)
@@ -123,7 +125,6 @@ struct HomeView: View {
         .background {
             if !model.isWalletSuspended { AutoBoardingService(message: $autoBoardMessage) }
         }
-        .onboardingWindow($window)
         .onChange(of: window.wide) { _, wide in scrollMemory.layoutChanged(toWide: wide) }
         .onboardingHaptics(haptics)
         .modifier(observation)
