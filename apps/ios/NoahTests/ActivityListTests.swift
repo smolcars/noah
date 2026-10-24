@@ -96,6 +96,25 @@ struct ActivityListTests {
         #expect([ark, lightning, failed, canceled].filter(HistoryCSV.exports).count == 3)
     }
 
+    @Test func csvExportsAnAmountlessRetrysProvenDebitOrABlankCell() {
+        // Attempt 1 failed at 1,000; the retry paid 2,000 (+80). Bark kept attempt 1's destination amount.
+        var paid = Self.row("movement-4", "2026-10-22T12:00:00Z", amount: 1_000, direction: "outgoing", type: "Bolt11")
+        paid.subsystemName = "bark.lightning_send"
+        paid.sentTo = [.init(destination: ActivityMappingTests.amountlessInvoice, amount_sat: 1_000, paymentMethod: "invoice")]
+        paid.effectiveBalanceSat = -2_080
+        var lines = HistoryCSV(transactions: [paid], currency: "USD").content.split(separator: "\n", omittingEmptySubsequences: false)
+        #expect(lines[0] == "Payment ID,Date,Type,Status,Direction,Amount (sats),BTC Price (USD),Transaction ID,Destination")
+        #expect(lines[1].split(separator: ",", omittingEmptySubsequences: false)[5] == "-2080")
+        paid.effectiveBalanceSat = nil
+        lines = HistoryCSV(transactions: [paid], currency: "USD").content.split(separator: "\n", omittingEmptySubsequences: false)
+        let cells = lines[1].split(separator: ",", omittingEmptySubsequences: false)
+        #expect(cells.count == 9 && cells[5].isEmpty, "a blank cell, never 1000")
+        // A fixed-amount payment keeps today's cell.
+        var fixed = paid
+        fixed.sentTo = [.init(destination: ActivityMappingTests.coffeeInvoice, amount_sat: 1_000, paymentMethod: "invoice")]
+        #expect(HistoryCSV.amount(fixed) == "-1000")
+    }
+
     @Test func hiddenAmountsShowDots() {
         let row = HomeActivityRow(Self.row("ark", "2026-10-22T12:00:00Z", direction: "outgoing"), ownDomain: "noahwallet.io")
         #expect(row.amount(unit: .bip177, hidden: true, locale: Locale(identifier: "en")) == "••••")
