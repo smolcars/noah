@@ -119,7 +119,7 @@ private val navHeight = 56.dp
 internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifier = Modifier, line: String? = null, hero: Boolean = false,
                            chip: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {},
                            foot: (@Composable RowScope.() -> Unit)? = null, scroll: ScrollState? = rememberScrollState(),
-                           bare: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+                           bare: Boolean = false, footFade: Float = .46f, content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val reduceMotion = LocalReduceMotion.current
@@ -170,7 +170,7 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
         }
         foot?.let { actionsRow ->
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), .46f to palette.background))
+                .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), footFade to palette.background))
                 .padding(start = start, end = if (wide) 24.dp else end, top = 48.dp, bottom = if (wide) 24.dp else 28.dp)) {
                 Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp), content = actionsRow)
             }

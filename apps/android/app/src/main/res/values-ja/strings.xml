@@ -15,6 +15,7 @@
   <string name="gt_d58fd353bb1b174f">"約20分 · 推定手数料 %1$s"</string>
   <string name="gt_388e5f8e82667507">"約20分 · 手数料 %1$s"</string>
   <string name="gt_962a08a8878d9a42">"Noahについて"</string>
+  <string name="gt_a520965e40a8e4d5">"About %1$s a VTXO now, from your on-chain bitcoin."</string>
   <string name="gt_df717e92d8745fc7">"再度承認する前に、現在の支払いを確認してください。"</string>
   <string name="gt_64cff1319d2fd2cb">"操作"</string>
   <string name="gt_bc0daf560b7f0b9d">"操作が正常に完了しました"</string>
@@ -26,9 +27,11 @@
   <string name="gt_a301e27dce0ce4cd">"実際のオンチェーン手数料"</string>
   <string name="gt_9fd728c66c9a256b">"追加"</string>
   <string name="gt_322c0e13ef4fa485">"メモを追加"</string>
+  <string name="gt_2f0183c4e7f054bf">"Add about %1$s on-chain first. Each exit transaction\'s fee comes from there."</string>
   <string name="gt_223e44268146e60d">"金額を追加"</string>
   <string name="gt_82767841e4f8c995">"先に金額を追加してください"</string>
   <string name="gt_00df1293cf6d241b">"Lightningで受け取る金額を入力"</string>
+  <string name="gt_7bf06b339959a3be">"Add on-chain funds"</string>
   <string name="gt_ef61c03bbcda7402">"スクリーンショットを追加"</string>
   <string name="gt_fcdcc9c0caf001eb">"メールアドレスを追加"</string>
   <string name="gt_73886d4afd4c8e01">"メモを追加すると、この支払いはLightning経由で行われます。"</string>
@@ -48,6 +51,7 @@
   <string name="gt_a52ace420f2175d0">"すべて"</string>
   <string name="gt_dafb15f7c8ae0a82">"すべて受け取り可能になる時点"</string>
   <string name="gt_22a80351096850d8">"すべて受け取り可能になるブロック：%1$s"</string>
+  <string name="gt_d9639aadea54e91a">"All exits"</string>
   <string name="gt_dbffa8bd40a8f321">"ウォレットのすべての操作が無効になっています。設定でウォレットを再開してください。"</string>
   <string name="gt_e18835ef2f6c8558">"カメラの使用を許可"</string>
   <string name="gt_8074d363626518da">"支払い用QRコードを読み取るには、設定でカメラへのアクセスを許可してください。"</string>
@@ -81,6 +85,7 @@
   <string name="gt_ba2b359463cd8640">"Ark手数料"</string>
   <string name="gt_03fc60ebe53fdf56">"Arkが預かっています"</string>
   <string name="gt_084e20c59e73feb6">"Lightningの支払い中はArkが預かります"</string>
+  <string name="gt_0bd893d3e340e0fe">"Ark is faster and cheaper"</string>
   <string name="gt_a82ff39c153e2885">"Arkの受取額"</string>
   <string name="gt_e3fdc6fb344a217d">"Arkラウンド"</string>
   <string name="gt_bb52f900a0567ac9">"Arkサーバー"</string>
@@ -149,7 +154,6 @@
   <string name="gt_5538c35c05d2ea68">"Bitcoinマップ"</string>
   <string name="gt_574c3a5e56925ad9">"ビットコインアドレス"</string>
   <string name="gt_1b7ede8a6599a2f7">"ビットコインとArkをひとつのコードに。Lightningには金額を追加"</string>
-  <string name="gt_4607d70ecce0e406">"Bitcoin入金アドレス"</string>
   <string name="gt_1b56841e496f03f9">"ビットコイン入金アドレスのQRコード"</string>
   <string name="gt_ee54572769ce5499">"Bitcoin送金先アドレス"</string>
   <string name="gt_d02d0e8a04250582">"Arkのビットコインはすぐに送れて、送金コストも抑えられます。"</string>
@@ -186,6 +190,7 @@
   <string name="gt_d6e645b7d2b2da64">"電話"</string>
   <string name="gt_c0e4c9ea037a36e4">"QRコードを読み取るにはカメラの使用許可が必要です。"</string>
   <string name="gt_caed8de2afc3776f">"カメラを利用できません。読み取り画面を閉じて再試行してください。"</string>
+  <string name="gt_066a27d543018358">"Can\'t be undone"</string>
   <string name="gt_19766ed6ccb2f4a3">"キャンセル"</string>
   <string name="gt_804eb334c4bd5e69">"出金をキャンセル"</string>
   <string name="gt_d00194635dcfa015">"支払いをキャンセル"</string>
@@ -228,11 +233,15 @@
   <string name="gt_0dfe1d63c9d86896">"確認中"</string>
   <string name="gt_ec963ffc911b8401">"確認中…"</string>
   <string name="gt_0a84829094f5cfed">"子取引"</string>
+  <string name="gt_c7f937836f5d82d5">"Choose"</string>
+  <string name="gt_8a0840da9df48f32">"Choose VTXOs"</string>
   <string name="gt_ec1ad72325f469f2">"支払いに十分な残高を選択してください。"</string>
   <string name="gt_3b5a71ad765370b3">"残高を選択"</string>
   <string name="gt_3c23f7c4e7718d4f">"支払い方法を選択"</string>
+  <string name="gt_3ff1868e9c56300e">"Choose the VTXOs to exit"</string>
   <string name="gt_6ac674c9f0a80fb1">"都市検索を利用できません。"</string>
   <string name="gt_05f4e6f4ede4a216">"出金資金を受け取る"</string>
+  <string name="gt_b7d762b9330eb38c">"Claim fee"</string>
   <string name="gt_0c6a6352089917f2">"バックグラウンドで支払いを受け取る"</string>
   <string name="gt_03baf110b771f684">"回収した資金を受け取る"</string>
   <string name="gt_aa87e940cf06cc86">"受け取り申請を送信しました。更新して確認状況を確認してください。"</string>
@@ -288,6 +297,7 @@
   <string name="gt_63ba394601c5c4aa">"%1$sをコピー"</string>
   <string name="gt_2cbe9c9f6490fc8c">"%1$sをコピー"</string>
   <string name="gt_3c0179f73e2f914c">"%1$sをコピー"</string>
+  <string name="gt_8e71221ac7fa5a0e">"Costs on-chain fees"</string>
   <string name="gt_18abee57c90f531e">"ライトニング請求書を生成できませんでした。もう一度お試しください。"</string>
   <string name="gt_3edd56c6165589b7">"受け取りリクエストを作成できませんでした。もう一度お試しください。"</string>
   <string name="gt_ddb95fbc0846aba8">"BTC Mapを開けませんでした"</string>
@@ -321,6 +331,7 @@
   <string name="gt_1c37497466d54115">"確認画面を準備できませんでした。何も送信されていません。ウォレットの準備ができてからもう一度お試しください。"</string>
   <string name="gt_c3cdb5dbb6be37f2">"スクリーンショットを読み取れませんでした。再試行してください。"</string>
   <string name="gt_89f8973b092ae069">"ウォレットの状態を読み取れませんでした。下に引いて更新してください。"</string>
+  <string name="gt_93b14ee46cda2935">"Couldn\'t record that these coins stay on-chain, so nothing was sent. Try again."</string>
   <string name="gt_b8e043dbc53a4a4c">"プロフィールを更新できませんでした。再試行してください。"</string>
   <string name="gt_d08dea249a1c48bb">"再登録できませんでした。再試行してください。"</string>
   <string name="gt_b8f165e6a90e3092">"UnifiedPushに登録できませんでした。再試行してください。"</string>
@@ -408,6 +419,7 @@
   <string name="gt_3a9f176a663d540d">"緊急連絡用メールアドレス"</string>
   <string name="gt_a9214c2e38df7318">"緊急出金"</string>
   <string name="gt_b8eea92a324ae5b4">"緊急出金"</string>
+  <string name="gt_6b37661a5dd8e8ae">"Emergency use only. It takes your bitcoin out of Ark without Ark\'s server."</string>
   <string name="gt_cade2f4efb6f7c99">"エミュレーター"</string>
   <string name="gt_1cd009ba27e712a8">"ウォレット認証を有効にする"</string>
   <string name="gt_732891401030ce05">"このスマートフォンから送信される前に、復元フレーズで暗号化されます。"</string>
@@ -486,6 +498,7 @@
   <string name="gt_292ce5ce3450f0b4">"チェーンへ退出中"</string>
   <string name="gt_5e561017c8169c76">"退出"</string>
   <string name="gt_db5f066a21225f71">"退出の出金処理を進めました。トランザクションがブロードキャストされたか、手数料が引き上げられた可能性があります。"</string>
+  <string name="gt_26377ba9c6b97926">"Exits use it once it confirms."</string>
   <string name="gt_e72d5d8d0b167d21">"展開済み"</string>
   <string name="gt_ed051741d4064ad6">"整数トークンが必要です"</string>
   <string name="gt_424a2551d356754c">"期限切れ"</string>
@@ -528,6 +541,8 @@
   <string name="gt_26290dab5e50b113">"既存の支払いの手数料：%1$s sats"</string>
   <string name="gt_6c6cc6eb80efa410">"手数料率"</string>
   <string name="gt_aac77df347205252">"フィードバック"</string>
+  <string name="gt_779ff4584d72f733">"Fees are more than these VTXOs are worth."</string>
+  <string name="gt_e2a3937904b6bf08">"Fees more than it\'s worth"</string>
   <string name="gt_c7e61b7092a55da5">"バックアップを取得中…"</string>
   <string name="gt_2a246cca8735d1b7">"減らす"</string>
   <string name="gt_1369793595356d9d">"法定通貨の換算レートを取得できません：%1$s"</string>
@@ -595,6 +610,7 @@
   <string name="gt_cd65f6dcab984750">"書き留めました"</string>
   <string name="gt_306becc0aba824d9">"履歴を確認したので、新しい支払いを開始"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
+  <string name="gt_653b28e6a3e022c8">"If Ark works, send to a Bitcoin address instead."</string>
   <string name="gt_1d93f10792a18bf1">"未成熟"</string>
   <string name="gt_86a486e897edd1bc">"VTXOをインポート"</string>
   <string name="gt_1016441cc23c561f">"ラウンド参加中"</string>
@@ -602,6 +618,7 @@
   <string name="gt_c1f88e9d6c4145cf">"進行中"</string>
   <string name="gt_f868160d0a466230">"数秒で"</string>
   <string name="gt_9fff0400bb9e73d5">"このウォレットの残高"</string>
+  <string name="gt_13f9f26fa93bba36">"In use right now"</string>
   <plurals name="gt_da31d49e931af4ab">
     <item quantity="one">"%1$s個のVTXO"</item>
     <item quantity="other">"%1$s個のVTXO"</item>
@@ -670,6 +687,9 @@
   <string name="gt_b9249da7761d28ae">"最新のブロック高：%1$s"</string>
   <string name="gt_fc6e4a408d56be96">"閉じる"</string>
   <string name="gt_58eb9032e3bb83f0">"残り"</string>
+  <string name="gt_8d889b2a0398edd9">"Left out, fees more than they\'re worth: %1$s. Choose them to exit them anyway."</string>
+  <string name="gt_71dd91736743204f">"Left out, in use right now: %1$s."</string>
+  <string name="gt_1b02259449b4abf0">"Left out, too small to exit: %1$s."</string>
   <string name="gt_68dc9d6d2e2e87ef">"旧式のAndroidコールバック"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Noah をバックグラウンドで動かす"</string>
   <string name="gt_e085922bf6346107">"Lightningの受け取りのためにNoahを起動できます"</string>
@@ -755,6 +775,8 @@
   <string name="gt_c1ebc7817870e5be">"対応が必要"</string>
   <string name="gt_1744b96470b51bf3">"ネットワーク"</string>
   <string name="gt_82c5067df6801187">"ネットワーク手数料"</string>
+  <string name="gt_598ce3ccc02e5890">"Network fees"</string>
+  <string name="gt_6c79c5d1bd98b91d">"Network fees come from your on-chain %1$s at %2$s sat/vB. Transactions your VTXOs share are paid once. Fees may change."</string>
   <string name="gt_e5cff1be1c0e3c93">"ネットワークが一致しません：想定は%1$s、実際は%2$s"</string>
   <string name="gt_6300ef800bb88429">"終了しない"</string>
   <string name="gt_0d559c8d4e9ab250">"Nostrの秘密鍵は絶対に貼り付けないでください。npub公開鍵を入力してください。"</string>
@@ -874,6 +896,7 @@
   <string name="gt_1e86a7752acde6de">"定期支払いではオンチェーンアドレスはまだ利用できません"</string>
   <string name="gt_ba6aa54176784a6b">"オンチェーンウォレット"</string>
   <string name="gt_f5795926f351bd4a">"オンチェーン · ブロック待ち"</string>
+  <string name="gt_0c2cf5c7019fb7dd">"Once its last transaction is sent."</string>
   <string name="gt_0cc23d9ecbb9986c">"開始すると、Noahはバックグラウンドで退出処理を自動的に進めます。退出取引のブロードキャストや手数料の引き上げを行い、オンチェーン残高から手数料を支払います。回収額から差し引かれるのは受け取り手数料のみです。キャンセルできるのは、最後の退出取引がブロードキャストされるまでです。"</string>
   <string name="gt_acc38e1a7250680d">"開始すると、Noahはバックグラウンドで退出処理を自動的に進めます。退出取引のブロードキャストや手数料の引き上げを行い、オンチェーン残高から手数料を支払います。表示される手数料は見積もりであり、変わる場合があります。回収額から差し引かれるのは受け取り手数料のみです。キャンセルできるのは、最後の退出取引がブロードキャストされるまでです。"</string>
   <string name="gt_90822ee1d520d059">"オンチェーン"</string>
@@ -904,6 +927,7 @@
   <string name="gt_51a87000f35dc875">"重複支払い防止を解除…"</string>
   <string name="gt_fb81b961af456e5e">"支払い完了"</string>
   <string name="gt_a0145d18401ff94f">"Ark残高から支払われます。"</string>
+  <string name="gt_5dc01c1c6bc76383">"Paid from your on-chain bitcoin."</string>
   <string name="gt_17cceb4191297e74">"Lightningで支払いました。相手のシークレットが支払いの証明になります。"</string>
   <string name="gt_aa7a72fd611ec542">"支払い方法"</string>
   <string name="gt_f3380f7b44bd70af">"貼り付け"</string>
@@ -974,6 +998,7 @@
   <string name="gt_8ac767353080eae7">"読み取り専用"</string>
   <string name="gt_cb1838ea58a69336">"この画面の閲覧や手数料の見積もりだけでは、退出取引はブロードキャストされません。"</string>
   <string name="gt_5fa7aac5375c5815">"完了"</string>
+  <string name="gt_f476330a673de0fa">"Ready to claim"</string>
   <string name="gt_bac9d15ad9f1ca0c">"受け取る"</string>
   <string name="gt_050e3ec1aa394826">"受取額はsats単位の正の整数である必要があります"</string>
   <string name="gt_85cf80c2abc7c5f1">"受信時のDoS対策"</string>
@@ -1094,6 +1119,7 @@
   <string name="gt_0cde499fcb0c92da">"受け取り内容を確認"</string>
   <string name="gt_25aa0f37b47607b3">"確認して支払う"</string>
   <string name="gt_8b3cd108890cf4d0">"ウォレット内の全資金の退出を確認"</string>
+  <string name="gt_c9e91fec986cc876">"Review exit"</string>
   <string name="gt_7c434cbd5c50154f">"選択した退出を確認"</string>
   <string name="gt_8b3426dcf53c3f35">"確認済みの金額"</string>
   <string name="gt_883361d5d682a157">"右"</string>
@@ -1150,10 +1176,12 @@
   <string name="gt_3b18955703b2ebc3">"選択したスクリーンショット"</string>
   <string name="gt_f6f4688ff23d50c6">"送る"</string>
   <string name="gt_2bd7bfd7b3314b9b">"確認コードを送信"</string>
+  <string name="gt_b3080e138c3a73a8">"Send about %1$s here. Exits use it once it confirms."</string>
   <string name="gt_66a5b4090d14cb41">"コードを送信"</string>
   <string name="gt_dad3741faaf71ced">"%1$s を送る"</string>
   <string name="gt_e595f17fac1d8384">"送金中"</string>
   <string name="gt_a23752f662daf656">"%1$s を送金中"</string>
+  <string name="gt_d1ba6483f4dde6bd">"Sending %1$s of %2$s"</string>
   <string name="gt_5485623750e9453e">"送金中 · 経路を探しています"</string>
   <string name="gt_c5fb1b5d6362edc0">"送金中 · Arkのラウンド待ち"</string>
   <string name="gt_a38ba37fd4f8a52a">"送金中 · 承認待ち"</string>
@@ -1168,7 +1196,6 @@
   <string name="gt_604dce445e326d95">"サービス"</string>
   <string name="gt_74a883a037bc227f">"設定"</string>
   <string name="gt_29887a5ff9846ccc">"共有"</string>
-  <string name="gt_0191f24cb9f6ec6b">"Bitcoinアドレスを共有"</string>
   <string name="gt_0682d833fd5c9126">"アプリのログを共有"</string>
   <string name="gt_483ffbdd70c9c49f">"場所を共有"</string>
   <string name="gt_959aab0a1caf37f5">"共有するログに復元フレーズや鍵が含まれることはありません。"</string>
@@ -1202,6 +1229,7 @@
   <string name="gt_8a565d98b83e392b">"それでも新しい支払いを開始"</string>
   <string name="gt_e51e8c039fe7960f">"退出を開始"</string>
   <string name="gt_ecbc89cd37a03734">"開始済み"</string>
+  <string name="gt_aeed4d26bb5f0c31">"Starting"</string>
   <string name="gt_96b98008aedf83c7">"復元を開始中…"</string>
   <string name="gt_a3b50c476732c740">"状態"</string>
   <string name="gt_dd3b9c3445cd5eef">"状態の詳細"</string>
@@ -1243,6 +1271,7 @@
   <string name="gt_28c83220eb3316b6">"システム設定"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"使用済み"</string>
+  <string name="gt_857736cb0056f6bc">"Takes a day or more"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
   <string name="gt_be8494fb38fef6d7">"テストして保存"</string>
   <string name="gt_e806a291cfc3e61f">"テスト中"</string>
@@ -1257,6 +1286,7 @@
   <string name="gt_c58153172e51db2e">"実際の手数料はまだ確認できません。%1$s"</string>
   <string name="gt_f663d0d5c263a46c">"Arkが受け取る金額が最低額を下回っています。Arkへの入金額を増やしてください。"</string>
   <string name="gt_1f7124b49af4bb0c">"金額または手数料が変更されました。支払い内容を再確認してください。"</string>
+  <string name="gt_d99fbad70ce6933e">"The amount required may vary."</string>
   <string name="gt_d016dcf9ce33d5ac">"利用可能な資金が変わりました。支払い内容を再確認してください。"</string>
   <string name="gt_fbf76b6ef0e4a918">"バックアップ内のウォレット情報が一致しないため、Noahで安全に復元できませんでした。"</string>
   <string name="gt_abad8213287152da">"作成した取引の受け取り手数料が見積もりと異なります。何もブロードキャストされていません。受け取り内容を再確認してください。"</string>
@@ -1295,6 +1325,8 @@
   <string name="gt_fd04d8103140aa83">"ウォレットや手数料が変更されたか、見積もりの有効期限が切れました。確定する前に、もう一度確認してください。"</string>
   <string name="gt_be11c0d9d86f778e">"ウォレットを復元するための単語です。"</string>
   <string name="gt_d05e4b12e63fdf63">"相手の受領証明でロック解除"</string>
+  <string name="gt_cd0b2d8136476cb0">"Then a wait of about a day before you can claim."</string>
+  <string name="gt_a8788032dbf14dad">"Then a %1$s-block wait before you can claim."</string>
   <string name="gt_9cc11d41c56f8fed">"この金額と手数料を賄うだけの確認済みのオンチェーン資金がありません。金額を減らすか、確認をお待ちください。"</string>
   <string name="gt_2f536a74d5111f93">"今回のArkへの入金には少額のコインが多すぎます。金額を減らしてお試しください。"</string>
   <string name="gt_e05786d8bf8e865c">"これらのコインは利用できないか、確認中の別の支払いで確保されています。その確認画面を閉じてから、もう一度お試しください。"</string>
@@ -1341,6 +1373,7 @@
   <string name="gt_f4b06ef6d3c81436">"送信先"</string>
   <string name="gt_11cae96bf25946de">"復元するには、スマートフォンでNoahを設定するときに復元フレーズを入力してください。"</string>
   <string name="gt_2b065c7c9ce466e5">"今日"</string>
+  <string name="gt_8e5d375aee547cf8">"Too small to exit · under %1$s"</string>
   <string name="gt_d5cdfcf7ff75338f">"先頭"</string>
   <string name="gt_c9b3c38247f744e1">"合計"</string>
   <string name="gt_220753c790bf5c5f">"合計（確認済みのコイン）"</string>
@@ -1444,8 +1477,10 @@
   <string name="gt_99c1ee35d68e7feb">"ウォレットの準備ができるまで待ってから更新してください。"</string>
   <string name="gt_6e293a8c009e0011">"待機中"</string>
   <string name="gt_2571c46e541d8f87">"ブロック %1$s を待機中"</string>
+  <string name="gt_3456af7054b029e3">"Waiting for on-chain funds"</string>
   <string name="gt_14c805ec3e8cb07b">"安全な保存領域が利用可能になるのを待っています"</string>
   <string name="gt_d99bd370a6d72213">"安全な保存領域へのアクセスを待っています。端末のロックを解除して、もう一度お試しください。"</string>
+  <string name="gt_706eee3cfecc480a">"Waiting for the timelock"</string>
   <string name="gt_09ff3abe56e1c1df">"バックアップを待っています"</string>
   <string name="gt_a9fecbd4968622c1">"起動スケジュールはまだ同期されていません。Noahを開くと再試行します。"</string>
   <string name="gt_d1c9a01d57e90086">"ウォレット"</string>
@@ -1484,6 +1519,7 @@
   <string name="gt_c863d86963f48c57">"地図全体は引き続き閲覧できます。近くの場所を表示するには、設定で位置情報を有効にしてください。"</string>
   <string name="gt_b5f752b74adc1621">"地図全体は引き続き閲覧できます。近くの場所を表示するには、Androidの設定で位置情報へのアクセスを許可してください。"</string>
   <string name="gt_aaff5794a03433b0">"二重に支払う可能性があります"</string>
+  <string name="gt_4cd8ef2093993de6">"You get"</string>
   <string name="gt_0e5467ac43335fc4">"手元に残る額"</string>
   <string name="gt_357f1a2fdf17bb53">"%1$sを受け取りました"</string>
   <string name="gt_04dc7cb10406d3ac">"支払いの前日にリマインダーが届き、支払い後に毎回通知が届きます。スマートフォンの電源が切れていて支払いができなかった場合、Noahはその回の支払いをスキップし、2回分をまとめて支払うことはありません。"</string>
@@ -1547,6 +1583,7 @@
   <string name="gt_1cfd3ae82c2e9be1">"%2$sに%1$sを送信しました。"</string>
   <string name="gt_16d7d21cf4846790">"%2$sへの%1$sの送信はまだ完了していません：%3$s"</string>
   <string name="gt_e4687b2d37b4a9a5">"明日、%2$sに%1$sを送金します。"</string>
+  <string name="gt_643409a7df643204">"%1$s · fees ~%2$s"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s ブロック"</string>
   <string name="gt_1ad21324d7fd6678">"%1$s ブロック"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>
@@ -1580,6 +1617,7 @@
     <item quantity="one">"%1$s時間"</item>
     <item quantity="other">"%1$s時間"</item>
   </plurals>
+  <string name="gt_35fab73e01e36413">"%1$s in progress"</string>
   <string name="gt_76c569f37720fa3d">"あと%1$s回でデバッグを有効化"</string>
   <string name="gt_3612e1cd7501afab">"%1$s/%2$s"</string>
   <plurals name="gt_cbc409d6a950d6e9">
@@ -1595,6 +1633,10 @@
     <item quantity="other">"%1$s件の支払いをCSVファイルで書き出します。"</item>
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s秒"</string>
+  <plurals name="gt_618ceaf828dd8956">
+    <item quantity="one">"%1$s transaction"</item>
+    <item quantity="other">"%1$s transactions"</item>
+  </plurals>
   <string name="gt_6f18db1fb525f402">"%1$s週"</string>
   <string name="gt_7668781bc1fd97f9">"ウォレットを復元する%1$s個の単語です。"</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>

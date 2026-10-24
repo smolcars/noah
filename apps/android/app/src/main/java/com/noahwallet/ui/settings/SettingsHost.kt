@@ -187,6 +187,8 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                 list.SaveableStateProvider(SettingsDestination.Settings) { SettingsRoot(model, live, nav, selected, initialSheet = initialSheet) }
             } }
             val pages: List<NavKey> = if (wide) stack.drop(1).ifEmpty { listOf(SettingsDestination.Profile) } else stack.toList()
+            // The emergency exit takes the whole window: its picture leads and its details trail, split at the hinge (exit.md).
+            val exit = wide && SettingsRoutes.exit(pages.lastOrNull())
             // A pose change (compact <-> split) swaps NavDisplay's pages without navigating, so that swap doesn't animate:
             // NavDisplay drops a scene AnimatedContent still draws if the pose changes again mid-animation. Navigating
             // animates again.
@@ -210,7 +212,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
             val code = { if (idle()) myCode() }
             CompositionLocalProvider(LocalSettingsToasts provides toasts) {
                 Box(Modifier.fillMaxSize()) {
-                    if (wide) Box(when (pose) {
+                    if (wide && !exit) Box(when (pose) {
                         is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
                         is OnboardingPose.Tabletop -> Modifier.height(pose.top).fillMaxWidth()
                         else -> Modifier
@@ -219,12 +221,13 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                             root(SettingsNav(leave, { open(it, true) }, leave, code, leave, hold::set), pages.firstOrNull())
                         }
                     }
-                    Box(when (pose) {
-                        is OnboardingPose.Wide -> Modifier.padding(start = pose.end).fillMaxSize()
-                        is OnboardingPose.Tabletop -> Modifier.padding(top = pose.bottom).fillMaxSize()
+                    Box(when {
+                        exit -> Modifier.fillMaxSize()
+                        pose is OnboardingPose.Wide -> Modifier.padding(start = pose.end).fillMaxSize()
+                        pose is OnboardingPose.Tabletop -> Modifier.padding(top = pose.bottom).fillMaxSize()
                         else -> Modifier.fillMaxSize()
                     }.testTag("settings-page-pane")) {
-                        CompositionLocalProvider(LocalSettingsPane provides if (wide) SettingsPane.trailing else SettingsPane.compact) {
+                        CompositionLocalProvider(LocalSettingsPane provides if (wide && !exit) SettingsPane.trailing else SettingsPane.compact) {
                             NavDisplay(pages, onBack = { if (idle()) pop() },
                                 entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
                                 transitionSpec = { transition(true) },
@@ -233,7 +236,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                 entryProvider = { key ->
                                     NavEntry(key) {
                                         val index = pages.indexOf(key)
-                                        val back = if (wide && index <= 0) null else ({ if (idle()) pop() })
+                                        val back = if (wide && index <= 0 && !SettingsRoutes.exit(key)) null else ({ if (idle()) pop() })
                                         val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave, hold::set)
                                         @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview) { content ->
                                             MaterialTheme(appColors, appShapes, appTypography, content)
@@ -269,7 +272,7 @@ private class GearReveal(private val gear: Rect?, private val progress: Float, p
  */
 internal data class SettingsPreview(val sheet: String? = null, val phrase: List<String>? = null, val unifiedPush: Boolean? = null)
 
-/** Each page. [legacy] re-provides the app's own theme for today's emergency exit screens, which keep their look. */
+/** Each page. [legacy] re-provides the app's own theme for today's exits list, which keeps its look until it's redrawn. */
 @Composable
 internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav, live: SettingsLive, preview: SettingsPreview?,
                                  legacy: @Composable (@Composable () -> Unit) -> Unit) {
@@ -286,8 +289,10 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringListPage(model, nav)
         is SchedulePage -> com.noahwallet.recurring.ScheduleScreen(model, nav, key.id)
         is EditorPage -> com.noahwallet.recurring.RecurringEditorPage(model, nav, key.id)
-        // Out of scope (settings.md): today's exit screens, unchanged, under Settings' bar.
-        SettingsDestination.Exits -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
+        SettingsDestination.Exits -> com.noahwallet.onchain.ExitWarningPage(model, nav)
+        ExitChoosePage -> com.noahwallet.onchain.ExitChoosePage(model, nav)
+        // Today's exit screens until their redesign lands: progress, claim and the list.
+        is ExitStartPage, is ExitPage, ExitClaimPage, ExitsPage -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
             legacy { com.noahwallet.onchain.UnilateralExitScreen(model) }
         }
         SettingsDestination.Notifications -> NotificationsPage(model, nav, live, preview?.unifiedPush ?: PlatformAccess.unifiedPush(LocalContext.current))

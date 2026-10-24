@@ -15,6 +15,7 @@
   <string name="gt_d58fd353bb1b174f">"About 20 min · %1$s estimated fee"</string>
   <string name="gt_388e5f8e82667507">"About 20 min · %1$s fee"</string>
   <string name="gt_962a08a8878d9a42">"About Noah"</string>
+  <string name="gt_a520965e40a8e4d5">"About %1$s a VTXO now, from your on-chain bitcoin."</string>
   <string name="gt_df717e92d8745fc7">"Acknowledge the current payment before approving it again."</string>
   <string name="gt_64cff1319d2fd2cb">"Action"</string>
   <string name="gt_bc0daf560b7f0b9d">"Action completed successfully"</string>
@@ -26,9 +27,11 @@
   <string name="gt_a301e27dce0ce4cd">"Actual onchain fee"</string>
   <string name="gt_9fd728c66c9a256b">"Add"</string>
   <string name="gt_322c0e13ef4fa485">"Add a note"</string>
+  <string name="gt_2f0183c4e7f054bf">"Add about %1$s on-chain first. Each exit transaction\'s fee comes from there."</string>
   <string name="gt_223e44268146e60d">"Add amount"</string>
   <string name="gt_82767841e4f8c995">"Add an amount first"</string>
   <string name="gt_00df1293cf6d241b">"Add an amount to receive over Lightning"</string>
+  <string name="gt_7bf06b339959a3be">"Add on-chain funds"</string>
   <string name="gt_ef61c03bbcda7402">"Add screenshot"</string>
   <string name="gt_fcdcc9c0caf001eb">"Add your email"</string>
   <string name="gt_73886d4afd4c8e01">"Adding a note will send this payment over Lightning."</string>
@@ -48,6 +51,7 @@
   <string name="gt_a52ace420f2175d0">"All"</string>
   <string name="gt_dafb15f7c8ae0a82">"All claimable at"</string>
   <string name="gt_22a80351096850d8">"All claimable at: Block %1$s"</string>
+  <string name="gt_d9639aadea54e91a">"All exits"</string>
   <string name="gt_dbffa8bd40a8f321">"All wallet operations are disabled. Resume your wallet in Settings."</string>
   <string name="gt_e18835ef2f6c8558">"Allow camera"</string>
   <string name="gt_8074d363626518da">"Allow camera access in Settings to scan a payment QR code."</string>
@@ -81,6 +85,7 @@
   <string name="gt_ba2b359463cd8640">"Ark fee"</string>
   <string name="gt_03fc60ebe53fdf56">"Ark holds it for you"</string>
   <string name="gt_084e20c59e73feb6">"Ark holds it while Lightning pays"</string>
+  <string name="gt_0bd893d3e340e0fe">"Ark is faster and cheaper"</string>
   <string name="gt_a82ff39c153e2885">"Ark receives"</string>
   <string name="gt_e3fdc6fb344a217d">"Ark round"</string>
   <string name="gt_bb52f900a0567ac9">"Ark server"</string>
@@ -149,7 +154,6 @@
   <string name="gt_5538c35c05d2ea68">"Bitcoin Map"</string>
   <string name="gt_574c3a5e56925ad9">"Bitcoin address"</string>
   <string name="gt_1b7ede8a6599a2f7">"Bitcoin and Ark in one code. Add an amount for Lightning"</string>
-  <string name="gt_4607d70ecce0e406">"Bitcoin deposit address"</string>
   <string name="gt_1b56841e496f03f9">"Bitcoin deposit address QR code"</string>
   <string name="gt_ee54572769ce5499">"Bitcoin destination address"</string>
   <string name="gt_d02d0e8a04250582">"Bitcoin in Ark moves instantly and costs less to send."</string>
@@ -186,6 +190,7 @@
   <string name="gt_d6e645b7d2b2da64">"Call"</string>
   <string name="gt_c0e4c9ea037a36e4">"Camera permission is required to scan QR codes."</string>
   <string name="gt_caed8de2afc3776f">"Camera unavailable. Close the scanner and try again."</string>
+  <string name="gt_066a27d543018358">"Can\'t be undone"</string>
   <string name="gt_19766ed6ccb2f4a3">"Cancel"</string>
   <string name="gt_804eb334c4bd5e69">"Cancel Exit"</string>
   <string name="gt_d00194635dcfa015">"Cancel payment"</string>
@@ -228,11 +233,15 @@
   <string name="gt_0dfe1d63c9d86896">"Checking"</string>
   <string name="gt_ec963ffc911b8401">"Checking…"</string>
   <string name="gt_0a84829094f5cfed">"Child transaction"</string>
+  <string name="gt_c7f937836f5d82d5">"Choose"</string>
+  <string name="gt_8a0840da9df48f32">"Choose VTXOs"</string>
   <string name="gt_ec1ad72325f469f2">"Choose a balance with sufficient funds."</string>
   <string name="gt_3b5a71ad765370b3">"Choose balance"</string>
   <string name="gt_3c23f7c4e7718d4f">"Choose payment method"</string>
+  <string name="gt_3ff1868e9c56300e">"Choose the VTXOs to exit"</string>
   <string name="gt_6ac674c9f0a80fb1">"City search is unavailable."</string>
   <string name="gt_05f4e6f4ede4a216">"Claim Exits"</string>
+  <string name="gt_b7d762b9330eb38c">"Claim fee"</string>
   <string name="gt_0c6a6352089917f2">"Claim payments in the background"</string>
   <string name="gt_03baf110b771f684">"Claim recovered funds"</string>
   <string name="gt_aa87e940cf06cc86">"Claim submitted. Refresh to check confirmation."</string>
@@ -288,6 +297,7 @@
   <string name="gt_63ba394601c5c4aa">"Copy %1$s"</string>
   <string name="gt_2cbe9c9f6490fc8c">"Copy %1$s"</string>
   <string name="gt_3c0179f73e2f914c">"Copy %1$s"</string>
+  <string name="gt_8e71221ac7fa5a0e">"Costs on-chain fees"</string>
   <string name="gt_18abee57c90f531e">"Could not generate a Lightning invoice. Please try again."</string>
   <string name="gt_3edd56c6165589b7">"Could not generate a receive request. Please try again."</string>
   <string name="gt_ddb95fbc0846aba8">"Could not open BTC Map"</string>
@@ -321,6 +331,7 @@
   <string name="gt_1c37497466d54115">"Couldn\'t prepare the review. Nothing was submitted. Try again when the wallet is ready."</string>
   <string name="gt_c3cdb5dbb6be37f2">"Couldn\'t read the screenshot. Please try again."</string>
   <string name="gt_89f8973b092ae069">"Couldn\'t read wallet status. Pull to refresh."</string>
+  <string name="gt_93b14ee46cda2935">"Couldn\'t record that these coins stay on-chain, so nothing was sent. Try again."</string>
   <string name="gt_b8e043dbc53a4a4c">"Couldn\'t refresh your profile. Please try again."</string>
   <string name="gt_d08dea249a1c48bb">"Couldn\'t register again. Please retry."</string>
   <string name="gt_b8f165e6a90e3092">"Couldn\'t register with UnifiedPush. Please try again."</string>
@@ -408,6 +419,7 @@
   <string name="gt_3a9f176a663d540d">"Emergency Email"</string>
   <string name="gt_a9214c2e38df7318">"Emergency Exit"</string>
   <string name="gt_b8eea92a324ae5b4">"Emergency exit"</string>
+  <string name="gt_6b37661a5dd8e8ae">"Emergency use only. It takes your bitcoin out of Ark without Ark\'s server."</string>
   <string name="gt_cade2f4efb6f7c99">"Emulator"</string>
   <string name="gt_1cd009ba27e712a8">"Enable wallet authentication"</string>
   <string name="gt_732891401030ce05">"Encrypted with your recovery phrase before it leaves this phone."</string>
@@ -486,6 +498,7 @@
   <string name="gt_292ce5ce3450f0b4">"Exiting to the chain"</string>
   <string name="gt_5e561017c8169c76">"Exits"</string>
   <string name="gt_db5f066a21225f71">"Exits progressed. Transactions may have been broadcast or fee-bumped."</string>
+  <string name="gt_26377ba9c6b97926">"Exits use it once it confirms."</string>
   <string name="gt_e72d5d8d0b167d21">"Expanded"</string>
   <string name="gt_ed051741d4064ad6">"Expected an integer token"</string>
   <string name="gt_424a2551d356754c">"Expired"</string>
@@ -528,6 +541,8 @@
   <string name="gt_26290dab5e50b113">"Fee for the existing payment: %1$s sats"</string>
   <string name="gt_6c6cc6eb80efa410">"Fee rate"</string>
   <string name="gt_aac77df347205252">"Feedback"</string>
+  <string name="gt_779ff4584d72f733">"Fees are more than these VTXOs are worth."</string>
+  <string name="gt_e2a3937904b6bf08">"Fees more than it\'s worth"</string>
   <string name="gt_c7e61b7092a55da5">"Fetching backup…"</string>
   <string name="gt_2a246cca8735d1b7">"Fewer"</string>
   <string name="gt_1369793595356d9d">"Fiat rate unavailable: %1$s"</string>
@@ -595,6 +610,7 @@
   <string name="gt_cd65f6dcab984750">"I wrote it down"</string>
   <string name="gt_306becc0aba824d9">"I\'ve checked my history, start a new payment"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
+  <string name="gt_653b28e6a3e022c8">"If Ark works, send to a Bitcoin address instead."</string>
   <string name="gt_1d93f10792a18bf1">"Immature"</string>
   <string name="gt_86a486e897edd1bc">"Import VTXO"</string>
   <string name="gt_1016441cc23c561f">"In a round"</string>
@@ -602,6 +618,7 @@
   <string name="gt_c1f88e9d6c4145cf">"In progress"</string>
   <string name="gt_f868160d0a466230">"In seconds"</string>
   <string name="gt_9fff0400bb9e73d5">"In this wallet"</string>
+  <string name="gt_13f9f26fa93bba36">"In use right now"</string>
   <plurals name="gt_da31d49e931af4ab">
     <item quantity="one">"In %1$s VTXO"</item>
     <item quantity="other">"In %1$s VTXOs"</item>
@@ -670,6 +687,9 @@
   <string name="gt_b9249da7761d28ae">"Latest height: %1$s"</string>
   <string name="gt_fc6e4a408d56be96">"Leave"</string>
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
+  <string name="gt_8d889b2a0398edd9">"Left out, fees more than they\'re worth: %1$s. Choose them to exit them anyway."</string>
+  <string name="gt_71dd91736743204f">"Left out, in use right now: %1$s."</string>
+  <string name="gt_1b02259449b4abf0">"Left out, too small to exit: %1$s."</string>
   <string name="gt_68dc9d6d2e2e87ef">"Legacy Android callback"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Let Noah run in the background"</string>
   <string name="gt_e085922bf6346107">"Lets Noah wake up for Lightning"</string>
@@ -755,6 +775,8 @@
   <string name="gt_c1ebc7817870e5be">"Needs attention"</string>
   <string name="gt_1744b96470b51bf3">"Network"</string>
   <string name="gt_82c5067df6801187">"Network fee"</string>
+  <string name="gt_598ce3ccc02e5890">"Network fees"</string>
+  <string name="gt_6c79c5d1bd98b91d">"Network fees come from your on-chain %1$s at %2$s sat/vB. Transactions your VTXOs share are paid once. Fees may change."</string>
   <string name="gt_e5cff1be1c0e3c93">"Network mismatch: expected %1$s, got %2$s"</string>
   <string name="gt_6300ef800bb88429">"Never"</string>
   <string name="gt_0d559c8d4e9ab250">"Never paste a Nostr private key. Enter an npub public key."</string>
@@ -874,6 +896,7 @@
   <string name="gt_1e86a7752acde6de">"On-chain addresses are not supported for recurring payments yet"</string>
   <string name="gt_ba6aa54176784a6b">"On-chain wallet"</string>
   <string name="gt_f5795926f351bd4a">"On-chain · waiting for a block"</string>
+  <string name="gt_0c2cf5c7019fb7dd">"Once its last transaction is sent."</string>
   <string name="gt_0cc23d9ecbb9986c">"Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
   <string name="gt_acc38e1a7250680d">"Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
   <string name="gt_90822ee1d520d059">"Onchain"</string>
@@ -904,6 +927,7 @@
   <string name="gt_51a87000f35dc875">"Override repeat protection…"</string>
   <string name="gt_fb81b961af456e5e">"Paid"</string>
   <string name="gt_a0145d18401ff94f">"Paid from your Ark balance."</string>
+  <string name="gt_5dc01c1c6bc76383">"Paid from your on-chain bitcoin."</string>
   <string name="gt_17cceb4191297e74">"Paid over Lightning. Their secret is your proof of payment."</string>
   <string name="gt_aa7a72fd611ec542">"Paid via"</string>
   <string name="gt_f3380f7b44bd70af">"Paste"</string>
@@ -974,6 +998,7 @@
   <string name="gt_8ac767353080eae7">"Read only"</string>
   <string name="gt_cb1838ea58a69336">"Reading this screen and estimating fees never broadcasts an exit."</string>
   <string name="gt_5fa7aac5375c5815">"Ready"</string>
+  <string name="gt_f476330a673de0fa">"Ready to claim"</string>
   <string name="gt_bac9d15ad9f1ca0c">"Receive"</string>
   <string name="gt_050e3ec1aa394826">"Receive amount must be a positive whole number of sats"</string>
   <string name="gt_85cf80c2abc7c5f1">"Receive anti-DoS"</string>
@@ -1094,6 +1119,7 @@
   <string name="gt_0cde499fcb0c92da">"Review Claim"</string>
   <string name="gt_25aa0f37b47607b3">"Review and pay"</string>
   <string name="gt_8b3cd108890cf4d0">"Review entire wallet exit"</string>
+  <string name="gt_c9e91fec986cc876">"Review exit"</string>
   <string name="gt_7c434cbd5c50154f">"Review selected exit"</string>
   <string name="gt_8b3426dcf53c3f35">"Reviewed amount"</string>
   <string name="gt_883361d5d682a157">"Right"</string>
@@ -1150,10 +1176,12 @@
   <string name="gt_3b18955703b2ebc3">"Selected screenshot"</string>
   <string name="gt_f6f4688ff23d50c6">"Send"</string>
   <string name="gt_2bd7bfd7b3314b9b">"Send Verification Code"</string>
+  <string name="gt_b3080e138c3a73a8">"Send about %1$s here. Exits use it once it confirms."</string>
   <string name="gt_66a5b4090d14cb41">"Send code"</string>
   <string name="gt_dad3741faaf71ced">"Send %1$s"</string>
   <string name="gt_e595f17fac1d8384">"Sending"</string>
   <string name="gt_a23752f662daf656">"Sending %1$s"</string>
+  <string name="gt_d1ba6483f4dde6bd">"Sending %1$s of %2$s"</string>
   <string name="gt_5485623750e9453e">"Sending · still finding a route"</string>
   <string name="gt_c5fb1b5d6362edc0">"Sending · waiting for an Ark round"</string>
   <string name="gt_a38ba37fd4f8a52a">"Sending · waiting for confirmations"</string>
@@ -1168,7 +1196,6 @@
   <string name="gt_604dce445e326d95">"Services"</string>
   <string name="gt_74a883a037bc227f">"Settings"</string>
   <string name="gt_29887a5ff9846ccc">"Share"</string>
-  <string name="gt_0191f24cb9f6ec6b">"Share Bitcoin address"</string>
   <string name="gt_0682d833fd5c9126">"Share app logs"</string>
   <string name="gt_483ffbdd70c9c49f">"Share place"</string>
   <string name="gt_959aab0a1caf37f5">"Shared logs never include your phrase or keys."</string>
@@ -1202,6 +1229,7 @@
   <string name="gt_8a565d98b83e392b">"Start a new payment anyway"</string>
   <string name="gt_e51e8c039fe7960f">"Start an exit"</string>
   <string name="gt_ecbc89cd37a03734">"Started"</string>
+  <string name="gt_aeed4d26bb5f0c31">"Starting"</string>
   <string name="gt_96b98008aedf83c7">"Starting restore..."</string>
   <string name="gt_a3b50c476732c740">"State"</string>
   <string name="gt_dd3b9c3445cd5eef">"State detail"</string>
@@ -1243,6 +1271,7 @@
   <string name="gt_28c83220eb3316b6">"System settings"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"Taken"</string>
+  <string name="gt_857736cb0056f6bc">"Takes a day or more"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
   <string name="gt_be8494fb38fef6d7">"Test and save"</string>
   <string name="gt_e806a291cfc3e61f">"Testing"</string>
@@ -1257,6 +1286,7 @@
   <string name="gt_c58153172e51db2e">"The actual fee is not yet available. %1$s"</string>
   <string name="gt_f663d0d5c263a46c">"The amount Ark receives is below its minimum. Increase the boarding amount."</string>
   <string name="gt_1f7124b49af4bb0c">"The amount or fee changed. Review the payment again."</string>
+  <string name="gt_d99fbad70ce6933e">"The amount required may vary."</string>
   <string name="gt_d016dcf9ce33d5ac">"The available funds changed. Review the payment again."</string>
   <string name="gt_fbf76b6ef0e4a918">"The backup\'s wallet information doesn\'t match. Noah couldn\'t safely restore it."</string>
   <string name="gt_abad8213287152da">"The built claim fee differs from the estimate. Nothing was broadcast. Review the claim again."</string>
@@ -1295,6 +1325,8 @@
   <string name="gt_fd04d8103140aa83">"The wallet or fees changed, or the quote expired. Review again before confirming."</string>
   <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
   <string name="gt_d05e4b12e63fdf63">"Their receipt unlocks it"</string>
+  <string name="gt_cd0b2d8136476cb0">"Then a wait of about a day before you can claim."</string>
+  <string name="gt_a8788032dbf14dad">"Then a %1$s-block wait before you can claim."</string>
   <string name="gt_9cc11d41c56f8fed">"There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation."</string>
   <string name="gt_2f536a74d5111f93">"There are too many small coins for this board. Try a smaller amount."</string>
   <string name="gt_e05786d8bf8e865c">"These coins are unavailable or reserved by another payment in review. Close that review, then try again."</string>
@@ -1341,6 +1373,7 @@
   <string name="gt_f4b06ef6d3c81436">"To"</string>
   <string name="gt_11cae96bf25946de">"To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_2b065c7c9ce466e5">"Today"</string>
+  <string name="gt_8e5d375aee547cf8">"Too small to exit · under %1$s"</string>
   <string name="gt_d5cdfcf7ff75338f">"Top"</string>
   <string name="gt_c9b3c38247f744e1">"Total"</string>
   <string name="gt_220753c790bf5c5f">"Total (reviewed coins)"</string>
@@ -1444,8 +1477,10 @@
   <string name="gt_99c1ee35d68e7feb">"Wait for the wallet to be ready, then refresh."</string>
   <string name="gt_6e293a8c009e0011">"Waiting"</string>
   <string name="gt_2571c46e541d8f87">"Waiting for block %1$s"</string>
+  <string name="gt_3456af7054b029e3">"Waiting for on-chain funds"</string>
   <string name="gt_14c805ec3e8cb07b">"Waiting for secure storage"</string>
   <string name="gt_d99bd370a6d72213">"Waiting for secure storage. Unlock your device and try again."</string>
+  <string name="gt_706eee3cfecc480a">"Waiting for the timelock"</string>
   <string name="gt_09ff3abe56e1c1df">"Waiting to back up"</string>
   <string name="gt_a9fecbd4968622c1">"Wake-up schedule hasn\'t synced yet. Noah will retry when opened."</string>
   <string name="gt_d1c9a01d57e90086">"Wallet"</string>
@@ -1484,6 +1519,7 @@
   <string name="gt_c863d86963f48c57">"You can still browse the full map. Enable location in Settings to see nearby places."</string>
   <string name="gt_b5f752b74adc1621">"You can still browse the full map. To see nearby places, allow location in Android Settings."</string>
   <string name="gt_aaff5794a03433b0">"You could pay twice"</string>
+  <string name="gt_4cd8ef2093993de6">"You get"</string>
   <string name="gt_0e5467ac43335fc4">"You keep"</string>
   <string name="gt_357f1a2fdf17bb53">"You received %1$s"</string>
   <string name="gt_04dc7cb10406d3ac">"You\'ll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice."</string>
@@ -1547,6 +1583,7 @@
   <string name="gt_1cfd3ae82c2e9be1">"%1$s sent to %2$s."</string>
   <string name="gt_16d7d21cf4846790">"%1$s to %2$s could not be sent yet: %3$s"</string>
   <string name="gt_e4687b2d37b4a9a5">"%1$s to %2$s will be sent tomorrow."</string>
+  <string name="gt_643409a7df643204">"%1$s · fees ~%2$s"</string>
   <string name="gt_4ace755a59e3c6fc">"%1$s block"</string>
   <string name="gt_1ad21324d7fd6678">"%1$s blocks"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s rate unavailable"</string>
@@ -1580,6 +1617,7 @@
     <item quantity="one">"%1$s hour"</item>
     <item quantity="other">"%1$s hours"</item>
   </plurals>
+  <string name="gt_35fab73e01e36413">"%1$s in progress"</string>
   <string name="gt_76c569f37720fa3d">"%1$s more to turn on debug"</string>
   <string name="gt_3612e1cd7501afab">"%1$s of %2$s"</string>
   <plurals name="gt_cbc409d6a950d6e9">
@@ -1595,6 +1633,10 @@
     <item quantity="other">"%1$s payments as a CSV file."</item>
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s seconds"</string>
+  <plurals name="gt_618ceaf828dd8956">
+    <item quantity="one">"%1$s transaction"</item>
+    <item quantity="other">"%1$s transactions"</item>
+  </plurals>
   <string name="gt_6f18db1fb525f402">"%1$s wk"</string>
   <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>

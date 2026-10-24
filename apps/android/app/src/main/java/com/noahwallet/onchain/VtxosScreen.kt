@@ -62,7 +62,7 @@ internal fun expiresText(vtxo: VtxoModel): String {
     }
 }
 
-private fun money(app: AppModel, sats: Long) = if (app.hidden) BitcoinAmount.format(0, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier)).replace("0", "••••")
+internal fun money(app: AppModel, sats: Long) = if (app.hidden) BitcoinAmount.format(0, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier)).replace("0", "••••")
     else BitcoinAmount.format(sats, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier))
 
 /** The VTXO lifetime the server gives new VTXOs (blocks), for the expiry line and the lifetime bar. */

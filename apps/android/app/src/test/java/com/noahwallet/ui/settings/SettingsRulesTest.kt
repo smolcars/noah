@@ -91,6 +91,13 @@ class SettingsRulesTest {
         assertEquals(listOf(settings, SettingsDestination.Notifications, SettingsDestination.UnifiedPush), SettingsRoutes.chain(SettingsDestination.UnifiedPush))
         assertEquals(listOf(settings, SettingsDestination.Advanced, SettingsDestination.Debug), SettingsRoutes.chain(SettingsDestination.Debug))
         assertEquals(listOf(settings, SettingsDestination.Recurring, EditorPage(null)), SettingsRoutes.chain(EditorPage(null)))
+        // The emergency exit's pages sit above its warning and fill a wide window; nothing else does.
+        for (page in listOf(ExitChoosePage, ExitStartPage(listOf("v1")), ExitPage("v1"), ExitClaimPage, ExitsPage)) {
+            assertEquals(listOf(settings, SettingsDestination.Exits, page), SettingsRoutes.chain(page))
+            assertTrue(SettingsRoutes.exit(page))
+        }
+        assertTrue(SettingsRoutes.exit(SettingsDestination.Exits))
+        assertFalse(SettingsRoutes.exit(SettingsDestination.Vtxos)); assertFalse(SettingsRoutes.exit(null))
     }
 
     @Test fun navigationIsHeldWhileAnySaveThatNavigatesRuns() {

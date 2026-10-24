@@ -168,29 +168,3 @@ internal fun ExitDetailsRows(details: ExitDetails) {
         tx.status.block?.let { DetailRow("Confirmed", OnchainDisplay.block(it)) }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExitDepositSheet(app: AppModel, fee: Long, dismiss: () -> Unit) {
-    val context = LocalContext.current
-    var address by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(app.isWalletSuspended) {
-        try { if (!onchainReady(app)) fail(OnchainFailure.unavailable); address = app.session.exitDepositAddress() }
-        catch (_: Exception) { error = "Couldn't load a deposit address. Close and try again when the wallet is ready." }
-    }
-    WalletModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(tr("Deposit Onchain Funds"), style = MaterialTheme.typography.headlineSmall)
-            if (fee > 0) AmountRow(app, "Suggested deposit", fee)
-            Text(tr("Broadcast fees are paid separately from confirmed onchain funds. Deposit bitcoin and wait for confirmation before progressing an exit. The amount required may vary."))
-            address?.let { value ->
-                com.noahwallet.ui.ReceiveQR(value) { copy(context, value) }
-                DetailRow("Bitcoin deposit address", value)
-                TextButton({ copy(context, value) }) { Text(tr("Copy Bitcoin address")) }
-                TextButton({ context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, value), "Share Bitcoin address")) }) { Text(tr("Share")) }
-            } ?: Text(tr(error ?: "Loading address…"))
-            TextButton(dismiss) { Text(tr("Done")) }
-        }
-    }
-}
