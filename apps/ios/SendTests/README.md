@@ -1,5 +1,54 @@
 # Native Send verification
 
+## bark-bolt-ffi 0.7.0 adoption (2026-10-24)
+
+Base `01c25f42`. iOS pins **exactVersion 0.7.0** (Bark still 0.8.0, `lib-0.8.0`
+`959a489f`) at `b0f3a0fb9ac2231886e0cf6002dc7df2f95cc257` (native source `6961e825`,
+CI run 40132677901, all jobs green). The SPM checkout's `Package.swift` hashes
+`dda94992…` and the resolved XCFramework archive `fe1b17f7…`; both match the
+release `SHA256SUMS`, GitHub's asset digests and SPM's artifact-source record
+([artifact evidence](evidence/ffi070-artifact.json)). SwiftPM was warmed with
+`swift package --disable-keychain resolve` in a scratch package, as for 0.6.0.
+
+- **Typed exit errors.** Never-exitable codes offer no "Continue without
+  estimate"; the reason shows ("Already spent", "Swept", else "This VTXO can't be
+  exited.") and a VTXO bark names stays unselectable on Choose VTXOs for the app
+  run. A refused start drops its journal attempt. Chain-source codes,
+  `invalidFeeRate` and `other` keep today's fallback. Check the chain counts
+  `exitInsufficientConfirmedFunds` as needs-funds evidence with `neededSats`;
+  bark 0.8.0 never emits it, so the inference stays the fallback.
+- **"All" exclusions.** Choose VTXOs reads `excludedVtxos` from
+  `estimateEmergencyExitFee(vtxoIds: [])`: "Renew first" and "Renew this VTXO in
+  Settings → VTXOs before exiting it.", never in All or the total.
+- **Auto-board.** Claimed-to-this-phone outpoints go to `prepareBoard` as
+  `excludedOutpoints` for the drain probe and the one sized preparation; the
+  retry loop is gone. Move to Ark excludes nothing.
+- **`uncertain` boards** stay locked with `uncertainBoard`, no override; Check
+  status gives a receipt if anything names the funding txid, removes the attempt
+  only when nothing was boarded, and keeps it on any doubt.
+- **Confirmed-only submit throws** (reorged parent, unreachable chain source)
+  read as not submitted: board "Boarding was not submitted…", send "The
+  transaction could not be built…".
+
+**No SQLite migration.** Bark is the same commit as 0.6.0's.
+
+**Tests.** Full NoahTests once: **1,198 total / 1,160 passed / 38 opt-in skipped / 0 failed**, 235 suites (targeted exit, on-chain, board and auto-board suites first: 156 in 15 suites). Simulator "Noah FFI iPhone"
+(iPhone 17, iOS 27.0), DerivedData `/private/tmp/noah-ffi-ios-dd`.
+
+**Live checks on `noah-bark08`** (opt-in `FFI070LiveTests`,
+`TEST_RUNNER_NOAH_FFI070_STAGE=<stage>`, built with the `NOAH_REGTEST_*`
+overrides; host acts through `docker exec` only; 4 blocks mined, 1286–1289):
+
+| Stage | Result |
+| --- | --- |
+| baseline (0.6.0) | A scratch copy of `01c25f42` created wallet `8fa01b6c`; Core sent 60,000 and 45,000 sats (block 1286); LND paid a 5,000-sat invoice: 1 `bark.lightning_receive` movement, 4,890 spendable |
+| `upgrade` | The 0.7.0 build opened it unchanged before and after a sync: fingerprint, movement row, balances, coins and VTXOs; Bark's `sqlite_master` hash `6da287f5…` identical and `migrations` still at 42 |
+| `autoboard` | The 60,000 coin marked claimed to this phone in auto-board's ledger (a stand-in: a real exit claim needs 144 blocks). Move to Ark's DrainAll used both coins; auto-board prepared once from the 45,000 coin only: 39,845 boarded + 155 fee, exactly the 5,000 reserve left |
+| `exit-all` | After 3 blocks the board resolved confirmed, no pending board, claimed coin still unspent. "All" (`vtxoIds: []`): 25,756 broadcast + 2,055 claim fee, 7 transactions at 10 sat/vB, nothing excluded; equal to the explicit estimate of both VTXOs |
+
+LND's 5,000 sats were returned with a CLN payment. The owned simulator, its
+DerivedData, the scratch copy and result bundles were deleted.
+
 ## bark-bolt-ffi 0.6.0 adoption (2026-10-22)
 
 Base `fe4296dd`. iOS pins **exactVersion 0.6.0** (Bark 0.8.0, `lib-0.8.0`
