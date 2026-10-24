@@ -1,8 +1,8 @@
 {
   "command": "cd apps/android && nix develop -c ./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest",
-  "result": "BUILD SUCCESSFUL in 1m 2s",
+  "result": "BUILD SUCCESSFUL in 57s",
   "suites": 197,
-  "tests": 4236,
+  "tests": 4237,
   "skipped": 0,
   "failures": 0,
   "errors": 0,
@@ -20,7 +20,8 @@
       "noOverrideUnlocksAnUncertainBoardEvenAfterAReload",
       "anUncertainBoardProvenNeverRecordedIsReleased",
       "aBoardMovementIsFoundByItsChainAnchorWithoutAPendingBoardOrStoredVtxo",
-      "aStartBarkRefusedPartWayIsRetriedAfterAReloadWithoutADuplicateExit"
+      "aStartBarkRefusedPartWayIsRetriedAfterAReloadWithoutADuplicateExit",
+      "anOrphanBoardMovementReleasesOnlyWhenNothingCanBroadcastTheBoard"
     ],
     "SendPreparedTest": [
       "aReorgedOrUnverifiableParentAtFirstBroadcastReadsAsBeforeSubmission"
