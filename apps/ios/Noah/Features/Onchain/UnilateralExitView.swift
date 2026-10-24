@@ -82,6 +82,9 @@ struct ExitChooseView: View {
     @State private var all = true
     @State private var selected = Set<String>()
     @State private var uneconomic = Set<String>()
+    /// The eligible VTXOs the labels above were worked out for: All waits for them, so it never
+    /// freezes a VTXO it would leave out once they're known.
+    @State private var classified: [String]?
     @State private var estimate: EmergencyExitFeeEstimate?
     @State private var estimating = false
     @State private var sheet: ExitSheet?
@@ -113,7 +116,7 @@ struct ExitChooseView: View {
         ExitPanes {
             if settings.wide {
                 ExitHeadline(amount: money(value), line: estimate.map {
-                    L10n.plural("{n} VTXOs · {count} transactions", count: selection.count, $0.txsToBroadcast.formatted(), locale: language)
+                    ExitText.count(vtxos: selection.count, transactions: $0.txsToBroadcast, language)
                 })
                 summary(money)
             } else {
@@ -132,7 +135,7 @@ struct ExitChooseView: View {
                 settings.open(.exitReview(selection.map(\.id)))
             }
             .buttonStyle(SettingsActionStyle())
-            .disabled(selection.isEmpty || model.locked)
+            .disabled(selection.isEmpty || model.locked || all && classified != vtxos.filter(\.eligible).map(\.id))
             .accessibilityIdentifier("exit-review")
         }
         .settingsChrome("Choose VTXOs")
@@ -148,7 +151,14 @@ struct ExitChooseView: View {
             all = false
             selected = Set(preset)
         }
-        .task(id: vtxos.filter(\.eligible).map(\.id)) { uneconomic = await model.uneconomic(vtxos.filter(\.eligible)) }
+        .task(id: vtxos.filter(\.eligible).map(\.id)) {
+            let eligible = vtxos.filter(\.eligible)
+            classified = nil
+            let labels = await model.uneconomic(eligible)
+            guard !Task.isCancelled else { return }
+            uneconomic = labels
+            classified = eligible.map(\.id)
+        }
         .task(id: selection.map(\.id)) {
             estimating = true
             defer { estimating = false }
@@ -176,7 +186,7 @@ struct ExitChooseView: View {
     @ViewBuilder private func summary(_ money: ExitMoney) -> some View {
             VStack(spacing: 0) {
                 SettingsDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
-                    L10n.text("{n} · {count} transactions", selection.count.formatted(), $0.txsToBroadcast.formatted(), locale: language)
+                    selection.count.formatted() + " · " + L10n.plural("{n} transactions", count: Int($0.txsToBroadcast), locale: language)
                 } ?? selection.count.formatted(), numeric: true)
                 SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
                 SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
@@ -250,7 +260,7 @@ struct ExitReviewView: View {
         let amount = quote?.amount ?? (model.overview?.vtxos ?? []).filter { ids.contains($0.id) }.reduce(0) { $0 + $1.amount }
         ExitPanes {
             ExitHeadline(amount: L10n.text("Exit {amount}", money(amount), locale: language),
-                         line: estimate.map { L10n.plural("{n} VTXOs · {count} transactions", count: ids.count, $0.txsToBroadcast.formatted(), locale: language) })
+                         line: estimate.map { ExitText.count(vtxos: ids.count, transactions: $0.txsToBroadcast, language) })
             if settings.wide {
                 ExitStageView(scene: ExitStageScene(path: model.overview?.tip, server: false))
                     .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
@@ -266,7 +276,7 @@ struct ExitReviewView: View {
                         if let delta = model.overview?.exitDelta, let estimate {
                             // One block per transaction along a path at most, then the timelock.
                             SettingsDetailRow(label: L10n.text("Claimable", locale: language),
-                                              value: L10n.text("In about {time}", VtxoList.span(Int64(delta) + Int64(estimate.txsToBroadcast), locale: language), locale: language))
+                                              value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language))
                         }
                         if let rate = quote.feeRate {
                             SettingsDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))

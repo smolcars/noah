@@ -266,9 +266,10 @@
   <string name="gt_c52ed3f9cce24384">"Claimable"</string>
   <string name="gt_5791d9f14fa53cfd">"Claimable Lightning Receive"</string>
   <string name="gt_f78dda21b2e48efd">"Claimable in about %1$s"</string>
-  <plurals name="gt_32a315c279d0ee7f">
-    <item quantity="one">"Claimable in %1$s block · about %2$s"</item>
-    <item quantity="other">"Claimable in %1$s blocks · about %2$s"</item>
+  <string name="gt_32a315c279d0ee7f">"Claimable in %1$s blocks · about %2$s"</string>
+  <plurals name="gt_17bf7bb54aafd273">
+    <item quantity="one">"Claimable in %1$s block · %2$s"</item>
+    <item quantity="other">"Claimable in %1$s blocks · %2$s"</item>
   </plurals>
   <string name="gt_9564c9cd94655763">"Claimable since block %1$s"</string>
   <string name="gt_ddcd2779294a61f0">"Claimed"</string>
@@ -649,7 +650,6 @@
   <string name="gt_0764de2c3a61c282">"In a block"</string>
   <string name="gt_1016441cc23c561f">"In a round"</string>
   <string name="gt_14f23687c9fe3353">"In about 20 minutes"</string>
-  <string name="gt_2d6250023c794435">"In about %1$s"</string>
   <string name="gt_c1f88e9d6c4145cf">"In progress"</string>
   <string name="gt_f868160d0a466230">"In seconds"</string>
   <string name="gt_9fff0400bb9e73d5">"In this wallet"</string>
@@ -658,6 +658,7 @@
     <item quantity="one">"In %1$s VTXO"</item>
     <item quantity="other">"In %1$s VTXOs"</item>
   </plurals>
+  <string name="gt_0dc23ef619cceb30">"In %1$s"</string>
   <string name="gt_e301820ac8393100">"Incoming"</string>
   <string name="gt_544bf107f0c7d65e">"Incoming over Lightning"</string>
   <string name="gt_7abc49dfa87bc183">"Inputs"</string>
@@ -893,11 +894,15 @@
   <string name="gt_822918727e4f828f">"Noah default"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."</string>
   <string name="gt_6ee90a045027e1c3">"Noah hasn\'t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."</string>
-  <string name="gt_545eb93f8194bd47">"Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noah is Locked"</string>
   <string name="gt_9354e260e9c82293">"Noah is in beta. Only keep what you’re comfortable losing."</string>
   <string name="gt_2588c7db9f3fe277">"Noah is locked"</string>
   <string name="gt_f590e31a6eb944e2">"Noah is still finishing a backup. Try again in a moment."</string>
+  <string name="gt_0450659e5fbd54ab">"Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."</string>
+  <plurals name="gt_5063ccfc0bf26542">
+    <item quantity="one">"Noah last checked this exit %1$s block ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
+    <item quantity="other">"Noah last checked this exit %1$s blocks ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
+  </plurals>
   <string name="gt_338e68cc4323f294">"Noah notifications"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registers this wallet with the server again. Your wallet stays."</string>
   <string name="gt_286c0deecb39be99">"Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."</string>
@@ -961,6 +966,10 @@
   <string name="gt_9ef5c3ab9edb50eb">"Onchain Send"</string>
   <string name="gt_89cc4ee3c69a3b7e">"Onchain fee"</string>
   <string name="gt_c35e69dac4ff6d3f">"Onchain reserve left"</string>
+  <plurals name="gt_09e4665e49aef548">
+    <item quantity="one">"One claim for %1$s exit: %2$s received after a %3$s fee."</item>
+    <item quantity="other">"One claim for %1$s exits: %2$s received after a %3$s fee."</item>
+  </plurals>
   <string name="gt_d6e3df34a55bbeb3">"One last transaction. Its fee comes out of the amount."</string>
   <string name="gt_51795cf8f3fe4c84">"One transaction per block: about ten minutes each."</string>
   <string name="gt_4831cbdad7ad0bb6">"Only for urgent alerts about your wallet."</string>
@@ -1411,10 +1420,6 @@
   <string name="gt_9e3a6e3e9bd56700">"This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."</string>
   <string name="gt_f2faa6b386bacbee">"This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."</string>
   <string name="gt_dbccb7274b22662b">"This exit is behind the current chain height: last checked at block %1$s, %2$s blocks ago. Checking the chain can also send exit transactions."</string>
-  <plurals name="gt_94e7b11e64a199f4">
-    <item quantity="one">"This exit is %1$s block behind the chain: last checked at block %2$s. Checking the chain can also send exit transactions."</item>
-    <item quantity="other">"This exit is %1$s blocks behind the chain: last checked at block %2$s. Checking the chain can also send exit transactions."</item>
-  </plurals>
   <string name="gt_5ed0c20bff01c0ca">"This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming."</string>
   <string name="gt_acec76ba83ee20ef">"This invoice was already paid: %1$s"</string>
   <string name="gt_285f2d035fb443e8">"This is a login link, not a payment request"</string>
@@ -1507,6 +1512,7 @@
   <string name="gt_b126042b7ef8a274">"Unlock VTXO"</string>
   <string name="gt_3470a00c3bb2d5ca">"Unlock to see your wallet."</string>
   <string name="gt_38674ce943ca4bc9">"Unlocked at block %1$s"</string>
+  <string name="gt_c5b5f0e95343c511">"Unlocks at block %1$s"</string>
   <string name="gt_fae022f4a65e9a7d">"Unreadable image"</string>
   <string name="gt_ea72a231d1b8a76f">"Unrestricted"</string>
   <string name="gt_8b5f54fcadeccafe">"Unsigned tx %1$s"</string>
@@ -1563,9 +1569,10 @@
   <string name="gt_d99bd370a6d72213">"Waiting for secure storage. Unlock your device and try again."</string>
   <string name="gt_706eee3cfecc480a">"Waiting for the timelock"</string>
   <string name="gt_09ff3abe56e1c1df">"Waiting to back up"</string>
-  <plurals name="gt_38b84da1d4c099eb">
-    <item quantity="one">"Waiting · %1$s block · about %2$s"</item>
-    <item quantity="other">"Waiting · %1$s blocks · about %2$s"</item>
+  <string name="gt_38b84da1d4c099eb">"Waiting · %1$s blocks · about %2$s"</string>
+  <plurals name="gt_985fc1ec623fd8b3">
+    <item quantity="one">"Waiting · %1$s block · %2$s"</item>
+    <item quantity="other">"Waiting · %1$s blocks · %2$s"</item>
   </plurals>
   <string name="gt_a9fecbd4968622c1">"Wake-up schedule hasn\'t synced yet. Noah will retry when opened."</string>
   <string name="gt_d1c9a01d57e90086">"Wallet"</string>
@@ -1645,6 +1652,7 @@
   <string name="gt_f195f8e226312c3a">"You’re all set"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_fe453fd2b1186bf1">"about a day"</string>
+  <string name="gt_424efd5bb8022cc0">"about %1$s"</string>
   <string name="gt_ab51004e9d71a485">"days"</string>
   <string name="gt_0b8e9e995d8d77f1">"debug"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
@@ -1715,15 +1723,11 @@
     <item quantity="one">"%1$s VTXO expires within a day"</item>
     <item quantity="other">"%1$s VTXOs expire within a day"</item>
   </plurals>
-  <plurals name="gt_67804ae8e6858e64">
-    <item quantity="one">"%1$s VTXO · %2$s transactions"</item>
-    <item quantity="other">"%1$s VTXOs · %2$s transactions"</item>
-  </plurals>
   <string name="gt_f4d60c7d0545f547">"%1$s active"</string>
   <string name="gt_00f904d64507e53f">"%1$s blocks"</string>
-  <plurals name="gt_ee08497b4ec8925a">
-    <item quantity="one">"%1$s block · about %2$s"</item>
-    <item quantity="other">"%1$s blocks · about %2$s"</item>
+  <plurals name="gt_bdf51ce532245aa7">
+    <item quantity="one">"%1$s block · %2$s"</item>
+    <item quantity="other">"%1$s blocks · %2$s"</item>
   </plurals>
   <string name="gt_3f2e9c59984c0b94">"%1$s d"</string>
   <plurals name="gt_901bac8a657292dd">
@@ -1770,7 +1774,6 @@
   <string name="gt_6f18db1fb525f402">"%1$s wk"</string>
   <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
-  <string name="gt_30b5b5d939eece20">"%1$s · %2$s transactions"</string>
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, raised when rates rise"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · shared"</string>

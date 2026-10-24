@@ -66,6 +66,12 @@ struct OnchainOverview: Sendable {
     var received: [String: UInt64] = [:]
     /// Decision 3: a parked exit's next package fee (bark's estimate without its margin, per transaction).
     var packageFees: [String: UInt64] = [:]
+    /// bark's daemon is progressing exits in this session.
+    var progressing = true
+    /// The tip at the app's own last completed exit progress (Check the chain), if any.
+    var checkedTip: UInt32?
+    /// Transactions that call left waiting for a fee child after trying to fund them.
+    var provenParked: Set<String> = []
 }
 
 enum OnchainAction: String, Codable, Sendable {
@@ -111,6 +117,10 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var feesUnknown: Bool { fee == nil && chainFee == nil && (action == .startExit || action == .claim) }
     var hasUnknownFeeConsent: Bool { feesUnknown && unknownFeeConsent == id }
     var net: UInt64 { ExitRules.received(amount: amount, claimFee: fee!) }
+    /// The prepared transaction spends one of these outpoints ("txid:vout").
+    func spends(_ outpoints: Set<String>) -> Bool {
+        prepared?.inputs?.contains { outpoints.contains("\($0.txid):\($0.vout)") } == true
+    }
     var totalFee: UInt64 { fee! + chainFee! }
     var fundable: Bool { chainFee.map { confirmed >= $0 } ?? false }
     var inputs: ExitReviewInputs {

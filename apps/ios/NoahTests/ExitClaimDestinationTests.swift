@@ -186,6 +186,9 @@ struct ExitClaimDestinationModelTests {
 struct ExitClaimExecutionTests {
     static let ownAddress = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"
     static let externalAddress = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"
+    /// A real signed claim (regtest, noah-bark08 block 1,276), so its txid can be computed before broadcast.
+    static let claimTransaction = "020000000001014e0022621458774a9eeedc9448622587e1bb35bb5245b98011eb9a0d39c2140a00000000009000000001b8cb010000000000160014501b11c7bd0b5b441e3c84165c028717c7aa35c003400711f56eaa28ae510b667d56393cf8d060a1f479c15af7ee485f89606f839fb0510c7cc0483668731fe0ce5173d37bbfb53c2fe83c5e0f7728777137278fd0d427029000b27520b66df7ecec3bcd274058b2989abf533f8857cdc03f4f5b69309b6436b95b50ecac21c0c477c505b62f93b1837ce023fb42ccb7f3b0c09cdb98e365e69a8e8e01293b8afb040000"
+    static let claimTxid = "ba2d58faec28bc2f17f6b9faae7947c6ae92318b0390f62fbf3d59134d158fc7"
 
     actor Wallet {
         var estimateCalls = 0
@@ -220,7 +223,7 @@ struct ExitClaimExecutionTests {
         }
         func broadcast(_ psbt: String) -> String {
             broadcasts.append(psbt)
-            return "claim-tx"
+            return ExitClaimExecutionTests.claimTxid
         }
         nonisolated func access() -> WalletSession.OnchainClaimAccess {
             .init(walletID: "wallet", network: "regtest", confirmed: { 100_000 }, exits: {
@@ -229,7 +232,7 @@ struct ExitClaimExecutionTests {
                     isClaimable: true)]
             }, isMine: { try await self.isMine($0) }, estimate: { _, _ in
                 try await self.estimate()
-            }, drain: { await self.drain($0, $1) }, transaction: { $0 }, broadcast: { await self.broadcast($0) })
+            }, drain: { await self.drain($0, $1) }, transaction: { _ in ExitClaimExecutionTests.claimTransaction }, broadcast: { await self.broadcast($0) })
         }
     }
 
@@ -259,7 +262,7 @@ struct ExitClaimExecutionTests {
         #expect(try await journal.loadAll().isEmpty)
         _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access())
         #expect(await wallet.estimateCalls == 1)
-        #expect(await wallet.broadcasts == ["claim-psbt"])
+        #expect(await wallet.broadcasts == [Self.claimTransaction])
         let saved = try #require(try await OnchainOperationJournal(file: file).load())
         #expect(saved.quote.hasUnknownFeeConsent && saved.quote.ids == ["a"])
         #expect(saved.quote.fee == nil && saved.quote.chainFee == nil)
@@ -365,10 +368,10 @@ struct ExitClaimExecutionTests {
             _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access())
             #expect(await wallet.ownershipChecks == [destination, destination])
             #expect(await wallet.drainDestinations == [reviewed.destination!])
-            #expect(await wallet.broadcasts == ["claim-psbt"])
+            #expect(await wallet.broadcasts == [Self.claimTransaction])
             let saved = try #require(try await OnchainOperationJournal(file: file).load())
             #expect(saved.quote.destination == (await wallet.drainDestinations).first)
-            #expect(saved.receipt?.txid == "claim-tx")
+            #expect(saved.receipt?.txid == Self.claimTxid)
         }
     }
 

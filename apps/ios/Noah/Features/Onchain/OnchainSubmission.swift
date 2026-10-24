@@ -19,6 +19,8 @@ enum OnchainSubmission {
     static func preBroadcast(_ error: any Error, action: OnchainAction) -> OnchainFailure? {
         if let failure = error as? OnchainFailure,
            [.claimFeeChanged, .cancellationRefused, .boardNotAttempted].contains(failure) { return failure }
+        // A claim to this phone that couldn't be recorded is refused before it's sent.
+        if action == .claim, let failure = error as? OnchainFailure, failure == .constructionFailed { return failure }
         // Renew's eligibility check refuses before submitting anything.
         if action == .refresh, let failure = error as? OnchainFailure, failure == .changed { return failure }
         return action == .board ? boardFailure(error) : nil

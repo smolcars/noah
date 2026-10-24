@@ -62,8 +62,8 @@ struct ExitVtxoDetailView: View {
                     if progress.phase == .needsFunds, let need = text.need {
                         ExitWarning(text: L10n.text("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need), locale: language))
                     }
-                    if progress.stale, let checked = progress.checked {
-                        ExitWarning(text: L10n.plural("This exit is {n} blocks behind the chain: last checked at block {height}. Checking the chain can also send exit transactions.",
+                    if progress.stale, let checked = progress.checked ?? exit.details.tip_height {
+                        ExitWarning(text: L10n.plural("Noah last checked this exit {n} blocks ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions.",
                                                       count: Int(tip - min(tip, checked)), checked.formatted(.number.locale(locale)), locale: language),
                                     symbol: "clock", muted: true)
                     }
@@ -74,6 +74,7 @@ struct ExitVtxoDetailView: View {
                         }
                     }
                     .padding(.top, 22)
+                    if let line = text.batchLine { SettingsFine(text: line) }
                     SettingsDetails(open: $details) { detailRows(exit, progress, text) }
                     OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
                 } footer: {
@@ -290,11 +291,31 @@ struct ExitStatusLine: View {
     /// This exit's claim, as journaled (its reviewed destination and fee).
     private var claim: OnchainQuote? { attempts.first { $0.quote.action == .claim && $0.quote.ids.contains(exit.id) }?.quote }
     private var claimTxid: String? { exit.details.claimTxid }
-    var received: UInt64? { claimTxid.flatMap { overview?.received[$0] } }
-    var claimFee: UInt64? { claim?.fee ?? received.map { exit.amount - min(exit.amount, $0) } }
-    /// Roughly what claiming pays out: the amount less today's claim estimate when Noah has one.
+    /// Every exit the same claim transaction covered (bark records its txid on each).
+    var batch: [ExitModel] {
+        guard let claimTxid else { return [exit] }
+        let covered = (overview?.exits ?? []).filter { $0.details.claimTxid == claimTxid }
+        return covered.contains { $0.id == exit.id } ? covered : covered + [exit]
+    }
+    private var batchAmount: UInt64 { batch.reduce(0) { $0 + $1.amount } }
+    /// What the whole claim paid this wallet (a claim to this phone).
+    private var received: UInt64? { claimTxid.flatMap { overview?.received[$0] } }
+    /// The claim's one fee, as reviewed, or what didn't arrive here.
+    var batchFee: UInt64? { claim?.fee ?? received.map { batchAmount - min(batchAmount, $0) } }
+    /// This exit's part of that fee, so the parts add up to the claim.
+    var claimFee: UInt64? {
+        batchFee.map { ExitClaimSplit.fees(Dictionary(batch.map { ($0.id, $0.amount) }, uniquingKeysWith: { a, _ in a }), fee: $0)[exit.id] ?? 0 }
+    }
+    /// What the Claim button names for this exit; Claim itself prices every ready exit together.
     var claimable: UInt64 { exit.amount }
-    var amount: UInt64 { progress.phase == .claimed ? received ?? claimFee.map { exit.amount - min(exit.amount, $0) } ?? exit.amount : exit.amount }
+    var amount: UInt64 { progress.phase == .claimed ? claimFee.map { exit.amount - min(exit.amount, $0) } ?? exit.amount : exit.amount }
+
+    /// One claim for several exits: the total received and the fee once.
+    var batchLine: String? {
+        guard progress.phase == .claimed, batch.count > 1, let fee = batchFee else { return nil }
+        return L10n.plural("One claim for {n} exits: {amount} received after a {fee} fee.", count: batch.count,
+                           money(batchAmount - min(batchAmount, fee)), money(fee), locale: language)
+    }
 
     /// Fees this wallet's children paid for this exit's transactions.
     var feesPaid: UInt64 {
@@ -353,7 +374,8 @@ struct ExitStatusLine: View {
         case .onchain: return tr("On-chain in block {height}", block(progress.heights.compactMap { $0 }.last ?? tip))
         case .waiting:
             let left = progress.left(tip: tip) ?? 0
-            return L10n.plural("Claimable in {n} blocks · about {time}", count: Int(left), VtxoList.span(Int64(left), locale: language), locale: language)
+            guard left > 0 else { return tr("Unlocks at block {height}", block(progress.claimableHeight ?? tip)) }
+            return L10n.plural("Claimable in {n} blocks · {time}", count: Int(left), ExitText.about(left, language), locale: language)
         case .claimable: return tr("Unlocked at block {height}", block(progress.claimableHeight ?? tip))
         case .claiming: return tr("Claiming · waiting for block {height}", block(tip + 1))
         case .claimed: return tr("Claimed in block {height}", block(progress.claimedHeight ?? tip))
@@ -365,7 +387,7 @@ struct ExitStatusLine: View {
 
     /// One sentence per phase for the wide layout's leading pane.
     var explanation: String {
-        if progress.stale { return tr("Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.") }
+        if progress.stale { return tr("Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on.") }
         switch progress.phase {
         case .starting: return tr("Your VTXO leaves Ark. Nothing from here on needs Ark’s server.")
         case .publishing: return L10n.plural("Your bitcoin sits at the end of a path of {n} transactions in the round’s tree. The round’s own transaction is already on-chain.",
@@ -398,7 +420,7 @@ struct ExitStatusLine: View {
             rows.append(.init(label: tr("Network fees"), value: money(feesPaid), numeric: true))
             if let fee = claimFee { rows.append(.init(label: tr("Claim fee"), value: money(fee), numeric: true)) }
             if let took {
-                rows.append(.init(label: tr("Took"), value: L10n.plural("{n} blocks · about {time}", count: Int(took), VtxoList.span(Int64(took), locale: language), locale: language)))
+                rows.append(.init(label: tr("Took"), value: L10n.plural("{n} blocks · {time}", count: Int(took), ExitText.about(took, language), locale: language)))
             }
             return rows
         case .canceled:
@@ -424,6 +446,16 @@ struct ExitStatusLine: View {
             }
             return rows
         }
+    }
+
+    /// "about 16 h", or "under an hour" for a few blocks.
+    static func about(_ blocks: UInt32, _ language: String) -> String {
+        blocks < 6 ? L10n.text("under an hour", locale: language) : L10n.text("about {time}", VtxoList.span(Int64(blocks), locale: language), locale: language)
+    }
+
+    /// "1 VTXO · 4 transactions".
+    static func count(vtxos: Int, transactions: UInt64, _ language: String) -> String {
+        L10n.plural("{n} VTXOs", count: vtxos, locale: language) + " · " + L10n.plural("{n} transactions", count: Int(transactions), locale: language)
     }
 
     /// Blocks from start to the claim's block (bark keeps heights, not times).

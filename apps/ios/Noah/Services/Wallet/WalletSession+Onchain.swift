@@ -21,13 +21,22 @@ extension WalletSession {
                 confirmed: try await handles.onchain.balance().confirmedSats, tip: tip,
                 pendingTotal: try await handles.wallet.pendingExitsTotalSats(),
                 claimableHeight: try await handles.wallet.allExitsClaimableAtHeight())
-            guard !models.isEmpty else { return overview }
             // What the exit screens add; optional, so a failed read never hides the exits themselves.
             overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
+            overview.progressing = await self.runsDaemon
+            if let check = await self.exitChecks[overview.walletID] {
+                overview.checkedTip = check.tip
+                overview.provenParked = check.parked
+            }
+            guard !models.isEmpty else { return overview }
             let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
             let claims = Set(models.compactMap(\.details.claimTxid))
             for transaction in (try? await handles.onchain.transactions()) ?? [] {
-                if children.contains(transaction.txid), let fee = transaction.onchainFeeSats { overview.childFees[transaction.txid] = fee }
+                // BDK can't price a fee child (its anchor input isn't the wallet's); what left the wallet is its fee.
+                if children.contains(transaction.txid), let fee = transaction.onchainFeeSats
+                    ?? (transaction.balanceChangeSats < 0 ? UInt64(-transaction.balanceChangeSats) : nil) {
+                    overview.childFees[transaction.txid] = fee
+                }
                 if claims.contains(transaction.txid), transaction.balanceChangeSats > 0 {
                     overview.received[transaction.txid] = UInt64(transaction.balanceChangeSats)
                 }
@@ -142,18 +151,27 @@ extension WalletSession {
         }
     }
 
-    /// Preparation is held only for the visible confirmation; never submitted by automation.
+    /// Preparation is held only for the visible confirmation; never submitted by automation. Exit
+    /// claims to this phone stay on-chain: their value is left out of the threshold and the amount.
     func autoBoardQuote() async throws -> OnchainQuote? {
         try await withOpenWallet { handles in
             guard let info = try await handles.wallet.arkInfo() else { throw OnchainFailure.unavailable }
             let balance = try await handles.onchain.balance().confirmedSats
-            guard balance > BoardingRules.reserve + BoardingRules.threshold(info.minBoardAmountSats)
+            let claims = try await Self.exitClaims(handles)
+            guard balance > claims.held, balance - claims.held > BoardingRules.reserve + BoardingRules.threshold(info.minBoardAmountSats)
             else { return nil }
-            return try await self.prepareBoardReview(handles, requested: 0, automatic: true)
+            return try await self.prepareBoardReview(handles, requested: 0, automatic: true, claims: claims)
         }
     }
 
-    private func prepareBoardReview(_ handles: Handles, requested: UInt64, automatic: Bool) async throws -> OnchainQuote? {
+    /// This wallet's exit claims to this phone, and what of them auto-board leaves on-chain.
+    static func exitClaims(_ handles: Handles) async throws -> AutoBoardFunding.Claims {
+        let outpoints = try AutoBoardFunding().claims(walletID: handles.wallet.fingerprint())
+        return .init(outpoints: outpoints, held: AutoBoardFunding.held(outpoints, utxos: try await handles.onchain.utxos()))
+    }
+
+    private func prepareBoardReview(_ handles: Handles, requested: UInt64, automatic: Bool,
+                                    claims: AutoBoardFunding.Claims = .init()) async throws -> OnchainQuote? {
         let balance = try await handles.onchain.balance().confirmedSats
         let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
         let walletID = handles.wallet.fingerprint()
@@ -172,15 +190,18 @@ extension WalletSession {
             do { return try await prepare(requested) }
             catch { throw OnchainSubmission.boardFailure(error) ?? error }
         }
-        return try await Self.reserveBoardReview(minimum: minimum, feeRate: rate,
+        return try await Self.reserveBoardReview(minimum: minimum, feeRate: rate, claims: claims,
             discard: { quote in
                 await self.discardBoard(quote)
                 guard await self.boardPreparations[quote.prepared!.id] == nil else { throw OnchainFailure.uncertain }
             }, prepare: prepare)
     }
 
+    /// `claims`: exit claims to this phone. Their value is left out (the board is prepared by amount,
+    /// so it stays on-chain as change), and a preparation that spends one of them is discarded: no
+    /// prompt, and the next balance refresh tries again.
     static func reserveBoardReview(
-        minimum: UInt64, feeRate: UInt64,
+        minimum: UInt64, feeRate: UInt64, claims: AutoBoardFunding.Claims = .init(),
         discard: @Sendable (OnchainQuote) async throws -> Void,
         prepare: @Sendable (UInt64) async throws -> OnchainQuote
     ) async throws -> OnchainQuote? {
@@ -189,14 +210,14 @@ extension WalletSession {
             try await discard(probe)
             try Task.checkCancellation()
             // Allow for the extra change output (at most 43 vB) absent from the drain probe.
-            let retained = BoardingRules.reserve + 43 * feeRate
+            let retained = BoardingRules.reserve + 43 * feeRate + claims.held
             guard probe.amount > retained else { return nil }
             let gross = probe.amount - retained
             guard gross >= BoardingRules.threshold(minimum) else { return nil }
             let quote = try await prepare(gross)
             do {
                 try Task.checkCancellation()
-                guard quote.amount + quote.chainFee! + BoardingRules.reserve <= quote.confirmed,
+                guard quote.amount + quote.chainFee! + BoardingRules.reserve + claims.held <= quote.confirmed, !quote.spends(claims.outpoints),
                       quote.net >= BoardingRules.threshold(minimum) else {
                     try await discard(quote)
                     return nil
@@ -284,11 +305,17 @@ extension WalletSession {
             let claim = try await access.drain(quote.ids, quote.destination!)
             guard quote.hasUnknownFeeConsent || claim.feeSats == quote.fee else { throw OnchainFailure.claimFeeChanged }
             let tx = try access.transaction(claim.psbtBase64)
+            // A claim to this phone is recorded before it's sent, or not sent (nothing broadcast yet).
+            let expected = BitcoinTransaction.txid(hex: tx)
+            if quote.destinationIsMine == true {
+                guard let expected else { throw OnchainFailure.constructionFailed }
+                do { try await access.claimedToPhone(expected) } catch { throw OnchainFailure.constructionFailed }
+            }
             let txid: String
             do { txid = try await access.broadcast(tx) }
             catch { throw OnchainFailure.uncertain }
-            // Sent: a failed ledger write must not make it look unsent; auto-board's own read marks it too.
-            if quote.destinationIsMine == true { try? await access.claimedToPhone(txid) }
+            // Auto-board's own read also marks claims bark has seen.
+            if quote.destinationIsMine == true, txid != expected { try? await access.claimedToPhone(txid) }
             return OnchainReceipt(message: "Claim submitted. Refresh to check confirmation.", txid: txid)
         }
     }
@@ -386,7 +413,8 @@ extension WalletSession {
         return try await withOpenWallet { handles in
             if quote.action == .board {
                 return try await self.submitBoard(quote, walletID: handles.wallet.fingerprint(), journal: journal,
-                    confirmed: { try await handles.onchain.balance().confirmedSats }, funding: funding,
+                    confirmed: { try await handles.onchain.balance().confirmedSats }, claims: { try await Self.exitClaims(handles) },
+                    funding: funding,
                     readFunding: {
                         guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
                         return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
@@ -422,6 +450,15 @@ extension WalletSession {
                 case .progress:
                     let statuses = try await handles.wallet.progressExits(feeRateSatPerVb: quote.feeRate)
                     let failures = statuses.filter { $0.error != nil }.count
+                    // A completed call tried to fund every parked transaction; those still parked had too
+                    // few confirmed funds (Decision 3). Exits it failed on prove nothing.
+                    if let tip = try? await handles.onchain.tipHeight() {
+                        let parked = statuses.filter { $0.error == nil }.compactMap {
+                            Self.exitModel(.init(vtxoId: $0.vtxoId, amountSats: 0, state: $0.state, history: nil,
+                                                 transactionCount: 0, transactions: [])).parkedTxid
+                        }
+                        await self.recordExitCheck(.init(tip: tip, parked: Set(parked)), walletID: handles.wallet.fingerprint())
+                    }
                     return OnchainReceipt(
                         message: failures == 0
                             ? "Exits progressed. Transactions may have been broadcast or fee-bumped."

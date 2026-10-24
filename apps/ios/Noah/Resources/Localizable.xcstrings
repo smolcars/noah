@@ -9498,18 +9498,54 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claimable in %1$@ blocks · about %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reclamable en %1$@ bloques · unos %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ブロック後に受け取り可能 · 約%2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@블록 후 청구 가능 · 약 %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan lösas in om %1$@ block · ungefär %2$@"
+          }
+        }
+      }
+    },
+    "Claimable in {n} blocks · {time}": {
+      "comment": "GT gt_17bf7bb54aafd273; arguments: n, time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
           "variations": {
             "plural": {
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld block · about %2$@"
+                  "value": "Claimable in %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld blocks · about %2$@"
+                  "value": "Claimable in %1$lld blocks · %2$@"
                 }
               }
             }
@@ -9521,13 +9557,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Reclamable en %1$lld bloque · unas %2$@"
+                  "value": "Claimable in %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Reclamable en %1$lld bloques · unas %2$@"
+                  "value": "Claimable in %1$lld blocks · %2$@"
                 }
               }
             }
@@ -9539,13 +9575,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "あと%1$lldブロックで受け取り可能 · 約%2$@"
+                  "value": "Claimable in %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "あと%1$lldブロックで受け取り可能 · 約%2$@"
+                  "value": "Claimable in %1$lld blocks · %2$@"
                 }
               }
             }
@@ -9557,13 +9593,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld블록 후 청구 가능 · 약 %2$@"
+                  "value": "Claimable in %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld블록 후 청구 가능 · 약 %2$@"
+                  "value": "Claimable in %1$lld blocks · %2$@"
                 }
               }
             }
@@ -9575,13 +9611,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Kan lösas in om %1$lld block · ungefär %2$@"
+                  "value": "Claimable in %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Kan lösas in om %1$lld block · ungefär %2$@"
+                  "value": "Claimable in %1$lld blocks · %2$@"
                 }
               }
             }
@@ -23041,42 +23077,6 @@
         }
       }
     },
-    "In about {time}": {
-      "comment": "GT gt_2d6250023c794435; arguments: time",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In about %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En unas %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "約%1$@後"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "약 %1$@ 후"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Om ungefär %1$@"
-          }
-        }
-      }
-    },
     "In progress": {
       "comment": "GT gt_c1f88e9d6c4145cf; arguments: none",
       "extractionState": "manual",
@@ -23313,6 +23313,42 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "In {time}": {
+      "comment": "GT gt_0dc23ef619cceb30; arguments: time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@"
           }
         }
       }
@@ -31777,42 +31813,6 @@
         }
       }
     },
-    "Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.": {
-      "comment": "GT gt_545eb93f8194bd47; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah hace tiempo que no consulta la cadena para esta salida. Consultarla también puede enviar sus transacciones o subir su comisión."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahはしばらくこの出金のチェーンを確認していません。確認すると、トランザクションの送信や手数料の引き上げが行われることもあります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah가 한동안 이 출금의 체인을 확인하지 않았어요. 확인하면 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah har inte kontrollerat blockkedjan för det här uttaget på ett tag. En kontroll kan också skicka eller höja avgiften för dess transaktioner."
-          }
-        }
-      }
-    },
     "Noah is Locked": {
       "comment": "GT gt_ef0d44ddb30f6d0d; arguments: none",
       "extractionState": "manual",
@@ -31953,6 +31953,138 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah håller fortfarande på att slutföra en säkerhetskopiering. Försök igen om en stund."
+          }
+        }
+      }
+    },
+    "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on.": {
+      "comment": "GT gt_0450659e5fbd54ab; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+          }
+        }
+      }
+    },
+    "Noah last checked this exit {n} blocks ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions.": {
+      "comment": "GT gt_5063ccfc0bf26542; arguments: n, height",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                }
+              }
+            }
           }
         }
       }
@@ -34173,6 +34305,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "Återstående reserv på blockkedjan"
+          }
+        }
+      }
+    },
+    "One claim for {n} exits: {amount} received after a {fee} fee.": {
+      "comment": "GT gt_09e4665e49aef548; arguments: n, amount, fee",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                }
+              }
+            }
           }
         }
       }
@@ -50281,102 +50509,6 @@
         }
       }
     },
-    "This exit is {n} blocks behind the chain: last checked at block {height}. Checking the chain can also send exit transactions.": {
-      "comment": "GT gt_94e7b11e64a199f4; arguments: n, height",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "This exit is %1$lld block behind the chain: last checked at block %2$@. Checking the chain can also send exit transactions."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "This exit is %1$lld blocks behind the chain: last checked at block %2$@. Checking the chain can also send exit transactions."
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Esta salida va %1$lld bloque por detrás de la cadena: última consulta en el bloque %2$@. Consultar la cadena también puede enviar transacciones de salida."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Esta salida va %1$lld bloques por detrás de la cadena: última consulta en el bloque %2$@. Consultar la cadena también puede enviar transacciones de salida."
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "この出金はチェーンから%1$lldブロック遅れています: 最終確認はブロック %2$@。チェーンを確認すると、出金トランザクションが送信されることもあります。"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "この出金はチェーンから%1$lldブロック遅れています: 最終確認はブロック %2$@。チェーンを確認すると、出金トランザクションが送信されることもあります。"
-                }
-              }
-            }
-          }
-        },
-        "ko": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "이 출금은 체인보다 %1$lld블록 뒤처져 있어요: 마지막 확인은 블록 %2$@. 체인을 확인하면 출금 트랜잭션을 보낼 수도 있어요."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "이 출금은 체인보다 %1$lld블록 뒤처져 있어요: 마지막 확인은 블록 %2$@. 체인을 확인하면 출금 트랜잭션을 보낼 수도 있어요."
-                }
-              }
-            }
-          }
-        },
-        "sv": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Det här uttaget ligger %1$lld block efter blockkedjan: senast kontrollerat vid block %2$@. En kontroll av blockkedjan kan också skicka uttagstransaktioner."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Det här uttaget ligger %1$lld block efter blockkedjan: senast kontrollerat vid block %2$@. En kontroll av blockkedjan kan också skicka uttagstransaktioner."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.": {
       "comment": "GT gt_5ed0c20bff01c0ca; arguments: none",
       "extractionState": "manual",
@@ -53689,6 +53821,42 @@
         }
       }
     },
+    "Unlocks at block {height}": {
+      "comment": "GT gt_c5b5f0e95343c511; arguments: height",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlocks at block %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlocks at block %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlocks at block %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlocks at block %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlocks at block %1$@"
+          }
+        }
+      }
+    },
     "Unreadable image": {
       "comment": "GT gt_fae022f4a65e9a7d; arguments: none",
       "extractionState": "manual",
@@ -55710,18 +55878,54 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting · %1$@ blocks · about %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En espera · %1$@ bloques · unos %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中 · %1$@ブロック · 約%2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대기 중 · %1$@블록 · 약 %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Väntar · %1$@ block · ungefär %2$@"
+          }
+        }
+      }
+    },
+    "Waiting · {n} blocks · {time}": {
+      "comment": "GT gt_985fc1ec623fd8b3; arguments: n, time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
           "variations": {
             "plural": {
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld block · about %2$@"
+                  "value": "Waiting · %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld blocks · about %2$@"
+                  "value": "Waiting · %1$lld blocks · %2$@"
                 }
               }
             }
@@ -55733,13 +55937,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "En espera · %1$lld bloque · unas %2$@"
+                  "value": "Waiting · %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "En espera · %1$lld bloques · unas %2$@"
+                  "value": "Waiting · %1$lld blocks · %2$@"
                 }
               }
             }
@@ -55751,13 +55955,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "待機中 · %1$lldブロック · 約%2$@"
+                  "value": "Waiting · %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "待機中 · %1$lldブロック · 約%2$@"
+                  "value": "Waiting · %1$lld blocks · %2$@"
                 }
               }
             }
@@ -55769,13 +55973,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "대기 중 · %1$lld블록 · 약 %2$@"
+                  "value": "Waiting · %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "대기 중 · %1$lld블록 · 약 %2$@"
+                  "value": "Waiting · %1$lld blocks · %2$@"
                 }
               }
             }
@@ -55787,13 +55991,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Väntar · %1$lld block · ungefär %2$@"
+                  "value": "Waiting · %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Väntar · %1$lld block · ungefär %2$@"
+                  "value": "Waiting · %1$lld blocks · %2$@"
                 }
               }
             }
@@ -58465,6 +58669,42 @@
         }
       }
     },
+    "about {time}": {
+      "comment": "GT gt_424efd5bb8022cc0; arguments: time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %1$@"
+          }
+        }
+      }
+    },
     "days": {
       "comment": "GT gt_ab51004e9d71a485; arguments: none",
       "extractionState": "manual",
@@ -60745,102 +60985,6 @@
         }
       }
     },
-    "{n} VTXOs · {count} transactions": {
-      "comment": "GT gt_67804ae8e6858e64; arguments: n, count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld VTXO · %2$@ transactions"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld VTXOs · %2$@ transactions"
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld VTXO · %2$@ transacciones"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld VTXOs · %2$@ transacciones"
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld個のVTXO · %2$@件のトランザクション"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld個のVTXO · %2$@件のトランザクション"
-                }
-              }
-            }
-          }
-        },
-        "ko": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO %1$lld개 · 트랜잭션 %2$@개"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO %1$lld개 · 트랜잭션 %2$@개"
-                }
-              }
-            }
-          }
-        },
-        "sv": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld VTXO · %2$@ transaktioner"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld VTXO:er · %2$@ transaktioner"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "{n} active": {
       "comment": "GT gt_f4d60c7d0545f547; arguments: n",
       "extractionState": "manual",
@@ -60913,8 +61057,8 @@
         }
       }
     },
-    "{n} blocks · about {time}": {
-      "comment": "GT gt_ee08497b4ec8925a; arguments: n, time",
+    "{n} blocks · {time}": {
+      "comment": "GT gt_bdf51ce532245aa7; arguments: n, time",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -60923,13 +61067,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld block · about %2$@"
+                  "value": "%1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld blocks · about %2$@"
+                  "value": "%1$lld blocks · %2$@"
                 }
               }
             }
@@ -60941,13 +61085,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld bloque · unas %2$@"
+                  "value": "%1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld bloques · unas %2$@"
+                  "value": "%1$lld blocks · %2$@"
                 }
               }
             }
@@ -60959,13 +61103,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lldブロック · 約%2$@"
+                  "value": "%1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lldブロック · 約%2$@"
+                  "value": "%1$lld blocks · %2$@"
                 }
               }
             }
@@ -60977,13 +61121,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld블록 · 약 %2$@"
+                  "value": "%1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld블록 · 약 %2$@"
+                  "value": "%1$lld blocks · %2$@"
                 }
               }
             }
@@ -60995,13 +61139,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld block · ungefär %2$@"
+                  "value": "%1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld block · ungefär %2$@"
+                  "value": "%1$lld blocks · %2$@"
                 }
               }
             }
@@ -62241,42 +62385,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ wu"
-          }
-        }
-      }
-    },
-    "{n} · {count} transactions": {
-      "comment": "GT gt_30b5b5d939eece20; arguments: n, count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@ transactions"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@ transacciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@件のトランザクション"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · 트랜잭션 %2$@개"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@ transaktioner"
           }
         }
       }

@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Testing
 
@@ -60,6 +61,12 @@ struct ExitProgressTests {
         #expect(waiting.phase == .waiting && waiting.picture == .lock && waiting.left(tip: 150) == 98)
         // Later states keep the path bark last listed.
         #expect(waiting.total == 4 && waiting.confirmed == 4)
+        // bark's last list can still show the leaf in the mempool: past Processing it's in a block.
+        var leafPending = mined
+        leafPending[3] = Self.tx("leaf", "awaiting-confirmation", child: "c3", origin: "wallet")
+        let jumped = ExitProgress(Self.exit("AwaitingDelta", .init(kind: "awaiting-delta", tip_height: 150,
+            confirmed_block: .init(height: 104, hash: "h"), claimable_height: 248), history: [Self.processing(leafPending, tip: 103)]), tip: 150)
+        #expect(jumped.confirmed == 4 && jumped.heights.last == 104)
 
         let claimable = ExitProgress(Self.exit("Claimable", .init(kind: "claimable", tip_height: 248,
             claimable_since: .init(height: 248, hash: "h"))), tip: 248)
@@ -95,40 +102,51 @@ struct ExitProgressTests {
         #expect(bumped.bumped && bumped.stuck == 1)
     }
 
-    @Test func staleOnlyWhileLiveAndBehindTheChain() {
+    @Test func staleOnlyWhileNothingProgressesASendingExit() {
         let behind = Self.exit("Processing", Self.processing(Self.path.map { Self.tx($0, "verify-inputs") }, tip: 90))
-        #expect(ExitProgress(behind, tip: 100).stale)
-        #expect(!ExitProgress(behind, tip: 90).stale)
+        // bark's daemon checks every exit each minute while it runs: never stale, however old the record.
+        #expect(!ExitProgress(behind, tip: 100).stale)
+        // Without it, the last progress there was is the app's own check, or bark's record.
+        #expect(ExitProgress(behind, tip: 100, progressing: false).stale)
+        #expect(!ExitProgress(behind, tip: 91, progressing: false).stale)
+        #expect(!ExitProgress(behind, tip: 100, checkedTip: 99, progressing: false).stale)
+        #expect(ExitProgress(behind, tip: 100, checkedTip: 98, progressing: false).stale)
+        #expect(ExitProgress(behind, tip: 100, checkedTip: 98, progressing: false).checked == 98)
+        // "Last checked" is the app's own check, never bark's frozen height.
+        #expect(ExitProgress(behind, tip: 100).checked == nil)
+        // Waiting exits are never stale.
+        let waiting = Self.exit("AwaitingDelta", .init(kind: "awaiting-delta", tip_height: 90, claimable_height: 234))
+        #expect(!ExitProgress(waiting, tip: 150, progressing: false).stale)
+    }
+
+    @Test func aSentClaimReadsClaimingUntilBarkSeesIt() {
+        let ready = Self.exit("Claimable", .init(kind: "claimable", tip_height: 248, claimable_since: .init(height: 248, hash: "h")))
+        #expect(ExitProgress(ready, tip: 248).phase == .claimable)
+        #expect(ExitProgress(ready, tip: 248, claimSent: true).phase == .claiming)
     }
 
     // MARK: Decision 3
 
-    @Test func needsFundsShowsOnlyAfterAFullCycleAndClearsWhenFundsArrive() {
+    @Test func needsFundsNeedsACompletedProgressThatLeftItParked() {
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
         txs[0] = Self.tx("root", "confirmed", height: 101)
         txs[1] = Self.tx("l2", "awaiting-cpfp-broadcast")
         let exit = Self.exit("Processing", Self.processing(txs, tip: 101))
         #expect(exit.parkedTxid == "l2")
-        let t0 = Date(timeIntervalSince1970: 1_000)
-        var funds = ExitFunds()
-        funds.observe([exit], now: t0)
-        #expect(!funds.needsFunds(exit, confirmed: 310, packageFee: 1_215, now: t0))
-        #expect(!funds.needsFunds(exit, confirmed: 310, packageFee: 1_215, now: t0.addingTimeInterval(59)))
-        // Observing again doesn't restart the clock.
-        funds.observe([exit], now: t0.addingTimeInterval(30))
-        #expect(funds.needsFunds(exit, confirmed: 310, packageFee: 1_215, now: t0.addingTimeInterval(60)))
+        // Parked with too few funds, but no completed progress has tried it yet: no claim of missing funds.
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 310, packageFee: 1_215, proven: []))
+        // A completed Check the chain left it parked.
+        #expect(ExitFunds.needsFunds(exit, confirmed: 310, packageFee: 1_215, proven: ["l2"]))
         // Funds arrive: enough confirmed for the package.
-        #expect(!funds.needsFunds(exit, confirmed: 1_215, packageFee: 1_215, now: t0.addingTimeInterval(60)))
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 1_215, packageFee: 1_215, proven: ["l2"]))
         // No package fee known: nothing is inferred.
-        #expect(!funds.needsFunds(exit, confirmed: 0, packageFee: nil, now: t0.addingTimeInterval(600)))
-
-        // The transaction got its child: forgotten, and no longer parked.
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 0, packageFee: nil, proven: ["l2"]))
+        // Proof for another transaction doesn't carry over.
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 0, packageFee: 1_215, proven: ["root"]))
+        // It got its child: no longer parked.
         var moved = txs
         moved[1] = Self.tx("l2", "awaiting-confirmation", child: "c1", origin: "wallet")
-        let sent = Self.exit("Processing", Self.processing(moved, tip: 101))
-        funds.observe([sent], now: t0.addingTimeInterval(90))
-        #expect(funds.parkedSince.isEmpty)
-        #expect(!funds.needsFunds(sent, confirmed: 0, packageFee: 1_215, now: t0.addingTimeInterval(90)))
+        #expect(!ExitFunds.needsFunds(Self.exit("Processing", Self.processing(moved, tip: 101)), confirmed: 0, packageFee: 1_215, proven: ["l2"]))
     }
 
     @Test func barkHistoryProvesAProgressCycleAlready() {
@@ -137,13 +155,29 @@ struct ExitProgressTests {
         let earlier = Self.processing(txs, tip: 100)
         let exit = Self.exit("Processing", Self.processing(txs, tip: 102), history: [earlier])
         #expect(exit.parkedAcrossProgress)
-        let now = Date()
-        var funds = ExitFunds()
-        funds.observe([exit], now: now)
-        #expect(funds.needsFunds(exit, confirmed: 100, packageFee: 1_215, now: now))
-        // Same tip: one progress only, so it waits for a cycle.
+        #expect(ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: []))
+        // Same tip: one progress only.
         let same = Self.exit("Processing", Self.processing(txs, tip: 100), history: [earlier])
         #expect(!same.parkedAcrossProgress)
+    }
+
+    @Test func mempoolWaitCountsAgainstTheChainTip() {
+        var txs = Self.path.map { Self.tx($0, "verify-inputs") }
+        txs[0] = Self.tx("root", "awaiting-confirmation", child: "c0", origin: "wallet")
+        // bark keeps the state, height included, while nothing changes: the chain's tip counts the blocks.
+        let frozen = Self.exit("Processing", Self.processing(txs, tip: 100))
+        #expect(ExitProgress(frozen, tip: 100).stuck == 0)
+        #expect(ExitProgress(frozen, tip: 104).stuck == 4)
+    }
+
+    @Test func aBatchedClaimsFeeIsSplitSoThePartsAddUp() {
+        let parts = ExitClaimSplit.fees(["a": 31_000, "b": 24_500], fee: 262)
+        #expect(parts.values.reduce(0, +) == 262)
+        #expect((31_000 - parts["a"]!) + (24_500 - parts["b"]!) == 55_238)
+        #expect(parts == ["a": 146, "b": 116])
+        #expect(ExitClaimSplit.fees(["a": 31_000], fee: 262) == ["a": 262])
+        let thirds = ExitClaimSplit.fees(["a": 1, "b": 1, "c": 1], fee: 100)
+        #expect(thirds.values.reduce(0, +) == 100 && thirds.values.allSatisfy { $0 == 33 || $0 == 34 })
     }
 
     // MARK: Decision 4
@@ -280,7 +314,8 @@ struct ExitClaimLedgerTests {
             let destination = mine ? ExitClaimExecutionTests.ownAddress : ExitClaimExecutionTests.externalAddress
             let reviewed = try await WalletSession.claimQuote(ids: ["a"], destination: destination, access: access)
             _ = try await WalletSession.executeClaim(reviewed, journal: OnchainOperationJournal(file: file), access: access)
-            #expect(await marks.txids == (mine ? ["claim-tx"] : []))
+            // Recorded before the broadcast, from the signed transaction itself.
+            #expect(await marks.txids == (mine ? [ExitClaimExecutionTests.claimTxid] : []))
         }
     }
 
@@ -302,5 +337,202 @@ struct ExitClaimLedgerTests {
         let before = disk
         try AutoBoardFunding.markClaimed([], walletID: "wallet", store: store)
         #expect(disk == before)
+    }
+}
+
+/// Auto-board after an exit claim to this phone: the claimed coins stay on-chain. Only a real
+/// deposit is offered, prepared by amount; with only the claim on-chain there's no prompt; once the
+/// claimed coin is spent it no longer counts.
+struct ExitClaimAutoBoardTests {
+    static let claim = "\(ExitClaimExecutionTests.claimTxid):0"
+
+    @Test func aClaimsTxidIsKnownBeforeItsSent() {
+        #expect(BitcoinTransaction.txid(hex: ExitClaimExecutionTests.claimTransaction) == ExitClaimExecutionTests.claimTxid)
+        for broken in ["", "zz", String(ExitClaimExecutionTests.claimTransaction.dropLast(2)), ExitClaimExecutionTests.claimTransaction + "00"] {
+            #expect(BitcoinTransaction.txid(hex: broken) == nil)
+        }
+    }
+
+    @Test func heldValueIsTheUnspentConfirmedClaimOnly() {
+        let utxos: [OnchainUtxo] = [
+            .local(outpoint: .init(txid: ExitClaimExecutionTests.claimTxid, vout: 0), amountSats: 58_705, confirmationHeight: 1_278),
+            .local(outpoint: .init(txid: "deposit", vout: 0), amountSats: 40_000, confirmationHeight: 1_280),
+            .local(outpoint: .init(txid: "pending-claim", vout: 0), amountSats: 9_000, confirmationHeight: nil),
+        ]
+        #expect(AutoBoardFunding.held([Self.claim, "pending-claim:0"], utxos: utxos) == 58_705)
+        // Spent: gone from the wallet's coins, so nothing is held back any more.
+        #expect(AutoBoardFunding.held([Self.claim], utxos: Array(utxos.dropFirst())) == 0)
+    }
+
+    actor Board {
+        let balance: UInt64
+        /// The coins bark's coin selection picks for the sized board.
+        let inputs: [String]
+        var amounts: [UInt64] = []
+        var discarded: [UUID] = []
+        init(balance: UInt64, inputs: [String] = ["deposit:0"]) { self.balance = balance; self.inputs = inputs }
+        func prepare(_ amount: UInt64) -> OnchainQuote {
+            amounts.append(amount)
+            var quote = BoardPreparedTests.quote
+            quote.id = UUID(); quote.automatic = true; quote.confirmed = balance
+            quote.amount = amount == 0 ? balance - 150 : amount
+            quote.chainFee = 150; quote.fee = 330; quote.feeRate = 1
+            quote.prepared = .init(PreparedBoard(id: quote.id.uuidString, txid: "board", grossSats: quote.amount, netSats: quote.net,
+                arkFeeSats: 330, onchainFeeSats: 150, vsize: 150, inputs: inputs.map {
+                    .init(txid: String($0.prefix { $0 != ":" }), vout: UInt32($0.split(separator: ":")[1])!) }))
+            return quote
+        }
+        func discard(_ quote: OnchainQuote) { discarded.append(quote.id) }
+        func review(held: UInt64, claimed: Set<String> = [ExitClaimAutoBoardTests.claim]) async throws -> OnchainQuote? {
+            try await WalletSession.reserveBoardReview(minimum: 20_000, feeRate: 1, claims: .init(outpoints: claimed, held: held),
+                                                       discard: { await self.discard($0) }, prepare: { await self.prepare($0) })
+        }
+    }
+
+    @Test func aLaterDepositIsOfferedWithoutTheClaimedCoins() async throws {
+        // The ₿58,705 claim plus a ₿40,000 deposit: only the deposit, less fees and the reserve, is boarded.
+        let board = Board(balance: 98_705)
+        let quote = try #require(try await board.review(held: 58_705))
+        #expect(await board.amounts == [0, 98_555 - (5_000 + 43) - 58_705])
+        #expect(quote.confirmed - quote.amount - quote.chainFee! >= 58_705 + BoardingRules.reserve)
+        // Without the claim held back, the whole balance would have gone.
+        #expect(try await Board(balance: 98_705).review(held: 0, claimed: [])?.amount == 98_555 - 5_043)
+    }
+
+    @Test func withOnlyTheClaimOnChainThereIsNoPrompt() async throws {
+        #expect(try await Board(balance: 58_705).review(held: 58_705) == nil)
+    }
+
+    @Test func aSmallDepositBesideTheClaimGivesNoPrompt() async throws {
+        // ₿15,000 beside the claim: what auto-board may board stays under ₿20,000.
+        #expect(try await Board(balance: 73_705).review(held: 58_705) == nil)
+    }
+
+    @Test func aPreparationThatSpendsTheClaimedCoinIsDiscarded() async throws {
+        let board = Board(balance: 98_705, inputs: ["deposit:0", ExitClaimAutoBoardTests.claim])
+        #expect(try await board.review(held: 58_705) == nil)
+        // The probe and the sized board are both discarded; nothing is left held for a prompt.
+        #expect(await board.discarded.count == 2)
+    }
+
+    @Test func submittingRechecksTheClaimedCoins() async throws {
+        for (claimed, held, submits) in [(Set<String>(), UInt64(0), true), ([ExitClaimAutoBoardTests.claim], 0, false), ([], 58_705, false)] {
+            let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: file) }
+            let journal = OnchainOperationJournal(file: file)
+            let session = WalletSession()
+            var quote = await Board(balance: 45_000, inputs: ["deposit:0", ExitClaimAutoBoardTests.claim]).prepare(39_000)
+            quote.walletID = "wallet"
+            let reviewed = quote
+            let sent = BoardSubmissions()
+            await session.retainBoardReview(reviewed, discard: {}, submit: {
+                await sent.add()
+                return .init(txid: "board", broadcast: .accepted, vtxoIds: [])
+            })
+            let submit = {
+                try await session.submitBoard(reviewed, walletID: "wallet", journal: journal, confirmed: { 45_000 },
+                                              claims: { .init(outpoints: claimed, held: held) })
+            }
+            if submits { _ = try await submit() } else { await #expect(throws: OnchainFailure.changed) { _ = try await submit() } }
+            #expect(await sent.count == (submits ? 1 : 0))
+        }
+    }
+
+    actor BoardSubmissions {
+        var count = 0
+        func add() { count += 1 }
+    }
+
+    @MainActor @Test func claimsAreRecordedBesideHandledInOneWrite() throws {
+        var disk: String? = #"{"wallet":["deposit:0"]}"# // An original outpoint-only ledger.
+        var writes = 0
+        var store = AutoBoardFunding()
+        store.read = { disk }; store.write = { disk = $0; writes += 1 }
+        try AutoBoardFunding.markClaimed([Self.claim], walletID: "wallet", store: store)
+        #expect(writes == 1)
+        #expect(try store.claims(walletID: "wallet") == [Self.claim])
+        #expect(try !store.hasUnhandled(.init(walletID: "wallet", outpoints: ["deposit:0", Self.claim])))
+        // Marking it again changes nothing.
+        try AutoBoardFunding.markClaimed([Self.claim], walletID: "wallet", store: store)
+        #expect(writes == 1)
+        #expect(try store.claims(walletID: "other").isEmpty)
+    }
+
+    @Test func aClaimToThisPhoneThatCantBeRecordedIsNotSent() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let wallet = ExitClaimExecutionTests.Wallet()
+        var access = wallet.access()
+        access.claimedToPhone = { _ in throw OnchainFailure.unavailable }
+        let journal = OnchainOperationJournal(file: file)
+        let reviewed = try await WalletSession.claimQuote(ids: ["a"], destination: ExitClaimExecutionTests.ownAddress, access: access)
+        await #expect(throws: OnchainFailure.constructionFailed) {
+            _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: access)
+        }
+        #expect(await wallet.broadcasts.isEmpty)
+        // Nothing was sent, so nothing blocks a new claim.
+        #expect(try await journal.loadAll().isEmpty)
+    }
+}
+
+/// Hold to start and hold to claim across a restart: the durable journal is what stops a repeat.
+/// One model is held twice (a size-class change rebuilds the hold), then a fresh model and journal
+/// on the same file (a process restart) reviews and holds again. Exactly one wallet mutation each.
+@MainActor
+struct ExitRestartTests {
+    nonisolated static let overview = OnchainOverview(walletID: "wallet", vtxos: [], exits: [], confirmed: 100_000, tip: 100, pendingTotal: 0, claimableHeight: nil)
+
+    @Test func aClaimHeldAgainAfterARestartIsSentOnce() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let wallet = ExitClaimExecutionTests.Wallet()
+        func launch() -> OnchainModel {
+            let journal = OnchainOperationJournal(file: file), access = wallet.access()
+            return OnchainModel(dependencies: .init(ready: { true }, overview: { Self.overview },
+                quote: { _, ids, _, destination in try await WalletSession.claimQuote(ids: ids, destination: destination, access: access) },
+                execute: { try await WalletSession.executeClaim($0, journal: journal, access: access) },
+                attempt: { try await journal.loadAll() }, acknowledge: { try await journal.acknowledge($0) }))
+        }
+        let first = launch()
+        await first.review(.claim, ids: ["a"], destination: ExitClaimExecutionTests.ownAddress)
+        async let held: Void = first.confirm()
+        async let rebuilt: Void = first.confirm()
+        _ = await (held, rebuilt)
+        #expect(await wallet.broadcasts.count == 1)
+        let restarted = launch()
+        await restarted.review(.claim, ids: ["a"], destination: ExitClaimExecutionTests.ownAddress)
+        #expect(restarted.quote == nil && restarted.error != nil)
+        await restarted.confirm()
+        #expect(await wallet.broadcasts.count == 1)
+    }
+
+    actor Starts {
+        var count = 0
+        func start() { count += 1 }
+    }
+
+    @Test func aStartHeldAgainAfterARestartStartsOnce() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let starts = Starts()
+        // executeOnchain's start: the journal's one operation around bark's start.
+        func launch() -> OnchainModel {
+            let journal = OnchainOperationJournal(file: file)
+            return OnchainModel(dependencies: .init(ready: { true }, overview: { Self.overview },
+                quote: { action, ids, _, _ in .init(action: action, walletID: "wallet", ids: ids, amount: 31_000, fee: 262, chainFee: 5_533, confirmed: 18_400) },
+                execute: { quote in try await journal.perform(quote) { await starts.start(); return "Exit started." } },
+                attempt: { try await journal.loadAll() }, acknowledge: { try await journal.acknowledge($0) }))
+        }
+        let first = launch()
+        await first.review(.startExit, ids: ["v"])
+        async let held: Void = first.confirm()
+        async let rebuilt: Void = first.confirm()
+        _ = await (held, rebuilt)
+        #expect(await starts.count == 1)
+        let restarted = launch()
+        await restarted.review(.startExit, ids: ["v"])
+        #expect(restarted.quote == nil && restarted.error != nil)
+        await restarted.confirm()
+        #expect(await starts.count == 1)
     }
 }

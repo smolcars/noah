@@ -266,9 +266,10 @@
   <string name="gt_c52ed3f9cce24384">"청구 가능"</string>
   <string name="gt_5791d9f14fa53cfd">"청구 가능한 Lightning 수신 금액"</string>
   <string name="gt_f78dda21b2e48efd">"약 %1$s 후 청구 가능"</string>
-  <plurals name="gt_32a315c279d0ee7f">
-    <item quantity="one">"%1$s블록 후 청구 가능 · 약 %2$s"</item>
-    <item quantity="other">"%1$s블록 후 청구 가능 · 약 %2$s"</item>
+  <string name="gt_32a315c279d0ee7f">"%1$s블록 후 청구 가능 · 약 %2$s"</string>
+  <plurals name="gt_17bf7bb54aafd273">
+    <item quantity="one">"Claimable in %1$s block · %2$s"</item>
+    <item quantity="other">"Claimable in %1$s blocks · %2$s"</item>
   </plurals>
   <string name="gt_9564c9cd94655763">"블록 %1$s부터 청구 가능"</string>
   <string name="gt_ddcd2779294a61f0">"청구 완료"</string>
@@ -649,7 +650,6 @@
   <string name="gt_0764de2c3a61c282">"블록에 포함됨"</string>
   <string name="gt_1016441cc23c561f">"라운드 참여 중"</string>
   <string name="gt_14f23687c9fe3353">"약 20분 후"</string>
-  <string name="gt_2d6250023c794435">"약 %1$s 후"</string>
   <string name="gt_c1f88e9d6c4145cf">"진행 중"</string>
   <string name="gt_f868160d0a466230">"몇 초 안에"</string>
   <string name="gt_9fff0400bb9e73d5">"이 지갑의 잔액"</string>
@@ -658,6 +658,7 @@
     <item quantity="one">"VTXO %1$s개"</item>
     <item quantity="other">"VTXO %1$s개"</item>
   </plurals>
+  <string name="gt_0dc23ef619cceb30">"In %1$s"</string>
   <string name="gt_e301820ac8393100">"수신"</string>
   <string name="gt_544bf107f0c7d65e">"라이트닝으로 들어오는 중"</string>
   <string name="gt_7abc49dfa87bc183">"입력"</string>
@@ -893,11 +894,15 @@
   <string name="gt_822918727e4f828f">"Noah 기본값"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah가 최종 결과를 확인하지 못했습니다. 다시 결제하지 마세요. 상태 확인으로는 새 결제가 제출되지 않습니다."</string>
   <string name="gt_6ee90a045027e1c3">"Noah가 한동안 이 출금의 체인을 확인하지 않았습니다. 확인하면 거래를 보내거나 수수료를 올릴 수도 있습니다."</string>
-  <string name="gt_545eb93f8194bd47">"Noah가 한동안 이 출금의 체인을 확인하지 않았어요. 확인하면 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noah가 잠겨 있습니다"</string>
   <string name="gt_9354e260e9c82293">"Noah는 베타 버전입니다. 잃어도 괜찮은 만큼만 보관하세요."</string>
   <string name="gt_2588c7db9f3fe277">"Noah가 잠겨 있어요"</string>
   <string name="gt_f590e31a6eb944e2">"Noah에서 백업을 마무리하는 중입니다. 잠시 후 다시 시도하세요."</string>
+  <string name="gt_0450659e5fbd54ab">"Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."</string>
+  <plurals name="gt_5063ccfc0bf26542">
+    <item quantity="one">"Noah last checked this exit %1$s block ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
+    <item quantity="other">"Noah last checked this exit %1$s blocks ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
+  </plurals>
   <string name="gt_338e68cc4323f294">"Noah 알림"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah가 이 지갑을 서버에 다시 등록해요. 지갑은 그대로 유지돼요."</string>
   <string name="gt_286c0deecb39be99">"Noah가 Ark 잔액에서 자동으로 결제합니다. 지정된 받는 사람에게 정해진 금액만 결제되며, 언제든지 일시 중지하거나 취소할 수 있습니다."</string>
@@ -961,6 +966,10 @@
   <string name="gt_9ef5c3ab9edb50eb">"온체인 송금"</string>
   <string name="gt_89cc4ee3c69a3b7e">"온체인 수수료"</string>
   <string name="gt_c35e69dac4ff6d3f">"남은 온체인 예비금"</string>
+  <plurals name="gt_09e4665e49aef548">
+    <item quantity="one">"One claim for %1$s exit: %2$s received after a %3$s fee."</item>
+    <item quantity="other">"One claim for %1$s exits: %2$s received after a %3$s fee."</item>
+  </plurals>
   <string name="gt_d6e3df34a55bbeb3">"마지막 트랜잭션이에요. 수수료는 금액에서 빠져요."</string>
   <string name="gt_51795cf8f3fe4c84">"블록당 트랜잭션 하나: 각각 약 10분이에요."</string>
   <string name="gt_4831cbdad7ad0bb6">"지갑에 관한 긴급 알림에만 사용합니다."</string>
@@ -1411,10 +1420,6 @@
   <string name="gt_9e3a6e3e9bd56700">"기존 작업은 취소되지 않습니다. 다시 제출하면 자금이나 수수료가 추가로 지출될 수 있습니다. Noah는 이번 시도를 기록해 두고 지갑 동기화 중에 상태를 확인합니다."</string>
   <string name="gt_f2faa6b386bacbee">"이 출금은 더 이상 취소할 수 없습니다. 최종 거래가 이미 전파되었을 수 있습니다. 상태를 새로 고치세요."</string>
   <string name="gt_dbccb7274b22662b">"이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %1$s(%2$s블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."</string>
-  <plurals name="gt_94e7b11e64a199f4">
-    <item quantity="one">"이 출금은 체인보다 %1$s블록 뒤처져 있어요: 마지막 확인은 블록 %2$s. 체인을 확인하면 출금 트랜잭션을 보낼 수도 있어요."</item>
-    <item quantity="other">"이 출금은 체인보다 %1$s블록 뒤처져 있어요: 마지막 확인은 블록 %2$s. 체인을 확인하면 출금 트랜잭션을 보낼 수도 있어요."</item>
-  </plurals>
   <string name="gt_5ed0c20bff01c0ca">"이 결제 요청서는 이미 결제되었습니다. 이번 회차에는 다시 전송하지 않았습니다. 재개하기 전에 받는 사람에게 확인하세요."</string>
   <string name="gt_acec76ba83ee20ef">"이미 결제된 인보이스입니다: %1$s"</string>
   <string name="gt_285f2d035fb443e8">"로그인 링크이며 결제 요청이 아닙니다"</string>
@@ -1507,6 +1512,7 @@
   <string name="gt_b126042b7ef8a274">"VTXO 잠금 해제"</string>
   <string name="gt_3470a00c3bb2d5ca">"지갑을 보려면 잠금을 해제하세요."</string>
   <string name="gt_38674ce943ca4bc9">"블록 %1$s에서 잠금 해제"</string>
+  <string name="gt_c5b5f0e95343c511">"Unlocks at block %1$s"</string>
   <string name="gt_fae022f4a65e9a7d">"읽을 수 없는 이미지"</string>
   <string name="gt_ea72a231d1b8a76f">"제한 없음"</string>
   <string name="gt_8b5f54fcadeccafe">"서명되지 않은 거래 %1$s"</string>
@@ -1563,9 +1569,10 @@
   <string name="gt_d99bd370a6d72213">"보안 저장소에 접근할 수 있을 때까지 기다리는 중입니다. 기기 잠금을 해제하고 다시 시도하세요."</string>
   <string name="gt_706eee3cfecc480a">"타임락 대기 중"</string>
   <string name="gt_09ff3abe56e1c1df">"백업을 기다리는 중"</string>
-  <plurals name="gt_38b84da1d4c099eb">
-    <item quantity="one">"대기 중 · %1$s블록 · 약 %2$s"</item>
-    <item quantity="other">"대기 중 · %1$s블록 · 약 %2$s"</item>
+  <string name="gt_38b84da1d4c099eb">"대기 중 · %1$s블록 · 약 %2$s"</string>
+  <plurals name="gt_985fc1ec623fd8b3">
+    <item quantity="one">"Waiting · %1$s block · %2$s"</item>
+    <item quantity="other">"Waiting · %1$s blocks · %2$s"</item>
   </plurals>
   <string name="gt_a9fecbd4968622c1">"깨우기 일정이 아직 동기화되지 않았습니다. Noah를 열면 다시 시도합니다."</string>
   <string name="gt_d1c9a01d57e90086">"지갑"</string>
@@ -1645,6 +1652,7 @@
   <string name="gt_f195f8e226312c3a">"모든 준비가 끝났어요"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_fe453fd2b1186bf1">"약 하루"</string>
+  <string name="gt_424efd5bb8022cc0">"about %1$s"</string>
   <string name="gt_ab51004e9d71a485">"일마다"</string>
   <string name="gt_0b8e9e995d8d77f1">"디버그"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
@@ -1715,15 +1723,11 @@
     <item quantity="one">"VTXO %1$s개가 하루 안에 만료돼요"</item>
     <item quantity="other">"VTXO %1$s개가 하루 안에 만료돼요"</item>
   </plurals>
-  <plurals name="gt_67804ae8e6858e64">
-    <item quantity="one">"VTXO %1$s개 · 트랜잭션 %2$s개"</item>
-    <item quantity="other">"VTXO %1$s개 · 트랜잭션 %2$s개"</item>
-  </plurals>
   <string name="gt_f4d60c7d0545f547">"%1$s개 활성"</string>
   <string name="gt_00f904d64507e53f">"%1$s블록"</string>
-  <plurals name="gt_ee08497b4ec8925a">
-    <item quantity="one">"%1$s블록 · 약 %2$s"</item>
-    <item quantity="other">"%1$s블록 · 약 %2$s"</item>
+  <plurals name="gt_bdf51ce532245aa7">
+    <item quantity="one">"%1$s block · %2$s"</item>
+    <item quantity="other">"%1$s blocks · %2$s"</item>
   </plurals>
   <string name="gt_3f2e9c59984c0b94">"%1$s일"</string>
   <plurals name="gt_901bac8a657292dd">
@@ -1770,7 +1774,6 @@
   <string name="gt_6f18db1fb525f402">"%1$s주"</string>
   <string name="gt_7668781bc1fd97f9">"지갑을 복원하는 %1$s개 단어예요."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
-  <string name="gt_30b5b5d939eece20">"%1$s · 트랜잭션 %2$s개"</string>
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, 수수료율이 오르면 인상"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · 공유"</string>

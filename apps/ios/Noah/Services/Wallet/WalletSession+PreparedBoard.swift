@@ -92,6 +92,7 @@ extension WalletSession {
 
     func submitBoard(_ quote: OnchainQuote, walletID: String, journal: OnchainOperationJournal,
                      confirmed: @Sendable () async throws -> UInt64,
+                     claims: @Sendable () async throws -> AutoBoardFunding.Claims = { .init() },
                      funding: AutoBoardFunding.Snapshot? = nil,
                      readFunding: @Sendable () async throws -> AutoBoardFunding.Snapshot? = { nil }) async throws -> String {
         guard let id = quote.prepared?.id, var held = boardPreparations[id],
@@ -105,7 +106,10 @@ extension WalletSession {
                     guard funding.walletID == walletID, try await readFunding() == funding else { throw OnchainFailure.changed }
                 }
                 let balance = try await confirmed()
-                guard balance >= quote.confirmed, quote.isCurrent,
+                // Exit claims to this phone stay on-chain (Decision 8): rechecked against the board as signed.
+                let claimed = try await claims()
+                guard balance >= quote.confirmed, quote.isCurrent, !quote.spends(claimed.outpoints),
+                      quote.amount + quote.chainFee! + BoardingRules.reserve + claimed.held <= balance,
                       let current = boardPreparations[id], !current.claimed, !current.discardRequested,
                       current.quote == quote else { throw OnchainFailure.changed }
                 held = current

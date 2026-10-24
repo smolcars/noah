@@ -1,4 +1,5 @@
 import BarkBoltFFI
+import CryptoKit
 import Foundation
 
 /// Only a foreground review that reaches presentation consumes its confirmed funding.
@@ -25,6 +26,8 @@ struct AutoBoardFunding {
     private struct State: Codable {
         var handled: [String: Set<String>] = [:]
         var retryAfter: [String: Double] = [:]
+        /// Decision 8: outputs of exit claims to this phone, per wallet. Optional so earlier ledgers stay readable.
+        var claims: [String: Set<String>]?
     }
     private func load() throws -> State {
         guard let raw = read() else { return .init() }
@@ -56,10 +59,33 @@ struct AutoBoardFunding {
     }
     @discardableResult func markHandled(_ funding: Snapshot) throws -> Bool { try claim(funding) != nil }
     /// Decision 8: a claim to this phone's on-chain wallet isn't a deposit. Its outputs join the
-    /// handled ledger so auto-board never offers them. On the main actor, with the ledger's other writers.
+    /// handled ledger, so auto-board never offers them, and the claims set, so a later deposit's board
+    /// leaves their value on-chain. One durable write. On the main actor, with the ledger's other writers.
     @MainActor static func markClaimed(_ outpoints: Set<String>, walletID: String, store: AutoBoardFunding = .init()) throws {
-        guard !outpoints.isEmpty else { return }
-        try store.markHandled(.init(walletID: walletID, outpoints: outpoints))
+        var saved = try store.load()
+        let handled = saved.handled[walletID] ?? [], claims = saved.claims?[walletID] ?? []
+        guard !outpoints.isSubset(of: handled) || !outpoints.isSubset(of: claims) else { return }
+        saved.handled[walletID] = handled.union(outpoints)
+        saved.claims = (saved.claims ?? [:]).merging([walletID: claims.union(outpoints)]) { $1 }
+        try store.save(saved)
+    }
+
+    func claims(walletID: String) throws -> Set<String> { try load().claims?[walletID] ?? [] }
+
+    /// Exit claims to this phone as auto-board sees them now: their outpoints, and the value of those
+    /// still unspent and confirmed, which it leaves on-chain.
+    struct Claims: Sendable {
+        var outpoints: Set<String> = []
+        var held: UInt64 = 0
+    }
+
+    /// What auto-board leaves on-chain for exit claims to this phone: those outputs still unspent and
+    /// confirmed. Once one is spent it no longer counts.
+    static func held(_ claims: Set<String>, utxos: [OnchainUtxo]) -> UInt64 {
+        utxos.reduce(0) { total, utxo in
+            guard case let .local(point, amount, height) = utxo, height != nil, claims.contains("\(point.txid):\(point.vout)") else { return total }
+            return total + amount
+        }
     }
     func release(_ funding: Snapshot, retryAfter: Date) throws {
         var saved = try load()
@@ -75,6 +101,65 @@ struct AutoBoardFunding {
         saved.handled[funding.walletID] = previous.union(funding.outpoints)
         try save(saved)
         return .init(walletID: funding.walletID, outpoints: newly)
+    }
+}
+
+/// A raw transaction's id before it's sent: double SHA-256 of its serialization without witness
+/// data, byte-reversed. nil when the hex isn't one well-formed transaction.
+enum BitcoinTransaction {
+    static func txid(hex: String) -> String? {
+        guard hex.count % 2 == 0 else { return nil }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index..<next], radix: 16) else { return nil }
+            bytes.append(byte)
+            index = next
+        }
+        var at = 0
+        func skip(_ count: Int) -> Bool {
+            guard count >= 0, at + count <= bytes.count else { return false }
+            at += count
+            return true
+        }
+        func varint() -> Int? {
+            guard at < bytes.count else { return nil }
+            let first = bytes[at]
+            at += 1
+            if first < 0xfd { return Int(first) }
+            let width = first == 0xfd ? 2 : first == 0xfe ? 4 : 8
+            guard at + width <= bytes.count else { return nil }
+            let value = bytes[at..<at + width].reversed().reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
+            at += width
+            return value <= UInt64(bytes.count) ? Int(value) : nil
+        }
+        guard skip(4) else { return nil }
+        let segwit = bytes.count > 6 && bytes[4] == 0 && bytes[5] != 0
+        if segwit { at += 2 }
+        let bodyStart = at
+        guard let inputs = varint(), inputs > 0 else { return nil }
+        for _ in 0..<inputs {
+            guard skip(36), let script = varint(), skip(script), skip(4) else { return nil }
+        }
+        guard let outputs = varint() else { return nil }
+        for _ in 0..<outputs {
+            guard skip(8), let script = varint(), skip(script) else { return nil }
+        }
+        let bodyEnd = at
+        if segwit {
+            for _ in 0..<inputs {
+                guard let items = varint() else { return nil }
+                for _ in 0..<items {
+                    guard let size = varint(), skip(size) else { return nil }
+                }
+            }
+        }
+        guard skip(4), at == bytes.count else { return nil }
+        let stripped = Array(bytes[0..<4]) + Array(bytes[bodyStart..<bodyEnd]) + Array(bytes[(bytes.count - 4)...])
+        let hash = SHA256.hash(data: Data(SHA256.hash(data: Data(stripped))))
+        return hash.reversed().map { String(format: "%02x", $0) }.joined()
     }
 }
 

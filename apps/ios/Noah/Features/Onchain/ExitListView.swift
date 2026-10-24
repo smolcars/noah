@@ -158,7 +158,10 @@ extension ExitText {
         case .canceled: return L10n.text("Canceled · still in Ark", locale: language)
         case .waiting:
             let left = progress.left(tip: tip) ?? 0
-            return L10n.plural("Waiting · {n} blocks · about {time}", count: Int(left), VtxoList.span(Int64(left), locale: language), locale: language)
+            guard left > 0 else {
+                return L10n.text("Unlocks at block {height}", (progress.claimableHeight ?? tip).formatted(.number.locale(Locale(identifier: language))), locale: language)
+            }
+            return L10n.plural("Waiting · {n} blocks · {time}", count: Int(left), ExitText.about(left, language), locale: language)
         case .sending, .mempool, .shared, .confirmed:
             let shared = ExitSharing.groups(overview?.exits ?? []).contains { $0.contains { $0.id == exit.id } }
             let line = L10n.text("Sending {n} of {total}", (progress.step ?? progress.confirmed + 1).formatted(), progress.total.formatted(), locale: language)
@@ -187,10 +190,14 @@ struct ExitSharedPicture: View {
             var nodes: [Node] = [], roots: [Int] = [], coins: [(node: Int, exit: ExitModel)] = []
             for exit in exits {
                 var parent: Int?
+                // Past Processing every transaction is in a block, whatever bark's last list said.
+                let settled = !["Start", "Processing"].contains(exit.state)
                 for (depth, tx) in exit.path.enumerated() {
                     let siblings = parent.map { nodes[$0].children } ?? roots
                     if let found = siblings.first(where: { nodes[$0].txid == tx.txid }) { parent = found; continue }
-                    nodes.append(.init(txid: tx.txid, depth: depth, status: tx.status))
+                    let status = settled && tx.status.block == nil
+                        ? ExitDetails.Transaction.Status(kind: "confirmed", block: .init(height: 0, hash: "")) : tx.status
+                    nodes.append(.init(txid: tx.txid, depth: depth, status: status))
                     if let parent { nodes[parent].children.append(nodes.count - 1) } else { roots.append(nodes.count - 1) }
                     parent = nodes.count - 1
                 }

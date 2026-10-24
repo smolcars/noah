@@ -149,7 +149,6 @@ final class OnchainModel {
             let latest = try await dependencies.overview()
             guard await dependencies.ready(), token == generation else { return }
             overview = latest
-            Self.funds.observe(latest.exits, now: Date())
             error = statusFailed ? "Couldn't check network status. Showing the last known status." : nil
         } catch {
             self.error =
@@ -230,15 +229,14 @@ final class OnchainModel {
         await load()
         if let submissionError { error = submissionError }
     }
-    /// When each parked exit transaction was first seen, for every screen (Decision 3).
-    private static var funds = ExitFunds()
-
     /// The exit as its screens show it, with the needs-funds inference.
-    func progress(_ exit: ExitModel, now: Date = Date()) -> ExitProgress {
+    func progress(_ exit: ExitModel) -> ExitProgress {
         let needsFunds = overview.map {
-            Self.funds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], now: now)
+            ExitFunds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], proven: $0.provenParked)
         } ?? false
-        return ExitProgress(exit, tip: overview?.tip ?? exit.details.tip_height ?? 0, needsFunds: needsFunds)
+        let claimSent = attempts.contains { $0.quote.action == .claim && $0.quote.ids.contains(exit.id) && $0.receipt?.txid != nil }
+        return ExitProgress(exit, tip: overview?.tip ?? exit.details.tip_height ?? 0, needsFunds: needsFunds, claimSent: claimSent,
+                            checkedTip: overview?.checkedTip, progressing: overview?.progressing ?? true)
     }
 
     /// The exit estimate for a selection, or nil when it can't be read (the review still offers

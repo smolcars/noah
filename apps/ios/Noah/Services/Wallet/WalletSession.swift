@@ -48,6 +48,17 @@ actor WalletSession {
         let onchain: OnchainWallet
     }
 
+    /// bark's daemon progresses exits (every 60 s) while this session runs it; the app can't see its cycles.
+    private(set) var runsDaemon = false
+    /// The app's own last completed exit progress (Check the chain), per wallet: the tip then, and the
+    /// transactions still waiting for a fee child after that call tried to fund them.
+    struct ExitCheck: Sendable {
+        var tip: UInt32
+        var parked: Set<String>
+    }
+    private(set) var exitChecks: [String: ExitCheck] = [:]
+    func recordExitCheck(_ check: ExitCheck, walletID: String) { exitChecks[walletID] = check }
+
     private enum State {
         case closed
         case opening(Task<Handles, Error>)
@@ -177,7 +188,9 @@ actor WalletSession {
                 guard RecurringSubmissionBudget.$current.withValue(admission, operation: { RecurringSubmissionBudget.available }) else {
                     throw CancellationError()
                 }
-                let handles = try await opener(mnemonic, datadir, runDaemon && Self.backgroundOwner == nil, appVersion, false)
+                let daemon = runDaemon && Self.backgroundOwner == nil
+                let handles = try await opener(mnemonic, datadir, daemon, appVersion, false)
+                runsDaemon = daemon
                 state = .open(handles)
                 return handles
             } catch {
@@ -338,6 +351,7 @@ actor WalletSession {
         let opener = self.opener
         let datadir = location.directory.path
         let handles = try await Task { try await opener(mnemonic, datadir, runDaemon, appVersion, true) }.value
+        runsDaemon = runDaemon
         do {
             // RN creation persists key 0 before peeking its registration address.
             _ = try await Task { try await handles.wallet.deriveStoreNextKeypair() }.value
