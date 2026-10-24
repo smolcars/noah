@@ -375,7 +375,7 @@ internal fun HomeToast(message: HomeToastMessage?, modifier: Modifier = Modifier
     val reduceMotion = LocalReduceMotion.current
     val progress = remember { Animatable(1f) }
     var shown by remember { mutableStateOf<HomeToastMessage?>(null) }
-    LaunchedEffect(message) {
+    LaunchedEffect(message?.id) {
         if (message == null) return@LaunchedEffect
         shown = message
         progress.snapTo(0f)
@@ -383,6 +383,7 @@ internal fun HomeToast(message: HomeToastMessage?, modifier: Modifier = Modifier
         shown = null
     }
     val current = shown ?: return
+    val text = message?.takeIf { it.id == current.id }?.text ?: current.text
     val p = progress.value
     val inEnd = (340f / current.millis).coerceAtMost(.2f)
     val outStart = 1 - (306f / current.millis).coerceAtMost(.18f)
@@ -392,11 +393,12 @@ internal fun HomeToast(message: HomeToastMessage?, modifier: Modifier = Modifier
     Box(modifier.graphicsLayer { this.alpha = alpha.coerceIn(0f, 1f); translationY = rise * density; scaleX = scale; scaleY = scale }
         .height(34.dp).background(palette.foreground, RoundedCornerShape(17.dp)).padding(horizontal = 16.dp)
         .semantics { liveRegion = LiveRegionMode.Polite }, contentAlignment = Alignment.Center) {
-        Text(current.text, style = HomeType.toast, color = palette.background, maxLines = 1)
+        Text(text, style = HomeType.toast, color = palette.background, maxLines = 1)
     }
 }
 
-data class HomeToastMessage(val text: String, val millis: Long = 1_700, val id: Long = System.nanoTime())
+/** [tag] names a toast that [HomeToasts.retext] may update in place; a retext keeps [id], so the toast keeps its time. */
+data class HomeToastMessage(val text: String, val millis: Long = 1_700, val id: Long = System.nanoTime(), val tag: String? = null)
 
 /** Rise-in entrance on Home's first appearance (prototype `enter()`), driven by [elapsed] since it started. */
 internal fun Modifier.rise(elapsed: Long, delay: Long, distance: Float, reduceMotion: Boolean): Modifier = graphicsLayer {

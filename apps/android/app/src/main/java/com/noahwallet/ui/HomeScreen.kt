@@ -148,9 +148,12 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
         tr("{amount} available in Ark", if (model.hidden) "••••" else com.noahwallet.formatting.BitcoinAmount.format(amount, model.amountUnit, locale)) } }
     LaunchedEffect(completionText, completionAt) {
         val key = "$completion:$completionAt"
-        if (completionText != null && completionAt != null && memory.toastSeen != key) {
+        if (completionText == null || completionAt == null) return@LaunchedEffect
+        // Hiding amounts (or changing language) while it shows swaps the text in place, for the rest of its time.
+        if (memory.toastSeen == key) toasts.retext(key, completionText)
+        else {
             memory.toastSeen = key
-            toasts.show(completionText, (HomeRules.successMillis - (System.currentTimeMillis() - completionAt)).coerceIn(1_000, HomeRules.successMillis))
+            toasts.show(completionText, (HomeRules.successMillis - (System.currentTimeMillis() - completionAt)).coerceIn(1_000, HomeRules.successMillis), tag = key)
         }
     }
 

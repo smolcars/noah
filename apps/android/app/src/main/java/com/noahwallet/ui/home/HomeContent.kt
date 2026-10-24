@@ -98,7 +98,12 @@ class HomeMemory {
     data class FirstPayment(val startedAt: Long, val sats: Long, val from: String?)
 }
 
-class HomeToasts { var current by mutableStateOf<HomeToastMessage?>(null); fun show(text: String, millis: Long = 1_700) { current = HomeToastMessage(text, millis) } }
+class HomeToasts {
+    var current by mutableStateOf<HomeToastMessage?>(null)
+    fun show(text: String, millis: Long = 1_700, tag: String? = null) { current = HomeToastMessage(text, millis, tag = tag) }
+    /** New text for the toast tagged [tag] while it is the latest; it stays for the rest of its time. */
+    fun retext(tag: String, text: String) { current?.takeIf { it.tag == tag && it.text != text }?.let { current = it.copy(text = text) } }
+}
 
 class HomeActions(
     val myCode: () -> Unit = {}, val scan: () -> Unit = {}, val settings: () -> Unit = {}, val map: () -> Unit = {},
