@@ -17,7 +17,7 @@ object JWT {
             return requireNotNull(exp.doubleOrNull).also { require(it.isFinite()) }
         } catch (_: Exception) {
             // Parsing exceptions can contain the JWT payload. Never retain their message/cause.
-            throw IllegalArgumentException("Invalid server token expiry")
+            throw IllegalArgumentException("""Invalid server token expiry""")
         }
     }
 

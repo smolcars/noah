@@ -16,7 +16,7 @@ internal class AndroidSecretKeys : SecretKeys {
     override fun existing(alias: String): SecretKey? {
         val store = store()
         if (!store.containsAlias(alias)) return null
-        return store.getKey(alias, null) as? SecretKey ?: error("Secure key unavailable")
+        return store.getKey(alias, null) as? SecretKey ?: error("""Secure key unavailable""")
     }
 
     override fun create(alias: String): SecretKey {
@@ -45,7 +45,7 @@ internal class AtomicSecretFile(private val path: File) : SecretFile {
         }
     } catch (_: FileNotFoundException) {
         // AtomicFile also recovers its old .bak format on read; an unreadable existing file is NOT absent.
-        if (path.exists() || File(path.path + ".bak").exists()) error("Secure file unreadable")
+        if (path.exists() || File(path.path + ".bak").exists()) error("""Secure file unreadable""")
         null
     }
 

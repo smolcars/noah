@@ -47,8 +47,8 @@ internal fun WalletAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Com
         }, content = confirmButton) },
         dismissButton = dismissButton?.let { { WalletModalContent(cover = {}, content = it) } },
         icon = icon?.let { { WalletModalContent(cover = {}, content = it) } },
-        title = title?.let { { WalletModalContent(cover = { Text(tr("Noah is Locked")) }, content = it) } },
-        text = text?.let { { WalletModalContent(cover = { Text(tr("Authenticate to access your wallet")) }, content = { Box(Modifier.verticalScroll(rememberScrollState())) { it() } }) } })
+        title = title?.let { { WalletModalContent(cover = { Text(tr("Noah is locked")) }, content = it) } },
+        text = text?.let { { WalletModalContent(cover = { Text(tr("Unlock to see your wallet.")) }, content = { Box(Modifier.verticalScroll(rememberScrollState())) { it() } }) } })
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -77,7 +77,7 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
         Box(Modifier.fillMaxWidth().heightIn(max = (sheetHeight - 56.dp).coerceAtLeast(1.dp)).avoidHinge(verticalFolds)) {
             WalletModalContent(cover = {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(tr("Noah is Locked"))
+                Text(tr("Noah is locked"))
                 privacy.unlock?.let { NoahButton("Unlock", onClick = it) }
             }
             }) { Column(content = content) }

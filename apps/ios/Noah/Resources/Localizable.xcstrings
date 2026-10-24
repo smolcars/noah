@@ -2473,42 +2473,6 @@
         }
       }
     },
-    "Android SDK built for": {
-      "comment": "GT gt_dea19a697a27a904; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android SDK built for"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SDK de Android compilado para"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android SDKのビルド対象"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android SDK 빌드 대상"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Android SDK byggt för"
-          }
-        }
-      }
-    },
     "Another Lightning payment is still in progress. Try again once it completes.": {
       "comment": "GT gt_15ea390b9d935697; arguments: none",
       "extractionState": "manual",
@@ -3697,42 +3661,6 @@
         }
       }
     },
-    "Authenticate to access your wallet": {
-      "comment": "GT gt_c8271c0bafb7c1eb; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Authenticate to access your wallet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Autentícate para acceder a tu billetera"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "認証してウォレットにアクセスしてください"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑을 사용하려면 인증해 주세요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verifiera din identitet för att komma åt din plånbok"
-          }
-        }
-      }
-    },
     "Authentication failed. Please try again.": {
       "comment": "GT gt_4190475b52357e7a; arguments: none",
       "extractionState": "manual",
@@ -4557,42 +4485,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopian har raderats"
-          }
-        }
-      }
-    },
-    "Backup download exceeds limit": {
-      "comment": "GT gt_effe557f24b31ca1; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backup download exceeds limit"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La descarga de la copia de seguridad supera el límite"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップのダウンロードが上限を超えています"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업 다운로드가 한도를 초과했습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hämtningen av säkerhetskopian överskrider gränsen"
           }
         }
       }
@@ -6829,150 +6721,6 @@
         }
       }
     },
-    "Cannot create wallet directory": {
-      "comment": "GT gt_c8fa4348a993453a; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot create wallet directory"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se puede crear el directorio de la billetera"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのディレクトリを作成できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 디렉터리를 생성할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte skapa plånboksmapp"
-          }
-        }
-      }
-    },
-    "Cannot inspect scratch files": {
-      "comment": "GT gt_7b26a7a0cc56a9a5; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot inspect scratch files"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pueden inspeccionar los archivos temporales"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "作業用一時ファイルを確認できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "임시 파일을 검사할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte granska tillfälliga filer"
-          }
-        }
-      }
-    },
-    "Cannot inspect settings exports": {
-      "comment": "GT gt_62147460a3d20c27; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot inspect settings exports"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pueden inspeccionar las exportaciones de configuración"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エクスポートされた設定を確認できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내보낸 설정 파일을 검사할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte granska exporterade inställningar"
-          }
-        }
-      }
-    },
-    "Cannot inspect wallet directory": {
-      "comment": "GT gt_7830e14445428d0a; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot inspect wallet directory"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se puede inspeccionar el directorio de la billetera"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのディレクトリを確認できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 디렉터리를 검사할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte granska plånboksmappen"
-          }
-        }
-      }
-    },
     "Cannot open link": {
       "comment": "GT gt_76dbc28dfacadd7d; arguments: none",
       "extractionState": "manual",
@@ -7005,78 +6753,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kan inte öppna länken"
-          }
-        }
-      }
-    },
-    "Cannot read bark wallet properties": {
-      "comment": "GT gt_31a90f3cda2dfb7b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot read bark wallet properties"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pueden leer las propiedades de la billetera bark"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "barkウォレットのプロパティを読み取れません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bark 지갑 속성을 읽을 수 없음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte läsa egenskaperna för bark-plånboken"
-          }
-        }
-      }
-    },
-    "Cannot read staged files": {
-      "comment": "GT gt_ca985bb90dcf0a7b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot read staged files"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pueden leer los archivos preparados"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一時保存されたファイルを読み取れません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "준비된 파일을 읽을 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte läsa mellanlagrade filer"
           }
         }
       }
@@ -13969,42 +13645,6 @@
         }
       }
     },
-    "Email already verified": {
-      "comment": "GT gt_829e3579e020d067; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Email already verified"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correo electrónico ya verificado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メールアドレスは確認済みです"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미 인증된 이메일"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "E-postadressen är redan verifierad"
-          }
-        }
-      }
-    },
     "Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them.": {
       "comment": "GT gt_50d8230c905d564f; arguments: none",
       "extractionState": "manual",
@@ -14181,42 +13821,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Endast i nödfall. Det tar ut dina bitcoin ur Ark utan Arks server."
-          }
-        }
-      }
-    },
-    "Emulator": {
-      "comment": "GT gt_cade2f4efb6f7c99; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Emulator"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Emulador"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エミュレーター"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "에뮬레이터"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Emulator"
           }
         }
       }
@@ -17701,42 +17305,6 @@
         }
       }
     },
-    "Failed to check app version, allowing app to continue": {
-      "comment": "GT gt_650e662ff450d76b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to check app version, allowing app to continue"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo comprobar la versión de la aplicación; se permitirá que siga funcionando"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリのバージョンを確認できませんでしたが、そのまま続行します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱 버전을 확인하지 못했지만 앱을 계속 실행합니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunde inte kontrollera appversionen. Appen får fortsätta."
-          }
-        }
-      }
-    },
     "Failed to fetch logs.": {
       "comment": "GT gt_0e64d6a1c553e225; arguments: none",
       "extractionState": "manual",
@@ -17805,42 +17373,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det gick inte att registrera plånboken på servern. Försök igen."
-          }
-        }
-      }
-    },
-    "Failed to save email prompt dismissal": {
-      "comment": "GT gt_0aac4e26d6649873; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to save email prompt dismissal"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo guardar que se descartó el aviso de correo electrónico"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メール案内を閉じたことを保存できませんでした"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이메일 안내를 닫은 상태를 저장하지 못했습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunde inte spara att e-postfrågan avvisats"
           }
         }
       }
@@ -18669,42 +18201,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Letar efter din bitcoin"
-          }
-        }
-      }
-    },
-    "Finish onboarding before background wallet work": {
-      "comment": "GT gt_ff8fa5b5d54ed7db; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finish onboarding before background wallet work"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completa la configuración inicial antes de realizar tareas de la billetera en segundo plano"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのバックグラウンド処理を行う前に、初期設定を完了してください"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 백그라운드 작업을 시작하기 전에 초기 설정을 완료하세요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slutför introduktionen innan plånboken kan arbeta i bakgrunden"
           }
         }
       }
@@ -19713,42 +19209,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uppfattat"
-          }
-        }
-      }
-    },
-    "HTTP failure": {
-      "comment": "GT gt_c02479b6e3bd01fb; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTTP failure"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error HTTP"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTTPエラー"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTTP 오류"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTTP-fel"
           }
         }
       }
@@ -21469,42 +20929,6 @@
         }
       }
     },
-    "Interrupted restore not settled yet": {
-      "comment": "GT gt_d6e896cee6f715fd; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Interrupted restore not settled yet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restauración interrumpida aún sin resolver"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "中断された復元の処理がまだ完了していません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "중단된 복원이 아직 처리되지 않음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den avbrutna återställningen är ännu inte slutförd"
-          }
-        }
-      }
-    },
     "Invalid BIP-321 URI": {
       "comment": "GT gt_50bc71f591bfa3ff; arguments: none",
       "extractionState": "manual",
@@ -21649,42 +21073,6 @@
         }
       }
     },
-    "Invalid export name": {
-      "comment": "GT gt_809d321d74b3c7ba; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid export name"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre de exportación no válido"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エクスポート名が無効です"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "잘못된 내보내기 이름"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ogiltigt exportnamn"
-          }
-        }
-      }
-    },
     "Invalid or expired verification code.": {
       "comment": "GT gt_b9b0e9e85d5ed074; arguments: none",
       "extractionState": "manual",
@@ -21753,42 +21141,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verifieringskoden är ogiltig eller har gått ut. Försök igen."
-          }
-        }
-      }
-    },
-    "Invalid server token expiry": {
-      "comment": "GT gt_9aecdf7b7354577b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid server token expiry"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fecha de caducidad del token del servidor no válida"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サーバートークンの有効期限が無効です"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서버 토큰 만료 정보가 유효하지 않습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ogiltig utgångstid för servertoken"
           }
         }
       }
@@ -24921,78 +24273,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Metadata"
-          }
-        }
-      }
-    },
-    "Missing bundled BIP39 word list": {
-      "comment": "GT gt_86387c399b5ea22e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Missing bundled BIP39 word list"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falta la lista de palabras BIP39 incluida en la aplicación"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同梱のBIP39単語リストがありません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내장 BIP39 단어 목록 누락"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den medföljande BIP39-ordlistan saknas"
-          }
-        }
-      }
-    },
-    "Missing plural resource: {nativeValue1}": {
-      "comment": "GT gt_656ea5e06bac3d88; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Missing plural resource: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falta el recurso plural: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "複数形リソースがありません：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복수형 리소스 누락: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pluralresurs saknas: %1$@"
           }
         }
       }
@@ -28561,42 +27841,6 @@
         }
       }
     },
-    "Noah is Locked": {
-      "comment": "GT gt_ef0d44ddb30f6d0d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah is Locked"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah está bloqueado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahはロックされています"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah가 잠겨 있습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah är låst"
-          }
-        }
-      }
-    },
     "Noah is in beta. Only keep what you’re comfortable losing.": {
       "comment": "GT gt_9354e260e9c82293; arguments: none",
       "extractionState": "manual",
@@ -28953,42 +28197,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah flyttar inte tillbaka dem till Ark."
-          }
-        }
-      }
-    },
-    "NoahAppVariant missing or invalid in Info.plist": {
-      "comment": "GT gt_f02d150579902f58; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NoahAppVariant missing or invalid in Info.plist"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falta NoahAppVariant o no es válido en Info.plist"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Info.plistにNoahAppVariantがないか、値が無効です"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Info.plist에 NoahAppVariant가 없거나 유효하지 않습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NoahAppVariant saknas eller är ogiltig i Info.plist"
           }
         }
       }
@@ -34081,42 +33289,6 @@
         }
       }
     },
-    "Read only": {
-      "comment": "GT gt_8ac767353080eae7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Read only"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo lectura"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "読み取り専用"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "읽기 전용"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skrivskyddad"
-          }
-        }
-      }
-    },
     "Reading this screen and estimating fees never broadcasts an exit.": {
       "comment": "GT gt_cb1838ea58a69336; arguments: none",
       "extractionState": "manual",
@@ -37189,42 +36361,6 @@
         }
       }
     },
-    "Restart Noah to settle the pending restore before deleting": {
-      "comment": "GT gt_5954f39fc8781bfa; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restart Noah to settle the pending restore before deleting"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reinicia Noah para completar la restauración pendiente antes de eliminar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "削除する前にNoahを再起動し、保留中の復元を完了してください"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "삭제하기 전에 Noah를 다시 시작하여 대기 중인 복원을 마무리하세요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Starta om Noah för att slutföra den väntande återställningen innan du raderar"
-          }
-        }
-      }
-    },
     "Restore": {
       "comment": "GT gt_a76e13b9839270eb; arguments: none",
       "extractionState": "manual",
@@ -39241,78 +38377,6 @@
         }
       }
     },
-    "Secure file unreadable": {
-      "comment": "GT gt_26a08e3cf397b095; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Secure file unreadable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se puede leer el archivo seguro"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保護されたファイルを読み取れません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "보안 파일을 읽을 수 없음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den säkra filen kan inte läsas"
-          }
-        }
-      }
-    },
-    "Secure key unavailable": {
-      "comment": "GT gt_6e5835bc30b172d3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Secure key unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clave segura no disponible"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安全に保管された鍵を利用できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "보안 키를 사용할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Säker nyckel inte tillgänglig"
-          }
-        }
-      }
-    },
     "Secure storage unavailable": {
       "comment": "GT gt_60e65c7b7c95778d; arguments: none",
       "extractionState": "manual",
@@ -40317,78 +39381,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ skickat"
-          }
-        }
-      }
-    },
-    "Server authentication failed": {
-      "comment": "GT gt_76c5f148894222a9; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server authentication failed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error de autenticación del servidor"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サーバー認証に失敗しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서버 인증 실패"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Serverautentiseringen misslyckades"
-          }
-        }
-      }
-    },
-    "Server connection failed": {
-      "comment": "GT gt_5f5c5c0c66eda444; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server connection failed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error de conexión con el servidor"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サーバーへの接続に失敗しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서버 연결 실패"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anslutningen till servern misslyckades"
           }
         }
       }
@@ -42369,42 +41361,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lyckad"
-          }
-        }
-      }
-    },
-    "Successfully registered with server": {
-      "comment": "GT gt_cc5ca35c0cd158c2; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Successfully registered with server"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registro en el servidor completado correctamente"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サーバーへの登録が完了しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서버에 성공적으로 등록되었습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registreringen hos servern lyckades"
           }
         }
       }
@@ -48205,42 +47161,6 @@
         }
       }
     },
-    "UnifiedPush server registration failed; queued for retry": {
-      "comment": "GT gt_cf92288ec69afe62; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UnifiedPush server registration failed; queued for retry"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falló el registro en el servidor UnifiedPush; se volverá a intentar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UnifiedPushサーバーへの登録に失敗しました。再試行待ちです"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UnifiedPush 서버 등록에 실패했습니다. 재시도 대기열에 추가되었습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registreringen hos UnifiedPush-servern misslyckades. Ett nytt försök har köats"
-          }
-        }
-      }
-    },
     "Unknown": {
       "comment": "GT gt_b764cdc0eab71374; arguments: none",
       "extractionState": "manual",
@@ -50605,42 +49525,6 @@
         }
       }
     },
-    "Wallet is not ready for backup": {
-      "comment": "GT gt_d5af5b7c0524458c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wallet is not ready for backup"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La billetera no está lista para crear una copia de seguridad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのバックアップ準備ができていません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 지갑을 백업할 준비가 되지 않았습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plånboken är inte redo för säkerhetskopiering"
-          }
-        }
-      }
-    },
     "Wallet key": {
       "comment": "GT gt_a30be676284ee1f2; arguments: none",
       "extractionState": "manual",
@@ -50785,42 +49669,6 @@
         }
       }
     },
-    "Wallet seed unavailable": {
-      "comment": "GT gt_172f54e96d258f92; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wallet seed unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Semilla de la billetera no disponible"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのシードを取得できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 시드를 사용할 수 없음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plånbokens återställningsfras är inte tillgänglig"
-          }
-        }
-      }
-    },
     "Wallet suspended": {
       "comment": "GT gt_7adf4a8d18569397; arguments: none",
       "extractionState": "manual",
@@ -50925,42 +49773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plånboken är pausad. Återuppta den under Inställningar."
-          }
-        }
-      }
-    },
-    "Wallet unavailable": {
-      "comment": "GT gt_62c0adf992b7f00b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wallet unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Billetera no disponible"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットを利用できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 사용 불가"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plånboken är inte tillgänglig"
           }
         }
       }

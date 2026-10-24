@@ -17,7 +17,7 @@ class ServerRegistration(
     private val device: () -> com.noahwallet.api.generated.models.DeviceInfo = DeviceInfo::current,
     private val now: () -> Long = System::currentTimeMillis,
     private val warn: (String) -> Unit,
-    private val mailboxAuthorization: suspend (Long) -> AuthorizeMailboxPayload = { throw ServerFailure("Wallet unavailable") },
+    private val mailboxAuthorization: suspend (Long) -> AuthorizeMailboxPayload = { throw ServerFailure("""Wallet unavailable""") },
 ) {
     val state get() = storage.state
     private val version = MutableStateFlow<AppVersionInfo?>(null)

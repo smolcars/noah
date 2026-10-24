@@ -26,7 +26,7 @@ class AppServices private constructor(private val context: Context) {
         readToken = { (tokenItem.read() as? SecretResult.Found)?.value },
         saveToken = tokenItem::saveAuthToken,
         clearToken = tokenItem::clearAuthToken,
-        readMnemonic = { (seed.read() as? SecretResult.Found)?.value ?: throw ServerFailure("Wallet seed unavailable") },
+        readMnemonic = { (seed.read() as? SecretResult.Found)?.value ?: throw ServerFailure("""Wallet seed unavailable""") },
         login = { ServerClient.login(publicClient, variant, it) },
         loginKey = { ServerClient.loginKey(variant, it) },
     )
@@ -177,7 +177,7 @@ class AppServices private constructor(private val context: Context) {
     }
 
     class WalletSuspended : Exception("Wallet suspended")
-    class RestoreNotSettled : Exception("Interrupted restore not settled yet")
+    class RestoreNotSettled : Exception("""Interrupted restore not settled yet""")
 
     /** Headless opens only read seeds; pending restore/deletion always waits for foreground recovery. */
     private val walletOpener = StoredWalletOpener(seed, { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }

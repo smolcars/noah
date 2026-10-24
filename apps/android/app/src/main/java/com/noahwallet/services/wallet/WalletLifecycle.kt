@@ -37,7 +37,7 @@ class WalletLifecycle(
     companion object { const val automationStopKey = "native-recurring-automation-stop-generation" }
     class WaitingForSecureStorage : Exception("Waiting for secure storage. Unlock your device and try again.")
     class RestoreSettingsUnavailable : Exception("Restored wallet settings can't be saved yet. Try Resume again when storage is available. Recurring payments remain stopped.")
-    class RestorePending : Exception("Restart Noah to settle the pending restore before deleting")
+    class RestorePending : Exception("""Restart Noah to settle the pending restore before deleting""")
     class BackupBusy : Exception("Noah is still finishing a backup. Try again in a moment.")
     class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
     private val mutation = Mutex()

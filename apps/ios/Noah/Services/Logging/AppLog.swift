@@ -415,7 +415,7 @@ final class LogFile: @unchecked Sendable {
     private static let bip39: Set<String> = {
         guard let url = Bundle.main.url(forResource: "bip39-english", withExtension: "txt"),
               let text = try? String(contentsOf: url, encoding: .utf8) else {
-            preconditionFailure("Missing bundled BIP39 word list")
+            preconditionFailure(#"Missing bundled BIP39 word list"#)
         }
         return Set(text.split(whereSeparator: \.isWhitespace).map(String.init))
     }()

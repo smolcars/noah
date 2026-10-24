@@ -58,7 +58,7 @@ class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = {
     fun sweepForWalletDeletion() = synchronized(inUse) {
         check(operations.value == 0 && (deleting || inUse.isEmpty())) { "Scratch operations are still active" }
         if (root.exists()) {
-            val folders = root.listFiles() ?: error("Cannot inspect scratch files")
+            val folders = root.listFiles() ?: error("""Cannot inspect scratch files""")
             folders.forEach { check(it.deleteRecursively()) { "Cannot delete scratch files" } }
             inUse.clear()
             syncDirectory(root)

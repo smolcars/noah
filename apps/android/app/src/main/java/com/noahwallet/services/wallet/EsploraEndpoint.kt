@@ -67,7 +67,7 @@ object EsploraEndpoint {
     suspend fun fetch(url: String): String = withContext(Dispatchers.IO) {
         try {
             client.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                if (!response.isSuccessful) throw Failure("HTTP failure")
+                if (!response.isSuccessful) throw Failure("""HTTP failure""")
                 val source = checkNotNull(response.body).source()
                 source.request(1025)
                 check(source.buffer.size < 1025)

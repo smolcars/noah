@@ -68,7 +68,7 @@ class WalletDataLocation(filesDirectory: File, variant: String) {
     val database = File(directory, "db.sqlite")
     // A partial datadir still belongs to the user; unreadable directories fail closed.
     val hasAnyData: Boolean get() = directory.exists() &&
-        (directory.list()?.isNotEmpty() ?: error("Cannot inspect wallet directory"))
+        (directory.list()?.isNotEmpty() ?: error("""Cannot inspect wallet directory"""))
 
     internal fun removeAttemptFiles(datadirExisted: Boolean): Boolean = try {
         if (!datadirExisted) !directory.exists() || directory.deleteRecursively()

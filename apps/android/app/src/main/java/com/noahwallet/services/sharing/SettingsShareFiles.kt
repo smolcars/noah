@@ -28,7 +28,7 @@ class SettingsShareFiles(private val root: File, private val revoke: (File) -> U
 
     fun deleteAll() {
         if (!root.exists()) return
-        val files = root.listFiles() ?: error("Cannot inspect settings exports")
+        val files = root.listFiles() ?: error("""Cannot inspect settings exports""")
         files.forEach { file -> revoke(file); check(file.delete()) { "Cannot delete settings export" } }
         syncDirectory(root)
     }

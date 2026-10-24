@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /** A pass owns its slot until state is updated, then clears it BEFORE resuming flush waiters. */
 class BackupCoordinator(private val dependencies: Dependencies) {
     enum class Reason { appForeground, databaseChanged, manual, push, resyncRequired, startup }
-    class NotReady : Exception("Wallet is not ready for backup")
+    class NotReady : Exception("""Wallet is not ready for backup""")
     class Dependencies(
         val perform: suspend (String?, () -> Unit) -> BackupService.Outcome,
         val canBackup: (Boolean) -> Boolean,

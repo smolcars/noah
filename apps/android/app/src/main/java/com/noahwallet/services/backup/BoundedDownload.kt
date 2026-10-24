@@ -7,7 +7,7 @@ import okhttp3.*
 
 /** Blocking network IO belongs to a child job: cancellation cancels the call, then joins file writes. */
 object BoundedDownload {
-    class TooLarge : Exception("Backup download exceeds limit")
+    class TooLarge : Exception("""Backup download exceeds limit""")
     val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
         .callTimeout(60, TimeUnit.SECONDS).build()
 

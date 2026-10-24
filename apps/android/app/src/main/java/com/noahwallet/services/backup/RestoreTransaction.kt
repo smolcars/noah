@@ -129,7 +129,7 @@ class RestoreTransaction(
     private fun removeJournal() { remove(journalFile); sync(directory) }
     private fun syncBothSides() { sync(datadir.parentFile!!); sync(directory) }
     private fun syncTree(root: File) {
-        if (root.isDirectory) (root.listFiles() ?: error("Cannot read staged files")).forEach(::syncTree)
+        if (root.isDirectory) (root.listFiles() ?: error("""Cannot read staged files""")).forEach(::syncTree)
         sync(root)
     }
     private fun remove(file: File) { check(!file.exists() || file.deleteRecursively()) { "Cannot remove restore workspace files" } }

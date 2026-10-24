@@ -10,7 +10,7 @@ enum AppVariant: String, Sendable, CaseIterable {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: "NoahAppVariant") as? String,
             let variant = AppVariant(rawValue: raw)
         else {
-            preconditionFailure("NoahAppVariant missing or invalid in Info.plist")
+            preconditionFailure(#"NoahAppVariant missing or invalid in Info.plist"#)
         }
         return variant
     }()

@@ -8,7 +8,7 @@ import com.noahwallet.services.backup.ScratchSpace
 /** Read-only check before opening; OnchainWallet.openExisting repeats it in the SDK (defence in depth). */
 object WalletDatabase {
     data class Properties(val network: String, val fingerprint: String)
-    class InspectionError : Exception("Cannot read bark wallet properties")
+    class InspectionError : Exception("""Cannot read bark wallet properties""")
 
     /** The framework's default handler deletes a database it finds corrupt. Never on a wallet. */
     private val keepDatabase = DatabaseErrorHandler { }

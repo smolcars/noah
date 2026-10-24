@@ -38,7 +38,7 @@ final class ServerRegistration {
                     versionInfo = try await client.checkAppVersion(body: .json(.init(
                         clientVersion: DeviceInfo.current().appVersion ?? "0.0.1"))).ok.body.json
                 } catch {
-                    log.w("Failed to check app version, allowing app to continue")
+                    log.w(#"Failed to check app version, allowing app to continue"#)
                 }
                 checkedVersion = true
             }
@@ -51,7 +51,7 @@ final class ServerRegistration {
                 arkAddress: address, deviceInfo: device.registrationPayload, lnAddress: nil))).ok.body.json
             try await completeServices?()
             try apply(result, device: device)
-            log.d("Successfully registered with server")
+            log.d(#"Successfully registered with server"#)
         }
         registration = attempt
         isRegistering = true
@@ -92,7 +92,7 @@ final class ServerRegistration {
     func sendEmail(_ email: String) async throws -> Bool {
         try await ensureRegistered()
         let response = try await client.sendVerificationEmail(body: .json(.init(email: email))).ok.body.json
-        if response.message == "Email already verified" {
+        if response.message == #"Email already verified"# { // The server's message, not UI copy.
             try verifiedEmail(response.email ?? email)
             return true
         }
@@ -157,7 +157,7 @@ final class ServerRegistration {
 
     func dismissEmailPrompt() {
         do { try update { $0.isEmailPromptDismissed = true } }
-        catch { log.w("Failed to save email prompt dismissal") }
+        catch { log.w(#"Failed to save email prompt dismissal"#) }
     }
 
     func setMailboxEnabled(_ enabled: Bool) async throws {

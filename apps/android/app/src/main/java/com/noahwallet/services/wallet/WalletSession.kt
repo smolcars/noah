@@ -279,7 +279,7 @@ class WalletSession internal constructor(
                 checkHeld(reservation)
                 if (location.restorePending) throw OpenError(OpenFailure.restorePending)
                 if (location.databaseExists) throw OpenError(OpenFailure.walletDatabaseExists)
-                check(location.directory.isDirectory || location.directory.mkdirs()) { "Cannot create wallet directory" }
+                check(location.directory.isDirectory || location.directory.mkdirs()) { """Cannot create wallet directory""" }
                 daemon = runDaemon
             }
             caller.checkWalletAdmission()

@@ -51,7 +51,7 @@ class BackupService(
      * death's leftovers get swept.
      */
     suspend fun exportEncryptedBackup(fileName: String): Export {
-        require(fileName.isNotBlank() && '/' !in fileName && fileName != "." && fileName != "..") { "Invalid export name" }
+        require(fileName.isNotBlank() && '/' !in fileName && fileName != "." && fileName != "..") { """Invalid export name""" }
         val shared = scratch.makeFolder("share-backup")
         try {
             val archive = scratch.withFolder("export") { folder ->

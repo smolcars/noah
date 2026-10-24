@@ -15,7 +15,7 @@ import com.google.android.gms.common.GoogleApiAvailabilityLight
 object PlatformAccess {
     fun unifiedPush(context: Context) = GoogleApiAvailabilityLight.getInstance().isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS
     fun physical() = !(Build.FINGERPRINT.startsWith("generic") || Build.FINGERPRINT.startsWith("unknown") ||
-        Build.MODEL.contains("google_sdk") || Build.MODEL.contains("Emulator") || Build.MODEL.contains("Android SDK built for") ||
+        Build.MODEL.contains("google_sdk") || Build.MODEL.contains("""Emulator""") || Build.MODEL.contains("""Android SDK built for""") ||
         Build.HARDWARE in listOf("goldfish", "ranchu") || Build.PRODUCT.contains("sdk"))
     fun permission(context: Context): PlatformGateRules.Permission {
         // Expo also reports DENIED when the notification manager is disabled, even before the first request.

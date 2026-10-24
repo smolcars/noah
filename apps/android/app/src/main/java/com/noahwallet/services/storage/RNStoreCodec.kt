@@ -55,7 +55,7 @@ object RNStoreCodec {
     internal fun validateStoredValue(key: String, raw: String) {
         decode(key, raw)
         if (key == com.noahwallet.recurring.RecurringStore.key) {
-            try { com.noahwallet.recurring.RecurringStore({ raw }, { error("Read only") }).load() }
+            try { com.noahwallet.recurring.RecurringStore({ raw }, { error("""Read only""") }).load() }
             catch (_: Exception) { throw Unreadable() }
         }
     }

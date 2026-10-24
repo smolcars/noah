@@ -71,7 +71,6 @@
   <string name="gt_b636320b54efe2b7">"백업 중 알 수 없는 오류가 발생했습니다."</string>
   <string name="gt_a4ae750b610e875e">"앵커"</string>
   <string name="gt_94c45bc285c9613e">"앵커 + 수수료 %1$s · %3$s개 중 %2$s"</string>
-  <string name="gt_dea19a697a27a904">"Android SDK 빌드 대상"</string>
   <string name="gt_15ea390b9d935697">"다른 Lightning 결제가 아직 진행 중입니다. 완료된 후 다시 시도하세요."</string>
   <string name="gt_aa8f23bda4bd9ea8">"같은 라운드의 다른 출금이 자체 수수료로 이미 보냈어요. 지불하지 않아도 돼요."</string>
   <string name="gt_c4e9b3d10877c72c">"다른 지갑"</string>
@@ -105,7 +104,6 @@
   <string name="gt_c6dd438b37364cad">"%1$s 이상이 되면 물어봐요"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"3자 이상"</string>
   <string name="gt_0d04eed763c98c70">"최소 %1$s."</string>
-  <string name="gt_c8271c0bafb7c1eb">"지갑을 사용하려면 인증해 주세요"</string>
   <string name="gt_4190475b52357e7a">"인증에 실패했습니다. 다시 시도해 주세요."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"자동 입금 기준 금액을 확인할 수 없습니다"</string>
   <string name="gt_cb8603c8ce918947">"자동 백업"</string>
@@ -129,7 +127,6 @@
   <string name="gt_838557924a5cdfb2">"백업"</string>
   <string name="gt_5618590eea28d6d7">"백업 완료"</string>
   <string name="gt_2e0257c2eab324c7">"백업 삭제됨"</string>
-  <string name="gt_effe557f24b31ca1">"백업 다운로드가 한도를 초과했습니다"</string>
   <string name="gt_0e7112ced3c8c26b">"백업 실패"</string>
   <string name="gt_7218b3a881ce16c6">"백업 대기 중"</string>
   <string name="gt_3334fee2c77fef82">"백업"</string>
@@ -192,13 +189,7 @@
   <string name="gt_a4957dd359a04eac">"취소됨 %1$s"</string>
   <string name="gt_57c46774d231a726">"취소됨 · 지갑에서 빠져나간 금액 없음"</string>
   <string name="gt_811051f995891b6c">"취소됨 · Ark에 그대로 있음"</string>
-  <string name="gt_c8fa4348a993453a">"지갑 디렉터리를 생성할 수 없습니다"</string>
-  <string name="gt_7b26a7a0cc56a9a5">"임시 파일을 검사할 수 없습니다"</string>
-  <string name="gt_62147460a3d20c27">"내보낸 설정 파일을 검사할 수 없습니다"</string>
-  <string name="gt_7830e14445428d0a">"지갑 디렉터리를 검사할 수 없습니다"</string>
   <string name="gt_76dbc28dfacadd7d">"링크를 열 수 없습니다"</string>
-  <string name="gt_31a90f3cda2dfb7b">"bark 지갑 속성을 읽을 수 없음"</string>
-  <string name="gt_ca985bb90dcf0a7b">"준비된 파일을 읽을 수 없습니다"</string>
   <string name="gt_baa67160c5bcf450">"되돌릴 수 없어요"</string>
   <string name="gt_1478662458cf20d0">"체인 앵커"</string>
   <string name="gt_70cc1886428b724b">"체인 상태"</string>
@@ -393,13 +384,11 @@
   <string name="gt_6eea8608c452711b">"이메일(선택 사항)"</string>
   <string name="gt_09bf25ef30833633">"이메일 주소"</string>
   <string name="gt_de101ec2a9081a8b">"이메일 추가됨"</string>
-  <string name="gt_829e3579e020d067">"이미 인증된 이메일"</string>
   <string name="gt_50d8230c905d564f">"이메일 등록은 선택 사항입니다. Noah는 VTXO가 만료 임박 상태여서 온라인에 접속해 갱신해야 하는 경우 등 지갑 안전과 관련된 긴급 안내에만 이메일을 사용합니다."</string>
   <string name="gt_bdfb1e4f00c73e98">"이메일 인증 완료"</string>
   <string name="gt_3a9f176a663d540d">"긴급 연락용 이메일"</string>
   <string name="gt_b8eea92a324ae5b4">"긴급 출금"</string>
   <string name="gt_4f5556b1b428d358">"긴급 상황에만 쓰세요. Ark 서버 없이 비트코인을 Ark에서 꺼내요."</string>
-  <string name="gt_cade2f4efb6f7c99">"에뮬레이터"</string>
   <string name="gt_1cd009ba27e712a8">"지갑 인증 활성화"</string>
   <string name="gt_3d5044351caf9c70">"이 휴대폰을 떠나기 전에 복구 문구로 암호화됩니다. 복원하려면 휴대폰에서 Noah를 설정할 때 복구 문구를 입력하세요."</string>
   <string name="gt_1e1e7aaa734a1633">"암호화 및 업로드 중"</string>
@@ -502,10 +491,8 @@
   <string name="gt_a3b205a9ee2b931f">"법정화폐"</string>
   <string name="gt_33811c75989f1198">"Face ID"</string>
   <string name="gt_031a8f0f659df890">"실패"</string>
-  <string name="gt_650e662ff450d76b">"앱 버전을 확인하지 못했지만 앱을 계속 실행합니다"</string>
   <string name="gt_0e64d6a1c553e225">"로그를 가져오지 못했습니다."</string>
   <string name="gt_584cd4e5161a0b9d">"서버에 등록하지 못했습니다. 다시 시도해 주세요."</string>
-  <string name="gt_0aac4e26d6649873">"이메일 안내를 닫은 상태를 저장하지 못했습니다"</string>
   <string name="gt_3b81a18b3127cb14">"인증 코드를 보내지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_fd5ca43ef5f13cca">"의견을 보내지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_5c31f5e6276f5882">"라이트닝 주소를 업데이트하지 못했습니다. 다시 시도하세요."</string>
@@ -529,7 +516,6 @@
   <string name="gt_b4221133c0166c16">"최종 청구 거래가 전파되어 확정을 기다리고 있습니다."</string>
   <string name="gt_664fa279a9ee2f99">"Bitcoin 결제가 가능한 곳 찾기"</string>
   <string name="gt_280918c59094fc48">"비트코인을 찾는 중"</string>
-  <string name="gt_ff8fa5b5d54ed7db">"지갑 백그라운드 작업을 시작하기 전에 초기 설정을 완료하세요"</string>
   <string name="gt_25cc2b0e08f9d856">"QR 코드를 공유하기 전에 라이트닝 주소 설정을 완료하세요."</string>
   <string name="gt_feb81c547b248d40">"다른 결제 요청을 열기 전에 현재 결제를 완료하세요."</string>
   <string name="gt_b7657804c2b4cf70">"다른 요청을 스캔하기 전에 현재 결제를 완료하세요."</string>
@@ -558,7 +544,6 @@
   <string name="gt_83047f2bb98b251f">"이 결제에 사용할 짧은 이름을 입력하세요(최대 64자)."</string>
   <string name="gt_0c3587820d4cdb77">"Google Play 서비스를 사용할 수 없습니다. 알림을 받으려면 UnifiedPush 배포 앱(예: ntfy)을 사용하세요."</string>
   <string name="gt_5ad3dbd1242a4cea">"확인"</string>
-  <string name="gt_c02479b6e3bd01fb">"HTTP 오류"</string>
   <string name="gt_0a5639302aa6c182">"확인하셨나요?"</string>
   <string name="gt_b79cac926e0b2e34">"도움말"</string>
   <string name="gt_c41b2bdf4c4d8c50">"보안을 위해 숨김"</string>
@@ -608,15 +593,12 @@
   <string name="gt_136f8bedf0a24121">"즉시"</string>
   <string name="gt_9464444aff9626f4">"이 결제 수단으로 결제하기에는 잔액이 부족합니다."</string>
   <string name="gt_0c5413a928ae3639">"예정된 변동"</string>
-  <string name="gt_d6e896cee6f715fd">"중단된 복원이 아직 처리되지 않음"</string>
   <string name="gt_50bc71f591bfa3ff">"유효하지 않은 BIP-321 URI"</string>
   <string name="gt_ec21cf0f83a4a7de">"잘못된 BOLT12 제안"</string>
   <string name="gt_7f89a8b29b034582">"잘못된 금액 형식"</string>
   <string name="gt_dfc5950db71330cf">"잘못된 Bitcoin 주소"</string>
-  <string name="gt_809d321d74b3c7ba">"잘못된 내보내기 이름"</string>
   <string name="gt_b9b0e9e85d5ed074">"인증 코드가 잘못되었거나 만료되었습니다."</string>
   <string name="gt_97ce5ac8121480ec">"인증 코드가 유효하지 않거나 만료되었습니다. 다시 시도해 주세요."</string>
-  <string name="gt_9aecdf7b7354577b">"서버 토큰 만료 정보가 유효하지 않습니다"</string>
   <string name="gt_b832002da297545f">"인보이스"</string>
   <string name="gt_7aabdd55b1ce8710">"이미 결제된 결제 요청서"</string>
   <string name="gt_cb736bbe0310b99e">"인보이스 금액이 1사토시 미만입니다."</string>
@@ -704,8 +686,6 @@
   <string name="gt_f62bb082d169c40c">"사용 가능한 최대 금액"</string>
   <string name="gt_2f77668a9dfbf8d5">"메시지"</string>
   <string name="gt_9eddf573cb509f1f">"메타데이터"</string>
-  <string name="gt_86387c399b5ea22e">"내장 BIP39 단어 목록 누락"</string>
-  <string name="gt_656ea5e06bac3d88">"복수형 리소스 누락: %1$s"</string>
   <string name="gt_9b11f6b707d2a03e">"매월"</string>
   <string name="gt_d47d7cb0e4f8fd2b">"더 보기"</string>
   <string name="gt_6ecc3df6bffdd06c">"이동"</string>
@@ -805,7 +785,6 @@
   <string name="gt_822918727e4f828f">"Noah 기본값"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah가 최종 결과를 확인하지 못했습니다. 다시 결제하지 마세요. 상태 확인으로는 새 결제가 제출되지 않습니다."</string>
   <string name="gt_545eb93f8194bd47">"Noah가 한동안 이 출금의 체인을 확인하지 않았습니다. 확인하면 거래를 보내거나 수수료를 올릴 수도 있습니다."</string>
-  <string name="gt_ef0d44ddb30f6d0d">"Noah가 잠겨 있습니다"</string>
   <string name="gt_9354e260e9c82293">"Noah는 베타 버전입니다. 잃어도 괜찮은 만큼만 보관하세요."</string>
   <string name="gt_2588c7db9f3fe277">"Noah가 잠겨 있어요"</string>
   <string name="gt_f590e31a6eb944e2">"Noah에서 백업을 마무리하는 중입니다. 잠시 후 다시 시도하세요."</string>
@@ -816,7 +795,6 @@
   <string name="gt_ddecc0272120b4ba">"Noah 사용자"</string>
   <string name="gt_f802f9f1257fc080">"이 결제를 전송하는 중 Noah가 중단되었습니다. 계속하기 전에 거래 내역을 확인해 주세요."</string>
   <string name="gt_deca5f2b35700ac7">"Noah가 이 비트코인을 Ark로 다시 옮기지 않아요."</string>
-  <string name="gt_f02d150579902f58">"Info.plist에 NoahAppVariant가 없거나 유효하지 않습니다"</string>
   <string name="gt_dc937b59892604f5">"없음"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr 키"</string>
   <string name="gt_e3df4eceed29d5f4">"Nostr 키(선택 사항)"</string>
@@ -961,7 +939,6 @@
   <string name="gt_93f355ad6107bcb8">"QR 모드"</string>
   <string name="gt_66b1e18e98c4a1d5">"QR 코드를 표시할 수 없습니다. 눌러서 결제 상세 정보를 복사하세요."</string>
   <string name="gt_ecf58b0c890a1c76">"원시 거래"</string>
-  <string name="gt_8ac767353080eae7">"읽기 전용"</string>
   <string name="gt_cb1838ea58a69336">"이 화면을 보거나 수수료를 추정하는 것만으로는 출금 거래가 전파되지 않습니다."</string>
   <string name="gt_5fa7aac5375c5815">"준비 완료"</string>
   <string name="gt_f476330a673de0fa">"청구 준비 완료"</string>
@@ -1050,7 +1027,6 @@
   <string name="gt_daee7606b339f3c3">"초기화"</string>
   <string name="gt_55d67318211dbda2">"등록 초기화"</string>
   <string name="gt_9d5cd4a03ec60322">"등록을 초기화할까요?"</string>
-  <string name="gt_5954f39fc8781bfa">"삭제하기 전에 Noah를 다시 시작하여 대기 중인 복원을 마무리하세요"</string>
   <string name="gt_a76e13b9839270eb">"복원"</string>
   <string name="gt_3b4a6b8e1dbe37e1">"지갑 복원"</string>
   <string name="gt_758420e6c40b4a1e">"복원이 완료되지 않았습니다"</string>
@@ -1107,8 +1083,6 @@
   <string name="gt_49c266baaaa70981">"검색"</string>
   <string name="gt_08cf22a9053129c5">"장소 또는 도시 검색"</string>
   <string name="gt_fa0e0b90eef384a2">"몇 초 · 수수료 %1$s"</string>
-  <string name="gt_26a08e3cf397b095">"보안 파일을 읽을 수 없음"</string>
-  <string name="gt_6e5835bc30b172d3">"보안 키를 사용할 수 없습니다"</string>
   <string name="gt_60e65c7b7c95778d">"보안 저장소 사용 불가"</string>
   <string name="gt_8f6fb4eb7f42c0e2">"보안"</string>
   <string name="gt_d7a8c446069a0585">"모두 보기"</string>
@@ -1137,8 +1111,6 @@
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s(으)로 보냄"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s 보냄"</string>
-  <string name="gt_76c5f148894222a9">"서버 인증 실패"</string>
-  <string name="gt_5f5c5c0c66eda444">"서버 연결 실패"</string>
   <string name="gt_c653cd477710322c">"서버 키"</string>
   <string name="gt_2b93f3e367d004bf">"서버 새로 고침 완료"</string>
   <string name="gt_604dce445e326d95">"서비스"</string>
@@ -1194,7 +1166,6 @@
   <string name="gt_8b60ea61b803ead4">"제출되었습니다. 새로고침하여 네트워크 상태를 확인하세요. 이 결제를 다시 보내지 마세요."</string>
   <string name="gt_63734ae10b7e46e9">"하위 시스템"</string>
   <string name="gt_f3686bb328c6d408">"성공"</string>
-  <string name="gt_cc5ca35c0cd158c2">"서버에 성공적으로 등록되었습니다"</string>
   <string name="gt_479b9ae48026aec9">"지원 코드: SEED_INVALID. 저장된 복구 문구의 유효성을 확인할 수 없습니다. 이 앱을 삭제하지 말고 github.com/smolcars/noah에서 Noah 지원팀에 문의하세요. 복구 문구, 개인 키 또는 지갑 데이터베이스를 누구에게도 보내지 마세요."</string>
   <string name="gt_2dd46d7515a9b8c0">"지원 코드: WALLET_CONFLICT. Noah가 안전하게 대조할 수 없는 지갑 기록을 발견했습니다. 앱을 삭제하지 말고 github.com/smolcars/noah에서 Noah 지원팀에 문의하세요. 복구 문구, 개인 키 또는 지갑 데이터베이스를 누구에게도 보내지 마세요."</string>
   <string name="gt_4948e134182f8420">"일시 중지"</string>
@@ -1356,7 +1327,6 @@
   <string name="gt_08af79cb5523570f">"UnifiedPush"</string>
   <string name="gt_da316df29fe4c8f6">"UnifiedPush 설정"</string>
   <string name="gt_7ae925241d0d67f0">"UnifiedPush 엔드포인트"</string>
-  <string name="gt_cf92288ec69afe62">"UnifiedPush 서버 등록에 실패했습니다. 재시도 대기열에 추가되었습니다"</string>
   <string name="gt_b764cdc0eab71374">"알 수 없음"</string>
   <string name="gt_5acdc8f986a4f293">"알 수 없는 필수 매개변수: %1$s"</string>
   <string name="gt_4ac709aa58bcfe5d">"잠금 해제"</string>
@@ -1424,16 +1394,13 @@
   <string name="gt_48352af75874570f">"이 기기에 지갑 데이터가 있지만 복구 문구가 없습니다. Noah는 이 파일들을 덮어쓰지 않습니다. 복구 문구를 잘 보관하고 지원팀에 지갑 복구 도움을 요청하세요."</string>
   <string name="gt_6f9f190770ef0638">"암호화된 지갑 데이터베이스"</string>
   <string name="gt_6a728f849818223b">"지갑 기록에서 이 결제가 실패했거나 취소된 것으로 확인됩니다."</string>
-  <string name="gt_d5af5b7c0524458c">"아직 지갑을 백업할 준비가 되지 않았습니다"</string>
   <string name="gt_a30be676284ee1f2">"지갑 키"</string>
   <string name="gt_1db6ba4dfd2bc628">"지갑이 열려 있지 않음"</string>
   <string name="gt_157e2e4d3fa7c80a">"지갑 복구 필요"</string>
   <string name="gt_46a366f15c4809e0">"지갑이 재개됨"</string>
-  <string name="gt_172f54e96d258f92">"지갑 시드를 사용할 수 없음"</string>
   <string name="gt_7adf4a8d18569397">"지갑 일시 중지됨"</string>
   <string name="gt_d761927c2b2aeaf0">"지갑이 일시 중지되었거나 교체 대기 중입니다. 전송이 중지되었습니다."</string>
   <string name="gt_795e0058d0191f98">"지갑이 일시 중지되었습니다. 설정에서 지갑을 다시 활성화하세요."</string>
-  <string name="gt_62c0adf992b7f00b">"지갑 사용 불가"</string>
   <string name="gt_6fb08948581619e7">"나에게 결제하는 방법"</string>
   <string name="gt_ebeb067bb53b2c70">"%1$s 주소로 6자리 인증 코드를 보냈습니다"</string>
   <string name="gt_b5a229ac8becc603">"웹사이트"</string>
