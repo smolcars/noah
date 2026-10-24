@@ -320,3 +320,40 @@ tests. No physical device, shared emulator or Docker service was controlled.
 Cleanup: the AVD name was confirmed again before shutdown; `adb devices` confirmed
 `emulator-5610` was absent, and both the exact `.avd` directory and `.ini`
 registration were verified absent after deleting only `NoahRestoreRecoverySol5610`.
+
+## Stored-phrase screen restyle (2026-10-24)
+
+"Recovery phrase found" is now an onboarding step (`storedSeed` in `Onboarding.kt`, as iOS's
+`OnboardingFlow.storedSeed`). `FormLayout` lays it out: the headline and short line, the error just above a black
+Restore Wallet pill, then a red Delete Wallet. Book posture splits at the hinge, and tabletop puts the headline
+above the fold. Restore Wallet plays the Restoring scene and holds "Ready" before Home. A failed restore returns to
+this screen with its error. The old step messages ("Validating backup…" and the others) are gone, as on iOS. The
+suspended branch, blocked Back, `RestoreShield`, `restore-error` and `restore-progress` (now Restoring's phase
+text) all stay.
+
+Opt-in captures of the suspended, idle, restoring and error states run on a disposable regtest emulator. Point the
+server at a host port that accepts connections and never answers, so Restore holds and then fails:
+
+```sh
+./gradlew -PnoahRegtestServerURL=http://10.0.2.2:3199 assembleRegtestDebug assembleRegtestDebugAndroidTest
+adb shell am instrument -w -e class com.noahwallet.ui.StoredSeedShotsTest -e noahStoredSeedShots <label> \
+  com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner
+adb exec-out run-as com.noahwallet.regtest cat files/stored-seed-shots/<label>/idle.png > idle.png
+```
+
+The stored phrase is the public BIP-39 test vector, and the screen never shows it. Captures were taken before and
+after on the owned Android 15 AVDs `noah-phrase-phone` (emulator-5592) and `noah-phrase-fold` (emulator-5594), in
+light and dark. The fold was half-open: rotation 0 for book, rotation 1 for tabletop. The phone was also captured
+with animator scale 0.
+
+Results:
+- `OnboardingFoldTest`, which now includes this screen, passed 3/3.
+- `RestoreUIDeviceTest.seedOnlyLaunchCanConfirmDeletionAndStartOver` passed.
+- The live successful stored-phrase restore (`liveBackupWipePasteRestoreAndMissingBackup`) wasn't rerun to the
+  end. Neither local server could store a backup, so it stops at "upload backup".
+- Two failures are unrelated to this screen and predate it:
+  - `platformWordFieldsAreVisibleAndKeepTheKeyboardPrivate` expects no transformation method, but the field sets
+    `isSingleLine`.
+  - `interruptedJournalAndWaitingSecretNeverOfferCreation` waits for "Unlock your device", but that screen reads
+    "Wallet recovery required".
+- Full JVM suite: 4,215 tests in 197 suites, 0 failures; the instrumentation APK builds.
