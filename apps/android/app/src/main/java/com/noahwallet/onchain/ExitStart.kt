@@ -27,9 +27,16 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun ExitStartPage(app: AppModel, nav: SettingsNav, ids: List<String>) {
     val model = rememberOnchainModel(app)
+    OnchainEffects(app, model, reloadOnChange = true)
+    ExitStartScreen(model, nav, ids, app.isWalletSuspended, rememberExitDelta(app), { money(app, it) }) { OnchainStatus(app, model) }
+}
+
+/** The start page on [model] (its review, the hold and where it leaves to), apart from [AppModel] so a device test drives it. */
+@Composable
+internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<String>, suspended: Boolean, delta: Long?, money: (Long) -> String,
+                             status: @Composable () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
-    OnchainEffects(app, model, reloadOnChange = true)
     var started by remember { mutableStateOf(false) }
     // The review itself: read-only. Pausing, a wallet change or 30 s drop it; Review again asks bark afresh.
     LaunchedEffect(ids) { if (model.quote == null) model.review(OnchainAction.startExit, ids) }
@@ -38,8 +45,8 @@ internal fun ExitStartPage(app: AppModel, nav: SettingsNav, ids: List<String>) {
         val live = model.overview?.exits.orEmpty().filter { it.id in ids && it.state !in ExitTimeline.terminal }
         if (!started && !model.busy && live.size == ids.size) nav.replace(if (ids.size == 1) ExitPage(ids.single()) else ExitsPage)
     }
-    ExitStartContent(model.quote, model.estimateFallback, model.overview?.confirmed, model.busy, app.isWalletSuspended, rememberExitDelta(app),
-        { money(app, it) }, nav.back, tip = model.overview?.tip ?: 0, reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
+    ExitStartContent(model.quote, model.estimateFallback, model.overview?.confirmed, model.busy, suspended, delta,
+        money, nav.back, tip = model.overview?.tip ?: 0, reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
         withoutEstimate = model::continueWithoutEstimate,
         start = {
             if (!model.busy && model.quote != null) {
@@ -52,7 +59,7 @@ internal fun ExitStartPage(app: AppModel, nav: SettingsNav, ids: List<String>) {
                     } else haptics.error()
                 }
             }
-        }) { OnchainStatus(app, model) }
+        }, status = status)
 }
 
 @Composable

@@ -36,9 +36,16 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun ExitClaimPage(app: AppModel, nav: SettingsNav) {
     val model = rememberOnchainModel(app)
+    OnchainEffects(app, model, reloadOnChange = true)
+    ExitClaimScreen(model, nav, app.session::exitDepositAddress, app.isWalletSuspended, { money(app, it) }) { OnchainStatus(app, model) }
+}
+
+/** The claim page on [model] (destination, review and hold), apart from [AppModel] so a device test drives it. */
+@Composable
+internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress: suspend () -> String, suspended: Boolean, money: (Long) -> String,
+                             status: @Composable () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
-    OnchainEffects(app, model, reloadOnChange = true)
     var to by rememberSaveable { mutableStateOf(ClaimTo.other) }
     var typed by rememberSaveable { mutableStateOf("") }
     var phone by remember { mutableStateOf<String?>(null) }
@@ -48,7 +55,7 @@ internal fun ExitClaimPage(app: AppModel, nav: SettingsNav) {
     val address = ExitClaim.address(typed, BuildConfig.APP_VARIANT)
     val destination = ExitClaim.destination(to, typed, phone, BuildConfig.APP_VARIANT)
     LaunchedEffect(to) {
-        if (to == ClaimTo.phone && phone == null) try { phone = app.session.exitDepositAddress() }
+        if (to == ClaimTo.phone && phone == null) try { phone = phoneAddress() }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { phoneError = true }
     }
     // Today's claim review for this destination: read-only, fresh for 30 s, asked again when the destination changes.
@@ -59,7 +66,7 @@ internal fun ExitClaimPage(app: AppModel, nav: SettingsNav) {
         model.review(OnchainAction.claim, ids, destination = destination)
     }
     ExitClaimContent(exits, model.overview?.tip ?: 0, model.quote?.takeIf { it.destination == destination }, model.estimateFallback?.takeIf { it.destination == destination },
-        to, typed, address, phone, phoneError, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back,
+        to, typed, address, phone, phoneError, model.busy, suspended, money, nav.back,
         choose = { to = it }, type = { typed = it }, reviewAgain = { destination?.let { scope.launch { model.review(OnchainAction.claim, ids, destination = it) } } },
         withoutEstimate = model::continueWithoutEstimate,
         claim = {
@@ -71,7 +78,7 @@ internal fun ExitClaimPage(app: AppModel, nav: SettingsNav) {
                     if (model.message != null && model.error == null && model.estimateFallback == null) { haptics.success(); nav.pop() } else haptics.error()
                 }
             }
-        }) { OnchainStatus(app, model) }
+        }, status = status)
 }
 
 @Composable

@@ -35,30 +35,35 @@ fun onchainReady(app: AppModel): Boolean {
     return ExitRules.ready(persisted?.isInitialized != false, app.session.isOpen,
         app.isWalletSuspended || persisted?.isWalletSuspended == true, WalletBackgroundActivity.isRunning)
 }
-internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
-    ready = { onchainReady(app) }, overview = app.session::onchainOverview,
-    quote = { action, ids, amount, destination -> app.session.quoteOnchain(action, ids, amount, destination) },
-    execute = { quote -> app.services.lifecycle.withWalletMutation {
-        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
-        app.session.executeOnchain(quote, keepOnchain = { AutoBoardFunding.stored(app.settings).keep(quote.walletID, it) })
+internal fun onchainDependencies(app: AppModel) =
+    onchainDependencies(app.session, app.services.lifecycle, AutoBoardFunding.stored(app.settings)) { onchainReady(app) }
+
+/** The model's calls on [session], each mutation under [lifecycle]'s gate; a device test runs them on a fake wallet. */
+internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletSession, lifecycle: com.noahwallet.services.wallet.WalletLifecycle,
+                                 funding: AutoBoardFunding, ready: () -> Boolean) = OnchainModel.Dependencies(
+    ready = ready, overview = session::onchainOverview,
+    quote = { action, ids, amount, destination -> session.quoteOnchain(action, ids, amount, destination) },
+    execute = { quote -> lifecycle.withWalletMutation {
+        if (!ready()) fail(OnchainFailure.unavailable)
+        session.executeOnchain(quote, keepOnchain = { funding.keep(quote.walletID, it) })
     } },
-    attempts = { withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() } },
-    acknowledge = { id -> app.services.lifecycle.withWalletMutation {
-        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
-        withContext(Dispatchers.IO) { app.session.onchainJournal.acknowledge(id) }
+    attempts = { withContext(Dispatchers.IO) { session.onchainJournal.loadAll() } },
+    acknowledge = { id -> lifecycle.withWalletMutation {
+        if (!ready()) fail(OnchainFailure.unavailable)
+        withContext(Dispatchers.IO) { session.onchainJournal.acknowledge(id) }
     } },
-    check = app.session::checkOnchainAttempt,
-    override = { id -> app.services.lifecycle.withWalletMutation {
-        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
-        withContext(Dispatchers.IO) { app.session.onchainJournal.overrideUncertain(id) }
+    check = session::checkOnchainAttempt,
+    override = { id -> lifecycle.withWalletMutation {
+        if (!ready()) fail(OnchainFailure.unavailable)
+        withContext(Dispatchers.IO) { session.onchainJournal.overrideUncertain(id) }
     } },
-    detail = app.session::exitDetail, refreshReceipts = app.session::refreshOnchainReceiptFees,
-    claimAddress = app.session::exitDepositAddress, claimOwnership = app.session::exitClaimDestinationIsMine, discard = app.session::discardBoardReview,
-    executeRenewal = { quote -> app.services.lifecycle.withWalletMutation {
-        if (!onchainReady(app)) fail(OnchainFailure.unavailable)
-        app.session.executeOnchain(quote, renewal = true)
+    detail = session::exitDetail, refreshReceipts = session::refreshOnchainReceiptFees,
+    claimAddress = session::exitDepositAddress, claimOwnership = session::exitClaimDestinationIsMine, discard = session::discardBoardReview,
+    executeRenewal = { quote -> lifecycle.withWalletMutation {
+        if (!ready()) fail(OnchainFailure.unavailable)
+        session.executeOnchain(quote, renewal = true)
     } },
-    coin = app.session::vtxoDetail,
+    coin = session::vtxoDetail,
 )
 
 @Composable
