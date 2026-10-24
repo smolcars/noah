@@ -63,9 +63,16 @@ struct ActivityDetail: Equatable {
             else { status = outgoing ? "Sent" : "Received" }
         }
 
+        // What the record shows it moved over comes first: a Lightning address paid over Ark keeps the legacy
+        // "Lnurl" type (the filter still groups it by type), but bark recorded it as an Ark send.
+        let recorded = Set(methods.compactMap(\.paymentMethod))
+        let offer = recorded.contains("offer")
         if transaction.isRenewal { rail = .arkRound }
-        else if lightning { rail = methods.contains { $0.paymentMethod == "offer" } ? .lightningOffer : .lightning }
-        else if onchain || transaction.type == "Onchain" { rail = .onchain }
+        else if onchain || recorded.contains("bitcoin") { rail = .onchain }
+        else if ["bark.lightning_send", "bark.lightning_receive"].contains(transaction.subsystemName) { rail = offer ? .lightningOffer : .lightning }
+        else if transaction.subsystemName == "bark.arkoor" || recorded.contains("ark") { rail = .ark }
+        else if lightning { rail = offer ? .lightningOffer : .lightning }
+        else if transaction.type == "Onchain" { rail = .onchain }
         else { rail = .ark }
 
         // Only an address names the recipient; incoming records hold our own receiving method.

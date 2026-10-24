@@ -202,6 +202,36 @@ struct ActivityDetailTests {
         #expect(ActivityDetail.fiat(Self.lightningSend(status: "failed"), current: 100_000, currency: "USD", locale: english, now: now) == nil)
     }
 
+    @Test func theRailFollowsWhatBarkRecorded() {
+        // A Noah user's Lightning address paid over Ark: the legacy type says Lnurl, bark says Ark.
+        var viaArk = HomeRulesTests.row("movement-5", type: "Lnurl", amount: 500, direction: "outgoing",
+                                        destination: "maya@noahwallet.io", offchainFee: 0)
+        viaArk.subsystemName = "bark.arkoor"
+        viaArk.subsystemKind = "send"
+        viaArk.sentTo = [.init(destination: "tark1recipient", amount_sat: 500, paymentMethod: "ark")]
+        viaArk.repeatPayment = RepeatPayment(destination: "maya@noahwallet.io", comment: "", amountMode: "SATS", amountInput: "500")
+        let detail = ActivityDetail(viaArk, ownDomain: Self.own)
+        #expect(detail.rail == .ark && detail.to == "maya@noahwallet.io" && detail.fee == .free)
+        let receipt = ActivityDetail.receipt(viaArk, ownDomain: Self.own, unit: .bip177, locale: Locale(identifier: "en"), date: "Today")
+        #expect(receipt.contains("Via: Ark") && !receipt.contains("Via: Lightning"))
+        // The filter keeps grouping it by type.
+        #expect(HistoryFilter.lightning.includes(viaArk) && !HistoryFilter.ark.includes(viaArk))
+        // The same address paid over Lightning, an offer, and a legacy record without a subsystem.
+        #expect(ActivityDetail(Self.lightningSend(), ownDomain: Self.own).rail == .lightning)
+        var offer = Self.lightningSend()
+        offer.sentTo = [.init(destination: ActivityMappingTests.offer, amount_sat: 4_842, paymentMethod: "offer")]
+        #expect(ActivityDetail(offer, ownDomain: Self.own).rail == .lightningOffer)
+        var legacy = Self.lightningSend()
+        legacy.subsystemName = nil
+        legacy.sentTo = nil
+        #expect(ActivityDetail(legacy, ownDomain: Self.own).rail == .lightning)
+        // A bitcoin destination is on-chain whatever the subsystem.
+        var bitcoin = viaArk
+        bitcoin.type = "Onchain"
+        bitcoin.sentTo = [.init(destination: "bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", amount_sat: 500, paymentMethod: "bitcoin")]
+        #expect(ActivityDetail(bitcoin, ownDomain: Self.own).rail == .onchain)
+    }
+
     @Test func receivesShowARecordedFeeButNeverFree() {
         var receive = Self.lightningReceive()
         receive.offchainFeeSat = 104
