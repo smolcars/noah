@@ -23,6 +23,25 @@ class OnchainModelTest {
             model.confirm(); model.confirm(); assertEquals(1, submits); assertEquals(2, estimates)
         }
     }
+    /** exit.md, Testing: a second hold (or the accessibility action) while a start or claim runs submits nothing more. */
+    @Test fun holdingAgainNeverStartsOrClaimsTwice() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) {
+            var submits = 0
+            val running = CompletableDeferred<Unit>()
+            val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") },
+                { a, ids, _, destination -> OnchainQuote(a, "wallet", ids.sorted(), destination, 30_000, fee = 262, chainFee = 0) },
+                { submits++; running.await(); "submitted" }, { emptyList() }, {}, { false }, {}, { null }, {}))
+            model.review(action, listOf("a"), destination = "address")
+            val first = launch { model.confirm() }
+            yield()
+            assertTrue(model.busy)
+            model.confirm(); model.confirm()
+            running.complete(Unit); first.join()
+            model.confirm()
+            assertEquals(action.name, 1, submits)
+            assertNull("the reviewed quote is spent", model.quote)
+        }
+    }
     @Test fun renewalReviewsAreSubmittedThroughTheLockHeldRenewalCheck() = runBlocking {
         val submitted = mutableListOf<String>()
         val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") },

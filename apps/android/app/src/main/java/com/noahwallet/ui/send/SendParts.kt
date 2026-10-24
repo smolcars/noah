@@ -287,7 +287,13 @@ internal const val HoldMillis = 800L
  * TalkBack and Switch Access get a "Send ₿X" action that asks for confirmation instead of holding.
  */
 @Composable
-internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modifier: Modifier = Modifier, onConfirm: () -> Unit) {
+internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modifier: Modifier = Modifier, onConfirm: () -> Unit) =
+    HoldToConfirm(tr("Hold to send"), tr("Sending"), tr("Send {amount}", amount), tr("Send"), enabled, sending, modifier, "send-hold", onConfirm)
+
+/** Send's hold with other words ([hold], [busyLabel]); [action] names the accessibility action and its confirmation, [confirm] its button. */
+@Composable
+internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, confirm: String, enabled: Boolean, sending: Boolean,
+                           modifier: Modifier = Modifier, tag: String, onConfirm: () -> Unit) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
@@ -297,8 +303,7 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
     var confirming by remember { mutableStateOf(false) }
     val currentConfirm by rememberUpdatedState(onConfirm)
     val currentEnabled by rememberUpdatedState(enabled)
-    val action = tr("Send {amount}", amount)
-    val label = if (sending) tr("Sending") else tr("Hold to send")
+    val label = if (sending) busyLabel else hold
     Box(modifier.fillMaxWidth().height(58.dp)
         .graphicsLayer { scaleX = press.value; scaleY = press.value; alpha = if (enabled || sending) 1f else .4f }
         .drawWithContent {
@@ -312,7 +317,7 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
             }
         }
         .background(palette.foreground, RoundedCornerShape(29.dp))
-        .testTag("send-hold")
+        .testTag(tag)
         // A pose change moves the pill under the finger, so it restarts the gesture: hold again in the new pose.
         .pointerInput(LocalPose.current) {
             awaitEachGesture {
@@ -352,12 +357,13 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
             onClick(label = action) { if (currentEnabled) confirming = true; currentEnabled }
             customActions = listOf(CustomAccessibilityAction(action) { if (currentEnabled) confirming = true; currentEnabled })
         }, contentAlignment = Alignment.Center) {
-        Text(label, style = SendType.pill, color = palette.background)
+        androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = palette.background),
+            maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = SendType.pill.fontSize))
     }
     LaunchedEffect(sending) { if (!sending && progress.value >= 1f) progress.snapTo(0f) }
     if (confirming) WalletAlertDialog(onDismissRequest = { confirming = false },
         title = { Text(action) },
-        confirmButton = { TextButton({ confirming = false; if (currentEnabled) { haptics.heavy(); currentConfirm() } }, Modifier.testTag("send-hold-confirm")) { Text(tr("Send")) } },
+        confirmButton = { TextButton({ confirming = false; if (currentEnabled) { haptics.heavy(); currentConfirm() } }, Modifier.testTag("$tag-confirm")) { Text(confirm) } },
         dismissButton = { TextButton({ confirming = false }) { Text(tr("Cancel")) } })
 }
 

@@ -474,6 +474,7 @@
   <string name="gt_8422e4065fd1b49e">"Existing fee"</string>
   <string name="gt_b4af3461164879e7">"Existing wallet data is incomplete"</string>
   <string name="gt_8ad236bd4bc3ed16">"Existing wallet data is incomplete. Restore your wallet to continue."</string>
+  <string name="gt_d17d84a604994b72">"Exit"</string>
   <string name="gt_4f4388dc6ce48980">"Exit Details"</string>
   <string name="gt_0085d19b65acb661">"Exit Synced Tip"</string>
   <string name="gt_6796f99963bfff4f">"Exit Tip"</string>
@@ -492,6 +493,7 @@
   <string name="gt_3dbc56210d18edb5">"Exit transaction %1$s"</string>
   <string name="gt_62d2c6ab601628f3">"Exit transactions were prepared and monitored."</string>
   <string name="gt_16d94f2461c3f1a9">"Exit weight"</string>
+  <string name="gt_57ebe88528802de0">"Exit %1$s"</string>
   <string name="gt_85fc46c17cd71d1d">"Exited"</string>
   <string name="gt_7c2f8a4625fab18d">"Exited coins"</string>
   <string name="gt_4a366d77739e7414">"Exiting"</string>
@@ -597,6 +599,7 @@
   <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"History read failed"</string>
   <string name="gt_5013616d3cb50e40">"Hold to send"</string>
+  <string name="gt_17b879d48aafcfb8">"Hold to start exit"</string>
   <string name="gt_3a78695388b38b5c">"Home"</string>
   <string name="gt_28b8708f20cec955">"Hours: %1$s"</string>
   <string name="gt_44f51ff976b00dd3">"How amounts are written."</string>
@@ -856,6 +859,7 @@
   <string name="gt_08b28eee5b5a6d39">"Noah registers this wallet with the server again. Your wallet stays."</string>
   <string name="gt_286c0deecb39be99">"Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."</string>
   <string name="gt_4ad1be4370f0322f">"Noah support"</string>
+  <string name="gt_c31c87ce77cb431b">"Noah then sends and fee-bumps the exit\'s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>
   <string name="gt_f802f9f1257fc080">"Noah was interrupted while sending this payment. Check your transaction history before resuming."</string>
   <string name="gt_f02d150579902f58">"NoahAppVariant missing or invalid in Info.plist"</string>
@@ -865,6 +869,7 @@
   <string name="gt_b94b03f4cd232a39">"Nostr public keys must use npub encoding"</string>
   <string name="gt_67e716b9f541b283">"Not backed up yet"</string>
   <string name="gt_2b8df7c6e321a665">"Not changed."</string>
+  <string name="gt_e843a23b9e84091b">"Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about %1$s."</string>
   <string name="gt_ca374c23ed92ea82">"Not registered"</string>
   <string name="gt_5fe2851c6d173f8d">"Not required"</string>
   <string name="gt_22b3467c1ba90e48">"Not saved"</string>
@@ -896,6 +901,7 @@
   <string name="gt_1e86a7752acde6de">"On-chain addresses are not supported for recurring payments yet"</string>
   <string name="gt_ba6aa54176784a6b">"On-chain wallet"</string>
   <string name="gt_f5795926f351bd4a">"On-chain · waiting for a block"</string>
+  <string name="gt_25d0eb395cc24f4e">"On-chain · %1$s"</string>
   <string name="gt_0c2cf5c7019fb7dd">"Once its last transaction is sent."</string>
   <string name="gt_0cc23d9ecbb9986c">"Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
   <string name="gt_acc38e1a7250680d">"Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
@@ -926,6 +932,7 @@
   <string name="gt_33a067f2594b14e7">"Override repeat protection?"</string>
   <string name="gt_51a87000f35dc875">"Override repeat protection…"</string>
   <string name="gt_fb81b961af456e5e">"Paid"</string>
+  <string name="gt_fa8b4f5768e435b1">"Paid from"</string>
   <string name="gt_a0145d18401ff94f">"Paid from your Ark balance."</string>
   <string name="gt_5dc01c1c6bc76383">"Paid from your on-chain bitcoin."</string>
   <string name="gt_17cceb4191297e74">"Paid over Lightning. Their secret is your proof of payment."</string>
@@ -1117,6 +1124,7 @@
   <string name="gt_04048ff7f2687457">"Retry registration"</string>
   <string name="gt_aff0766a5290e117">"Review"</string>
   <string name="gt_0cde499fcb0c92da">"Review Claim"</string>
+  <string name="gt_d4ea61c79c9b77d6">"Review again"</string>
   <string name="gt_25aa0f37b47607b3">"Review and pay"</string>
   <string name="gt_8b3cd108890cf4d0">"Review entire wallet exit"</string>
   <string name="gt_c9e91fec986cc876">"Review exit"</string>
@@ -1228,6 +1236,7 @@
   <string name="gt_d65d3a6d1c27a19c">"Start a new payment after checking history"</string>
   <string name="gt_8a565d98b83e392b">"Start a new payment anyway"</string>
   <string name="gt_e51e8c039fe7960f">"Start an exit"</string>
+  <string name="gt_499f9885f21d51cb">"Start exit"</string>
   <string name="gt_ecbc89cd37a03734">"Started"</string>
   <string name="gt_aeed4d26bb5f0c31">"Starting"</string>
   <string name="gt_96b98008aedf83c7">"Starting restore..."</string>
@@ -1370,6 +1379,7 @@
   <string name="gt_fa9699d246ed7062">"This signed transaction expires after two minutes. Review again for a fresh fee rate."</string>
   <string name="gt_d9302348c16e07a5">"This transaction cannot confirm on the current chain: a confirmed different transaction (%1$s) spends one of its inputs."</string>
   <string name="gt_124b7359d4adc8aa">"This transaction may be your payment: %1$s"</string>
+  <string name="gt_e12a2ce4d26b2017">"Timelock"</string>
   <string name="gt_f4b06ef6d3c81436">"To"</string>
   <string name="gt_11cae96bf25946de">"To restore, enter your recovery phrase when you set up Noah on a phone."</string>
   <string name="gt_2b065c7c9ce466e5">"Today"</string>
@@ -1541,6 +1551,7 @@
   <string name="gt_23a3ca761b70abf7">"Your wallet isn\'t ready. Please try again."</string>
   <string name="gt_f195f8e226312c3a">"You’re all set"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
+  <string name="gt_fe453fd2b1186bf1">"about a day"</string>
   <string name="gt_ab51004e9d71a485">"days"</string>
   <string name="gt_0b8e9e995d8d77f1">"debug"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
@@ -1601,6 +1612,10 @@
     <item quantity="one">"%1$s Lightning payment as a CSV file."</item>
     <item quantity="other">"%1$s Lightning payments as a CSV file."</item>
   </plurals>
+  <plurals name="gt_2c0c259cf0ba0ee3">
+    <item quantity="one">"%1$s VTXO"</item>
+    <item quantity="other">"%1$s VTXOs"</item>
+  </plurals>
   <plurals name="gt_f7957bd8d410be30">
     <item quantity="one">"%1$s VTXO expires within a day"</item>
     <item quantity="other">"%1$s VTXOs expire within a day"</item>
@@ -1640,6 +1655,7 @@
   <string name="gt_6f18db1fb525f402">"%1$s wk"</string>
   <string name="gt_7668781bc1fd97f9">"%1$s words that restore your wallet."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
+  <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"%1$s at the time"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>

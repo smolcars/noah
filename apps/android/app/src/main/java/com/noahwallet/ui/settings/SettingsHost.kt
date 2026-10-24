@@ -48,9 +48,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
-/** How a page moves: push a page, leave this one, open My code, or close Settings for Home; [hold] is [save]'s. */
+/**
+ * How a page moves: push a page, leave this one, open My code, or close Settings for Home; [hold] is [save]'s. [replace]
+ * shows a page with only its parents beneath, as a deep link does (a started exit leaves its review for its progress).
+ */
 internal class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
-                           val hold: (Boolean) -> Unit = {})
+                           val hold: (Boolean) -> Unit = {}, val replace: (NavKey) -> Unit = {})
 
 /**
  * A save whose completion navigates (the Lightning address, "I wrote it down"): [AppModel.action] that holds Back, list
@@ -208,6 +211,12 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                 if (fromList && wide) while (stack.size > 1) stack.removeAt(stack.lastIndex)
                 if (stack.lastOrNull() != page) stack.add(page)
             }
+            fun replace(page: NavKey) {
+                poseSwap = false
+                val chain = SettingsRoutes.chain(page)
+                while (stack.size > 1) stack.removeAt(stack.lastIndex)
+                stack.addAll(chain.drop(1))
+            }
             val leave = { if (idle()) close() }
             val code = { if (idle()) myCode() }
             CompositionLocalProvider(LocalSettingsToasts provides toasts) {
@@ -237,7 +246,8 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                     NavEntry(key) {
                                         val index = pages.indexOf(key)
                                         val back = if (wide && index <= 0 && !SettingsRoutes.exit(key)) null else ({ if (idle()) pop() })
-                                        val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave, hold::set)
+                                        val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave, hold::set,
+                                            { if (SettingsRoutes.top(stack, key)) replace(it) })
                                         @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview) { content ->
                                             MaterialTheme(appColors, appShapes, appTypography, content)
                                         }
@@ -291,8 +301,9 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         is EditorPage -> com.noahwallet.recurring.RecurringEditorPage(model, nav, key.id)
         SettingsDestination.Exits -> com.noahwallet.onchain.ExitWarningPage(model, nav)
         ExitChoosePage -> com.noahwallet.onchain.ExitChoosePage(model, nav)
+        is ExitStartPage -> com.noahwallet.onchain.ExitStartPage(model, nav, key.ids)
         // Today's exit screens until their redesign lands: progress, claim and the list.
-        is ExitStartPage, is ExitPage, ExitClaimPage, ExitsPage -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
+        is ExitPage, ExitClaimPage, ExitsPage -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
             legacy { com.noahwallet.onchain.UnilateralExitScreen(model) }
         }
         SettingsDestination.Notifications -> NotificationsPage(model, nav, live, preview?.unifiedPush ?: PlatformAccess.unifiedPush(LocalContext.current))

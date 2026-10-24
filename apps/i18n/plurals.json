@@ -74,5 +74,9 @@
   "{n} transactions": {
     "one": "{n} transaction",
     "other": "{n} transactions"
+  },
+  "{n} VTXOs": {
+    "one": "{n} VTXO",
+    "other": "{n} VTXOs"
   }
 }
