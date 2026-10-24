@@ -71,6 +71,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         com.noahwallet.services.background.PeriodicExecution.foreground(false)
+        if (!isChangingConfigurations) com.noahwallet.onchain.ExitFunding.shared.backgrounded()
         if (model == null && !isChangingConfigurations) invalidatedBeforeReady = true
         super.onStop()
     }

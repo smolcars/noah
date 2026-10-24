@@ -633,10 +633,12 @@ fill a wide window or fold themselves (explanation and picture lead, details and
 above). `ExitStages` maps each bark `ExitState` and transaction status to the page's phase, and reads fees rising
 from bark's history. bark keeps a state's tip while nothing changes, so `ExitSeen` keeps (across restarts) the wallet
 tip at which Noah first saw each transaction in its status, per episode (where that status began in bark's
-append-only history), and blocks stuck in the mempool count from there. "Needs
+append-only history, in this run: bark restarts a canceled exit with empty history, and starting or canceling forgets
+the exit's evidence), and blocks stuck in the mempool count from there. "Needs
 on-chain funds" is inferred (`ExitFunding`): a transaction in `AwaitingCpfpBroadcast` while the confirmed balance is
 below its package's fee at the rate bark's own estimate reports, once bark has tried (a completed Check the chain, or
-one configured daemon sync interval plus 15 s within one daemon run), within the same parking episode. The stale warning needs evidence that nothing
+one configured daemon sync interval plus 15 s within one daemon run, restarted on return from the background), within
+the same parking episode. The stale warning needs evidence that nothing
 progresses exits: the last Check the chain failed, or the wallet is open without bark's daemon. "Fees more than it's
 worth" uses each VTXO's standalone estimate until bark-bolt-ffi's estimate has per-transaction data; "All" waits until
 every VTXO has one (Try again asks for the rest). A fee child's fee

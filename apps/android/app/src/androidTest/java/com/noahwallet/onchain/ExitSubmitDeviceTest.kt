@@ -137,7 +137,7 @@ class ExitSubmitDeviceTest {
             if (shown) {
                 val restored = remember { SaveableStateRegistry(saved) { true }.also { registry = it } }
                 CompositionLocalProvider(LocalSaveableStateRegistry provides restored) {
-                    val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {}), claims) { true })
+                    val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {}), claims, ExitSeen({ null }, {})) { true })
                         .also { models += it } }
                     LaunchedEffect(model) { model.load() }
                     page(model)

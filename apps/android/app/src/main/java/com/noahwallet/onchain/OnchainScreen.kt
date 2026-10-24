@@ -36,16 +36,20 @@ fun onchainReady(app: AppModel): Boolean {
         app.isWalletSuspended || persisted?.isWalletSuspended == true, WalletBackgroundActivity.isRunning)
 }
 internal fun onchainDependencies(app: AppModel) =
-    onchainDependencies(app.session, app.services.lifecycle, AutoBoardFunding.stored(app.settings), ExitClaimRecords.stored(app.settings)) { onchainReady(app) }
+    onchainDependencies(app.session, app.services.lifecycle, AutoBoardFunding.stored(app.settings), ExitClaimRecords.stored(app.settings),
+        ExitSeen.stored(app.settings)) { onchainReady(app) }
 
 /** The model's calls on [session], each mutation under [lifecycle]'s gate; a device test runs them on a fake wallet. */
 internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletSession, lifecycle: com.noahwallet.services.wallet.WalletLifecycle,
-                                 funding: AutoBoardFunding, claims: ExitClaimRecords, ready: () -> Boolean) = OnchainModel.Dependencies(
+                                 funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, ready: () -> Boolean) = OnchainModel.Dependencies(
     ready = ready, overview = session::onchainOverview,
     quote = { action, ids, amount, destination -> session.quoteOnchain(action, ids, amount, destination) },
     execute = { quote -> lifecycle.withWalletMutation {
         if (!ready()) fail(OnchainFailure.unavailable)
-        session.executeOnchain(quote, keepOnchain = { funding.keep(quote.walletID, it) }, recordClaim = claims::add)
+        session.executeOnchain(quote, keepOnchain = { funding.keep(quote.walletID, it) }, recordClaim = claims::add).also {
+            // A started or canceled exit begins a new run: its old proof and tips must not carry over.
+            if (quote.action in setOf(OnchainAction.startExit, OnchainAction.cancel)) { ExitFunding.shared.forget(quote.ids); seen.forget(quote.ids) }
+        }
     } },
     attempts = { withContext(Dispatchers.IO) { session.onchainJournal.loadAll() } },
     acknowledge = { id -> lifecycle.withWalletMutation {

@@ -101,7 +101,7 @@ class ExitStagesTest {
 
     @Test fun aReplacedChildMeansFeesRoseAndBlocksWithoutItMeanStuck() {
         val sent = processing(100, tx("root", "awaiting-confirmation", "c1", origin = "wallet"), tx("leaf", "verify-inputs"))
-        val firstSeen = mapOf("root/awaiting-confirmation/0" to 100L)
+        val firstSeen = mapOf("v1/root/awaiting-confirmation/100:0" to 100L)
         // bark keeps the state, tip and all, while nothing changes: two blocks on the wallet's tip, it's stuck.
         val stuck = ExitStages.of(exit("Processing", sent), 102, seen = firstSeen)
         assertEquals(ExitStage.Attention.stuck, stuck.attention); assertEquals(2L, stuck.waited)
@@ -114,7 +114,7 @@ class ExitStagesTest {
         val evicted = processing(102, tx("root", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs"))
         val again = exit("Processing", processing(103, tx("root", "awaiting-confirmation", "c3", origin = "wallet"), tx("leaf", "verify-inputs")),
             history = listOf(sent, evicted))
-        val stage = ExitStages.of(again, 105, seen = mapOf("root/awaiting-confirmation/2" to 103L))
+        val stage = ExitStages.of(again, 105, seen = mapOf("v1/root/awaiting-confirmation/100:2" to 103L))
         assertEquals(ExitStage.Attention.stuck, stage.attention); assertEquals(2L, stage.waited)
         val rebumped = exit("Processing", processing(104, tx("root", "awaiting-confirmation", "c4", origin = "wallet"), tx("leaf", "verify-inputs")),
             history = listOf(sent, evicted, again.details))
@@ -125,19 +125,59 @@ class ExitStagesTest {
         var stored: String? = null
         val seen = ExitSeen({ stored }, { stored = it })
         val sent = exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c1"), tx("leaf", "verify-inputs")))
-        assertEquals(mapOf("root/awaiting-confirmation/0" to 100L, "leaf/verify-inputs/0" to 100L), seen.note(listOf(sent), 100))
+        assertEquals(mapOf("v1/root/awaiting-confirmation/100:0" to 100L, "v1/leaf/verify-inputs/100:0" to 100L), seen.note(listOf(sent), 100))
         // A later read of the same state keeps the first tip, also after a restart (a new store over the same text).
-        assertEquals(100L, ExitSeen({ stored }, { stored = it }).note(listOf(sent), 103)["root/awaiting-confirmation/0"])
+        assertEquals(100L, ExitSeen({ stored }, { stored = it }).note(listOf(sent), 103)["v1/root/awaiting-confirmation/100:0"])
         assertEquals(3L, ExitStages.of(sent, 103, seen = seen.note(listOf(sent), 103)).waited)
         // A new status starts over; anything no longer waiting is forgotten.
         val mined = exit("Processing", processing(104, tx("root", "confirmed", "c1", 104), tx("leaf", "awaiting-confirmation", "c2")))
-        assertEquals(mapOf("leaf/awaiting-confirmation/0" to 104L), seen.note(listOf(mined), 104))
+        assertEquals(mapOf("v1/leaf/awaiting-confirmation/104:0" to 104L), seen.note(listOf(mined), 104))
         assertEquals(emptyMap<String, Long>(), seen.note(emptyList(), 105))
-        assertEquals("unreadable text starts afresh", mapOf("leaf/awaiting-confirmation/0" to 106L), ExitSeen({ "{" }, {}).note(listOf(mined), 106))
+        assertEquals("unreadable text starts afresh", mapOf("v1/leaf/awaiting-confirmation/104:0" to 106L), ExitSeen({ "{" }, {}).note(listOf(mined), 106))
         // Evicted and sent again while Noah wasn't looking: bark's history shows a new episode, counted afresh.
         val evicted = exit("Processing", processing(110, tx("root", "confirmed", "c1", 104), tx("leaf", "awaiting-confirmation", "c3")),
             history = listOf(mined.details, processing(108, tx("root", "confirmed", "c1", 104), tx("leaf", "awaiting-cpfp-broadcast"))))
-        assertEquals(mapOf("leaf/awaiting-confirmation/2" to 110L), seen.note(listOf(evicted), 110))
+        assertEquals(mapOf("v1/leaf/awaiting-confirmation/104:2" to 110L), seen.note(listOf(evicted), 110))
+    }
+
+    @Test fun aCanceledAndRestartedExitStartsItsEvidenceOver() {
+        fun run(began: Long, vararg later: ExitDetails, now: ExitDetails) =
+            exit("Processing", now, history = listOf(ExitDetails(kind = "start", tip_height = began)) + later, next = 1_215)
+        val parked = processing(102, tx("root", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs"))
+        val first = run(100, processing(101, tx("root", "verify-inputs"), tx("leaf", "verify-inputs")), now = parked)
+        val funding = ExitFunding(75_000) { 0 }
+        funding.checked(listOf(first), completed = true)
+        assertEquals(setOf("v1"), funding.needsFunds(listOf(first), 0, 1))
+        // bark restarts a canceled exit with empty history: the same transaction parks at the same place in a later run.
+        val restarted = run(108, processing(109, tx("root", "verify-inputs"), tx("leaf", "verify-inputs")), now = parked.copy(tip_height = 110))
+        assertEquals("the same place in its history", "100:2" to "108:2", ExitStages.episode(first, "root") to ExitStages.episode(restarted, "root"))
+        assertTrue("a new run needs its own proof", funding.needsFunds(listOf(restarted), 0, 1).isEmpty())
+        // Restarted within the same block, the keys would match: starting or canceling forgets the exit's evidence.
+        val again = ExitFunding(75_000) { 0 }
+        again.checked(listOf(first), completed = true); again.forget(listOf("v1"))
+        assertTrue(again.needsFunds(listOf(first), 0, 1).isEmpty())
+        var stored: String? = null
+        val seen = ExitSeen({ stored }, { stored = it })
+        assertEquals(100L, seen.note(listOf(first), 100).getValue("v1/root/awaiting-cpfp-broadcast/100:2"))
+        assertEquals("another run, another tip", 110L, seen.note(listOf(restarted), 110).getValue("v1/root/awaiting-cpfp-broadcast/108:2"))
+        seen.note(listOf(first), 100)
+        seen.forget(listOf("v2")); assertEquals("only the exits named", 100L, seen.note(listOf(first), 120).getValue("v1/root/awaiting-cpfp-broadcast/100:2"))
+        seen.forget(listOf("v1")); assertEquals(120L, seen.note(listOf(first), 120).getValue("v1/root/awaiting-cpfp-broadcast/100:2"))
+    }
+
+    @Test fun waitingTimeFromBeforeTheBackgroundDoesNotCount() {
+        var now = 0L
+        val funding = ExitFunding(75_000) { now }
+        funding.needsFunds(listOf(parked), 0, 1)
+        // Backgrounded for a while, the run unchanged: bark's daemon may not have run, so the wait starts over on return.
+        now = 300_000; funding.backgrounded()
+        assertTrue(funding.needsFunds(listOf(parked), 0, 1).isEmpty())
+        now = 374_999; assertTrue(funding.needsFunds(listOf(parked), 0, 1).isEmpty())
+        now = 375_000; assertEquals(setOf("v1"), funding.needsFunds(listOf(parked), 0, 1))
+        // A completed Check the chain is proof whatever happens after.
+        val checking = ExitFunding(75_000) { 0 }
+        checking.checked(listOf(parked), completed = true); checking.backgrounded()
+        assertEquals(setOf("v1"), checking.needsFunds(listOf(parked), 0, 1))
     }
 
     @Test fun anExitIsStaleOnlyWithEvidenceThatNothingProgressesIt() {

@@ -44,10 +44,14 @@ data class ExitStage(
 
 internal object ExitStages {
     /**
-     * Where [txid]'s current status began in bark's history (append-only: each change pushes the state before it). A
-     * transaction that leaves a status and comes back starts a new episode, so evidence from the last one doesn't count.
+     * Where [txid]'s current status began in bark's history (append-only: each change pushes the state before it), within
+     * this run of the exit (bark restarts a canceled one with empty history, so a run is told apart by the tip it began at).
+     * A transaction that leaves a status and comes back starts a new episode, so evidence from the last one doesn't count.
      */
-    fun episode(exit: ExitModel, txid: String): Int {
+    fun episode(exit: ExitModel, txid: String) = "${(exit.historyDetails + exit.details).first().tip_height}:${episodeStart(exit, txid)}"
+
+    /** The index in bark's history (and current state) where [txid]'s current status began. */
+    fun episodeStart(exit: ExitModel, txid: String): Int {
         val states = exit.historyDetails + exit.details
         val kind = exit.details.transactions?.find { it.txid == txid }?.status?.kind
         var start = states.lastIndex
@@ -110,7 +114,7 @@ internal object ExitStages {
                 val mine = tx.status.origin == null || tx.status.origin == "wallet"
                 // Every child bark gave it in this stay in the mempool, oldest first: a replaced one means fees rose. An earlier
                 // stay (before an eviction or reorg) doesn't count.
-                val children = (exit.historyDetails + exit.details).drop(episode(exit, tx.txid)).mapNotNull { state ->
+                val children = (exit.historyDetails + exit.details).drop(episodeStart(exit, tx.txid)).mapNotNull { state ->
                     state.transactions?.find { it.txid == tx.txid }?.status?.child_txid
                 }.distinct()
                 // bark's own tip stays put while nothing changes: count from the tip Noah first saw it in the mempool at.
@@ -176,10 +180,18 @@ internal class ExitSeen(private val read: () -> String?, private val write: (Str
         return seen
     }
 
+    /** Started or canceled: the exits' tips are from a run that's over. */
+    @Synchronized
+    fun forget(ids: Collection<String>) {
+        val saved = read()?.let { runCatching { Json.decodeFromString<Map<String, Long>>(it) }.getOrNull() }.orEmpty()
+        val kept = saved.filterKeys { key -> ids.none { key.startsWith("$it/") } }
+        if (kept != saved) write(Json.encodeToString(kept))
+    }
+
     companion object {
         private const val storageKey = "native-exit-seen-v1"
-        /** A transaction's status in its current episode ([ExitStages.episode]). */
-        fun key(exit: ExitModel, tx: ExitDetails.Transaction) = "${tx.txid}/${tx.status.kind}/${ExitStages.episode(exit, tx.txid)}"
+        /** A transaction's status in its exit's current episode ([ExitStages.episode]). */
+        fun key(exit: ExitModel, tx: ExitDetails.Transaction) = "${exit.id}/${tx.txid}/${tx.status.kind}/${ExitStages.episode(exit, tx.txid)}"
         fun stored(settings: com.noahwallet.services.storage.SettingsStorage) = ExitSeen({ settings.string(storageKey) }, { settings.set(it, storageKey) })
     }
 }
@@ -235,6 +247,14 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
         checkFailed = !completed
         if (completed) for (key in parkedIn(exits).keys) parked.getOrPut(key) { Parked(null, now()) }.tried = true
     }
+
+    /** Started or canceled: the exits' proof is from a run that's over. */
+    @Synchronized
+    fun forget(ids: Collection<String>) { parked.keys.removeAll { key -> ids.any { key.startsWith("$it/") } } }
+
+    /** Noah went to the background, where bark's daemon may not run: waiting time starts over; a completed check still counts. */
+    @Synchronized
+    fun backgrounded() { parked.values.removeAll { !it.tried } }
 
     private fun parkedIn(exits: List<ExitModel>) = exits.mapNotNull { exit ->
         exit.details.transactions?.firstOrNull { it.status.kind != "confirmed" }
