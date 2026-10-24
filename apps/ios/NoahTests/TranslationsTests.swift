@@ -118,7 +118,7 @@ struct TranslationsTests {
         let coverage = try Fixtures.decode("translations-coverage", as: Coverage.self)
         let used = Set(coverage.coverage["ios"]?.used ?? [])
         let plurals = fixture.plurals.filter { used.contains($0.source) }
-        #expect(plurals.count == 2)
+        #expect(plurals.count == 1) // The old exit summary used the other; the redesign words staleness itself.
         for locale in LegacyLocale.supported {
             for entry in plurals {
                 let forms = try #require(entry.translations[locale])
