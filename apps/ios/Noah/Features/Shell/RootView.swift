@@ -180,6 +180,7 @@ struct WalletTabs: View {
         .environment(history)
         .environment(tracker)
         .environment(settingsSummary)
+        .environment(\.scanPayment, scanned)
         // A recurring payment notification: Home opens Recurring payments with Settings beneath.
         .onChange(of: recurringRoute.presented, initial: true) { _, presented in if presented { selection = .home } }
         .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {

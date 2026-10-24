@@ -66,6 +66,14 @@ struct SettingsNavigator {
     var receive: () -> Void = {}
     /// A short confirmation over Settings that outlives the page that shows it.
     var toast: (String) -> Void = { _ in }
+
+    /// Settings pages pushed outside Home (Receive's Profile link) navigate within their own stack:
+    /// pages and My code push, Back dismisses.
+    static func standalone(push: @escaping (SettingsPage) -> Void, myCode: @escaping () -> Void, pushed: @escaping () -> Bool,
+                           dismiss: @escaping () -> Void) -> Self {
+        SettingsNavigator(select: push, open: push, back: dismiss, leave: { _ in if !pushed() { dismiss() } },
+                          close: dismiss, myCode: myCode)
+    }
 }
 
 /// Screenshot fixtures: fakes for what Settings' pages read from the wallet and the server.
@@ -89,6 +97,8 @@ extension EnvironmentValues {
     @Entry var settingsSubpage = false
     /// The page this view is in.
     @Entry var settingsPage: SettingsPage?
+    /// A payment request scanned outside Home (the QR hub opened from Receive's Profile) goes to Send.
+    @Entry var scanPayment: (String) -> Void = { _ in }
 }
 
 /// One Settings screen in Home's stack. Phones show the list (root) or one page. Wide windows show
@@ -105,14 +115,15 @@ struct SettingsHost: View {
     @State private var deletion = WalletDeletion()
     /// The list's scroll position, kept as it moves between the phone's page and the wide leading pane.
     @State private var listOffset: CGFloat = 0
-    /// Outside Home's Settings: the page this one opened.
+    /// Outside Home's Settings: the page this one opened, or My code.
     @State private var standalonePage: SettingsPage?
+    @State private var standaloneMyCode = false
     @Environment(\.settingsFixture) private var fixture
+    @Environment(\.scanPayment) private var scanPayment
 
     private var settings: SettingsNavigator {
-        home.live ? home : SettingsNavigator(select: { standalonePage = $0 }, open: { standalonePage = $0 },
-                                             back: { dismiss() }, leave: { _ in if standalonePage == nil { dismiss() } },
-                                             close: { dismiss() })
+        home.live ? home : .standalone(push: { standalonePage = $0 }, myCode: { standaloneMyCode = true },
+                                       pushed: { standalonePage != nil || standaloneMyCode }, dismiss: { dismiss() })
     }
 
     var body: some View {
@@ -134,6 +145,7 @@ struct SettingsHost: View {
         .navigationBarBackButtonHidden(settings.wide)
         .environment(\.settings, settings)
         .navigationDestination(item: $standalonePage) { SettingsHost(page: $0) }
+        .navigationDestination(isPresented: $standaloneMyCode) { QRHubView(isActive: true, initialMode: .myCode, onScan: scanPayment) }
         .task { if page == nil, let open = fixture?.sheet { sheet = open } }
         .foregroundStyle(NoahTokens.Colors.foreground)
         .tint(NoahTokens.Colors.foreground)
