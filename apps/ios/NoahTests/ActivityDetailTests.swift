@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import Noah
 
 /// activity.md "Detail": the status line, the rows that apply and the Share receipt.
@@ -325,5 +326,42 @@ struct ActivityDetailReadsTests {
         gate.continuation.yield(.confirmed(100))
         await task.value
         #expect(reads.status(for: a.id) == nil)
+    }
+}
+
+/// Where the share sheet opens.
+@MainActor
+struct ActivitySharePlacementTests {
+    @Test func iPadAlwaysHasAPopoverSource() {
+        let window = UIView(frame: CGRect(x: 0, y: 0, width: 1024, height: 768))
+        // Home's detail on iPad: no anchor measured.
+        var controller = UIActivityViewController(activityItems: ["receipt"], applicationActivities: nil)
+        ActivityShare.place(controller, anchor: nil, in: window, idiom: .pad)
+        #expect(controller.modalPresentationStyle == .popover)
+        #expect(controller.popoverPresentationController?.sourceView === window)
+        #expect(controller.popoverPresentationController?.sourceRect == CGRect(x: 512, y: 384, width: 1, height: 1))
+        // The measured button when there is one.
+        controller = UIActivityViewController(activityItems: ["receipt"], applicationActivities: nil)
+        let button = CGRect(x: 960, y: 40, width: 44, height: 44)
+        ActivityShare.place(controller, anchor: button, in: window, idiom: .pad)
+        #expect(controller.popoverPresentationController?.sourceRect == button)
+        // An anchor off the window (stale geometry) falls back to the centre.
+        controller = UIActivityViewController(activityItems: ["receipt"], applicationActivities: nil)
+        ActivityShare.place(controller, anchor: CGRect(x: 4_000, y: 40, width: 44, height: 44), in: window, idiom: .pad)
+        #expect(controller.popoverPresentationController?.sourceRect == CGRect(x: 512, y: 384, width: 1, height: 1))
+    }
+
+    @Test func phonesKeepTheStandardSheet() {
+        let window = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
+        let controller = UIActivityViewController(activityItems: ["receipt"], applicationActivities: nil)
+        ActivityShare.place(controller, anchor: CGRect(x: 340, y: 60, width: 44, height: 44), in: window, idiom: .phone)
+        // Untouched: UIKit adapts the activity sheet to the phone.
+        #expect(controller.popoverPresentationController?.sourceView == nil)
+        // The open Duo (a wide iPhone window) anchors the popover to the button, in the trailing pane.
+        let duo = UIView(frame: CGRect(x: 0, y: 0, width: 951, height: 669))
+        let button = CGRect(x: 880, y: 20, width: 44, height: 44)
+        ActivityShare.place(controller, anchor: button, in: duo, idiom: .phone)
+        #expect(controller.popoverPresentationController?.sourceView === duo)
+        #expect(controller.popoverPresentationController?.sourceRect == button)
     }
 }

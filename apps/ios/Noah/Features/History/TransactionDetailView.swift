@@ -456,7 +456,8 @@ struct TransactionDetailView: View {
         haptics.play(.light)
         // The receipt is the user's to share; it is never logged.
         let text = ActivityDetail.receipt(transaction, ownDomain: ownDomain, unit: app.amountUnit, locale: locale, date: dateText)
-        ActivityShare.present([text], anchor: wide ? shareAnchor : nil)
+        // Always the measured button: Home's sheet on iPad presents it as a popover too.
+        ActivityShare.present([text], anchor: shareAnchor)
     }
 }
 

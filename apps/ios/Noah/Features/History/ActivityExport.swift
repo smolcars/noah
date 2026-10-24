@@ -112,14 +112,24 @@ enum ActivityShare {
         while let presented = top.presentedViewController, !presented.isBeingDismissed { top = presented }
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
         controller.completionWithItemsHandler = { _, _, _, _ in completion() }
-        let wide = OnboardingLayout(size: window.bounds.size, insets: EdgeInsets()).wide
-        if let anchor, wide || window.traitCollection.userInterfaceIdiom == .pad {
-            controller.modalPresentationStyle = .popover
-            controller.popoverPresentationController?.sourceView = window
-            controller.popoverPresentationController?.sourceRect = anchor
-            controller.popoverPresentationController?.delegate = PopoverKeeper.shared
-        }
+        place(controller, anchor: anchor, in: window, idiom: window.traitCollection.userInterfaceIdiom)
         top.present(controller, animated: true)
+    }
+
+    /// Wide windows and iPad show the share sheet as a popover, which needs a source: the measured button,
+    /// or the window's centre (iPad's popover crashes without one).
+    @MainActor static func place(_ controller: UIViewController, anchor: CGRect?, in window: UIView, idiom: UIUserInterfaceIdiom) {
+        guard idiom == .pad || OnboardingLayout(size: window.bounds.size, insets: EdgeInsets()).wide else { return }
+        controller.modalPresentationStyle = .popover
+        guard let popover = controller.popoverPresentationController else { return }
+        popover.sourceView = window
+        popover.delegate = PopoverKeeper.shared
+        if let anchor, !anchor.isEmpty, window.bounds.intersects(anchor) {
+            popover.sourceRect = anchor
+        } else {
+            popover.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 1, height: 1)
+            popover.permittedArrowDirections = []
+        }
     }
 
     /// Keeps the popover a popover on iPhone-sized traits.
