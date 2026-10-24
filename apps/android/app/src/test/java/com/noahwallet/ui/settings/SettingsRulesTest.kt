@@ -74,4 +74,25 @@ class SettingsRulesTest {
         assertEquals(listOf(settings, SettingsDestination.Notifications, SettingsDestination.UnifiedPush), SettingsRoutes.chain(SettingsDestination.UnifiedPush))
         assertEquals(listOf(settings, SettingsDestination.Advanced, SettingsDestination.Debug), SettingsRoutes.chain(SettingsDestination.Debug))
     }
+
+    @Test fun phraseCopyIsMarkedSensitiveAndClearsAfterTwoMinutes() {
+        val clip = PhraseClip.clip("noah-recovery-test", "sample phrase only")
+        assertTrue(clip.description.extras.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE))
+        assertEquals("noah-recovery-test", clip.description.label)
+        assertEquals(120_000L, PhraseClip.clearAfterMillis)
+        val clipboard = org.robolectric.RuntimeEnvironment.getApplication().getSystemService(android.content.ClipboardManager::class.java)
+        clipboard.setPrimaryClip(clip)
+        assertTrue(PhraseClip.ours(clipboard, "noah-recovery-test"))
+        assertFalse(PhraseClip.ours(clipboard, "noah-recovery-other"))
+    }
+
+    @Test fun revealedWordsLiveInMemoryAndClear() {
+        val phrase = RevealedPhrase()
+        assertTrue(phrase.words.isEmpty())
+        phrase.show(listOf("sample", "phrase"), generation = 3)
+        assertEquals(3, phrase.generation)
+        phrase.clear()
+        assertTrue(phrase.words.isEmpty())
+        assertEquals(-1, phrase.generation)
+    }
 }

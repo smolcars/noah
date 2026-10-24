@@ -3,6 +3,7 @@
 <resources>
   <string name="gt_0645c621fa74eb0d">" （あと%1$s回タップでデバッグを有効化）"</string>
   <string name="gt_8a6fa5252a4b7e05">"12語"</string>
+  <string name="gt_ee9f27256262ffe9">"12 words that restore your wallet."</string>
   <string name="gt_fae43771b7367b9c">"24語"</string>
   <string name="gt_0d1fa0dfcc9e3821">"6桁のコード"</string>
   <string name="gt_ca4925ac35b345a4">"カスタムEsploraサーバーは、このウォレットが照会するBitcoinアドレスや取引を確認できます。信頼できるサーバーのみを使用してください。"</string>
@@ -71,6 +72,7 @@
   <string name="gt_22b587b11be36edd">"アンカーポイント"</string>
   <string name="gt_dea19a697a27a904">"Android SDKのビルド対象"</string>
   <string name="gt_15ea390b9d935697">"別のライトニング支払いがまだ処理中です。完了してからもう一度お試しください。"</string>
+  <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
   <string name="gt_0d04bfeb7d64b71c">"App"</string>
   <string name="gt_b0d015fdadc38e33">"App lock"</string>
   <string name="gt_2b16e2ecee477adb">"支払いが完了したようです。履歴を確認してください"</string>
@@ -294,6 +296,7 @@
   <string name="gt_065277fcb38b2217">"見積もりなしで続行"</string>
   <string name="gt_aced5f27d837a4e9">"見積もりなしで続行しますか？"</string>
   <string name="gt_8d525e5f158b9afe">"コピーしました"</string>
+  <string name="gt_bcec6f578c46c325">"Copied · clears in 2 minutes"</string>
   <string name="gt_e21f935f11d7e966">"コピー"</string>
   <string name="gt_ca778115cc05083c">"ビットコインアドレスをコピー"</string>
   <string name="gt_5a531e363a276b20">"エンドポイントをコピー"</string>
@@ -610,6 +613,7 @@
   <string name="gt_ef9a2be3b826ee15">"履歴を確認しました"</string>
   <string name="gt_9e0f9b800b0db2b0">"操作が重複する可能性を理解しています"</string>
   <string name="gt_806f6591e2359170">"復元フレーズを他人と共有しません。"</string>
+  <string name="gt_cd65f6dcab984750">"I wrote it down"</string>
   <string name="gt_306becc0aba824d9">"履歴を確認したので、新しい支払いを開始"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_1d93f10792a18bf1">"未成熟"</string>
@@ -768,6 +772,7 @@
   <string name="gt_6300ef800bb88429">"終了しない"</string>
   <string name="gt_0d559c8d4e9ab250">"Nostrの秘密鍵は絶対に貼り付けないでください。npub公開鍵を入力してください。"</string>
   <string name="gt_9058de98f9840c3e">"Never paste a private key. Use your npub."</string>
+  <string name="gt_4959a2e0f7e6fc11">"Never share them. Anyone with these words can take your bitcoin."</string>
   <string name="gt_290be13116ba7713">"シードフレーズは絶対に誰にも教えないでください。安全に保管することが重要です。"</string>
   <string name="gt_87d5d56d886e2a24">"新しいコイン"</string>
   <string name="gt_5774c62707b2a954">"新しい定期支払い"</string>
@@ -828,6 +833,7 @@
   <string name="gt_9bbbe9d436c3e3e3">"Noahは最終結果を確認できていません。再度支払わないでください。状態の確認によって別の支払いが送信されることはありません。"</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noahはロックされています"</string>
   <string name="gt_9354e260e9c82293">"Noah はベータ版です。失っても構わない金額だけを保管してください。"</string>
+  <string name="gt_2588c7db9f3fe277">"Noah is locked"</string>
   <string name="gt_f590e31a6eb944e2">"Noahでバックアップ処理が続いています。少し待ってからもう一度お試しください。"</string>
   <string name="gt_338e68cc4323f294">"Noahの通知"</string>
   <string name="gt_88412489feb3f0b2">"GitHubのNoah"</string>
@@ -1178,6 +1184,7 @@
   <string name="gt_1d0bdface33f9d9a">"シードフレーズを表示"</string>
   <string name="gt_4d22aa231b07949e">"VTXOを表示"</string>
   <string name="gt_2150d8df37e48957">"すべて表示"</string>
+  <string name="gt_3175b05f8140f78b">"Show anyway"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"支払いの詳細を表示"</string>
   <string name="gt_93749012e2444865">"復元フレーズを表示"</string>
   <string name="gt_d8425d416f6d496d">"ウォレットの残高を表示"</string>
@@ -1387,6 +1394,7 @@
   <string name="gt_4ac709aa58bcfe5d">"ロック解除"</string>
   <string name="gt_99e8588dce6a534a">"Noahのロックを解除"</string>
   <string name="gt_b126042b7ef8a274">"VTXOのロックを解除"</string>
+  <string name="gt_3470a00c3bb2d5ca">"Unlock to see your wallet."</string>
   <string name="gt_fae022f4a65e9a7d">"画像を読み取れません"</string>
   <string name="gt_8b5f54fcadeccafe">"未署名のトランザクション %1$s"</string>
   <string name="gt_b38065110f2bd113">"未署名のトランザクション %1$s"</string>
@@ -1552,7 +1560,6 @@
   <string name="gt_1ad21324d7fd6678">"%1$s ブロック"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
-  <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s 支払い済み"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>

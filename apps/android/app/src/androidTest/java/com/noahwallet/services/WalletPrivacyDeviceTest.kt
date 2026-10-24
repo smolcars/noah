@@ -12,7 +12,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.MainActivity
 import com.noahwallet.services.storage.*
 import com.noahwallet.ui.AppModel
-import com.noahwallet.ui.MnemonicScreen
 import com.noahwallet.ui.NoahTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -56,7 +55,7 @@ class WalletPrivacyDeviceTest {
         try {
             assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
             fun prompt() {
-                waitFor { matches(automation.rootInActiveWindow) { it.text?.contains("Noah is Locked") == true } }
+                waitFor { matches(automation.rootInActiveWindow) { it.text?.contains("Noah is locked") == true } }
                 instrumentation.runOnMainSync { model.viewModelScope.launch { model.walletLock.unlock(activity) } }
                 waitFor { model.walletLock.authenticating && activity.lifecycle.currentState == Lifecycle.State.CREATED }
             }
@@ -115,7 +114,7 @@ class WalletPrivacyDeviceTest {
             waitFor { activity.lifecycle.currentState == Lifecycle.State.RESUMED }
             assertTrue("direct relaunch: locked=${model.walletLock.locked}, authenticating=${model.walletLock.authenticating}, generation=${model.walletLock.generation}, started=$started", model.walletLock.locked)
             assertNotEquals("unexpected direct relaunch invalidates the request", started, model.walletLock.generation)
-            waitFor { matches(automation.rootInActiveWindow) { it.text?.contains("Noah is Locked") == true } }
+            waitFor { matches(automation.rootInActiveWindow) { it.text?.contains("Noah is locked") == true } }
             waitFor { !model.walletLock.authenticating }
             assertFalse("Settings cannot reveal the phrase", revealed)
             assertTrue(model.walletLock.locked)

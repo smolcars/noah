@@ -3,6 +3,7 @@
 <resources>
   <string name="gt_0645c621fa74eb0d">" (%1$s taps to unlock debug)"</string>
   <string name="gt_8a6fa5252a4b7e05">"12 words"</string>
+  <string name="gt_ee9f27256262ffe9">"12 words that restore your wallet."</string>
   <string name="gt_fae43771b7367b9c">"24 words"</string>
   <string name="gt_0d1fa0dfcc9e3821">"6-digit code"</string>
   <string name="gt_ca4925ac35b345a4">"A custom Esplora server can observe the Bitcoin addresses and transactions requested by this wallet. Only use a server you trust."</string>
@@ -71,6 +72,7 @@
   <string name="gt_22b587b11be36edd">"Anchor Point"</string>
   <string name="gt_dea19a697a27a904">"Android SDK built for"</string>
   <string name="gt_15ea390b9d935697">"Another Lightning payment is still in progress. Try again once it completes."</string>
+  <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
   <string name="gt_0d04bfeb7d64b71c">"App"</string>
   <string name="gt_b0d015fdadc38e33">"App lock"</string>
   <string name="gt_2b16e2ecee477adb">"Appears to have gone through — check History"</string>
@@ -294,6 +296,7 @@
   <string name="gt_065277fcb38b2217">"Continue without estimate"</string>
   <string name="gt_aced5f27d837a4e9">"Continue without estimate?"</string>
   <string name="gt_8d525e5f158b9afe">"Copied"</string>
+  <string name="gt_bcec6f578c46c325">"Copied · clears in 2 minutes"</string>
   <string name="gt_e21f935f11d7e966">"Copy"</string>
   <string name="gt_ca778115cc05083c">"Copy Bitcoin address"</string>
   <string name="gt_5a531e363a276b20">"Copy Endpoint"</string>
@@ -610,6 +613,7 @@
   <string name="gt_ef9a2be3b826ee15">"I checked history"</string>
   <string name="gt_9e0f9b800b0db2b0">"I understand this may repeat the operation"</string>
   <string name="gt_806f6591e2359170">"I will not share my recovery phrase."</string>
+  <string name="gt_cd65f6dcab984750">"I wrote it down"</string>
   <string name="gt_306becc0aba824d9">"I\'ve checked my history, start a new payment"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_1d93f10792a18bf1">"Immature"</string>
@@ -768,6 +772,7 @@
   <string name="gt_6300ef800bb88429">"Never"</string>
   <string name="gt_0d559c8d4e9ab250">"Never paste a Nostr private key. Enter an npub public key."</string>
   <string name="gt_9058de98f9840c3e">"Never paste a private key. Use your npub."</string>
+  <string name="gt_4959a2e0f7e6fc11">"Never share them. Anyone with these words can take your bitcoin."</string>
   <string name="gt_290be13116ba7713">"Never share your seed phrase with anyone. It is important to keep it safe and secure."</string>
   <string name="gt_87d5d56d886e2a24">"New coins"</string>
   <string name="gt_5774c62707b2a954">"New recurring payment"</string>
@@ -828,6 +833,7 @@
   <string name="gt_9bbbe9d436c3e3e3">"Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noah is Locked"</string>
   <string name="gt_9354e260e9c82293">"Noah is in beta. Only keep what you’re comfortable losing."</string>
+  <string name="gt_2588c7db9f3fe277">"Noah is locked"</string>
   <string name="gt_f590e31a6eb944e2">"Noah is still finishing a backup. Try again in a moment."</string>
   <string name="gt_338e68cc4323f294">"Noah notifications"</string>
   <string name="gt_88412489feb3f0b2">"Noah on GitHub"</string>
@@ -1178,6 +1184,7 @@
   <string name="gt_1d0bdface33f9d9a">"Show Seed Phrase"</string>
   <string name="gt_4d22aa231b07949e">"Show VTXOs"</string>
   <string name="gt_2150d8df37e48957">"Show all"</string>
+  <string name="gt_3175b05f8140f78b">"Show anyway"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"Show payment details"</string>
   <string name="gt_93749012e2444865">"Show recovery phrase"</string>
   <string name="gt_d8425d416f6d496d">"Show wallet balance"</string>
@@ -1387,6 +1394,7 @@
   <string name="gt_4ac709aa58bcfe5d">"Unlock"</string>
   <string name="gt_99e8588dce6a534a">"Unlock Noah"</string>
   <string name="gt_b126042b7ef8a274">"Unlock VTXO"</string>
+  <string name="gt_3470a00c3bb2d5ca">"Unlock to see your wallet."</string>
   <string name="gt_fae022f4a65e9a7d">"Unreadable image"</string>
   <string name="gt_8b5f54fcadeccafe">"Unsigned tx %1$s"</string>
   <string name="gt_b38065110f2bd113">"Unsigned tx %1$s"</string>
@@ -1552,7 +1560,6 @@
   <string name="gt_1ad21324d7fd6678">"%1$s blocks"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s rate unavailable"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s at %2$s"</string>
-  <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s paid"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>

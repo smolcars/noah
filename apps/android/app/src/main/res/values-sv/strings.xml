@@ -3,6 +3,7 @@
 <resources>
   <string name="gt_0645c621fa74eb0d">" (%1$s tryck för att låsa upp felsökning)"</string>
   <string name="gt_8a6fa5252a4b7e05">"12 ord"</string>
+  <string name="gt_ee9f27256262ffe9">"12 words that restore your wallet."</string>
   <string name="gt_fae43771b7367b9c">"24 ord"</string>
   <string name="gt_0d1fa0dfcc9e3821">"6-siffrig kod"</string>
   <string name="gt_ca4925ac35b345a4">"En anpassad Esplora-server kan se vilka Bitcoin-adresser och transaktioner plånboken begär information om. Använd bara en server som du litar på."</string>
@@ -71,6 +72,7 @@
   <string name="gt_22b587b11be36edd">"Förankringspunkt"</string>
   <string name="gt_dea19a697a27a904">"Android SDK byggt för"</string>
   <string name="gt_15ea390b9d935697">"En annan Lightning-betalning pågår fortfarande. Försök igen när den är klar."</string>
+  <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
   <string name="gt_0d04bfeb7d64b71c">"App"</string>
   <string name="gt_b0d015fdadc38e33">"App lock"</string>
   <string name="gt_2b16e2ecee477adb">"Verkar ha gått igenom – kontrollera Historik"</string>
@@ -294,6 +296,7 @@
   <string name="gt_065277fcb38b2217">"Fortsätt utan beräkning"</string>
   <string name="gt_aced5f27d837a4e9">"Fortsätt utan beräkning?"</string>
   <string name="gt_8d525e5f158b9afe">"Kopierat"</string>
+  <string name="gt_bcec6f578c46c325">"Copied · clears in 2 minutes"</string>
   <string name="gt_e21f935f11d7e966">"Kopiera"</string>
   <string name="gt_ca778115cc05083c">"Kopiera Bitcoin-adress"</string>
   <string name="gt_5a531e363a276b20">"Kopiera slutpunkt"</string>
@@ -610,6 +613,7 @@
   <string name="gt_ef9a2be3b826ee15">"Jag har kontrollerat historiken"</string>
   <string name="gt_9e0f9b800b0db2b0">"Jag förstår att åtgärden kan utföras igen"</string>
   <string name="gt_806f6591e2359170">"Jag kommer inte att dela min återställningsfras."</string>
+  <string name="gt_cd65f6dcab984750">"I wrote it down"</string>
   <string name="gt_306becc0aba824d9">"Jag har kontrollerat min historik – starta en ny betalning"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_1d93f10792a18bf1">"Omoget"</string>
@@ -768,6 +772,7 @@
   <string name="gt_6300ef800bb88429">"Aldrig"</string>
   <string name="gt_0d559c8d4e9ab250">"Klistra aldrig in en privat Nostr-nyckel. Ange en publik npub-nyckel."</string>
   <string name="gt_9058de98f9840c3e">"Never paste a private key. Use your npub."</string>
+  <string name="gt_4959a2e0f7e6fc11">"Never share them. Anyone with these words can take your bitcoin."</string>
   <string name="gt_290be13116ba7713">"Dela aldrig din återställningsfras med någon. Det är viktigt att förvara den säkert."</string>
   <string name="gt_87d5d56d886e2a24">"Nya mynt"</string>
   <string name="gt_5774c62707b2a954">"Ny återkommande betalning"</string>
@@ -828,6 +833,7 @@
   <string name="gt_9bbbe9d436c3e3e3">"Noah har inte bekräftat det slutliga utfallet. Betala inte igen. En statuskontroll skickar aldrig en ny betalning."</string>
   <string name="gt_ef0d44ddb30f6d0d">"Noah är låst"</string>
   <string name="gt_9354e260e9c82293">"Noah är i beta. Förvara bara det du har råd att förlora."</string>
+  <string name="gt_2588c7db9f3fe277">"Noah is locked"</string>
   <string name="gt_f590e31a6eb944e2">"Noah håller fortfarande på att slutföra en säkerhetskopiering. Försök igen om en stund."</string>
   <string name="gt_338e68cc4323f294">"Aviseringar från Noah"</string>
   <string name="gt_88412489feb3f0b2">"Noah på GitHub"</string>
@@ -1178,6 +1184,7 @@
   <string name="gt_1d0bdface33f9d9a">"Visa återställningsfras"</string>
   <string name="gt_4d22aa231b07949e">"Visa VTXO:er"</string>
   <string name="gt_2150d8df37e48957">"Visa alla"</string>
+  <string name="gt_3175b05f8140f78b">"Show anyway"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"Visa betalningsuppgifter"</string>
   <string name="gt_93749012e2444865">"Visa återställningsfras"</string>
   <string name="gt_d8425d416f6d496d">"Visa plånbokens saldo"</string>
@@ -1387,6 +1394,7 @@
   <string name="gt_4ac709aa58bcfe5d">"Lås upp"</string>
   <string name="gt_99e8588dce6a534a">"Lås upp Noah"</string>
   <string name="gt_b126042b7ef8a274">"Lås upp VTXO"</string>
+  <string name="gt_3470a00c3bb2d5ca">"Unlock to see your wallet."</string>
   <string name="gt_fae022f4a65e9a7d">"Oläsbar bild"</string>
   <string name="gt_8b5f54fcadeccafe">"Osignerad tx %1$s"</string>
   <string name="gt_b38065110f2bd113">"Osignerad transaktion %1$s"</string>
@@ -1552,7 +1560,6 @@
   <string name="gt_1ad21324d7fd6678">"%1$s block"</string>
   <string name="gt_d8c81b717fe6d90e">"Växelkurs för %1$s saknas"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s kl. %2$s"</string>
-  <string name="gt_e05179bb80b39657">"%1$s  %2$s"</string>
   <string name="gt_3a90596f58baed3b">"%1$s · %2$s betalt"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>

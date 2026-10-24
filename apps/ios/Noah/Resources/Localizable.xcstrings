@@ -73,6 +73,42 @@
         }
       }
     },
+    "12 words that restore your wallet.": {
+      "comment": "GT gt_ee9f27256262ffe9; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words that restore your wallet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words that restore your wallet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words that restore your wallet."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words that restore your wallet."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 words that restore your wallet."
+          }
+        }
+      }
+    },
     "24 words": {
       "comment": "GT gt_fae43771b7367b9c; arguments: none",
       "extractionState": "manual",
@@ -2517,6 +2553,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "En annan Lightning-betalning pågår fortfarande. Försök igen när den är klar."
+          }
+        }
+      }
+    },
+    "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.": {
+      "comment": "GT gt_75ff3fb1ac6ce5d1; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."
           }
         }
       }
@@ -10545,6 +10617,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kopierat"
+          }
+        }
+      }
+    },
+    "Copied · clears in 2 minutes": {
+      "comment": "GT gt_bcec6f578c46c325; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied · clears in 2 minutes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied · clears in 2 minutes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied · clears in 2 minutes"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied · clears in 2 minutes"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied · clears in 2 minutes"
           }
         }
       }
@@ -21877,6 +21985,42 @@
         }
       }
     },
+    "I wrote it down": {
+      "comment": "GT gt_cd65f6dcab984750; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I wrote it down"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I wrote it down"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I wrote it down"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I wrote it down"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I wrote it down"
+          }
+        }
+      }
+    },
     "I've checked my history, start a new payment": {
       "comment": "GT gt_306becc0aba824d9; arguments: none",
       "extractionState": "manual",
@@ -27565,6 +27709,42 @@
         }
       }
     },
+    "Never share them. Anyone with these words can take your bitcoin.": {
+      "comment": "GT gt_4959a2e0f7e6fc11; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never share them. Anyone with these words can take your bitcoin."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never share them. Anyone with these words can take your bitcoin."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never share them. Anyone with these words can take your bitcoin."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never share them. Anyone with these words can take your bitcoin."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never share them. Anyone with these words can take your bitcoin."
+          }
+        }
+      }
+    },
     "Never share your seed phrase with anyone. It is important to keep it safe and secure.": {
       "comment": "GT gt_290be13116ba7713; arguments: none",
       "extractionState": "manual",
@@ -29721,6 +29901,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah är i beta. Förvara bara det du har råd att förlora."
+          }
+        }
+      }
+    },
+    "Noah is locked": {
+      "comment": "GT gt_2588c7db9f3fe277; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah is locked"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah is locked"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah is locked"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah is locked"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah is locked"
           }
         }
       }
@@ -42277,6 +42493,42 @@
         }
       }
     },
+    "Show anyway": {
+      "comment": "GT gt_3175b05f8140f78b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show anyway"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show anyway"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show anyway"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show anyway"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show anyway"
+          }
+        }
+      }
+    },
     "Show payment details": {
       "comment": "GT gt_4aa5f4cd7ecfd4da; arguments: none",
       "extractionState": "manual",
@@ -49801,6 +50053,42 @@
         }
       }
     },
+    "Unlock to see your wallet.": {
+      "comment": "GT gt_3470a00c3bb2d5ca; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock to see your wallet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock to see your wallet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock to see your wallet."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock to see your wallet."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock to see your wallet."
+          }
+        }
+      }
+    },
     "Unreadable image": {
       "comment": "GT gt_fae022f4a65e9a7d; arguments: none",
       "extractionState": "manual",
@@ -55641,42 +55929,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ kl. %2$@"
-          }
-        }
-      }
-    },
-    "{nativeValue1}  {nativeValue2}": {
-      "comment": "GT gt_e05179bb80b39657; arguments: nativeValue1, nativeValue2",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@"
           }
         }
       }

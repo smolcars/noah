@@ -187,14 +187,12 @@ fun LaunchGateView(model: AppModel) {
         dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false,
         securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn, decorFitsSystemWindows = false,
     )) {
-        androidx.compose.material3.Surface(Modifier.fillMaxSize().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing).avoidHinge(), color = MaterialTheme.colorScheme.background) {
-            if (checking && !model.walletLock.locked) {
+        val locked = !(checking && !model.walletLock.locked)
+        androidx.compose.material3.Surface(Modifier.fillMaxSize().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing).avoidHinge(),
+            color = if (locked) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background) {
+            if (!locked) {
                 LaunchMessage(null, false, model::start, model)
-            } else NoahForm("Noah is Locked") {
-                Text(tr("Authenticate to access your wallet"))
-                model.walletLock.error?.let { Text(tr(it)) }
-                NoahButton("Unlock", !model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
-            }
+            } else com.noahwallet.ui.settings.LockCover(model.walletLock.error, model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
         }
     }
 

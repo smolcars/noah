@@ -155,7 +155,10 @@ class AdaptiveStateRestorationTest {
 
     @Test fun recoverySurfaceIsSecureBeforeAndAfterActivityRecreation() {
         val app = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application)
-        fun mount(activity: ComponentActivity) { activity.setContent { NoahTheme { MnemonicScreen(app) } } }
+        val nav = com.noahwallet.ui.settings.SettingsNav(null, {}, {}, {}, {})
+        fun mount(activity: ComponentActivity) { activity.setContent { NoahTheme { com.noahwallet.ui.onboarding.OnboardingFrame(null) {
+            com.noahwallet.ui.settings.RecoveryPhrasePage(app, nav)
+        } } } }
         compose.activityRule.scenario.onActivity(::mount)
         compose.waitForIdle()
         compose.runOnIdle { assertTrue(compose.activity.window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE != 0) }

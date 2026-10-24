@@ -3,12 +3,7 @@ package com.noahwallet.ui
 import com.noahwallet.ui.WalletAlertDialog
 
 import com.noahwallet.localization.tr
-import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
-import android.os.*
-import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,9 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import kotlinx.coroutines.launch
 import androidx.compose.animation.togetherWith
 
 /**
@@ -91,99 +83,6 @@ private fun onboardingTransition(target: String, back: Boolean, reduceMotion: Bo
     val fadeSpring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<Float>()
     return (androidx.compose.animation.slideInHorizontally(spring) { if (back) -it / 10 else it / 9 } + androidx.compose.animation.fadeIn(fadeSpring)) togetherWith
         (androidx.compose.animation.slideOutHorizontally(spring) { if (back) it / 9 else -it / 12 } + androidx.compose.animation.fadeOut(fadeSpring))
-}
-
-/**
- * The authenticated recovery-phrase view (Settings, and the Home "Back up your wallet" prompt). While this
- * wallet isn't backed up, it ends with "I’ve written it down", which records the backup.
- */
-@Composable
-fun MnemonicScreen(model: AppModel, onBackedUp: () -> Unit = {}) {
-    val context = LocalContext.current
-    val activity = context as Activity
-    var words by remember { mutableStateOf<List<String>>(emptyList()) }
-    var copied by remember { mutableStateOf(false) }
-    var warningGeneration by remember { mutableStateOf<Int?>(null) }
-    val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
-    val handler = remember { Handler(Looper.getMainLooper()) }
-    val label = remember { "noah-recovery-${java.util.UUID.randomUUID()}" }
-    val clear = remember { Runnable {
-        if (clipboard.primaryClipDescription?.label == label) {
-            if (Build.VERSION.SDK_INT >= 28) clipboard.clearPrimaryClip()
-            else clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
-        }
-    } }
-    DisposableEffect(activity) {
-        val alreadySecure = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
-        activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        onDispose {
-            if (!alreadySecure) activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-            handler.removeCallbacks(clear); clear.run()
-        }
-    }
-    val scope = rememberCoroutineScope()
-    val generation = model.walletLock.generation
-    LaunchedEffect(generation) { words = emptyList(); copied = false; warningGeneration = null; clear.run() }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    suspend fun reveal() {
-        val started = model.walletLock.generation
-        // Authentication needs the app's FragmentActivity; any other host never reveals the phrase.
-        val fragment = activity as? androidx.fragment.app.FragmentActivity ?: return
-        if (com.noahwallet.ui.settings.WalletLock.hasNoScreenLock(fragment)) {
-            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) warningGeneration = started
-        } else if (model.walletLock.authenticate(fragment, "View your seed phrase")) {
-            val loaded = model.mnemonic()
-            if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
-        }
-    }
-    LaunchedEffect(model) { reveal() }
-    if (warningGeneration != null) WalletAlertDialog(
-        onDismissRequest = { warningGeneration = null },
-        title = { Text(tr("No screen lock")) },
-        text = { Text(tr("This device has no screen lock. Anyone with access to it can view your recovery phrase. Set a screen lock in device settings to protect your wallet.")) },
-        dismissButton = { TextButton({ warningGeneration = null }) { Text(tr("Cancel")) } },
-        confirmButton = { TextButton({
-            val started = warningGeneration
-            warningGeneration = null
-            scope.launch {
-                if (started != model.walletLock.generation || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@launch
-                if (com.noahwallet.ui.settings.WalletLock.hasNoScreenLock(activity as androidx.fragment.app.FragmentActivity)) {
-                    val loaded = model.mnemonic()
-                    if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) words = loaded
-                } else reveal()
-            }
-        }) { Text(tr("Show recovery phrase")) } },
-    )
-    NoahForm("Your Recovery Phrase") {
-        Text(tr("Write down these ${words.size} words in order and store them in a safe place. This is the only way to recover your wallet."))
-        Card {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                words.chunked(2).forEachIndexed { row, pair ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        pair.forEachIndexed { col, word -> Text(tr("${row * 2 + col + 1}  $word"), Modifier.weight(1f)) }
-                    }
-                }
-            }
-        }
-        NoahButton(if (copied) "Copied" else "Copy Seed Phrase", words.isNotEmpty(), secondary = true) {
-            val clip = ClipData.newPlainText(label, words.joinToString(" "))
-            clip.description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-            clipboard.setPrimaryClip(clip)
-            handler.removeCallbacks(clear); handler.postDelayed(clear, 120_000)
-            copied = true
-        }
-        if (words.isEmpty()) {
-            model.walletLock.error?.let { Text(tr(it)) }
-            NoahButton("Authenticate to view your seed phrase", !model.walletLock.authenticating) {
-                scope.launch {
-                    reveal()
-                }
-            }
-        }
-        if (words.isNotEmpty() && !model.recoveryPhraseBackedUp) NoahButton("I’ve written it down", !model.busy) {
-            model.action("Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); onBackedUp() }
-        }
-    }
 }
 
 @Composable
