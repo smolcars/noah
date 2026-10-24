@@ -6,6 +6,8 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 internal class BoardNotSubmitted(val reason: OnchainFailure) : Exception()
+/** The SDK's BroadcastOutcome.Uncertain: bark may have recorded the board, so the journal keeps it locked. */
+internal class BoardUncertain : Exception()
 internal fun boardFailure(error: BarkError): OnchainFailure = when (error.code) {
     BarkErrorCode.BELOW_MINIMUM_BOARD_AMOUNT -> OnchainFailure.belowMinimum
     BarkErrorCode.TOO_MANY_INPUTS -> OnchainFailure.tooManyInputs

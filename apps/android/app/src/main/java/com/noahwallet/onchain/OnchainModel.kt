@@ -159,7 +159,9 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             if (!dependencies.ready()) fail(OnchainFailure.unavailable)
             val resolved = dependencies.check(id)
             load()
-            message = if (resolved) "Status resolved. Review the receipt." else "Status remains uncertain. Noah checks again automatically as your wallet syncs."
+            // Only a board proven never recorded leaves the journal on a check.
+            message = if (resolved && attempts.none { it.id == id }) OnchainFailure.boardNotAttempted.text
+                else if (resolved) "Status resolved. Review the receipt." else "Status remains uncertain. Noah checks again automatically as your wallet syncs."
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't check status. The attempt is still saved." }
         finally { busy = false }

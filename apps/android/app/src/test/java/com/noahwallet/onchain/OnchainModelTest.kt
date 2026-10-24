@@ -71,6 +71,19 @@ class OnchainModelTest {
             assertEquals("not the uncertain copy", "This VTXO can't be exited.", model.error); assertNull(model.estimateFallback)
         }
     }
+    @Test fun aCheckThatProvesAnUncertainBoardNeverHappenedSaysSo() = runBlocking {
+        val uncertain = OnchainOperationJournal.Attempt(OnchainQuote(OnchainAction.board, "wallet"), txid = "board-tx", uncertainBoard = true)
+        var saved = listOf(uncertain)
+        var proven = false
+        val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") }, { _, _, _, _ -> error("unused") }, { "unused" },
+            { saved }, {}, { if (proven) saved = emptyList(); proven }, {}, { null }, {}))
+        model.checkStatus(uncertain.id)
+        assertEquals("Status remains uncertain. Noah checks again automatically as your wallet syncs.", model.message)
+        proven = true
+        model.checkStatus(uncertain.id)
+        assertEquals(OnchainFailure.boardNotAttempted.text, model.message)
+        assertTrue(model.attempts.isEmpty())
+    }
     @Test fun failedPreparationOffersNoFallbackAndSuccessfulQuoteStaysNormal() = runBlocking {
         val fake = Fake(); val model = OnchainModel(fake.dependencies())
         fake.failPreparation = true; model.review(OnchainAction.startExit, listOf("a"))

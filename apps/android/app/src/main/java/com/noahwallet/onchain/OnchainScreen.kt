@@ -177,7 +177,8 @@ internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
         else {
             Text(tr("Noah checks again automatically as your wallet syncs."))
             TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Check status")) }
-            if (attempt.receipt == null && attempt.overrideAudit == null) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
+            // An uncertain board stays locked until Check status settles it, so it has no override.
+            if (attempt.receipt == null && attempt.overrideAudit == null && !attempt.uncertainBoard) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
         }
     }
     overrideID?.let { id -> WalletAlertDialog(onDismissRequest = { overrideID = null },

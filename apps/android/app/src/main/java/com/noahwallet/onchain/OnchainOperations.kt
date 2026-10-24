@@ -245,7 +245,7 @@ internal class OnchainOperations(
                     if (result.txid != reviewed.preparedBoard.txid) fail(OnchainFailure.uncertain)
                     if (result.broadcast is BroadcastOutcome.NotAttempted) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
                     // bark failed after it may have recorded the board. The SDK refuses a resubmit; Check status reconciles it.
-                    if (result.broadcast is BroadcastOutcome.Uncertain) fail(OnchainFailure.uncertain)
+                    if (result.broadcast is BroadcastOutcome.Uncertain) throw BoardUncertain()
                     val retry = result.broadcast is BroadcastOutcome.Failed
                     OnchainReceipt(if (retry) OnchainReceipt.broadcastFailedMessage
                         else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)
@@ -308,6 +308,7 @@ internal class OnchainOperations(
         override suspend fun transactionIDs() = wallet.transactions().map { it.txid }.toSet()
         override suspend fun transactionStatus(txid: String) = ChainStatus.from(wallet.transactionStatus(txid))
         override suspend fun boardTransactionIDs() = wallet.boardTransactionIDs()
+        override suspend fun unspentOutpoints() = wallet.utxos().filterIsInstance<OnchainUtxo.Local>().map { "${it.outpoint.txid}:${it.outpoint.vout}" }.toSet()
         override suspend fun vtxoState(id: String) = vtxoState(wallet.vtxo(id).state)
         override suspend fun exitState(id: String) = wallet.status(id)?.let { exitState(it.state).first }
     })

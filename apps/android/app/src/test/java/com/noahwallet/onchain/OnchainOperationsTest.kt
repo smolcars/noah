@@ -296,7 +296,8 @@ class OnchainOperationsTest {
         override fun claimBoard(quote: OnchainQuote) { if (bound[quote.preparedBoard!!.id] != quote) fail(OnchainFailure.changed) }
         override suspend fun discardBoard(id: String, includingClaimed: Boolean) { discarded.add(id); bound.remove(id) }
         override suspend fun allExits() = states.keys.mapNotNull { status(it) }
-        override suspend fun transactionStatus(txid: String): TransactionStatus = chainStatus
+        var chainError: Exception? = null
+        override suspend fun transactionStatus(txid: String): TransactionStatus { chainError?.let { throw it }; return chainStatus }
         var items = listOf(Companion.vtxo("a"))
         var active = listOf<ExitVtxo>()
         var states = mutableMapOf<String, ExitState>()
@@ -946,20 +947,60 @@ class OnchainOperationsTest {
         wallet.submitOutcome = BroadcastOutcome.Uncertain("checkpoint write failed")
         assertEquals(OnchainFailure.uncertain, (runCatching { ops.execute(reviewed) }.exceptionOrNull() as OnchainException).reason)
         val attempt = journal.loadAll().single()
-        assertEquals("board-tx", attempt.txid); assertNull(attempt.receipt)
+        assertEquals("board-tx", attempt.txid); assertNull(attempt.receipt); assertTrue(attempt.uncertainBoard)
         assertTrue(attempt.blocks(OnchainAction.board, emptyList()))
         assertEquals("released, not resubmitted", listOf(reviewed.preparedBoard!!.id), wallet.discarded)
-        // Nothing found yet: it stays uncertain, and neither a review nor auto-board can board again.
+        // Nothing found yet, but the coins aren't proven unspent: it stays uncertain, and neither a review nor auto-board can board.
         wallet.fundingTransactions = emptyList(); wallet.chainStatus = TransactionStatus.NotFound
         assertFalse(ops.check(attempt.id))
         assertNull(ops.autoBoardFunding())
         wallet.submitOutcome = BroadcastOutcome.Accepted
         assertEquals(OnchainFailure.busy, (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
-        // bark had recorded it: its pending board names the funding txid, and Check status resolves the attempt.
+        // bark had recorded it: its BOARD movement names the funding txid, and Check status finds it with delivery protection.
         wallet.boardTxids = setOf("board-tx")
         assertTrue(ops.check(attempt.id))
-        assertNotNull(journal.loadAll().single().receipt)
+        val found = journal.loadAll().single()
+        assertTrue(found.receipt!!.broadcastRetryPending); assertTrue(found.receipt.message.contains("Do not board again"))
+        assertTrue(found.blocks(OnchainAction.board, emptyList()))
+        assertEquals(OnchainFailure.busy, (runCatching { journal.acknowledge(found.id) }.exceptionOrNull() as OnchainException).reason)
         assertEquals(1, wallet.calls.count { it.startsWith("submit:") })
+    } }
+    @Test fun noOverrideUnlocksAnUncertainBoardEvenAfterAReload() = runBlocking { fixture { wallet, ops, journal, _ ->
+        wallet.submitOutcome = BroadcastOutcome.Uncertain("checkpoint write failed")
+        val first = ops.quote(OnchainAction.board, amount = 30_000)
+        runCatching { ops.execute(first) }
+        wallet.submitOutcome = BroadcastOutcome.Accepted
+        assertEquals(OnchainFailure.busy, (runCatching { journal.overrideUncertain(first.id) }.exceptionOrNull() as OnchainException).reason)
+        // Relaunched: the flag is on disk, so the reloaded journal refuses the override and the second board too.
+        val reloaded = OnchainOperationJournal(OnchainFile(wallet.attemptFile) {})
+        val again = OnchainOperations(wallet, reloaded)
+        assertTrue(reloaded.loadAll().single().uncertainBoard)
+        assertEquals(OnchainFailure.busy, (runCatching { reloaded.overrideUncertain(first.id) }.exceptionOrNull() as OnchainException).reason)
+        assertEquals(OnchainFailure.busy, (runCatching { again.execute(again.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
+        // Even a journal written with an override on it still blocks.
+        assertTrue(reloaded.loadAll().single().copy(overrideAudit = OnchainOperationJournal.OverrideAudit(1)).blocks(OnchainAction.board, emptyList()))
+        assertEquals(1, wallet.calls.count { it.startsWith("submit:") })
+    } }
+    @Test fun anUncertainBoardProvenNeverRecordedIsReleased() = runBlocking { fixture { wallet, ops, journal, _ ->
+        wallet.submitOutcome = BroadcastOutcome.Uncertain("lookup failed")
+        val first = ops.quote(OnchainAction.board, amount = 30_000)
+        runCatching { ops.execute(first) }
+        wallet.submitOutcome = BroadcastOutcome.Accepted
+        val id = journal.loadAll().single().id
+        wallet.fundingTransactions = emptyList(); wallet.chainStatus = TransactionStatus.NotFound
+        val input = OnchainUtxo.Local(OutPoint("input-0", 0u), 100_000u, 100u)
+        // Any doubt keeps it: the chain source unreachable, a coin no longer the wallet's, or bark naming the txid.
+        wallet.fundingUtxos = listOf(input); wallet.chainError = java.net.SocketTimeoutException()
+        assertTrue(runCatching { ops.check(id) }.isFailure); assertEquals(1, journal.loadAll().size)
+        wallet.chainError = null; wallet.fundingUtxos = emptyList()
+        assertFalse(ops.check(id)); assertEquals(1, journal.loadAll().size)
+        // Nothing names it, the chain source doesn't know it, and its input is still the wallet's: nothing was boarded.
+        wallet.fundingUtxos = listOf(input)
+        assertTrue(ops.check(id))
+        assertTrue(journal.loadAll().isEmpty())
+        ops.execute(ops.quote(OnchainAction.board, amount = 30_000))
+        assertEquals("a fresh review boards", 2, wallet.calls.count { it.startsWith("submit:") })
+        assertNotNull(journal.loadAll().single().receipt)
     } }
     @Test fun aReorgedOrUnverifiableParentAtSubmitReadsAsBeforeSubmission() = runBlocking {
         // SDK 0.7.0's confirmed-only re-check: a parent back in the mempool, or a chain source it can't reach.
