@@ -125,7 +125,13 @@ extension WalletSession {
             let submit = held.submit
             let message = try await journal.perform(quote) {
                 try await journal.recordTransaction(quote.prepared!.txid, for: quote.id)
-                let result = try await submit()
+                let result: BoardResult
+                // FFI 0.7.0 throws only before Bark records the board (after that it returns an outcome): a
+                // confirmed-only parent reorged out is typed (unavailable inputs), an unreachable chain source isn't.
+                do { result = try await submit() }
+                catch let error as BarkError where OnchainSubmission.boardFailure(error) == nil {
+                    throw OnchainFailure.boardNotAttempted
+                }
                 return try OnchainSubmission.boardReceipt(result, quote: quote)
             }
             await discardBoard(quote, includingClaimed: true)

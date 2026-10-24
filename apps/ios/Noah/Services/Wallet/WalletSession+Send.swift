@@ -353,10 +353,12 @@ enum SendMaxValidation {
 enum SendOnchainSubmission {
     static func notSubmitted(_ error: Error) -> SendFailure? {
         guard let code = (error as? BarkError)?.code else { return nil }
-        // core/onchain.rs checks these before record_prepared; the app never retries this id.
+        // core/onchain.rs (FFI 0.7.0) throws only before record_prepared, after which it returns an outcome:
+        // inputs gone or reserved, a confirmed-only parent reorged out, or an unreachable chain source.
+        // The app never retries this id.
         switch code {
         case .preparedTransactionNotFound, .preparedInputsUnavailable: return .fundsChanged
-        default: return nil
+        default: return .constructionFailed
         }
     }
     static func receipt(_ result: BroadcastResult, quote: SendQuote) throws -> SendReceipt {

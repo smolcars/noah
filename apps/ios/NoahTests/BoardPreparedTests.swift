@@ -520,6 +520,27 @@ struct BoardPreparedTests {
         #expect(try await check(["exact"]))
         #expect(try await journal.load()?.receipt?.broadcastRetryPending == true)
     }
+    /// FFI 0.7.0 re-checks a confirmed-only board's parents at first submit. A parent reorged out and an
+    /// unreachable chain source both throw before Bark records anything: not submitted, a new review allowed.
+    /// Anything else thrown stays uncertain.
+    @Test(arguments: [
+        (BarkError(message: "prepared board parent is no longer confirmed", code: .preparedInputsUnavailable) as any Error, OnchainFailure.reservedInputs),
+        (BarkError(message: "chain source unreachable"), .boardNotAttempted),
+        (URLError(.networkConnectionLost), .uncertain),
+    ])
+    func submitThrowsBeforeBarkRecordsReadAsNotSubmitted(error: any Error, failure: OnchainFailure) async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let quote = Self.quote
+        await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: { throw error })
+        await #expect(throws: failure) {
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
+        }
+        #expect(try await journal.loadAll().map(\.id) == (failure == .uncertain ? [quote.id] : []))
+        #expect(await calls.discarded == [quote.id])
+    }
     /// `notAttempted` still means nothing was recorded: the lock is released and a new review submits.
     @Test func notAttemptedOutcomeAllowsAFreshBoard() async throws {
         let (journal, file) = journal()

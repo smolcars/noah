@@ -96,12 +96,16 @@ import Testing
         }
     }
 
-    @Test func onlyTypedFirstBroadcastRefusalsUnlockOnchainSend() {
+    /// FFI 0.7.0's broadcastPrepared throws only before it records the transaction.
+    @Test func firstBroadcastThrowsUnlockOnchainSendAsNotSubmitted() {
         for code in BarkErrorCode.allCases {
             let failure = SendOnchainSubmission.notSubmitted(BarkError(message: "arbitrary diagnostic", code: code))
-            #expect((failure != nil) == [.preparedTransactionNotFound, .preparedInputsUnavailable].contains(code))
+            #expect(failure == ([.preparedTransactionNotFound, .preparedInputsUnavailable].contains(code) ? .fundsChanged : .constructionFailed))
         }
-        #expect(SendOnchainSubmission.notSubmitted(BarkError(message: "Send failed: error building tx: insufficient funds")) == nil)
+        // A confirmed-only parent reorged out: unavailable inputs. An unreachable chain source: untyped.
+        #expect(SendOnchainSubmission.notSubmitted(BarkError(message: "prepared input parent is no longer confirmed; discard and prepare again",
+                                                             code: .preparedInputsUnavailable)) == .fundsChanged)
+        #expect(SendOnchainSubmission.notSubmitted(BarkError(message: "chain source unreachable")) == .constructionFailed)
         #expect(SendOnchainSubmission.notSubmitted(URLError(.timedOut)) == nil)
     }
 
