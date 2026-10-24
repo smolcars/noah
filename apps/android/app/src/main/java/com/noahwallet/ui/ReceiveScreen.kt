@@ -76,6 +76,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     var ownArk by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var ownHashes by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var error by remember { mutableStateOf<String?>(null) }
+    var errorTitle by remember { mutableStateOf<String?>(null) }
     var invoiceError by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
     var saving by remember { mutableStateOf(false) }
@@ -116,6 +117,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
                     }
                     is ReceiveCompletion.LightningFailed -> {
                         request = null; format = ReceiveFormats.afterAmount(format, false)
+                        errorTitle = if (event.canceled) "Lightning Receive Canceled" else "Lightning Receive Failed"
                         error = "The Lightning payment could not be received. Generate a new payment request and try again."
                         return@LaunchedEffect
                     }
@@ -152,7 +154,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     val confirmedAt = chain?.txid?.let { txid -> rows.firstOrNull { it.txid == txid && it.source == "onchain-wallet" } }
         ?.takeIf { it.hasConfirmation == true }?.confirmationHeight?.toLong()
     val address = app.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
-    val ui = ReceiveUi(request, address, format, app.amountUnit, locale, price, currency, error = error, saving = saving, invoiceError = invoiceError,
+    val ui = ReceiveUi(request, address, format, app.amountUnit, locale, price, currency, error = error, errorTitle = errorTitle, saving = saving, invoiceError = invoiceError,
         arrival = arrival, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current }, confirmedAt = confirmedAt,
         listening = app.session.isOpen && !app.isWalletSuspended && error == null && (format == ReceiveFormat.lightningAddress && address != null || request != null))
     val actions = ReceiveActions(
@@ -174,7 +176,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
         },
         // Clearing the amount returns to your Lightning address, whichever format was showing.
         removeAmount = { request?.let { request = ReceiveRequest(it.arkAddress, it.onchainAddress) }; format = ReceiveFormat.lightningAddress },
-        retry = { error = null; retry++ },
+        retry = { error = null; errorTitle = null; retry++ },
         profile = onProfile,
     )
     com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {

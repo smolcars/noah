@@ -1889,6 +1889,8 @@
         "Lightning",
         "Lightning Payment Received! ⚡",
         "Lightning Receive",
+        "Lightning Receive Canceled",
+        "Lightning Receive Failed",
         "Lightning address",
         "Lightning address unavailable",
         "Lightning invoice",

@@ -69,6 +69,8 @@ data class ReceiveUi(
     val currency: String,
     /** Today's request error, with Retry; null while it loads or once it's ready. */
     val error: String? = null,
+    /** The title over [error] that says whether a Lightning receive was canceled or failed, as iOS does. */
+    val errorTitle: String? = null,
     val saving: Boolean = false,
     val invoiceError: String? = null,
     val arrival: ReceiveArrival? = null,
@@ -183,7 +185,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     val line = phase?.let { tr(it) } ?: chainPhase
     val done = phase == "Received" || ui.confirmedAt != null && chainPhase != null
     val card = @Composable {
-        if (ui.error != null && ui.request == null && ui.format != ReceiveFormat.lightningAddress) ErrorCard(ui.error, cardWidth, actions.retry)
+        if (ui.error != null && ui.request == null && ui.format != ReceiveFormat.lightningAddress) ErrorCard(ui.error, ui.errorTitle, cardWidth, actions.retry)
         else FitHeight {
             ReceiveCard(face, ui.arrival, ui.arrival?.let { ui.sats(it.sats) }, ui.listening && ui.error == null, tilt.value, cardWidth, qrSide,
                 actions.profile, if (paned) null else ({ haptics.light(); sheet = "formats" }))
@@ -204,6 +206,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     // Today's request errors (and a failed Lightning receive) while the card still shows your address.
     val problem = @Composable { modifier: Modifier ->
         if (ui.error != null && !(ui.request == null && ui.format != ReceiveFormat.lightningAddress)) Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            ui.errorTitle?.let { Text(tr(it), style = SendType.strong, color = palette.foreground, textAlign = TextAlign.Center) }
             Text(tr(ui.error), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center)
             androidx.compose.material3.TextButton(actions.retry) { Text(tr("Retry"), style = SendType.line, color = palette.foreground) }
         }
@@ -321,9 +324,10 @@ private fun FitHeight(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun ErrorCard(error: String, width: Dp, retry: () -> Unit) {
+private fun ErrorCard(error: String, title: String?, width: Dp, retry: () -> Unit) {
     val palette = LocalPalette.current
     Column(Modifier.width(width).padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        title?.let { Text(tr(it), style = SendType.strong, color = palette.foreground, textAlign = TextAlign.Center) }
         Text(tr(error), style = SendType.line, color = palette.failure, textAlign = TextAlign.Center)
         SendPill(tr("Retry"), Modifier.fillMaxWidth(), height = 48.dp, onClick = retry)
     }
