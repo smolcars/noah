@@ -127,3 +127,26 @@ The user made these on 2026-10-24:
   - mine the few blocks the path needs. The stack's `exit_delta` is 144. Don't mine that many on the shared stack unless the user approves; otherwise stop at "Waiting for the timelock" and cover claimable/claim with fixtures;
   - claim to another wallet (an LND address);
   - one exit with on-chain funds removed, to see "Needs on-chain funds".
+
+## Accepted deviations
+
+Both platforms were built and reviewed to this spec, with these deviations. The user's later decisions and the reviews on 2026-10-24 settled them:
+
+1. **"Fees more than it's worth" uses each VTXO's standalone estimate,** not its deduplicated share (Decision 4). bark-bolt-ffi 0.6.0's estimate returns only set totals. Standalone errs on the safe side: "All" never includes an uneconomic VTXO, and at worst leaves out siblings that are only economic together, which the user can still choose. "All" can't be reviewed until every VTXO in the current set is classified. Replace this once the FFI gives per-transaction estimate data.
+2. **"Needs on-chain funds" evidence (Decision 3).** bark's daemon reports nothing back, and Noah adds no progress calls of its own, because two callers of `progress_exits_with_cpfp` can each build a fee child (`bark/src/exit/bdk.rs:33-84`).
+   - **The rule:** the label shows when the confirmed balance is below the parked package's fee (its own weight plus the fee child, at bark's exit fee rate).
+   - **Required evidence:** a completed Check the chain, or one daemon sync interval (60 s) plus a margin within the current parking episode.
+   - **Resets:** the waiting time restarts when the app returns from the background, and starting or cancelling an exit clears that exit's evidence.
+3. **Waiting and "stuck"** count from the wallet tip at which Noah first saw each transaction in its current status, keyed by exit run and status episode. bark keeps a state's `tip_height` frozen while nothing changes (`bark/src/exit/progress/states.rs:169-173`), so its height can't be used.
+4. **"Stale"** shows only after a failed Check the chain, or when the wallet is open without the daemon (no path does that today). "Fees rose" counts only fee children from the transaction's current stay in the mempool.
+5. **Claim to this phone and auto-board (Decision 8).**
+   - **The claimed set:** the claimed outpoints go into the handled ledger and into a separate claimed set, both written before broadcast. If the write fails, nothing is sent.
+   - **What auto-board offers:** its threshold and amount leave out the value of claimed outpoints that are still unspent and confirmed.
+   - **The retry:** bark picks a board's inputs itself, so a preparation that spends a claimed coin is discarded and retried at 1% less (at least 1,000 sats less), up to 3 times. After that, there's no prompt. Replace this once `prepare_board` takes excluded outpoints.
+   - **Unchanged:** manual Move to Ark.
+6. **A batched claim** splits its one fee evenly across the exits it covers, so the parts add up. The receipt (txid, actual fee, exits, destination) is written before broadcast, so a broadcast whose answer is lost still shows the net amount. bark's state still decides "Claimed".
+7. **Layout and missing data:**
+   - **Platform choices:** Android's "To" is two radio rows with the address field inline, and its Cancel and Check the chain are side-by-side pills (Check the chain is a link beside the primary action where space is short). iOS's Cancel confirmation is a sheet, so it stays in the Duo's trailing pane.
+   - **What bark doesn't provide:** there's no round-block height label, leaf number or node names. "Took" is measured in blocks.
+   - **Details:** Android labels bark's height "Recorded at", and iOS shows its own last Check the chain tip as "Last checked".
+   - **Activity:** "Exit details" opens the exit's own page.
