@@ -116,6 +116,25 @@ struct ActivityDetailTests {
         #expect(ActivityDetail.requiredConfirmations(Self.onchainSend(), variant: .mainnet) == 2)
     }
 
+    @Test func anOffboardsTotalIsItsDebitNotTheFeeTwice() {
+        // Offboarding 100,000 with a 1,000 fee: 99,000 reaches the address and bark records a 100,000 debit,
+        // which is also the row's amount.
+        var offboard = HomeRulesTests.row("movement-9", type: "Onchain", amount: 100_000, direction: "outgoing",
+                                          kind: "offboard", effective: -100_000, offchainFee: 1_000)
+        offboard.sentTo = [.init(destination: "bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", amount_sat: 99_000, paymentMethod: "bitcoin")]
+        let detail = ActivityDetail(offboard, ownDomain: Self.own)
+        #expect(detail.fee == .amount(1_000))
+        #expect(detail.total == nil, "the amount already is the debit")
+        // A send-onchain records the destination's amount, so its total is the debit.
+        var send = offboard
+        send.movementKind = "send-onchain"
+        send.amount = 99_000
+        #expect(ActivityDetail(send, ownDomain: Self.own).total == 100_000)
+        // No debit on record, no guessed total.
+        send.effectiveBalanceSat = nil
+        #expect(ActivityDetail(send, ownDomain: Self.own).total == nil)
+    }
+
     @Test func settledLightningFeesComeFromTheBalanceChange() {
         // A retried fixed-amount invoice keeps its first attempt's fee field (50); the balance change says 12.
         var fixed = Self.lightningSend(to: ActivityMappingTests.coffeeInvoice, fee: 12)

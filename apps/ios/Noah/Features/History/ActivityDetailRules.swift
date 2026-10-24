@@ -96,11 +96,12 @@ struct ActivityDetail: Equatable {
         else if arkFee == 0 && outgoing { fee = .free }
         else { fee = nil }
 
-        // The total follows the fee. A movement's balance change is its own total; BDK's already includes its fee.
+        // The total follows the fee. A movement's own debit is its total, shown only when it differs from the
+        // amount: an offboard's amount already includes its fee, and BDK's balance change includes its own.
         let fees = (arkFee ?? 0) + networkFee
         if outgoing && !unsuccessful && !transaction.isRenewal && !walletRow, fees > 0, arkFee != nil || networkFee > 0 {
-            let spent = transaction.effectiveBalanceSat.map { -$0 } ?? 0
-            total = settledLightningSend ? transaction.amount + fees : spent > transaction.amount ? spent : transaction.amount + fees
+            let spent = transaction.effectiveBalanceSat.map { -$0 }
+            total = settledLightningSend ? transaction.amount + fees : spent.flatMap { $0 > transaction.amount ? $0 : nil }
         } else {
             total = nil
         }
