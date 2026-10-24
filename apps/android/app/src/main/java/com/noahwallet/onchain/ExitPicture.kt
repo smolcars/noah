@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -104,7 +105,7 @@ internal fun ExitPicture(pose: ExitPose, description: String, modifier: Modifier
                          destination: String? = null, showArk: Boolean = true) {
     val reduceMotion = LocalReduceMotion.current
     if (reduceMotion) Crossfade(pose, modifier.semantics { contentDescription = description }, animationSpec = tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS), label = "exit") { p ->
-        PictureCanvas(p, PictureMotion.rest(p), balance, destination, showArk, Modifier)
+        PictureCanvas(p, PictureMotion.rest(p), balance, destination, showArk, Modifier.fillMaxSize())
     } else {
         val motion = rememberPictureMotion(pose)
         PictureCanvas(pose, motion, balance, destination, showArk, modifier.semantics { contentDescription = description })
@@ -176,6 +177,8 @@ private fun PictureCanvas(p: ExitPose, m: PictureMotion, balance: String?, desti
     Canvas(modifier) {
         val k = density.density
         val w = size.width / k; val full = size.height / k; val h = min(full, 430f)
+        // Too small to hold the path, the row and the bar (a pane mid-resize): draw nothing rather than overlap.
+        if (w < 200f || h < 160f) return@Canvas
         translate(0f, (full - h) / 2 * k) { scale(k, k, Offset.Zero) {
             fun label(value: String, x: Float, y: Float, color: Color, alpha: Float = 1f, style: TextStyle = grotesk, align: Int = 0) {
                 if (alpha <= 0f) return
@@ -334,7 +337,7 @@ private fun PictureCanvas(p: ExitPose, m: PictureMotion, balance: String?, desti
                 if (u < 1f) {
                     val hx = bx0 + bw * u
                     drawCircle(palette.orange, 4.5f, Offset(hx, by + 3), alpha = a * m.blink)
-                    label(number.format(p.tip), clamp(hx, bx0 + 22, bx1 - 22), by - 10, palette.foreground, a)
+                    label(number.format(p.tip), hx.coerceIn(bx0 + 22, maxOf(bx0 + 22, bx1 - 22)), by - 10, palette.foreground, a)
                 }
                 label(number.format(p.lockedFrom), bx0, by + 30, palette.muted, a, align = -1)
                 label(number.format(p.claimableHeight), bx1, by + 30, if (u >= 1f) palette.foreground else palette.muted, a, align = 1)
