@@ -284,6 +284,9 @@ class OnchainOperationsTest {
         /** Funding txids bark's pending boards and board movements name. */
         var boardTxids = emptySet<String>()
         override suspend fun boardTransactionIDs() = boardTxids
+        /** Funding txids BOARD movements name in their chain_anchor. */
+        var movementTxids = emptySet<String>()
+        override suspend fun boardMovementTransactionIDs() = movementTxids
         var chainStatus: TransactionStatus = TransactionStatus.InMempool
         var fundingTransactions: List<WalletTransaction>? = null
         var fundingUtxos = emptyList<OnchainUtxo>()
@@ -997,7 +1000,7 @@ class OnchainOperationsTest {
         assertNull(ops.autoBoardFunding())
         wallet.submitOutcome = BroadcastOutcome.Accepted
         assertEquals(OnchainFailure.busy, (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
-        // bark had recorded it: its BOARD movement names the funding txid, and Check status finds it with delivery protection.
+        // bark had recorded it: its pending board names the funding txid, and Check status finds it with delivery protection.
         wallet.boardTxids = setOf("board-tx")
         assertTrue(ops.check(attempt.id))
         val found = journal.loadAll().single()
@@ -1043,17 +1046,48 @@ class OnchainOperationsTest {
         assertEquals("a fresh review boards", 2, wallet.calls.count { it.startsWith("submit:") })
         assertNotNull(journal.loadAll().single().receipt)
     } }
-    @Test fun aBoardMovementIsFoundByItsChainAnchorWithoutAPendingBoardOrStoredVtxo() = runBlocking {
+    @Test fun aBoardMovementIsFoundByItsChainAnchorWithoutAPendingBoardOrStoredVtxo() {
         val txid = "8052815cfc4cfce003689ae6bdc6d6feea531577cb6732e98e335d959a4b5fc9"
-        fun movement(subsystem: String, metadata: String, outputs: List<String> = listOf("unstored:0")) = Movement(4u, "pending", subsystem, "board",
-            metadata, 30_000, 29_670, 330u, emptyList(), emptyList(), emptyList(), outputs, emptyList(), "now", "now", null, null, null, null)
+        fun movement(subsystem: String, metadata: String) = Movement(4u, "pending", subsystem, "board", metadata, 30_000, 29_670, 330u,
+            emptyList(), emptyList(), emptyList(), listOf("unstored:0"), emptyList(), "now", "now", null, null, null, null)
         // Written before bark's checkpoint: no pending board, no stored VTXO, no chain transaction.
-        val partial = movement("bark.board", """{"chain_anchor":"$txid:0","onchain_fee_sat":155}""")
-        assertEquals(setOf(txid), boardFundingTxids(emptyList(), listOf(partial)) { null })
-        // Only BOARD movements, only a well-formed anchor; a stored VTXO's anchor and pending boards still count.
-        assertTrue(boardFundingTxids(emptyList(), listOf(movement("bark.arkoor", """{"chain_anchor":"$txid:0"}"""),
-            movement("bark.board", """{"chain_anchor":"not-an-outpoint"}"""), movement("bark.board", "{")), { null }).isEmpty())
-        assertEquals(setOf("pending-tx", "vtxo-anchor"), boardFundingTxids(listOf("pending-tx"), listOf(movement("bark.board", "{}"))) { "vtxo-anchor" })
+        assertEquals(setOf(txid), boardMovementTxids(listOf(movement("bark.board", """{"chain_anchor":"$txid:0","onchain_fee_sat":155}"""))))
+        // Only BOARD movements, and only a well-formed anchor.
+        assertTrue(boardMovementTxids(listOf(movement("bark.arkoor", """{"chain_anchor":"$txid:0"}"""),
+            movement("bark.board", """{"chain_anchor":"not-an-outpoint"}"""), movement("bark.board", "{"), movement("bark.board", "{}"))).isEmpty())
+    }
+    @Test fun anOrphanBoardMovementReleasesOnlyWhenNothingCanBroadcastTheBoard() = runBlocking {
+        val cases = listOf("released", "pending board", "found txid", "wallet transaction", "spent input", "unreachable source")
+        for (crash in listOf(false, true)) for (case in cases) fixture { wallet, ops, journal, _ ->
+            val first = ops.quote(OnchainAction.board, amount = 30_000)
+            if (crash) runCatching { journal.perform(first) { record -> record("board-tx"); error("process died before checkpoint") } }
+            else { wallet.submitOutcome = BroadcastOutcome.Uncertain("checkpoint write failed"); runCatching { ops.execute(first) } }
+            wallet.submitOutcome = BroadcastOutcome.Accepted
+            val id = journal.loadAll().single().id
+            // bark wrote the BOARD movement and nothing else.
+            wallet.movementTxids = setOf("board-tx"); wallet.fundingTransactions = emptyList(); wallet.chainStatus = TransactionStatus.NotFound
+            wallet.fundingUtxos = listOf(OnchainUtxo.Local(OutPoint("input-0", 0u), 100_000u, 100u))
+            when (case) {
+                "pending board" -> wallet.boardTxids = setOf("board-tx")
+                "found txid" -> wallet.chainStatus = TransactionStatus.InMempool
+                "wallet transaction" -> wallet.fundingTransactions = listOf(WalletTransaction("board-tx", "", 155u, -30_155, null, false))
+                "spent input" -> wallet.fundingUtxos = emptyList()
+                "unreachable source" -> wallet.chainError = java.net.SocketTimeoutException()
+            }
+            runCatching { ops.check(id) }
+            val submits = if (crash) 0 else 1
+            if (case == "released") {
+                assertTrue("crash=$crash", journal.loadAll().isEmpty())
+                ops.execute(ops.quote(OnchainAction.board, amount = 30_000))
+                assertEquals(submits + 1, wallet.calls.count { it.startsWith("submit:") })
+            } else {
+                val kept = journal.loadAll().single()
+                assertTrue("$case crash=$crash", kept.blocks(OnchainAction.board, emptyList()))
+                assertEquals("$case crash=$crash", OnchainFailure.busy, (runCatching { journal.overrideUncertain(id) }.exceptionOrNull() as OnchainException).reason)
+                assertEquals(OnchainFailure.busy, (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
+                assertEquals(submits, wallet.calls.count { it.startsWith("submit:") })
+            }
+        }
     }
     @Test fun aReorgedOrUnverifiableParentAtSubmitReadsAsBeforeSubmission() = runBlocking {
         // SDK 0.7.0's confirmed-only re-check: a parent back in the mempool, or a chain source it can't reach.

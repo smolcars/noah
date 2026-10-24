@@ -66,20 +66,27 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
             return action == OnchainAction.board || quote.ids.any { it in ids }
         }
     }
-    /** [unspent]: the wallet's unspent outpoints ("txid:vout"), read only for an uncertain board. */
+    /**
+     * [boardTransactionIDs]: funding txids bark's pending boards (checkpoints) and stored board VTXOs name;
+     * [boardMovementTransactionIDs]: those BOARD movements name in their `chain_anchor`; [unspent]: the wallet's unspent
+     * outpoints ("txid:vout"), read only for an unresolved board.
+     */
     data class Evidence(val walletID: String, val vtxoStates: Map<String, String> = emptyMap(),
         val exitStates: Map<String, String?> = emptyMap(), val transactionIDs: Set<String> = emptySet(),
         val chainStatuses: Map<String, ChainStatus> = emptyMap(), val boardTransactionIDs: Set<String> = emptySet(),
-        val unspent: Set<String>? = null) {
+        val unspent: Set<String>? = null, val boardMovementTransactionIDs: Set<String> = emptySet()) {
+        /** Only a BOARD movement names the board: an orphan bark wrote before its checkpoint, locked like Uncertain. */
+        fun orphan(attempt: Attempt) = attempt.quote.action == OnchainAction.board && attempt.overrideAudit == null &&
+            attempt.txid in boardMovementTransactionIDs && receipt(attempt) == null
         /**
-         * An uncertain board bark never recorded: no wallet transaction, pending board or BOARD movement names its funding
-         * txid, the chain source doesn't know it, and every input is still an unspent coin of this wallet. bark writes the
-         * movement before anything else and broadcasts only after its checkpoint, so nothing can complete it later.
+         * An uncertain or orphaned board nothing can complete: no pending board, checkpoint or wallet transaction names its
+         * funding txid, the chain source says it doesn't know it, and every input is still an unspent coin of this wallet.
          */
         fun nothingBoarded(attempt: Attempt): Boolean {
             val prepared = attempt.quote.preparedBoard ?: return false
-            return attempt.uncertainBoard && walletID == attempt.quote.walletID && attempt.txid == prepared.txid &&
-                prepared.txid !in transactionIDs && prepared.txid !in boardTransactionIDs &&
+            // An orphan movement doesn't block: the server saw only the unsigned tx, the signed bytes died with the preparation, and bark broadcasts only from a checkpoint.
+            return (attempt.uncertainBoard || orphan(attempt)) && attempt.overrideAudit == null && walletID == attempt.quote.walletID &&
+                attempt.txid == prepared.txid && prepared.txid !in transactionIDs && prepared.txid !in boardTransactionIDs &&
                 chainStatuses[prepared.txid]?.kind == ChainStatus.Kind.notFound && unspent != null &&
                 prepared.inputs.isNotEmpty() && prepared.inputs.all { "${it.txid}:${it.vout}" in unspent }
         }
@@ -153,7 +160,12 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         val attempt = attempts.find { it.id == id && it.receipt == null } ?: return@withLock false
         // Proven never recorded: the attempt goes, so a fresh review can board these coins.
         if (evidence.nothingBoarded(attempt)) { save(attempts.filter { it.id != id }); return@withLock true }
-        val receipt = evidence.receipt(attempt) ?: return@withLock false
+        val receipt = evidence.receipt(attempt)
+        if (receipt == null) {
+            // An orphan that can't be released yet (a crash's, say) loses its override until a check releases it.
+            if (evidence.orphan(attempt) && !attempt.uncertainBoard) save(attempts.map { if (it.id == id) it.copy(uncertainBoard = true) else it })
+            return@withLock false
+        }
         save(attempts.map { if (it.id == id) it.copy(receipt = receipt) else it }); true
     }
     suspend fun refreshBoardFees(walletID: String, fees: Map<String, Long>) = mutex.withLock {
@@ -201,6 +213,7 @@ interface OnchainAttemptReads {
     suspend fun transactionIDs(): Set<String>
     suspend fun transactionStatus(txid: String): ChainStatus? = null
     suspend fun boardTransactionIDs(): Set<String> = emptySet()
+    suspend fun boardMovementTransactionIDs(): Set<String> = emptySet()
     /** The wallet's unspent outpoints ("txid:vout"); null when unknown. */
     suspend fun unspentOutpoints(): Set<String>? = null
     suspend fun vtxoState(id: String): String
@@ -215,9 +228,11 @@ suspend fun checkOnchainAttempt(id: String, journal: OnchainOperationJournal, re
         catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) { lookupError = error; null }
     val transactions = reads.transactionIDs()
-    val boards = if (attempt.quote.action == OnchainAction.board && txid != null) reads.boardTransactionIDs() else emptySet()
-    // Unknown coins can't prove an uncertain board never happened, so it stays locked.
-    val unspent = if (attempt.uncertainBoard && attempt.receipt == null) try { reads.unspentOutpoints() }
+    val board = attempt.quote.action == OnchainAction.board && txid != null
+    val boards = if (board) reads.boardTransactionIDs() else emptySet()
+    val movements = if (board) reads.boardMovementTransactionIDs() else emptySet()
+    // Unknown coins can't prove a board never happened, so it stays locked.
+    val unspent = if (board && attempt.receipt == null) try { reads.unspentOutpoints() }
         catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null } else null
     val vtxos = mutableMapOf<String, String>()
     val exits = mutableMapOf<String, String?>()
@@ -226,7 +241,7 @@ suspend fun checkOnchainAttempt(id: String, journal: OnchainOperationJournal, re
         exits[item] = reads.exitState(item)
     }
     val resolved = journal.reconcile(id, OnchainOperationJournal.Evidence(reads.walletID, vtxos, exits, transactions,
-        if (txid != null && status != null) mapOf(txid to status) else emptyMap(), boards, unspent))
+        if (txid != null && status != null) mapOf(txid to status) else emptyMap(), boards, unspent, movements))
     // Exact local evidence remains useful even when the optional chain source is unavailable.
     journal.refreshStatus(id, status, if (lookupError != null) ChainStatus.errorText else null)
     if (!resolved && attempt.receipt == null) lookupError?.let { throw it }

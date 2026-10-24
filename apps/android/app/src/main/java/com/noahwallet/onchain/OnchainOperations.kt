@@ -308,6 +308,7 @@ internal class OnchainOperations(
         override suspend fun transactionIDs() = wallet.transactions().map { it.txid }.toSet()
         override suspend fun transactionStatus(txid: String) = ChainStatus.from(wallet.transactionStatus(txid))
         override suspend fun boardTransactionIDs() = wallet.boardTransactionIDs()
+        override suspend fun boardMovementTransactionIDs() = wallet.boardMovementTransactionIDs()
         override suspend fun unspentOutpoints() = wallet.utxos().filterIsInstance<OnchainUtxo.Local>().map { "${it.outpoint.txid}:${it.outpoint.vout}" }.toSet()
         override suspend fun vtxoState(id: String) = vtxoState(wallet.vtxo(id).state)
         override suspend fun exitState(id: String) = wallet.status(id)?.let { exitState(it.state).first }

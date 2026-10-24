@@ -36,6 +36,7 @@ internal interface OnchainWalletAccess {
     suspend fun allExits(): List<ExitTransactionStatus> = error("""Unsupported""")
     suspend fun transactionStatus(txid: String): TransactionStatus = error("""Unsupported""")
     suspend fun boardTransactionIDs(): Set<String> = emptySet()
+    suspend fun boardMovementTransactionIDs(): Set<String> = emptySet()
     suspend fun refresh(ids: List<String>): RoundState? = error("""Unsupported""")
     suspend fun start(ids: List<String>): Unit = error("""Unsupported""")
     suspend fun progress(feeRate: Long?): List<ExitProgressStatus> = error("""Unsupported""")
@@ -90,9 +91,12 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     // Transactions come from bark's own store (no chain query): the picture, Details and fees read them.
     override suspend fun allExits() = wallet.listAllExits(includeHistory = true, includeTransactions = true)
     override suspend fun transactionStatus(txid: String) = wallet.transactionStatus(txid)
-    override suspend fun boardTransactionIDs(): Set<String> = boardFundingTxids(wallet.pendingBoards().map { it.txid }, wallet.history()) { id ->
-        runCatching { wallet.getVtxoById(id).anchorPoint.txid }.getOrNull()
-    }
+    override suspend fun boardTransactionIDs(): Set<String> = wallet.pendingBoards().map { it.txid }.toSet() +
+        wallet.history().filter { it.subsystemName == "bark.board" }.flatMap { movement ->
+            // Board movement output IDs identify the funding transaction, never its amount.
+            movement.outputVtxoIds.mapNotNull { id -> runCatching { wallet.getVtxoById(id).anchorPoint.txid }.getOrNull() }
+        }
+    override suspend fun boardMovementTransactionIDs() = boardMovementTxids(wallet.history())
     override suspend fun refresh(ids: List<String>) = wallet.refreshVtxosDelegated(ids)
     override suspend fun start(ids: List<String>) = wallet.startExitForVtxos(ids)
     override suspend fun progress(feeRate: Long?) = wallet.progressExits(feeRate?.toULong())
@@ -103,14 +107,11 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
 }
 
 /**
- * The funding txids bark knows as boards: its pending boards', and each BOARD movement's own `chain_anchor` (bark writes the
- * movement before its checkpoint and the VTXO, as the SDK's uncertain check reads it) or its stored VTXO's anchor. Board
- * movement output IDs identify the funding transaction, never its amount.
+ * The funding txids BOARD movements name in their own `chain_anchor`, as the SDK's uncertain check reads them. bark writes the
+ * movement before its checkpoint and the VTXO, so a partial record has one even when nothing else names the board.
  */
-internal suspend fun boardFundingTxids(pending: List<String>, history: List<Movement>, anchor: suspend (String) -> String?): Set<String> =
-    pending.toSet() + history.filter { it.subsystemName == "bark.board" }.flatMap { movement ->
-        listOfNotNull(chainAnchorTxid(movement.metadataJson)) + movement.outputVtxoIds.mapNotNull { anchor(it) }
-    }
+internal fun boardMovementTxids(history: List<Movement>): Set<String> =
+    history.filter { it.subsystemName == "bark.board" }.mapNotNull { chainAnchorTxid(it.metadataJson) }.toSet()
 
 /** The txid of a movement's `chain_anchor` outpoint ("txid:vout"), exactly; null when it has none. */
 internal fun chainAnchorTxid(metadataJson: String): String? =
