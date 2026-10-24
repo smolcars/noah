@@ -351,7 +351,7 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
     record.recurring?.takeIf { record.direction == "outgoing" }?.let { recurring ->
         rows += { last -> DetailRow("Repeats", tr(recurring.interval.description), toasts = toasts, last = last) { actions.recurring(recurring.scheduleID) } }
     }
-    if (record.movementKind == "exit") rows += { last -> DetailRow("Progress", tr("Exit details"), toasts = toasts, last = last, onClick = actions.exits) }
+    if (record.movementKind == "exit") rows += { last -> DetailRow("Progress", tr("Exit details"), toasts = toasts, last = last) { actions.exits(record.exitedVtxos.orEmpty()) } }
     ActivityRules.proof(record)?.let { proof -> rows += { last -> DetailRow("Proof of payment", short(proof), ValueKind.mono, copy = proof, toasts = toasts, last = last) } }
     ActivityRules.chainTxid(record)?.let { txid ->
         val url = ActivityRules.explorerURL(record, ui.variant)

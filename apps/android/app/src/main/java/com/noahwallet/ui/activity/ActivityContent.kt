@@ -120,7 +120,7 @@ data class ActivityActions(
     val export: suspend (List<HistoryTransaction>) -> String? = { null },
     /** Opens the explorer; false when no browser can. */
     val explorer: (String) -> Boolean = { true },
-    val recurring: (String) -> Unit = {}, val exits: () -> Unit = {}, val coin: (String) -> Unit = {},
+    val recurring: (String) -> Unit = {}, val exits: (List<String>) -> Unit = {}, val coin: (String) -> Unit = {},
     /** Phones hide the tab bar while a payment is open. */
     val barHidden: (Boolean) -> Unit = {},
     /** A row has been seen (its dot faded or it was opened): Home's "new" set drops it too. */

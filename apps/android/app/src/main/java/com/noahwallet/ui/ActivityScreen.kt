@@ -100,7 +100,8 @@ internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, 
             catch (_: android.content.ActivityNotFoundException) { false }
         },
         recurring = { id -> onSettings(com.noahwallet.ui.settings.SchedulePage(id)) },
-        exits = { onSettings(SettingsDestination.Exits) },
+        // An exit's own page when the payment names its VTXO, else the list.
+        exits = { ids -> onSettings(ids.singleOrNull()?.let { com.noahwallet.ui.settings.ExitPage(it) } ?: com.noahwallet.ui.settings.ExitsPage) },
         coin = { id -> onSettings(com.noahwallet.ui.settings.VtxoPage(id)) },
         shown = { record ->
             val request = chainReads.begin(record.id, app.summary?.fingerprint)

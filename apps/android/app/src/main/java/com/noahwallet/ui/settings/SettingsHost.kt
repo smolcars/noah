@@ -156,9 +156,6 @@ private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boole
 internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: () -> Unit, myCode: () -> Unit,
                           preview: SettingsPreview? = null, hold: NavigationHold = remember { NavigationHold() }) {
     val initialSheet = preview?.sheet
-    val appColors = MaterialTheme.colorScheme
-    val appTypography = MaterialTheme.typography
-    val appShapes = MaterialTheme.shapes
     val entryScope = LocalEntryScope.current
     val entry = LocalSettingsEntry.current
     val reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion()
@@ -248,9 +245,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                         val back = if (wide && index <= 0 && !SettingsRoutes.exit(key)) null else ({ if (idle()) pop() })
                                         val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave, hold::set,
                                             { if (SettingsRoutes.top(stack, key)) replace(it) })
-                                        @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview) { content ->
-                                            MaterialTheme(appColors, appShapes, appTypography, content)
-                                        }
+                                        @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview)
                                         if (key != SettingsDestination.Settings) Page() else if (!currentlyWide) root(nav, null)
                                     }
                                 })
@@ -282,10 +277,9 @@ private class GearReveal(private val gear: Rect?, private val progress: Float, p
  */
 internal data class SettingsPreview(val sheet: String? = null, val phrase: List<String>? = null, val unifiedPush: Boolean? = null)
 
-/** Each page. [legacy] re-provides the app's own theme for today's exits list, which keeps its look until it's redrawn. */
+/** Each page. */
 @Composable
-internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav, live: SettingsLive, preview: SettingsPreview?,
-                                 legacy: @Composable (@Composable () -> Unit) -> Unit) {
+internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav, live: SettingsLive, preview: SettingsPreview?) {
     val initialSheet = preview?.sheet
     when (key) {
         SettingsDestination.Profile -> ProfilePage(model, nav)
@@ -304,10 +298,7 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         is ExitStartPage -> com.noahwallet.onchain.ExitStartPage(model, nav, key.ids)
         is ExitPage -> com.noahwallet.onchain.ExitProgressPage(model, nav, key.id)
         ExitClaimPage -> com.noahwallet.onchain.ExitClaimPage(model, nav)
-        // Today's exit screens until the list's redesign lands.
-        ExitsPage -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
-            legacy { com.noahwallet.onchain.UnilateralExitScreen(model) }
-        }
+        ExitsPage -> com.noahwallet.onchain.ExitListPage(model, nav)
         SettingsDestination.Notifications -> NotificationsPage(model, nav, live, preview?.unifiedPush ?: PlatformAccess.unifiedPush(LocalContext.current))
         SettingsDestination.UnifiedPush -> UnifiedPushPage(nav)
         SettingsDestination.Advanced -> AdvancedPage(model, nav, live, initialSheet)

@@ -54,7 +54,6 @@
   </plurals>
   <string name="gt_a52ace420f2175d0">"すべて"</string>
   <string name="gt_dafb15f7c8ae0a82">"すべて受け取り可能になる時点"</string>
-  <string name="gt_22a80351096850d8">"すべて受け取り可能になるブロック：%1$s"</string>
   <string name="gt_d9639aadea54e91a">"All exits"</string>
   <string name="gt_dbffa8bd40a8f321">"ウォレットのすべての操作が無効になっています。設定でウォレットを再開してください。"</string>
   <string name="gt_e18835ef2f6c8558">"カメラの使用を許可"</string>
@@ -132,7 +131,6 @@
   <string name="gt_7adadfe2ad44793b">"BTC価格（%1$s）"</string>
   <string name="gt_76900f1bfd16c8d4">"戻る"</string>
   <string name="gt_ad5879b1f394ff83">"ウォレットに戻りました"</string>
-  <string name="gt_34a2564efc24f085">"退出一覧に戻る"</string>
   <string name="gt_0054e707d5a94f9f">"バックアップ"</string>
   <string name="gt_02a2840b598b6b1c">"今すぐバックアップ"</string>
   <string name="gt_43a4e75cee0888df">"今すぐバックアップするか、次の変更を待ちます"</string>
@@ -177,7 +175,6 @@
   <string name="gt_97fffb31364c8804">"ブロックハッシュ"</string>
   <string name="gt_cc3bf438e0ff0a5a">"ブロック高"</string>
   <string name="gt_72e6d3aef9cf136d">"ブロック高API"</string>
-  <string name="gt_9e16c107128974b9">"ブロック高：%1$s"</string>
   <string name="gt_b69792e8c9b6b4aa">"ブロック %1$s"</string>
   <string name="gt_52d8701c498a04d0">"ブロック%1$s · %2$s"</string>
   <string name="gt_d20282998912f670">"ブロック %1$s"</string>
@@ -213,6 +210,7 @@
   <string name="gt_fd8b3a1321ddc28b">"キャンセル済み %1$s"</string>
   <string name="gt_a4957dd359a04eac">"キャンセル済み %1$s"</string>
   <string name="gt_57c46774d231a726">"キャンセル済み · ウォレットからの出金はありません"</string>
+  <string name="gt_811051f995891b6c">"Canceled · still in Ark"</string>
   <string name="gt_c8fa4348a993453a">"ウォレットのディレクトリを作成できません"</string>
   <string name="gt_12947b5f3649ac55">"エクスポートした履歴を削除できません"</string>
   <string name="gt_46d02642c5e2d009">"履歴のエクスポートを確認できません"</string>
@@ -277,6 +275,7 @@
   <string name="gt_2dfe1661c34f3e0f">"受け取りが完了したブロック"</string>
   <string name="gt_a0db5cf3b152db7a">"Claimed in"</string>
   <string name="gt_1b9a6f007e618766">"Claimed in block %1$s"</string>
+  <string name="gt_6ff55162d8a9bb5e">"Claimed · block %1$s"</string>
   <string name="gt_9928373127bf808f">"受け取り処理中"</string>
   <string name="gt_28f01c81fd62a9ec">"あなたの鍵で受け取り中"</string>
   <string name="gt_0075dff6ca828fc1">"Claiming · waiting for block %1$s"</string>
@@ -514,6 +513,7 @@
   <string name="gt_1efedf4f4378da10">"出金待機ブロック数"</string>
   <string name="gt_22b3b7a335275593">"退出の深度"</string>
   <string name="gt_37566aa4ce592457">"出金の詳細"</string>
+  <string name="gt_dd4f2a6cf22e8e94">"Exit more VTXOs"</string>
   <string name="gt_ba61a6796c9bda55">"退出処理は完了前に取り消されました。"</string>
   <string name="gt_0cb3378726d1acba">"退出処理で%1$s件のエラーが発生しました。取引がブロードキャストされたか、手数料が引き上げられた可能性があります。続行する前に退出の詳細を更新してください。"</string>
   <string name="gt_1bc751fa07b37246">"退出を開始しました。Noahはバックグラウンドで自動的に処理を進め、ブロードキャストと手数料引き上げにかかる費用をオンチェーン残高から支払います。"</string>
@@ -594,8 +594,8 @@
   <string name="gt_ff8fa5b5d54ed7db">"ウォレットのバックグラウンド処理を行う前に、初期設定を完了してください"</string>
   <string name="gt_25cc2b0e08f9d856">"QRコードを共有する前に、ライトニングアドレスの設定を完了してください。"</string>
   <string name="gt_b7657804c2b4cf70">"別のリクエストを読み取る前に、現在の支払いを完了してください。"</string>
+  <string name="gt_7804f7a79a9eee32">"Finished"</string>
   <string name="gt_5b9830f95d13338c">"最初のブロック高"</string>
-  <string name="gt_e41727ad36a36410">"開始ブロック高：%1$s"</string>
   <string name="gt_45650656cfdd8260">"初回の支払い"</string>
   <string name="gt_48f1e8beb4c38745">"飲食"</string>
   <string name="gt_305a93ebd8a6e87e">"開発者向けです。ウォレットを変更する操作もあります。"</string>
@@ -728,7 +728,6 @@
   <string name="gt_ec3b8bf1e0261664">"前回成功したバックアップ %1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"最終スキャン"</string>
   <string name="gt_4d7b2bf37878962a">"最新のブロック高"</string>
-  <string name="gt_b9249da7761d28ae">"最新のブロック高：%1$s"</string>
   <string name="gt_fc6e4a408d56be96">"閉じる"</string>
   <string name="gt_e85039a1d8fa0011">"Leaving Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"残り"</string>
@@ -854,6 +853,8 @@
   <string name="gt_ef2d0c6e9c73b8d4">"メールアドレスは未登録です"</string>
   <string name="gt_f53385a88a883116">"No exits are ready to claim."</string>
   <string name="gt_096987783ca38a4e">"開始された退出はありません。"</string>
+  <string name="gt_ffb56f3889a9177c">"No exits in progress"</string>
+  <string name="gt_e1b7dfd6dedf4d9d">"No exits in this view."</string>
   <string name="gt_f7fcff0d8feaf039">"上限なし"</string>
   <string name="gt_2c131be7e653b5b8">"ログが見つかりません。"</string>
   <string name="gt_2df01a03ff43400b">"該当なし"</string>
@@ -1301,7 +1302,6 @@
   <string name="gt_96b98008aedf83c7">"復元を開始中…"</string>
   <string name="gt_a3b50c476732c740">"状態"</string>
   <string name="gt_dd3b9c3445cd5eef">"状態の詳細"</string>
-  <string name="gt_b09f5d5388526ffb">"状態：%1$s"</string>
   <string name="gt_920e413c7d411b61">"状態"</string>
   <string name="gt_1c23c9a0a6a0b504">"状況はまだ確定していません。ウォレットの同期時にNoahが自動的に再確認します。"</string>
   <string name="gt_08b950ead9bd3efa">"状況が確定しました。処理記録を確認してください。"</string>
@@ -1520,7 +1520,6 @@
   <string name="gt_ff8b555d818f0b25">"アップデートがあります"</string>
   <string name="gt_9f725ecf91f1aaf9">"更新時刻：%1$s"</string>
   <string name="gt_22e2bada8f1c65cd">"更新情報"</string>
-  <string name="gt_b7fa2070a7d802fb">"更新：%1$s"</string>
   <string name="gt_a7a68b529b93080a">"Noahウォレットを更新中"</string>
   <string name="gt_b1a5d49f22607423">"場所の情報を更新中"</string>
   <string name="gt_77a11d005b310667">"ウォレットを更新中"</string>
@@ -1566,6 +1565,7 @@
   <string name="gt_d99bd370a6d72213">"安全な保存領域へのアクセスを待っています。端末のロックを解除して、もう一度お試しください。"</string>
   <string name="gt_706eee3cfecc480a">"Waiting for the timelock"</string>
   <string name="gt_09ff3abe56e1c1df">"バックアップを待っています"</string>
+  <string name="gt_38b84da1d4c099eb">"Waiting · %1$s blocks · about %2$s"</string>
   <string name="gt_a9fecbd4968622c1">"起動スケジュールはまだ同期されていません。Noahを開くと再試行します。"</string>
   <string name="gt_d1c9a01d57e90086">"ウォレット"</string>
   <string name="gt_b7998d3f39a7633a">"ウォレットの利用が停止されています"</string>
@@ -1651,6 +1651,7 @@
   <string name="gt_a97b0931730e83fb">"round"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"satsずつ"</string>
+  <string name="gt_a4d26868017c0ccf">"shared"</string>
   <string name="gt_688897c430ce4d33">"%1$s へ"</string>
   <string name="gt_43cfd880a046a5da">"%1$s へ"</string>
   <string name="gt_4e45ea730a8e0eba">"1時間以内"</string>
@@ -1688,7 +1689,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s。ほかのバックアップは残ります。"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · 次回 %2$s"</string>
-  <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
@@ -1714,6 +1714,7 @@
     <item quantity="one">"%1$s日"</item>
     <item quantity="other">"%1$s日"</item>
   </plurals>
+  <string name="gt_8338b13e065297c7">"%1$s exits from one round: %2$s transactions, not %3$s. Shared ones are sent and paid once."</string>
   <string name="gt_068deca46a360c34">"%1$s時間"</string>
   <plurals name="gt_e2f49aad27ca4b0f">
     <item quantity="one">"%1$s時間"</item>
@@ -1735,6 +1736,7 @@
     <item quantity="one">"%1$s件の支払いをCSVファイルで書き出します。"</item>
     <item quantity="other">"%1$s件の支払いをCSVファイルで書き出します。"</item>
   </plurals>
+  <string name="gt_8d28334022517918">"%1$s ready to claim"</string>
   <string name="gt_996a4adc403eb54c">"%1$s秒"</string>
   <plurals name="gt_618ceaf828dd8956">
     <item quantity="one">"%1$s transaction"</item>
@@ -1749,6 +1751,7 @@
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, raised when rates rise"</string>
+  <string name="gt_6267c8c9b8dd0055">"%1$s · shared"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"当時%1$s"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>

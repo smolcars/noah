@@ -52,7 +52,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false, foot: (@Composable RowScope.() -> Unit)? = null,
                        scroll: ScrollState = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {}, footFade: Float = .46f,
-                       pictureLeads: Boolean = false,
+                       pictureLeads: Boolean = false, chip: (@Composable () -> Unit)? = null,
                        leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
@@ -65,23 +65,28 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
             }.testTag("exit-leading").padding(start = 24.dp, end = 24.dp, top = 56.dp, bottom = if (split) 24.dp else 8.dp)
                 .then(if (split && !pictureLeads) Modifier.verticalScroll(rememberScrollState()) else Modifier),
                 verticalArrangement = if (split && !pictureLeads) Arrangement.Center else Arrangement.Top) {
-                if (!hero) Text(title, Modifier.semantics { heading() }, style = ActivityType.large.copy(fontSize = if (split) 36.sp else 30.sp,
-                    lineHeight = if (split) 42.sp else 36.sp), color = palette.foreground)
+                if (!hero) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(title, Modifier.semantics { heading() }, style = ActivityType.large.copy(fontSize = if (split) 36.sp else 30.sp,
+                        lineHeight = if (split) 42.sp else 36.sp), color = palette.foreground)
+                    chip?.invoke()
+                }
                 leading()
             }
-            back?.let { Box(Modifier.padding(start = 4.dp).height(56.dp), contentAlignment = Alignment.Center) {
-                BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() }
-            } }
+            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                back?.let { BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() } }
+                Spacer(Modifier.weight(1f))
+                actions()
+            }
             Box(when (pose) {
                 is OnboardingPose.Wide -> Modifier.padding(start = pose.end)
                 else -> Modifier.padding(top = (pose as OnboardingPose.Tabletop).bottom)
             }.fillMaxSize().testTag("exit-trailing")) {
                 CompositionLocalProvider(LocalSettingsPane provides SettingsPane.trailing) {
-                    SettingsFrame(title, null, hero = true, foot = foot, scroll = scroll, actions = actions, footFade = footFade, content = trailing)
+                    SettingsFrame(title, null, hero = true, foot = foot, scroll = scroll, footFade = footFade, content = trailing)
                 }
             }
         }
-        else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade) { leading(); trailing() }
+        else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade, chip = chip) { leading(); trailing() }
     }
 }
 

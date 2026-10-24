@@ -439,17 +439,6 @@ private fun LifetimeBar(vtxo: VtxoModel, lifetime: Long, number: java.text.Numbe
     }
 }
 
-@Composable
-internal fun <T> FilterMenu(selected: T, values: List<T>, label: (T) -> String, change: (T) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        TextButton({ open = true }) { Text(tr("Filter") + ": " + tr(label(selected))) }
-        DropdownMenu(open, onDismissRequest = { open = false }) {
-            values.forEach { value -> DropdownMenuItem(text = { Text(tr(label(value))) }, onClick = { change(value); open = false }) }
-        }
-    }
-}
-
 /**
  * Home's Renew: takes the request once and opens today's refresh review for those VTXOs that are still due ([due]:
  * expiring, spendable, not expired); the user still confirms, and submitting checks again, under the wallet's

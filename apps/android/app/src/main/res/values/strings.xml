@@ -54,7 +54,6 @@
   </plurals>
   <string name="gt_a52ace420f2175d0">"All"</string>
   <string name="gt_dafb15f7c8ae0a82">"All claimable at"</string>
-  <string name="gt_22a80351096850d8">"All claimable at: Block %1$s"</string>
   <string name="gt_d9639aadea54e91a">"All exits"</string>
   <string name="gt_dbffa8bd40a8f321">"All wallet operations are disabled. Resume your wallet in Settings."</string>
   <string name="gt_e18835ef2f6c8558">"Allow camera"</string>
@@ -132,7 +131,6 @@
   <string name="gt_7adadfe2ad44793b">"BTC Price (%1$s)"</string>
   <string name="gt_76900f1bfd16c8d4">"Back"</string>
   <string name="gt_ad5879b1f394ff83">"Back in your wallet"</string>
-  <string name="gt_34a2564efc24f085">"Back to exits"</string>
   <string name="gt_0054e707d5a94f9f">"Back up"</string>
   <string name="gt_02a2840b598b6b1c">"Back up now"</string>
   <string name="gt_43a4e75cee0888df">"Back up now or wait for the next change"</string>
@@ -177,7 +175,6 @@
   <string name="gt_97fffb31364c8804">"Block hash"</string>
   <string name="gt_cc3bf438e0ff0a5a">"Block height"</string>
   <string name="gt_72e6d3aef9cf136d">"Block height API"</string>
-  <string name="gt_9e16c107128974b9">"Block height: %1$s"</string>
   <string name="gt_b69792e8c9b6b4aa">"Block %1$s"</string>
   <string name="gt_52d8701c498a04d0">"Block %1$s · %2$s"</string>
   <string name="gt_d20282998912f670">"Block %1$s"</string>
@@ -213,6 +210,7 @@
   <string name="gt_fd8b3a1321ddc28b">"Canceled %1$s"</string>
   <string name="gt_a4957dd359a04eac">"Canceled %1$s"</string>
   <string name="gt_57c46774d231a726">"Canceled · nothing left your wallet"</string>
+  <string name="gt_811051f995891b6c">"Canceled · still in Ark"</string>
   <string name="gt_c8fa4348a993453a">"Cannot create wallet directory"</string>
   <string name="gt_12947b5f3649ac55">"Cannot delete history export"</string>
   <string name="gt_46d02642c5e2d009">"Cannot inspect history exports"</string>
@@ -277,6 +275,7 @@
   <string name="gt_2dfe1661c34f3e0f">"Claimed block"</string>
   <string name="gt_a0db5cf3b152db7a">"Claimed in"</string>
   <string name="gt_1b9a6f007e618766">"Claimed in block %1$s"</string>
+  <string name="gt_6ff55162d8a9bb5e">"Claimed · block %1$s"</string>
   <string name="gt_9928373127bf808f">"Claiming"</string>
   <string name="gt_28f01c81fd62a9ec">"Claiming with your key"</string>
   <string name="gt_0075dff6ca828fc1">"Claiming · waiting for block %1$s"</string>
@@ -514,6 +513,7 @@
   <string name="gt_1efedf4f4378da10">"Exit delta"</string>
   <string name="gt_22b3b7a335275593">"Exit depth"</string>
   <string name="gt_37566aa4ce592457">"Exit details"</string>
+  <string name="gt_dd4f2a6cf22e8e94">"Exit more VTXOs"</string>
   <string name="gt_ba61a6796c9bda55">"Exit processing was canceled before completion."</string>
   <string name="gt_0cb3378726d1acba">"Exit progression returned %1$s errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing."</string>
   <string name="gt_1bc751fa07b37246">"Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."</string>
@@ -594,8 +594,8 @@
   <string name="gt_ff8fa5b5d54ed7db">"Finish onboarding before background wallet work"</string>
   <string name="gt_25cc2b0e08f9d856">"Finish setting up your Lightning address before sharing your QR."</string>
   <string name="gt_b7657804c2b4cf70">"Finish the current payment before scanning another request."</string>
+  <string name="gt_7804f7a79a9eee32">"Finished"</string>
   <string name="gt_5b9830f95d13338c">"First height"</string>
-  <string name="gt_e41727ad36a36410">"First height: %1$s"</string>
   <string name="gt_45650656cfdd8260">"First payment"</string>
   <string name="gt_48f1e8beb4c38745">"Food &amp; drink"</string>
   <string name="gt_305a93ebd8a6e87e">"For developers. Some actions change your wallet."</string>
@@ -728,7 +728,6 @@
   <string name="gt_ec3b8bf1e0261664">"Last good backup %1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"Last scanned"</string>
   <string name="gt_4d7b2bf37878962a">"Latest height"</string>
-  <string name="gt_b9249da7761d28ae">"Latest height: %1$s"</string>
   <string name="gt_fc6e4a408d56be96">"Leave"</string>
   <string name="gt_e85039a1d8fa0011">"Leaving Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
@@ -854,6 +853,8 @@
   <string name="gt_ef2d0c6e9c73b8d4">"No email yet"</string>
   <string name="gt_f53385a88a883116">"No exits are ready to claim."</string>
   <string name="gt_096987783ca38a4e">"No exits have been started."</string>
+  <string name="gt_ffb56f3889a9177c">"No exits in progress"</string>
+  <string name="gt_e1b7dfd6dedf4d9d">"No exits in this view."</string>
   <string name="gt_f7fcff0d8feaf039">"No limit"</string>
   <string name="gt_2c131be7e653b5b8">"No logs found."</string>
   <string name="gt_2df01a03ff43400b">"No matches"</string>
@@ -1301,7 +1302,6 @@
   <string name="gt_96b98008aedf83c7">"Starting restore..."</string>
   <string name="gt_a3b50c476732c740">"State"</string>
   <string name="gt_dd3b9c3445cd5eef">"State detail"</string>
-  <string name="gt_b09f5d5388526ffb">"State: %1$s"</string>
   <string name="gt_920e413c7d411b61">"Status"</string>
   <string name="gt_1c23c9a0a6a0b504">"Status remains uncertain. Noah checks again automatically as your wallet syncs."</string>
   <string name="gt_08b950ead9bd3efa">"Status resolved. Review the receipt."</string>
@@ -1520,7 +1520,6 @@
   <string name="gt_ff8b555d818f0b25">"Update available"</string>
   <string name="gt_9f725ecf91f1aaf9">"Updated at %1$s"</string>
   <string name="gt_22e2bada8f1c65cd">"Updates"</string>
-  <string name="gt_b7fa2070a7d802fb">"Updates: %1$s"</string>
   <string name="gt_a7a68b529b93080a">"Updating Noah wallet"</string>
   <string name="gt_b1a5d49f22607423">"Updating places"</string>
   <string name="gt_77a11d005b310667">"Updating wallet"</string>
@@ -1566,6 +1565,7 @@
   <string name="gt_d99bd370a6d72213">"Waiting for secure storage. Unlock your device and try again."</string>
   <string name="gt_706eee3cfecc480a">"Waiting for the timelock"</string>
   <string name="gt_09ff3abe56e1c1df">"Waiting to back up"</string>
+  <string name="gt_38b84da1d4c099eb">"Waiting · %1$s blocks · about %2$s"</string>
   <string name="gt_a9fecbd4968622c1">"Wake-up schedule hasn\'t synced yet. Noah will retry when opened."</string>
   <string name="gt_d1c9a01d57e90086">"Wallet"</string>
   <string name="gt_b7998d3f39a7633a">"Wallet Suspended"</string>
@@ -1651,6 +1651,7 @@
   <string name="gt_a97b0931730e83fb">"round"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats each time"</string>
+  <string name="gt_a4d26868017c0ccf">"shared"</string>
   <string name="gt_688897c430ce4d33">"to %1$s"</string>
   <string name="gt_43cfd880a046a5da">"to %1$s"</string>
   <string name="gt_4e45ea730a8e0eba">"under an hour"</string>
@@ -1688,7 +1689,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Your other backups stay."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s at %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · next %2$s"</string>
-  <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
@@ -1714,6 +1714,7 @@
     <item quantity="one">"%1$s day"</item>
     <item quantity="other">"%1$s days"</item>
   </plurals>
+  <string name="gt_8338b13e065297c7">"%1$s exits from one round: %2$s transactions, not %3$s. Shared ones are sent and paid once."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>
   <plurals name="gt_e2f49aad27ca4b0f">
     <item quantity="one">"%1$s hour"</item>
@@ -1735,6 +1736,7 @@
     <item quantity="one">"%1$s payment as a CSV file."</item>
     <item quantity="other">"%1$s payments as a CSV file."</item>
   </plurals>
+  <string name="gt_8d28334022517918">"%1$s ready to claim"</string>
   <string name="gt_996a4adc403eb54c">"%1$s seconds"</string>
   <plurals name="gt_618ceaf828dd8956">
     <item quantity="one">"%1$s transaction"</item>
@@ -1749,6 +1751,7 @@
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, raised when rates rise"</string>
+  <string name="gt_6267c8c9b8dd0055">"%1$s · shared"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
   <string name="gt_fec76a562b406e84">"%1$s at the time"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
