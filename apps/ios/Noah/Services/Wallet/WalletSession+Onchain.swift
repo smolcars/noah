@@ -700,6 +700,7 @@ extension WalletSession {
                         vtxoId: id, includeHistory: true, includeTransactions: false) else { return nil }
                     return Self.exitState(status.state).0
                 }, transactionStatus: { .init(try await handles.wallet.transactionStatus(txid: $0)) },
+                vtxoAnchors: { Set(try await handles.wallet.allVtxos().map(\.anchorPoint.txid)) },
                 unspent: {
                     Set(try await handles.onchain.utxos().compactMap {
                         if case let .local(point, _, _) = $0 { "\(point.txid):\(point.vout)" } else { nil }
@@ -715,6 +716,8 @@ extension WalletSession {
         var vtxoState: @Sendable (String) async throws -> String
         var exitState: @Sendable (String) async throws -> String?
         var transactionStatus: @Sendable (String) async throws -> ChainTransactionStatus? = { _ in nil }
+        /// The funding txids stored VTXOs are anchored to, spent ones included: a board's VTXO proves the board.
+        var vtxoAnchors: @Sendable () async throws -> Set<String> = { [] }
         /// The wallet's unspent outpoints ("txid:vout").
         var unspent: @Sendable () async throws -> Set<String> = { [] }
     }
@@ -726,6 +729,8 @@ extension WalletSession {
             attempt.quote.walletID == reads.walletID else { throw OnchainFailure.changed }
         var evidence = OnchainOperationJournal.Evidence(walletID: reads.walletID)
         evidence.transactionIDs = try await reads.transactionIDs()
+        // A stored board VTXO outlives its checkpoint and BDK transaction.
+        if attempt.quote.action == .board { evidence.transactionIDs.formUnion(try await reads.vtxoAnchors()) }
         for id in attempt.quote.ids {
             if attempt.quote.action == .refresh { evidence.vtxoStates[id] = try await reads.vtxoState(id) }
             evidence.exitStates[id] = try await reads.exitState(id)

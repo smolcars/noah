@@ -582,11 +582,11 @@ struct BoardPreparedTests {
         return (journal, file, attempt.id)
     }
 
-    func check(_ journal: OnchainOperationJournal, _ id: UUID, ids: Set<String> = [], chain: @escaping @Sendable () throws -> ChainTransactionStatus? = { .notFound },
+    func check(_ journal: OnchainOperationJournal, _ id: UUID, ids: Set<String> = [], vtxoAnchors: Set<String> = [], chain: @escaping @Sendable () throws -> ChainTransactionStatus? = { .notFound },
                unspent: @escaping @Sendable () throws -> Set<String> = { ["funding:0", "other:1"] }) async throws -> Bool {
         try await WalletSession.checkOnchainAttempt(id, journal: journal, reads: .init(
             walletID: "wallet", transactionIDs: { ids }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
-            transactionStatus: { _ in try chain() }, unspent: { try unspent() }))
+            transactionStatus: { _ in try chain() }, vtxoAnchors: { vtxoAnchors }, unspent: { try unspent() }))
     }
 
     /// Nothing boarded: no pending board or wallet transaction names the txid, the chain source says it isn't
@@ -628,6 +628,19 @@ struct BoardPreparedTests {
         #expect(saved.receipt?.broadcastRetryPending == true && saved.blocks(.board, ids: []))
         await #expect(throws: OnchainFailure.uncertain) { try await journal.acknowledge(id) }
         #expect(try await journal.loadAll().count == 1)
+    }
+    /// A stored board VTXO anchored to the funding txid, after its checkpoint and BDK transaction have gone
+    /// (no pending board, no wallet transaction, chain not found, inputs unspent): boarded, never released.
+    @Test func uncertainBoardWithOnlyAStoredBoardVtxoIsBoarded() async throws {
+        let (journal, file, id) = try uncertainJournal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        #expect(try await check(journal, id, vtxoAnchors: ["exact", "round"]))
+        let saved = try #require(try await journal.load())
+        #expect(saved.receipt?.txid == "exact" && saved.receipt?.broadcastRetryPending == true && saved.blocks(.board, ids: []))
+        await #expect(throws: OnchainFailure.uncertain) { try await journal.acknowledge(id) }
+        // Checking again never releases it.
+        _ = try await check(journal, id)
+        #expect(try await journal.loadAll().map(\.id) == [id])
     }
     /// `notAttempted` still means nothing was recorded: the lock is released and a new review submits.
     @Test func notAttemptedOutcomeAllowsAFreshBoard() async throws {
