@@ -235,7 +235,7 @@ class OnchainOperationsTest {
         val estimatedIds = mutableListOf<String>()
         override suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate {
             estimates++; estimatedIds += ids; estimateError?.let { throw it }
-            return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u)
+            return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u, emptyList())
         }
         override suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = bound.remove(quote.preparedBoard?.id) == quote
         override suspend fun vtxos() = items

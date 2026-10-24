@@ -69,7 +69,7 @@ class ExitSubmitDeviceTest {
         override suspend fun allExits() = listOfNotNull(status(id))
         override suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate {
             estimating = true; try { estimateGate?.await() } finally { estimating = false }
-            return EmergencyExitFeeEstimate(5_533u, 262u, 5_795u, 3u, 4u)
+            return EmergencyExitFeeEstimate(5_533u, 262u, 5_795u, 3u, 4u, emptyList())
         }
         override suspend fun destinationIsMine(address: String) = false
         override suspend fun start(ids: List<String>) {
