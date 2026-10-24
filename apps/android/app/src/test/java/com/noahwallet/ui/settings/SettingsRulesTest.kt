@@ -93,6 +93,13 @@ class SettingsRulesTest {
         assertEquals(listOf(settings, SettingsDestination.Recurring, EditorPage(null)), SettingsRoutes.chain(EditorPage(null)))
     }
 
+    @Test fun aFinishingSaveLeavesOnlyItsOwnPage() {
+        assertTrue(SettingsRoutes.top(SettingsRoutes.chain(SettingsDestination.Lightning), SettingsDestination.Lightning))
+        // A recurring notification replaced Settings' stack while the save ran: its completion leaves that page alone.
+        assertFalse(SettingsRoutes.top(SettingsRoutes.chain(SettingsDestination.Recurring), SettingsDestination.Lightning))
+        assertFalse(SettingsRoutes.top(SettingsRoutes.chain(SettingsDestination.Email), SettingsDestination.Profile))
+    }
+
     @Test fun phraseCopyIsMarkedSensitiveAndClearsAfterTwoMinutes() {
         val clip = PhraseClip.clip("noah-recovery-test", "sample phrase only")
         assertTrue(clip.description.extras.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE))

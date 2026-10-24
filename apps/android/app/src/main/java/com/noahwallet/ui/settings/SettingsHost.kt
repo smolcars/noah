@@ -159,11 +159,17 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
             val wide = pose !is OnboardingPose.Compact
             val pages: List<NavKey> = if (wide) stack.drop(1).ifEmpty { listOf(SettingsDestination.Profile) } else stack.toList()
             fun pop() { if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
+            // While a save runs (busy), you can't move away from its page: Back, the bar's back, list picks and links
+            // wait. Its completion leaves only its own page, so it can't dismiss another one.
+            val idle = { !model.busy }
             fun open(page: NavKey, fromList: Boolean) {
+                if (!idle()) return
                 // In a split window the list replaces the page beside it; inside a page, pages stack.
                 if (fromList && wide) while (stack.size > 1) stack.removeAt(stack.lastIndex)
                 if (stack.lastOrNull() != page) stack.add(page)
             }
+            val leave = { if (idle()) close() }
+            val code = { if (idle()) myCode() }
             val density = androidx.compose.ui.platform.LocalDensity.current
             CompositionLocalProvider(LocalSettingsToasts provides toasts) {
                 Box(Modifier.fillMaxSize()) {
@@ -174,7 +180,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                     }.testTag("settings-list-pane")) {
                         CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading) {
                             holder.SaveableStateProvider(SettingsDestination.Settings.toString()) {
-                                SettingsRoot(model, live, SettingsNav(close, { open(it, true) }, close, myCode, close),
+                                SettingsRoot(model, live, SettingsNav(leave, { open(it, true) }, leave, code, leave),
                                     selected = pages.firstOrNull(), initialSheet = initialSheet)
                             }
                         }
@@ -185,7 +191,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         else -> Modifier.fillMaxSize()
                     }.testTag("settings-page-pane")) {
                         CompositionLocalProvider(LocalSettingsPane provides if (wide) SettingsPane.trailing else SettingsPane.compact) {
-                            NavDisplay(pages, onBack = { pop() },
+                            NavDisplay(pages, onBack = { if (idle()) pop() },
                                 entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
                                 transitionSpec = { pageTransition(true, reduceMotion, wide, density) },
                                 popTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
@@ -193,8 +199,8 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                 entryProvider = { key ->
                                     NavEntry(key) {
                                         val index = pages.indexOf(key)
-                                        val back = if (wide && index <= 0) null else ({ pop() })
-                                        val nav = SettingsNav(back, { open(it, false) }, { pop() }, myCode, close)
+                                        val back = if (wide && index <= 0) null else ({ if (idle()) pop() })
+                                        val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave)
                                         SettingsPageContent(model, key, nav, live, preview) { content ->
                                             MaterialTheme(appColors, appShapes, appTypography, content)
                                         }
@@ -203,6 +209,10 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         }
                     }
                 }
+                // With one page NavDisplay passes Back on to Home (which would close Settings): that waits for a running save too.
+                androidx.navigationevent.compose.NavigationBackHandler(
+                    androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
+                    isBackEnabled = model.busy, onBackCompleted = {})
             }
         }
     }

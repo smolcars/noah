@@ -177,6 +177,43 @@ class SettingsDeviceTest {
         compose.onNode(hasText("After 3,000,000,001 payments") and !hasTestTag("ends")).assertExists()
     }
 
+    @Test fun navigationWaitsForARunningSave() {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        host(SettingsDestination.Lightning)
+        val page = SettingsRoutes.chain(SettingsDestination.Lightning)
+        val before = closed
+        try {
+            // A save in flight: the model is busy until it ends.
+            compose.runOnUiThread { model.action("Couldn't save.") { gate.await() } }
+            compose.waitUntil(5_000) { model.busy }
+            for (predictive in listOf(false, true)) {
+                back(predictive); compose.waitForIdle()
+                assertEquals("Back (predictive=$predictive)", page, stack.toList())
+                compose.onNodeWithTag("lightning-npub-input").assertIsDisplayed()
+            }
+            compose.onNode(hasTestTag("settings-back") and hasAnyAncestor(hasTestTag("settings-page-pane"))).performClick()
+            compose.waitForIdle()
+            assertEquals("the bar's back", page, stack.toList())
+            assertEquals("Settings stays open", before, closed)
+            // In a split, picking another page from the list waits too.
+            pose(book)
+            compose.onNodeWithTag("settings-backup").performScrollTo().performClick()
+            compose.waitForIdle()
+            assertEquals("a list pick", page, stack.toList())
+            pose(null)
+            // On the list, Back would close Settings: that waits too.
+            host(SettingsDestination.Settings)
+            back(false)
+            compose.waitForIdle()
+            assertEquals("Settings stays open", before, closed)
+        } finally { compose.runOnUiThread { gate.complete(Unit) } }
+        compose.waitUntil(5_000) { !model.busy }
+        host(SettingsDestination.Lightning)
+        back(false)
+        compose.waitForIdle()
+        assertEquals("once it ends, Back works", page.dropLast(1), stack.toList())
+    }
+
     @Test fun suspendWalletAsksFirst() {
         assumeNotSuspended()
         host(SettingsDestination.Advanced)

@@ -36,6 +36,9 @@ internal object SettingsRoutes {
         else -> null
     }
 
+    /** Whether [page] is the one on top, so a finishing save leaves only its own page. */
+    fun top(stack: List<NavKey>, page: NavKey) = stack.lastOrNull() == page
+
     /** What a deep link puts on Settings' stack: the list, every page above it, then [page]. */
     fun chain(page: NavKey): List<NavKey> = generateSequence(page, ::parent).toList().reversed()
 
