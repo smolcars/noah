@@ -409,16 +409,18 @@ struct ActivityCoinReadTests {
                                          blockTime: { _ in nil }, price: { _, _ in nil }, coin: coin))
     }
 
-    @Test func anyLookupFailureIsUnknown() async {
+    @Test func aFailedReadIsToldApartFromAMissingCoinAndCanBeRetried() async {
         let read = ActivityCoinRead()
         await read.load("c:0", history: Self.history { _ in Self.coin })
         #expect(read.state == .coin(Self.coin))
-        // Whatever bark says (a missing coin or anything else), it's unknown; never decided from its text.
-        struct Missing: Error {}
-        await read.load("c:0", history: Self.history { _ in throw Missing() })
-        #expect(read.state == .unknown)
+        // A read that throws failed (pull to refresh tries again); nil is a coin the wallet doesn't have.
+        struct Offline: Error {}
+        await read.load("c:0", history: Self.history { _ in throw Offline() })
+        #expect(read.state == .failed)
         await read.load("c:0", history: Self.history { _ in nil })
-        #expect(read.state == .unknown)
+        #expect(read.state == .missing)
+        await read.load("c:0", history: Self.history { _ in Self.coin })
+        #expect(read.state == .coin(Self.coin), "a retry after a failure loads it")
     }
 
     /// Overlapping lookups (pull to refresh while a history read's lookup is out): the newer one's result
@@ -528,5 +530,21 @@ struct ActivityBoardFeeTests {
         #expect(ActivityDetail(board, ownDomain: "noahwallet.io").fee == .split(ark: 500, network: 300))
         board.offchainFeeSat = 0
         #expect(ActivityDetail(board, ownDomain: "noahwallet.io").fee == .network(300))
+    }
+}
+
+/// A coin read by ID, settled without bark's error text.
+struct VtxoLookupTests {
+    @Test func aFailedByIDReadIsSettledByTheFullListNeverByErrorText() async throws {
+        struct Failed: Error {}
+        let spent = try await WalletSession.lookUp("b", byID: { _ in throw Failed() }, all: { ["a", "b"] }, id: { $0 })
+        #expect(spent == "b")
+        let missing = try await WalletSession.lookUp("z", byID: { _ in throw Failed() }, all: { ["a", "b"] }, id: { $0 })
+        #expect(missing == nil)
+        await #expect(throws: Failed.self) {
+            _ = try await WalletSession.lookUp("z", byID: { _ in throw Failed() }, all: { throw Failed() }, id: { $0 })
+        }
+        let direct = try await WalletSession.lookUp("a", byID: { $0 }, all: { throw Failed() }, id: { $0 })
+        #expect(direct == "a")
     }
 }

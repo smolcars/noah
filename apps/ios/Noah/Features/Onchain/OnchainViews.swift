@@ -213,6 +213,8 @@ struct OnchainScreen: ViewModifier {
     let model: OnchainModel
     /// Settings' pages present their own review (Renew, Move to Ark) in a pane-aware sheet.
     var presentsReview = true
+    /// More to reload when pulled (a VTXO read by ID).
+    var refresh: (() async -> Void)?
     func body(content: Content) -> some View {
         content
             .disabled(app.isWalletSuspended)
@@ -226,6 +228,7 @@ struct OnchainScreen: ViewModifier {
             .refreshable {
                 model.invalidate()
                 await model.load()
+                await refresh?()
             }
             .onChange(of: phase) { _, _ in model.invalidate() }
             .onChange(of: app.isWalletSuspended) { _, suspended in

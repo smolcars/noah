@@ -24,11 +24,24 @@ extension WalletSession {
         }
     }
 
-    /// One coin by ID, spent ones included (Activity's coin links).
-    func vtxo(_ id: String) async throws -> VtxoModel {
+    /// One coin by ID, spent ones included (Activity's coin links): nil when the wallet has no such
+    /// coin, a throw when it couldn't be read. A tip that can't be read leaves it at 0.
+    func vtxo(_ id: String) async throws -> VtxoModel? {
         try await withOpenWallet { handles in
-            Self.vtxoModel(try await handles.wallet.getVtxoById(vtxoId: id), tip: try await handles.onchain.tipHeight(), expiring: [])
+            let tip = (try? await handles.onchain.tipHeight()) ?? 0
+            return try await Self.lookUp(id, byID: { try await handles.wallet.getVtxoById(vtxoId: $0) },
+                                         all: { try await handles.wallet.allVtxos() }, id: \.id)
+                .map { Self.vtxoModel($0, tip: tip, expiring: []) }
         }
+    }
+
+    /// bark-bolt-ffi has no typed "not found" and its error text is never matched: a failed by-ID read
+    /// is settled by the full list (spent coins included). Absent there, the record is missing; if the
+    /// list can't be read either, the lookup failed.
+    static func lookUp<Record>(_ id: String, byID: (String) async throws -> Record, all: () async throws -> [Record],
+                               id identify: (Record) -> String) async throws -> Record? {
+        if let record = try? await byID(id) { return record }
+        return try await all().first { identify($0) == id }
     }
 
     func exitDetail(_ id: String) async throws -> ExitModel? {

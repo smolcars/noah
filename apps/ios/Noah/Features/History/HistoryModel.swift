@@ -95,7 +95,12 @@ final class HistoryModel {
         return price
     }
 
-    func coin(_ id: String) async -> VtxoModel? { (try? await dependencies.coin(id)) ?? nil }
+    enum CoinLookup: Equatable { case found(VtxoModel), missing, failed }
+
+    /// A coin by ID, told apart from one the wallet doesn't have and from a read that failed.
+    func coin(_ id: String) async -> CoinLookup {
+        do { return try await dependencies.coin(id).map(CoinLookup.found) ?? .missing } catch { return .failed }
+    }
 
     /// One read of the chain tip and, when there's a txid, its status (Send's block row data).
     func chainState(txid: String?) async -> (tip: UInt32?, status: ChainTransactionStatus?) {

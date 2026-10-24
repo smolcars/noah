@@ -417,8 +417,18 @@ struct VtxoDetailView: View {
                     }
                 }
             }
-            if current == nil && !model.loading && read.state != .loading {
-                SettingsFine(text: L10n.text("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status.", locale: language))
+            if vtxo == nil {
+                // The ID stays, whatever the read says.
+                SettingsDetailRow(label: L10n.text("VTXO ID", locale: language), value: id, mono: true, copy: id, hairline: false)
+                    .padding(.top, 6)
+            }
+            if current == nil && !model.loading {
+                switch read.state {
+                case .failed: SettingsFine(text: L10n.text("Couldn't read wallet status. Pull to refresh.", locale: language), failure: true)
+                case .missing, .coin:
+                    SettingsFine(text: L10n.text("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status.", locale: language))
+                case .loading: ProgressView().frame(maxWidth: .infinity).padding(.top, 18)
+                }
             }
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         }
@@ -435,7 +445,7 @@ struct VtxoDetailView: View {
             }
         }
         .onboardingHaptics(haptics)
-        .modifier(OnchainScreen(model: model, presentsReview: false))
+        .modifier(OnchainScreen(model: model, presentsReview: false, refresh: { if let history { await read.load(id, history: history) } }))
         .settingsSheet(item: Binding(get: { model.quote }, set: { if $0 == nil { model.invalidate() } })) { quote in
             RenewReviewSheet(quote: quote, cancel: { model.invalidate() }) {
                 Task {

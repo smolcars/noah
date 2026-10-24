@@ -601,21 +601,25 @@ struct DetailLine: View {
     }
 }
 
-/// One coin, read by ID. bark-bolt-ffi 0.6.0 has no typed "not found", so any failed lookup is unknown (never
-/// matched on bark's error text). Pull to refresh and each history read start lookups that can overlap: only
-/// the newest one publishes, and a cancelled one writes nothing.
+/// One coin, read by ID: found, missing from the wallet, or a read that failed (try again). Pull to
+/// refresh and each history read start lookups that can overlap: only the newest one publishes, and a
+/// cancelled one writes nothing.
 @MainActor @Observable
 final class ActivityCoinRead {
-    enum State: Equatable { case loading, coin(VtxoModel), unknown }
+    enum State: Equatable { case loading, coin(VtxoModel), missing, failed }
     private(set) var state = State.loading
     private var generation = 0
 
     func load(_ id: String, history: HistoryModel) async {
         generation += 1
         let request = generation
-        let coin = await history.coin(id)
+        let lookup = await history.coin(id)
         guard !Task.isCancelled, request == generation else { return }
-        state = coin.map(State.coin) ?? .unknown
+        switch lookup {
+        case .found(let coin): state = .coin(coin)
+        case .missing: state = .missing
+        case .failed: state = .failed
+        }
     }
 }
 
