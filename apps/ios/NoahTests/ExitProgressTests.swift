@@ -590,70 +590,83 @@ struct ExitClaimAutoBoardTests {
 
     actor Board {
         let balance: UInt64
-        /// The coins bark's coin selection picks for the sized board.
-        let inputs: [String]
-        /// Above this amount, coin selection picks the claimed coin too.
-        let claimedAbove: UInt64?
+        /// The claimed coin's value; coin selection leaves it out when it's excluded.
+        let claimed: UInt64
+        /// A coin selection that spends the claimed coin anyway.
+        let ignoresExclusions: Bool
         var amounts: [UInt64] = []
+        var exclusions: [Set<String>] = []
         var discarded: [UUID] = []
-        init(balance: UInt64, inputs: [String] = ["deposit:0"], claimedAbove: UInt64? = nil) {
-            self.balance = balance; self.inputs = inputs; self.claimedAbove = claimedAbove
+        init(balance: UInt64, claimed: UInt64 = 0, ignoresExclusions: Bool = false) {
+            self.balance = balance; self.claimed = claimed; self.ignoresExclusions = ignoresExclusions
         }
-        func prepare(_ amount: UInt64) -> OnchainQuote {
+        func prepare(_ amount: UInt64, excluding: Set<String> = []) throws -> OnchainQuote {
             amounts.append(amount)
-            let inputs = amount > 0 && claimedAbove.map { amount > $0 } == true ? self.inputs + [ExitClaimAutoBoardTests.claim] : self.inputs
+            exclusions.append(excluding)
+            let spendsClaim = claimed > 0 && (ignoresExclusions || !excluding.contains(ExitClaimAutoBoardTests.claim))
+            // bark drains only what isn't excluded; with nothing else it's the usual InsufficientFunds.
+            guard amount > 0 || balance - (spendsClaim ? 0 : claimed) > 150 else {
+                throw BarkError(message: "insufficient", code: .insufficientFunds)
+            }
             var quote = BoardPreparedTests.quote
             quote.id = UUID(); quote.automatic = true; quote.confirmed = balance
-            quote.amount = amount == 0 ? balance - 150 : amount
+            quote.amount = amount == 0 ? balance - (spendsClaim ? 0 : claimed) - 150 : amount
             quote.chainFee = 150; quote.fee = 330; quote.feeRate = 1
             quote.prepared = .init(PreparedBoard(id: quote.id.uuidString, txid: "board", grossSats: quote.amount, netSats: quote.net,
-                arkFeeSats: 330, onchainFeeSats: 150, vsize: 150, inputs: inputs.map {
+                arkFeeSats: 330, onchainFeeSats: 150, vsize: 150, inputs: (spendsClaim ? ["deposit:0", ExitClaimAutoBoardTests.claim] : ["deposit:0"]).map {
                     .init(txid: String($0.prefix { $0 != ":" }), vout: UInt32($0.split(separator: ":")[1])!) }))
             return quote
         }
         func discard(_ quote: OnchainQuote) { discarded.append(quote.id) }
         func review(held: UInt64, claimed: Set<String> = [ExitClaimAutoBoardTests.claim]) async throws -> OnchainQuote? {
             try await WalletSession.reserveBoardReview(minimum: 20_000, feeRate: 1, claims: .init(outpoints: claimed, held: held),
-                                                       discard: { await self.discard($0) }, prepare: { await self.prepare($0) })
+                                                       discard: { await self.discard($0) }, prepare: { try await self.prepare($0, excluding: $1) })
         }
     }
 
     @Test func aLaterDepositIsOfferedWithoutTheClaimedCoins() async throws {
-        // The ₿58,705 claim plus a ₿40,000 deposit: only the deposit, less fees and the reserve, is boarded.
-        let board = Board(balance: 98_705)
+        // The ₿58,705 claim plus a ₿40,000 deposit: the claim is excluded, so only the deposit, less fees and
+        // the reserve, is boarded, prepared once after the probe.
+        let board = Board(balance: 98_705, claimed: 58_705)
         let quote = try #require(try await board.review(held: 58_705))
-        #expect(await board.amounts == [0, 98_555 - (5_000 + 43) - 58_705])
+        #expect(await board.amounts == [0, 40_000 - 150 - (5_000 + 43)])
+        #expect(await board.exclusions == [[Self.claim], [Self.claim]])
+        #expect(!quote.spends([Self.claim]))
+        #expect(await board.discarded.count == 1)
         #expect(quote.confirmed - quote.amount - quote.chainFee! >= 58_705 + BoardingRules.reserve)
-        // Without the claim held back, the whole balance would have gone.
-        #expect(try await Board(balance: 98_705).review(held: 0, claimed: [])?.amount == 98_555 - 5_043)
+        // Without the claim nothing is excluded and the whole balance would have gone.
+        let unclaimed = Board(balance: 98_705)
+        #expect(try await unclaimed.review(held: 0, claimed: [])?.amount == 98_555 - 5_043)
+        #expect(await unclaimed.exclusions == [[], []])
     }
 
-    @Test func withOnlyTheClaimOnChainThereIsNoPrompt() async throws {
-        #expect(try await Board(balance: 58_705).review(held: 58_705) == nil)
+    @Test func withOnlyTheClaimOnChainThereIsNoBoard() async throws {
+        // autoBoardQuote doesn't even ask; if asked, bark refuses rather than spend the claim.
+        let board = Board(balance: 58_705, claimed: 58_705)
+        await #expect(throws: OnchainFailure.insufficientFunds) { try await board.review(held: 58_705) }
+        #expect(await board.amounts == [0])
+        #expect(await board.exclusions == [[Self.claim]])
     }
 
     @Test func aSmallDepositBesideTheClaimGivesNoPrompt() async throws {
-        // ₿15,000 beside the claim: what auto-board may board stays under ₿20,000.
-        #expect(try await Board(balance: 73_705).review(held: 58_705) == nil)
-    }
-
-    @Test func aPreparationThatAlwaysSpendsTheClaimedCoinIsDiscarded() async throws {
-        let board = Board(balance: 98_705, inputs: ["deposit:0", ExitClaimAutoBoardTests.claim])
+        // ₿15,000 beside the claim: what auto-board may board stays under ₿20,000, so nothing is prepared after the probe.
+        let board = Board(balance: 73_705, claimed: 58_705)
         #expect(try await board.review(held: 58_705) == nil)
-        // The probe and three sized boards, each a little smaller, are all discarded: no prompt.
-        let first = UInt64(98_555 - 5_043 - 58_705)
-        #expect(await board.amounts == [0, first, first - 1_000, first - 2_000])
-        #expect(await board.discarded.count == 4)
+        #expect(await board.amounts == [0])
     }
 
-    @Test func aSmallerBoardThatAvoidsTheClaimedCoinIsOffered() async throws {
-        // Coin selection picks the claimed coin for the full amount and the deposit for a little less.
-        let first = UInt64(98_555 - 5_043 - 58_705)
-        let board = Board(balance: 98_705, inputs: ["deposit:0"], claimedAbove: first - 1)
-        let quote = try #require(try await board.review(held: 58_705))
-        #expect(await board.amounts == [0, first, first - 1_000])
-        #expect(quote.amount == first - 1_000 && !quote.spends([ExitClaimAutoBoardTests.claim]))
+    @Test func aPreparationThatSpendsTheClaimedCoinAnywayIsDiscarded() async throws {
+        let board = Board(balance: 98_705, claimed: 58_705, ignoresExclusions: true)
+        #expect(try await board.review(held: 58_705) == nil)
+        // The probe and the one sized board, both discarded: no prompt, and no retry at a lower amount.
+        #expect(await board.amounts.count == 2)
         #expect(await board.discarded.count == 2)
+    }
+
+    /// Claimed outpoints as `prepareBoard` exclusions; malformed ones are dropped.
+    @Test func claimOutpointsBecomeSdkExclusions() {
+        let points = WalletSession.outpoints([Self.claim, "deposit:1", "malformed", "a:b", "x:1:2"])
+        #expect(Set(points.map { "\($0.txid):\($0.vout)" }) == [Self.claim, "deposit:1"])
     }
 
     @Test func submittingRechecksTheClaimedCoins() async throws {
@@ -662,7 +675,7 @@ struct ExitClaimAutoBoardTests {
             defer { try? FileManager.default.removeItem(at: file) }
             let journal = OnchainOperationJournal(file: file)
             let session = WalletSession()
-            var quote = await Board(balance: 45_000, inputs: ["deposit:0", ExitClaimAutoBoardTests.claim]).prepare(39_000)
+            var quote = try await Board(balance: 45_000, claimed: 5_000, ignoresExclusions: true).prepare(39_000)
             quote.walletID = "wallet"
             let reviewed = quote
             let sent = BoardSubmissions()

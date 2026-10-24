@@ -190,10 +190,10 @@ extension WalletSession {
         let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
         let walletID = handles.wallet.fingerprint()
         let minimum = try await handles.wallet.arkInfo()?.minBoardAmountSats ?? 0
-        @Sendable func prepare(_ amount: UInt64) async throws -> OnchainQuote {
+        @Sendable func prepare(_ amount: UInt64, excluding: Set<String>?) async throws -> OnchainQuote {
             let board = try await handles.wallet.prepareBoard(
                 amount: amount == 0 ? .drainAll : .amount(amountSats: amount),
-                feeRateSatPerVb: rate, confirmedOnly: true)
+                feeRateSatPerVb: rate, confirmedOnly: true, excludedOutpoints: excluding.map(Self.outpoints))
             let quote = OnchainQuote(action: .board, walletID: walletID, ids: [], amount: board.grossSats,
                 fee: board.arkFeeSats, chainFee: board.onchainFeeSats, confirmed: balance, feeRate: rate,
                 automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil, prepared: .init(board))
@@ -201,7 +201,8 @@ extension WalletSession {
             return quote
         }
         guard automatic else {
-            do { return try await prepare(requested) }
+            // Move to Ark excludes nothing: the user may move everything, exit claims to this phone included.
+            do { return try await prepare(requested, excluding: nil) }
             catch { throw OnchainSubmission.boardFailure(error) ?? error }
         }
         return try await Self.reserveBoardReview(minimum: minimum, feeRate: rate, claims: claims,
@@ -211,48 +212,45 @@ extension WalletSession {
             }, prepare: prepare)
     }
 
-    /// `claims`: exit claims to this phone. Their value is left out (the board is prepared by amount,
-    /// so it stays on-chain as change), and a preparation that spends one of them is discarded: no
-    /// prompt, and the next balance refresh tries again.
+    /// "txid:vout" outpoints for `prepareBoard`; bark ignores malformed and foreign ones.
+    static func outpoints(_ points: Set<String>) -> [OutPoint] {
+        points.compactMap { point in
+            let parts = point.split(separator: ":")
+            guard parts.count == 2, let vout = UInt32(parts[1]) else { return nil }
+            return OutPoint(txid: String(parts[0]), vout: vout)
+        }
+    }
+
+    /// `claims`: exit claims to this phone. Coin selection never spends them (`prepare`'s exclusions),
+    /// so they stay on-chain; a preparation that spends one anyway is discarded: no prompt, and the next
+    /// balance refresh tries again.
     static func reserveBoardReview(
         minimum: UInt64, feeRate: UInt64, claims: AutoBoardFunding.Claims = .init(),
         discard: @Sendable (OnchainQuote) async throws -> Void,
-        prepare: @Sendable (UInt64) async throws -> OnchainQuote
+        prepare: @Sendable (UInt64, Set<String>) async throws -> OnchainQuote
     ) async throws -> OnchainQuote? {
         do {
-            let probe = try await prepare(0) // Confirmed-only DrainAll can afford its own exact input fees.
+            // Confirmed-only DrainAll of every other coin can afford its own exact input fees.
+            let probe = try await prepare(0, claims.outpoints)
             try await discard(probe)
             try Task.checkCancellation()
             // Allow for the extra change output (at most 43 vB) absent from the drain probe.
-            let retained = BoardingRules.reserve + 43 * feeRate + claims.held
-            guard probe.amount > retained else { return nil }
-            var gross = probe.amount - retained
-            // shortcut: bark-bolt-ffi 0.6.0's prepare_board takes no excluded outpoints, and its deterministic coin
-            // selection may keep picking a claimed coin, so ask again for a little less; pass them once it can.
-            for attempt in 1...3 {
-                guard gross >= BoardingRules.threshold(minimum) else { return nil }
-                let quote = try await prepare(gross)
-                do {
-                    try Task.checkCancellation()
-                    if quote.spends(claims.outpoints) {
-                        try await discard(quote)
-                        let step = max(gross / 100, 1_000)
-                        gross = gross > step ? gross - step : 0
-                        continue
-                    }
-                    guard quote.amount + quote.chainFee! + BoardingRules.reserve + claims.held <= quote.confirmed,
-                          quote.net >= BoardingRules.threshold(minimum) else {
-                        try await discard(quote)
-                        return nil
-                    }
-                    return quote
-                } catch {
-                    try? await discard(quote)
-                    throw error
+            let retained = BoardingRules.reserve + 43 * feeRate
+            guard probe.amount > retained, probe.amount - retained >= BoardingRules.threshold(minimum) else { return nil }
+            let quote = try await prepare(probe.amount - retained, claims.outpoints)
+            do {
+                try Task.checkCancellation()
+                guard !quote.spends(claims.outpoints),
+                      quote.amount + quote.chainFee! + BoardingRules.reserve + claims.held <= quote.confirmed,
+                      quote.net >= BoardingRules.threshold(minimum) else {
+                    try await discard(quote)
+                    return nil
                 }
+                return quote
+            } catch {
+                try? await discard(quote)
+                throw error
             }
-            AppLog("onchain").w(#"Auto-board didn't offer a board: each preparation spent an exit claim to this phone"#)
-            return nil
         } catch {
             throw OnchainSubmission.boardFailure(error) ?? error
         }

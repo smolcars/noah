@@ -670,7 +670,7 @@ struct BoardPreparedTests {
         }
         func review() async throws -> OnchainQuote? {
             try await WalletSession.reserveBoardReview(minimum: 20_000, feeRate: 10,
-                discard: { try await self.discard($0) }, prepare: { try await self.prepare($0) })
+                discard: { try await self.discard($0) }, prepare: { amount, _ in try await self.prepare(amount) })
         }
     }
     @Test func manyInputsAtHighFeeReachAnAffordableReview() async throws {
