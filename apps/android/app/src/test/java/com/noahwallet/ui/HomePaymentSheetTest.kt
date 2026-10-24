@@ -1,9 +1,12 @@
 package com.noahwallet.ui
 
+import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.history.HistoryRules
 import com.noahwallet.history.HistoryTransaction
 import com.noahwallet.ui.activity.ActivityRules
 import org.junit.Assert.assertEquals
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.Test
 import java.util.Date
 
@@ -27,5 +30,14 @@ class HomePaymentSheetTest {
         val sent = paymentSummary(send("successful", -5_015, 15), "noahwallet.io")
         assertEquals("Sent", sent.status)
         assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(15))), sent.fees)
+    }
+
+    @Test fun aBoardShowsTheArkFeeItRecorded() {
+        // The shared fixture's successful board without metadata: no network fee, a 500-sat Ark fee.
+        val case = SharedFixtures.load("transaction-history").single { it.name == "bark.board:board successful" }
+        val board = Json { ignoreUnknownKeys = true }.decodeFromJsonElement(HistoryTransaction.serializer(), case.expected.jsonObject.getValue("transaction"))
+        assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(500))), paymentSummary(board, "noahwallet.io").fees)
+        // A board that recorded no fee shows none ("Free" is a claim for sends).
+        assertEquals(emptyList<ActivityRules.FeeLine>(), paymentSummary(board.copy(offchainFeeSat = 0), "noahwallet.io").fees)
     }
 }

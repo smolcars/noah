@@ -193,8 +193,7 @@ object ActivityRules {
         return when {
             paid != null && network != null -> listOf(FeeLine("Ark fee", FeeValue.Sats(paid)), FeeLine("Network fee", FeeValue.Sats(network)))
             network != null -> listOf(FeeLine("Network fee", FeeValue.Sats(network)))
-            record.isInternalTransfer -> emptyList()
-            // A receive shows the fee it paid (a Lightning receive's, say); "Free" stays a claim for sends.
+            // A receive or a board shows the fee it paid (a Lightning receive's, a board's Ark fee); "Free" stays a claim for sends.
             record.direction != "outgoing" -> listOfNotNull(paid?.let { FeeLine("Fee", FeeValue.Sats(it)) })
             paid != null -> listOf(FeeLine("Fee", FeeValue.Sats(paid)))
             // "Free" is a claim only a proven zero on Ark or Lightning can make; a fee nothing proves has no row.
