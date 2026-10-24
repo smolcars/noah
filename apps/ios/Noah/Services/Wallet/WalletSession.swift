@@ -49,7 +49,8 @@ actor WalletSession {
     }
 
     /// Since when bark's daemon has been progressing exits (every 60 s) in this session, restarted when
-    /// the app comes back (it doesn't run while suspended); nil without it. The app can't see its cycles.
+    /// the app comes back (it doesn't run while suspended); nil without it. Set wherever the daemon
+    /// starts and cleared wherever it stops. The app can't see its cycles.
     private(set) var daemonSince: Date?
     func appBecameActive() { daemonSince = daemonSince.map { _ in Date() } }
     /// The app's own last exit progress (Check the chain), per wallet: the tip and the parking episodes
@@ -256,6 +257,7 @@ actor WalletSession {
                 state = previousState
                 throw error
             }
+            daemonSince = nil
             state = reservation.map { .reserved($0.id) } ?? .closed
         }
     }
@@ -277,10 +279,12 @@ actor WalletSession {
         try checkHeld(reservation)
         try checkExistingDatabase()
         let handles = try await Task { try await opener(mnemonic, location.directory.path, true, appVersion, false) }.value
+        daemonSince = Date()
         do { try commit() }
         catch {
             do { try await Task { try await handles.wallet.stopDaemonWait() }.value }
             catch { state = .quarantined(handles); throw OpenError.teardownFailed }
+            daemonSince = nil
             throw error
         }
         state = .open(handles)
@@ -367,6 +371,7 @@ actor WalletSession {
                 state = .open(handles)
                 throw OpenError.teardownFailed
             }
+            daemonSince = nil
             throw error
         }
         if self === WalletSession.shared { await SendPaymentController.shared.reloadForWalletChange() }

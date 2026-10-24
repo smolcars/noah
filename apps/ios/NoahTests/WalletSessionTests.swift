@@ -154,6 +154,32 @@ struct WalletSessionTests {
         }
     }
 
+    /// Exits read the daemon's clock: every path that starts bark's daemon sets it, every stop clears it.
+    /// A cold launch with a custom Esplora opens through `reopen`.
+    @Test(.timeLimit(.minutes(1))) func theDaemonClockFollowsEveryOpenAndClose() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        let mnemonic = try generateMnemonic()
+        try await session.createNew(mnemonic: mnemonic, runDaemon: true, appVersion: "test")
+        #expect(await session.daemonSince != nil)
+        let reservation = try await session.reserveForConfigurationChange()
+        #expect(await session.daemonSince == nil)
+        try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
+        #expect(await session.daemonSince != nil)
+        try await session.close()
+        #expect(await session.daemonSince == nil)
+        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        #expect(await session.daemonSince == nil)
+        try await session.close()
+        // A configuration that fails to commit stops the daemon again.
+        let failing = try await session.reserveForConfigurationChange()
+        await #expect(throws: OpenerFailed.self) {
+            try await session.reopen(failing, mnemonic: mnemonic, appVersion: "test", commit: { throw OpenerFailed() })
+        }
+        #expect(await session.daemonSince == nil)
+        await session.release(failing)
+    }
+
     @Test(.timeLimit(.minutes(1))) func silentEsploraReleasesUIGateButKeepsReservationUntilRollback() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         for lateSuccess in [false, true] {
