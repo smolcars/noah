@@ -64,7 +64,7 @@ class ExitGalleryTest {
         show("start-expired") { ExitStartContent(review.copy(createdAt = System.currentTimeMillis() - 31_000), null, 18_400, false, false, 144, f.money, {}, {}, {}, {}) }
         fun progress(name: String, exit: ExitModel, tip: Long = exit.details.tip_height ?: f.tip, needsFunds: Boolean = false, confirmed: Long = 18_400,
                      context: ExitContext = ExitContext(tip, confirmed, 144, cancelable = exit.cancelable, claimEstimate = 262)) =
-            show(name, 4_000) { ExitProgressContent(exit, ExitStages.of(exit, tip, needsFunds), context, false, false, f.money, {}, {}, {}, {}, {}, {}) }
+            show(name, 4_000) { ExitProgressContent(exit, f.stage(exit, tip, needsFunds), context, false, false, f.money, {}, {}, {}, {}, {}, {}) }
         progress("progress-lift", f.start)
         progress("progress-publish", f.publish)
         progress("progress-mempool", f.mempool)

@@ -99,43 +99,73 @@ class ExitStagesTest {
 
     @Test fun aReplacedChildMeansFeesRoseAndBlocksWithoutItMeanStuck() {
         val sent = processing(100, tx("root", "awaiting-confirmation", "c1", origin = "wallet"), tx("leaf", "verify-inputs"))
-        val stillWaiting = processing(102, tx("root", "awaiting-confirmation", "c1", origin = "wallet"), tx("leaf", "verify-inputs"))
-        val stuck = ExitStages.of(exit("Processing", stillWaiting, history = listOf(sent)), 102)
+        val firstSeen = mapOf("root/awaiting-confirmation" to 100L)
+        // bark keeps the state, tip and all, while nothing changes: two blocks on the wallet's tip, it's stuck.
+        val stuck = ExitStages.of(exit("Processing", sent), 102, seen = firstSeen)
         assertEquals(ExitStage.Attention.stuck, stuck.attention); assertEquals(2L, stuck.waited)
-        // The same tip as when it was sent: no block has come without it yet.
-        assertNull(ExitStages.of(exit("Processing", sent), 100).attention)
-        // The wallet's tip is ahead of bark's: stale, but not stuck (bark hasn't looked at the new blocks).
-        val behind = ExitStages.of(exit("Processing", sent), 102)
-        assertNull(behind.attention); assertTrue(behind.stale)
-        assertFalse("one block behind is the minute until bark's next progress", ExitStages.of(exit("Processing", sent), 101).stale)
-        assertFalse("bark keeps a waiting exit's tip from when it began waiting", ExitStages.of(exit("AwaitingDelta",
-            ExitDetails(tip_height = 100, confirmed_block = ExitDetails.Block(100), claimable_height = 244)), 180).stale)
+        assertNull("no block has come without it yet", ExitStages.of(exit("Processing", sent), 100, seen = firstSeen).attention)
+        assertNull("not seen in the mempool yet: nothing to count from", ExitStages.of(exit("Processing", sent), 102).attention)
         val bumped = processing(101, tx("root", "awaiting-confirmation", "c2", origin = "wallet"), tx("leaf", "verify-inputs"))
         assertEquals(ExitStage.Attention.feesRose, ExitStages.of(exit("Processing", bumped, history = listOf(sent)), 101).attention)
+    }
+
+    @Test fun noahCountsWaitingFromTheTipItFirstSawEachStatusAt() {
+        var stored: String? = null
+        val seen = ExitSeen({ stored }, { stored = it })
+        val sent = exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c1"), tx("leaf", "verify-inputs")))
+        assertEquals(mapOf("root/awaiting-confirmation" to 100L, "leaf/verify-inputs" to 100L), seen.note(listOf(sent), 100))
+        // A later read of the same state keeps the first tip, also after a restart (a new store over the same text).
+        assertEquals(100L, ExitSeen({ stored }, { stored = it }).note(listOf(sent), 103)["root/awaiting-confirmation"])
+        assertEquals(3L, ExitStages.of(sent, 103, seen = seen.note(listOf(sent), 103)).waited)
+        // A new status starts over; anything no longer waiting is forgotten.
+        val mined = exit("Processing", processing(104, tx("root", "confirmed", "c1", 104), tx("leaf", "awaiting-confirmation", "c2")))
+        assertEquals(mapOf("leaf/awaiting-confirmation" to 104L), seen.note(listOf(mined), 104))
+        assertEquals(emptyMap<String, Long>(), seen.note(emptyList(), 105))
+        assertEquals("unreadable text starts afresh", mapOf("leaf/awaiting-confirmation" to 106L), ExitSeen({ "{" }, {}).note(listOf(mined), 106))
+    }
+
+    @Test fun anExitIsStaleOnlyWithEvidenceThatNothingProgressesIt() {
+        val sent = processing(100, tx("root", "awaiting-confirmation", "c1", origin = "wallet"), tx("leaf", "verify-inputs"))
+        assertFalse("the daemon keeps it current, whatever bark's height says", ExitStages.of(exit("Processing", sent), 150).stale)
+        assertTrue(ExitStages.of(exit("Processing", sent), 101, stalled = true).stale)
+        assertTrue(ExitStages.of(exit("Start", ExitDetails(kind = "start", tip_height = 100)), 101, stalled = true).stale)
+        assertFalse("not behind", ExitStages.of(exit("Processing", sent), 100, stalled = true).stale)
+        assertFalse("a waiting exit has nothing to send", ExitStages.of(exit("AwaitingDelta",
+            ExitDetails(tip_height = 100, confirmed_block = ExitDetails.Block(100), claimable_height = 244)), 180, stalled = true).stale)
     }
 
     private val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs")),
         history = listOf(processing(99, tx("root", "awaiting-confirmation", "c1"), tx("l2", "verify-inputs"), tx("leaf", "verify-inputs")),
             processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs"))), next = 1_215)
 
-    @Test fun needsFundsShowsOnlyAfterAFullProgressCycleAndClearsWhenFundsArrive() {
+    @Test fun needsFundsWaitsUntilBarkHasTriedAndClearsWhenFundsArrive() {
         var now = 0L
-        val funding = ExitFunding(60_000) { now }
-        assertTrue("just parked: bark may still pay it", funding.needsFunds(listOf(parked), 310).isEmpty())
-        now = 59_999; assertTrue(funding.needsFunds(listOf(parked), 310).isEmpty())
-        now = 60_000; assertEquals(setOf("v1"), funding.needsFunds(listOf(parked), 310))
+        val funding = ExitFunding(75_000) { now }
+        assertTrue("just parked: bark may still pay it", funding.needsFunds(listOf(parked), 310, run = 1).isEmpty())
+        now = 74_999; assertTrue(funding.needsFunds(listOf(parked), 310, 1).isEmpty())
+        now = 75_000; assertEquals("a daemon interval passed in one run", setOf("v1"), funding.needsFunds(listOf(parked), 310, 1))
         assertEquals(ExitStage.Attention.needsFunds, ExitStages.of(parked, 100, needsFunds = true).attention)
-        assertTrue("funds arrived", funding.needsFunds(listOf(parked), 1_215).isEmpty())
-        assertTrue("no package fee known", funding.needsFunds(listOf(parked.copy(nextPackageFee = null)), 0).isEmpty())
-        // Once it gets its child, it's forgotten: parking again starts a new cycle.
+        assertTrue("funds arrived", funding.needsFunds(listOf(parked), 1_215, 1).isEmpty())
+        assertTrue("no package fee known", funding.needsFunds(listOf(parked.copy(nextPackageFee = null)), 0, 1).isEmpty())
+        // Time counts only within one daemon run: reopening the wallet starts it over, and without the daemon it never counts.
+        val reopened = ExitFunding(75_000) { now }
+        now = 0; reopened.needsFunds(listOf(parked), 0, 1)
+        now = 60_000; assertTrue(reopened.needsFunds(listOf(parked), 0, 2).isEmpty())
+        now = 134_999; assertTrue(reopened.needsFunds(listOf(parked), 0, 2).isEmpty())
+        now = 135_000; assertEquals(setOf("v1"), reopened.needsFunds(listOf(parked), 0, 2))
+        val noDaemon = ExitFunding(75_000) { now }
+        now = 0; noDaemon.needsFunds(listOf(parked), 0, null)
+        now = 10_000_000; assertTrue(noDaemon.needsFunds(listOf(parked), 0, null).isEmpty())
+        // A completed Check the chain proves bark tried, whether Noah saw the transaction parked before or after it; a failed one doesn't.
+        val checking = ExitFunding(75_000) { 0 }
+        checking.checked(listOf(parked), completed = false)
+        assertTrue(checking.checkFailed); assertTrue(checking.needsFunds(listOf(parked), 0, null).isEmpty())
+        checking.checked(listOf(parked), completed = true)
+        assertFalse(checking.checkFailed); assertEquals(setOf("v1"), checking.needsFunds(listOf(parked), 0, null))
+        // Once it gets its child it's forgotten: parked again, it needs bark to try again.
         val sent = parked.copy(details = processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-confirmation", "c2"), tx("leaf", "verify-inputs")))
-        assertTrue(funding.needsFunds(listOf(sent), 0).isEmpty())
-        assertTrue(funding.needsFunds(listOf(parked), 0).isEmpty())
-        // Check the chain is a full cycle.
-        funding.checkedChain(); assertEquals(setOf("v1"), funding.needsFunds(listOf(parked), 0))
-        // bark progressed it at a later tip and it still waits: a cycle passed, even on a fresh page.
-        val progressed = parked.copy(details = parked.details.copy(tip_height = 101))
-        assertEquals(setOf("v1"), ExitFunding(60_000) { 0 }.needsFunds(listOf(progressed), 0))
+        assertTrue(checking.needsFunds(listOf(sent), 0, null).isEmpty())
+        assertTrue(checking.needsFunds(listOf(parked), 0, null).isEmpty())
         assertEquals("only the parked transaction shows it", null, ExitStages.of(exit("Processing", processing(100, *path("verify-inputs"))), 100, needsFunds = true).attention)
     }
 

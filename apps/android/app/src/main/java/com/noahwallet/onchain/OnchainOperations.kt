@@ -232,7 +232,7 @@ internal class OnchainOperations(
                 }
                 OnchainAction.progress -> {
                     val failures = wallet.progress(reviewed.feeRate).count { it.error != null }
-                    OnchainReceipt(if (failures == 0) "Exits progressed. Transactions may have been broadcast or fee-bumped."
+                    OnchainReceipt(if (failures == 0) OnchainReceipt.progressedMessage
                         else "Exit progression returned $failures errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 }
                 OnchainAction.claim -> {

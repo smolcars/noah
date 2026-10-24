@@ -130,7 +130,7 @@ internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
     val model = rememberOnchainModel(app)
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
-    val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed) }.orEmpty() }
+    val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed, app.session.daemonRun) }.orEmpty() }
     ExitWarningContent(overview?.exits.orEmpty(), overview?.tip ?: 0, rememberExitDelta(app), rememberSampleCost(app, overview?.vtxos.orEmpty())?.broadcast,
         app.isWalletSuspended, { money(app, it) }, nav.back, choose = { nav.open(ExitChoosePage) }, open = { nav.open(ExitPage(it)) },
         all = { nav.open(ExitsPage) }, needsFunds = needsFunds) { OnchainStatus(app, model) }

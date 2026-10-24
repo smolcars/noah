@@ -63,12 +63,15 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
     val exit = model.exit ?: overview?.exits?.find { it.id == id }
-    // Recomputed on each completed read (every minute, as before), even an unchanged one: the inference needs a full progress
-    // cycle, never a timer of its own.
-    val needsFunds = remember(model.revision) {
-        overview?.let { o -> ExitFunding.shared.needsFunds(o.exits.map { exit -> model.exit?.takeIf { it.id == exit.id } ?: exit }, o.confirmed) }.orEmpty()
+    val exits = overview?.exits.orEmpty().map { exit -> model.exit?.takeIf { it.id == exit.id } ?: exit }
+    val seenStore = remember(app.settings) { ExitSeen.stored(app.settings) }
+    // Recomputed on each completed read (every minute, as before), even an unchanged one; never a timer of its own.
+    val (needsFunds, seen) = remember(model.revision) {
+        overview?.let { o -> ExitFunding.shared.needsFunds(exits, o.confirmed, app.session.daemonRun) to seenStore.note(exits, o.tip) } ?: (emptySet<String>() to emptyMap())
     }
-    val stage = exit?.let { ExitClaims.apply(ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds), ExitClaims.submitted(model.attempts)[id]) }
+    val stalled = ExitFunding.shared.checkFailed || app.session.openWithoutDaemon
+    val stage = exit?.let { ExitClaims.apply(ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds, seen, stalled),
+        ExitClaims.submitted(model.attempts)[id]) }
     // The claim's own attempt says what it cost and where it went (the claim fee is checked exactly before broadcast).
     val claim = model.attempts.firstOrNull { it.quote.action == OnchainAction.claim && id in it.quote.ids && (stage?.claimTxid == null || it.receipt?.txid == stage.claimTxid) }
     val claimEstimate by produceState<Long?>(null, stage?.phase == ExitStage.Phase.claimable) {
@@ -87,8 +90,10 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
             OnchainAction.progress -> CheckSheet(quote, model.busy, { money(app, it) }, model::invalidate) {
                 scope.launch {
                     model.confirm()
-                    // A completed check is a full progress cycle: read again so a transaction still waiting shows why at once.
-                    if (model.message != null && model.error == null) { ExitFunding.shared.checkedChain(); model.load(); haptics.light() } else haptics.error()
+                    // A completed check is bark's full progress: read again so a transaction still waiting shows why at once.
+                    val completed = model.error == null && model.message == OnchainReceipt.progressedMessage
+                    ExitFunding.shared.checked(model.overview?.exits.orEmpty(), completed)
+                    if (completed) { model.load(); haptics.light() } else haptics.error()
                 }
             }
             OnchainAction.cancel -> CancelDialog(model::invalidate) {

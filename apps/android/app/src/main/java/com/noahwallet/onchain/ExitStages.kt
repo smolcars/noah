@@ -1,5 +1,10 @@
 package com.noahwallet.onchain
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.serialization.json.Json
+
 /**
  * One exit transaction as Details and the picture read it: bark's package (its raw parent and CPFP child) reduced to
  * the parent's weight, how many outputs it has, which output of its own parent it spends, and its child.
@@ -19,7 +24,7 @@ data class ExitStage(
     val currentKind: String? = null,
     /** The block of the last transaction mined so far. */
     val lastBlock: Long? = null,
-    /** Blocks [current] has waited in the mempool, by bark's own synced tip. */
+    /** Blocks [current] has waited in the mempool: the wallet's tip less the tip Noah first saw it there at ([ExitSeen]). */
     val waited: Long = 0,
     /** [current]'s fee child's fee (this wallet paid it) and its package rate, sat/vB, once known. */
     val fee: Long? = null, val rate: Long? = null,
@@ -27,7 +32,7 @@ data class ExitStage(
     val claimTxid: String? = null, val claimedBlock: Long? = null,
     /** Fees this wallet paid for the exit's transactions (adopted ones cost nothing). */
     val feesPaid: Long = 0,
-    /** bark last checked this exit while sending it, two or more blocks below the chain's tip: Noah hasn't progressed it since. */
+    /** Noah has evidence nothing progresses exits, and bark last recorded this one, while sending it, below the chain's tip. */
     val stale: Boolean = false,
 ) {
     enum class Phase { lift, publish, mempool, bump, confirm, onchain, wait, claimable, claiming, claimed, canceled, spent, swept }
@@ -42,26 +47,27 @@ internal object ExitStages {
     private val waitingKinds = setOf("verify-inputs", "awaiting-input-confirmation")
 
     /**
-     * [tip] is the wallet's chain tip; [needsFunds] is [ExitFunding]'s inference for the parked transaction. Fees rising
-     * and a transaction stuck in the mempool are read from bark's history, so they survive closing the page.
+     * [tip] is the wallet's chain tip; [needsFunds] is [ExitFunding]'s inference for the parked transaction; [seen] is
+     * [ExitSeen]'s first-seen tips; [stalled] is Noah's evidence that nothing progresses exits (its last Check the chain
+     * failed, or the wallet is open without bark's daemon). Fees rising is read from bark's history.
      */
-    fun of(exit: ExitModel, tip: Long, needsFunds: Boolean = false): ExitStage {
+    fun of(exit: ExitModel, tip: Long, needsFunds: Boolean = false, seen: Map<String, Long> = emptyMap(), stalled: Boolean = false): ExitStage {
         val details = exit.details
         val txs = details.transactions.orEmpty()
         // Later states don't list transactions: the last state that did, or bark's packages, say how many there are.
         val known = (exit.historyDetails + details).lastOrNull { !it.transactions.isNullOrEmpty() }?.transactions.orEmpty()
         val total = listOf(txs.size, exit.packages.size, known.size).firstOrNull { it > 0 } ?: 0
         val feesPaid = exit.packages.filter { it.childOrigin == "wallet" }.sumOf { exit.childFees[it.childTxid] ?: 0 }
-        // bark records its tip on each progress only while it sends (Start, Processing); later states keep the tip they began
-        // at. One block behind is the minute until the next progress, so stale means two or more.
+        // bark keeps a state's tip while nothing changes, so its height can't say whether progress runs; while the daemon
+        // runs it keeps exits current. Only with Noah's evidence that it doesn't is an exit bark last recorded below the tip behind.
         val synced = details.tip_height
-        val stale = synced != null && exit.state in setOf("Start", "Processing") && tip - synced >= 2
+        val stale = stalled && synced != null && exit.state in setOf("Start", "Processing") && tip > synced
         val base = ExitStage(ExitStage.Phase.lift, total = total, feesPaid = feesPaid, stale = stale)
         // Once claimable, the timelock's start and end are what bark recorded while it waited.
         val locked = (exit.historyDetails + details).lastOrNull { it.confirmed_block != null }
         return when (exit.state) {
             "Start" -> base
-            "Processing" -> processing(exit, base, txs)
+            "Processing" -> processing(exit, base, txs, tip, seen)
             "AwaitingDelta" -> base.copy(phase = ExitStage.Phase.wait, inBlocks = total, current = total,
                 lastBlock = details.confirmed_block?.height, lockedFrom = details.confirmed_block?.height, claimableHeight = details.claimable_height)
             "Claimable" -> base.copy(phase = ExitStage.Phase.claimable, inBlocks = total, current = total, lockedFrom = locked?.confirmed_block?.height,
@@ -77,7 +83,7 @@ internal object ExitStages {
         }.let { if (needsFunds && it.currentKind == "awaiting-cpfp-broadcast") it.copy(attention = ExitStage.Attention.needsFunds) else it }
     }
 
-    private fun processing(exit: ExitModel, base: ExitStage, txs: List<ExitDetails.Transaction>): ExitStage {
+    private fun processing(exit: ExitModel, base: ExitStage, txs: List<ExitDetails.Transaction>, tip: Long, seen: Map<String, Long>): ExitStage {
         val inBlocks = txs.count { it.status.kind == "confirmed" }
         val current = txs.indexOfFirst { it.status.kind != "confirmed" }.let { if (it < 0) txs.size else it }
         val lastBlock = txs.mapNotNull { it.status.block?.height }.maxOrNull()
@@ -90,13 +96,12 @@ internal object ExitStages {
             kind == "awaiting-cpfp-broadcast" -> stage.copy(phase = ExitStage.Phase.mempool)
             else -> {
                 val mine = tx.status.origin == null || tx.status.origin == "wallet"
-                // Every state bark recorded while this transaction waited in the mempool, oldest first.
-                val seen = (exit.historyDetails + exit.details).mapNotNull { state ->
-                    state.transactions?.find { it.txid == tx.txid }?.takeIf { it.status.kind == "awaiting-confirmation" }?.let { state.tip_height to it.status.child_txid }
-                }
-                val sentAt = seen.mapNotNull { it.first }.minOrNull()
-                val waited = if (sentAt != null && exit.details.tip_height != null) (exit.details.tip_height - sentAt).coerceAtLeast(0) else 0
-                val children = seen.mapNotNull { it.second }.distinct()
+                // Every child bark gave it in the mempool, oldest first: a replaced one means fees rose.
+                val children = (exit.historyDetails + exit.details).mapNotNull { state ->
+                    state.transactions?.find { it.txid == tx.txid }?.takeIf { it.status.kind == "awaiting-confirmation" }?.status?.child_txid
+                }.distinct()
+                // bark's own tip stays put while nothing changes: count from the tip Noah first saw it in the mempool at.
+                val waited = seen[ExitSeen.key(tx)]?.let { (tip - it).coerceAtLeast(0) } ?: 0
                 val fee = tx.status.child_txid?.let { exit.childFees[it] }
                 val pkg = exit.packages.find { it.txid == tx.txid }
                 val weight = pkg?.let { p -> p.weight?.let { w -> p.childWeight?.let { w + it } } }
@@ -138,46 +143,70 @@ internal object ExitActions {
 }
 
 /**
- * "Needs on-chain funds" is inferred (exit.md, Decision 3): bark 0.8 leaves a transaction it can't pay for in
- * AwaitingCpfpBroadcast and only logs a warning. It shows once the transaction has waited there past one progress cycle
- * (bark's daemon runs every minute) while the confirmed on-chain balance is below that package's fee, and clears as soon
- * as the balance covers it. Never from error text.
+ * The wallet tip at which Noah first saw each exit transaction in its current status, kept across restarts. bark returns
+ * its old state, tip and all, while no status changes, so how long a transaction has waited counts from here.
  */
-internal class ExitFunding(private val cycle: Long = 60_000, private val now: () -> Long = { android.os.SystemClock.elapsedRealtime() }) {
-    private val parked = mutableMapOf<String, Long>()
-    private val checked = mutableSetOf<String>()
-
-    /**
-     * Notes each parked transaction (exit and txid) when first seen, and forgets ones no longer parked. A cycle has passed
-     * once bark progressed the exit since it parked (its synced tip moved), a minute went by, or "Check the chain" ran.
-     */
+internal class ExitSeen(private val read: () -> String?, private val write: (String) -> Unit) {
+    /** Notes [tip] for each unconfirmed transaction's status seen for the first time, forgets the rest, and returns them all. */
     @Synchronized
-    fun needsFunds(exits: List<ExitModel>, confirmed: Long): Set<String> {
-        val current = mutableSetOf<String>()
-        val result = mutableSetOf<String>()
-        for (exit in exits) {
-            val tx = exit.details.transactions?.firstOrNull { it.status.kind != "confirmed" } ?: continue
-            if (exit.state != "Processing" || tx.status.kind != "awaiting-cpfp-broadcast") continue
-            val key = "${exit.id}/${tx.txid}"
-            current += key
-            val since = parked.getOrPut(key) { now() }
-            val parkedAt = (exit.historyDetails + exit.details).firstOrNull { state ->
-                state.transactions?.find { it.txid == tx.txid }?.status?.kind == "awaiting-cpfp-broadcast"
-            }?.tip_height
-            val progressed = parkedAt != null && (exit.details.tip_height ?: parkedAt) > parkedAt
-            val cycled = progressed || now() - since >= cycle || key in checked
-            val fee = exit.nextPackageFee
-            if (cycled && fee != null && confirmed < fee) result += exit.id
-        }
-        parked.keys.retainAll(current); checked.retainAll(current)
-        return result
+    fun note(exits: List<ExitModel>, tip: Long): Map<String, Long> {
+        val saved = read()?.let { runCatching { Json.decodeFromString<Map<String, Long>>(it) }.getOrNull() }.orEmpty()
+        val seen = exits.filter { it.state == "Processing" }.flatMap { it.details.transactions.orEmpty() }
+            .filter { it.status.kind != "confirmed" }.associate { key(it) to (saved[key(it)] ?: tip) }
+        if (seen != saved) write(Json.encodeToString(seen))
+        return seen
     }
 
-    /** "Check the chain" just ran a full progress: whatever is still parked has had its cycle. */
-    @Synchronized
-    fun checkedChain() { checked += parked.keys }
+    companion object {
+        private const val storageKey = "native-exit-seen-v1"
+        fun key(tx: ExitDetails.Transaction) = "${tx.txid}/${tx.status.kind}"
+        fun stored(settings: com.noahwallet.services.storage.SettingsStorage) = ExitSeen({ settings.string(storageKey) }, { settings.set(it, storageKey) })
+    }
+}
 
-    companion object { val shared = ExitFunding() }
+/**
+ * "Needs on-chain funds" is inferred (exit.md, Decision 3): bark 0.8 leaves a transaction it can't pay for in
+ * AwaitingCpfpBroadcast and only logs a warning. It shows while the confirmed on-chain balance is below that package's
+ * fee, once bark has had a chance to pay, and clears as soon as the balance covers it. Never from error text.
+ */
+internal class ExitFunding(private val interval: Long, private val now: () -> Long = { android.os.SystemClock.uptimeMillis() }) {
+    private class Parked(val run: Long?, val since: Long, var tried: Boolean = false)
+    private val parked = mutableMapOf<String, Parked>()
+    /** The last Check the chain didn't complete: Noah's evidence that nothing progresses exits. */
+    var checkFailed by mutableStateOf(false); private set
+
+    /** [run] is the wallet's current daemon run ([com.noahwallet.services.wallet.WalletSession.daemonRun]), timed from when Noah first saw it parked. */
+    @Synchronized
+    fun needsFunds(exits: List<ExitModel>, confirmed: Long, run: Long?): Set<String> {
+        val current = parkedIn(exits)
+        parked.keys.retainAll(current.keys)
+        return current.filter { (key, exit) ->
+            val entry = parked[key]?.takeIf { it.tried || it.run == run } ?: Parked(run, now()).also { parked[key] = it }
+            // The short balance is the proof; a completed check or one daemon interval only stops it flashing before bark has tried.
+            val tried = entry.tried || (run != null && now() - entry.since >= interval)
+            val fee = exit.nextPackageFee
+            tried && fee != null && confirmed < fee
+        }.values.map { it.id }.toSet()
+    }
+
+    /** A Check the chain ended: if it [completed], bark tried to pay every transaction parked in [exits], read before or after it. */
+    @Synchronized
+    fun checked(exits: List<ExitModel>, completed: Boolean) {
+        checkFailed = !completed
+        if (completed) for (key in parkedIn(exits).keys) parked.getOrPut(key) { Parked(null, now()) }.tried = true
+    }
+
+    private fun parkedIn(exits: List<ExitModel>) = exits.mapNotNull { exit ->
+        exit.details.transactions?.firstOrNull { it.status.kind != "confirmed" }
+            ?.takeIf { exit.state == "Processing" && it.status.kind == "awaiting-cpfp-broadcast" }?.let { "${exit.id}/${it.txid}" to exit }
+    }.toMap()
+
+    companion object {
+        /** bark's daemon interval as Noah configures it, with a margin for the progress itself. */
+        val shared by lazy {
+            ExitFunding(com.noahwallet.services.wallet.WalletConfiguration.base(com.noahwallet.BuildConfig.APP_VARIANT).daemonSyncIntervalSecs.toLong() * 1_000 + 15_000)
+        }
+    }
 }
 
 /** Decision 4: a VTXO whose own exit costs at least its amount says "Fees more than it's worth" and stays out of "All". */

@@ -96,7 +96,7 @@ class ExitDeviceTest {
         var exit by mutableStateOf(f.mempool)
         compose.setContent { NoahTheme { ExitPreviewHost {
             val tip = exit.details.tip_height ?: f.tip
-            ExitProgressContent(exit, ExitStages.of(exit, tip), ExitContext(tip, 18_400, 144, cancelable = exit.cancelable), false, false, f.money,
+            ExitProgressContent(exit, f.stage(exit, tip), ExitContext(tip, 18_400, 144, cancelable = exit.cancelable), false, false, f.money,
                 {}, {}, {}, {}, {}, {})
         } } }
         compose.mainClock.advanceTimeBy(2_000)
@@ -160,7 +160,7 @@ class ExitDeviceTest {
             "list" to @Composable { ExitListContent(f.list, f.tip + 2, emptySet(), true, false, false, f.money, {}, {}, {}, {}) },
         ) + listOf(f.publish, f.bump, f.nofunds, f.wait, f.claimable, f.claimed, f.canceled).mapIndexed { i, exit -> "progress $i" to @Composable {
             val tip = exit.details.tip_height ?: f.tip
-            ExitProgressContent(exit, ExitStages.of(exit, tip, exit == f.nofunds), ExitContext(tip, 18_400, 144, cancelable = exit.cancelable), false, false,
+            ExitProgressContent(exit, f.stage(exit, tip), ExitContext(tip, 18_400, 144, cancelable = exit.cancelable), false, false,
                 f.money, {}, {}, {}, {}, {}, {})
         } }
         for ((pose, hinge) in listOf("book" to book, "tabletop" to tabletop)) for ((name, page) in pages) {
@@ -175,7 +175,7 @@ class ExitDeviceTest {
         compose.setContent { NoahTheme { ExitPreviewHost {
             CompositionLocalProvider(com.noahwallet.ui.onboarding.LocalReduceMotion provides true) {
                 val tip = exit.details.tip_height ?: f.tip
-                ExitProgressContent(exit, ExitStages.of(exit, tip, exit == f.nofunds), ExitContext(tip, 18_400, 144), false, false, f.money, {}, {}, {}, {}, {}, {})
+                ExitProgressContent(exit, f.stage(exit, tip), ExitContext(tip, 18_400, 144), false, false, f.money, {}, {}, {}, {}, {}, {})
             }
         } } }
         for (phase in listOf(f.start, f.publish, f.mempool, f.bump, f.confirm, f.onchain, f.wait, f.claimable, f.claiming, f.claimed, f.nofunds,
@@ -196,7 +196,7 @@ class ExitDeviceTest {
             // Once on-chain, the picture is the locked coin and its bar: the fixture carries what bark recorded while it waited.
             if (phase.state in setOf("AwaitingDelta", "Claimable", "ClaimInProgress", "Claimed")) {
                 val tip = phase.details.tip_height ?: f.tip
-                val pose = ExitPose.of(phase, ExitStages.of(phase, tip), tip)
+                val pose = ExitPose.of(phase, f.stage(phase, tip), tip)
                 assertTrue("${phase.state} has its timelock to draw", pose.lockedFrom != null && pose.claimableHeight != null)
             }
         }

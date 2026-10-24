@@ -54,9 +54,12 @@ internal fun ExitListPage(app: AppModel, nav: SettingsNav) {
     val model = rememberOnchainModel(app)
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
-    val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed) }.orEmpty() }
+    val seenStore = remember(app.settings) { ExitSeen.stored(app.settings) }
+    val (needsFunds, seen) = remember(model.revision) {
+        overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed, app.session.daemonRun) to seenStore.note(it.exits, it.tip) } ?: (emptySet<String>() to emptyMap())
+    }
     ExitListContent(overview?.exits.orEmpty(), overview?.tip ?: 0, needsFunds, ready = overview != null, loading = model.loading,
-        claims = ExitClaims.submitted(model.attempts),
+        claims = ExitClaims.submitted(model.attempts), seen = seen, stalled = ExitFunding.shared.checkFailed || app.session.openWithoutDaemon,
         suspended = app.isWalletSuspended, money = { money(app, it) }, back = nav.back, open = { nav.open(ExitPage(it)) },
         claim = { nav.open(ExitClaimPage) }, more = { nav.open(ExitChoosePage) }) { OnchainStatus(app, model) }
 }
@@ -64,11 +67,12 @@ internal fun ExitListPage(app: AppModel, nav: SettingsNav) {
 @Composable
 internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<String>, ready: Boolean, loading: Boolean, suspended: Boolean,
                              money: (Long) -> String, back: (() -> Unit)?, open: (String) -> Unit, claim: () -> Unit, more: () -> Unit,
-                             claims: Map<String, String> = emptyMap(), status: @Composable () -> Unit = {}) {
+                             claims: Map<String, String> = emptyMap(), seen: Map<String, Long> = emptyMap(), stalled: Boolean = false,
+                             status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
-    val stages = exits.associate { it.id to ExitClaims.apply(ExitStages.of(it, tip, it.id in needsFunds), claims[it.id]) }
+    val stages = exits.associate { it.id to ExitClaims.apply(ExitStages.of(it, tip, it.id in needsFunds, seen, stalled), claims[it.id]) }
     val live = exits.filter { stages.getValue(it.id).live }
     val claimable = exits.filter { stages.getValue(it.id).phase == ExitStage.Phase.claimable }
     val shared = ExitList.shared(exits)
@@ -94,7 +98,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
             !ready -> FinePrint(if (loading) tr("Loading…") else tr("Couldn't read wallet status. Pull to refresh."))
             exits.isEmpty() -> FinePrint(tr("No exits have been started."))
         }
-        // Today's stale-exit warning: Noah hasn't progressed these since the chain moved on.
+        // Today's stale-exit warning, only with Noah's evidence that nothing progresses these.
         val stale = live.count { stages.getValue(it.id).stale }
         if (stale > 0) Warning(trPlural("{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.", stale),
             SettingsIcons.clock)

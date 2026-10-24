@@ -216,6 +216,11 @@ class WalletSession internal constructor(
     private var openingSeedDigest: ByteArray? = null
     private fun seedDigest(value: String) = java.security.MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
     val isOpen: Boolean get() = state is State.Open
+    @Volatile private var daemon = false
+    /** This open while bark's daemon runs in it, progressing exits by itself (each open has its own value), or null. */
+    val daemonRun: Long? get() = walletChanges.value.takeIf { isOpen && daemon }
+    /** Open without bark's daemon: nothing progresses exits but Check the chain. */
+    val openWithoutDaemon: Boolean get() = isOpen && !daemon
 
     suspend fun openExisting(mnemonic: String, runDaemon: Boolean, appVersion: String) {
         beginOpen(mnemonic, runDaemon, appVersion, create = false, join = false)?.await()
@@ -274,6 +279,7 @@ class WalletSession internal constructor(
                 if (location.restorePending) throw OpenError(OpenFailure.restorePending)
                 if (location.databaseExists) throw OpenError(OpenFailure.walletDatabaseExists)
                 check(location.directory.isDirectory || location.directory.mkdirs()) { "Cannot create wallet directory" }
+                daemon = runDaemon
             }
             caller.checkWalletAdmission()
             val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, true)
@@ -325,6 +331,7 @@ class WalletSession internal constructor(
                     }
                 }
                 openingSeedDigest = seedDigest(mnemonic)
+                daemon = runDaemon
                 state = State.Opening(attempt)
                 attempt.start()
                 attempt
@@ -555,7 +562,7 @@ class WalletSession internal constructor(
             catch (_: Exception) { synchronized(lock) { state = State.Quarantined(handles) }; throw OpenError(OpenFailure.teardownFailed) }
             throw failure
         }
-        synchronized(lock) { openingSeedDigest = seedDigest(mnemonic); state = State.Open(handles); walletChanged() }
+        synchronized(lock) { openingSeedDigest = seedDigest(mnemonic); daemon = true; state = State.Open(handles); walletChanged() }
     }
 
     companion object {

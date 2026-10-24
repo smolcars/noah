@@ -17,6 +17,8 @@ data class WalletConfiguration(
     val htlcRecvClaimDelta: UShort = 18u,
     val vtxoExitMargin: UShort = 12u,
     val roundTxRequiredConfirmations: UInt,
+    /** How often bark's daemon syncs and progresses exits; bark's own default, set here so the exit pages can rely on it. */
+    val daemonSyncIntervalSecs: ULong = 60u,
 ) {
     val networkName: String get() = network.name.lowercase()
     val fallbackFeeRateSatPerKwu: ULong get() = fallbackFeeRateSatPerKvb / 4u
@@ -27,7 +29,7 @@ data class WalletConfiguration(
         vtxoRefreshExpiryThreshold = vtxoRefreshExpiryThreshold,
         vtxoExitMargin = vtxoExitMargin, htlcRecvClaimDelta = htlcRecvClaimDelta,
         fallbackFeeRate = fallbackFeeRateSatPerKwu,
-        roundTxRequiredConfirmations = roundTxRequiredConfirmations, userAgent = userAgent,
+        roundTxRequiredConfirmations = roundTxRequiredConfirmations, daemonSyncIntervalSecs = daemonSyncIntervalSecs, userAgent = userAgent,
     )
 
     companion object {

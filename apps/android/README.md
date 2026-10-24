@@ -630,16 +630,22 @@ then pull `files/settings-shots/<label>` with `run-as`. Its recovery phrase is t
 The exit follows [its redesign](../../docs/native-rewrite/design/exit.md) on today's exit calls, journal and rules. Its
 pages (`ExitKey`: warning, Choose VTXOs, start, one exit, claim, the list) sit above Settings → Emergency exit and
 fill a wide window or fold themselves (explanation and picture lead, details and actions trail; tabletop: picture
-above). `ExitStages` maps each bark `ExitState` and transaction status to the page's phase, and reads fees rising and
-a transaction stuck in the mempool from bark's history. "Needs on-chain funds" is inferred (`ExitFunding`): a
-transaction in `AwaitingCpfpBroadcast` past one progress cycle while the confirmed balance is below its package's fee
-at the rate bark's own estimate reports. A fee child's fee is what left the wallet (BDK can't price its anchor input).
+above). `ExitStages` maps each bark `ExitState` and transaction status to the page's phase, and reads fees rising
+from bark's history. bark keeps a state's tip while nothing changes, so `ExitSeen` keeps (across restarts) the wallet
+tip at which Noah first saw each transaction in its status, and blocks stuck in the mempool count from there. "Needs
+on-chain funds" is inferred (`ExitFunding`): a transaction in `AwaitingCpfpBroadcast` while the confirmed balance is
+below its package's fee at the rate bark's own estimate reports, once bark has tried (a completed Check the chain, or
+one configured daemon sync interval plus 15 s within one daemon run). The stale warning needs evidence that nothing
+progresses exits: the last Check the chain failed, or the wallet is open without bark's daemon. "Fees more than it's
+worth" uses each VTXO's standalone estimate until bark-bolt-ffi's estimate has per-transaction data. A fee child's fee
+is what left the wallet (BDK can't price its anchor input).
 Claims default to another wallet; a claim to this phone records its outputs in auto-board's handled ledger and its
 claimed set (one durable write) before it's broadcast. Auto-board then weighs and sizes only the confirmed balance
 less those coins while they're unspent, prepares by amount so their value stays on-chain, and never offers a review
 whose inputs (bark's choice) include one. A submitted claim shows as claiming until bark's next progress marks it.
 `ExitDeviceTest` (hold submits once, Claim off until a valid reviewed address, Cancel only while allowed, synthetic
-book and tabletop folds, recreation) runs unconditionally. Opt-in fixture gallery (no wallet):
+book and tabletop folds, recreation) and `ExitSubmitDeviceTest` (start and claim reach a fake bark once through the
+real pages, session and on-disk journal, across a posture change and process death) run unconditionally. Opt-in fixture gallery (no wallet):
 `-e class com.noahwallet.onchain.ExitGalleryTest -e noahExitShots <label>` (optionally `-e noahExitScenes warn,list`),
 then pull `files/exit-shots/<label>` with `run-as`. `ExitLiveTest` adds owned-wallet stages for the live check:
 `board-all` (no confirmed on-chain funds left), `inspect` (each exit's packages, fee children and waiting package fee)
