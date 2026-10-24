@@ -245,11 +245,13 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
     var deposit by rememberSaveable { mutableStateOf<Long?>(null) }
     val vtxos = model.overview?.vtxos.orEmpty()
     val eligible = vtxos.filter { it.eligible }.map { it.id }
-    // Each VTXO's own estimate, once per set of VTXOs: not on every periodic read.
-    val costs by produceState<Map<String, ExitCosts.Cost?>?>(null, eligible) {
-        value = if (eligible.isEmpty()) emptyMap() else try { withContext(Dispatchers.IO) { app.session.exitCosts(eligible) } }
+    // Each VTXO's own estimate, once per set of VTXOs: not on every periodic read. Kept with the set it classified, so a
+    // new set reads as unclassified until its own estimates arrive.
+    val classified by produceState<Pair<List<String>, Map<String, ExitCosts.Cost?>>?>(null, eligible) {
+        value = eligible to if (eligible.isEmpty()) emptyMap() else try { withContext(Dispatchers.IO) { app.session.exitCosts(eligible) } }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { emptyMap() }
     }
+    val costs = classified?.takeIf { it.first == eligible }?.second
     ExitChooseContent(vtxos, costs, model.overview?.confirmed, loading = model.overview == null && model.loading, ready = model.overview != null,
         suspended = app.isWalletSuspended, busy = model.busy, money = { money(app, it) }, back = nav.back,
         // bark's estimate for exactly the selection (shared transactions once); read-only.
@@ -287,8 +289,9 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             if (!everything) Text(if (chosen.isEmpty()) tr("Choose the VTXOs to exit") else fees?.chainFee?.let { tr("{amount} · fees ~{fee}", money(value), money(it)) }
                 ?: money(value), Modifier.padding(bottom = 8.dp), style = HomeType.amount.copy(fontSize = 15.sp), color = palette.foreground)
+            // "All" is fixed only once every VTXO is classified: until then it might hold one that costs more than it's worth.
             SendPill(tr("Review exit"), Modifier.fillMaxWidth().testTag("exit-review"), height = 56.dp,
-                enabled = chosen.isNotEmpty() && !busy && !suspended) { haptics.light(); review(ids) }
+                enabled = chosen.isNotEmpty() && !busy && !suspended && (!everything || costs != null)) { haptics.light(); review(ids) }
         }
     }, leading = {
         Segmented(listOf(true to tr("All"), false to tr("Choose")), everything, Modifier.padding(top = 10.dp).testTag("exit-mode")) { everything = it }

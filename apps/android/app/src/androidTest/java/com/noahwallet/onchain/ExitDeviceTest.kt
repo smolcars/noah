@@ -202,6 +202,25 @@ class ExitDeviceTest {
         }
     }
 
+    @Test fun allCanBeReviewedOnlyOnceEveryVtxoIsClassified() {
+        var costs by mutableStateOf<Map<String, ExitCosts.Cost?>?>(null)
+        val reviewed = mutableListOf<List<String>>()
+        compose.setContent { NoahTheme { ExitPreviewHost {
+            ExitChooseContent(f.vtxos, costs, 18_400, false, true, false, false, f.money, {}, { null }, { reviewed += it }, {})
+        } } }
+        compose.onNodeWithTag("exit-review").assertIsNotEnabled()
+        // Choosing one by one needs no estimate.
+        compose.onNodeWithText("Choose").performClick()
+        compose.onNodeWithTag("exit-vtxo-${f.vtxos[0].id.take(12)}").performClick()
+        compose.onNodeWithTag("exit-review").assertIsEnabled()
+        compose.onNodeWithText("All").performClick()
+        compose.onNodeWithTag("exit-review").assertIsNotEnabled()
+        compose.runOnUiThread { costs = f.costs }
+        compose.onNodeWithTag("exit-review").assertIsEnabled().performClick()
+        // Those whose fees are more than they're worth (₿7,500 and below here) stay out.
+        compose.runOnIdle { assertEquals(listOf(f.vtxos.filter { it.amount > 7_500 && it.eligible }.map { it.id }), reviewed) }
+    }
+
     @Test fun recreatingTheWindowKeepsTheChosenVtxos() {
         val restoration = StateRestorationTester(compose)
         val reviewed = mutableListOf<List<String>>()
