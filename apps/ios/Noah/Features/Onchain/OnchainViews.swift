@@ -211,6 +211,8 @@ struct OnchainScreen: ViewModifier {
     @Environment(\.scenePhase) private var phase
     @Environment(AppModel.self) private var app
     let model: OnchainModel
+    /// Settings' pages present their own review (Renew, Move to Ark) in a pane-aware sheet.
+    var presentsReview = true
     func body(content: Content) -> some View {
         content
             .disabled(app.isWalletSuspended)
@@ -231,7 +233,7 @@ struct OnchainScreen: ViewModifier {
             }
             .onChange(of: app.summary?.fingerprint) { _, _ in model.invalidate() }
             .onDisappear { model.invalidate() }
-            .sheet(item: Binding(get: { model.quote }, set: { if $0 == nil { model.invalidate() } })) {
+            .sheet(item: Binding(get: { presentsReview ? model.quote : nil }, set: { if $0 == nil { model.invalidate() } })) {
                 quote in
                 OnchainReviewSheet(quote: quote) { Task { await model.confirm() } }
             }

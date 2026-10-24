@@ -96,12 +96,18 @@ enum VtxoList {
         }
     }
 
+    struct Section: Identifiable, Equatable {
+        let group: Group
+        let rows: [VtxoModel]
+        var id: Group { group }
+    }
+
     /// Non-empty groups in order, soonest expiry first.
-    static func groups(_ vtxos: [VtxoModel], filter: Filter) -> [(Group, [VtxoModel])] {
+    static func groups(_ vtxos: [VtxoModel], filter: Filter) -> [Section] {
         let visible = vtxos.filter { includes(filter, $0) }.sorted { $0.expiry < $1.expiry }
         return Group.allCases.compactMap { group in
             let rows = visible.filter { self.group($0) == group }
-            return rows.isEmpty ? nil : (group, rows)
+            return rows.isEmpty ? nil : Section(group: group, rows: rows)
         }
     }
 

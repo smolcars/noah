@@ -58,5 +58,9 @@
   "{n} payments": {
     "one": "{n} payment",
     "other": "{n} payments"
+  },
+  "Renew {n} VTXOs": {
+    "one": "Renew {n} VTXO",
+    "other": "Renew {n} VTXOs"
   }
 }

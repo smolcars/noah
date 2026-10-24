@@ -68,7 +68,6 @@
   <string name="gt_9bb0c676a3c4146c">"An existing Lightning payment will be checked. No new payment will be created."</string>
   <string name="gt_b636320b54efe2b7">"An unknown error occurred while backing up."</string>
   <string name="gt_a4ae750b610e875e">"Anchor"</string>
-  <string name="gt_22b587b11be36edd">"Anchor Point"</string>
   <string name="gt_dea19a697a27a904">"Android SDK built for"</string>
   <string name="gt_15ea390b9d935697">"Another Lightning payment is still in progress. Try again once it completes."</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
@@ -103,6 +102,7 @@
   <string name="gt_e3c03bb0dee641c5">"Asks for %1$s"</string>
   <string name="gt_c6dd438b37364cad">"Asks when you have %1$s or more"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"At least 3 characters"</string>
+  <string name="gt_0d04eed763c98c70">"At least %1$s."</string>
   <string name="gt_4c9ce17646b28614">"Audit unavailable"</string>
   <string name="gt_c8271c0bafb7c1eb">"Authenticate to access your wallet"</string>
   <string name="gt_7dc5ec1879cdb204">"Authenticate to disable biometrics"</string>
@@ -174,7 +174,6 @@
   <string name="gt_b69792e8c9b6b4aa">"Block %1$s"</string>
   <string name="gt_52d8701c498a04d0">"Block %1$s · %2$s"</string>
   <string name="gt_d20282998912f670">"Block %1$s"</string>
-  <string name="gt_a7f1ee1a5b8f9592">"Blocks Until Expiry"</string>
   <string name="gt_b9dba3190e1924dc">"Blocks left"</string>
   <string name="gt_4816cbfd74aa8297">"Board"</string>
   <string name="gt_a3659865c762c69f">"Board to Ark"</string>
@@ -257,7 +256,6 @@
   <string name="gt_83b12c2216efb4fd">"Clear"</string>
   <string name="gt_ba59e2d4a5e39a42">"Clear filter"</string>
   <string name="gt_3b7ea51793e9d906">"Clear search"</string>
-  <string name="gt_cea4d2e010b8fd52">"Clear selection"</string>
   <string name="gt_7d9eb7acb13e2462">"Close"</string>
   <string name="gt_dfc885030d22671d">"Close place details"</string>
   <string name="gt_55656b5e434f4c06">"Close search"</string>
@@ -275,7 +273,6 @@
   <string name="gt_6b2946528b3b4809">"Confirmed block"</string>
   <string name="gt_c0c33c452704cf4e">"Confirmed in block %1$s"</string>
   <string name="gt_c8231c9c5838def9">"Confirmed in block %1$s."</string>
-  <string name="gt_6bcc1f9a831a85eb">"Confirmed onchain balance"</string>
   <string name="gt_90733bdb40937a8c">"Confirmed onchain funds"</string>
   <string name="gt_d978a5522ce4865f">"Confirming"</string>
   <string name="gt_916a464e6cfffe51">"Conflicted"</string>
@@ -336,6 +333,7 @@
   <string name="gt_0d5423d40addc1a4">"Couldn\'t resume recovery. Restart Noah and try again."</string>
   <string name="gt_9f01ece862c96f1d">"Couldn\'t save authentication preference."</string>
   <string name="gt_83462be19140c53a">"Couldn\'t save auto-board preference."</string>
+  <string name="gt_638978fdc93e6a4b">"Couldn\'t save auto-board setting."</string>
   <string name="gt_e25b19f7d22a2fdf">"Couldn\'t save debug setting."</string>
   <string name="gt_a23e74658fe15a8e">"Couldn\'t save this payment. Try again."</string>
   <string name="gt_f86a26a2b4cac899">"Couldn\'t save your name."</string>
@@ -355,7 +353,6 @@
   <string name="gt_e4bca5667d4fa25e">"Creation failed. Please try again."</string>
   <string name="gt_f9039698f684e234">"Crop Screenshot"</string>
   <string name="gt_3ac1a9ec4fa7a9fa">"Currency"</string>
-  <string name="gt_79d5a9c6567df0af">"Current Block Height"</string>
   <string name="gt_0f200023fd30d368">"Current Endpoint:"</string>
   <string name="gt_bac875f5494598a0">"Current Height"</string>
   <string name="gt_076e7f8f950658d4">"Current State"</string>
@@ -480,7 +477,6 @@
   <string name="gt_8422e4065fd1b49e">"Existing fee"</string>
   <string name="gt_b4af3461164879e7">"Existing wallet data is incomplete"</string>
   <string name="gt_8ad236bd4bc3ed16">"Existing wallet data is incomplete. Restore your wallet to continue."</string>
-  <string name="gt_d285d8542e6aed66">"Exit Delta"</string>
   <string name="gt_4f4388dc6ce48980">"Exit Details"</string>
   <string name="gt_0085d19b65acb661">"Exit Synced Tip"</string>
   <string name="gt_6796f99963bfff4f">"Exit Tip"</string>
@@ -496,7 +492,6 @@
   <string name="gt_09fc43a650792fef">"Exit tracking was registered for this VTXO."</string>
   <string name="gt_d4cb3fa71fab7042">"Exit transaction confirmed; funds become claimable at block %1$s."</string>
   <string name="gt_d1bba0593dfc3706">"Exit transaction confirmed; waiting for the timelock."</string>
-  <string name="gt_db7283eaafc6abac">"Exit transaction weight"</string>
   <string name="gt_3dbc56210d18edb5">"Exit transaction %1$s"</string>
   <string name="gt_62d2c6ab601628f3">"Exit transactions were prepared and monitored."</string>
   <string name="gt_16d94f2461c3f1a9">"Exit weight"</string>
@@ -520,8 +515,6 @@
     <item quantity="other">"Expires in %1$s hours"</item>
   </plurals>
   <string name="gt_ff44a401445c99df">"Expiring"</string>
-  <string name="gt_62e07fdadbbe9af4">"Expiry Height"</string>
-  <string name="gt_ff57161969e87713">"Expiry: Block %1$s"</string>
   <string name="gt_c39d646f10769b07">"Explorer"</string>
   <string name="gt_f4a9c52fcbef8486">"Explorer APIs"</string>
   <string name="gt_3664895579f0a7e6">"Export"</string>
@@ -732,6 +725,7 @@
   <string name="gt_08f271887ce94707">"M"</string>
   <string name="gt_2d9c014a222db12a">"MAX"</string>
   <string name="gt_0cf896b378674f75">"MAX requires an on-chain address without a fixed amount."</string>
+  <string name="gt_6f3359083a6fca2d">"MAX uses confirmed funds only and deducts the onchain fee from that balance."</string>
   <string name="gt_2872df3893a9447d">"MXN"</string>
   <string name="gt_dacaaac564509e99">"Mailbox authorization is disabled"</string>
   <string name="gt_0271cf5ff81b28c0">"Mailbox key"</string>
@@ -753,7 +747,6 @@
   <string name="gt_e0951b12a02b7bc0">"Mempool explorer"</string>
   <string name="gt_2f77668a9dfbf8d5">"Message"</string>
   <string name="gt_9eddf573cb509f1f">"Metadata"</string>
-  <string name="gt_5819bda7950a5abf">"Minimum Ark amount"</string>
   <string name="gt_5be3749e9f8a36d8">"Minimum board amount"</string>
   <string name="gt_86387c399b5ea22e">"Missing bundled BIP39 word list"</string>
   <string name="gt_656ea5e06bac3d88">"Missing plural resource: %1$s"</string>
@@ -761,7 +754,6 @@
   <string name="gt_d47d7cb0e4f8fd2b">"More"</string>
   <string name="gt_6ecc3df6bffdd06c">"Move"</string>
   <string name="gt_ae88a18039eabe64">"Move automatically"</string>
-  <string name="gt_95e949f1c9e6a26a">"Move onchain bitcoin into Ark for fast, low-cost payments."</string>
   <string name="gt_85720a9d10dec1ca">"Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."</string>
   <string name="gt_a571fc41c8ac198d">"Move onchain bitcoin into Ark. The amounts and fees shown are exact for this prepared transaction. Funds become spendable after the board completes."</string>
   <string name="gt_44541f362e819e01">"Move to Ark"</string>
@@ -1049,7 +1041,6 @@
   <string name="gt_1e5abacf65e5532e">"Recurring %1$s, occurrence %2$s"</string>
   <string name="gt_0e91610117029a62">"Refresh"</string>
   <string name="gt_81efe61214483139">"Refresh Server"</string>
-  <string name="gt_abc9793f7de5bd33">"Refresh VTXO"</string>
   <string name="gt_12e9814ebb03b5ec">"Refresh VTXOs"</string>
   <string name="gt_4a7fda6546a2ec0b">"Refresh activity"</string>
   <string name="gt_a6d23a9a6e2f9501">"Refresh app logs"</string>
@@ -1058,8 +1049,6 @@
   <string name="gt_ffc1364cefebd7a2">"Refresh network status"</string>
   <string name="gt_5dbbba5210b8e6c2">"Refresh payment status"</string>
   <string name="gt_dea03b1eaff62e66">"Refresh submitted to delegated round %1$s."</string>
-  <string name="gt_d0ee4bf8239e4c01">"Refresh this VTXO to keep it available."</string>
-  <string name="gt_c903490c78f12f8f">"Refresh %1$s VTXOs"</string>
   <string name="gt_117f6a7cf0372277">"Refunded"</string>
   <string name="gt_3de658e662e84920">"Refunded · back in your wallet"</string>
   <string name="gt_bb7234ec12451361">"Register"</string>
@@ -1068,13 +1057,13 @@
   <string name="gt_e25e5b89a9bf90b6">"Register with UnifiedPush"</string>
   <string name="gt_2351ee992626bafb">"Registered"</string>
   <string name="gt_e9bbe75d333a5c65">"Registered again"</string>
-  <string name="gt_009d9a53d84c4cef">"Registered with server"</string>
   <string name="gt_662d250b76c694aa">"Registered with the server again"</string>
   <string name="gt_9ef767a32782109c">"Registering..."</string>
   <string name="gt_6cfaa6f78b393854">"Registration is in progress."</string>
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"Regtest wallets use Bitcoin Core instead of Esplora."</string>
   <string name="gt_addcab98b516c661">"Regtest wallets use Bitcoin Core."</string>
+  <string name="gt_0953524e2307a002">"Reload list"</string>
   <string name="gt_f3e4352a5df650e5">"Remaining"</string>
   <string name="gt_c3812fc4acb861d5">"Remove"</string>
   <string name="gt_86c0f68e1ece91e2">"Remove Screenshot"</string>
@@ -1084,7 +1073,10 @@
   <string name="gt_b44a676f499031ee">"Renew this VTXO to keep it available."</string>
   <string name="gt_46e6876f99389ec8">"Renew %1$s"</string>
   <string name="gt_b72aebe90513cba1">"Renew %1$s"</string>
-  <string name="gt_51ccf0d08c7d2b01">"Renew %1$s VTXOs"</string>
+  <plurals name="gt_51ccf0d08c7d2b01">
+    <item quantity="one">"Renew %1$s VTXO"</item>
+    <item quantity="other">"Renew %1$s VTXOs"</item>
+  </plurals>
   <string name="gt_77ad89ff1752beb2">"Renewal status unavailable"</string>
   <string name="gt_1c736ed5f00ea1a6">"Renewed"</string>
   <plurals name="gt_c93ae43d7d80967e">
@@ -1132,7 +1124,6 @@
   <string name="gt_0cde499fcb0c92da">"Review Claim"</string>
   <string name="gt_25aa0f37b47607b3">"Review and pay"</string>
   <string name="gt_ebf6d96a47674b7c">"Review and pay manually"</string>
-  <string name="gt_bbcfaee293856b58">"Review boarding"</string>
   <string name="gt_8b3cd108890cf4d0">"Review entire wallet exit"</string>
   <string name="gt_7c434cbd5c50154f">"Review selected exit"</string>
   <string name="gt_8b3426dcf53c3f35">"Reviewed amount"</string>
@@ -1183,16 +1174,11 @@
   <string name="gt_8f6fb4eb7f42c0e2">"Security"</string>
   <string name="gt_d7a8c446069a0585">"See all"</string>
   <string name="gt_9c251e1192d16e65">"Seen on the network"</string>
-  <string name="gt_2a78025de6aae5e7">"Select"</string>
   <string name="gt_3676800cd56a15b0">"Select Action"</string>
   <string name="gt_a0066e88129f5f98">"Select Distributor"</string>
   <string name="gt_0834cfb81fbae767">"Select VTXOs"</string>
-  <string name="gt_65f9b19c0365a914">"Select a VTXO to see its details"</string>
   <string name="gt_0bdc583e8496eb4a">"Select a payment"</string>
   <string name="gt_ba6afbdcb15d6321">"Select all eligible VTXOs"</string>
-  <string name="gt_a81bdedbd0dccc7d">"Select expiring"</string>
-  <string name="gt_70f58736b63e2c9e">"Select visible"</string>
-  <string name="gt_57fd7a0cf33f2666">"Selected"</string>
   <string name="gt_3b18955703b2ebc3">"Selected screenshot"</string>
   <string name="gt_f6f4688ff23d50c6">"Send"</string>
   <string name="gt_84195de9375af87c">"Send Feedback"</string>
@@ -1209,7 +1195,6 @@
   <string name="gt_c16bc82bf1f04ede">"Sent"</string>
   <string name="gt_4e7201c7b8985a98">"Sent to"</string>
   <string name="gt_fba003c1a141b7a1">"Sent %1$s"</string>
-  <string name="gt_e403f4d9ad2126dd">"Server Public Key"</string>
   <string name="gt_76c5f148894222a9">"Server authentication failed"</string>
   <string name="gt_5f5c5c0c66eda444">"Server connection failed"</string>
   <string name="gt_c653cd477710322c">"Server key"</string>
@@ -1477,7 +1462,6 @@
   <string name="gt_0bc523a8f221ea9f">"Username may only contain a-z, 0-9, dash, underscore, and period"</string>
   <string name="gt_94dcfd1ebf80512e">"Using the default"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>
-  <string name="gt_8429e678433b1192">"VTXO Details"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO ID"</string>
   <string name="gt_d432b0c1cc8809d0">"VTXO exit delta"</string>
   <string name="gt_a3d44a4fe18f60fb">"VTXO hex or ID"</string>

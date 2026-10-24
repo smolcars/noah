@@ -217,13 +217,15 @@ struct SettingsToggleRow: View {
     var id = ""
 
     var body: some View {
-        SettingsRowLabel(icon: icon, title: title, sub: sub, hairline: hairline) {
+        // VoiceOver reads the switch alone: its title, its line as the hint.
+        SettingsRowLabel(icon: icon, title: title, sub: sub, hairline: hairline, labelHidden: true) {
             Toggle(isOn: $isOn) { Text(verbatim: title) }
                 .labelsHidden()
                 .tint(NoahTokens.Colors.foreground)
+                .accessibilityLabel(Text(verbatim: title))
+                .accessibilityHint(Text(verbatim: sub ?? ""))
                 .accessibilityIdentifier(id)
         }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -236,6 +238,7 @@ struct SettingsRowLabel<Trailing: View>: View {
     var bold = false
     var hairline = true
     var selected = false
+    var labelHidden = false
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -250,6 +253,7 @@ struct SettingsRowLabel<Trailing: View>: View {
             }
             .padding(.vertical, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityHidden(labelHidden)
             trailing
         }
         .frame(minHeight: 54)
@@ -618,5 +622,32 @@ struct SettingsStatusHeader: View {
         }
         .padding(.top, 14)
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: Receipts
+
+extension View {
+    /// Today's on-chain receipts and their buttons (`OnchainStatusSection`), in Settings' type and rows.
+    func settingsReceipts() -> some View {
+        VStack(alignment: .leading, spacing: 10) { self }
+            .noahText(NoahTokens.Typography.sub)
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .labeledContentStyle(SettingsLabeledContentStyle())
+            .buttonStyle(HomePillStyle(prominent: false, height: 40))
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// A receipt's label and value as a detail row.
+struct SettingsLabeledContentStyle: LabeledContentStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 18) {
+            configuration.label.foregroundStyle(NoahTokens.Colors.muted)
+            Spacer(minLength: 0)
+            configuration.content.monospacedDigit().multilineTextAlignment(.trailing)
+        }
+        .frame(minHeight: 44)
+        .overlay(alignment: .bottom) { HomeHairline() }
     }
 }

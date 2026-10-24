@@ -1,46 +1,196 @@
 import SwiftUI
 
+/// Bitcoin → On-chain: your confirmed on-chain balance, Move to Ark (amount, Max and today's fee
+/// rows in a sheet), Move automatically (auto-board), and today's receipts. While a move confirms,
+/// Send's block row. Home's auto-board prompt is unchanged.
 struct BoardArkView: View {
+    private struct MoveSheet: Identifiable, Equatable { var id: Int { 0 } }
+
     @Environment(AppModel.self) private var app
+    @Environment(SettingsSummary.self) private var summary: SettingsSummary?
+    @Environment(\.locale) private var locale
     @State private var model = OnchainModel()
-    @State private var amount = ""
     @State private var minimum: UInt64?
-    @FocusState private var amountFocused: Bool
-    var body: some View {
-        AdaptiveForm {
-            Section {
-                Text("Move onchain bitcoin into Ark for fast, low-cost payments.")
-                if let overview = model.overview {
-                    OnchainAmountRow(title: "Confirmed onchain balance", sats: overview.confirmed)
-                }
-                if let minimum { OnchainAmountRow(title: "Minimum Ark amount", sats: minimum) }
-            }
-        } secondary: {
-            Section("Amount") {
-                TextField("Amount in sats", text: $amount).keyboardType(.numberPad)
-                    .focused($amountFocused)
-                    .accessibilityIdentifier("board-amount")
-                    .disabled(model.locked)
-                Button("MAX") {
-                    amount = "MAX"
-                }.disabled(model.locked || model.overview?.confirmed == 0)
-                Button("Review boarding") {
-                    Task { await model.review(.board, amount: UInt64(amount) ?? 0) }
-                }
-                .disabled(model.locked || (amount != "MAX" && (UInt64(amount) ?? 0) == 0))
-                .accessibilityIdentifier("board-review")
-            }
-            OnchainStatusSection(model: model)
+    @State private var transaction = PersistedTransactionState.load(from: .shared)
+    @State private var moving: MoveSheet?
+    @State private var amount = ""
+    @State private var error: String?
+    @State private var haptics = OnboardingHaptics()
+
+    private var language: String { locale.identifier }
+    /// A move that's been sent and hasn't confirmed yet.
+    private var confirming: OnchainOperationJournal.Attempt? {
+        model.attempts.first { attempt in
+            guard attempt.quote.action == .board, let receipt = attempt.receipt, receipt.txid != nil else { return false }
+            if case .confirmed = receipt.chainStatus { return false }
+            return true
         }
-        .settingsStyle("Board to Ark", maximumWidth: AdaptiveLayout.pairedWidth)
-        .scrollDismissesKeyboard(.interactively)
-        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { amountFocused = false } } }
-        .modifier(OnchainScreen(model: model))
+    }
+
+    var body: some View {
+        SettingsScroll {
+            Text(verbatim: model.overview.map { money($0.confirmed) } ?? " ")
+                .noahText(SettingsText.big).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
+                .padding(.top, 6)
+                .accessibilityIdentifier("onchain-balance")
+            if let confirming {
+                Text(verbatim: L10n.text("Moving {amount} to Ark", money(confirming.quote.amount), locale: language))
+                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
+                ActivityBlockRow(tip: model.overview?.tip, confirmedHeight: nil)
+                    .frame(width: 204, height: 62).padding(.leading, -8).padding(.top, 18)
+                if let tip = model.overview?.tip {
+                    Text(verbatim: L10n.text("Waiting for block {height}", (tip + 1).formatted(.number.locale(locale)), locale: language))
+                        .noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 4)
+                }
+            } else {
+                Text(L10n.text("Confirmed", locale: language)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
+            }
+            SettingsGroup {
+                SettingsToggleRow(icon: "arrow.triangle.2.circlepath", title: L10n.text("Move automatically", locale: language),
+                                  sub: minimum.map { L10n.text("Asks when you have {amount} or more", money(max($0, 20_000)), locale: language) }
+                                      ?? L10n.text("Auto-board threshold unavailable", locale: language),
+                                  isOn: Binding(get: { transaction.isAutoBoardingEnabled }, set: setAutoBoard), id: "onchain-auto-board")
+                if let minimum {
+                    SettingsRowLabel(icon: "sailboat", title: L10n.text("Smallest move", locale: language), hairline: false) {
+                        Text(verbatim: money(minimum)).noahText(HomeText.amount).monospacedDigit().foregroundStyle(NoahTokens.Colors.muted)
+                    }
+                }
+            }
+            if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
+            SettingsFine(text: L10n.text("Bitcoin in Ark moves instantly and costs less to send.", locale: language))
+            OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
+        }
+        .settingsChrome("On-chain")
+        .settingsFooter {
+            if confirming == nil {
+                Button(L10n.text("Move to Ark", locale: language)) {
+                    haptics.play(.light)
+                    amount = ""
+                    moving = MoveSheet()
+                }
+                .buttonStyle(SettingsActionStyle())
+                .disabled(model.locked || model.overview?.confirmed ?? 0 == 0)
+                .accessibilityIdentifier("board-open")
+            }
+        }
+        .onboardingHaptics(haptics)
+        .modifier(OnchainScreen(model: model, presentsReview: false))
+        .settingsSheet(item: $moving, locked: model.busy) { _ in
+            MoveToArkSheet(model: model, amount: $amount, minimum: minimum, cancel: closeMove) {
+                Task {
+                    moving = nil
+                    await model.confirm()
+                    if model.error == nil { haptics.play(.success) }
+                    await summary?.refresh(suspended: app.isWalletSuspended, force: true)
+                }
+            }
+        }
+        .onChange(of: amount) { _, _ in model.invalidate() }
         .task {
             guard !app.isWalletSuspended else { return }
             minimum = try? await app.session.boardingMinimum()
         }
-        .onChange(of: amount) { _, _ in model.invalidate() }
+    }
+
+    private func closeMove() {
+        model.invalidate()
+        moving = nil
+    }
+
+    private func setAutoBoard(_ enabled: Bool) {
+        transaction.setAutoBoarding(enabled)
+        do { try SettingsStorage.shared.setPersistedState(transaction, key: PersistedTransactionState.key, version: PersistedTransactionState.version) }
+        catch { self.error = "Couldn't save auto-board setting." }
+    }
+
+    private func money(_ sats: UInt64) -> String {
+        app.isBalanceHidden ? (app.amountUnit == .bip177 ? "₿••••" : "•••• sats")
+            : BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale)
+    }
+}
+
+/// Move to Ark: the amount (or Max), then today's board review rows in the same sheet. The
+/// signed funding transaction expires after two minutes, as today; editing the amount drops it.
+private struct MoveToArkSheet: View {
+    let model: OnchainModel
+    @Binding var amount: String
+    let minimum: UInt64?
+    let cancel: () -> Void
+    let confirm: () -> Void
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
+    @FocusState private var focused: Bool
+
+    private var language: String { locale.identifier }
+    private var max: Bool { amount == "MAX" }
+    private var requested: UInt64? { max ? 0 : UInt64(amount) }
+
+    var body: some View {
+        SettingsSheetBody(title: L10n.text("Move to Ark", locale: language), line: L10n.text("From your on-chain balance.", locale: language)) {
+            HStack(alignment: .firstTextBaseline) {
+                if max {
+                    Text(L10n.text("Max", locale: language)).noahText(SettingsText.big)
+                } else {
+                    TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(NoahTokens.Colors.muted)) { Text("Amount in sats") }
+                        .noahText(SettingsText.big)
+                        .keyboardType(.numberPad)
+                        .tint(NoahTokens.Colors.orange)
+                        .focused($focused)
+                        .onChange(of: amount) { _, value in
+                            let digits = String(value.filter(\.isNumber).prefix(16))
+                            if digits != value && value != "MAX" { amount = digits }
+                        }
+                        .accessibilityIdentifier("board-amount")
+                    Text(verbatim: "sats").noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
+                }
+                Spacer()
+                Button(L10n.text("Max", locale: language)) { amount = max ? "" : "MAX" }
+                    .buttonStyle(OnboardingChipStyle(bold: max))
+                    .disabled(model.locked || model.overview?.confirmed ?? 0 == 0)
+                    .accessibilityIdentifier("board-max")
+            }
+            .padding(.top, 16)
+            .disabled(model.busy)
+            if let quote = model.quote {
+                VStack(spacing: 0) {
+                    row("Amount", quote.amount)
+                    if let fee = quote.fee, let chainFee = quote.chainFee {
+                        row("Ark fee", fee)
+                        row("Network fee", chainFee)
+                        row("Arrives in Ark", quote.net)
+                        row("Total", quote.amount + chainFee)
+                    }
+                    if let prepared = quote.prepared {
+                        SettingsDetailRow(label: L10n.text("Signed transaction size", locale: language), value: "\(prepared.vsize) vB", compact: true)
+                        SettingsDetailRow(label: L10n.text("Funding inputs", locale: language), value: "\(prepared.inputCount)", compact: true, hairline: false)
+                    }
+                }
+                .padding(.top, 8)
+                SettingsFine(text: L10n.text("Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.", locale: language)
+                             + (quote.boardAll == true ? " " + L10n.text("MAX uses confirmed funds only and deducts the onchain fee from that balance.", locale: language) : ""))
+            } else if let minimum {
+                SettingsFine(text: L10n.text("At least {amount}.", BitcoinAmount.format(sats: Int64(clamping: minimum), unit: app.amountUnit, locale: locale), locale: language))
+            }
+            if let error = model.error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
+        } actions: {
+            if model.quote == nil {
+                SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Review", locale: language),
+                                     enabled: requested.map { $0 > 0 || max } ?? false, busy: model.busy, actionID: "board-review",
+                                     onCancel: cancel) {
+                    focused = false
+                    Task { await model.review(.board, amount: requested ?? 0) }
+                }
+            } else {
+                SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Move", locale: language),
+                                     busy: model.busy, actionID: "onchain-confirm", onCancel: cancel, onAction: confirm)
+            }
+        }
+        .onAppear { focused = true }
+    }
+
+    private func row(_ label: String, _ sats: UInt64) -> some View {
+        SettingsDetailRow(label: L10n.text(label, locale: language), value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale),
+                          numeric: true)
     }
 }
 

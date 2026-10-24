@@ -86,9 +86,7 @@ struct AdaptivePresentationTests {
                 case "esplora": view = AnyView(NavigationStack { EsploraSettingsScreen() })
                 case "delete": view = AnyView(DeleteWalletSheet())
                 case "vtxos": view = AnyView(NavigationStack { VtxosView(model: onchainModel()) })
-                case "vtxo-detail":
-                    let model = onchainModel()
-                    view = AnyView(NavigationStack { VtxoDetailView(id: "layout-vtxo", model: model).modifier(OnchainScreen(model: model)) })
+                case "vtxo-detail": view = AnyView(NavigationStack { VtxoDetailView(id: "layout-vtxo") })
                 case "exit-detail": view = AnyView(NavigationStack { ExitVtxoDetailView(id: "layout-exit", model: onchainModel(detailID: "layout-exit")) })
                 default:
                     Issue.record("Unknown adaptive fixture screen")

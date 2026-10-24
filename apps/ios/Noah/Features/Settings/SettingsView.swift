@@ -532,7 +532,7 @@ struct SettingsPageView: View {
         case .backup: BackupSettingsView()
         case .recovery: RecoveryPhrasePage()
         case .vtxos: VtxosView()
-        case .vtxo(let id): VtxosView().id(id)
+        case .vtxo(let id): VtxoDetailView(id: id)
         case .onchain: BoardArkView()
         case .recurring: RecurringPaymentsView()
         case .schedule(let id): RecurringPaymentsView(scheduleID: id)

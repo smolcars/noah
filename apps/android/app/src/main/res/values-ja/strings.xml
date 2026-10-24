@@ -68,7 +68,6 @@
   <string name="gt_9bb0c676a3c4146c">"既存のライトニング支払いを確認します。新しい支払いは作成されません。"</string>
   <string name="gt_b636320b54efe2b7">"バックアップ中に不明なエラーが発生しました。"</string>
   <string name="gt_a4ae750b610e875e">"アンカー"</string>
-  <string name="gt_22b587b11be36edd">"アンカーポイント"</string>
   <string name="gt_dea19a697a27a904">"Android SDKのビルド対象"</string>
   <string name="gt_15ea390b9d935697">"別のライトニング支払いがまだ処理中です。完了してからもう一度お試しください。"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"この端末を持つ人なら誰でもフレーズを見られます。設定で画面ロックを設定して保護してください。"</string>
@@ -103,6 +102,7 @@
   <string name="gt_e3c03bb0dee641c5">"%1$s の請求"</string>
   <string name="gt_c6dd438b37364cad">"%1$s以上になったら確認します"</string>
   <string name="gt_2bb9a4e3a6cb73a9">"3文字以上"</string>
+  <string name="gt_0d04eed763c98c70">"At least %1$s."</string>
   <string name="gt_4c9ce17646b28614">"監査を利用できません"</string>
   <string name="gt_c8271c0bafb7c1eb">"認証してウォレットにアクセスしてください"</string>
   <string name="gt_7dc5ec1879cdb204">"生体認証を無効にするために認証してください"</string>
@@ -174,7 +174,6 @@
   <string name="gt_b69792e8c9b6b4aa">"ブロック %1$s"</string>
   <string name="gt_52d8701c498a04d0">"ブロック%1$s · %2$s"</string>
   <string name="gt_d20282998912f670">"ブロック %1$s"</string>
-  <string name="gt_a7f1ee1a5b8f9592">"期限切れまでのブロック数"</string>
   <string name="gt_b9dba3190e1924dc">"残りブロック数"</string>
   <string name="gt_4816cbfd74aa8297">"Arkに入金する"</string>
   <string name="gt_a3659865c762c69f">"Arkに入金する"</string>
@@ -257,7 +256,6 @@
   <string name="gt_83b12c2216efb4fd">"クリア"</string>
   <string name="gt_ba59e2d4a5e39a42">"絞り込みを解除"</string>
   <string name="gt_3b7ea51793e9d906">"検索をクリア"</string>
-  <string name="gt_cea4d2e010b8fd52">"選択を解除"</string>
   <string name="gt_7d9eb7acb13e2462">"閉じる"</string>
   <string name="gt_dfc885030d22671d">"施設の詳細を閉じる"</string>
   <string name="gt_55656b5e434f4c06">"検索を閉じる"</string>
@@ -275,7 +273,6 @@
   <string name="gt_6b2946528b3b4809">"確認されたブロック"</string>
   <string name="gt_c0c33c452704cf4e">"ブロック %1$s で承認"</string>
   <string name="gt_c8231c9c5838def9">"ブロック %1$s で承認されました。"</string>
-  <string name="gt_6bcc1f9a831a85eb">"承認済みのオンチェーン残高"</string>
   <string name="gt_90733bdb40937a8c">"確認済みのオンチェーン資金"</string>
   <string name="gt_d978a5522ce4865f">"確認中"</string>
   <string name="gt_916a464e6cfffe51">"競合あり"</string>
@@ -336,6 +333,7 @@
   <string name="gt_0d5423d40addc1a4">"復旧を再開できませんでした。Noahを再起動して、もう一度お試しください。"</string>
   <string name="gt_9f01ece862c96f1d">"認証設定を保存できませんでした。"</string>
   <string name="gt_83462be19140c53a">"Auto-boardの設定を保存できませんでした。"</string>
+  <string name="gt_638978fdc93e6a4b">"Auto-boardの設定を保存できませんでした。"</string>
   <string name="gt_e25b19f7d22a2fdf">"デバッグ設定を保存できませんでした。"</string>
   <string name="gt_a23e74658fe15a8e">"この支払いを保存できませんでした。もう一度お試しください。"</string>
   <string name="gt_f86a26a2b4cac899">"名前を保存できませんでした。"</string>
@@ -355,7 +353,6 @@
   <string name="gt_e4bca5667d4fa25e">"作成に失敗しました。もう一度お試しください。"</string>
   <string name="gt_f9039698f684e234">"スクリーンショットを切り抜く"</string>
   <string name="gt_3ac1a9ec4fa7a9fa">"通貨"</string>
-  <string name="gt_79d5a9c6567df0af">"現在のブロック高"</string>
   <string name="gt_0f200023fd30d368">"現在のエンドポイント："</string>
   <string name="gt_bac875f5494598a0">"現在のブロック高"</string>
   <string name="gt_076e7f8f950658d4">"現在の状態"</string>
@@ -480,7 +477,6 @@
   <string name="gt_8422e4065fd1b49e">"既存の手数料"</string>
   <string name="gt_b4af3461164879e7">"既存のウォレットデータが不完全です"</string>
   <string name="gt_8ad236bd4bc3ed16">"既存のウォレットデータが不完全です。続行するにはウォレットを復元してください。"</string>
-  <string name="gt_d285d8542e6aed66">"出金待機ブロック数"</string>
   <string name="gt_4f4388dc6ce48980">"退出の詳細"</string>
   <string name="gt_0085d19b65acb661">"出金処理の同期済み最新ブロック"</string>
   <string name="gt_6796f99963bfff4f">"退出の最新ブロック"</string>
@@ -496,7 +492,6 @@
   <string name="gt_09fc43a650792fef">"このVTXOの退出追跡を登録しました。"</string>
   <string name="gt_d4cb3fa71fab7042">"退出トランザクションは確認済みです。ブロック %1$s に達すると資金が受け取り可能になります。"</string>
   <string name="gt_d1bba0593dfc3706">"退出トランザクションが確認されました。タイムロックの解除を待っています。"</string>
-  <string name="gt_db7283eaafc6abac">"退出トランザクションのウェイト"</string>
   <string name="gt_3dbc56210d18edb5">"退出トランザクション %1$s"</string>
   <string name="gt_62d2c6ab601628f3">"退出トランザクションを準備し、監視しました。"</string>
   <string name="gt_16d94f2461c3f1a9">"退出の重み"</string>
@@ -520,8 +515,6 @@
     <item quantity="other">"%1$s時間後に期限切れ"</item>
   </plurals>
   <string name="gt_ff44a401445c99df">"まもなく期限切れ"</string>
-  <string name="gt_62e07fdadbbe9af4">"期限切れとなるブロック高"</string>
-  <string name="gt_ff57161969e87713">"有効期限：ブロック %1$s"</string>
   <string name="gt_c39d646f10769b07">"エクスプローラー"</string>
   <string name="gt_f4a9c52fcbef8486">"エクスプローラーAPI"</string>
   <string name="gt_3664895579f0a7e6">"エクスポート"</string>
@@ -732,6 +725,7 @@
   <string name="gt_08f271887ce94707">"M"</string>
   <string name="gt_2d9c014a222db12a">"最大"</string>
   <string name="gt_0cf896b378674f75">"MAXを使うには、金額が指定されていないオンチェーンアドレスが必要です。"</string>
+  <string name="gt_6f3359083a6fca2d">"MAX uses confirmed funds only and deducts the onchain fee from that balance."</string>
   <string name="gt_2872df3893a9447d">"MXN"</string>
   <string name="gt_dacaaac564509e99">"メールボックスの認可が無効になっています"</string>
   <string name="gt_0271cf5ff81b28c0">"メールボックスの鍵"</string>
@@ -753,7 +747,6 @@
   <string name="gt_e0951b12a02b7bc0">"メモリプールエクスプローラー"</string>
   <string name="gt_2f77668a9dfbf8d5">"メッセージ"</string>
   <string name="gt_9eddf573cb509f1f">"メタデータ"</string>
-  <string name="gt_5819bda7950a5abf">"Arkの最低金額"</string>
   <string name="gt_5be3749e9f8a36d8">"Arkへの最低入金額"</string>
   <string name="gt_86387c399b5ea22e">"同梱のBIP39単語リストがありません"</string>
   <string name="gt_656ea5e06bac3d88">"複数形リソースがありません：%1$s"</string>
@@ -761,7 +754,6 @@
   <string name="gt_d47d7cb0e4f8fd2b">"その他"</string>
   <string name="gt_6ecc3df6bffdd06c">"移動"</string>
   <string name="gt_ae88a18039eabe64">"自動で移動"</string>
-  <string name="gt_95e949f1c9e6a26a">"オンチェーンのビットコインをArkに移動すると、低い手数料で素早く支払えます。"</string>
   <string name="gt_85720a9d10dec1ca">"この署名済み入金トランザクションをそのまま使用して、オンチェーンのBitcoinをArkに入金します。Arkへの入金額にはArkの手数料が含まれますが、オンチェーン手数料は別途かかります。Arkへの入金が完了すると資金を使用できます。この確認内容は2分後に失効します。"</string>
   <string name="gt_a571fc41c8ac198d">"オンチェーンのBitcoinをArkに入金します。表示されている金額と手数料は、この準備済みトランザクションに適用される正確な値です。Arkへの入金が完了すると資金を使用できます。"</string>
   <string name="gt_44541f362e819e01">"Arkに移動"</string>
@@ -1049,7 +1041,6 @@
   <string name="gt_1e5abacf65e5532e">"定期支払い%1$s、%2$s回目"</string>
   <string name="gt_0e91610117029a62">"更新"</string>
   <string name="gt_81efe61214483139">"サーバーを更新"</string>
-  <string name="gt_abc9793f7de5bd33">"VTXOを更新"</string>
   <string name="gt_12e9814ebb03b5ec">"VTXOを更新"</string>
   <string name="gt_4a7fda6546a2ec0b">"アクティビティを更新"</string>
   <string name="gt_a6d23a9a6e2f9501">"アプリのログを更新"</string>
@@ -1058,8 +1049,6 @@
   <string name="gt_ffc1364cefebd7a2">"ネットワーク状況を更新"</string>
   <string name="gt_5dbbba5210b8e6c2">"支払い状況を更新"</string>
   <string name="gt_dea03b1eaff62e66">"委任ラウンド %1$s に更新を送信しました。"</string>
-  <string name="gt_d0ee4bf8239e4c01">"このVTXOを引き続き利用するには、更新してください。"</string>
-  <string name="gt_c903490c78f12f8f">"%1$s個のVTXOを更新"</string>
   <string name="gt_117f6a7cf0372277">"返金済み"</string>
   <string name="gt_3de658e662e84920">"返金済み · ウォレットに戻りました"</string>
   <string name="gt_bb7234ec12451361">"登録"</string>
@@ -1068,13 +1057,13 @@
   <string name="gt_e25e5b89a9bf90b6">"UnifiedPushに登録"</string>
   <string name="gt_2351ee992626bafb">"登録済み"</string>
   <string name="gt_e9bbe75d333a5c65">"Registered again"</string>
-  <string name="gt_009d9a53d84c4cef">"サーバーに登録済み"</string>
   <string name="gt_662d250b76c694aa">"サーバーに再登録しました"</string>
   <string name="gt_9ef767a32782109c">"登録中…"</string>
   <string name="gt_6cfaa6f78b393854">"登録処理中です。"</string>
   <string name="gt_c5bb2e9f9899e92e">"Regtest"</string>
   <string name="gt_3da089232bf0c887">"RegtestウォレットはEsploraの代わりにBitcoin Coreを使用します。"</string>
   <string name="gt_addcab98b516c661">"RegtestのウォレットはBitcoin Coreを使います。"</string>
+  <string name="gt_0953524e2307a002">"Reload list"</string>
   <string name="gt_f3e4352a5df650e5">"残り"</string>
   <string name="gt_c3812fc4acb861d5">"削除"</string>
   <string name="gt_86c0f68e1ece91e2">"スクリーンショットを削除"</string>
@@ -1084,7 +1073,10 @@
   <string name="gt_b44a676f499031ee">"引き続き使えるよう、このVTXOを更新してください。"</string>
   <string name="gt_46e6876f99389ec8">"%1$s を更新"</string>
   <string name="gt_b72aebe90513cba1">"%1$s個を更新"</string>
-  <string name="gt_51ccf0d08c7d2b01">"%1$s個のVTXOを更新"</string>
+  <plurals name="gt_51ccf0d08c7d2b01">
+    <item quantity="one">"Renew %1$s VTXO"</item>
+    <item quantity="other">"Renew %1$s VTXOs"</item>
+  </plurals>
   <string name="gt_77ad89ff1752beb2">"更新の状況を取得できません"</string>
   <string name="gt_1c736ed5f00ea1a6">"更新済み"</string>
   <plurals name="gt_c93ae43d7d80967e">
@@ -1132,7 +1124,6 @@
   <string name="gt_0cde499fcb0c92da">"受け取り内容を確認"</string>
   <string name="gt_25aa0f37b47607b3">"確認して支払う"</string>
   <string name="gt_ebf6d96a47674b7c">"確認して手動で支払う"</string>
-  <string name="gt_bbcfaee293856b58">"Arkへの入金内容を確認"</string>
   <string name="gt_8b3cd108890cf4d0">"ウォレット内の全資金の退出を確認"</string>
   <string name="gt_7c434cbd5c50154f">"選択した退出を確認"</string>
   <string name="gt_8b3426dcf53c3f35">"確認済みの金額"</string>
@@ -1183,16 +1174,11 @@
   <string name="gt_8f6fb4eb7f42c0e2">"セキュリティ"</string>
   <string name="gt_d7a8c446069a0585">"すべて表示"</string>
   <string name="gt_9c251e1192d16e65">"ネットワークで検出"</string>
-  <string name="gt_2a78025de6aae5e7">"選択"</string>
   <string name="gt_3676800cd56a15b0">"操作を選択"</string>
   <string name="gt_a0066e88129f5f98">"配信アプリを選択"</string>
   <string name="gt_0834cfb81fbae767">"VTXOを選択"</string>
-  <string name="gt_65f9b19c0365a914">"VTXOを選択すると詳細が表示されます"</string>
   <string name="gt_0bdc583e8496eb4a">"支払いを選択"</string>
   <string name="gt_ba6afbdcb15d6321">"対象のVTXOをすべて選択"</string>
-  <string name="gt_a81bdedbd0dccc7d">"まもなく期限切れになるものを選択"</string>
-  <string name="gt_70f58736b63e2c9e">"表示中のものを選択"</string>
-  <string name="gt_57fd7a0cf33f2666">"選択済み"</string>
   <string name="gt_3b18955703b2ebc3">"選択したスクリーンショット"</string>
   <string name="gt_f6f4688ff23d50c6">"送る"</string>
   <string name="gt_84195de9375af87c">"フィードバックを送信"</string>
@@ -1209,7 +1195,6 @@
   <string name="gt_c16bc82bf1f04ede">"送金済み"</string>
   <string name="gt_4e7201c7b8985a98">"送金先"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s を送金しました"</string>
-  <string name="gt_e403f4d9ad2126dd">"サーバー公開鍵"</string>
   <string name="gt_76c5f148894222a9">"サーバー認証に失敗しました"</string>
   <string name="gt_5f5c5c0c66eda444">"サーバーへの接続に失敗しました"</string>
   <string name="gt_c653cd477710322c">"サーバーの鍵"</string>
@@ -1477,7 +1462,6 @@
   <string name="gt_0bc523a8f221ea9f">"ユーザー名に使用できるのはa-z、0-9、ハイフン、アンダースコア、ピリオドのみです"</string>
   <string name="gt_94dcfd1ebf80512e">"標準設定を使用中"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>
-  <string name="gt_8429e678433b1192">"VTXOの詳細"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO ID"</string>
   <string name="gt_d432b0c1cc8809d0">"VTXO出金の待機ブロック数"</string>
   <string name="gt_a3d44a4fe18f60fb">"VTXOの16進数表記またはID"</string>

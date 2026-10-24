@@ -426,7 +426,7 @@ struct TransactionDetailView: View {
 
     @ViewBuilder private func destination(_ link: Link) -> some View {
         switch link {
-        case .coin(let id, let role): ActivityCoinView(id: id, role: role)
+        case .coin(let id, _): VtxoDetailView(id: id)
         case .exits: UnilateralExitView()
         case .recurring(let id): RecurringPaymentsView(scheduleID: id)
         }
@@ -601,59 +601,6 @@ struct DetailLine: View {
     }
 }
 
-/// A coin from a payment's Details, loaded by ID so spent coins open too (Settings' VTXO screen lists
-/// only the wallet's current ones). When bark can't load it, what the payment records.
-private struct ActivityCoinView: View {
-    let id: String
-    /// "Spent coins", "New coins" or "Exited coins".
-    let role: String
-    @Environment(HistoryModel.self) private var history
-    @Environment(AppModel.self) private var app
-    @Environment(\.locale) private var locale
-    @State private var read = ActivityCoinRead()
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(LocalizedStringKey(role)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
-                    .padding(.bottom, 6)
-                line("VTXO ID", id, mono: true)
-                switch read.state {
-                case .coin(let coin):
-                    line("Amount", app.isBalanceHidden ? "₿••••" : BitcoinAmount.format(sats: Int64(clamping: coin.amount), unit: app.amountUnit, locale: locale),
-                         numeric: true)
-                    line("State", L10n.text(coin.state, locale: locale.identifier))
-                    line("Expiry Height", coin.expiry.formatted(.number.locale(locale)))
-                    line("Point", coin.point, mono: true)
-                    line("Anchor Point", coin.anchorPoint, mono: true)
-                case .loading:
-                    ProgressView().frame(maxWidth: .infinity).padding(.top, 24)
-                case .unknown:
-                    // Read-only either way: no coin actions here.
-                    Text("Couldn't read wallet status. Pull to refresh.")
-                        .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-                        .padding(.top, 14)
-                        .accessibilityIdentifier("activity-coin-unknown")
-                }
-            }
-            .foregroundStyle(NoahTokens.Colors.foreground)
-            .padding(.horizontal, NoahTokens.Space.screen).padding(.top, 8).padding(.bottom, 40)
-        }
-        .background(NoahTokens.Colors.background.ignoresSafeArea())
-        .navigationTitle("VTXO Details")
-        .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await read.load(id, history: history) }
-        // Retries after every completed history read.
-        .task(id: "\(id):\(history.revision)") { await read.load(id, history: history) }
-    }
-
-    private func line(_ label: String, _ value: String, mono: Bool = false, numeric: Bool = false) -> some View {
-        DetailLine(label: L10n.text(label, locale: locale.identifier), value: value, mono: mono, numeric: numeric, wraps: mono,
-                   onCopy: mono ? { UIPasteboard.general.setItems([[UIPasteboard.typeAutomatic: value]],
-                                                                 options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)]) } : nil)
-    }
-}
-
 /// One coin, read by ID. bark-bolt-ffi 0.6.0 has no typed "not found", so any failed lookup is unknown (never
 /// matched on bark's error text). Pull to refresh and each history read start lookups that can overlap: only
 /// the newest one publishes, and a cancelled one writes nothing.
@@ -694,7 +641,7 @@ private struct ActivityOrangePulse: View {
 
 /// Send's block row for a pending on-chain payment: your transaction waits in "next", then
 /// its block fills. Data from today's chain status only.
-private struct ActivityBlockRow: View {
+struct ActivityBlockRow: View {
     let tip: UInt32?
     let confirmedHeight: UInt32?
     @Environment(\.colorScheme) private var colorScheme
