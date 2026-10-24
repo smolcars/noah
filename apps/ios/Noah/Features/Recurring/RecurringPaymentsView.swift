@@ -277,6 +277,11 @@ struct RecurringSchedulePage: View {
             RecurringPaymentsView.approval(payment: item.payment, quote: item.quote, controller: executor.controller,
                                            pay: { Task { await ForegroundExecution.run { await executor.execute(manual: true, approval: item) } } },
                                            dismiss: { review = nil }, done: { review = nil; Task { await executor.reload() } })
+                .onAppear { app.paymentLink.approvalOpen = true }
+                .onDisappear { app.paymentLink.approvalOpen = false }
+                .alert("Payment in progress", isPresented: Bindable(app.paymentLink).approvalBlocked) {
+                    Button("OK", role: .cancel) {}
+                } message: { Text(WalletTabs.blockedMessage(link: true)) }
         }
         .settingsSheet(item: $sheet) { sheet in
             switch sheet {

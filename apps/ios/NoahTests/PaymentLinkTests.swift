@@ -10,9 +10,14 @@ struct PaymentLinkTests {
     static let address = "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22"
     static let ark = "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
 
-    private func send(_ controller: SendPaymentController? = nil) -> SendModel {
-        SendModel(controller: controller ?? SendPaymentTests().make(SendPaymentTests.Backend(), SendPaymentTests.Storage()),
-                  resolveRecipient: { .init(destination: $0, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 0) })
+    /// Funds take a fixed-amount request straight to review, as with a single funded rail today.
+    private func send(_ controller: SendPaymentController? = nil, funds: UInt64 = 0,
+                      quote: @escaping (SendPayment) async -> SendQuote = { .init(amount: $0.amount, fee: 0, total: $0.amount) }) -> SendModel {
+        let model = SendModel(controller: controller ?? SendPaymentTests().make(SendPaymentTests.Backend(), SendPaymentTests.Storage()),
+                              resolveRecipient: { .init(destination: $0, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 0) },
+                              quotePayment: { await quote($0) }, discardQuote: { _ in })
+        model.arkBalance = funds
+        return model
     }
 
     /// The link the OS hands over, through the route, as `WalletTabs` takes it.
@@ -111,10 +116,85 @@ struct PaymentLinkTests {
         let model = send(controller)
         model.destination = "original@example.com"
         let link = try #require(try handOver("lightning:\(Self.invoice)"))
-        #expect(!(await QRScanRoute.apply(link, to: model)))
+        #expect(!(await PaymentLinkRoute.apply(link, to: model)))
         #expect(model.destination == "original@example.com")
         #expect(await backend.calls == 1)
         #expect(WalletTabs.blockedMessage(link: true) == "Finish the current payment before opening another payment request.")
         #expect(WalletTabs.blockedMessage(link: false) == "Finish the current payment before scanning another request.")
+    }
+
+    @Test func aReviewBeingPreparedOrShownRefusesALinkAndStaysAsItIs() async throws {
+        var quoting: CheckedContinuation<SendQuote, Never>?
+        let model = send(funds: 1_000_000, quote: { payment in
+            if quoting == nil { return await withCheckedContinuation { quoting = $0 } } // Only the first review waits.
+            return .init(amount: payment.amount, fee: 0, total: payment.amount)
+        })
+        let invoice = "lightning:\(Self.invoice)", other = "bitcoin:\(Self.address)?amount=0.0001"
+        let first = Task { await PaymentLinkRoute.apply(invoice, to: model) }
+        while quoting == nil { await Task.yield() }
+        #expect(model.stage == .review && model.busy) // Preparing the review.
+        #expect(!(await PaymentLinkRoute.apply(other, to: model)))
+        quoting?.resume(returning: .init(amount: 1500, fee: 3, total: 1503))
+        #expect(await first.value)
+
+        #expect(model.stage == .review && model.showReview) // Showing it.
+        let quote = model.quote, payment = model.payment
+        #expect(quote != nil && payment != nil)
+        #expect(!(await PaymentLinkRoute.apply(other, to: model)))
+        #expect(model.destination == invoice && model.quote == quote && model.payment == payment && model.showReview)
+        // Scanning keeps today's rule: a scan still replaces a review that isn't sending.
+        #expect(await QRScanRoute.apply(other, to: model))
+        #expect(model.destination == other)
+    }
+
+    @Test func anOpenRecurringApprovalRefusesALinkAndItsSheetSaysWhy() throws {
+        let route = PaymentLinkRoute()
+        route.approvalOpen = true
+        route.receive(try #require(URL(string: "lightning:\(Self.invoice)")), gate: .open)
+        #expect(route.take(.open) == nil) // Send never sees it, so the tabs stay as they are.
+        #expect(route.approvalBlocked)
+        #expect(route.pending == nil) // Refused, not kept for after the approval.
+        route.approvalOpen = false
+        #expect(route.take(.open) == nil)
+    }
+
+    @Test func aLinkFromBehindAGateStaysGoneWhenTheGateClearsBeforeUnlock() throws {
+        let url = try #require(URL(string: "bitcoin:\(Self.address)?amount=0.0001"))
+        var lock = BiometricLockPolicy(enabled: true)
+        var gated = true // Suspended or notifications required, behind the lock.
+        var gate: Gate { Gate(phase: .wallet, onboarding: false, gated: gated, locked: lock.locked) }
+        let route = PaymentLinkRoute()
+        route.receive(url, gate: gate)
+        #expect(gate == .ignore && route.pending == nil)
+        gated = false
+        #expect(gate == .hold)
+        lock.authenticated(generation: lock.generation)
+        #expect(gate == .open)
+        #expect(route.take(gate) == nil)
+        // A launch gate (recovery) decides the same way while locked.
+        route.receive(url, gate: Gate(phase: .blocked(.walletDataWithoutSeed), onboarding: false, gated: false, locked: true))
+        #expect(route.pending == nil)
+    }
+
+    @Test func twoLinksInARow() async throws {
+        let invoice = "lightning:\(Self.invoice)", other = "bitcoin:\(Self.address)?amount=0.0001"
+        // Held while locked: the later link replaces the earlier and is handed over once.
+        let route = PaymentLinkRoute()
+        route.receive(try #require(URL(string: invoice)), gate: .hold)
+        route.receive(try #require(URL(string: other)), gate: .hold)
+        #expect(route.take(.open) == other)
+        #expect(route.take(.open) == nil)
+        // A draft before review follows scanning: the second link replaces it.
+        let draft = send()
+        #expect(await PaymentLinkRoute.apply(invoice, to: draft))
+        #expect(draft.stage == .method) // No funds: How to send.
+        #expect(await PaymentLinkRoute.apply(other, to: draft))
+        #expect(draft.destination == other)
+        // The review the first link opened refuses the second.
+        let funded = send(funds: 1_000_000)
+        #expect(await PaymentLinkRoute.apply(invoice, to: funded))
+        #expect(funded.showReview)
+        #expect(!(await PaymentLinkRoute.apply(other, to: funded)))
+        #expect(funded.destination == invoice && funded.showReview)
     }
 }

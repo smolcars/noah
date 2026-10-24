@@ -214,7 +214,10 @@ struct WalletTabs: View {
 
     private func open(_ value: String, link: Bool) {
         selection = .send
-        Task { if !(await QRScanRoute.apply(value, to: send)) { linkBlocked = link; scanBlocked = true } }
+        Task {
+            let applied = link ? await PaymentLinkRoute.apply(value, to: send) : await QRScanRoute.apply(value, to: send)
+            if !applied { linkBlocked = link; scanBlocked = true }
+        }
     }
 
     private func consumeRepeatPayment() {

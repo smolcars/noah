@@ -73,6 +73,10 @@ final class PaymentLinkRoute {
     }
 
     private(set) var pending: String?
+    /// A recurring approval's sheet is open. It shows the alert for a link refused over it:
+    /// one from Send's tabs would dismiss the sheet.
+    var approvalOpen = false
+    var approvalBlocked = false
 
     /// The URL's own string, so its case and percent-encoding reach Send as a scanned code's would.
     func receive(_ url: URL, gate: Gate) {
@@ -80,10 +84,18 @@ final class PaymentLinkRoute {
         pending = url.absoluteString
     }
 
-    /// The held link once the gate opens; an ignoring gate drops it.
+    /// The held link once the gate opens; an ignoring gate or an open approval drops it.
     func take(_ gate: Gate) -> String? {
         guard gate != .hold else { return nil }
         defer { pending = nil }
-        return gate == .open ? pending : nil
+        guard gate == .open, pending != nil else { return nil }
+        if approvalOpen { approvalBlocked = true; return nil }
+        return pending
+    }
+
+    /// Send takes a link as a scan, but never over a review it is preparing or showing.
+    static func apply(_ link: String, to send: SendModel) async -> Bool {
+        guard send.stage != .review, !send.showReview else { return false }
+        return await QRScanRoute.apply(link, to: send)
     }
 }
