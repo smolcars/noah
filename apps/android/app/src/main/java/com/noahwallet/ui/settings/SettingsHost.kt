@@ -154,27 +154,40 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
         OnboardingFrame(null, splitAtWindowCentre = true) {
             val pose = LocalPose.current
             val holder = rememberSaveableStateHolder()
-            // The list's own state (its sheet, its scroll), outside NavDisplay's: the list beside a page (split) and the
-            // list as the first page (compact) share it, so folding or unfolding keeps both. A pose change recreates the
-            // activity, so the two are never composed at once.
+            // The list's own state (its sheet, its scroll), outside NavDisplay's, so a fold that recreates the activity keeps it.
             val list = rememberSaveableStateHolder()
             val toasts = remember { HomeToasts() }
             val live = rememberSettingsLive(model)
             val wide = pose !is OnboardingPose.Compact
+            val currentlyWide by rememberUpdatedState(wide)
+            // One list, moved with its state between the leading pane (split) and the first page (compact). A live pose
+            // change (tabletop needn't recreate the activity) animates the first page out: that copy reads the current pose
+            // and leaves the list alone, so its saved state has one owner.
+            val root = remember { movableContentOf { nav: SettingsNav, selected: NavKey? ->
+                list.SaveableStateProvider(SettingsDestination.Settings) { SettingsRoot(model, live, nav, selected, initialSheet = initialSheet) }
+            } }
             val pages: List<NavKey> = if (wide) stack.drop(1).ifEmpty { listOf(SettingsDestination.Profile) } else stack.toList()
-            fun pop() { if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
+            // A pose change (compact <-> split) swaps NavDisplay's pages without navigating, so that swap doesn't animate:
+            // NavDisplay drops a scene AnimatedContent still draws if the pose changes again mid-animation. Navigating
+            // animates again.
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            var poseSwap by remember { mutableStateOf(false) }
+            var drawnWide by remember { mutableStateOf(wide) }
+            if (drawnWide != wide) SideEffect { drawnWide = wide; poseSwap = true }
+            fun transition(forward: Boolean) = if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else pageTransition(forward, reduceMotion, wide, density)
+            fun pop() { poseSwap = false; if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
             // While a save runs (busy), you can't move away from its page: Back, the bar's back, list picks and links
             // wait. Its completion leaves only its own page, so it can't dismiss another one.
             val idle = { !model.busy }
             fun open(page: NavKey, fromList: Boolean) {
                 if (!idle()) return
+                poseSwap = false
                 // In a split window the list replaces the page beside it; inside a page, pages stack.
                 if (fromList && wide) while (stack.size > 1) stack.removeAt(stack.lastIndex)
                 if (stack.lastOrNull() != page) stack.add(page)
             }
             val leave = { if (idle()) close() }
             val code = { if (idle()) myCode() }
-            val density = androidx.compose.ui.platform.LocalDensity.current
             CompositionLocalProvider(LocalSettingsToasts provides toasts) {
                 Box(Modifier.fillMaxSize()) {
                     if (wide) Box(when (pose) {
@@ -183,10 +196,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         else -> Modifier
                     }.testTag("settings-list-pane")) {
                         CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading) {
-                            list.SaveableStateProvider(SettingsDestination.Settings) {
-                                SettingsRoot(model, live, SettingsNav(leave, { open(it, true) }, leave, code, leave),
-                                    selected = pages.firstOrNull(), initialSheet = initialSheet)
-                            }
+                            root(SettingsNav(leave, { open(it, true) }, leave, code, leave), pages.firstOrNull())
                         }
                     }
                     Box(when (pose) {
@@ -197,8 +207,8 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         CompositionLocalProvider(LocalSettingsPane provides if (wide) SettingsPane.trailing else SettingsPane.compact) {
                             NavDisplay(pages, onBack = { if (idle()) pop() },
                                 entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
-                                transitionSpec = { pageTransition(true, reduceMotion, wide, density) },
-                                popTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
+                                transitionSpec = { transition(true) },
+                                popTransitionSpec = { transition(false) },
                                 predictivePopTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
                                 entryProvider = { key ->
                                     NavEntry(key) {
@@ -208,7 +218,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                         @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview) { content ->
                                             MaterialTheme(appColors, appShapes, appTypography, content)
                                         }
-                                        if (key == SettingsDestination.Settings) list.SaveableStateProvider(SettingsDestination.Settings) { Page() } else Page()
+                                        if (key != SettingsDestination.Settings) Page() else if (!currentlyWide) root(nav, null)
                                     }
                                 })
                         }
@@ -245,7 +255,6 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
                                  legacy: @Composable (@Composable () -> Unit) -> Unit) {
     val initialSheet = preview?.sheet
     when (key) {
-        SettingsDestination.Settings -> SettingsRoot(model, live, nav, selected = null, initialSheet = initialSheet)
         SettingsDestination.Profile -> ProfilePage(model, nav)
         SettingsDestination.Lightning -> LightningAddressPage(model, nav)
         SettingsDestination.Email -> EmailPage(model, nav)

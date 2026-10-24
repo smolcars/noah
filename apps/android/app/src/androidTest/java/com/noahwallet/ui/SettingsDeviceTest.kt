@@ -346,6 +346,28 @@ class SettingsDeviceTest {
         assertEquals(SettingsRoutes.chain(SettingsDestination.Lightning), stack.toList())
     }
 
+    @Test fun livePoseChangesKeepOneListWithItsSheet() {
+        // The compact list on top, with its delete sheet open (nothing is deleted).
+        width = 400.dp
+        host(SettingsDestination.Settings)
+        compose.onNodeWithTag("settings-delete-wallet").performScrollTo().performClick()
+        fun sheetOpen() = compose.waitUntil(5_000) { compose.onAllNodesWithTag("delete-wallet-sheet").fetchSemanticsNodes().isNotEmpty() }
+        sheetOpen()
+        // Live posture changes, without recreation: the list moves between the first page and the leading pane.
+        pose(tabletop)
+        compose.onNodeWithTag("settings-list-pane").assertExists()
+        sheetOpen()
+        compose.runOnUiThread { width = null }
+        pose(book)
+        compose.onNodeWithTag("settings-list-pane").assertExists()
+        sheetOpen()
+        compose.runOnUiThread { width = 400.dp }
+        pose(null)
+        compose.onNodeWithTag("settings-list-pane").assertDoesNotExist()
+        sheetOpen()
+        assertEquals(listOf<NavKey>(SettingsDestination.Settings), stack.toList())
+    }
+
     @Test fun foldingAndUnfoldingKeepTheListsSheetAndScroll() {
         // Folded: one column, scrolled to the bottom, with the delete sheet open (nothing is deleted).
         width = 400.dp
