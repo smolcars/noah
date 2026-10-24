@@ -14,8 +14,10 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 
 object AutoBoardRules {
+    /** "Asks when you have 20,000 sats or more": of what it may move, so never counting coins claimed to this phone. */
+    const val minimumBalance = 20_000L
     fun shouldPrompt(enabled: Boolean, hasUnhandled: Boolean, ready: Boolean, balance: Long, blocking: Boolean) =
-        enabled && hasUnhandled && ready && balance >= 20_000 && !blocking
+        enabled && hasUnhandled && ready && balance >= minimumBalance && !blocking
 }
 
 /** Foreground confirmation only: background checks never submit boarding. */
@@ -65,8 +67,8 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
                         lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && plan == null &&
                         AutoBoardRules.shouldPrompt(enabled(), true, onchainReady(app),
                             app.summary?.balance?.onchain?.confirmed?.toLong() ?: 0, false)
-                }, funding = { withContext(Dispatchers.IO) { app.session.autoBoardFunding() } },
-                    quote = { app.session.autoBoardQuote() }, discard = { app.session.discardBoardReview(it) },
+                }, funding = { withContext(Dispatchers.IO) { app.session.autoBoardFunding(fundingStore::kept) } },
+                    quote = { app.session.autoBoardQuote(fundingStore::kept) }, discard = { app.session.discardBoardReview(it) },
                     present = { plan = it })
             }
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -91,7 +93,7 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
                     try {
                         message = app.services.lifecycle.withWalletMutation {
                             if (!enabled() || !onchainReady(app) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) fail(OnchainFailure.unavailable)
-                            app.session.executeOnchain(quote, review.fundingFor(quote))
+                            app.session.executeOnchain(quote, review.fundingFor(quote), kept = fundingStore::kept)
                         }
                         onBoarded(quote.net)
                         app.refresh()

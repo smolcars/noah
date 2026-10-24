@@ -191,6 +191,8 @@ class OnchainOperationsTest {
         var exactFee = 1543L
         var extraFixedFee = 0L
         var inputCount = 1
+        /** The coins bark's selection spends for a prepared board, when a test picks them. */
+        var boardInputs: List<OutPoint>? = null
         var afterPrepare: suspend (PreparedBoard) -> Unit = {}
         var afterBind: () -> Unit = {}
         var submitOutcome: BroadcastOutcome = BroadcastOutcome.Accepted
@@ -207,7 +209,7 @@ class OnchainOperationsTest {
             val gross = if (all) balance - chainFee else amount
             if (gross < fee || gross + chainFee > balance) throw BarkError("insufficient balance", BarkErrorCode.INSUFFICIENT_FUNDS)
             return PreparedBoard("prepared-${preparations.size}", "board-tx", gross.toULong(), (gross - fee).toULong(), fee.toULong(), chainFee.toULong(), 199u,
-                List(inputCount) { OutPoint("input-$it", 0u) }).also { preparations.add(it); afterPrepare(it) }
+                boardInputs ?: List(inputCount) { OutPoint("input-$it", 0u) }).also { preparations.add(it); afterPrepare(it) }
         }
         override fun bindBoard(quote: OnchainQuote) { bound[quote.preparedBoard!!.id] = quote; afterBind() }
         override fun claimBoard(quote: OnchainQuote) { if (bound[quote.preparedBoard!!.id] != quote) fail(OnchainFailure.changed) }
@@ -349,6 +351,75 @@ class OnchainOperationsTest {
             val wallet = Wallet().apply { attemptFile = File(root, "attempt") }
             withTimeout(10_000) { body(wallet, OnchainOperations(wallet, journal), journal, history) }
         } finally { root.deleteRecursively() }
+    }
+    // exit.md, Decision 8: coins claimed to this phone stay on-chain; auto-board weighs only the rest.
+    private val claimed = OnchainUtxo.Local(OutPoint("claim", 0u), 28_375u, 100u)
+    private val deposit = OnchainUtxo.Local(OutPoint("deposit", 0u), 60_000u, 100u)
+    private val claimTx = WalletTransaction("claim", "", null, 28_375, null, false)
+    private val depositTx = WalletTransaction("deposit", "", null, 60_000, null, false)
+    private fun ledger(): AutoBoardFunding { var disk: String? = null; return AutoBoardFunding({ disk }, { disk = it }).apply { keep("wallet", setOf("claim:0")) } }
+
+    @Test fun aDepositAfterAClaimToThisPhoneIsOfferedWithoutTheClaim() = runBlocking { fixture { wallet, ops, _, _ ->
+        val store = ledger()
+        wallet.fundingTransactions = listOf(claimTx, depositTx); wallet.fundingUtxos = listOf(claimed, deposit); wallet.balance = 88_375
+        val funding = checkNotNull(ops.autoBoardFunding(store::kept))
+        assertTrue("the deposit is new", store.hasUnhandled(funding))
+        val quote = checkNotNull(ops.autoBoardQuote(store::kept))
+        // The deposit less the on-chain fee, the change output and today's 5,000 reserve: never the claim's 28,375.
+        assertEquals(60_000L - 1_543 - 43 - 5_000, quote.amount)
+        assertEquals("the claim's value stays on-chain beside the reserve", 28_375L + 5_000, quote.reserveLeft)
+        assertFalse("prepared by amount, so the rest is change", quote.boardAll)
+        // Submitting rechecks the same weighing under the wallet's locks.
+        ops.execute(quote, funding, kept = store::kept)
+        assertEquals(listOf("submit:${quote.preparedBoard!!.id}"), wallet.calls.filter { it.startsWith("submit:") })
+    } }
+    @Test fun withOnlyTheClaimOnChainAutoBoardNeverAsks() = runBlocking { fixture { wallet, ops, _, _ ->
+        val store = ledger()
+        wallet.fundingTransactions = listOf(claimTx); wallet.fundingUtxos = listOf(claimed); wallet.balance = 28_375
+        assertNull(ops.autoBoardFunding(store::kept))
+        var quoted = 0
+        assertNull(AutoBoardReview(store).prepare({ true }, { ops.autoBoardFunding(store::kept) }, { quoted++; ops.autoBoardQuote(store::kept) }, {}))
+        assertEquals(0, quoted)
+        assertNull(ops.autoBoardQuote(store::kept)); assertTrue("nothing was even prepared", wallet.preparations.isEmpty())
+        // A small deposit beside it: the balance passes 20,000, but what auto-board may move doesn't.
+        val small = OnchainUtxo.Local(OutPoint("deposit", 0u), 10_000u, 100u)
+        wallet.fundingTransactions = listOf(claimTx, depositTx.copy(balanceChangeSats = 10_000)); wallet.fundingUtxos = listOf(claimed, small); wallet.balance = 38_375
+        assertNull(ops.autoBoardFunding(store::kept))
+        assertNotNull("weighing the claim too would have asked", ops.autoBoardFunding())
+    } }
+    @Test fun onceAClaimedCoinIsSpentItNoLongerHoldsValueBack() = runBlocking { fixture { wallet, ops, _, _ ->
+        val store = ledger()
+        // The claimed coin was spent (moved with Max, say): only the deposit is left, and all of it may move.
+        wallet.fundingTransactions = listOf(claimTx, depositTx); wallet.fundingUtxos = listOf(deposit); wallet.balance = 60_000
+        assertEquals(60_000L, AutoBoardFunding.boardable(60_000, wallet.fundingUtxos, store.kept("wallet")))
+        assertEquals(60_000L - 1_543 - 43 - 5_000, checkNotNull(ops.autoBoardQuote(store::kept)).amount)
+        // Unconfirmed, it isn't in the confirmed balance yet, so there's nothing to subtract for it either.
+        assertEquals(60_000L, AutoBoardFunding.boardable(60_000, listOf(deposit, OnchainUtxo.Local(OutPoint("claim", 0u), 28_375u, null)), setOf("claim:0")))
+        assertEquals(31_625L, AutoBoardFunding.boardable(60_000, listOf(deposit, claimed), setOf("claim:0")))
+    } }
+    @Test fun aReviewThatWouldSpendAClaimedCoinIsNeverOffered() = runBlocking { fixture { wallet, ops, _, _ ->
+        val store = ledger()
+        wallet.fundingTransactions = listOf(claimTx, depositTx); wallet.fundingUtxos = listOf(claimed, deposit); wallet.balance = 88_375
+        // bark chooses the inputs; when its draw spends the claimed coin, its value would end up in ordinary change.
+        wallet.boardInputs = listOf(OutPoint("claim", 0u))
+        assertNull(ops.autoBoardQuote(store::kept))
+        assertTrue("its preparation is discarded", wallet.bound.isEmpty())
+        wallet.boardInputs = listOf(OutPoint("deposit", 0u))
+        assertNotNull(ops.autoBoardQuote(store::kept))
+    } }
+    @Test fun claimedCoinsAreKeptBesideTheHandledLedgerInOneWrite() {
+        var disk: String? = null; var writes = 0
+        val store = AutoBoardFunding({ disk }, { disk = it; writes++ })
+        store.keep("wallet", setOf("claim:0"))
+        assertEquals(1, writes)
+        assertEquals(setOf("claim:0"), store.kept("wallet")); assertTrue(store.kept("other").isEmpty())
+        assertFalse(store.hasUnhandled(AutoBoardFunding.Snapshot("wallet", setOf("claim:0"))))
+        // Releasing a declined review keeps them.
+        store.release(AutoBoardFunding.Snapshot("wallet", setOf("deposit:0")), 1)
+        assertEquals(setOf("claim:0"), store.kept("wallet"))
+        // A ledger saved before kept coins existed still reads.
+        disk = """{"handled":{"wallet":["deposit:0"]},"retryAfter":{}}"""
+        assertTrue(store.kept("wallet").isEmpty()); assertFalse(store.hasUnhandled(AutoBoardFunding.Snapshot("wallet", setOf("deposit:0"))))
     }
     @Test fun confirmedFundingExcludesPendingExitUnknownAndBoardChange() = runBlocking { fixture { wallet, ops, _, _ ->
         wallet.fundingTransactions = listOf(

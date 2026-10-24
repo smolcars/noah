@@ -634,8 +634,10 @@ above). `ExitStages` maps each bark `ExitState` and transaction status to the pa
 a transaction stuck in the mempool from bark's history. "Needs on-chain funds" is inferred (`ExitFunding`): a
 transaction in `AwaitingCpfpBroadcast` past one progress cycle while the confirmed balance is below its package's fee
 at the rate bark's own estimate reports. A fee child's fee is what left the wallet (BDK can't price its anchor input).
-Claims default to another wallet; a claim to this phone records its outputs in auto-board's handled ledger before
-it's broadcast. A submitted claim shows as claiming until bark's next progress marks it.
+Claims default to another wallet; a claim to this phone records its outputs in auto-board's handled ledger and its
+claimed set (one durable write) before it's broadcast. Auto-board then weighs and sizes only the confirmed balance
+less those coins while they're unspent, prepares by amount so their value stays on-chain, and never offers a review
+whose inputs (bark's choice) include one. A submitted claim shows as claiming until bark's next progress marks it.
 `ExitDeviceTest` (hold submits once, Claim off until a valid reviewed address, Cancel only while allowed, synthetic
 book and tabletop folds, recreation) runs unconditionally. Opt-in fixture gallery (no wallet):
 `-e class com.noahwallet.onchain.ExitGalleryTest -e noahExitShots <label>` (optionally `-e noahExitScenes warn,list`),

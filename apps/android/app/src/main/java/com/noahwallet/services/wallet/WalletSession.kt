@@ -407,14 +407,15 @@ class WalletSession internal constructor(
         destination: String? = null, automatic: Boolean = false): OnchainQuote = withM6 {
         onchainOperations(it).quote(action, ids, amount, destination, automatic)
     }
-    suspend fun autoBoardFunding(): AutoBoardFunding.Snapshot? = withM6 { onchainOperations(it).autoBoardFunding() }
-    suspend fun autoBoardQuote(): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote() }
+    /** [kept]: each wallet's coins claimed to this phone, which auto-board never moves. */
+    suspend fun autoBoardFunding(kept: (String) -> Set<String> = { emptySet() }): AutoBoardFunding.Snapshot? = withM6 { onchainOperations(it).autoBoardFunding(kept) }
+    suspend fun autoBoardQuote(kept: (String) -> Set<String> = { emptySet() }): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote(kept) }
     /** [renewal]: Home's Renew, whose VTXOs must all still be due when it's submitted, checked under these locks. */
     /** [keepOnchain]: where a claim to this wallet records its outputs, so auto-board leaves them on-chain. */
     suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false,
-                               keepOnchain: (Set<String>) -> Unit = {}): String = withM6 { handles ->
+                               keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() }): String = withM6 { handles ->
         val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
-        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain) }
+        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept) }
     }
     internal suspend fun exitCosts(ids: List<String>): Map<String, com.noahwallet.onchain.ExitCosts.Cost?> = withM6 { onchainOperations(it).exitCosts(ids) }
     suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->

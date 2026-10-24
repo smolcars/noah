@@ -67,22 +67,34 @@ internal class OnchainOperations(
         }
         return ExitModel(status.vtxoId, status.amountSats.toLong(), current.first, current.second, past.map { it.first }, past.map { it.second }, packages)
     }
-    suspend fun autoBoardFunding(): AutoBoardFunding.Snapshot? {
+    /**
+     * [kept]: each wallet's coins claimed to this phone (exit.md, Decision 8). Auto-board asks only when what it may move
+     * without them reaches its 20,000-sat threshold.
+     */
+    suspend fun autoBoardFunding(kept: (String) -> Set<String> = { emptySet() }): AutoBoardFunding.Snapshot? {
         if (!ready()) fail(OnchainFailure.unavailable)
         for (attempt in journal.loadAll().filter { it.quote.walletID == wallet.walletID && it.blocks(OnchainAction.board, emptyList()) })
             check(attempt.id)
         if (journal.loadAll().any { it.blocks(OnchainAction.board, emptyList()) } || wallet.hasPendingBoards()) return null
-        return AutoBoardFunding.confirmed(wallet.walletID, wallet.utxos(), wallet.transactions())
+        val utxos = wallet.utxos()
+        if (AutoBoardFunding.boardable(wallet.confirmed(), utxos, kept(wallet.walletID)) < AutoBoardRules.minimumBalance) return null
+        return AutoBoardFunding.confirmed(wallet.walletID, utxos, wallet.transactions())
     }
-    suspend fun autoBoardQuote(): OnchainQuote? {
+    /**
+     * Sizes the review from what auto-board may move: the confirmed balance less coins claimed to this phone, which stay
+     * on-chain as change. bark chooses the inputs, so a review that would spend a claimed coin is never offered.
+     */
+    suspend fun autoBoardQuote(kept: (String) -> Set<String> = { emptySet() }): OnchainQuote? {
         if (!ready()) fail(OnchainFailure.unavailable)
         val minimum = wallet.minimum() ?: fail(OnchainFailure.unavailable)
-        val balance = wallet.confirmed()
+        val claimed = kept(wallet.walletID)
+        val keptValue = if (claimed.isEmpty()) 0 else AutoBoardFunding.keptValue(wallet.utxos(), claimed)
+        val balance = wallet.confirmed() - keptValue
         if (balance <= BoardingRules.reserve + BoardingRules.threshold(minimum)) return null
         val probe = quote(OnchainAction.board, automatic = true)
         val candidate = try {
             // Fixed-amount boarding adds a 43-vB Taproot change output to the confirmed-input drain.
-            probe.amount - BoardingRules.reserve - 43 * checkNotNull(probe.feeRate)
+            probe.amount - keptValue - BoardingRules.reserve - 43 * checkNotNull(probe.feeRate)
         } finally { withContext(NonCancellable) { wallet.discardBoard(checkNotNull(probe.preparedBoard).id) } }
         if (!wallet.boardCleanupComplete(checkNotNull(probe.preparedBoard).id)) fail(OnchainFailure.uncertain)
         currentCoroutineContext().ensureActive()
@@ -91,7 +103,8 @@ internal class OnchainOperations(
         var reviewed = false
         try {
             currentCoroutineContext().ensureActive()
-            if (prepared.reserveLeft < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready()) return null
+            if (prepared.reserveLeft - keptValue < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready() ||
+                checkNotNull(prepared.preparedBoard).inputs.any { "${it.txid}:${it.vout}" in claimed }) return null
             reviewed = true
             return prepared
         } finally {
@@ -176,10 +189,10 @@ internal class OnchainOperations(
      * before it's broadcast, so auto-board never offers them back to Ark.
      */
     suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
-                        keepOnchain: (Set<String>) -> Unit = {}): String {
+                        keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() }): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
-            if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding() != funding)) fail(OnchainFailure.changed)
+            if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding(kept) != funding)) fail(OnchainFailure.changed)
             if (reviewed.preparedBoard == null) fail(OnchainFailure.changed)
             // Added funds leave at least the reviewed reserve; only a decrease can break it (iOS parity).
             if (reviewed.automatic && (wallet.confirmed() < reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve)) fail(OnchainFailure.changed)

@@ -13,6 +13,11 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
         private val lock = Any()
         fun stored(settings: com.noahwallet.services.storage.SettingsStorage) =
             AutoBoardFunding({ settings.string(key) }, { settings.set(it, key); settings.sync() })
+        /** What claimed-to-this-phone coins hold now: those still unspent and confirmed in the wallet (spent ones drop out). */
+        fun keptValue(utxos: List<OnchainUtxo>, kept: Set<String>): Long = utxos.filterIsInstance<OnchainUtxo.Local>()
+            .filter { it.confirmationHeight != null && "${it.outpoint.txid}:${it.outpoint.vout}" in kept }.sumOf { it.amountSats.toLong() }
+        /** What auto-board may move (exit.md, Decision 8): the confirmed balance less the coins claimed to this phone. */
+        fun boardable(confirmed: Long, utxos: List<OnchainUtxo>, kept: Set<String>) = confirmed - keptValue(utxos, kept)
         fun confirmed(walletID: String, utxos: List<OnchainUtxo>, transactions: List<WalletTransaction>): Snapshot {
             // A board/send's change is not a new deposit. Unknown transactions are not eligible.
             val incoming = transactions.filter { it.balanceChangeSats > 0 }.map { it.txid }.toSet()
@@ -21,13 +26,17 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
                 .map { "${it.outpoint.txid}:${it.outpoint.vout}" }.toSet())
         }
     }
-    private data class State(val handled: Map<String, Set<String>>, val retryAfter: Map<String, Long> = emptyMap())
+    /** [kept]: outpoints claimed to this phone from exits, per wallet; auto-board never moves their value. */
+    private data class State(val handled: Map<String, Set<String>>, val retryAfter: Map<String, Long> = emptyMap(),
+                             val kept: Map<String, Set<String>> = emptyMap())
     private fun load(): State {
         val root = read()?.let { Json.parseToJsonElement(it).jsonObject } ?: return State(emptyMap())
         val handled = root["handled"]?.jsonObject ?: root // Original outpoint-only ledger.
-        return State(handled.mapValues { (_, value) ->
+        fun sets(node: JsonObject) = node.mapValues { (_, value) ->
             value.jsonArray.map { require(it.jsonPrimitive.isString); it.jsonPrimitive.content }.toSet()
-        }, root["retryAfter"]?.jsonObject?.mapValues { it.value.jsonPrimitive.long }.orEmpty())
+        }
+        return State(sets(handled), root["retryAfter"]?.jsonObject?.mapValues { it.value.jsonPrimitive.long }.orEmpty(),
+            root["kept"]?.jsonObject?.let(::sets).orEmpty())
     }
     /** A deadline beyond one backoff window means the clock moved back since saving; cap it durably once. */
     fun retryDeadline(walletID: String, now: Long = System.currentTimeMillis()): Long = synchronized(lock) {
@@ -42,13 +51,14 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
     fun markHandled(funding: Snapshot): Boolean = claim(funding) != null
     fun release(funding: Snapshot, retryAfter: Long) = synchronized(lock) {
         val saved = load()
-        save(State(saved.handled + (funding.walletID to (saved.handled[funding.walletID].orEmpty() - funding.outpoints)),
-            saved.retryAfter + (funding.walletID to retryAfter))) // Release and deadline share one durable write.
+        save(saved.copy(handled = saved.handled + (funding.walletID to (saved.handled[funding.walletID].orEmpty() - funding.outpoints)),
+            retryAfter = saved.retryAfter + (funding.walletID to retryAfter))) // Release and deadline share one durable write.
     }
     private fun save(saved: State) {
         write(buildJsonObject {
             put("handled", JsonObject(saved.handled.mapValues { (_, ids) -> JsonArray(ids.sorted().map(::JsonPrimitive)) }))
             put("retryAfter", JsonObject(saved.retryAfter.mapValues { JsonPrimitive(it.value) }))
+            if (saved.kept.isNotEmpty()) put("kept", JsonObject(saved.kept.mapValues { (_, ids) -> JsonArray(ids.sorted().map(::JsonPrimitive)) }))
         }.toString())
     }
     fun claim(funding: Snapshot): Snapshot? = synchronized(lock) {
@@ -59,8 +69,16 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
         save(saved.copy(handled = saved.handled + (funding.walletID to (previous + funding.outpoints))))
         Snapshot(funding.walletID, newly)
     }
-    /** Coins claimed to this phone stay on-chain (exit.md, Decision 8): handled before they exist, so no review offers them. */
-    fun keep(walletID: String, outpoints: Set<String>) { claim(Snapshot(walletID, outpoints)) }
+    /**
+     * Coins claimed to this phone stay on-chain (exit.md, Decision 8): handled, so no review offers them, and kept, so no
+     * review's amount includes their value. One durable write, before the claim is broadcast.
+     */
+    fun keep(walletID: String, outpoints: Set<String>) = synchronized(lock) {
+        val saved = load()
+        save(saved.copy(handled = saved.handled + (walletID to (saved.handled[walletID].orEmpty() + outpoints)),
+            kept = saved.kept + (walletID to (saved.kept[walletID].orEmpty() + outpoints))))
+    }
+    fun kept(walletID: String): Set<String> = load().kept[walletID].orEmpty()
 }
 
 /** Async reads may finish after pause/navigation; only a still-active caller may evaluate or claim funding. */
