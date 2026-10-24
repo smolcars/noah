@@ -24,15 +24,18 @@ struct UnilateralExitView: View {
             Text(verbatim: L10n.text("Emergency use only. It takes your bitcoin out of Ark without Ark’s server.", locale: language))
                 .noahText(SettingsText.line).foregroundStyle(NoahTokens.Colors.muted)
                 .fixedSize(horizontal: false, vertical: true)
+            // The exits already running, or ended: one opens directly, several open the list.
             if exits.count == 1, let exit = exits.first {
-                SettingsRow(title: money(exit.amount), value: L10n.text(ExitTimeline.labels[exit.state] ?? exit.state, locale: language),
-                            hairline: false, id: "exit-entry") { settings.open(.exitProgress(exit.id)) }
+                ExitListRow(exit: exit, progress: model.progress(exit), text: ExitText(progress: model.progress(exit), exit: exit,
+                            tip: model.overview?.tip ?? 0, overview: model.overview, attempts: model.attempts, money: money, language: language),
+                            hairline: false) { settings.open(.exitProgress(exit.id)) }
                     .padding(.top, 14)
             } else if !exits.isEmpty {
-                SettingsRow(title: L10n.text("Exits", locale: language), value: "\(exits.count)", hairline: false, id: "exit-entry") {
-                    settings.open(.exitList)
-                }
-                .padding(.top, 14)
+                SettingsRow(icon: "list.bullet", title: L10n.text("Exits", locale: language),
+                            value: L10n.text("{n} in progress · {count} ready to claim", exits.filter { ExitRules.live($0.state) && !$0.claimable }.count.formatted(),
+                                             exits.filter(\.claimable).count.formatted(), locale: language),
+                            hairline: false, id: "exit-entry") { settings.open(.exitList) }
+                    .padding(.top, 14)
             }
         } trailing: {
             VStack(spacing: 0) {
@@ -295,111 +298,6 @@ struct ExitReviewView: View {
             guard model.error == nil else { haptics.play(.error); return }
             haptics.play(.success)
             settings.swap(.exit, ids.count == 1 ? .exitProgress(ids[0]) : .exitList)
-        }
-    }
-}
-
-/// Today's exits, progress and claim sections, kept until the redesigned list and claim replace them.
-struct ExitListView: View {
-    @Environment(AppModel.self) private var app
-    @State private var model = OnchainModel()
-    private var destination: String { model.claimDestination }
-    @State private var filter: String?
-    private var exits: [ExitModel] { model.overview?.exits ?? [] }
-    private var pending: [ExitModel] { exits.filter { ExitRules.live($0.state) } }
-    var body: some View {
-        Form {
-            if !pending.isEmpty {
-                Section("Progress") {
-                    Text("Noah progresses exits automatically. You can also progress all pending exits manually.")
-                    Button("Progress Exits") {
-                        Task { await model.review(.progress, ids: pending.map(\.id)) }
-                    }
-                    .disabled(model.locked)
-                }
-            }
-            if exits.contains(where: \.claimable) {
-                Section("Claim recovered funds") {
-                    TextField("Bitcoin destination address", text: Binding(get: { destination }, set: model.editClaimDestination))
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    if let error = model.claimDestinationError {
-                        Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive)
-                    } else if model.claimDestinationIsMine == false {
-                        Text("This address isn't in your Noah wallet. The claimed funds will be sent there.")
-                            .foregroundStyle(NoahColor.destructive)
-                    }
-                    Button("Use my Noah wallet address") { Task { await model.useWalletClaimAddress() } }
-                        .disabled(model.locked)
-                    Button("Review Claim") {
-                        Task {
-                            await model.review(
-                                .claim, ids: exits.filter(\.claimable).map(\.id),
-                                destination: destination.trimmingCharacters(in: .whitespacesAndNewlines))
-                        }
-                    }.disabled(destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.locked)
-                }
-            }
-            Section("Exits") {
-                Picker("Status", selection: $filter) {
-                    Text("All").tag(nil as String?)
-                    ForEach(ExitTimeline.labels.keys.sorted(), id: \.self) {
-                        Text(LocalizedStringKey(ExitTimeline.labels[$0]!)).tag(Optional($0))
-                    }
-                }
-                ForEach(exits.filter { filter == nil || $0.state == filter }) { exit in
-                    NavigationLink {
-                        ExitVtxoDetailView(id: exit.id)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            OnchainAmountRow(title: ExitTimeline.labels[exit.state] ?? exit.state, sats: exit.amount)
-                            Text(exit.id).font(NoahFont.footnote).lineLimit(1).truncationMode(.middle)
-                        }
-                    }
-                }
-            }
-            OnchainStatusSection(model: model)
-        }
-        .settingsStyle("Exits")
-        .modifier(OnchainScreen(model: model))
-        .task(id: model.overview?.walletID) {
-            if model.overview != nil, destination.isEmpty { await model.useWalletClaimAddress() }
-        }
-        .task(id: destination + (model.overview?.walletID ?? "") + String(app.isWalletSuspended)) {
-            await model.checkClaimDestination()
-        }
-    }
-}
-
-struct ExitOverviewSummary: View {
-    let overview: OnchainOverview
-    private var exits: [ExitModel] { overview.exits }
-    private var eligible: [VtxoModel] { overview.vtxos.filter(\.eligible) }
-    private var pending: [ExitModel] { exits.filter { ExitRules.live($0.state) } }
-    var body: some View {
-        LabeledContent("Tracked", value: "\(exits.count)")
-        LabeledContent("Pending", value: "\(pending.count)")
-        LabeledContent("Claimable", value: "\(exits.filter(\.claimable).count)")
-        LabeledContent("Claiming", value: "\(exits.filter { $0.state == "ClaimInProgress" }.count)")
-        LabeledContent("Claimed", value: "\(exits.filter { $0.state == "Claimed" }.count)")
-        LabeledContent("Available", value: "\(eligible.count)")
-        OnchainAmountRow(title: "Available Value", sats: eligible.reduce(0) { $0 + $1.amount })
-        OnchainAmountRow(title: "Pending exit value", sats: overview.pendingTotal)
-        OnchainAmountRow(title: "Confirmed onchain funds", sats: overview.confirmed)
-        LabeledContent("Block height", value: "\(overview.tip)")
-        if let syncedTip = exits.compactMap({ $0.details.tip_height }).max() {
-            LabeledContent("Exit Synced Tip", value: "\(syncedTip)")
-        }
-        let staleCount = exits.filter { $0.details.tip_height.map { $0 < overview.tip } == true }.count
-        if staleCount > 0 {
-            Text(L10n.plural("{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.", count: staleCount))
-        }
-        let belowDust = overview.vtxos.filter { $0.state == "Spendable" && $0.amount < ExitRules.dust }
-        if !belowDust.isEmpty {
-            LabeledContent("Below dust limit", value: "\(belowDust.count)")
-            OnchainAmountRow(title: "Below dust limit", sats: belowDust.reduce(0) { $0 + $1.amount })
-        }
-        if let height = overview.claimableHeight {
-            LabeledContent("All claimable at", value: "Block \(height)")
         }
     }
 }

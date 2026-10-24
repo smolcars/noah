@@ -28,36 +28,4 @@ struct WalletParityDeviceTests {
             window.isHidden = true
         }
     }
-    @Test func exitOverviewFields() async throws {
-        let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
-        let window = UIWindow(windowScene: scene)
-        let dust = VtxoModel(id: "public-dust", amount: 100, expiry: 200, state: "Spendable", kind: "Arkoor",
-            exitDepth: 1, exitWeight: 400, registered: true, serverPubkey: "public-server", exitDelta: 144,
-            anchorPoint: "public-anchor:0", point: "public-point:0", expiring: false, tip: 150)
-        let exit = ExitModel(id: "public-exit", amount: 12000, state: "Claimed", details: .init(kind: "claimed", tip_height: 149),
-            history: [], historyDetails: [], claimable: false)
-        let overview = OnchainOverview(walletID: "public", vtxos: [dust], exits: [exit], confirmed: 50000,
-            tip: 150, pendingTotal: 0, claimableHeight: 144)
-        window.rootViewController = UIHostingController(rootView: NavigationStack {
-            ScrollView {
-                VStack(spacing: 12) { ExitOverviewSummary(overview: overview) }.padding(20)
-            }.navigationTitle("Emergency Exit")
-        }.environment(AppModel()).environment(\.locale, Locale(identifier: "en_US")))
-        window.makeKeyAndVisible()
-        defer { window.isHidden = true }
-        try await Task.sleep(for: .seconds(2))
-        func shot(_ name: String) throws {
-            let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) }
-            try #require(image.pngData()).write(to: URL.documentsDirectory.appending(path: name))
-        }
-        try shot("wallet-parity-exit-summary.png")
-        func scrollView(_ view: UIView) -> UIScrollView? {
-            (view as? UIScrollView) ?? view.subviews.compactMap { scrollView($0) }.first
-        }
-        let scroll = try #require(scrollView(window))
-        scroll.setContentOffset(CGPoint(x: 0, y: max(0, scroll.contentSize.height - scroll.bounds.height)), animated: false)
-        try await Task.sleep(for: .seconds(1))
-        try shot("wallet-parity-exit-summary-bottom.png")
-    }
-
 }

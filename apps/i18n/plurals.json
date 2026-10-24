@@ -126,5 +126,9 @@
   "Your bitcoin is on-chain, locked for {n} blocks. The lock gives Ark time to stop a VTXO that was already spent.": {
     "one": "Your bitcoin is on-chain, locked for {n} block. The lock gives Ark time to stop a VTXO that was already spent.",
     "other": "Your bitcoin is on-chain, locked for {n} blocks. The lock gives Ark time to stop a VTXO that was already spent."
+  },
+  "Waiting · {n} blocks · about {time}": {
+    "one": "Waiting · {n} block · about {time}",
+    "other": "Waiting · {n} blocks · about {time}"
   }
 }
