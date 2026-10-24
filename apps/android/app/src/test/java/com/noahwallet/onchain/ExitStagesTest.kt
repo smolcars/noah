@@ -109,6 +109,16 @@ class ExitStagesTest {
         assertNull("not seen in the mempool yet: nothing to count from", ExitStages.of(exit("Processing", sent), 102).attention)
         val bumped = processing(101, tx("root", "awaiting-confirmation", "c2", origin = "wallet"), tx("leaf", "verify-inputs"))
         assertEquals(ExitStage.Attention.feesRose, ExitStages.of(exit("Processing", bumped, history = listOf(sent)), 101).attention)
+        // Evicted (or reorged out), then sent again with a fresh child: the earlier stay's child isn't a replacement, so it's
+        // stuck, not "fees rose", once a block comes without it.
+        val evicted = processing(102, tx("root", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs"))
+        val again = exit("Processing", processing(103, tx("root", "awaiting-confirmation", "c3", origin = "wallet"), tx("leaf", "verify-inputs")),
+            history = listOf(sent, evicted))
+        val stage = ExitStages.of(again, 105, seen = mapOf("root/awaiting-confirmation/2" to 103L))
+        assertEquals(ExitStage.Attention.stuck, stage.attention); assertEquals(2L, stage.waited)
+        val rebumped = exit("Processing", processing(104, tx("root", "awaiting-confirmation", "c4", origin = "wallet"), tx("leaf", "verify-inputs")),
+            history = listOf(sent, evicted, again.details))
+        assertEquals("replaced within this stay", ExitStage.Attention.feesRose, ExitStages.of(rebumped, 104).attention)
     }
 
     @Test fun noahCountsWaitingFromTheTipItFirstSawEachStatusAt() {

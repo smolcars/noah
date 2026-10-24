@@ -108,9 +108,10 @@ internal object ExitStages {
             kind == "awaiting-cpfp-broadcast" -> stage.copy(phase = ExitStage.Phase.mempool)
             else -> {
                 val mine = tx.status.origin == null || tx.status.origin == "wallet"
-                // Every child bark gave it in the mempool, oldest first: a replaced one means fees rose.
-                val children = (exit.historyDetails + exit.details).mapNotNull { state ->
-                    state.transactions?.find { it.txid == tx.txid }?.takeIf { it.status.kind == "awaiting-confirmation" }?.status?.child_txid
+                // Every child bark gave it in this stay in the mempool, oldest first: a replaced one means fees rose. An earlier
+                // stay (before an eviction or reorg) doesn't count.
+                val children = (exit.historyDetails + exit.details).drop(episode(exit, tx.txid)).mapNotNull { state ->
+                    state.transactions?.find { it.txid == tx.txid }?.status?.child_txid
                 }.distinct()
                 // bark's own tip stays put while nothing changes: count from the tip Noah first saw it in the mempool at.
                 val waited = seen[ExitSeen.key(exit, tx)]?.let { (tip - it).coerceAtLeast(0) } ?: 0
