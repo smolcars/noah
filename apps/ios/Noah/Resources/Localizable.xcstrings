@@ -145,42 +145,6 @@
         }
       }
     },
-    "A custom Esplora server can observe the Bitcoin addresses and transactions requested by this wallet. Only use a server you trust.": {
-      "comment": "GT gt_ca4925ac35b345a4; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A custom Esplora server can observe the Bitcoin addresses and transactions requested by this wallet. Only use a server you trust."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un servidor Esplora personalizado puede ver las direcciones y transacciones de Bitcoin que consulta esta billetera. Usa solo un servidor en el que confíes."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カスタムEsploraサーバーは、このウォレットが照会するBitcoinアドレスや取引を確認できます。信頼できるサーバーのみを使用してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "사용자 지정 Esplora 서버는 이 지갑이 조회하는 Bitcoin 주소와 거래를 확인할 수 있습니다. 신뢰할 수 있는 서버만 사용하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En anpassad Esplora-server kan se vilka Bitcoin-adresser och transaktioner plånboken begär information om. Använd bara en server som du litar på."
-          }
-        }
-      }
-    },
     "A custom server can see your addresses. Use one you trust.": {
       "comment": "GT gt_1ef4529eb54eae53; arguments: none",
       "extractionState": "manual",
@@ -717,42 +681,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktiv"
-          }
-        }
-      }
-    },
-    "Active endpoint": {
-      "comment": "GT gt_72c7d12ad2eeb7db; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Active endpoint"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Punto de acceso activo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用中のエンドポイント"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "사용 중인 엔드포인트"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktiv slutpunkt"
           }
         }
       }
@@ -2721,42 +2649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nöduttag från Ark"
-          }
-        }
-      }
-    },
-    "Ark Info": {
-      "comment": "GT gt_e63e248cde19421e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark Info"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Información de Ark"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark情報"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark 정보"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark-information"
           }
         }
       }
@@ -6249,42 +6141,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Insättning slutförd"
-          }
-        }
-      }
-    },
-    "Boarding limits": {
-      "comment": "GT gt_b373946f56095665; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Boarding limits"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Límites de depósito"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arkへの入金制限"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "입금 한도"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Insättningsgränser"
           }
         }
       }
@@ -12733,42 +12589,6 @@
         }
       }
     },
-    "Custom endpoint": {
-      "comment": "GT gt_5fb0795eaf2ee446; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom endpoint"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Punto de acceso personalizado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カスタムエンドポイント"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "사용자 지정 엔드포인트"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anpassad slutpunkt"
-          }
-        }
-      }
-    },
     "Custom intervals must be between 1 and 365 days.": {
       "comment": "GT gt_2cf66471929b6b6b; arguments: none",
       "extractionState": "manual",
@@ -13233,42 +13053,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Standard"
-          }
-        }
-      }
-    },
-    "Default endpoint": {
-      "comment": "GT gt_a53809d541246272; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Default endpoint"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Punto de acceso predeterminado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "デフォルトのエンドポイント"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기본 엔드포인트"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Standardslutpunkt"
           }
         }
       }
@@ -14245,6 +14029,42 @@
         }
       }
     },
+    "ERROR": {
+      "comment": "GT gt_d98ee0e5f9399db9; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERROR"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERROR"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERROR"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERROR"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERROR"
+          }
+        }
+      }
+    },
     "EUR": {
       "comment": "GT gt_57d4846cecee3fdd; arguments: none",
       "extractionState": "manual",
@@ -14313,42 +14133,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ändra"
-          }
-        }
-      }
-    },
-    "Edit Esplora API": {
-      "comment": "GT gt_72f2925371ee93bd; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit Esplora API"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Editar la API de Esplora"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora APIを編集"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API 수정"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Redigera Esplora-API"
           }
         }
       }
@@ -15253,42 +15037,6 @@
         }
       }
     },
-    "Endpoint updated": {
-      "comment": "GT gt_44914ac9a9fded71; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint updated"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Punto de acceso actualizado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エンドポイントを更新しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "엔드포인트가 변경되었습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slutpunkten har uppdaterats"
-          }
-        }
-      }
-    },
     "Endpoints": {
       "comment": "GT gt_fce7fec2a58c8b49; arguments: none",
       "extractionState": "manual",
@@ -15357,78 +15105,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avslutas"
-          }
-        }
-      }
-    },
-    "Enter Bitcoin address": {
-      "comment": "GT gt_251de8d83bdb7bd0; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter Bitcoin address"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Introduce una dirección de Bitcoin"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ビットコインアドレスを入力"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bitcoin 주소 입력"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ange Bitcoin-adress"
-          }
-        }
-      }
-    },
-    "Enter VTXO hex or ID": {
-      "comment": "GT gt_5a56a30e6da9e5d9; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter VTXO hex or ID"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Introduce el valor hexadecimal o el ID del VTXO"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXOの16進数データまたはIDを入力"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXO의 16진수 값 또는 ID 입력"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ange VTXO i hexformat eller dess ID"
           }
         }
       }
@@ -16117,150 +15793,6 @@
         }
       }
     },
-    "Esplora API base URL": {
-      "comment": "GT gt_4aca231490486ddf; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API base URL"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "URL base de la API de Esplora"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora APIのベースURL"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API 기본 URL"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bas-URL för Esplora API"
-          }
-        }
-      }
-    },
-    "Esplora API · Custom endpoint": {
-      "comment": "GT gt_dea4969e1e0f5ab1; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · Custom endpoint"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API de Esplora · Punto de acceso personalizado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · カスタムエンドポイント"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · 사용자 지정 엔드포인트"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · Anpassad slutpunkt"
-          }
-        }
-      }
-    },
-    "Esplora API · Noah default": {
-      "comment": "GT gt_673e1f4d5ca309f4; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · Noah default"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API de Esplora · Predeterminada de Noah"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · Noahのデフォルト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · Noah 기본값"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora API · Noah-standard"
-          }
-        }
-      }
-    },
-    "Esplora Settings": {
-      "comment": "GT gt_7926af61aab9882c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora Settings"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajustes de Esplora"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora設定"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora 설정"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esplora-inställningar"
-          }
-        }
-      }
-    },
     "Estimated broadcast fees": {
       "comment": "GT gt_f81c8539f3f844d2; arguments: none",
       "extractionState": "manual",
@@ -16845,42 +16377,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Var … dag"
-          }
-        }
-      }
-    },
-    "Execute": {
-      "comment": "GT gt_e3a67d9540e9a204; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Execute"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ejecutar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実行"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실행"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utför"
           }
         }
       }
@@ -18297,42 +17793,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Utforskare"
-          }
-        }
-      }
-    },
-    "Explorer APIs": {
-      "comment": "GT gt_f4a9c52fcbef8486; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Explorer APIs"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API de exploradores"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エクスプローラーAPI"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "탐색기 API"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API:er för blockutforskare"
           }
         }
       }
@@ -20817,42 +20277,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "H"
-          }
-        }
-      }
-    },
-    "HTLC send expiry delta": {
-      "comment": "GT gt_f7202940b694d0d1; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTLC send expiry delta"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delta de vencimiento de envíos HTLC"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTLC送信の有効期限差分"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTLC 전송 만료 간격"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utgångsdelta för HTLC-sändning"
           }
         }
       }
@@ -23905,42 +23329,6 @@
         }
       }
     },
-    "Keys": {
-      "comment": "GT gt_f0d66a79c138e951; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keys"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claves"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "鍵"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "키"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nycklar"
-          }
-        }
-      }
-    },
     "LNURL invoice description hash does not commit to endpoint metadata": {
       "comment": "GT gt_4993449490bbc0ac; arguments: none",
       "extractionState": "manual",
@@ -25705,6 +25093,42 @@
         }
       }
     },
+    "Logs are redacted before you share them.": {
+      "comment": "GT gt_f1ed28c3c824a793; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs are redacted before you share them."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs are redacted before you share them."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs are redacted before you share them."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs are redacted before you share them."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs are redacted before you share them."
+          }
+        }
+      }
+    },
     "M": {
       "comment": "GT gt_08f271887ce94707; arguments: none",
       "extractionState": "manual",
@@ -25953,42 +25377,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Brevlådans nyckel"
-          }
-        }
-      }
-    },
-    "Mailbox pubkey": {
-      "comment": "GT gt_a21d42b5a962296c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mailbox pubkey"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clave pública del buzón"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メールボックス公開鍵"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "메일박스 공개 키"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brevlådans publika nyckel"
           }
         }
       }
@@ -26425,42 +25813,6 @@
         }
       }
     },
-    "Maximum VTXO amount": {
-      "comment": "GT gt_7f1a703cf6985117; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Maximum VTXO amount"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importe máximo por VTXO"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXOの最大金額"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최대 VTXO 금액"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Högsta VTXO-belopp"
-          }
-        }
-      }
-    },
     "Maximum available": {
       "comment": "GT gt_f62bb082d169c40c; arguments: none",
       "extractionState": "manual",
@@ -26493,42 +25845,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Högsta tillgängliga belopp"
-          }
-        }
-      }
-    },
-    "Mempool explorer": {
-      "comment": "GT gt_e0951b12a02b7bc0; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mempool explorer"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Explorador de mempool"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メモリプールエクスプローラー"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "멤풀 탐색기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mempool-utforskare"
           }
         }
       }
@@ -26601,42 +25917,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Metadata"
-          }
-        }
-      }
-    },
-    "Minimum board amount": {
-      "comment": "GT gt_5be3749e9f8a36d8; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minimum board amount"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importe mínimo para transferir"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arkへの最低入金額"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최소 입금 금액"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minsta insättningsbelopp"
           }
         }
       }
@@ -30565,42 +29845,6 @@
         }
       }
     },
-    "Noah will test /block-height/0 and verify the Bitcoin network before changing the wallet configuration. You may also paste the full test or tip URL.": {
-      "comment": "GT gt_19c788e87168392b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah will test /block-height/0 and verify the Bitcoin network before changing the wallet configuration. You may also paste the full test or tip URL."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah probará /block-height/0 y verificará la red Bitcoin antes de cambiar la configuración de la billetera. También puedes pegar la URL completa de prueba o del último bloque."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahはウォレットの設定を変更する前に、/block-height/0へのアクセスをテストし、Bitcoinネットワークを確認します。テスト用URLや最新ブロック用URLをそのまま貼り付けることもできます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah는 지갑 설정을 변경하기 전에 /block-height/0을 테스트하고 Bitcoin 네트워크를 확인합니다. 테스트용 또는 최신 블록 조회용 URL을 전체 주소로 붙여넣어도 됩니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah testar /block-height/0 och verifierar Bitcoin-nätverket innan plånbokens inställningar ändras. Du kan också klistra in den fullständiga test- eller tip-URL:en."
-          }
-        }
-      }
-    },
     "Noah's Ark Story": {
       "comment": "GT gt_dca2f6eb0cf5a388; arguments: none",
       "extractionState": "manual",
@@ -30849,6 +30093,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inte säkerhetskopierad än"
+          }
+        }
+      }
+    },
+    "Not changed.": {
+      "comment": "GT gt_2b8df7c6e321a665; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not changed."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not changed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not changed."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not changed."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not changed."
           }
         }
       }
@@ -38785,42 +38065,6 @@
         }
       }
     },
-    "Required board confirmations": {
-      "comment": "GT gt_ab6b06887f08fcb1; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Required board confirmations"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmaciones necesarias para transferir"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arkへの入金に必要な承認数"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "입금에 필요한 확인 수"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Antal bekräftelser som krävs för insättning"
-          }
-        }
-      }
-    },
     "Resend": {
       "comment": "GT gt_1f94843777aed851; arguments: none",
       "extractionState": "manual",
@@ -39037,38 +38281,38 @@
         }
       }
     },
-    "Reset to Noah Default": {
-      "comment": "GT gt_6be538eb01cfe029; arguments: none",
+    "Restart Noah to reopen the previous endpoint.": {
+      "comment": "GT gt_13749c162439355d; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reset to Noah Default"
+            "value": "Restart Noah to reopen the previous endpoint."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restablecer el punto de acceso predeterminado de Noah"
+            "value": "Restart Noah to reopen the previous endpoint."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noahの標準設定に戻す"
+            "value": "Restart Noah to reopen the previous endpoint."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah 기본값으로 재설정"
+            "value": "Restart Noah to reopen the previous endpoint."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Återställ till Noahs standard"
+            "value": "Restart Noah to reopen the previous endpoint."
           }
         }
       }
@@ -40081,42 +39325,6 @@
         }
       }
     },
-    "Round interval": {
-      "comment": "GT gt_0383bb4272ba17f6; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Round interval"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intervalo entre rondas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ラウンド間隔"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라운드 간격"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rundintervall"
-          }
-        }
-      }
-    },
     "Round nonces": {
       "comment": "GT gt_5094b5ed60506f03; arguments: none",
       "extractionState": "manual",
@@ -40149,42 +39357,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noncer per omgång"
-          }
-        }
-      }
-    },
-    "Rounds & Expiry": {
-      "comment": "GT gt_4725c4e98951924f; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rounds & Expiry"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rondas y caducidad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ラウンド & 有効期限"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라운드 및 만료"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Omgångar & utgångstid"
           }
         }
       }
@@ -40333,6 +39505,42 @@
         }
       }
     },
+    "Running": {
+      "comment": "GT gt_f4ccae29e1bb0c20; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running"
+          }
+        }
+      }
+    },
     "Running in background": {
       "comment": "GT gt_df00e58b3325e786; arguments: none",
       "extractionState": "manual",
@@ -40365,42 +39573,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Körs i bakgrunden"
-          }
-        }
-      }
-    },
-    "Running...": {
-      "comment": "GT gt_4977a7e5bb3675c4; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Running..."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En ejecución..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実行中..."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실행 중..."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Körs..."
           }
         }
       }
@@ -41629,42 +40801,6 @@
         }
       }
     },
-    "Select Action": {
-      "comment": "GT gt_3676800cd56a15b0; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select Action"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seleccionar acción"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "操作を選択"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "작업 선택"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Välj åtgärd"
-          }
-        }
-      }
-    },
     "Select Distributor": {
       "comment": "GT gt_a0066e88129f5f98; arguments: none",
       "extractionState": "manual",
@@ -42489,42 +41625,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Servernyckel"
-          }
-        }
-      }
-    },
-    "Server pubkey": {
-      "comment": "GT gt_ef96f6d2d26067b1; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server pubkey"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clave pública del servidor"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サーバー公開鍵"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서버 공개 키"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Serverns publika nyckel"
           }
         }
       }
@@ -45481,42 +44581,6 @@
         }
       }
     },
-    "Test & Save Endpoint": {
-      "comment": "GT gt_0b38e7e7a0f80600; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Test & Save Endpoint"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Probar y guardar punto de acceso"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エンドポイントをテストして保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "엔드포인트 테스트 및 저장"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Testa & spara slutpunkt"
-          }
-        }
-      }
-    },
     "Test and save": {
       "comment": "GT gt_be8494fb38fef6d7; arguments: none",
       "extractionState": "manual",
@@ -45585,42 +44649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Testar"
-          }
-        }
-      }
-    },
-    "Testing Endpoint...": {
-      "comment": "GT gt_487cace9d67bfca4; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Testing Endpoint..."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Probando punto de acceso..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エンドポイントをテスト中..."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "엔드포인트 테스트 중..."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Testar slutpunkt..."
           }
         }
       }
@@ -47317,74 +46345,38 @@
         }
       }
     },
-    "The wallet is now using Noah's default Esplora endpoint.": {
-      "comment": "GT gt_b721722a0c00f9a9; arguments: none",
+    "The wallet is using the previous endpoint.": {
+      "comment": "GT gt_55bac24a3bab5ea7; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The wallet is now using Noah's default Esplora endpoint."
+            "value": "The wallet is using the previous endpoint."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La billetera ahora usa el punto de acceso de Esplora predeterminado de Noah."
+            "value": "The wallet is using the previous endpoint."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウォレットの接続先をNoahの標準Esploraエンドポイントに切り替えました。"
+            "value": "The wallet is using the previous endpoint."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이제 지갑이 Noah의 기본 Esplora 엔드포인트를 사용합니다."
+            "value": "The wallet is using the previous endpoint."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plånboken använder nu Noahs standardslutpunkt för Esplora."
-          }
-        }
-      }
-    },
-    "The wallet is now using the new Esplora endpoint.": {
-      "comment": "GT gt_70f8c0c39c5d2857; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The wallet is now using the new Esplora endpoint."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La billetera ahora usa el nuevo punto de acceso de Esplora."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットの接続先を新しいEsploraエンドポイントに切り替えました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이제 지갑이 새 Esplora 엔드포인트를 사용합니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plånboken använder nu den nya Esplora-slutpunkten."
+            "value": "The wallet is using the previous endpoint."
           }
         }
       }
@@ -50845,42 +49837,6 @@
         }
       }
     },
-    "Unlimited": {
-      "comment": "GT gt_11dde17d6c3e2098; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unlimited"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin límite"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無制限"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "무제한"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obegränsat"
-          }
-        }
-      }
-    },
     "Unlock": {
       "comment": "GT gt_4ac709aa58bcfe5d; arguments: none",
       "extractionState": "manual",
@@ -51853,42 +50809,6 @@
         }
       }
     },
-    "Used for Bitcoin network data throughout the wallet.": {
-      "comment": "GT gt_b6dc690d5982336d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used for Bitcoin network data throughout the wallet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se usa para obtener datos de la red Bitcoin en toda la billetera."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレット全体でBitcoinネットワークのデータ取得に使用されます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 전반에서 Bitcoin 네트워크 데이터를 가져오는 데 사용됩니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Används för data från Bitcoin-nätverket i hela plånboken."
-          }
-        }
-      }
-    },
     "Username may only contain a-z, 0-9, dash, underscore, and period": {
       "comment": "GT gt_0bc523a8f221ea9f; arguments: none",
       "extractionState": "manual",
@@ -52029,42 +50949,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "VTXO-ID"
-          }
-        }
-      }
-    },
-    "VTXO exit delta": {
-      "comment": "GT gt_d432b0c1cc8809d0; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXO exit delta"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delta de salida de VTXO"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXO出金の待機ブロック数"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXO 출금 대기 블록 수"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delta för VTXO-nöduttag"
           }
         }
       }
@@ -53325,42 +52209,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plånbokens databas, krypterad"
-          }
-        }
-      }
-    },
-    "Wallet endpoints": {
-      "comment": "GT gt_416b15a97bb7cb55; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wallet endpoints"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Puntos de conexión de la billetera"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットのエンドポイント"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 엔드포인트"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plånbokens slutpunkter"
           }
         }
       }

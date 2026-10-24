@@ -73,7 +73,7 @@ private extension SettingsStatusMark.Kind {
 
 /// App → Advanced: the Ark server and Esplora, logs, reset registration, debug, and suspend.
 struct AdvancedPage: View {
-    private enum Sheet: String, Identifiable { case reset; var id: Self { self } }
+    private enum Sheet: String, Identifiable { case reset, suspend; var id: Self { self } }
 
     @Environment(AppModel.self) private var app
     @Environment(SettingsSummary.self) private var summary
@@ -105,12 +105,17 @@ struct AdvancedPage: View {
                     sheet = .reset
                 }
                 .disabled(busy || app.isWalletSuspended)
-                if summary.debug { row("ladybug", "Debug", page: .debug, last: true, id: "settings-debug") }
+                if summary.debug {
+                    row("ladybug", "Debug", page: .debug, id: "settings-debug")
+                    // Off hides Debug again; five taps on the version bring it back.
+                    SettingsToggleRow(icon: "hammer", title: L10n.text("Debug mode", locale: language),
+                                      isOn: Binding(get: { summary.debug }, set: setDebug), hairline: false, id: "settings-debug-mode")
+                }
             }
             SettingsGroup(label: "Wallet") {
                 SettingsToggleRow(icon: "stop.circle", title: L10n.text("Suspend wallet", locale: language),
                                   sub: L10n.text("Pauses all wallet activity", locale: language),
-                                  isOn: Binding(get: { app.isWalletSuspended }, set: setSuspended), hairline: false, id: "settings-suspend")
+                                  isOn: Binding(get: { app.isWalletSuspended }, set: suspendSwitched), hairline: false, id: "settings-suspend")
                     .disabled(busy)
             }
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
@@ -118,13 +123,31 @@ struct AdvancedPage: View {
         .settingsChrome("Advanced")
         .onboardingHaptics(haptics)
         .onAppear { esplora = EsploraSettings().selection(for: .current) }
-        .settingsSheet(item: $sheet, locked: busy) { _ in
-            SettingsSheetBody(title: L10n.text("Reset registration?", locale: language),
-                              line: L10n.text("Noah registers this wallet with the server again. Your wallet stays.", locale: language)) {
-                EmptyView()
-            } actions: {
-                SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Reset", locale: language), busy: busy,
-                                     actionID: "settings-reset-confirm", onCancel: { sheet = nil }, onAction: reset)
+        .settingsSheet(item: $sheet, locked: busy) { sheet in
+            switch sheet {
+            case .reset:
+                SettingsSheetBody(title: L10n.text("Reset registration?", locale: language),
+                                  line: L10n.text("Noah registers this wallet with the server again. Your wallet stays.", locale: language)) {
+                    EmptyView()
+                } actions: {
+                    SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Reset", locale: language), busy: busy,
+                                         actionID: "settings-reset-confirm", onCancel: { self.sheet = nil }, onAction: reset)
+                }
+            case .suspend:
+                SettingsSheetBody(title: L10n.text("Suspend wallet?", locale: language),
+                                  line: L10n.text("Noah closes the wallet and stops payments until you turn this off.", locale: language)) {
+                    EmptyView()
+                } actions: {
+                    SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Suspend", locale: language),
+                                         destructive: true, busy: busy, actionID: "settings-suspend-confirm", onCancel: { self.sheet = nil }) {
+                        haptics.play(.warning)
+                        run {
+                            try await app.suspendWallet()
+                            self.sheet = nil
+                            settings.toast("Wallet suspended")
+                        }
+                    }
+                }
             }
         }
     }
@@ -145,8 +168,22 @@ struct AdvancedPage: View {
         }
     }
 
-    private func setSuspended(_ suspend: Bool) {
-        run { suspend ? try await app.suspendWallet() : try await app.resumeWallet() }
+    /// Suspending asks first; resuming doesn't.
+    private func suspendSwitched(_ suspend: Bool) {
+        switch SuspendSwitch.action(suspended: app.isWalletSuspended, requested: suspend) {
+        case .confirm:
+            haptics.play(.light)
+            sheet = .suspend
+        case .resume: run { try await app.resumeWallet() }
+        case .none: break
+        }
+    }
+
+    private func setDebug(_ on: Bool) {
+        do {
+            try summary.setDebug(on)
+            haptics.play(.selection)
+        } catch { self.error = "Couldn't save debug setting." }
     }
 
     private func run(_ action: @escaping @MainActor () async throws -> Void) {

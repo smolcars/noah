@@ -156,3 +156,16 @@ struct DeleteChecklist: Equatable {
 
     static func confirms(_ typed: String) -> Bool { typed.trimmingCharacters(in: .whitespaces).lowercased() == "delete" }
 }
+
+/// Advanced → Suspend wallet: turning it on asks first (one stray tap closes the wallet); off resumes.
+enum SuspendSwitch: Equatable {
+    case confirm, resume, none
+
+    static func action(suspended: Bool, requested: Bool) -> Self {
+        switch (suspended, requested) {
+        case (false, true): .confirm
+        case (true, false): .resume
+        default: .none
+        }
+    }
+}
