@@ -1,3 +1,4 @@
+$VCEnableFrameProcessors=false
 require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
@@ -14,7 +15,6 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '16.4'
 
 prepare_react_native_project!
 
-$VCEnableFrameProcessors = false
 
 # Abstract target for all flavors to inherit common pods and settings
 abstract_target 'noah-common' do
