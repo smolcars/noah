@@ -235,7 +235,7 @@ struct OnboardingFlow: View {
             } catch WalletCreator.Failure.incompleteExistingData {
                 creationError = "Existing wallet data is incomplete. Restore your wallet to continue."
             } catch {
-                creationError = "Creation Failed. Please try again."
+                creationError = "Creation failed. Please try again."
             }
         }
     }

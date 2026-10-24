@@ -347,7 +347,6 @@
   <string name="gt_40a49ea198affe13">"지갑 만들기"</string>
   <string name="gt_7bef2fbf3b783bfe">"결제 요청서 생성 중…"</string>
   <string name="gt_2d011af498ebd5ea">"키를 만드는 중"</string>
-  <string name="gt_5f5dc2dbbf448465">"생성에 실패했습니다. 다시 시도하세요."</string>
   <string name="gt_e4bca5667d4fa25e">"생성하지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_f9039698f684e234">"스크린샷 자르기"</string>
   <string name="gt_3ac1a9ec4fa7a9fa">"통화"</string>
@@ -461,7 +460,6 @@
   </plurals>
   <string name="gt_a49df89d3846230c">"…일마다"</string>
   <string name="gt_8422e4065fd1b49e">"기존 수수료"</string>
-  <string name="gt_b4af3461164879e7">"기존 지갑 데이터가 불완전합니다"</string>
   <string name="gt_8ad236bd4bc3ed16">"기존 지갑 데이터가 불완전합니다. 계속하려면 지갑을 복원하세요."</string>
   <string name="gt_d17d84a604994b72">"출금"</string>
   <string name="gt_3a43bf4b2c39d1e6">"출금이 취소됐어요"</string>
@@ -594,7 +592,6 @@
   <string name="gt_c6f2925c588e5a67">"확인했어요"</string>
   <string name="gt_ef9a2be3b826ee15">"내역을 확인했습니다"</string>
   <string name="gt_9e0f9b800b0db2b0">"동일한 작업이 반복될 수 있음을 이해합니다"</string>
-  <string name="gt_806f6591e2359170">"복구 문구를 다른 사람과 공유하지 않겠습니다."</string>
   <string name="gt_cd65f6dcab984750">"적어 두었어요"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Ark가 작동한다면 Bitcoin 주소로 보내세요."</string>
@@ -801,7 +798,6 @@
   <string name="gt_c638d16576dfe156">"유효한 결제 수단을 찾을 수 없습니다"</string>
   <string name="gt_57c8529db3e2719a">"아니요, 끄기"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
-  <string name="gt_c6d29584a2c5564a">"Noah Android %1$s (%2$s): "</string>
   <string name="gt_51bf7dd8c85b84da">"Noah 지갑 거래 내보내기"</string>
   <string name="gt_518f6fc1d2bea961">"Noah가 닫혀 있어도 받기와 갱신을 할 수 있어요."</string>
   <string name="gt_966bc2f318542271">"Noah가 아직 보안 저장소를 읽을 수 없습니다. 계속하려면 기기 잠금을 해제하세요."</string>
@@ -832,7 +828,6 @@
   <string name="gt_338e68cc4323f294">"Noah 알림"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah가 이 지갑을 서버에 다시 등록해요. 지갑은 그대로 유지돼요."</string>
   <string name="gt_286c0deecb39be99">"Noah가 Ark 잔액에서 자동으로 결제합니다. 지정된 받는 사람에게 정해진 금액만 결제되며, 언제든지 일시 중지하거나 취소할 수 있습니다."</string>
-  <string name="gt_4ad1be4370f0322f">"Noah 지원"</string>
   <string name="gt_c31c87ce77cb431b">"이후 Noah가 출금 거래를 직접 보내고 수수료를 올리며, 온체인 비트코인에서 지불합니다. 수수료는 예상치입니다. 금액에서는 청구 수수료만 빠집니다. 마지막 거래를 보내기 전까지 취소할 수 있습니다."</string>
   <string name="gt_f3727b33f0798006">"이후 Noah가 출금 트랜잭션을 알아서 보내고 수수료를 올리며, 온체인 비트코인에서 지불해요. 수수료는 예상치예요. 금액에서는 청구 수수료만 빠져요. 마지막 트랜잭션이 보내지기 전까지 취소할 수 있어요."</string>
   <string name="gt_ddecc0272120b4ba">"Noah 사용자"</string>

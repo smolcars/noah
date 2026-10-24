@@ -347,7 +347,6 @@
   <string name="gt_40a49ea198affe13">"ウォレットを作成"</string>
   <string name="gt_7bef2fbf3b783bfe">"請求書を作成中…"</string>
   <string name="gt_2d011af498ebd5ea">"鍵を作成しています"</string>
-  <string name="gt_5f5dc2dbbf448465">"作成に失敗しました。もう一度お試しください。"</string>
   <string name="gt_e4bca5667d4fa25e">"作成に失敗しました。もう一度お試しください。"</string>
   <string name="gt_f9039698f684e234">"スクリーンショットを切り抜く"</string>
   <string name="gt_3ac1a9ec4fa7a9fa">"通貨"</string>
@@ -461,7 +460,6 @@
   </plurals>
   <string name="gt_a49df89d3846230c">"…日ごと"</string>
   <string name="gt_8422e4065fd1b49e">"既存の手数料"</string>
-  <string name="gt_b4af3461164879e7">"既存のウォレットデータが不完全です"</string>
   <string name="gt_8ad236bd4bc3ed16">"既存のウォレットデータが不完全です。続行するにはウォレットを復元してください。"</string>
   <string name="gt_d17d84a604994b72">"出金"</string>
   <string name="gt_3a43bf4b2c39d1e6">"出金をキャンセルしました"</string>
@@ -594,7 +592,6 @@
   <string name="gt_c6f2925c588e5a67">"確認しました"</string>
   <string name="gt_ef9a2be3b826ee15">"履歴を確認しました"</string>
   <string name="gt_9e0f9b800b0db2b0">"操作が重複する可能性を理解しています"</string>
-  <string name="gt_806f6591e2359170">"復元フレーズを他人と共有しません。"</string>
   <string name="gt_cd65f6dcab984750">"書き留めました"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Arkが動いているなら、ビットコインアドレスへの送金を使ってください。"</string>
@@ -801,7 +798,6 @@
   <string name="gt_c638d16576dfe156">"有効な支払い方法が見つかりません"</string>
   <string name="gt_57c8529db3e2719a">"いいえ、無効にする"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
-  <string name="gt_c6d29584a2c5564a">"Noah Android %1$s (%2$s): "</string>
   <string name="gt_51bf7dd8c85b84da">"Noahウォレットの取引エクスポート"</string>
   <string name="gt_518f6fc1d2bea961">"Noahを閉じていても受け取りと更新ができます。"</string>
   <string name="gt_966bc2f318542271">"Noahはまだセキュアストレージを読み取れません。続行するには端末のロックを解除してください。"</string>
@@ -832,7 +828,6 @@
   <string name="gt_338e68cc4323f294">"Noahの通知"</string>
   <string name="gt_08b28eee5b5a6d39">"Noahがこのウォレットをサーバーに再登録します。ウォレットはそのまま残ります。"</string>
   <string name="gt_286c0deecb39be99">"NoahがArk残高からこの支払いを自動で行います。支払いは指定された受取人と金額に限られ、いつでも一時停止やキャンセルができます。"</string>
-  <string name="gt_4ad1be4370f0322f">"Noahサポート"</string>
   <string name="gt_c31c87ce77cb431b">"その後はNoahが出金トランザクションの送信と手数料の引き上げを自動で行い、オンチェーンのビットコインから支払います。手数料は見積もりです。金額から差し引かれるのは受け取り手数料だけです。最後のトランザクションが送信されるまではキャンセルできます。"</string>
   <string name="gt_f3727b33f0798006">"その後はNoahが出金トランザクションの送信と手数料の引き上げを自動で行い、オンチェーンのビットコインから支払います。手数料は見積もりです。金額から差し引かれるのは受け取り手数料だけです。最後のトランザクションが送信されるまでキャンセルできます。"</string>
   <string name="gt_ddecc0272120b4ba">"Noahユーザー"</string>

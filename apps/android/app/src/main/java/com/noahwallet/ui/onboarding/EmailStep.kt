@@ -233,7 +233,7 @@ internal fun CodeEntry(model: AppModel, presentation: OnboardingPresentation, on
         }
     }
     Column {
-        val label = tr("6-digit code")
+        val label = tr("Verification code")
         var rowWidth by remember { mutableIntStateOf(0) }
         BasicTextField(otp.code, onTyped, Modifier.padding(top = formGap(34.dp)).fillMaxWidth().focusRequester(focus)
             .graphicsLayer { translationX = shake.value * density }

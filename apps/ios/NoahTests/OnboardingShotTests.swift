@@ -90,7 +90,7 @@ struct OnboardingShotTests {
                 WelcomeScreen(layout: layout, sheetUp: !layout.wide, languageCode: "en", onLanguage: {}, onCreate: {}, onRestore: {})
             } sheetContent: {
                 if state == "language" { LanguageSheet(selected: "en") { _ in } }
-                else { BetaSheet(busy: false, error: state == "beta-error" ? "Creation Failed. Please try again." : nil) {} }
+                else { BetaSheet(busy: false, error: state == "beta-error" ? "Creation failed. Please try again." : nil) {} }
             })
         case "creating":
             return AnyView(ShotHost(scene: .init(mode: .create, start: Date().addingTimeInterval(-1.9))) { layout in

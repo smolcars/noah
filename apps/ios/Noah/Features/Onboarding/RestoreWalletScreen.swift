@@ -267,7 +267,7 @@ private struct WordCountPicker: View {
         HStack(spacing: 0) {
             ForEach([12, 24], id: \.self) { option in
                 Button { select(option) } label: {
-                    Text(option == 12 ? "12 words" : "24 words")
+                    (option == 12 ? Text("12 words") : Text("24 words"))
                         .noahText(NoahTokens.Typography.control)
                         .bold()
                         .foregroundStyle(option == count ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)

@@ -12313,42 +12313,6 @@
         }
       }
     },
-    "Creation Failed. Please try again.": {
-      "comment": "GT gt_5f5dc2dbbf448465; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Creation Failed. Please try again."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo completar la creación. Inténtalo de nuevo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "作成に失敗しました。もう一度お試しください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "생성에 실패했습니다. 다시 시도하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det gick inte att skapa. Försök igen."
-          }
-        }
-      }
-    },
     "Creation failed. Please try again.": {
       "comment": "GT gt_e4bca5667d4fa25e; arguments: none",
       "extractionState": "manual",
@@ -16317,42 +16281,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Befintlig avgift"
-          }
-        }
-      }
-    },
-    "Existing wallet data is incomplete": {
-      "comment": "GT gt_b4af3461164879e7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Existing wallet data is incomplete"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los datos de la billetera existente están incompletos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "既存のウォレットデータが不完全です"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기존 지갑 데이터가 불완전합니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Befintliga plånboksdata är ofullständiga"
           }
         }
       }
@@ -21009,42 +20937,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jag förstår att åtgärden kan utföras igen"
-          }
-        }
-      }
-    },
-    "I will not share my recovery phrase.": {
-      "comment": "GT gt_806f6591e2359170; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I will not share my recovery phrase."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No compartiré mi frase de recuperación."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "復元フレーズを他人と共有しません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복구 문구를 다른 사람과 공유하지 않겠습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jag kommer inte att dela min återställningsfras."
           }
         }
       }
@@ -28417,42 +28309,6 @@
         }
       }
     },
-    "Noah Android {nativeValue1} ({nativeValue2}): ": {
-      "comment": "GT gt_c6d29584a2c5564a; arguments: nativeValue1, nativeValue2",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah Android %1$@ (%2$@): "
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah Android %1$@ (%2$@): "
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah Android %1$@ (%2$@): "
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah Android %1$@ (%2$@): "
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah Android %1$@ (%2$@): "
-          }
-        }
-      }
-    },
     "Noah Wallet Transaction Export": {
       "comment": "GT gt_51bf7dd8c85b84da; arguments: none",
       "extractionState": "manual",
@@ -29529,42 +29385,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah skickar den här betalningen automatiskt från ditt Ark-saldo. Betalningen får bara skickas till den här mottagaren och med det här beloppet. Du kan pausa eller avsluta den när som helst."
-          }
-        }
-      }
-    },
-    "Noah support": {
-      "comment": "GT gt_4ad1be4370f0322f; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah support"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Soporte de Noah"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahサポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah 지원"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahs support"
           }
         }
       }

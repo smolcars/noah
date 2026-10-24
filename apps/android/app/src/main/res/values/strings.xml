@@ -347,7 +347,6 @@
   <string name="gt_40a49ea198affe13">"Create wallet"</string>
   <string name="gt_7bef2fbf3b783bfe">"Creating invoice…"</string>
   <string name="gt_2d011af498ebd5ea">"Creating your keys"</string>
-  <string name="gt_5f5dc2dbbf448465">"Creation Failed. Please try again."</string>
   <string name="gt_e4bca5667d4fa25e">"Creation failed. Please try again."</string>
   <string name="gt_f9039698f684e234">"Crop Screenshot"</string>
   <string name="gt_3ac1a9ec4fa7a9fa">"Currency"</string>
@@ -461,7 +460,6 @@
   </plurals>
   <string name="gt_a49df89d3846230c">"Every … days"</string>
   <string name="gt_8422e4065fd1b49e">"Existing fee"</string>
-  <string name="gt_b4af3461164879e7">"Existing wallet data is incomplete"</string>
   <string name="gt_8ad236bd4bc3ed16">"Existing wallet data is incomplete. Restore your wallet to continue."</string>
   <string name="gt_d17d84a604994b72">"Exit"</string>
   <string name="gt_3a43bf4b2c39d1e6">"Exit canceled"</string>
@@ -594,7 +592,6 @@
   <string name="gt_c6f2925c588e5a67">"I checked"</string>
   <string name="gt_ef9a2be3b826ee15">"I checked history"</string>
   <string name="gt_9e0f9b800b0db2b0">"I understand this may repeat the operation"</string>
-  <string name="gt_806f6591e2359170">"I will not share my recovery phrase."</string>
   <string name="gt_cd65f6dcab984750">"I wrote it down"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"If Ark works, send to a Bitcoin address instead."</string>
@@ -801,7 +798,6 @@
   <string name="gt_c638d16576dfe156">"No valid payment methods found"</string>
   <string name="gt_57c8529db3e2719a">"No, turn off"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
-  <string name="gt_c6d29584a2c5564a">"Noah Android %1$s (%2$s): "</string>
   <string name="gt_51bf7dd8c85b84da">"Noah Wallet Transaction Export"</string>
   <string name="gt_518f6fc1d2bea961">"Noah can receive and renew while closed."</string>
   <string name="gt_966bc2f318542271">"Noah can\'t read its secure storage yet. Unlock your device to continue."</string>
@@ -832,7 +828,6 @@
   <string name="gt_338e68cc4323f294">"Noah notifications"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registers this wallet with the server again. Your wallet stays."</string>
   <string name="gt_286c0deecb39be99">"Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."</string>
-  <string name="gt_4ad1be4370f0322f">"Noah support"</string>
   <string name="gt_c31c87ce77cb431b">"Noah then sends and fee-bumps the exit\'s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_f3727b33f0798006">"Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>

@@ -9,7 +9,7 @@ import kotlinx.coroutines.*
 /** Create-or-resume: save the seed before files, and clean up only a fresh failed attempt. */
 class WalletCreator(private val dependencies: Dependencies) {
     sealed class Failure(message: String) : Exception(message) {
-        class IncompleteExistingData : Failure("Existing wallet data is incomplete")
+        class IncompleteExistingData : Failure("""Existing wallet data is incomplete""")
         class SecureStorageUnavailable(val reason: SecretFailure) : Failure("Secure storage unavailable")
     }
 

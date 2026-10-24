@@ -244,10 +244,10 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
             val context = LocalContext.current
             androidx.compose.material3.TextButton({
                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Noah support",
-                    "Noah Android ${com.noahwallet.BuildConfig.VERSION_NAME} (${com.noahwallet.BuildConfig.APP_VARIANT}): " +
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("""Noah support""",
+                    """Noah Android ${com.noahwallet.BuildConfig.VERSION_NAME} (${com.noahwallet.BuildConfig.APP_VARIANT}): """ +
                         "saved wallet data could not be safely verified after an update. Data has been kept. Please help me recover access. " +
-                        "I will not share my recovery phrase."))
+                        """I will not share my recovery phrase."""))
             }) { Text(tr("Copy support message")) }
         }
         if (state != null) NoahButton("Try again", onClick = retry)

@@ -347,7 +347,6 @@
   <string name="gt_40a49ea198affe13">"Skapa plånbok"</string>
   <string name="gt_7bef2fbf3b783bfe">"Skapar betalningsbegäran…"</string>
   <string name="gt_2d011af498ebd5ea">"Skapar dina nycklar"</string>
-  <string name="gt_5f5dc2dbbf448465">"Det gick inte att skapa. Försök igen."</string>
   <string name="gt_e4bca5667d4fa25e">"Kunde inte skapa. Försök igen."</string>
   <string name="gt_f9039698f684e234">"Beskär skärmbild"</string>
   <string name="gt_3ac1a9ec4fa7a9fa">"Valuta"</string>
@@ -461,7 +460,6 @@
   </plurals>
   <string name="gt_a49df89d3846230c">"Var … dag"</string>
   <string name="gt_8422e4065fd1b49e">"Befintlig avgift"</string>
-  <string name="gt_b4af3461164879e7">"Befintliga plånboksdata är ofullständiga"</string>
   <string name="gt_8ad236bd4bc3ed16">"Befintliga plånboksdata är ofullständiga. Återställ din plånbok för att fortsätta."</string>
   <string name="gt_d17d84a604994b72">"Uttag"</string>
   <string name="gt_3a43bf4b2c39d1e6">"Uttaget avbröts"</string>
@@ -594,7 +592,6 @@
   <string name="gt_c6f2925c588e5a67">"Jag har kollat"</string>
   <string name="gt_ef9a2be3b826ee15">"Jag har kontrollerat historiken"</string>
   <string name="gt_9e0f9b800b0db2b0">"Jag förstår att åtgärden kan utföras igen"</string>
-  <string name="gt_806f6591e2359170">"Jag kommer inte att dela min återställningsfras."</string>
   <string name="gt_cd65f6dcab984750">"Jag har skrivit ner den"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Om Ark fungerar, skicka till en Bitcoin-adress i stället."</string>
@@ -801,7 +798,6 @@
   <string name="gt_c638d16576dfe156">"Inga giltiga betalningsmetoder hittades"</string>
   <string name="gt_57c8529db3e2719a">"Nej, stäng av"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
-  <string name="gt_c6d29584a2c5564a">"Noah Android %1$s (%2$s): "</string>
   <string name="gt_51bf7dd8c85b84da">"Transaktionsexport från Noah-plånboken"</string>
   <string name="gt_518f6fc1d2bea961">"Noah kan ta emot och förnya även när appen är stängd."</string>
   <string name="gt_966bc2f318542271">"Noah kan inte läsa sin säkra lagring ännu. Lås upp enheten för att fortsätta."</string>
@@ -832,7 +828,6 @@
   <string name="gt_338e68cc4323f294">"Aviseringar från Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registrerar plånboken hos servern igen. Din plånbok finns kvar."</string>
   <string name="gt_286c0deecb39be99">"Noah skickar den här betalningen automatiskt från ditt Ark-saldo. Betalningen får bara skickas till den här mottagaren och med det här beloppet. Du kan pausa eller avsluta den när som helst."</string>
-  <string name="gt_4ad1be4370f0322f">"Noahs support"</string>
   <string name="gt_c31c87ce77cb431b">"Sedan skickar Noah nöduttagets transaktioner och höjer deras avgifter själv, och betalar från din bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."</string>
   <string name="gt_f3727b33f0798006">"Sedan skickar Noah uttagets transaktioner och höjer avgifterna själv, med betalning från dina bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."</string>
   <string name="gt_ddecc0272120b4ba">"Noah-användare"</string>
