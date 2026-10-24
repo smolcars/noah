@@ -69,11 +69,11 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
         TextButton(back) { Text(tr("Back to VTXOs")) }
         Text(tr("VTXO Details"), style = MaterialTheme.typography.headlineSmall)
         val listed = model.overview?.vtxos?.find { it.id == id }
-        // A coin a payment spent isn't in the overview: load it by ID.
-        val stored by produceState<VtxoModel?>(null, id, model.overview != null && listed == null) {
+        // A coin a payment spent isn't in the overview: load it by ID, again after each completed refresh.
+        val stored by produceState<Result<VtxoModel?>?>(null, id, model.revision, listed == null) {
             if (model.overview != null && listed == null) value = model.coin(id)
         }
-        val vtxo = listed ?: stored
+        val vtxo = listed ?: stored?.getOrNull()
         if (vtxo != null) {
             AmountRow(app, "Amount", vtxo.amount)
             DetailValue("VTXO ID", id, true); DetailRow("State", vtxo.state); DetailRow("Status", vtxo.status); DetailRow("Kind", vtxo.kind)
@@ -89,10 +89,11 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
             }
             if ((vtxo.expired || vtxo.expiring) && vtxo.refreshable) Text(tr("Refresh this VTXO to keep it available."))
             Button({ scope.launch { model.review(OnchainAction.refresh, listOf(id)) } }, enabled = vtxo.refreshable && !model.busy) { Text(tr("Refresh VTXO")) }
-        } else if (!model.loading && model.overview != null) {
-            // The wallet keeps no record of it: show what the payment recorded.
+        } else if (stored != null) {
+            // The wallet keeps no record of it, or couldn't be read: show what the payment recorded.
             DetailValue("VTXO ID", id, true)
-        } else if (!model.loading) Text(tr("VTXO is no longer in this view. Check its operation receipt or refresh."))
+            if (stored?.isFailure == true) Text(tr("Couldn't read wallet status. Pull to refresh."))
+        } else if (!model.loading && model.overview == null) Text(tr("VTXO is no longer in this view. Check its operation receipt or refresh."))
     }
 }
 

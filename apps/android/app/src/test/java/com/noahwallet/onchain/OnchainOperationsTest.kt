@@ -237,7 +237,8 @@ class OnchainOperationsTest {
         override suspend fun vtxos() = items
         /** Coins the wallet keeps a record of by ID, spent ones included. */
         val records = mutableMapOf<String, Vtxo>()
-        override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); return records[id] ?: Companion.vtxo(id) }
+        val lookupErrors = mutableMapOf<String, Exception>()
+        override suspend fun vtxo(id: String): Vtxo { check(!forbidVtxoLookup); lookupErrors[id]?.let { throw it }; return records[id] ?: Companion.vtxo(id) }
         override suspend fun exits() = active
         override suspend fun status(id: String) = states[id]?.let { ExitTransactionStatus(id, 30_000u, it, listOf(ExitState.Start(100u), it), 0u, emptyList()) }
         var tipHeight = 100L
@@ -271,10 +272,19 @@ class OnchainOperationsTest {
         wallet.records["spent"] = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), "spent", 2_500u, 90u, "pubkey",
             VtxoState.Spent, 1u, 500u, true)
         assertTrue(ops.overview(24u).vtxos.none { it.id == "spent" })
-        val coin = ops.vtxo("spent", 24u)
+        val coin = checkNotNull(ops.vtxo("spent", 24u))
         assertEquals("Spent", coin.state); assertEquals(2_500L, coin.amount); assertEquals(90L, coin.expiry)
         // A spent coin is never offered a refresh.
         assertFalse(coin.refreshable)
+    } }
+
+    @Test fun aCoinTheWalletHasNoRecordOfIsMissingNotAFailedRead() = runBlocking { fixture { wallet, ops, _, _ ->
+        // bark 0.8's words for it, read from a real wallet.
+        wallet.lookupErrors["gone"] = BarkError("The VTXO with id ${"ab".repeat(32)}:0 cannot be found")
+        assertNull(ops.vtxo("gone", 24u))
+        // Any other error, a database read say, is a failed lookup the screen retries.
+        wallet.lookupErrors["unread"] = BarkError("Error when querying vtxo unread in database")
+        assertTrue(runCatching { ops.vtxo("unread", 24u) }.exceptionOrNull() is BarkError)
     } }
 
     private suspend fun fixture(body: suspend (Wallet, OnchainOperations, OnchainOperationJournal, File) -> Unit) {

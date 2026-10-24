@@ -17,13 +17,18 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val discard: suspend (OnchainQuote) -> Unit = {},
         /** Submits Home's Renew, checking under the wallet's locks that every VTXO is still due. */
         val executeRenewal: suspend (OnchainQuote) -> String = { fail(OnchainFailure.unavailable) },
-        /** One coin by ID from the wallet, spent ones included (Activity opens a payment's coins). */
-        val coin: suspend (String) -> VtxoModel = { fail(OnchainFailure.unavailable) },
+        /** One coin by ID from the wallet, spent ones included (Activity opens a payment's coins); null when it has no record. */
+        val coin: suspend (String) -> VtxoModel? = { fail(OnchainFailure.unavailable) },
     )
-    /** A coin the overview doesn't list, such as one a payment spent; null when the wallet has no record of it. */
-    suspend fun coin(id: String): VtxoModel? = try { dependencies.coin(id) }
-        catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+    /**
+     * A coin the overview doesn't list, such as one a payment spent: the coin, null when the wallet has no record of
+     * it, or the failed lookup, which a refresh retries.
+     */
+    suspend fun coin(id: String): Result<VtxoModel?> = try { Result.success(dependencies.coin(id)) }
+        catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { Result.failure(failure) }
     var overview by mutableStateOf<OnchainOverview?>(null); private set
+    /** Counts completed overview reads (pull to refresh, the periodic read), so a coin lookup can retry after each. */
+    var revision by mutableIntStateOf(0); private set
     var exit by mutableStateOf<ExitModel?>(null); private set
     var estimateFallback by mutableStateOf<OnchainQuote?>(null); private set
     var quote by mutableStateOf<OnchainQuote?>(null); private set
@@ -85,7 +90,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             val token = generation
             val detail = detailID?.let { dependencies.detail(it) }
             val latest = dependencies.overview()
-            if (generation == token && dependencies.ready()) { exit = detail; overview = latest; error = receiptError }
+            if (generation == token && dependencies.ready()) { exit = detail; overview = latest; error = receiptError; revision++ }
             else if (!dependencies.ready()) unavailable()
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }

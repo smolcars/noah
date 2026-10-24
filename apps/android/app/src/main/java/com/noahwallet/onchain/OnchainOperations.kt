@@ -23,8 +23,13 @@ internal class OnchainOperations(
         val due = wallet.vtxos().map { vtxoModel(it, tip, expiring) }.filter { it.renewable }.map { it.id }.toSet()
         return ids.isNotEmpty() && ids.all { it in due }
     }
-    /** One coin by ID, spent ones included: the overview lists only the wallet's current coins. */
-    suspend fun vtxo(id: String, threshold: UInt): VtxoModel = vtxoModel(wallet.vtxo(id), wallet.tip(), wallet.expiring(threshold))
+    private val missing = Regex("VTXO with id \\S+ cannot be found")
+    /** One coin by ID, spent ones included: the overview lists only the wallet's current coins. Null when the wallet has no record of it. */
+    suspend fun vtxo(id: String, threshold: UInt): VtxoModel? {
+        // bark has no not-found code: its lookup says "The VTXO with id <id> cannot be found". Any other error is a failed read.
+        val vtxo = try { wallet.vtxo(id) } catch (error: BarkError) { if (missing.containsMatchIn(error.message.orEmpty())) return null else throw error }
+        return vtxoModel(vtxo, wallet.tip(), wallet.expiring(threshold))
+    }
     suspend fun detail(id: String): ExitModel? {
         val status = wallet.status(id) ?: return null
         return exitModel(status)

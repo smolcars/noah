@@ -124,12 +124,24 @@ class OnchainModelTest {
         var failStatusRead = false
         var detailCalls = 0
         val discarded = mutableListOf<OnchainQuote>()
+        var coin: suspend (String) -> VtxoModel? = { null }
         val overview = OnchainOverview("wallet", emptyList(), emptyList(), 100_000, 100, 0, null)
         fun dependencies() = OnchainModel.Dependencies(
             { ready }, { overview }, { action, ids, amount, destination ->
                 entered?.complete(Unit); gate?.await(); if (failPreparation) fail(OnchainFailure.notSynced); OnchainQuote(action, "wallet", ids, destination, amount)
             }, { calls++; "submitted" }, { attempts }, { id -> attempts = attempts.filter { it.id != id } },
-            { checks++; if (failStatusRead) error("transport"); false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) })
+            { checks++; if (failStatusRead) error("transport"); false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) }, coin = { coin(it) })
+    }
+    @Test fun aFailedCoinLookupIsNotAMissingRecordAndEachCompletedReadRetriesIt() = runBlocking {
+        val f = Fake(); val m = OnchainModel(f.dependencies())
+        f.coin = { error("transport") }
+        assertTrue(m.coin("spent").isFailure)
+        f.coin = { null }
+        assertEquals(Result.success(null), m.coin("spent"))
+        // The detail's lookup is keyed on the revision, which each completed overview read moves.
+        val before = m.revision
+        m.load(); assertEquals(before + 1, m.revision)
+        f.ready = false; m.load(); assertEquals("a read that failed retries nothing", before + 1, m.revision)
     }
     @Test fun lateReviewCannotInstallAfterInputsOrReadinessChange() = runBlocking {
         val f = Fake().apply { gate = CompletableDeferred(); entered = CompletableDeferred() }
