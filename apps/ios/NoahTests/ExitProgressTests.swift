@@ -232,16 +232,33 @@ struct ExitProgressTests {
         // A and B share the round's root; C is alone in its round.
         let paths = ["a": ["r1", "a"], "b": ["r1", "b"], "c": ["r2", "c"]]
         let vtxos = [Self.vtxo("a", 2_100), Self.vtxo("b", 1_100), Self.vtxo("c", 2_200)]
-        let flagged = try await ExitEconomics.uneconomic(vtxos, estimate: Self.estimator(paths))
+        let costs = await ExitEconomics.classify(vtxos, estimate: Self.estimator(paths))
         // Each carries its whole path and a claim input on its own: 2,100. A and B meet it; C is worth more.
-        #expect(flagged == ["a", "b"])
-        #expect(try await ExitEconomics.uneconomic([], estimate: Self.estimator(paths)).isEmpty)
+        #expect(costs == ["a": .uneconomic, "b": .uneconomic, "c": .worthIt])
+        #expect(ExitEconomics.classified(vtxos, costs: costs))
+        #expect(await ExitEconomics.classify([], estimate: Self.estimator(paths)).isEmpty)
+    }
+
+    @Test func aFailedEstimateKeepsItsOwnStateAndHoldsAll() async {
+        let vtxos = [Self.vtxo("a", 31_000), Self.vtxo("b", 24_500), Self.vtxo("c", 1_100)]
+        let costs = await ExitEconomics.classify(vtxos) { ids in
+            if ids == ["b"] { throw OnchainFailure.unavailable }
+            return 2_100
+        }
+        // One failure doesn't throw the others away.
+        #expect(costs == ["a": .worthIt, "b": .failed, "c": .uneconomic])
+        // All waits: it can't know yet whether B is worth its fees.
+        #expect(!ExitEconomics.classified(vtxos, costs: costs))
+        #expect(!ExitEconomics.classified(vtxos, costs: ["a": .worthIt]))
+        #expect(ExitEconomics.all(vtxos, costs: costs).map(\.id) == ["a"])
     }
 
     @Test func allLeavesOutUneconomicDustAndLocked() {
         let vtxos = [Self.vtxo("a", 31_000), Self.vtxo("b", 1_100), Self.vtxo("dust", 290), Self.vtxo("locked", 710, state: "Locked")]
-        #expect(ExitEconomics.all(vtxos, uneconomic: ["b"]).map(\.id) == ["a"])
-        #expect(ExitEconomics.all(vtxos, uneconomic: []).map(\.id) == ["a", "b"])
+        #expect(ExitEconomics.all(vtxos, costs: ["a": .worthIt, "b": .uneconomic]).map(\.id) == ["a"])
+        #expect(ExitEconomics.all(vtxos, costs: ["a": .worthIt, "b": .worthIt]).map(\.id) == ["a", "b"])
+        // Dust and locked VTXOs never need a classification.
+        #expect(ExitEconomics.classified(vtxos, costs: ["a": .worthIt, "b": .worthIt]))
     }
 
     // MARK: Decisions 5, 6 and 8

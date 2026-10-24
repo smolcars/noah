@@ -118,5 +118,9 @@
   "One claim for {n} exits: {amount} received after a {fee} fee.": {
     "one": "One claim for {n} exit: {amount} received after a {fee} fee.",
     "other": "One claim for {n} exits: {amount} received after a {fee} fee."
+  },
+  "Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.": {
+    "one": "Couldn’t check the fees of {n} VTXO, so All waits. Choose it on its own, or try again.",
+    "other": "Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again."
   }
 }

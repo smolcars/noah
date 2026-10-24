@@ -229,16 +229,27 @@ enum ExitFunds {
 /// claim) are at least its amount. Each VTXO is priced on its own, the conservative side: siblings
 /// each carry their shared path, so it never adds an uneconomic VTXO to All.
 enum ExitEconomics {
+    /// One VTXO's classification; a VTXO not yet in the map is still being priced.
+    enum Cost: Equatable, Sendable { case worthIt, uneconomic, failed }
+
     // shortcut: standalone estimates, as bark-bolt-ffi's estimate gives only set totals; deduplicate shared transactions once it exposes per-transaction estimate data.
-    static func uneconomic(_ vtxos: [VtxoModel], estimate: @Sendable ([String]) async throws -> UInt64) async throws -> Set<String> {
-        var result = Set<String>()
-        for vtxo in vtxos where try await estimate([vtxo.id]) >= vtxo.amount { result.insert(vtxo.id) }
-        return result
+    static func classify(_ vtxos: [VtxoModel], estimate: @Sendable ([String]) async throws -> UInt64) async -> [String: Cost] {
+        var costs: [String: Cost] = [:]
+        for vtxo in vtxos {
+            do { costs[vtxo.id] = try await estimate([vtxo.id]) >= vtxo.amount ? .uneconomic : .worthIt }
+            catch { costs[vtxo.id] = .failed }
+        }
+        return costs
     }
 
-    /// "All": every eligible VTXO except those that cost more than they're worth.
-    static func all(_ vtxos: [VtxoModel], uneconomic: Set<String>) -> [VtxoModel] {
-        vtxos.filter { $0.eligible && !uneconomic.contains($0.id) }
+    /// "All": every eligible VTXO known to be worth its fees.
+    static func all(_ vtxos: [VtxoModel], costs: [String: Cost]) -> [VtxoModel] {
+        vtxos.filter { $0.eligible && costs[$0.id] == .worthIt }
+    }
+
+    /// All can be reviewed only once every eligible VTXO is classified.
+    static func classified(_ vtxos: [VtxoModel], costs: [String: Cost]) -> Bool {
+        vtxos.filter(\.eligible).allSatisfy { costs[$0.id] == .worthIt || costs[$0.id] == .uneconomic }
     }
 }
 

@@ -259,11 +259,11 @@ final class OnchainModel {
         return try? await dependencies.estimate(ids)
     }
 
-    /// Decision 4's labels for the eligible VTXOs; none when the estimator fails.
-    func uneconomic(_ vtxos: [VtxoModel]) async -> Set<String> {
-        guard await dependencies.ready() else { return [] }
+    /// Decision 4: each VTXO's classification, `.failed` where bark couldn't estimate it.
+    func exitCosts(_ vtxos: [VtxoModel]) async -> [String: ExitEconomics.Cost] {
+        guard await dependencies.ready() else { return Dictionary(uniqueKeysWithValues: vtxos.map { ($0.id, .failed) }) }
         let estimate = dependencies.estimate
-        return (try? await ExitEconomics.uneconomic(vtxos) { try await estimate($0).totalFeeSats }) ?? []
+        return await ExitEconomics.classify(vtxos) { try await estimate($0).totalFeeSats }
     }
 
     func acknowledge(_ id: UUID) async {

@@ -81,10 +81,9 @@ struct ExitChooseView: View {
     @State private var model: OnchainModel
     @State private var all = true
     @State private var selected = Set<String>()
-    @State private var uneconomic = Set<String>()
-    /// The eligible VTXOs the labels above were worked out for: All waits for them, so it never
-    /// freezes a VTXO it would leave out once they're known.
-    @State private var classified: [String]?
+    @State private var costs: [String: ExitEconomics.Cost] = [:]
+    /// Pricing VTXOs again after some failed.
+    @State private var retry = 0
     @State private var estimate: EmergencyExitFeeEstimate?
     @State private var estimating = false
     @State private var sheet: ExitSheet?
@@ -102,7 +101,7 @@ struct ExitChooseView: View {
         (model.overview?.vtxos ?? []).filter { $0.state == "Spendable" || $0.state == "Locked" }.sorted { $0.amount > $1.amount }
     }
     private var selection: [VtxoModel] {
-        all ? ExitEconomics.all(vtxos, uneconomic: uneconomic) : vtxos.filter { $0.eligible && selected.contains($0.id) }
+        all ? ExitEconomics.all(vtxos, costs: costs) : vtxos.filter { $0.eligible && selected.contains($0.id) }
     }
     private var value: UInt64 { selection.reduce(0) { $0 + $1.amount } }
     /// What the confirmed on-chain balance is short of the broadcast fees.
@@ -135,7 +134,8 @@ struct ExitChooseView: View {
                 settings.open(.exitReview(selection.map(\.id)))
             }
             .buttonStyle(SettingsActionStyle())
-            .disabled(selection.isEmpty || model.locked || all && classified != vtxos.filter(\.eligible).map(\.id))
+            // All waits for every VTXO's classification, so it never freezes one it would leave out.
+            .disabled(selection.isEmpty || model.locked || all && !ExitEconomics.classified(vtxos, costs: costs))
             .accessibilityIdentifier("exit-review")
         }
         .settingsChrome("Choose VTXOs")
@@ -151,13 +151,12 @@ struct ExitChooseView: View {
             all = false
             selected = Set(preset)
         }
-        .task(id: vtxos.filter(\.eligible).map(\.id)) {
+        .task(id: vtxos.filter(\.eligible).map(\.id) + [String(retry)]) {
             let eligible = vtxos.filter(\.eligible)
-            classified = nil
-            let labels = await model.uneconomic(eligible)
+            costs = costs.filter { id, cost in cost != .failed && eligible.contains { $0.id == id } }
+            let latest = await model.exitCosts(eligible.filter { costs[$0.id] == nil })
             guard !Task.isCancelled else { return }
-            uneconomic = labels
-            classified = eligible.map(\.id)
+            costs.merge(latest) { $1 }
         }
         .task(id: selection.map(\.id)) {
             estimating = true
@@ -174,7 +173,7 @@ struct ExitChooseView: View {
         if !all || settings.wide {
             VStack(spacing: 0) {
                 ForEach(Array(vtxos.enumerated()), id: \.element.id) { index, vtxo in
-                    ExitVtxoRow(vtxo: vtxo, uneconomic: uneconomic.contains(vtxo.id), selected: all ? nil : selected.contains(vtxo.id),
+                    ExitVtxoRow(vtxo: vtxo, uneconomic: costs[vtxo.id] == .uneconomic, selected: all ? nil : selected.contains(vtxo.id),
                                 hairline: index < vtxos.count - 1) { toggle(vtxo) }
                 }
             }
@@ -219,11 +218,20 @@ struct ExitChooseView: View {
     @ViewBuilder private func leftOut(_ money: ExitMoney) -> some View {
         let dust = vtxos.filter { $0.state == "Spendable" && $0.amount < ExitRules.dust }.reduce(0) { $0 + $1.amount }
         let locked = vtxos.filter { $0.state == "Locked" }.reduce(0) { $0 + $1.amount }
-        let costly = vtxos.filter { $0.eligible && uneconomic.contains($0.id) }.reduce(0) { $0 + $1.amount }
+        let costly = vtxos.filter { $0.eligible && costs[$0.id] == .uneconomic }.reduce(0) { $0 + $1.amount }
         let lines = [dust > 0 ? L10n.text("Left out: {amount}, too small to exit.", money(dust), locale: language) : nil,
                      locked > 0 ? L10n.text("Left out: {amount}, in use right now.", money(locked), locale: language) : nil,
                      costly > 0 ? L10n.text("Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.", money(costly), locale: language) : nil]
         if lines.contains(where: { $0 != nil }) { SettingsFine(text: lines.compactMap { $0 }.joined(separator: "\n")) }
+        let failed = vtxos.filter { $0.eligible && costs[$0.id] == .failed }.count
+        if failed > 0 {
+            SettingsFine(text: L10n.plural("Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.",
+                                           count: failed, locale: language), failure: true)
+            Button(L10n.text("Try again", locale: language)) { retry += 1 }
+                .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
+                .padding(.top, 4)
+                .accessibilityIdentifier("exit-costs-retry")
+        }
     }
 
     private func toggle(_ vtxo: VtxoModel) {
