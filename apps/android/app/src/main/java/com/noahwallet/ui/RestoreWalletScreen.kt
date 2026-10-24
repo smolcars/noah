@@ -112,7 +112,7 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
                 model.step = "restoring"
                 model.restoreWallet(null)
             }
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { DeleteWalletFallback(model, palette.failure) }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { DeleteWalletFallback(model, palette.failure, NoahTokens.Typography.body) }
         }
     })
 }

@@ -243,14 +243,17 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
     }
 }
 
-/** [color] tints the button (stored-phrase recovery's destructive red); unspecified keeps the theme's. */
+/** [color] and [style] restyle the button for stored-phrase recovery (iOS's destructive body text); defaults keep the theme's. */
 @Composable
-internal fun DeleteWalletFallback(model: AppModel, color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified) {
+internal fun DeleteWalletFallback(model: AppModel, color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified,
+                                  style: androidx.compose.ui.text.TextStyle? = null) {
     var showingDelete by rememberSaveable { mutableStateOf(false) }
     var confirmation by rememberSaveable { mutableStateOf("") }
     val enabled = model.canDeleteRecoveryWallet
     androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled,
-        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = color)) { Text(tr("Delete Wallet")) }
+        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = color)) {
+        Text(tr("Delete Wallet"), style = style ?: androidx.compose.material3.LocalTextStyle.current)
+    }
     if (showingDelete) WalletAlertDialog(
         onDismissRequest = { if (enabled) showingDelete = false },
         title = { Text(tr("Delete Wallet")) },
