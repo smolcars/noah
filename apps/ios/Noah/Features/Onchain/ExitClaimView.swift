@@ -10,6 +10,8 @@ struct ExitClaimView: View {
     @State private var typed = ""
     @State private var scanning = false
     @State private var expired = false
+    /// The review key (`reviewKey`) whose review last finished: after that, a missing quote offers Review again.
+    @State private var reviewed: String?
     @State private var haptics = OnboardingHaptics()
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
@@ -32,6 +34,12 @@ struct ExitClaimView: View {
         guard let quote = model.quote, quote.action == .claim, quote.destination == destination, destination != nil else { return nil }
         return quote
     }
+    private var reviewKey: String { [destination ?? "", ready.map(\.id).joined(separator: ","), String(scenePhase == .active)].joined(separator: "|") }
+    /// Nothing to hold: the last review for these inputs finished without a quote (it failed, the fee
+    /// changed, or the app left and came back), and nothing is running.
+    private var reviewAgain: Bool {
+        quote == nil && model.estimateFallback == nil && destination != nil && !ready.isEmpty && !model.busy && !model.loading && reviewed == reviewKey
+    }
 
     var body: some View {
         let money = ExitMoney(app: app, locale: locale)
@@ -50,8 +58,9 @@ struct ExitClaimView: View {
         } trailing: {
             SettingsSection(title: "To")
             option(L10n.text("Another wallet", locale: language), selected: !toPhone, id: "exit-claim-other") { choose(phone: false) }
+                .disabled(model.busy)
             if !toPhone {
-                field
+                field.disabled(model.busy)
                 ExitWarning(text: L10n.text("Check the address. This can’t be undone.", locale: language), symbol: "exclamationmark.shield", muted: !(!address.isEmpty && !valid))
                 if !address.isEmpty && !valid {
                     SettingsFine(text: L10n.text("Enter an on-chain Bitcoin address for this network.", locale: language), failure: true)
@@ -59,6 +68,7 @@ struct ExitClaimView: View {
             }
             option(L10n.text("This phone’s on-chain wallet", locale: language), sub: L10n.text("Noah won’t move these back to Ark.", locale: language),
                    selected: toPhone, id: "exit-claim-phone") { choose(phone: true) }
+                .disabled(model.busy)
                 .padding(.top, toPhone ? 0 : 8)
             VStack(spacing: 0) {
                 SettingsDetailRow(label: L10n.text("Claim fee", locale: language),
@@ -75,10 +85,16 @@ struct ExitClaimView: View {
             if expired { SettingsFine(text: L10n.text("The estimate expired, so Noah fetched a new one. Check it and hold again.", locale: language)) }
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         } footer: {
-            SendHoldButton(amount: money(receive ?? amount), enabled: quote != nil && !model.busy && !ready.isEmpty,
-                           title: receive.map { LocalizedStringKey(L10n.text("Hold to claim {amount}", money($0), locale: language)) } ?? "Hold to claim",
-                           action: "Claim {amount}", confirm: "Claim", id: "exit-hold-claim") { claim() }
-                .id(quote?.id)
+            if reviewAgain, let destination {
+                Button(L10n.text("Review again", locale: language)) { Task { await review(destination) } }
+                    .buttonStyle(SettingsActionStyle())
+                    .accessibilityIdentifier("exit-claim-review")
+            } else {
+                SendHoldButton(amount: money(receive ?? amount), enabled: quote != nil && !model.busy && !ready.isEmpty,
+                               title: receive.map { LocalizedStringKey(L10n.text("Hold to claim {amount}", money($0), locale: language)) } ?? "Hold to claim",
+                               action: "Claim {amount}", confirm: "Claim", id: "exit-hold-claim") { claim() }
+                    .id(quote?.id)
+            }
         }
         .settingsChrome(nil)
         .onboardingHaptics(haptics)
@@ -98,12 +114,21 @@ struct ExitClaimView: View {
         }
         // Today's claim quote for the current destination, once it can be priced, and again whenever the
         // app comes back (leaving drops the review).
-        .task(id: [destination ?? "", ready.map(\.id).joined(separator: ","), String(scenePhase == .active)]) {
+        .task(id: reviewKey) {
+            reviewed = nil
             guard let destination, !ready.isEmpty, scenePhase == .active else { return }
             do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
-            while model.loading { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
-            await model.review(.claim, ids: ready.map(\.id), destination: destination)
+            await review(destination)
         }
+    }
+
+    /// Today's claim review for `destination`, once any running one is done: the model drops a
+    /// review asked for while it's busy.
+    private func review(_ destination: String) async {
+        let key = reviewKey
+        while model.loading || model.busy { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
+        await model.review(.claim, ids: ready.map(\.id), destination: destination)
+        reviewed = key
     }
 
     private var field: some View {
@@ -166,7 +191,7 @@ struct ExitClaimView: View {
             guard let quote, destination == quote.destination else { return }
             guard quote.isCurrent else {
                 expired = true
-                await model.review(.claim, ids: quote.ids, destination: quote.destination)
+                if let destination { await review(destination) }
                 return
             }
             expired = false

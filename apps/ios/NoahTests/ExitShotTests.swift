@@ -11,7 +11,7 @@ import UIKit
 /// the session. Light and dark follow the simulator; a wide window (the Duo open) shows the panes.
 /// States: warn, warn-live, choose, choose-all, choose-unfunded, review, review-unfunded,
 /// progress-<lift|publish|sending|mempool|confirm|onchain|wait|claimable|claiming|claimed>,
-/// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, claim-other, claim-phone, list, list-plain.
+/// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, claim-other, claim-phone, claim-again, list, list-plain.
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_EXIT_SHOTS"] == "1"))
 struct ExitShotTests {
@@ -182,9 +182,10 @@ struct ExitShotTests {
     /// The fixtures' episodes all began at bark's first record (`ExitModel.episode`).
     nonisolated static func episode(_ name: String, _ kind: String) -> String { "\(ActivityShotTests.hex(name))|\(kind)|0" }
 
-    static func model(_ overview: OnchainOverview, detail: ExitModel? = nil, quote: Bool = true) -> OnchainModel {
+    static func model(_ overview: OnchainOverview, detail: ExitModel? = nil, quote: Bool = true, reviewFails: Bool = false) -> OnchainModel {
         OnchainModel(dependencies: .init(ready: { true }, overview: { overview },
             quote: { action, ids, _, destination in
+                if reviewFails { throw OnchainFailure.changed }
                 guard quote else { throw ExitEstimateUnavailable(review: .init(action: action, walletID: "fixture", ids: ids, amount: 0, confirmed: overview.confirmed)) }
                 let amount = action == .startExit ? overview.vtxos.filter { ids.contains($0.id) }.reduce(0) { $0 + $1.amount }
                     : overview.exits.filter { ids.contains($0.id) }.reduce(0) { $0 + $1.amount }
@@ -219,9 +220,9 @@ struct ExitShotTests {
         case "review", "review-unfunded", "review-unknown":
             page = .exitReview([Self.vtxos[0].id])
             onchain = { Self.model(Self.overview(exits: [], confirmed: state == "review-unfunded" ? 310 : 18_400), quote: state != "review-unknown") }
-        case "claim-other", "claim-phone", "claim-invalid":
+        case "claim-other", "claim-phone", "claim-invalid", "claim-again":
             page = .exitClaim
-            onchain = { Self.model(Self.overview(exits: [Self.followed("claimable")], tip: Self.tip + 148)) }
+            onchain = { Self.model(Self.overview(exits: [Self.followed("claimable")], tip: Self.tip + 148), reviewFails: state == "claim-again") }
         case "list", "list-plain":
             page = .exitList
             let exits = state == "list" ? Self.listed() : Array(Self.listed().prefix(2))
@@ -245,7 +246,7 @@ struct ExitShotTests {
         let fixture = SettingsFixture(summary: HomeShotTests.summary(ark: 142_742, onchain: 18_400), storage: storage, onchain: onchain,
                                       phrase: .init(authenticate: { _ in .denied }, hasNoScreenLock: { false }, words: { [] }, generation: { 0 }),
                                       executor: recurring.executor, exitSelection: state == "choose" ? [Self.vtxos[0].id] : nil,
-                                      exitClaimTo: ["claim-other": "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202", "claim-phone": "phone",
+                                      exitClaimTo: ["claim-other": "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202", "claim-again": "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202", "claim-phone": "phone",
                                                     "claim-invalid": "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"][state])
         let view = ExitShotHost(page: page)
             .environment(app)
