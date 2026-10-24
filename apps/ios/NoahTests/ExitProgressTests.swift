@@ -795,8 +795,13 @@ struct ExitRestartTests {
         /// What happened, in order: Noah's new run, then bark's start.
         var events: [String] = []
         var estimatorFails = false
+        var runFails = false
         func start(_ ids: [String]) { starts.append(ids); events.append("start") }
-        func began() { events.append("run") }
+        func began() throws {
+            if runFails { throw OnchainFailure.unavailable }
+            events.append("run")
+        }
+        func failRuns(_ fails: Bool) { runFails = fails }
         func failEstimates() { estimatorFails = true }
         func estimate() throws -> EmergencyExitFeeEstimate {
             if estimatorFails { throw OnchainFailure.unavailable }
@@ -805,8 +810,31 @@ struct ExitRestartTests {
         /// bark still lists the VTXO as spendable: only the journal stops a second start.
         nonisolated func access() -> WalletSession.OnchainStartAccess {
             .init(walletID: "wallet", confirmed: { 18_400 }, spendable: { ["v": 31_000] },
-                  estimate: { _ in try await self.estimate() }, start: { await self.start($0) }, began: { _ in await self.began() })
+                  estimate: { _ in try await self.estimate() }, start: { await self.start($0) }, began: { _ in try await self.began() })
         }
+    }
+
+    /// The new run couldn't be recorded: bark isn't asked, and the start can be reviewed and held again.
+    @Test func aStartWhoseRunCantBeRecordedIsNotSent() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let wallet = StartWallet(), journal = OnchainOperationJournal(file: file), access = wallet.access()
+        let model = OnchainModel(dependencies: .init(ready: { true }, overview: { Self.overview },
+            quote: { _, ids, _, _ in try await WalletSession.startQuote(ids: ids, access: access) },
+            execute: { try await WalletSession.executeStart($0, journal: journal, access: access) },
+            attempt: { try await journal.loadAll() }, acknowledge: { try await journal.acknowledge($0) }))
+        await wallet.failRuns(true)
+        await model.review(.startExit, ids: ["v"])
+        #expect(await model.confirm() == false)
+        #expect(model.error == OnchainFailure.constructionFailed.errorDescription && model.quote == nil && model.estimateFallback == nil)
+        #expect(await wallet.starts.isEmpty)
+        // Nothing was sent, so the journal holds nothing back: Review again gets a fresh quote.
+        #expect(try await journal.loadAll().isEmpty)
+        await wallet.failRuns(false)
+        await model.review(.startExit, ids: ["v"])
+        #expect(model.quote != nil)
+        #expect(await model.confirm() == true)
+        #expect(await wallet.starts == [["v"]])
     }
 
     /// The first estimate worked, the one at submit didn't: nothing was sent, so the hold isn't a success

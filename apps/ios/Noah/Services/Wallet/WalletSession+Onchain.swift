@@ -346,8 +346,8 @@ extension WalletSession {
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
         guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
         return try await journal.perform(quote) {
-            // Best-effort: the earlier run's proof is cleared first, and its sightings end with its status.
-            try? await access.began(quote.ids)
+            // The new run is recorded before bark starts, or bark isn't asked (nothing sent yet).
+            do { try await access.began(quote.ids) } catch { throw OnchainFailure.constructionFailed }
             try await access.start(quote.ids)
             return "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
         }
