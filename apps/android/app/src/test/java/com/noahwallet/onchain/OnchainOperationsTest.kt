@@ -1089,6 +1089,33 @@ class OnchainOperationsTest {
             }
         }
     }
+    @Test fun checkStatusAndAutoBoardWaitForABoardStillBeingSubmitted() = runBlocking { fixture { wallet, ops, journal, _ ->
+        // Everything a check would read as "nothing boarded", even an orphan movement, while bark is still submitting.
+        wallet.movementTxids = setOf("board-tx"); wallet.chainStatus = TransactionStatus.NotFound
+        wallet.fundingUtxos = listOf(OnchainUtxo.Local(OutPoint("input-0", 0u), 100_000u, 100u))
+        wallet.fundingTransactions = listOf(WalletTransaction("input-0", "", null, 100_000, null, false))
+        val reviewed = ops.quote(OnchainAction.board, amount = 30_000)
+        val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
+        wallet.beforeSubmit = { entered.complete(Unit); gate.await() }
+        val submission = async { ops.execute(reviewed) }
+        entered.await()
+        var disk: String? = null
+        val check = async { ops.check(reviewed.id) }
+        val admission = async { AutoBoardReview(AutoBoardFunding({ disk }, { disk = it })).prepare({ true }, { ops.autoBoardFunding() },
+            { ops.autoBoardQuote() }, { wallet.discardBoard(it.preparedBoard!!.id) }) }
+        repeat(20) { yield() }
+        assertFalse("both wait for the submission's journal lock", check.isCompleted || admission.isCompleted)
+        val held = kotlinx.serialization.json.Json.decodeFromString<List<OnchainOperationJournal.Attempt>>(wallet.attemptFile.readText()).single()
+        assertEquals("board-tx", held.txid); assertNull(held.receipt)
+        // The only submission is the one still inside the SDK call; nothing prepared another.
+        assertEquals(1, wallet.preparations.size); assertTrue(wallet.calls.none { it.startsWith("submit:") })
+        // The board settles (bark accepted it): the check finds its receipt and auto-board offers nothing.
+        gate.complete(Unit)
+        submission.await()
+        assertTrue(check.await()); assertNull(admission.await())
+        assertNotNull(journal.loadAll().single().receipt)
+        assertEquals("no second preparation or submission", 1 to 1, wallet.preparations.size to wallet.calls.count { it.startsWith("submit:") })
+    } }
     @Test fun aReorgedOrUnverifiableParentAtSubmitReadsAsBeforeSubmission() = runBlocking {
         // SDK 0.7.0's confirmed-only re-check: a parent back in the mempool, or a chain source it can't reach.
         for ((code, reason) in listOf(BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE to OnchainFailure.reserved, BarkErrorCode.OTHER to OnchainFailure.boardNotAttempted)) fixture { wallet, ops, journal, _ ->

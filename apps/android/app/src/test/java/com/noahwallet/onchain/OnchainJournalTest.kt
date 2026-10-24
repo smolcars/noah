@@ -183,6 +183,30 @@ class OnchainJournalTest {
             assertNotNull(journal(file).loadAll().single().overrideAudit)
         }
     } }
+    @Test fun aJournalWrittenBeforeUncertainBoardsKeepsItsBlockingAndOverride() = runBlocking { fixture { file, journal ->
+        // As the 0.6.0 build wrote it: no uncertainBoard key. An unresolved board a crash left, and one overridden since.
+        val quote = """{"action":"board","walletID":"wallet","ids":[],"destination":null,"amount":30000,"fee":330,"chainFee":199,
+            "confirmed":100000,"feeRate":1,"createdAt":1761330000000,"automatic":false,"destinationIsMine":null,"unknownFeeConsent":null,
+            "boardAll":false,"preparedBoard":{"id":"local","txid":"%s","vsize":199,"inputs":[{"txid":"input","vout":0}]},"id":"%s","transactions":null}"""
+        file.writeText("""[{"quote":${quote.format("crashed", "crashed-board")},"receipt":null,"txid":"crashed","overrideAudit":null},
+            {"quote":${quote.format("overridden", "overridden-board")},"receipt":null,"txid":"overridden","overrideAudit":{"overriddenAt":1,
+            "title":"Override repeat protection?","warning":"${OnchainOperationJournal.overrideWarning}",
+            "confirmation":"I understand this may repeat the operation","statusMessage":"${OnchainFailure.uncertain.text}","acknowledgedAt":null}}]""")
+        assertFalse(file.readText().contains("uncertainBoard"))
+        val (crashed, overridden) = journal.loadAll()
+        assertFalse(crashed.uncertainBoard); assertFalse(overridden.uncertainBoard)
+        assertTrue("an unresolved board still blocks", crashed.blocks(OnchainAction.board, emptyList()))
+        assertFalse("an override still unblocks", overridden.blocks(OnchainAction.board, emptyList()))
+        // A movement found later never locks an attempt the user already overrode.
+        assertFalse(journal.reconcile(overridden.id, OnchainOperationJournal.Evidence("wallet", chainStatuses = mapOf("overridden" to ChainStatus(ChainStatus.Kind.notFound)),
+            unspent = setOf("input:0"), boardMovementTransactionIDs = setOf("overridden"))))
+        assertFalse(journal.loadAll().last().blocks(OnchainAction.board, emptyList()))
+        // A crash's unresolved board keeps today's override.
+        journal.overrideUncertain(crashed.id, 2)
+        val reloaded = journal(file).loadAll()
+        assertTrue(reloaded.none { it.blocks(OnchainAction.board, emptyList()) || it.uncertainBoard })
+        assertEquals(listOf(2L, 1L), reloaded.map { it.overrideAudit!!.overriddenAt })
+    } }
     @Test fun boardReceiptMissingFeeUpdatesByExactTxidAndWalletOnly() = runBlocking { fixture { file, journal ->
         val q = quote()
         journal.perform(q) { record -> record("tx"); OnchainReceipt(OnchainReceipt.boardingMessage(null), "tx") }
