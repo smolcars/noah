@@ -421,6 +421,42 @@ struct ActivityCoinReadTests {
         #expect(read.state == .unknown)
     }
 
+    /// Overlapping lookups (pull to refresh while a history read's lookup is out): the newer one's result
+    /// stands, whichever finishes last.
+    @Test(arguments: [true, false]) func theNewestLookupWins(olderFinishesLast: Bool) async {
+        final class Lookups: @unchecked Sendable {
+            let older = AsyncStream<VtxoModel>.makeStream(), newer = AsyncStream<VtxoModel>.makeStream()
+            let calls = RecurringExecutorTests.Locked(0)
+        }
+        let lookups = Lookups()
+        let history = Self.history { _ in
+            let stream = lookups.calls.withLock { $0 += 1; return $0 } == 1 ? lookups.older.stream : lookups.newer.stream
+            for await coin in stream { return coin }
+            return nil
+        }
+        var spendable = Self.coin, spent = Self.coin
+        spendable.state = "Spendable"
+        spent.state = "Spent"
+        let read = ActivityCoinRead()
+        let older = Task { await read.load("c:0", history: history) }
+        while lookups.calls.withLock({ $0 }) < 1 { await Task.yield() }
+        let newer = Task { await read.load("c:0", history: history) }
+        while lookups.calls.withLock({ $0 }) < 2 { await Task.yield() }
+        if olderFinishesLast {
+            lookups.newer.continuation.yield(spent)
+            await newer.value
+            lookups.older.continuation.yield(spendable)
+            await older.value
+        } else {
+            lookups.older.continuation.yield(spendable)
+            await older.value
+            #expect(read.state == .loading, "an older result never publishes once a newer lookup is out")
+            lookups.newer.continuation.yield(spent)
+            await newer.value
+        }
+        #expect(read.state == .coin(spent))
+    }
+
     @Test func aCancelledLookupWritesNothing() async {
         let gate = ActivityDetailReadsTests.Gate()
         let history = Self.history { _ in
