@@ -9557,13 +9557,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld block · %2$@"
+                  "value": "Reclamable en %1$lld bloque · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld blocks · %2$@"
+                  "value": "Reclamable en %1$lld bloques · %2$@"
                 }
               }
             }
@@ -9575,13 +9575,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld block · %2$@"
+                  "value": "あと%1$lldブロックで受け取り可能 · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld blocks · %2$@"
+                  "value": "あと%1$lldブロックで受け取り可能 · %2$@"
                 }
               }
             }
@@ -9593,13 +9593,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld block · %2$@"
+                  "value": "%1$lld블록 후 청구 가능 · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld blocks · %2$@"
+                  "value": "%1$lld블록 후 청구 가능 · %2$@"
                 }
               }
             }
@@ -9611,13 +9611,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld block · %2$@"
+                  "value": "Kan lösas in om %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Claimable in %1$lld blocks · %2$@"
+                  "value": "Kan lösas in om %1$lld block · %2$@"
                 }
               }
             }
@@ -23330,25 +23330,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "In %1$@"
+            "value": "En %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "In %1$@"
+            "value": "あと%1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "In %1$@"
+            "value": "%1$@ 남음"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "In %1$@"
+            "value": "Om %1$@"
           }
         }
       }
@@ -31970,25 +31970,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+            "value": "Noah no está consultando la cadena para esta salida ahora mismo. Usa Consultar la cadena para avanzarla."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+            "value": "Noahは現在この出金のチェーンを確認していません。「チェーンを確認」で進めてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+            "value": "지금 Noah가 이 출금의 체인을 확인하지 않고 있어요. ‘체인 확인’으로 진행하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."
+            "value": "Noah kontrollerar inte blockkedjan för det här uttaget just nu. Använd Kontrollera blockkedjan för att föra det vidare."
           }
         }
       }
@@ -32021,13 +32021,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noah consultó esta salida por última vez hace %1$lld bloque, en el bloque %2$@. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noah consultó esta salida por última vez hace %1$lld bloques, en el bloque %2$@. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión."
                 }
               }
             }
@@ -32039,13 +32039,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noahがこの出金を最後に確認したのは%1$lldブロック前、ブロック %2$@ です。「チェーンを確認」で進めてください。トランザクションの送信や手数料の引き上げが行われることもあります。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noahがこの出金を最後に確認したのは%1$lldブロック前、ブロック %2$@ です。「チェーンを確認」で進めてください。トランザクションの送信や手数料の引き上げが行われることもあります。"
                 }
               }
             }
@@ -32057,13 +32057,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noah가 이 출금을 마지막으로 확인한 건 %1$lld블록 전, 블록 %2$@이에요. ‘체인 확인’으로 진행하세요. 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noah가 이 출금을 마지막으로 확인한 건 %1$lld블록 전, 블록 %2$@이에요. ‘체인 확인’으로 진행하세요. 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."
                 }
               }
             }
@@ -32075,13 +32075,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noah kontrollerade det här uttaget senast för %1$lld block sedan, vid block %2$@. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
+                  "value": "Noah kontrollerade det här uttaget senast för %1$lld block sedan, vid block %2$@. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."
                 }
               }
             }
@@ -34337,13 +34337,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                  "value": "Una reclamación para %1$lld salida: %2$@ recibidos tras una comisión de %3$@."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                  "value": "Una reclamación para %1$lld salidas: %2$@ recibidos tras una comisión de %3$@."
                 }
               }
             }
@@ -34355,13 +34355,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                  "value": "%1$lld件の出金をまとめた1回の受け取り: 手数料%3$@を引いて%2$@を受け取りました。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                  "value": "%1$lld件の出金をまとめた1回の受け取り: 手数料%3$@を引いて%2$@を受け取りました。"
                 }
               }
             }
@@ -34373,13 +34373,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                  "value": "출금 %1$lld개를 한 번에 청구: 수수료 %3$@를 빼고 %2$@을 받았어요."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                  "value": "출금 %1$lld개를 한 번에 청구: 수수료 %3$@를 빼고 %2$@을 받았어요."
                 }
               }
             }
@@ -34391,13 +34391,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exit: %2$@ received after a %3$@ fee."
+                  "value": "Ett inlösen för %1$lld uttag: %2$@ mottaget efter en avgift på %3$@."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One claim for %1$lld exits: %2$@ received after a %3$@ fee."
+                  "value": "Ett inlösen för %1$lld uttag: %2$@ mottaget efter en avgift på %3$@."
                 }
               }
             }
@@ -53834,25 +53834,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unlocks at block %1$@"
+            "value": "Se desbloquea en el bloque %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unlocks at block %1$@"
+            "value": "ブロック %1$@ でロック解除"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unlocks at block %1$@"
+            "value": "블록 %1$@에서 잠금 해제"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unlocks at block %1$@"
+            "value": "Låses upp vid block %1$@"
           }
         }
       }
@@ -55937,13 +55937,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld block · %2$@"
+                  "value": "En espera · %1$lld bloque · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld blocks · %2$@"
+                  "value": "En espera · %1$lld bloques · %2$@"
                 }
               }
             }
@@ -55955,13 +55955,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld block · %2$@"
+                  "value": "待機中 · %1$lldブロック · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld blocks · %2$@"
+                  "value": "待機中 · %1$lldブロック · %2$@"
                 }
               }
             }
@@ -55973,13 +55973,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld block · %2$@"
+                  "value": "대기 중 · %1$lld블록 · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld blocks · %2$@"
+                  "value": "대기 중 · %1$lld블록 · %2$@"
                 }
               }
             }
@@ -55991,13 +55991,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld block · %2$@"
+                  "value": "Väntar · %1$lld block · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Waiting · %1$lld blocks · %2$@"
+                  "value": "Väntar · %1$lld block · %2$@"
                 }
               }
             }
@@ -58682,25 +58682,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$@"
+            "value": "unos %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$@"
+            "value": "約%1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$@"
+            "value": "약 %1$@"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "about %1$@"
+            "value": "ungefär %1$@"
           }
         }
       }
@@ -61085,13 +61085,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld block · %2$@"
+                  "value": "%1$lld bloque · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld blocks · %2$@"
+                  "value": "%1$lld bloques · %2$@"
                 }
               }
             }
@@ -61103,13 +61103,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld block · %2$@"
+                  "value": "%1$lldブロック · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld blocks · %2$@"
+                  "value": "%1$lldブロック · %2$@"
                 }
               }
             }
@@ -61121,13 +61121,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld block · %2$@"
+                  "value": "%1$lld블록 · %2$@"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld blocks · %2$@"
+                  "value": "%1$lld블록 · %2$@"
                 }
               }
             }
@@ -61145,7 +61145,7 @@
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld blocks · %2$@"
+                  "value": "%1$lld block · %2$@"
                 }
               }
             }
@@ -62153,13 +62153,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "거래 %1$lld개"
+                  "value": "트랜잭션 %1$lld개"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "거래 %1$lld개"
+                  "value": "트랜잭션 %1$lld개"
                 }
               }
             }

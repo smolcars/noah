@@ -1328,70 +1328,10 @@
         "· nothing left your wallet"
       ],
       "untranslated": {
-        "es": [
-          "gt_0450659e5fbd54ab",
-          "gt_09e4665e49aef548_one",
-          "gt_09e4665e49aef548_other",
-          "gt_0dc23ef619cceb30",
-          "gt_17bf7bb54aafd273_one",
-          "gt_17bf7bb54aafd273_other",
-          "gt_424efd5bb8022cc0",
-          "gt_5063ccfc0bf26542_one",
-          "gt_5063ccfc0bf26542_other",
-          "gt_985fc1ec623fd8b3_one",
-          "gt_985fc1ec623fd8b3_other",
-          "gt_bdf51ce532245aa7_one",
-          "gt_bdf51ce532245aa7_other",
-          "gt_c5b5f0e95343c511"
-        ],
-        "ja": [
-          "gt_0450659e5fbd54ab",
-          "gt_09e4665e49aef548_one",
-          "gt_09e4665e49aef548_other",
-          "gt_0dc23ef619cceb30",
-          "gt_17bf7bb54aafd273_one",
-          "gt_17bf7bb54aafd273_other",
-          "gt_424efd5bb8022cc0",
-          "gt_5063ccfc0bf26542_one",
-          "gt_5063ccfc0bf26542_other",
-          "gt_985fc1ec623fd8b3_one",
-          "gt_985fc1ec623fd8b3_other",
-          "gt_bdf51ce532245aa7_one",
-          "gt_bdf51ce532245aa7_other",
-          "gt_c5b5f0e95343c511"
-        ],
-        "ko": [
-          "gt_0450659e5fbd54ab",
-          "gt_09e4665e49aef548_one",
-          "gt_09e4665e49aef548_other",
-          "gt_0dc23ef619cceb30",
-          "gt_17bf7bb54aafd273_one",
-          "gt_17bf7bb54aafd273_other",
-          "gt_424efd5bb8022cc0",
-          "gt_5063ccfc0bf26542_one",
-          "gt_5063ccfc0bf26542_other",
-          "gt_985fc1ec623fd8b3_one",
-          "gt_985fc1ec623fd8b3_other",
-          "gt_bdf51ce532245aa7_one",
-          "gt_bdf51ce532245aa7_other",
-          "gt_c5b5f0e95343c511"
-        ],
-        "sv": [
-          "gt_0450659e5fbd54ab",
-          "gt_09e4665e49aef548_one",
-          "gt_09e4665e49aef548_other",
-          "gt_0dc23ef619cceb30",
-          "gt_17bf7bb54aafd273_one",
-          "gt_17bf7bb54aafd273_other",
-          "gt_424efd5bb8022cc0",
-          "gt_5063ccfc0bf26542_one",
-          "gt_5063ccfc0bf26542_other",
-          "gt_985fc1ec623fd8b3_one",
-          "gt_985fc1ec623fd8b3_other",
-          "gt_bdf51ce532245aa7_one",
-          "gt_bdf51ce532245aa7_other",
-          "gt_c5b5f0e95343c511"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     },
     "android": {

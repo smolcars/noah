@@ -268,8 +268,8 @@
   <string name="gt_f78dda21b2e48efd">"Kan lösas in om ungefär %1$s"</string>
   <string name="gt_32a315c279d0ee7f">"Kan lösas in om %1$s block · ungefär %2$s"</string>
   <plurals name="gt_17bf7bb54aafd273">
-    <item quantity="one">"Claimable in %1$s block · %2$s"</item>
-    <item quantity="other">"Claimable in %1$s blocks · %2$s"</item>
+    <item quantity="one">"Kan lösas in om %1$s block · %2$s"</item>
+    <item quantity="other">"Kan lösas in om %1$s block · %2$s"</item>
   </plurals>
   <string name="gt_9564c9cd94655763">"Kan lösas in sedan block %1$s"</string>
   <string name="gt_ddcd2779294a61f0">"Inlöst"</string>
@@ -658,7 +658,7 @@
     <item quantity="one">"I %1$s VTXO"</item>
     <item quantity="other">"I %1$s VTXO:er"</item>
   </plurals>
-  <string name="gt_0dc23ef619cceb30">"In %1$s"</string>
+  <string name="gt_0dc23ef619cceb30">"Om %1$s"</string>
   <string name="gt_e301820ac8393100">"Inkommande"</string>
   <string name="gt_544bf107f0c7d65e">"Inkommande via Lightning"</string>
   <string name="gt_7abc49dfa87bc183">"Ingångar"</string>
@@ -898,10 +898,10 @@
   <string name="gt_9354e260e9c82293">"Noah är i beta. Förvara bara det du har råd att förlora."</string>
   <string name="gt_2588c7db9f3fe277">"Noah är låst"</string>
   <string name="gt_f590e31a6eb944e2">"Noah håller fortfarande på att slutföra en säkerhetskopiering. Försök igen om en stund."</string>
-  <string name="gt_0450659e5fbd54ab">"Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."</string>
+  <string name="gt_0450659e5fbd54ab">"Noah kontrollerar inte blockkedjan för det här uttaget just nu. Använd Kontrollera blockkedjan för att föra det vidare."</string>
   <plurals name="gt_5063ccfc0bf26542">
-    <item quantity="one">"Noah last checked this exit %1$s block ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
-    <item quantity="other">"Noah last checked this exit %1$s blocks ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
+    <item quantity="one">"Noah kontrollerade det här uttaget senast för %1$s block sedan, vid block %2$s. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."</item>
+    <item quantity="other">"Noah kontrollerade det här uttaget senast för %1$s block sedan, vid block %2$s. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."</item>
   </plurals>
   <string name="gt_338e68cc4323f294">"Aviseringar från Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registrerar plånboken hos servern igen. Din plånbok finns kvar."</string>
@@ -967,8 +967,8 @@
   <string name="gt_89cc4ee3c69a3b7e">"Avgift på kedjan"</string>
   <string name="gt_c35e69dac4ff6d3f">"Återstående reserv på blockkedjan"</string>
   <plurals name="gt_09e4665e49aef548">
-    <item quantity="one">"One claim for %1$s exit: %2$s received after a %3$s fee."</item>
-    <item quantity="other">"One claim for %1$s exits: %2$s received after a %3$s fee."</item>
+    <item quantity="one">"Ett inlösen för %1$s uttag: %2$s mottaget efter en avgift på %3$s."</item>
+    <item quantity="other">"Ett inlösen för %1$s uttag: %2$s mottaget efter en avgift på %3$s."</item>
   </plurals>
   <string name="gt_d6e3df34a55bbeb3">"En sista transaktion. Dess avgift dras från beloppet."</string>
   <string name="gt_51795cf8f3fe4c84">"En transaktion per block: ungefär tio minuter var."</string>
@@ -1512,7 +1512,7 @@
   <string name="gt_b126042b7ef8a274">"Lås upp VTXO"</string>
   <string name="gt_3470a00c3bb2d5ca">"Lås upp för att se din plånbok."</string>
   <string name="gt_38674ce943ca4bc9">"Upplåst vid block %1$s"</string>
-  <string name="gt_c5b5f0e95343c511">"Unlocks at block %1$s"</string>
+  <string name="gt_c5b5f0e95343c511">"Låses upp vid block %1$s"</string>
   <string name="gt_fae022f4a65e9a7d">"Oläsbar bild"</string>
   <string name="gt_ea72a231d1b8a76f">"Obegränsad"</string>
   <string name="gt_8b5f54fcadeccafe">"Osignerad tx %1$s"</string>
@@ -1571,8 +1571,8 @@
   <string name="gt_09ff3abe56e1c1df">"Väntar på att säkerhetskopiera"</string>
   <string name="gt_38b84da1d4c099eb">"Väntar · %1$s block · ungefär %2$s"</string>
   <plurals name="gt_985fc1ec623fd8b3">
-    <item quantity="one">"Waiting · %1$s block · %2$s"</item>
-    <item quantity="other">"Waiting · %1$s blocks · %2$s"</item>
+    <item quantity="one">"Väntar · %1$s block · %2$s"</item>
+    <item quantity="other">"Väntar · %1$s block · %2$s"</item>
   </plurals>
   <string name="gt_a9fecbd4968622c1">"Väckningsschemat har inte synkroniserats än. Noah försöker igen när appen öppnas."</string>
   <string name="gt_d1c9a01d57e90086">"Plånbok"</string>
@@ -1652,7 +1652,7 @@
   <string name="gt_f195f8e226312c3a">"Allt är klart"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_fe453fd2b1186bf1">"ungefär en dag"</string>
-  <string name="gt_424efd5bb8022cc0">"about %1$s"</string>
+  <string name="gt_424efd5bb8022cc0">"ungefär %1$s"</string>
   <string name="gt_ab51004e9d71a485">"dagar"</string>
   <string name="gt_0b8e9e995d8d77f1">"felsökning"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
@@ -1727,7 +1727,7 @@
   <string name="gt_00f904d64507e53f">"%1$s block"</string>
   <plurals name="gt_bdf51ce532245aa7">
     <item quantity="one">"%1$s block · %2$s"</item>
-    <item quantity="other">"%1$s blocks · %2$s"</item>
+    <item quantity="other">"%1$s block · %2$s"</item>
   </plurals>
   <string name="gt_3f2e9c59984c0b94">"%1$s d"</string>
   <plurals name="gt_901bac8a657292dd">

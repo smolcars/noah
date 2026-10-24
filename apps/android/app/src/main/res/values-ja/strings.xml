@@ -268,8 +268,8 @@
   <string name="gt_f78dda21b2e48efd">"約%1$s後に受け取り可能"</string>
   <string name="gt_32a315c279d0ee7f">"%1$sブロック後に受け取り可能 · 約%2$s"</string>
   <plurals name="gt_17bf7bb54aafd273">
-    <item quantity="one">"Claimable in %1$s block · %2$s"</item>
-    <item quantity="other">"Claimable in %1$s blocks · %2$s"</item>
+    <item quantity="one">"あと%1$sブロックで受け取り可能 · %2$s"</item>
+    <item quantity="other">"あと%1$sブロックで受け取り可能 · %2$s"</item>
   </plurals>
   <string name="gt_9564c9cd94655763">"ブロック %1$s から受け取り可能"</string>
   <string name="gt_ddcd2779294a61f0">"受け取り済み"</string>
@@ -658,7 +658,7 @@
     <item quantity="one">"%1$s個のVTXO"</item>
     <item quantity="other">"%1$s個のVTXO"</item>
   </plurals>
-  <string name="gt_0dc23ef619cceb30">"In %1$s"</string>
+  <string name="gt_0dc23ef619cceb30">"あと%1$s"</string>
   <string name="gt_e301820ac8393100">"入金"</string>
   <string name="gt_544bf107f0c7d65e">"Lightningで着金中"</string>
   <string name="gt_7abc49dfa87bc183">"入力"</string>
@@ -898,10 +898,10 @@
   <string name="gt_9354e260e9c82293">"Noah はベータ版です。失っても構わない金額だけを保管してください。"</string>
   <string name="gt_2588c7db9f3fe277">"Noahはロックされています"</string>
   <string name="gt_f590e31a6eb944e2">"Noahでバックアップ処理が続いています。少し待ってからもう一度お試しください。"</string>
-  <string name="gt_0450659e5fbd54ab">"Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on."</string>
+  <string name="gt_0450659e5fbd54ab">"Noahは現在この出金のチェーンを確認していません。「チェーンを確認」で進めてください。"</string>
   <plurals name="gt_5063ccfc0bf26542">
-    <item quantity="one">"Noah last checked this exit %1$s block ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
-    <item quantity="other">"Noah last checked this exit %1$s blocks ago, at block %2$s. Use Check the chain to move it on; it can also send or fee-bump its transactions."</item>
+    <item quantity="one">"Noahがこの出金を最後に確認したのは%1$sブロック前、ブロック %2$s です。「チェーンを確認」で進めてください。トランザクションの送信や手数料の引き上げが行われることもあります。"</item>
+    <item quantity="other">"Noahがこの出金を最後に確認したのは%1$sブロック前、ブロック %2$s です。「チェーンを確認」で進めてください。トランザクションの送信や手数料の引き上げが行われることもあります。"</item>
   </plurals>
   <string name="gt_338e68cc4323f294">"Noahの通知"</string>
   <string name="gt_08b28eee5b5a6d39">"Noahがこのウォレットをサーバーに再登録します。ウォレットはそのまま残ります。"</string>
@@ -967,8 +967,8 @@
   <string name="gt_89cc4ee3c69a3b7e">"オンチェーン手数料"</string>
   <string name="gt_c35e69dac4ff6d3f">"オンチェーン予備資金の残額"</string>
   <plurals name="gt_09e4665e49aef548">
-    <item quantity="one">"One claim for %1$s exit: %2$s received after a %3$s fee."</item>
-    <item quantity="other">"One claim for %1$s exits: %2$s received after a %3$s fee."</item>
+    <item quantity="one">"%1$s件の出金をまとめた1回の受け取り: 手数料%3$sを引いて%2$sを受け取りました。"</item>
+    <item quantity="other">"%1$s件の出金をまとめた1回の受け取り: 手数料%3$sを引いて%2$sを受け取りました。"</item>
   </plurals>
   <string name="gt_d6e3df34a55bbeb3">"最後のトランザクションです。手数料は金額から差し引かれます。"</string>
   <string name="gt_51795cf8f3fe4c84">"1ブロックに1トランザクション: それぞれ約10分です。"</string>
@@ -1512,7 +1512,7 @@
   <string name="gt_b126042b7ef8a274">"VTXOのロックを解除"</string>
   <string name="gt_3470a00c3bb2d5ca">"ウォレットを見るにはロックを解除してください。"</string>
   <string name="gt_38674ce943ca4bc9">"ブロック %1$s でロック解除"</string>
-  <string name="gt_c5b5f0e95343c511">"Unlocks at block %1$s"</string>
+  <string name="gt_c5b5f0e95343c511">"ブロック %1$s でロック解除"</string>
   <string name="gt_fae022f4a65e9a7d">"画像を読み取れません"</string>
   <string name="gt_ea72a231d1b8a76f">"制限なし"</string>
   <string name="gt_8b5f54fcadeccafe">"未署名のトランザクション %1$s"</string>
@@ -1571,8 +1571,8 @@
   <string name="gt_09ff3abe56e1c1df">"バックアップを待っています"</string>
   <string name="gt_38b84da1d4c099eb">"待機中 · %1$sブロック · 約%2$s"</string>
   <plurals name="gt_985fc1ec623fd8b3">
-    <item quantity="one">"Waiting · %1$s block · %2$s"</item>
-    <item quantity="other">"Waiting · %1$s blocks · %2$s"</item>
+    <item quantity="one">"待機中 · %1$sブロック · %2$s"</item>
+    <item quantity="other">"待機中 · %1$sブロック · %2$s"</item>
   </plurals>
   <string name="gt_a9fecbd4968622c1">"起動スケジュールはまだ同期されていません。Noahを開くと再試行します。"</string>
   <string name="gt_d1c9a01d57e90086">"ウォレット"</string>
@@ -1652,7 +1652,7 @@
   <string name="gt_f195f8e226312c3a">"準備が整いました"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_fe453fd2b1186bf1">"約1日"</string>
-  <string name="gt_424efd5bb8022cc0">"about %1$s"</string>
+  <string name="gt_424efd5bb8022cc0">"約%1$s"</string>
   <string name="gt_ab51004e9d71a485">"日ごと"</string>
   <string name="gt_0b8e9e995d8d77f1">"デバッグ"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
@@ -1726,8 +1726,8 @@
   <string name="gt_f4d60c7d0545f547">"%1$s件が有効"</string>
   <string name="gt_00f904d64507e53f">"%1$sブロック"</string>
   <plurals name="gt_bdf51ce532245aa7">
-    <item quantity="one">"%1$s block · %2$s"</item>
-    <item quantity="other">"%1$s blocks · %2$s"</item>
+    <item quantity="one">"%1$sブロック · %2$s"</item>
+    <item quantity="other">"%1$sブロック · %2$s"</item>
   </plurals>
   <string name="gt_3f2e9c59984c0b94">"%1$s日"</string>
   <plurals name="gt_901bac8a657292dd">
