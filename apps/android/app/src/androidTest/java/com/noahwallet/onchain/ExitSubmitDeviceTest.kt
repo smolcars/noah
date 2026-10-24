@@ -3,9 +3,9 @@ package com.noahwallet.onchain
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.navigation3.runtime.NavKey
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.WalletDataLocation
 import com.noahwallet.services.wallet.ReceiveRequest
@@ -15,7 +15,6 @@ import com.noahwallet.services.wallet.WalletSession
 import com.noahwallet.ui.LocalFoldingFeatures
 import com.noahwallet.ui.NoahTheme
 import com.noahwallet.ui.WindowRegion
-import com.noahwallet.ui.settings.ExitPage
 import com.noahwallet.ui.settings.SettingsNav
 import io.github.niteshbalusu11.bark.*
 import java.io.File
@@ -110,20 +109,38 @@ class ExitSubmitDeviceTest {
 
     private lateinit var process: Process
     private var fold by mutableStateOf<WindowRegion?>(null)
-    private val replaced: MutableList<NavKey> = java.util.Collections.synchronizedList(mutableListOf())
     private val models: MutableList<OnchainModel> = java.util.Collections.synchronizedList(mutableListOf())
-    private val nav = SettingsNav(back = {}, open = {}, pop = {}, myCode = {}, home = {}, replace = { replaced += it })
+    private val nav = SettingsNav(back = {}, open = {}, pop = {}, myCode = {}, home = {})
 
-    /** A page as its Page composable builds it: a fresh model on this process's dependencies, read when it appears. */
-    private fun host(page: @Composable (OnchainModel) -> Unit): StateRestorationTester {
+    private var shown by mutableStateOf(true)
+    private var registry: SaveableStateRegistry? = null
+    private var saved: Map<String, List<Any?>>? = null
+
+    /**
+     * A page as its Page composable builds it: a fresh model on this process's dependencies, read when it appears, under a
+     * saved-state registry the test saves and restores as Android does when it recreates the activity.
+     */
+    private fun host(page: @Composable (OnchainModel) -> Unit) {
         compose.mainClock.autoAdvance = false
-        val restoration = StateRestorationTester(compose)
-        restoration.setContent { NoahTheme { CompositionLocalProvider(LocalFoldingFeatures provides listOfNotNull(fold)) { ExitPreviewHost {
-            val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {})) { true }).also { models += it } }
-            LaunchedEffect(model) { model.load() }
-            page(model)
+        compose.setContent { NoahTheme { CompositionLocalProvider(LocalFoldingFeatures provides listOfNotNull(fold)) { ExitPreviewHost {
+            if (shown) {
+                val restored = remember { SaveableStateRegistry(saved) { true }.also { registry = it } }
+                CompositionLocalProvider(LocalSaveableStateRegistry provides restored) {
+                    val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {})) { true }).also { models += it } }
+                    LaunchedEffect(model) { model.load() }
+                    page(model)
+                }
+            }
         } } } }
-        return restoration
+    }
+
+    /** Recreation: saved state is kept, the page and its model go, then [between] runs and they come back new. */
+    private fun recreate(between: () -> Unit = {}) {
+        compose.runOnUiThread { saved = checkNotNull(registry).performSave(); shown = false }
+        compose.mainClock.advanceTimeBy(100)
+        between()
+        compose.runOnUiThread { shown = true }
+        compose.mainClock.advanceTimeBy(100)
     }
 
     /** Lets the wallet's calls (on IO) and the page's own delays run until [done]. */
@@ -135,6 +152,7 @@ class ExitSubmitDeviceTest {
         }
         compose.mainClock.advanceTimeBy(300)
     }
+    private fun journal() = runBlocking { process.session.onchainJournal.loadAll() }
     private fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
     private fun enabled(tag: String) = compose.onAllNodes(hasTestTag(tag) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
     private fun hold(tag: String) {
@@ -144,51 +162,53 @@ class ExitSubmitDeviceTest {
         compose.mainClock.advanceTimeBy(300)
     }
     /** A posture change: the activity is recreated in a book posture, so the page and its model are new. */
-    private fun turn(restoration: StateRestorationTester) {
+    private fun turn() {
+        lateinit var book: WindowRegion
         compose.activityRule.scenario.onActivity { activity ->
             val view = activity.window.decorView
-            fold = WindowRegion(view.width / 2 - 12, 0, view.width / 2 + 12, view.height)
+            book = WindowRegion(view.width / 2 - 12, 0, view.width / 2 + 12, view.height)
         }
-        restoration.emulateSavedInstanceStateRestore()
+        recreate { compose.runOnUiThread { fold = book } }
     }
     /** Process death: a new session reads the same files; saved state comes back as the system restores it. */
-    private fun relaunch(restoration: StateRestorationTester, bark: Bark) {
+    private fun relaunch(bark: Bark) = recreate {
         runBlocking { process.session.close() }
         process = launch(bark)
-        restoration.emulateSavedInstanceStateRestore()
     }
 
     @Test fun startingAsksBarkOnceThroughAPostureChangeAndProcessDeath() {
         val bark = Bark(id)
         process = launch(bark)
-        val restoration = host { model -> ExitStartScreen(model, nav, listOf(id), false, 144, f.money) {} }
+        host { model -> ExitStartScreen(model, nav, listOf(id), false, 144, f.money) {} }
         settle("the review") { enabled("exit-hold-start") }
         bark.gate = CompletableDeferred()
         hold("exit-hold-start")
         settle("bark's start") { bark.calls.isNotEmpty() }
         // Still starting: the page comes back new, but the journal it reads is busy with the start.
-        turn(restoration)
+        turn()
         compose.mainClock.advanceTimeBy(2_000); Thread.sleep(500); compose.mainClock.advanceTimeBy(500)
         assertEquals("a new page and model", 2, models.size)
         if (enabled("exit-hold-start")) hold("exit-hold-start")
         checkNotNull(bark.gate).complete(Unit)
-        settle("the start to land") { replaced.isNotEmpty() }
+        settle("the start to land") { journal().any { it.receipt != null } && models.last().revision > 0 && !models.last().busy }
         assertEquals(listOf("start"), bark.calls)
-        assertEquals("a started exit leaves for its progress", ExitPage(id), replaced.last())
+        assertNull("the journal holds the started exit", models.last().quote)
         assertFalse("nothing left to start", exists("exit-hold-start"))
-        relaunch(restoration, bark)
-        settle("the relaunched page") { models.size == 3 && models.last().revision > 0 && replaced.size >= 2 }
-        assertFalse(exists("exit-hold-start"))
-        if (enabled("exit-review-again")) { compose.onNodeWithTag("exit-review-again").performClick(); compose.mainClock.advanceTimeBy(2_000) }
+        relaunch(bark)
+        settle("the relaunched page") { models.size == 3 && models.last().revision > 0 && !models.last().busy }
+        if (enabled("exit-review-again")) {
+            compose.onNodeWithTag("exit-review-again").performClick()
+            settle("another review") { !models.last().busy }
+        }
         assertFalse("the journal blocks a second start", exists("exit-hold-start"))
         assertEquals(listOf("start"), bark.calls)
-        assertEquals(1, runBlocking { process.session.onchainJournal.loadAll() }.count { it.quote.action == OnchainAction.startExit })
+        assertEquals(1, journal().count { it.quote.action == OnchainAction.startExit })
     }
 
     @Test fun claimingAsksBarkOnceThroughAPostureChangeAndProcessDeath() {
         val bark = Bark(id).apply { spendable = false; exit = ExitState.Claimable(921_493u, BlockRef(921_493u, "block"), null) }
         process = launch(bark)
-        val restoration = host { model -> ExitClaimScreen(model, nav, { error("unused") }, false, f.money) {} }
+        host { model -> ExitClaimScreen(model, nav, { error("unused") }, false, f.money) {} }
         settle("the claimable exit") { exists("exit-claim-address") }
         compose.onNode(hasSetTextAction() and (hasTestTag("exit-claim-address") or hasAnyAncestor(hasTestTag("exit-claim-address")))).performTextInput(regtest)
         settle("the review") { enabled("exit-hold-claim") }
@@ -196,19 +216,21 @@ class ExitSubmitDeviceTest {
         hold("exit-hold-claim")
         settle("bark's broadcast") { "broadcast" in bark.calls }
         // Still broadcasting: the new page keeps the address, but the journal holds the claim.
-        turn(restoration)
+        turn()
         compose.mainClock.advanceTimeBy(2_000); Thread.sleep(500); compose.mainClock.advanceTimeBy(500)
         assertEquals("a new page and model", 2, models.size)
         if (enabled("exit-hold-claim")) hold("exit-hold-claim")
         checkNotNull(bark.gate).complete(Unit)
-        settle("the claim to land") { runBlocking { process.session.onchainJournal.loadAll() }.any { it.receipt?.txid == "claim-tx" } }
+        settle("the claim to land") { journal().any { it.receipt?.txid == "claim-tx" } }
         compose.mainClock.advanceTimeBy(2_000); Thread.sleep(500); compose.mainClock.advanceTimeBy(500)
         assertFalse("the claimed exit can't be claimed again", enabled("exit-hold-claim"))
-        relaunch(restoration, bark)
+        relaunch(bark)
         settle("the relaunched page") { models.size == 3 && models.last().revision > 0 }
         compose.onNodeWithText("No exits are ready to claim.").assertExists()
-        assertFalse(exists("exit-hold-claim"))
+        // Its hold stays in the foot, off: holding it anyway reaches nothing.
+        assertFalse(enabled("exit-hold-claim"))
+        hold("exit-hold-claim"); settle("the hold to end") { !models.last().busy }
         assertEquals(listOf("drain", "broadcast"), bark.calls)
-        assertEquals(1, runBlocking { process.session.onchainJournal.loadAll() }.count { it.quote.action == OnchainAction.claim })
+        assertEquals(1, journal().count { it.quote.action == OnchainAction.claim })
     }
 }
