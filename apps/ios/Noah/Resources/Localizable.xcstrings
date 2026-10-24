@@ -2377,6 +2377,42 @@
         }
       }
     },
+    "An encrypted copy of this wallet. Restoring it needs your recovery phrase.": {
+      "comment": "GT gt_a2478512d941c769; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An encrypted copy of this wallet. Restoring it needs your recovery phrase."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An encrypted copy of this wallet. Restoring it needs your recovery phrase."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An encrypted copy of this wallet. Restoring it needs your recovery phrase."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An encrypted copy of this wallet. Restoring it needs your recovery phrase."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An encrypted copy of this wallet. Restoring it needs your recovery phrase."
+          }
+        }
+      }
+    },
     "An existing Lightning payment will be checked. No new payment will be created.": {
       "comment": "GT gt_9bb0c676a3c4146c; arguments: none",
       "extractionState": "manual",
@@ -4141,6 +4177,78 @@
         }
       }
     },
+    "Automatic backups": {
+      "comment": "GT gt_cb8603c8ce918947; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups"
+          }
+        }
+      }
+    },
+    "Automatic backups off": {
+      "comment": "GT gt_afbb8dd2c2dc511f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups off"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups off"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups off"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups off"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backups off"
+          }
+        }
+      }
+    },
     "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.": {
       "comment": "GT gt_168ae9aa2da9e959; arguments: recipient",
       "extractionState": "manual",
@@ -4789,6 +4897,78 @@
         }
       }
     },
+    "Back up now": {
+      "comment": "GT gt_02a2840b598b6b1c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now"
+          }
+        }
+      }
+    },
+    "Back up now or wait for the next change": {
+      "comment": "GT gt_43a4e75cee0888df; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now or wait for the next change"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now or wait for the next change"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now or wait for the next change"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now or wait for the next change"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up now or wait for the next change"
+          }
+        }
+      }
+    },
     "Back up your wallet": {
       "comment": "GT gt_52a7a389ef84accf; arguments: none",
       "extractionState": "manual",
@@ -5113,6 +5293,42 @@
         }
       }
     },
+    "Backup deleted": {
+      "comment": "GT gt_2e0257c2eab324c7; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup deleted"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup deleted"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup deleted"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup deleted"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup deleted"
+          }
+        }
+      }
+    },
     "Backup download exceeds limit": {
       "comment": "GT gt_effe557f24b31ca1; arguments: none",
       "extractionState": "manual",
@@ -5253,6 +5469,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Säkerhetskopiering väntar"
+          }
+        }
+      }
+    },
+    "Backups": {
+      "comment": "GT gt_3334fee2c77fef82; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups"
           }
         }
       }
@@ -12997,42 +13249,6 @@
         }
       }
     },
-    "Create an encrypted .noahbackup file": {
-      "comment": "GT gt_853bc38c249ac693; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create an encrypted .noahbackup file"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear un archivo .noahbackup cifrado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暗号化された.noahbackupファイルを作成"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "암호화된 .noahbackup 파일 생성"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skapa en krypterad .noahbackup-fil"
-          }
-        }
-      }
-    },
     "Create an encrypted backup file containing your wallet database.": {
       "comment": "GT gt_c840c095b7c7c8ef; arguments: none",
       "extractionState": "manual",
@@ -14149,6 +14365,42 @@
         }
       }
     },
+    "Delete backup": {
+      "comment": "GT gt_86cf366a184ec4d3; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete backup"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete backup"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete backup"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete backup"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete backup"
+          }
+        }
+      }
+    },
     "Delete digit": {
       "comment": "GT gt_8c643f5a37c9c83e; arguments: none",
       "extractionState": "manual",
@@ -14217,6 +14469,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ta bort krypterad säkerhetskopia?"
+          }
+        }
+      }
+    },
+    "Delete this backup?": {
+      "comment": "GT gt_f335ba3fdc3a04b5; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this backup?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this backup?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this backup?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this backup?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this backup?"
           }
         }
       }
@@ -15873,6 +16161,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Krypterad ögonblicksbild av plånboken"
+          }
+        }
+      }
+    },
+    "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone.": {
+      "comment": "GT gt_3d5044351caf9c70; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."
+          }
+        }
+      }
+    },
+    "Encrypting and uploading": {
+      "comment": "GT gt_1e1e7aaa734a1633; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypting and uploading"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypting and uploading"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypting and uploading"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypting and uploading"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypting and uploading"
           }
         }
       }
@@ -19065,6 +19425,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exportera transaktioner"
+          }
+        }
+      }
+    },
+    "Export wallet file": {
+      "comment": "GT gt_1517e5f3d4d648e3; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export wallet file"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export wallet file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export wallet file"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export wallet file"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export wallet file"
           }
         }
       }
@@ -24181,6 +24577,42 @@
         }
       }
     },
+    "Last backup {date}": {
+      "comment": "GT gt_fb6ee42c1c065f89; arguments: date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup %1$@"
+          }
+        }
+      }
+    },
     "Last backup {nativeValue1}": {
       "comment": "GT gt_f21e156f77eaeac9; arguments: nativeValue1",
       "extractionState": "manual",
@@ -24249,6 +24681,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Senaste säkerhetskopiering %1$@"
+          }
+        }
+      }
+    },
+    "Last good backup {date}": {
+      "comment": "GT gt_ec3b8bf1e0261664; arguments: date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last good backup %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last good backup %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last good backup %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last good backup %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last good backup %1$@"
           }
         }
       }
@@ -30549,6 +31017,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Publika Nostr-nycklar måste använda npub-kodning"
+          }
+        }
+      }
+    },
+    "Not backed up yet": {
+      "comment": "GT gt_67e716b9f541b283; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not backed up yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not backed up yet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not backed up yet"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not backed up yet"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not backed up yet"
           }
         }
       }
@@ -48685,6 +49189,42 @@
         }
       }
     },
+    "Turn it on or back up now": {
+      "comment": "GT gt_026460792a12cc5d; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn it on or back up now"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn it on or back up now"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn it on or back up now"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn it on or back up now"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn it on or back up now"
+          }
+        }
+      }
+    },
     "Turn on notifications": {
       "comment": "GT gt_92dfd3632baeb6d4; arguments: none",
       "extractionState": "manual",
@@ -52429,6 +52969,42 @@
         }
       }
     },
+    "Wallet database, encrypted": {
+      "comment": "GT gt_6f9f190770ef0638; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet database, encrypted"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet database, encrypted"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet database, encrypted"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet database, encrypted"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wallet database, encrypted"
+          }
+        }
+      }
+    },
     "Wallet endpoints": {
       "comment": "GT gt_416b15a97bb7cb55; arguments: none",
       "extractionState": "manual",
@@ -55893,6 +56469,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Växelkurs för %1$@ saknas"
+          }
+        }
+      }
+    },
+    "{date} · {size}. Your other backups stay.": {
+      "comment": "GT gt_d4f415cb72b11142; arguments: date, size",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@. Your other backups stay."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@. Your other backups stay."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@. Your other backups stay."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@. Your other backups stay."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@. Your other backups stay."
           }
         }
       }

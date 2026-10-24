@@ -200,8 +200,7 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         SettingsDestination.Lightning -> LightningAddressPage(model, nav)
         SettingsDestination.Email -> EmailPage(model, nav)
         SettingsDestination.Seed -> RecoveryPhrasePage(model, nav, preview?.phrase)
-        SettingsDestination.Backup -> Today(tr("Backup")) { BackupSettingsScreen(model) }
-        SettingsDestination.Export -> Today(tr("Export file")) { ExportScreen(model) }
+        SettingsDestination.Backup -> BackupPage(model, nav, live, initialSheet)
         SettingsDestination.Vtxos -> Today(tr("VTXOs")) { com.noahwallet.onchain.VtxosScreen(model) }
         SettingsDestination.Board -> Today(tr("On-chain")) { com.noahwallet.onchain.BoardArkScreen(model) }
         SettingsDestination.Recurring -> Today(tr("Recurring payments")) { com.noahwallet.recurring.RecurringPaymentsScreen(model) }

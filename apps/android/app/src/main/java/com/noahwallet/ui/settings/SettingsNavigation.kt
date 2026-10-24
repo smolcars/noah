@@ -11,15 +11,14 @@ import kotlinx.serialization.Serializable
 enum class SettingsDestination : NavKey {
     Settings, Profile, Lightning, Email, Seed, Backup, Vtxos, Board, Recurring, Exits,
     Notifications, UnifiedPush, Advanced, Ark, Esplora, Logs, Debug, Feedback, About,
-    /** Today's export and battery screens, until Backup and Notifications take them in. */
-    Export, Battery,
+    /** Today's battery screen, until Notifications takes it in. */
+    Battery,
 }
 
 internal object SettingsRoutes {
     private val parents = listOf(SettingsDestination.Lightning, SettingsDestination.Email).associateWith { SettingsDestination.Profile } +
         listOf(SettingsDestination.UnifiedPush, SettingsDestination.Battery).associateWith { SettingsDestination.Notifications } +
-        listOf(SettingsDestination.Ark, SettingsDestination.Esplora, SettingsDestination.Logs, SettingsDestination.Debug, SettingsDestination.Export)
-            .associateWith { SettingsDestination.Advanced }
+        listOf(SettingsDestination.Ark, SettingsDestination.Esplora, SettingsDestination.Logs, SettingsDestination.Debug).associateWith { SettingsDestination.Advanced }
 
     /** The page a page's Back returns to; null for the list. */
     fun parent(page: NavKey): NavKey? = when (page) {
