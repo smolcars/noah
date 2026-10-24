@@ -29,7 +29,8 @@ import org.robolectric.shadows.ShadowDialog
 
 /**
  * OS deep links against the real screens (deep-links.md, behaviour 3): Send's review step and the recurring approval
- * sheet each reject links while open, and accept them again once left by any route.
+ * sheet each reject links while open, and accept them again once left by any route. A link opened into Send's own
+ * scanner closes it first, so the request isn't hidden.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -172,5 +173,18 @@ class PaymentLinkScreensTest {
         compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasText("offline")).fetchSemanticsNodes().isNotEmpty() }
         compose.runOnIdle { assertEquals(0, app.openReviews.intValue) }
         assertTrue(accepts(send))
+    }
+
+    @Test fun anAcceptedLinkClosesSendsOwnScannerFirst() {
+        val model = mountSend()
+        compose.onNodeWithTag("send-scan").performClick()
+        compose.onNodeWithText("Scan QR code").assertIsDisplayed()
+        // NoahApp's scan route for an accepted link.
+        val link = "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.00002"
+        assertTrue(accepts(model.controller, link))
+        compose.runOnIdle { app.scannedDestination = link }
+        compose.waitForIdle()
+        compose.onNodeWithText("Scan QR code").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(link, model.destination) }
     }
 }

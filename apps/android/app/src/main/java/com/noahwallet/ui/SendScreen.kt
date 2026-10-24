@@ -91,7 +91,8 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     }
     LaunchedEffect(controller.state, app.scannedDestination) {
         app.scannedDestination?.let { if (!controller.locked) {
-            app.scannedDestination = null; model.reset(); model.importRecipient(it)
+            // Send's own scanner would cover the request it now shows.
+            app.scannedDestination = null; scanner = false; model.reset(); model.importRecipient(it)
         } }
     }
     LaunchedEffect(model.destination) {
