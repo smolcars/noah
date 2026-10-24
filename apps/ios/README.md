@@ -121,31 +121,36 @@ The emergency exit follows [`docs/native-rewrite/design/exit.md`](../../docs/nat
 
   The pages are `SettingsPage` routes under `.exit`; on wide windows they take both panes (`ownsPanes`).
 - **Progress evidence:** bark's daemon reports nothing back, and bark keeps a state, height included, until something changes.
-  - Noah persists, per wallet, the tip and time at which it first saw each exit transaction in its status (`native-exit-sightings-v1`). "Not in a block yet" counts from there.
-  - "Needs on-chain funds" requires a confirmed balance below the package fee (bark's estimate without its margin, per transaction). It also needs evidence bark has tried: a completed Check the chain, or 75 s (bark's 60 s daemon interval plus a margin) of a running daemon since Noah first saw the transaction parked.
-  - Stale shows only when the last Check the chain failed, or the wallet is open without the daemon.
+  - Evidence is per episode: a transaction's unbroken run in one status, from the bark record where it began (`ExitModel.episode`). A status change starts a new episode, so earlier evidence stops counting.
+  - Noah persists, per wallet, the tip and time at which it first saw each episode (`native-exit-sightings-v1`). "Not in a block yet" counts from there; "Fees rose" compares children within the current episode only.
+  - "Needs on-chain funds" requires a confirmed balance below the parked package's own fee: its parent's weight plus bark's canonical 609 WU child, at the rate of bark's estimate. Unpriced, it stays unknown. It also needs evidence within the episode that bark tried: a completed Check the chain, or 75 s (bark's 60 s daemon interval plus a margin) of a running daemon. That daemon clock restarts when the app comes back, because the daemon doesn't run while the app is suspended. bark's history is not evidence.
+  - Stale shows only when the last Check the chain failed, or the wallet is open without the daemon. Check the chain stays available beside Add on-chain funds, and on Claimable and Claiming.
 - **Claim (Decision 8):** "Another wallet" takes only this network's on-chain addresses. A claim to this phone writes its output into auto-board's ledger before broadcast; the txid comes from the signed transaction (`BitcoinTransaction`). That write adds it to the handled set and to a claims set.
   - Auto-board leaves claimed outputs that are still unspent and confirmed on-chain, for both its threshold and its amount.
   - It discards a preparation that spends one, and submitting re-checks both rules.
   - Its funding read also marks any exit claim bark has seen. Manual Move to Ark is unchanged.
-- **"Fees more than it's worth":** each VTXO is priced on its own (`shortcut:` until bark-bolt-ffi exposes per-transaction estimate data). All leaves those out and waits for every classification.
+  - When a preparation spends a claimed coin, auto-board asks again for up to 1% less, at least 1,000 sats less, twice more (`shortcut:` until `prepare_board` takes excluded outpoints). If all three do, it logs once and doesn't prompt.
+  - Before broadcast, every claim writes a display record keyed by its computed txid (`native-exit-claim-records-v1`): the drain's fee, the exits it covers, and whether it went to this phone. Done and the batched fee split read it, so the net amount survives an acknowledged journal entry or a lost broadcast response. The write is best-effort and blocks nothing; bark still decides Claimed.
+  - Claim disables "To" while a review runs, waits for a running review before asking again, and offers Review again once a review for the current inputs ends without a quote.
+- **"Fees more than it's worth":** each VTXO is priced on its own (`shortcut:` until bark-bolt-ffi exposes per-transaction estimate data). Each keeps its own result, failures included. All leaves the uneconomic ones out and waits until every VTXO is classified; Try again re-prices the failed ones.
 - **Fixtures:** `NoahTests/ExitShotTests` (opt-in, `TEST_RUNNER_NOAH_EXIT_SHOTS=1`). Write a state to the app's `Documents/exit-shot`, as with Settings. The states are:
   - `warn`, `warn-live`;
   - `choose`, `choose-all`, `choose-unfunded`;
   - `review`, `review-unfunded`, `review-unknown`;
   - `progress-<lift|publish|sending|mempool|confirm|onchain|wait|claimable|claiming|claimed|nofunds|feesrose|stuck|shared|stale|canceled|spent>`;
-  - `claim-other`, `claim-phone`, `claim-invalid`;
+  - `claim-other`, `claim-phone`, `claim-invalid`, `claim-again`;
   - `list`, `list-plain`.
 
   Light, dark and Reduce Motion follow the simulator; the Duo open shows the panes.
 - **Tests:**
-  - `ExitProgressTests`: states to phases and pictures, needs-funds, sightings, stale, the fee rule and its All, the Settings row, sharing, claim addresses and the batched claim split;
-  - `ExitHoldTests` and `ExitRestartTests`: one submission per hold, also across a restart from the durable journal;
-  - `ExitClaimLedgerTests` and `ExitClaimAutoBoardTests`: the claimed set, held value, the input guard and the submit re-check.
+  - `ExitProgressTests`: states to phases and pictures, needs-funds and its episodes, sightings, fee rises, stale, the fee rule and its All, the Settings row, sharing and its picture's spacing, claim addresses and the batched claim split;
+  - `ExitHoldTests` and `ExitRestartTests`: one submission per hold; and, through the real start and claim paths with the durable journal, one wallet mutation across a scene re-activation and a restart;
+  - `ExitClaimRecordTests`: the claim's record is written before broadcast, never blocks it, and keeps Done's net amount after acknowledgement;
+  - `ExitClaimLedgerTests` and `ExitClaimAutoBoardTests`: the claimed set, held value, the input guard, the retry by amount and the submit re-check.
 - **Live on `noah-bark08`:**
   - two boards, a delegated renew, and a self-send to make two arkoor VTXOs on one round's path;
   - exit A (₿118,863, 4 transactions) started with no on-chain funds. It showed "Sending 1 of 4", then "Needs on-chain funds" (₿3,186 short). After a ₿19,000 deposit it went "Anchor + ₿3,165 fee · 2 of 4" through to "Waiting for the timelock".
-  - exit B (₿60,000) shared three of its four transactions with A; the list drew them once ("2 exits from one round: 5 transactions, not 8");
+  - exit B (₿60,000) shared three of its four transactions with A; the list drew them once ("2 exits from one round: 5 transactions, not 8"). Each connected group gets its own picture;
   - A was claimed to LND (₿117,688 received, block 1,276), and B to this phone (₿58,705, block 1,278);
   - with only B's claim on-chain, auto-board stayed quiet. A ₿40,000 deposit then got an offer of ₿38,222 from one funding input, leaving ₿63,821 on-chain.
 
