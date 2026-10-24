@@ -252,6 +252,10 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         }
                     }
                 }
+                // The exit's warning alone fills a wide window, beside no list: Back returns to the list rather than leaving Settings.
+                androidx.navigationevent.compose.NavigationBackHandler(
+                    androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
+                    isBackEnabled = exit && pages.size == 1 && !hold.held, onBackCompleted = { pop() })
                 // With one page NavDisplay passes Back on to Home (which would close Settings): that waits for such a save too.
                 androidx.navigationevent.compose.NavigationBackHandler(
                     androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
