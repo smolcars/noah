@@ -75,7 +75,16 @@ struct SettingsList: View {
     @Binding var offset: CGFloat
     /// In a wide window's leading pane, with its own bar.
     var leading = false
-    @State private var position = ScrollPosition()
+    /// Starts where the other layout's list was, so a pose change keeps the scroll.
+    @State private var position: ScrollPosition
+
+    init(selected: SettingsPage?, sheet: Binding<SettingsRootSheet?>, offset: Binding<CGFloat>, leading: Bool = false) {
+        self.selected = selected
+        _sheet = sheet
+        _offset = offset
+        self.leading = leading
+        _position = State(initialValue: ScrollPosition(y: offset.wrappedValue))
+    }
 
     @Environment(AppModel.self) private var app
     @Environment(WalletLock.self) private var lock
@@ -128,7 +137,6 @@ struct SettingsList: View {
         .background(NoahTokens.Colors.background.ignoresSafeArea())
         .scrollPosition($position)
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in offset = y }
-        .onAppear { if offset > 0 { position.scrollTo(y: offset) } }
         .onboardingHaptics(haptics)
         .task(id: scenePhase == .active) {
             guard scenePhase == .active else { return }

@@ -428,12 +428,18 @@ private struct SettingsSheetModifier<Item: Identifiable & Equatable, Sheet: View
     let locked: Bool
     let sheet: (Item) -> Sheet
     @State private var height: CGFloat = 300
+    /// The layout now, for the system sheet's setter: unfolding dismisses that sheet, and its late
+    /// "dismissed" must not close the pane sheet that replaces it.
+    @State private var layout = Layout()
     @Environment(\.settings) private var settings
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private final class Layout { var wide = false }
+
     func body(content: Content) -> some View {
+        let _ = { layout.wide = settings.wide }()
         content
-            .sheet(item: Binding(get: { settings.wide ? nil : item }, set: { if !settings.wide { item = $0 } })) { value in
+            .sheet(item: Binding(get: { settings.wide ? nil : item }, set: { if !layout.wide { item = $0 } })) { value in
                 ScrollView {
                     sheet(value).padding(.top, 22)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
