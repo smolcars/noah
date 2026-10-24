@@ -44,8 +44,10 @@ internal object SettingsRules {
     fun deleteChecklist(totalSats: ULong?, phraseSaved: Boolean, lastBackupAt: Double?, backupStatus: String) =
         DeleteChecklist(totalSats?.toLong(), phraseSaved, lastBackupAt?.toLong(), backupStatus == "failed")
 
+    /** The word every typed-delete prompt asks for, in every language: never translated. */
+    const val deleteWord = "delete"
     /** Typed "delete": trimmed, any case. */
-    fun deleteConfirmed(typed: String) = typed.trim().equals("delete", ignoreCase = true)
+    fun deleteConfirmed(typed: String) = typed.trim().equals(deleteWord, ignoreCase = true)
 
     /** The version line unlocks debug after five taps, each within two seconds of the last. */
     class DebugTaps(private val window: Long = 2_000, private val needed: Int = 5) {

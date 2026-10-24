@@ -51553,42 +51553,6 @@
         }
       }
     },
-    "delete": {
-      "comment": "GT gt_6197595503f01ee2; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "delete"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "delete"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "delete"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "delete"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "delete"
-          }
-        }
-      }
-    },
     "e.g. Rent": {
       "comment": "GT gt_308e322df797ff25; arguments: none",
       "extractionState": "manual",

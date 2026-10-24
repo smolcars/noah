@@ -159,7 +159,9 @@ struct DeleteChecklist: Equatable {
         else { self.backup = .never }
     }
 
-    static func confirms(_ typed: String) -> Bool { typed.trimmingCharacters(in: .whitespaces).lowercased() == "delete" }
+    /// The word every typed-delete prompt asks for, in every language: never translated.
+    static let word = "delete"
+    static func confirms(_ typed: String) -> Bool { typed.trimmingCharacters(in: .whitespaces).lowercased() == word }
 }
 
 /// Advanced → Suspend wallet: turning it on asks first (one stray tap closes the wallet); off resumes.

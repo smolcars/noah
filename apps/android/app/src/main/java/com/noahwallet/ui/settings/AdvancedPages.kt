@@ -353,7 +353,7 @@ internal fun DebugPage(model: AppModel, nav: SettingsNav) {
     if (confirming) SettingsSheet({ confirming = false }, tr("{action}?", tr(action.title)), tr("This changes your wallet and can lose funds.")) { close ->
         SettingsField(confirmation, { confirmation = it }, tr("Type delete to confirm"), Modifier.testTag("debug-confirm-input"),
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
-        SheetActions(tr("Cancel"), tr("Confirm"), onCancel = close, danger = true, enabled = confirmation.equals("delete", true),
+        SheetActions(tr("Cancel"), tr("Confirm"), onCancel = close, danger = true, enabled = SettingsRules.deleteConfirmed(confirmation),
             confirmTag = "debug-confirm", onConfirm = { confirming = false; execute() })
     }
 }

@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1478,
-  "sourceKeys": 1507,
+  "catalogEntries": 1477,
+  "sourceKeys": 1506,
   "coverage": {
     "ios": {
       "used": [
@@ -2607,7 +2607,6 @@
         "about a day",
         "about {time}",
         "debug",
-        "delete",
         "e.g. Rent",
         "each time",
         "from {name}",

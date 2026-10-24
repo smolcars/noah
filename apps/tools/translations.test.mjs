@@ -228,3 +228,13 @@ test('single-platform copy needs a listed reason, and a listed entry must stay s
     await expect(generate(true, base)).rejects.toThrow('ios only, not listed: Native only');
   });
 });
+
+test('every prompt to type "delete" keeps the literal word, which both apps check, in every locale', async () => {
+  const english = JSON.parse(await readFile(resolve(root, 'apps/i18n/en/native.json'), 'utf8'));
+  const prompts = Object.entries(english).filter(([, text]) => /\btype delete\b/i.test(text));
+  expect(prompts.length).toBeGreaterThan(0);
+  for (const locale of locales.slice(1)) {
+    const catalog = JSON.parse(await readFile(resolve(root, `apps/i18n/${locale}/native.json`), 'utf8'));
+    for (const [key, text] of prompts) expect(`${locale}: ${catalog[key]}`).toContain('delete');
+  }
+});

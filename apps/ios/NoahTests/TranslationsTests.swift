@@ -28,6 +28,13 @@ struct TranslationsTests {
         let plurals: [Entry]
     }
 
+    @Test func everyTypedDeletePromptAsksForTheWordTheCheckAccepts() {
+        #expect(DeleteChecklist.confirms(DeleteChecklist.word))
+        for language in LegacyLocale.supported {
+            #expect(L10n.text("Type delete to confirm", locale: language).contains(DeleteChecklist.word), "\(language)")
+        }
+    }
+
     @Test func mixedNetworkURIIsRejectedInEveryLanguageAndErrorsRerender() throws {
         let defaults = UserDefaults.standard
         let preference = defaults.string(forKey: LegacyLocale.key)

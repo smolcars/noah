@@ -155,4 +155,16 @@ class TranslationsTest {
             assertEquals(L10n.text(context, "Open Noah to send {amount} to {recipient}.", "1,234 sats", "Alice"), NotificationCopy.reminder(context, "1,234 sats", "Alice", false).body)
         }
     }
+
+    @Test fun everyTypedDeletePromptAsksForTheWordTheCheckAccepts() {
+        val word = com.noahwallet.ui.settings.SettingsRules.deleteWord
+        assertTrue(com.noahwallet.ui.settings.SettingsRules.deleteConfirmed(word))
+        for (locale in LegacyLocale.supported) {
+            language(locale)
+            for (prompt in listOf("Type delete to confirm",
+                "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm.")) {
+                assertTrue("$locale: $prompt", L10n.text(context, prompt).contains(word))
+            }
+        }
+    }
 }

@@ -292,7 +292,6 @@
     "Your current email, {email}, will stay active until the new email is verified.": "parity-gap: Android's Home email nudge still opens the pre-redesign email form (ui/Onboarding.kt EmergencyEmailScreen); iOS opens Settings → Email",
     "Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device.": "parity-gap: only Android's restore screen offers Resume recovery for a suspended wallet",
     "about a day": "parity-gap (layout): Android's start summary says \"about a day\"; iOS's review shows when it can be claimed",
-    "delete": "shared: the word to type; iOS's DeleteChecklist compares the same literal, which the extractor can't see",
     "each time": "parity-gap: Android's amount follows the BIP-177 unit; iOS's always says sats",
     "from {name}": "parity-gap: iOS's first-payment card doesn't show who paid (spec: \"from {name}\")",
     "sats": "parity-gap (not localized): iOS shows the same unit label from a SettingsRow value, verbatim",

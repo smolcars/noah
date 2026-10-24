@@ -590,7 +590,6 @@
   "gt_617a8f15d57215f3": "Confirmed at block {{height}}",
   "gt_618ceaf828dd8956_one": "{{n}} transaction",
   "gt_618ceaf828dd8956_other": "{{n}} transactions",
-  "gt_6197595503f01ee2": "delete",
   "gt_6267c8c9b8dd0055": "{{status}} · shared",
   "gt_62d2c6ab601628f3": "Exit transactions were prepared and monitored.",
   "gt_62ee841196b41940": "Noah couldn't restore your wallet. Please try again later.",
