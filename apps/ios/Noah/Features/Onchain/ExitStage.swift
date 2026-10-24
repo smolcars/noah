@@ -258,6 +258,17 @@ struct ExitStagePainter {
     }
 
     /// Draws `a` moving to `b`: `u` is the snappy spring, `drop` the bouncy one for falls.
+    /// Every node of `b`, moving from its place in `a`. One `a` doesn't have (a real path longer than
+    /// Start's four) fades in where it lands.
+    func nodes(_ a: ExitStageLayout, _ b: ExitStageLayout, _ u: Double, _ drop: Double) -> [ExitStageLayout.Node] {
+        let mix = { (x: Double, y: Double) in x + (y - x) * u }
+        return b.nodes.indices.map { index in
+            let new = b.nodes[index], old = a.nodes[safe: index] ?? .init(x: new.x, y: new.y, alpha: 0, inBlock: new.inBlock)
+            return .init(x: mix(old.x, new.x), y: new.y == yRowC && old.y != yRowC && new.inBlock == 0 ? old.y + (new.y - old.y) * drop : mix(old.y, new.y),
+                         alpha: mix(old.alpha, new.alpha), inBlock: mix(old.inBlock, new.inBlock))
+        }
+    }
+
     func draw(_ context: GraphicsContext, _ a: ExitStageLayout, _ b: ExitStageLayout, _ u: Double, _ drop: Double, scene: ExitStageScene) {
         let canvas = MotionCanvas(context: context, size: size, viewBox: CGRect(origin: .zero, size: size), colors: colors)
         let mix = { (x: Double, y: Double) in x + (y - x) * u }
@@ -308,10 +319,7 @@ struct ExitStagePainter {
         // Your branch: links unroll in orange, everyone else's branches are faint stubs.
         let unroll = mix(a.unroll, b.unroll)
         let cancel = mix(a.cancel, b.cancel)
-        let nodes = zip(a.nodes, b.nodes).map { old, new in
-            ExitStageLayout.Node(x: mix(old.x, new.x), y: new.y == yRowC && old.y != yRowC && new.inBlock == 0 ? old.y + (new.y - old.y) * drop : mix(old.y, new.y),
-                                 alpha: mix(old.alpha, new.alpha), inBlock: mix(old.inBlock, new.inBlock))
-        }
+        let nodes = self.nodes(a, b, u, drop)
         var coin = ExitStageLayout.Node(x: mix(a.coin.x, b.coin.x), y: mix(a.coin.y, b.coin.y), alpha: mix(a.coin.alpha, b.coin.alpha),
                                         inBlock: mix(a.coin.inBlock, b.coin.inBlock))
         if b.coin.y == yRowC && a.coin.y != yRowC { coin.y = a.coin.y + (b.coin.y - a.coin.y) * drop }

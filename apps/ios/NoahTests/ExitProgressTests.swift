@@ -292,6 +292,24 @@ struct ExitProgressTests {
         #expect(ExitProgress(frozen, tip: 104).stuck == 0)
     }
 
+    @Test func aLongerRealPathKeepsEveryNodeAfterStart() {
+        let painter = ExitStagePainter(size: CGSize(width: 390, height: 430), colors: .theme(.light), reduceMotion: false, now: 0,
+                                       next: "next", round: "round", locale: Locale(identifier: "en"))
+        // Start draws a round's usual four; bark then lists eight (tree hops plus checkpoint or arkoor hops).
+        let start = ExitStageScene(ExitProgress(Self.exit("Start", .init(kind: "start", tip_height: 100)), tip: 100), tip: 100, wallet: nil, delta: nil, txids: [])
+        let names = (1...8).map { "t\($0)" }
+        let eight = Self.exit("Processing", Self.processing(names.map { Self.tx($0, "verify-inputs") }))
+        let path = ExitStageScene(ExitProgress(eight, tip: 100), tip: 100, wallet: nil, delta: nil, txids: names)
+        let a = painter.layout(start), b = painter.layout(path)
+        #expect(a.nodes.count == 3 && b.nodes.count == 7)
+        // Every destination node is drawn from the first frame, and lands where the path puts it.
+        #expect(painter.nodes(a, b, 0, 0).count == 7)
+        let landed = painter.nodes(a, b, 1, 1)
+        #expect(landed.map(\.x) == b.nodes.map(\.x) && landed.map(\.y) == b.nodes.map(\.y) && landed.map(\.alpha) == b.nodes.map(\.alpha))
+        // The new ones fade in where they land.
+        #expect(painter.nodes(a, b, 0, 0)[3...].allSatisfy { $0.alpha == 0 })
+    }
+
     @Test func aBatchedClaimsFeeIsSplitSoThePartsAddUp() {
         let parts = ExitClaimSplit.fees(["a": 31_000, "b": 24_500], fee: 262)
         #expect(parts.values.reduce(0, +) == 262)
