@@ -39,6 +39,11 @@ fun Onboarding(model: AppModel) {
     }
     // Predictive back: never back out of creation, restore or Done (OnboardingNavigation's boundaries).
     BackHandler(enabled = model.step != "welcome") { goBack() }
+    // One shield and clipboard from Restore or Recovery phrase found through Restoring and Ready: FLAG_SECURE and
+    // clipboard clearing never lapse between steps, and end only when Home (or a launch gate) replaces onboarding.
+    val activity = LocalContext.current as android.app.Activity
+    val restoreClipboard = rememberRestoreClipboard(activity)
+    if (model.step in setOf("restore", "storedSeed", "restoring")) RestoreShield(activity, model.walletLock, restoreClipboard) {}
     com.noahwallet.ui.onboarding.OnboardingFrame(presentation.scene) {
         // UnifiedPush setup keeps the conveyor beside it in split panes; one column has no room for it.
         val distributorAlone = presentation.notificationStage == com.noahwallet.ui.onboarding.NotificationStage.distributor &&
@@ -58,8 +63,8 @@ fun Onboarding(model: AppModel) {
         }, label = "onboarding") { step ->
             when (step) {
                 "welcome" -> com.noahwallet.ui.onboarding.WelcomeStep(model, presentation)
-                "restore" -> RestoreWalletScreen(model)
-                "storedSeed" -> RestoreWalletScreen(model, useStoredSeed = true)
+                "restore" -> RestoreWalletScreen(model, restoreClipboard)
+                "storedSeed" -> RestoreWalletScreen(model, restoreClipboard, useStoredSeed = true)
                 "creating" -> com.noahwallet.ui.onboarding.CreatingStep(model, presentation)
                 "restoring" -> com.noahwallet.ui.onboarding.RestoringStep(model, presentation)
                 "name" -> com.noahwallet.ui.onboarding.NameStep(model, presentation)

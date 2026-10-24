@@ -37,9 +37,12 @@ import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.onboarding.*
 import kotlinx.coroutines.delay
 
-/** FLAG_SECURE, clipboard clearing and clearing on background or removal; configuration changes keep the words in memory. */
+/**
+ * FLAG_SECURE, clipboard clearing and clearing on background or removal; configuration changes keep the words in memory.
+ * Onboarding holds one across the restore steps through Ready; screens with words add their own for [clear].
+ */
 @Composable
-private fun RestoreShield(activity: Activity, lock: com.noahwallet.ui.settings.WalletLock, clipboard: RestoreClipboard, clear: () -> Unit) {
+internal fun RestoreShield(activity: Activity, lock: com.noahwallet.ui.settings.WalletLock, clipboard: RestoreClipboard, clear: () -> Unit) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(activity, lifecycle) {
         val release = lock.showSecret(activity.window)
@@ -51,14 +54,16 @@ private fun RestoreShield(activity: Activity, lock: com.noahwallet.ui.settings.W
         onDispose {
             lifecycle.removeObserver(observer)
             clipboard.clearIfUnchanged()
-            if (!activity.isChangingConfigurations) clear()
-            release()
+            // Recreation builds the new activity in this same main-thread message, and MainActivity applies FLAG_SECURE
+            // from the lock's count before its window is shown; release afterwards so that count still includes this.
+            if (activity.isChangingConfigurations) android.os.Handler(android.os.Looper.getMainLooper()).post { release() }
+            else { clear(); release() }
         }
     }
 }
 
 @Composable
-private fun rememberRestoreClipboard(activity: Activity) = remember {
+internal fun rememberRestoreClipboard(activity: Activity) = remember {
     val manager = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     RestoreClipboard(
         read = { manager.primaryClip?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.text?.toString() },
@@ -69,25 +74,24 @@ private fun rememberRestoreClipboard(activity: Activity) = remember {
     )
 }
 
+/** Onboarding passes its [clipboard], shared with its restore shield so clearing outlasts this screen. */
 @Composable
-fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
-    if (useStoredSeed) StoredSeedRestoreScreen(model) else PhraseRestoreScreen(model)
+internal fun RestoreWalletScreen(model: AppModel, clipboard: RestoreClipboard = rememberRestoreClipboard(LocalContext.current as Activity),
+                                 useStoredSeed: Boolean = false) {
+    if (useStoredSeed) StoredSeedRestoreScreen(model) else PhraseRestoreScreen(model, clipboard)
 }
 
 /**
  * Reinstall recovery: the phrase is still stored, so there is nothing to type (iOS `StoredSeedRestoreScreen`). Restore
- * Wallet moves to Restoring, which brings a failed restore back here with its error.
+ * Wallet moves to Restoring, which brings a failed restore back here with its error. Onboarding's restore shield covers it.
  */
 @Composable
 private fun StoredSeedRestoreScreen(model: AppModel) {
-    val activity = LocalContext.current as Activity
-    val clipboard = rememberRestoreClipboard(activity)
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val flow = model.restore
     val blocked = model.busy || !flow.canLeave
     BackHandler { }
-    RestoreShield(activity, model.walletLock, clipboard) {}
     FormLayout(headline = { large ->
         Headline(tr("Recovery phrase found"),
             tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."), large)
@@ -125,9 +129,8 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PhraseRestoreScreen(model: AppModel) {
+private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
     val activity = LocalContext.current as Activity
-    val clipboard = rememberRestoreClipboard(activity)
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val focus = LocalFocusManager.current
