@@ -580,7 +580,6 @@
   <string name="gt_c8e5709f89baf900">"Subieron las comisiones, así que Noah pagó más"</string>
   <string name="gt_ea3a58f8b849ff21">"Subieron las comisiones. Pagando más"</string>
   <string name="gt_e410ef7cc3869d69">"Las comisiones subieron. Pagando más · esperando el bloque %1$s"</string>
-  <string name="gt_c7e61b7092a55da5">"Obteniendo copia de seguridad…"</string>
   <string name="gt_2a246cca8735d1b7">"Menos"</string>
   <string name="gt_1369793595356d9d">"Tipo de cambio a moneda fiduciaria no disponible: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"Filtrar"</string>
@@ -669,7 +668,6 @@
   <string name="gt_7abc49dfa87bc183">"Entradas"</string>
   <string name="gt_ff67ecdfc6ccee10">"Instala una aplicación distribuidora como \"ntfy\" desde F-Droid para activar las notificaciones push."</string>
   <string name="gt_2304400f597b8734">"Instala ntfy desde F-Droid y vuelve."</string>
-  <string name="gt_b24147c47f1ae370">"Instalando billetera…"</string>
   <string name="gt_ddd409663e0a1d7b">"Instantáneo y gratis desde billeteras Ark"</string>
   <string name="gt_cf9ea7f321c15e4b">"Instantáneo · gratis"</string>
   <string name="gt_bb3e30521a8bd6d0">"Instantáneo · comisión estimada de %1$s"</string>
@@ -1304,7 +1302,6 @@
   <string name="gt_006e7c35fe22b34d">"Iniciar la salida de %1$s"</string>
   <string name="gt_ecbc89cd37a03734">"Iniciado"</string>
   <string name="gt_aeed4d26bb5f0c31">"Iniciando"</string>
-  <string name="gt_96b98008aedf83c7">"Iniciando restauración..."</string>
   <string name="gt_a3b50c476732c740">"Estado"</string>
   <string name="gt_920e413c7d411b61">"Estado"</string>
   <string name="gt_1c23c9a0a6a0b504">"El estado sigue siendo incierto. Noah volverá a comprobarlo automáticamente a medida que se sincronice tu billetera."</string>
@@ -1548,12 +1545,10 @@
   <string name="gt_d8a3ba6381971636">"VTXOs"</string>
   <string name="gt_fbf9a3d817acb63b">"VTXOs seleccionados"</string>
   <string name="gt_72d4d360dea4e316">"VTXOs seleccionados: %1$s"</string>
-  <string name="gt_f414d2a540db754b">"Validando copia de seguridad…"</string>
   <string name="gt_3ee75029c70e284c">"Código de verificación"</string>
   <string name="gt_4f7838402f37674e">"Verificado"</string>
   <string name="gt_87672f62ea3f7a51">"Verificado el %1$s"</string>
   <string name="gt_9ae9fbbcb1c80ca9">"Verificar correo"</string>
-  <string name="gt_6883dd409f6d48a8">"Verificando el almacenamiento de la frase de recuperación…"</string>
   <string name="gt_dd167905de0defca">"Versión"</string>
   <string name="gt_a18745121bb8af6d">"Versión %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"Vía"</string>

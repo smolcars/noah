@@ -580,7 +580,6 @@
   <string name="gt_c8e5709f89baf900">"手数料が上がったため、Noahが多めに支払いました"</string>
   <string name="gt_ea3a58f8b849ff21">"手数料が上がりました。多めに支払っています"</string>
   <string name="gt_e410ef7cc3869d69">"手数料が上がりました。追加で支払い中 · ブロック %1$s を待機中"</string>
-  <string name="gt_c7e61b7092a55da5">"バックアップを取得中…"</string>
   <string name="gt_2a246cca8735d1b7">"減らす"</string>
   <string name="gt_1369793595356d9d">"法定通貨の換算レートを取得できません：%1$s"</string>
   <string name="gt_638e249f4a15ebb8">"絞り込み"</string>
@@ -669,7 +668,6 @@
   <string name="gt_7abc49dfa87bc183">"入力"</string>
   <string name="gt_ff67ecdfc6ccee10">"プッシュ通知を有効にするには、F-Droidから「ntfy」などの配信アプリをインストールしてください。"</string>
   <string name="gt_2304400f597b8734">"F-Droidからntfyをインストールして、もう一度開いてください。"</string>
-  <string name="gt_b24147c47f1ae370">"ウォレットをインストール中…"</string>
   <string name="gt_ddd409663e0a1d7b">"Arkウォレットから即時・無料"</string>
   <string name="gt_cf9ea7f321c15e4b">"即時 · 無料"</string>
   <string name="gt_bb3e30521a8bd6d0">"即時 · 推定手数料 %1$s"</string>
@@ -1304,7 +1302,6 @@
   <string name="gt_006e7c35fe22b34d">"%1$sの出金を開始"</string>
   <string name="gt_ecbc89cd37a03734">"開始済み"</string>
   <string name="gt_aeed4d26bb5f0c31">"開始中"</string>
-  <string name="gt_96b98008aedf83c7">"復元を開始中…"</string>
   <string name="gt_a3b50c476732c740">"状態"</string>
   <string name="gt_920e413c7d411b61">"状態"</string>
   <string name="gt_1c23c9a0a6a0b504">"状況はまだ確定していません。ウォレットの同期時にNoahが自動的に再確認します。"</string>
@@ -1548,12 +1545,10 @@
   <string name="gt_d8a3ba6381971636">"VTXO"</string>
   <string name="gt_fbf9a3d817acb63b">"選択したVTXO"</string>
   <string name="gt_72d4d360dea4e316">"選択したVTXO：%1$s"</string>
-  <string name="gt_f414d2a540db754b">"バックアップを検証中…"</string>
   <string name="gt_3ee75029c70e284c">"確認コード"</string>
   <string name="gt_4f7838402f37674e">"検証済み"</string>
   <string name="gt_87672f62ea3f7a51">"確認済み：%1$s"</string>
   <string name="gt_9ae9fbbcb1c80ca9">"メールアドレスを確認"</string>
-  <string name="gt_6883dd409f6d48a8">"復元フレーズの保存状態を確認中…"</string>
   <string name="gt_dd167905de0defca">"バージョン"</string>
   <string name="gt_a18745121bb8af6d">"バージョン %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"方法"</string>

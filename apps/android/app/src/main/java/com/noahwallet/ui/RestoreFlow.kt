@@ -10,14 +10,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
-fun WalletRestorer.Step?.restoreMessage(): String = when (this) {
-    null -> "Starting restore..."
-    WalletRestorer.Step.fetching -> "Fetching backup…"
-    WalletRestorer.Step.validating -> "Validating backup…"
-    WalletRestorer.Step.loading -> "Installing wallet…"
-    WalletRestorer.Step.finalizing -> "Verifying recovery phrase storage…"
-}
-
 /** Post-commit errors must never offer another transaction over the new wallet. */
 class RestoreCompletion(
     private val loadState: () -> PersistedWalletState,

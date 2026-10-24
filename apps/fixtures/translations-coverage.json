@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1694,
-  "sourceKeys": 1724,
+  "catalogEntries": 1689,
+  "sourceKeys": 1719,
   "coverage": {
     "ios": {
       "used": [
@@ -1813,7 +1813,6 @@
         "Fees paid",
         "Fees rose, so Noah paid more",
         "Fees rose. Paying more",
-        "Fetching backup…",
         "Fewer",
         "Final claim transaction was broadcast and is waiting for confirmation.",
         "Final: {nativeValue1}",
@@ -1881,7 +1880,6 @@
         "Inputs",
         "Install a distributor app like \"ntfy\" from F-Droid to enable push notifications.",
         "Install ntfy from F-Droid, then come back.",
-        "Installing wallet…",
         "Instant and free from Ark wallets",
         "Instant · free",
         "Instant · {fee} estimated fee",
@@ -2409,7 +2407,6 @@
         "Start exit",
         "Started",
         "Starting",
-        "Starting restore...",
         "State",
         "Status",
         "Status remains uncertain. Noah checks again automatically as your wallet syncs.",
@@ -2607,11 +2604,9 @@
         "VTXO {nativeValue1}…, {nativeValue2}, {nativeValue3}, {nativeValue4}",
         "VTXOs",
         "VTXOs selected: {nativeValue1}",
-        "Validating backup…",
         "Verified",
         "Verified {date}",
         "Verify Email",
-        "Verifying recovery phrase storage…",
         "Version",
         "Version {version}",
         "Via",

@@ -580,7 +580,6 @@
   <string name="gt_c8e5709f89baf900">"수수료가 올라 Noah가 더 지불했습니다"</string>
   <string name="gt_ea3a58f8b849ff21">"수수료가 올랐습니다. 더 지불하는 중"</string>
   <string name="gt_e410ef7cc3869d69">"수수료가 올랐어요. 더 지불하는 중 · 블록 %1$s 대기 중"</string>
-  <string name="gt_c7e61b7092a55da5">"백업 가져오는 중…"</string>
   <string name="gt_2a246cca8735d1b7">"줄이기"</string>
   <string name="gt_1369793595356d9d">"법정 화폐 환율을 확인할 수 없음: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"필터"</string>
@@ -669,7 +668,6 @@
   <string name="gt_7abc49dfa87bc183">"입력"</string>
   <string name="gt_ff67ecdfc6ccee10">"푸시 알림을 받으려면 F-Droid에서 \"ntfy\"와 같은 배포 앱을 설치하세요."</string>
   <string name="gt_2304400f597b8734">"F-Droid에서 ntfy를 설치한 뒤 다시 돌아오세요."</string>
-  <string name="gt_b24147c47f1ae370">"지갑 설치 중…"</string>
   <string name="gt_ddd409663e0a1d7b">"Ark 지갑에서 즉시, 무료로"</string>
   <string name="gt_cf9ea7f321c15e4b">"즉시 · 무료"</string>
   <string name="gt_bb3e30521a8bd6d0">"즉시 · 예상 수수료 %1$s"</string>
@@ -1304,7 +1302,6 @@
   <string name="gt_006e7c35fe22b34d">"%1$s 출금 시작"</string>
   <string name="gt_ecbc89cd37a03734">"시작됨"</string>
   <string name="gt_aeed4d26bb5f0c31">"시작하는 중"</string>
-  <string name="gt_96b98008aedf83c7">"복원 시작 중..."</string>
   <string name="gt_a3b50c476732c740">"상태"</string>
   <string name="gt_920e413c7d411b61">"상태"</string>
   <string name="gt_1c23c9a0a6a0b504">"아직 상태가 불확실합니다. 지갑이 동기화될 때 Noah가 자동으로 다시 확인합니다."</string>
@@ -1548,12 +1545,10 @@
   <string name="gt_d8a3ba6381971636">"VTXO"</string>
   <string name="gt_fbf9a3d817acb63b">"선택한 VTXO"</string>
   <string name="gt_72d4d360dea4e316">"선택된 VTXO: %1$s"</string>
-  <string name="gt_f414d2a540db754b">"백업 검증 중…"</string>
   <string name="gt_3ee75029c70e284c">"인증 코드"</string>
   <string name="gt_4f7838402f37674e">"검증됨"</string>
   <string name="gt_87672f62ea3f7a51">"확인일: %1$s"</string>
   <string name="gt_9ae9fbbcb1c80ca9">"이메일 인증"</string>
-  <string name="gt_6883dd409f6d48a8">"복구 문구 저장 상태 확인 중…"</string>
   <string name="gt_dd167905de0defca">"버전"</string>
   <string name="gt_a18745121bb8af6d">"버전 %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"경로"</string>

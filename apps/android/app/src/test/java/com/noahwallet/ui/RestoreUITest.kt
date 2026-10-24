@@ -277,11 +277,6 @@ class RestoreFlowTest {
         flow.reset(); assertFalse(flow.completed); assertNull(flow.issue)
         flow.run(phrase); assertEquals(2, calls)
     }
-    @Test fun stepLabelsCoverEngineStages() {
-        assertEquals("Starting restore...", null.restoreMessage())
-        assertEquals(listOf("Fetching backup…", "Validating backup…", "Installing wallet…", "Verifying recovery phrase storage…"),
-            WalletRestorer.Step.entries.map { it.restoreMessage() })
-    }
     @Test fun journalOrDeletionAlwaysBlocksOnboarding() {
         for (seed in LaunchState.SeedStatus.entries) for (database in listOf(false, true)) {
             assertEquals(LaunchState.restoreIncomplete, LaunchState.resolve(seed, database, restorePending = true))

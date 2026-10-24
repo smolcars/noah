@@ -580,7 +580,6 @@
   <string name="gt_c8e5709f89baf900">"Avgifterna steg, så Noah betalade mer"</string>
   <string name="gt_ea3a58f8b849ff21">"Avgifterna steg. Betalar mer"</string>
   <string name="gt_e410ef7cc3869d69">"Avgifterna steg. Betalar mer · väntar på block %1$s"</string>
-  <string name="gt_c7e61b7092a55da5">"Hämtar säkerhetskopia…"</string>
   <string name="gt_2a246cca8735d1b7">"Färre"</string>
   <string name="gt_1369793595356d9d">"Fiatkurs inte tillgänglig: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
@@ -669,7 +668,6 @@
   <string name="gt_7abc49dfa87bc183">"Ingångar"</string>
   <string name="gt_ff67ecdfc6ccee10">"Installera en distributörsapp som ”ntfy” från F-Droid för att aktivera pushaviseringar."</string>
   <string name="gt_2304400f597b8734">"Installera ntfy från F-Droid och kom sedan tillbaka."</string>
-  <string name="gt_b24147c47f1ae370">"Installerar plånbok…"</string>
   <string name="gt_ddd409663e0a1d7b">"Direkt och gratis från Ark-plånböcker"</string>
   <string name="gt_cf9ea7f321c15e4b">"Direkt · gratis"</string>
   <string name="gt_bb3e30521a8bd6d0">"Direkt · uppskattad avgift %1$s"</string>
@@ -1304,7 +1302,6 @@
   <string name="gt_006e7c35fe22b34d">"Starta uttag av %1$s"</string>
   <string name="gt_ecbc89cd37a03734">"Startat"</string>
   <string name="gt_aeed4d26bb5f0c31">"Startar"</string>
-  <string name="gt_96b98008aedf83c7">"Startar återställning..."</string>
   <string name="gt_a3b50c476732c740">"Status"</string>
   <string name="gt_920e413c7d411b61">"Status"</string>
   <string name="gt_1c23c9a0a6a0b504">"Status är fortfarande osäker. Noah kontrollerar automatiskt igen när din plånbok synkroniseras."</string>
@@ -1548,12 +1545,10 @@
   <string name="gt_d8a3ba6381971636">"VTXO:er"</string>
   <string name="gt_fbf9a3d817acb63b">"VTXO:er valda"</string>
   <string name="gt_72d4d360dea4e316">"Valda VTXO:er: %1$s"</string>
-  <string name="gt_f414d2a540db754b">"Validerar säkerhetskopia…"</string>
   <string name="gt_3ee75029c70e284c">"Verifieringskod"</string>
   <string name="gt_4f7838402f37674e">"Verifierad"</string>
   <string name="gt_87672f62ea3f7a51">"Verifierad %1$s"</string>
   <string name="gt_9ae9fbbcb1c80ca9">"Verifiera e-postadress"</string>
-  <string name="gt_6883dd409f6d48a8">"Kontrollerar att återställningsfrasen är sparad…"</string>
   <string name="gt_dd167905de0defca">"Version"</string>
   <string name="gt_a18745121bb8af6d">"Version %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"Via"</string>

@@ -20509,42 +20509,6 @@
         }
       }
     },
-    "Fetching backup…": {
-      "comment": "GT gt_c7e61b7092a55da5; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fetching backup…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obteniendo copia de seguridad…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップを取得中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업 가져오는 중…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hämtar säkerhetskopia…"
-          }
-        }
-      }
-    },
     "Fewer": {
       "comment": "GT gt_2a246cca8735d1b7; arguments: none",
       "extractionState": "manual",
@@ -23661,42 +23625,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Installera ntfy från F-Droid och kom sedan tillbaka."
-          }
-        }
-      }
-    },
-    "Installing wallet…": {
-      "comment": "GT gt_b24147c47f1ae370; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installing wallet…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Instalando billetera…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットをインストール中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 설치 중…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installerar plånbok…"
           }
         }
       }
@@ -46333,42 +46261,6 @@
         }
       }
     },
-    "Starting restore...": {
-      "comment": "GT gt_96b98008aedf83c7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Starting restore..."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Iniciando restauración..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "復元を開始中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복원 시작 중..."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Startar återställning..."
-          }
-        }
-      }
-    },
     "State": {
       "comment": "GT gt_a3b50c476732c740; arguments: none",
       "extractionState": "manual",
@@ -55117,42 +55009,6 @@
         }
       }
     },
-    "Validating backup…": {
-      "comment": "GT gt_f414d2a540db754b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Validating backup…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Validando copia de seguridad…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップを検証中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업 검증 중…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Validerar säkerhetskopia…"
-          }
-        }
-      }
-    },
     "Verification code": {
       "comment": "GT gt_3ee75029c70e284c; arguments: none",
       "extractionState": "manual",
@@ -55293,42 +55149,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verifiera e-postadress"
-          }
-        }
-      }
-    },
-    "Verifying recovery phrase storage…": {
-      "comment": "GT gt_6883dd409f6d48a8; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verifying recovery phrase storage…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verificando el almacenamiento de la frase de recuperación…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "復元フレーズの保存状態を確認中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복구 문구 저장 상태 확인 중…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrollerar att återställningsfrasen är sparad…"
           }
         }
       }

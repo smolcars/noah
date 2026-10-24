@@ -580,7 +580,6 @@
   <string name="gt_c8e5709f89baf900">"Fees rose, so Noah paid more"</string>
   <string name="gt_ea3a58f8b849ff21">"Fees rose. Paying more"</string>
   <string name="gt_e410ef7cc3869d69">"Fees rose. Paying more · waiting for block %1$s"</string>
-  <string name="gt_c7e61b7092a55da5">"Fetching backup…"</string>
   <string name="gt_2a246cca8735d1b7">"Fewer"</string>
   <string name="gt_1369793595356d9d">"Fiat rate unavailable: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
@@ -669,7 +668,6 @@
   <string name="gt_7abc49dfa87bc183">"Inputs"</string>
   <string name="gt_ff67ecdfc6ccee10">"Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."</string>
   <string name="gt_2304400f597b8734">"Install ntfy from F-Droid, then come back."</string>
-  <string name="gt_b24147c47f1ae370">"Installing wallet…"</string>
   <string name="gt_ddd409663e0a1d7b">"Instant and free from Ark wallets"</string>
   <string name="gt_cf9ea7f321c15e4b">"Instant · free"</string>
   <string name="gt_bb3e30521a8bd6d0">"Instant · %1$s estimated fee"</string>
@@ -1304,7 +1302,6 @@
   <string name="gt_006e7c35fe22b34d">"Start exit of %1$s"</string>
   <string name="gt_ecbc89cd37a03734">"Started"</string>
   <string name="gt_aeed4d26bb5f0c31">"Starting"</string>
-  <string name="gt_96b98008aedf83c7">"Starting restore..."</string>
   <string name="gt_a3b50c476732c740">"State"</string>
   <string name="gt_920e413c7d411b61">"Status"</string>
   <string name="gt_1c23c9a0a6a0b504">"Status remains uncertain. Noah checks again automatically as your wallet syncs."</string>
@@ -1548,12 +1545,10 @@
   <string name="gt_d8a3ba6381971636">"VTXOs"</string>
   <string name="gt_fbf9a3d817acb63b">"VTXOs selected"</string>
   <string name="gt_72d4d360dea4e316">"VTXOs selected: %1$s"</string>
-  <string name="gt_f414d2a540db754b">"Validating backup…"</string>
   <string name="gt_3ee75029c70e284c">"Verification code"</string>
   <string name="gt_4f7838402f37674e">"Verified"</string>
   <string name="gt_87672f62ea3f7a51">"Verified %1$s"</string>
   <string name="gt_9ae9fbbcb1c80ca9">"Verify Email"</string>
-  <string name="gt_6883dd409f6d48a8">"Verifying recovery phrase storage…"</string>
   <string name="gt_dd167905de0defca">"Version"</string>
   <string name="gt_a18745121bb8af6d">"Version %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"Via"</string>
