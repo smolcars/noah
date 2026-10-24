@@ -67,8 +67,8 @@ internal fun ExitClaimPage(app: AppModel, nav: SettingsNav) {
                 nav.hold(true)
                 scope.launch {
                     try { model.confirm() } finally { nav.hold(false) }
-                    app.refresh()
-                    if (model.error == null && model.estimateFallback == null) { haptics.success(); nav.pop() } else haptics.error()
+                    // Submitted: back to the exit at once (it shows Claiming); the wallet's own reads catch up.
+                    if (model.message != null && model.error == null && model.estimateFallback == null) { haptics.success(); nav.pop() } else haptics.error()
                 }
             }
         }) { OnchainStatus(app, model) }
@@ -100,7 +100,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
                 tag = "exit-hold-claim", onConfirm = claim)
         }
     }, leading = {
-        Text(tr("Claim {amount}", money(total)), Modifier.padding(top = 6.dp).testTag("exit-claim-amount"), style = ActivityType.big, color = palette.foreground, maxLines = 1)
+        ExitBig(tr("Claim {amount}", money(total)), Modifier.padding(top = 6.dp).testTag("exit-claim-amount"))
         exits.mapNotNull { it.details.claimable_since?.height }.minOrNull()?.let {
             Text(tr("Unlocked at block {height}", number(it)), Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }

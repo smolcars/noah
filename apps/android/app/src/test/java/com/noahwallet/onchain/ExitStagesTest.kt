@@ -104,9 +104,12 @@ class ExitStagesTest {
         assertEquals(ExitStage.Attention.stuck, stuck.attention); assertEquals(2L, stuck.waited)
         // The same tip as when it was sent: no block has come without it yet.
         assertNull(ExitStages.of(exit("Processing", sent), 100).attention)
-        // The wallet's tip is ahead of bark's: stale, but not stuck (bark hasn't looked at the new block).
-        val behind = ExitStages.of(exit("Processing", sent), 101)
+        // The wallet's tip is ahead of bark's: stale, but not stuck (bark hasn't looked at the new blocks).
+        val behind = ExitStages.of(exit("Processing", sent), 102)
         assertNull(behind.attention); assertTrue(behind.stale)
+        assertFalse("one block behind is the minute until bark's next progress", ExitStages.of(exit("Processing", sent), 101).stale)
+        assertFalse("bark keeps a waiting exit's tip from when it began waiting", ExitStages.of(exit("AwaitingDelta",
+            ExitDetails(tip_height = 100, confirmed_block = ExitDetails.Block(100), claimable_height = 244)), 180).stale)
         val bumped = processing(101, tx("root", "awaiting-confirmation", "c2", origin = "wallet"), tx("leaf", "verify-inputs"))
         assertEquals(ExitStage.Attention.feesRose, ExitStages.of(exit("Processing", bumped, history = listOf(sent)), 101).attention)
     }

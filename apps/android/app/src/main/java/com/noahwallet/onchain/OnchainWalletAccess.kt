@@ -22,8 +22,6 @@ internal interface OnchainWalletAccess {
     suspend fun destinationIsMine(address: String): Boolean = error("Unsupported")
     suspend fun minimum(): Long? = error("Unsupported")
     suspend fun regularSatPerKwu(): Long = error("Unsupported")
-    /** bark's exit rate: the chain source's fast (one-block) estimate. */
-    suspend fun fastSatPerKwu(): Long = error("Unsupported")
     suspend fun refreshFee(ids: List<String>): FeeEstimate = error("Unsupported")
     suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate = error("Unsupported")
     suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard = error("Unsupported")
@@ -70,7 +68,6 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     }
     override suspend fun minimum() = wallet.arkInfo()?.minBoardAmountSats?.toLong()
     override suspend fun regularSatPerKwu() = onchain.feeRates().regularSatPerKwu.toLong()
-    override suspend fun fastSatPerKwu() = onchain.feeRates().fastSatPerKwu.toLong()
     override suspend fun refreshFee(ids: List<String>) = wallet.estimateRefreshFee(ids)
     override suspend fun exitFee(ids: List<String>, destination: String?) = wallet.estimateEmergencyExitFee(ids, feeRateSatPerVb = null, destination = destination)
     override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {

@@ -57,8 +57,9 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
     val exit = model.exit ?: overview?.exits?.find { it.id == id }
-    // Recomputed on each read (every minute, as before): the inference needs a full progress cycle, never a timer of its own.
-    val needsFunds = remember(overview, model.exit) {
+    // Recomputed on each completed read (every minute, as before), even an unchanged one: the inference needs a full progress
+    // cycle, never a timer of its own.
+    val needsFunds = remember(model.revision) {
         overview?.let { o -> ExitFunding.shared.needsFunds(o.exits.map { exit -> model.exit?.takeIf { it.id == exit.id } ?: exit }, o.confirmed) }.orEmpty()
     }
     val stage = exit?.let { ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds) }
@@ -79,12 +80,13 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
         when (quote.action) {
             OnchainAction.progress -> CheckSheet(quote, model.busy, { money(app, it) }, model::invalidate) {
                 scope.launch {
-                    model.confirm(); app.refresh()
-                    if (model.error == null) { ExitFunding.shared.checkedChain(); haptics.light() } else haptics.error()
+                    model.confirm()
+                    // A completed check is a full progress cycle: read again so a transaction still waiting shows why at once.
+                    if (model.message != null && model.error == null) { ExitFunding.shared.checkedChain(); model.load(); haptics.light() } else haptics.error()
                 }
             }
             OnchainAction.cancel -> CancelDialog(model::invalidate) {
-                scope.launch { model.confirm(); app.refresh(); if (model.error == null) haptics.success() else haptics.error() }
+                scope.launch { model.confirm(); if (model.message != null && model.error == null) haptics.success() else haptics.error() }
             }
             else -> {}
         }
@@ -156,7 +158,7 @@ private fun ExitHeader(exit: ExitModel, stage: ExitStage, amount: Long, money: (
     val palette = LocalPalette.current
     val failed = stage.attention == ExitStage.Attention.needsFunds
     Column(Modifier.padding(top = 6.dp)) {
-        Text(money(amount), Modifier.testTag("exit-amount"), style = ActivityType.big, color = palette.foreground, maxLines = 1)
+        ExitBig(money(amount), Modifier.testTag("exit-amount"))
         Row(Modifier.padding(top = 10.dp).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }, verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             when {

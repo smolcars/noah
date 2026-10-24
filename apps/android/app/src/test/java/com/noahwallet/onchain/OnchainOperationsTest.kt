@@ -229,8 +229,9 @@ class OnchainOperationsTest {
         override suspend fun refreshFee(ids: List<String>) = FeeEstimate(30_000u, 269u, 29_731u, ids)
         var estimateError: Exception? = null
         var estimates = 0
+        val estimatedIds = mutableListOf<String>()
         override suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate {
-            estimates++; estimateError?.let { throw it }
+            estimates++; estimatedIds += ids; estimateError?.let { throw it }
             return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u)
         }
         override suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = bound.remove(quote.preparedBoard?.id) == quote
@@ -266,8 +267,6 @@ class OnchainOperationsTest {
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }
         /** A signed one-output transaction (txid 75ebf755…), standing in for the drain's claim. */
         override suspend fun claimTransaction(psbt: String) = "020000000001013e16e76ee2b6a9dc798b81be3a4903286e4e454dc019c48062d5396b4e21fdca0000000000fdffffff01d09b0000000000002251208751b9234a38be714a8011a02bad9f346f7b80e4a76b13fcacda7b0e2890c5e601408982addc732de240dd1dfb0bd4a66e0ab807073c73d92b26256827a2643735827b1eb0cb92812c4969544c107489479dc54ec9bc27409a15bef8486972bf03297f030000"
-        var fastRate = 750L
-        override suspend fun fastSatPerKwu() = fastRate
         companion object {
             fun vtxo(id: String, amount: ULong = 30_000u) = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, 500u, "pubkey", VtxoState.Spendable, 1u, 500u, true)
         }
@@ -306,7 +305,8 @@ class OnchainOperationsTest {
     }
     @Test fun exitsCarryTheirFeesAndTheWaitingPackagesFee() = runBlocking { fixture { wallet, _, journal, _ ->
         val node = ExitTransactions.parse(wallet.claimTransaction(""))!!
-        wallet.fundingTransactions = listOf(WalletTransaction("child-1", "", 1_215u, -1_215, null, false), WalletTransaction("unrelated", "", 99u, -99, null, false))
+        // As BDK reports a fee child live: no fee (its anchor input isn't a wallet coin), only what left the wallet.
+        wallet.fundingTransactions = listOf(WalletTransaction("child-1", "", null, -1_215, null, false), WalletTransaction("unrelated", "", 99u, -99, null, false))
         val waiting = ExitState.Processing(101u, listOf(ExitTx("root", ExitTxStatus.Confirmed("child-1", BlockRef(101u, "h"), ExitTxOrigin.Wallet(BlockRef(101u, "h")))),
             ExitTx("leaf", ExitTxStatus.AwaitingCpfpBroadcast)))
         wallet.states["a"] = waiting
@@ -316,7 +316,9 @@ class OnchainOperationsTest {
         val status = ExitTransactionStatus("a", 30_000u, waiting, listOf(ExitState.Start(100u)), 2u, packages)
         val exit = OnchainOperations(object : OnchainWalletAccess by wallet { override suspend fun status(id: String) = status }, journal).detail("a")!!
         assertEquals(mapOf("child-1" to 1_215L), exit.childFees)
-        assertEquals(ExitTransactions.packageFee(node.weight, 750), exit.nextPackageFee)
+        // At the rate bark's exits pay, from its estimate (10 sat/vB here), not the on-chain wallet's own estimate.
+        assertEquals(ExitTransactions.packageFee(node.weight, 2_500), exit.nextPackageFee)
+        assertEquals(listOf("a"), wallet.estimatedIds)
         assertEquals(listOf("root", "leaf"), exit.packages.map { it.txid })
         assertEquals("wallet", exit.packages[0].childOrigin); assertEquals(node.weight, exit.packages[1].weight); assertEquals(1, exit.packages[1].outputs)
         assertEquals(1_215L, ExitStages.of(exit, 101).feesPaid)

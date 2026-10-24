@@ -54,7 +54,7 @@ internal fun ExitListPage(app: AppModel, nav: SettingsNav) {
     val model = rememberOnchainModel(app)
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
-    val needsFunds = remember(overview) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed) }.orEmpty() }
+    val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed) }.orEmpty() }
     ExitListContent(overview?.exits.orEmpty(), overview?.tip ?: 0, needsFunds, ready = overview != null, loading = model.loading,
         suspended = app.isWalletSuspended, money = { money(app, it) }, back = nav.back, open = { nav.open(ExitPage(it)) },
         claim = { nav.open(ExitClaimPage) }, more = { nav.open(ExitChoosePage) }) { OnchainStatus(app, model) }

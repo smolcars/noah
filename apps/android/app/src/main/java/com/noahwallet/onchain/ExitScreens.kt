@@ -91,6 +91,14 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
     }
 }
 
+/** A big amount (prototype `.big`, 46 sp) that shrinks rather than clips in narrow panes and longer languages. */
+@Composable
+internal fun ExitBig(text: String, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    androidx.compose.foundation.text.BasicText(text, modifier, style = ActivityType.big.copy(color = palette.foreground), maxLines = 1,
+        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = ActivityType.big.fontSize))
+}
+
 /** The picture's size: 300 dp in a column (prototype `.stage`), the rest of the leading pane when split. */
 @Composable
 internal fun ColumnScope.exitPicture(): Modifier =
@@ -122,14 +130,16 @@ internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
     val model = rememberOnchainModel(app)
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
+    val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed) }.orEmpty() }
     ExitWarningContent(overview?.exits.orEmpty(), overview?.tip ?: 0, rememberExitDelta(app), rememberSampleCost(app, overview?.vtxos.orEmpty())?.broadcast,
         app.isWalletSuspended, { money(app, it) }, nav.back, choose = { nav.open(ExitChoosePage) }, open = { nav.open(ExitPage(it)) },
-        all = { nav.open(ExitsPage) }) { OnchainStatus(app, model) }
+        all = { nav.open(ExitsPage) }, needsFunds = needsFunds) { OnchainStatus(app, model) }
 }
 
 @Composable
 internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?, sample: Long?, suspended: Boolean, money: (Long) -> String,
-                                back: (() -> Unit)?, choose: () -> Unit, open: (String) -> Unit, all: () -> Unit, status: @Composable () -> Unit = {}) {
+                                back: (() -> Unit)?, choose: () -> Unit, open: (String) -> Unit, all: () -> Unit, needsFunds: Set<String> = emptySet(),
+                                status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     ExitFrame(tr("Emergency exit"), back, foot = {
         FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), enabled = !suspended, onClick = choose)
@@ -138,11 +148,11 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val live = exits.filter { it.state !in ExitTimeline.terminal }
         if (exits.isNotEmpty()) Column(Modifier.padding(top = 14.dp)) {
-            live.take(3).forEach { exit -> ExitRow(exit, tip, money, divider = true) { open(exit.id) } }
+            live.take(3).forEach { exit -> ExitRow(exit, tip, money, divider = true, needsFunds = exit.id in needsFunds) { open(exit.id) } }
             SettingsRow(tr("All exits"), SettingsIcons.exit, value = if (live.isEmpty()) null else tr("{n} in progress", live.size.toString()),
                 divider = false, modifier = Modifier.testTag("exit-all"), onClick = all)
         }
-        ExitPicture(ExitPose.sample(), tr("Your VTXO's path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
+        ExitPicture(ExitPose.sample(tip = tip), tr("Your VTXO's path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
     }) {
         if (suspended) FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
         Column(Modifier.padding(top = 20.dp)) {
@@ -176,17 +186,17 @@ private fun Fact(icon: Int, title: String, line: String, divider: Boolean = true
 
 /** One exit in a list: the coin, its amount and its phase in a line. The full row arrives with the exits list. */
 @Composable
-internal fun ExitRow(exit: ExitModel, tip: Long, money: (Long) -> String, divider: Boolean, onClick: () -> Unit) {
+internal fun ExitRow(exit: ExitModel, tip: Long, money: (Long) -> String, divider: Boolean, needsFunds: Boolean = false, onClick: () -> Unit) {
     val palette = LocalPalette.current
-    val stage = ExitStages.of(exit, tip)
+    val stage = ExitStages.of(exit, tip, needsFunds)
     Row(Modifier.fillMaxWidth().heightIn(min = 62.dp).drawBehind {
         if (divider) drawRect(palette.hairline, Offset(54.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 54.dp.toPx(), 1.dp.toPx()))
     }.clickable(role = Role.Button, onClick = onClick).semantics(mergeDescendants = true) {}.testTag("exit-row-${exit.id.take(12)}"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        ExitCoin(40.dp, pending = stage.live)
+        ExitCoin(40.dp, pending = stage.live, badge = needsFunds)
         Column(Modifier.weight(1f)) {
             Text(money(exit.amount), style = HomeType.amount, color = palette.foreground, maxLines = 1)
-            Text(exitStatusWord(stage), style = HomeType.small, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(exitStatusWord(stage), style = HomeType.small, color = if (needsFunds) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

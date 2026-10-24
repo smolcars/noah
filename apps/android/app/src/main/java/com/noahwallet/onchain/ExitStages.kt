@@ -27,7 +27,7 @@ data class ExitStage(
     val claimTxid: String? = null, val claimedBlock: Long? = null,
     /** Fees this wallet paid for the exit's transactions (adopted ones cost nothing). */
     val feesPaid: Long = 0,
-    /** bark last checked this exit below the chain's tip: Noah hasn't progressed it since. */
+    /** bark last checked this exit while sending it, two or more blocks below the chain's tip: Noah hasn't progressed it since. */
     val stale: Boolean = false,
 ) {
     enum class Phase { lift, publish, mempool, bump, confirm, onchain, wait, claimable, claiming, claimed, canceled, spent, swept }
@@ -52,20 +52,24 @@ internal object ExitStages {
         val known = (exit.historyDetails + details).lastOrNull { !it.transactions.isNullOrEmpty() }?.transactions.orEmpty()
         val total = listOf(txs.size, exit.packages.size, known.size).firstOrNull { it > 0 } ?: 0
         val feesPaid = exit.packages.filter { it.childOrigin == "wallet" }.sumOf { exit.childFees[it.childTxid] ?: 0 }
+        // bark records its tip on each progress only while it sends (Start, Processing); later states keep the tip they began
+        // at. One block behind is the minute until the next progress, so stale means two or more.
         val synced = details.tip_height
-        val stale = synced != null && synced < tip
+        val stale = synced != null && exit.state in setOf("Start", "Processing") && tip - synced >= 2
         val base = ExitStage(ExitStage.Phase.lift, total = total, feesPaid = feesPaid, stale = stale)
+        // Once claimable, the timelock's start and end are what bark recorded while it waited.
+        val locked = (exit.historyDetails + details).lastOrNull { it.confirmed_block != null }
         return when (exit.state) {
             "Start" -> base
             "Processing" -> processing(exit, base, txs)
             "AwaitingDelta" -> base.copy(phase = ExitStage.Phase.wait, inBlocks = total, current = total,
                 lastBlock = details.confirmed_block?.height, lockedFrom = details.confirmed_block?.height, claimableHeight = details.claimable_height)
-            "Claimable" -> base.copy(phase = ExitStage.Phase.claimable, inBlocks = total, current = total,
-                unlockedAt = details.claimable_since?.height, claimableHeight = details.claimable_since?.height)
-            "ClaimInProgress" -> base.copy(phase = ExitStage.Phase.claiming, inBlocks = total, current = total,
-                unlockedAt = details.claimable_since?.height, claimTxid = details.claim_txid)
-            "Claimed" -> base.copy(phase = ExitStage.Phase.claimed, inBlocks = total, current = total, claimTxid = details.txid,
-                claimedBlock = details.block?.height, stale = false)
+            "Claimable" -> base.copy(phase = ExitStage.Phase.claimable, inBlocks = total, current = total, lockedFrom = locked?.confirmed_block?.height,
+                unlockedAt = details.claimable_since?.height, claimableHeight = locked?.claimable_height ?: details.claimable_since?.height)
+            "ClaimInProgress" -> base.copy(phase = ExitStage.Phase.claiming, inBlocks = total, current = total, lockedFrom = locked?.confirmed_block?.height,
+                unlockedAt = details.claimable_since?.height, claimableHeight = locked?.claimable_height, claimTxid = details.claim_txid)
+            "Claimed" -> base.copy(phase = ExitStage.Phase.claimed, inBlocks = total, current = total, lockedFrom = locked?.confirmed_block?.height,
+                claimableHeight = locked?.claimable_height, claimTxid = details.txid, claimedBlock = details.block?.height, stale = false)
             "Canceled" -> base.copy(phase = ExitStage.Phase.canceled, inBlocks = known.count { it.status.kind == "confirmed" }, stale = false)
             "VtxoAlreadySpent" -> base.copy(phase = ExitStage.Phase.spent, stale = false)
             "VtxoSwept" -> base.copy(phase = ExitStage.Phase.swept, stale = false)

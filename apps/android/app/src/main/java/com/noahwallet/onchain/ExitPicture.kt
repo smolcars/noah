@@ -54,8 +54,8 @@ internal data class ExitPose(
 ) {
     companion object {
         /** A round VTXO's path before anything is sent (the warning's and review's picture): four transactions, radix 4. */
-        fun sample(n: Int = 4) = ExitPose(n.coerceAtLeast(1), ExitStage.Phase.publish, branches = List(n) { if (it < n - 1) 3 else 0 },
-            ours = List(n) { listOf(2, 2, 1).getOrElse(it) { 0 } })
+        fun sample(n: Int = 4, tip: Long = 0) = ExitPose(n.coerceAtLeast(1), ExitStage.Phase.publish, branches = List(n) { if (it < n - 1) 3 else 0 },
+            ours = List(n) { listOf(2, 2, 1).getOrElse(it) { 0 } }, tip = tip)
 
         fun of(exit: ExitModel, stage: ExitStage, tip: Long): ExitPose {
             val n = stage.total.coerceAtLeast(1)
@@ -220,9 +220,11 @@ private fun PictureCanvas(p: ExitPose, m: PictureMotion, balance: String?, desti
                     label(round, rx, yRowT + s + 14, palette.muted, rowA, words)
                     for (i in 0 until 3) drawCircle(palette.muted, 1.4f, Offset(rx + s / 2 + 9 + i * 6, yRowC), alpha = rowA)
                 }
+                // Without a tip (a sample path) the blocks are drawn unlabelled.
+                val labelled = p.tip > 0
                 for (i in -1..2) {
                     val height = p.tip - i
-                    if (height < 0) continue
+                    if (labelled && height < 0) continue
                     val x = blockX(height)
                     val a = fade(x) * rowA * if (i < 0) 1 - m.slide else 1f
                     if (a <= 0f) continue
@@ -231,7 +233,7 @@ private fun PictureCanvas(p: ExitPose, m: PictureMotion, balance: String?, desti
                     scale(popScale, popScale, Offset(x, yRowC)) {
                         drawRoundRect(palette.foreground, Offset(x - s / 2, yRowT), Size(s, s), CornerRadius(7f), alpha = a * if (ours) 1f else .55f + .15f * (2 - i).coerceIn(0, 2))
                     }
-                    label(number.format(height), x, yRowT + s + 14, if (ours && i == 0) palette.foreground else palette.muted, a)
+                    if (labelled) label(number.format(height), x, yRowT + s + 14, if (ours && i == 0) palette.foreground else palette.muted, a)
                 }
                 val nextX = nx + shift
                 drawRoundRect(palette.foreground, Offset(nextX - s / 2, yRowT), Size(s, s), CornerRadius(6f), alpha = rowA * (if (holds) m.blink else 1f),

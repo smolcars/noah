@@ -39,15 +39,14 @@ internal fun ExitStartPage(app: AppModel, nav: SettingsNav, ids: List<String>) {
         if (!started && !model.busy && live.size == ids.size) nav.replace(if (ids.size == 1) ExitPage(ids.single()) else ExitsPage)
     }
     ExitStartContent(model.quote, model.estimateFallback, model.overview?.confirmed, model.busy, app.isWalletSuspended, rememberExitDelta(app),
-        { money(app, it) }, nav.back, reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
+        { money(app, it) }, nav.back, tip = model.overview?.tip ?: 0, reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
         withoutEstimate = model::continueWithoutEstimate,
         start = {
             if (!model.busy && model.quote != null) {
                 nav.hold(true)
                 scope.launch {
                     try { model.confirm() } finally { nav.hold(false) }
-                    app.refresh()
-                    if (model.error == null && model.estimateFallback == null) {
+                    if (model.message != null && model.error == null && model.estimateFallback == null) {
                         started = true; haptics.success()
                         nav.replace(if (ids.size == 1) ExitPage(ids.single()) else ExitsPage)
                     } else haptics.error()
@@ -59,7 +58,7 @@ internal fun ExitStartPage(app: AppModel, nav: SettingsNav, ids: List<String>) {
 @Composable
 internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, confirmed: Long?, busy: Boolean, suspended: Boolean, delta: Long?,
                               money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
-                              status: @Composable () -> Unit = {}) {
+                              tip: Long = 0, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val toasts = LocalSettingsToasts.current
     val review = quote ?: fallback
@@ -75,14 +74,13 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             else -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), enabled = !busy && !suspended, loading = busy, onClick = reviewAgain)
         }
     }, leading = {
-        Text(review?.let { tr("Exit {amount}", money(it.amount)) } ?: tr("Exit"), Modifier.padding(top = 6.dp).testTag("exit-start-amount"),
-            style = ActivityType.big, color = palette.foreground, maxLines = 1)
+        ExitBig(review?.let { tr("Exit {amount}", money(it.amount)) } ?: tr("Exit"), Modifier.padding(top = 6.dp).testTag("exit-start-amount"))
         review?.let { r ->
             val count = trPlural("{n} VTXOs", r.ids.size)
             Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
                 Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
-        if (wide) ExitPicture(ExitPose.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4), tr("Your VTXO's path to the chain"),
+        if (wide) ExitPicture(ExitPose.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4, tip), tr("Your VTXO's path to the chain"),
             exitPicture().padding(top = 14.dp))
     }) {
         Column(Modifier.padding(top = 18.dp)) {
