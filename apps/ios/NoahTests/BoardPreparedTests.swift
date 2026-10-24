@@ -542,9 +542,9 @@ struct BoardPreparedTests {
         #expect(await calls.discarded == [quote.id])
     }
     /// An uncertain board may be partly recorded (a BOARD movement before its checkpoint): repeat protection
-    /// can't be overridden into a second board, even after a reload. Only Check status proving nothing was
-    /// boarded releases it.
-    @Test func uncertainBoardCantBeOverriddenUntilNothingWasBoarded() async throws {
+    /// can't be overridden into a second board, even after a reload, and any override is ignored. Only Check
+    /// status resolves it.
+    @Test func uncertainBoardCantBeOverriddenIntoASecondBoard() async throws {
         let (journal, file) = journal()
         defer { try? FileManager.default.removeItem(at: file) }
         let session = WalletSession()
@@ -559,42 +559,75 @@ struct BoardPreparedTests {
         var second = Self.quote
         second.id = UUID()
         for current in [journal, OnchainOperationJournal(file: file)] {
-            #expect(try await current.load()?.boardUncertain == true)
+            #expect(try await current.load()?.uncertainBoard == true)
             await #expect(throws: OnchainFailure.busy) { try await current.discardUncertain(quote.id) }
             await #expect(throws: OnchainFailure.busy) { try await current.perform(second) { "second board" } }
         }
-        let reloaded = OnchainOperationJournal(file: file)
-        func check(_ chain: ChainTransactionStatus? = .notFound, ids: Set<String> = [], anchors: Set<String> = [],
-                   unspent: Set<String> = ["funding:0"]) async throws -> Bool {
-            try await WalletSession.checkOnchainAttempt(quote.id, journal: reloaded, reads: .init(
-                walletID: "wallet", transactionIDs: { ids }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
-                transactionStatus: { _ in chain }, boardAnchors: { anchors }, unspent: { unspent }))
-        }
-        // A BOARD movement anchored to the funding txid, with no pending board, VTXO or chain transaction: kept.
-        #expect(try await !check(anchors: ["exact"]))
-        // Its input spent elsewhere, or a chain source that can't say: kept.
-        #expect(try await !check(unspent: []))
-        #expect(try await !check(nil))
-        #expect(try await reloaded.load()?.boardUncertain == true)
-        // Nothing anywhere and the input still unspent: released, and a fresh board may go.
-        #expect(try await check())
-        #expect(try await reloaded.loadAll().isEmpty)
-        _ = try await reloaded.perform(second) { "second board" }
+        #expect(OnchainFailure.busy.errorDescription?.hasPrefix("This operation overlaps an unresolved attempt") == true)
+        // An override written anyway changes nothing; a crash before the SDK answered (no flag) keeps today's override.
+        var overridden = try #require(try await journal.load())
+        overridden.overrideAudit = .init(overriddenAt: Date())
+        #expect(overridden.blocks(.board, ids: []))
+        overridden.uncertainBoard = nil
+        #expect(!overridden.blocks(.board, ids: []))
         #expect(await calls.submitted == 1)
     }
-    /// A pending board or the chain finding the funding txid still resolves it as boarded (never released).
-    @Test func uncertainBoardFoundByItsTxidResolvesAsBoarded() async throws {
+
+    func uncertainJournal() throws -> (OnchainOperationJournal, URL, UUID) {
         let (journal, file) = journal()
-        defer { try? FileManager.default.removeItem(at: file) }
         var attempt = OnchainOperationJournal.Attempt(quote: Self.quote)
         attempt.txid = "exact"
-        attempt.boardUncertain = true
+        attempt.uncertainBoard = true
         try JSONEncoder().encode([attempt]).write(to: file)
-        #expect(try await WalletSession.checkOnchainAttempt(Self.quote.id, journal: journal, reads: .init(
-            walletID: "wallet", transactionIDs: { [] }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
-            transactionStatus: { _ in .inMempool }, unspent: { ["funding:0"] })))
+        return (journal, file, attempt.id)
+    }
+
+    func check(_ journal: OnchainOperationJournal, _ id: UUID, ids: Set<String> = [], chain: @escaping @Sendable () throws -> ChainTransactionStatus? = { .notFound },
+               unspent: @escaping @Sendable () throws -> Set<String> = { ["funding:0", "other:1"] }) async throws -> Bool {
+        try await WalletSession.checkOnchainAttempt(id, journal: journal, reads: .init(
+            walletID: "wallet", transactionIDs: { ids }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
+            transactionStatus: { _ in try chain() }, unspent: { try unspent() }))
+    }
+
+    /// Nothing boarded: no pending board or wallet transaction names the txid, the chain source says it isn't
+    /// found and the input is still an unspent wallet coin. Check status reads no movements, so an orphan BOARD
+    /// movement can't hold it (bark never had the signed bytes). It goes, and a fresh board may follow.
+    @Test func uncertainBoardProvenNeverBoardedIsReleased() async throws {
+        let (journal, file, id) = try uncertainJournal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        #expect(try await check(journal, id))
+        #expect(try await journal.loadAll().isEmpty)
+        _ = try await journal.perform(Self.quote) { "fresh board" }
+    }
+
+    /// Any doubt keeps it locked and reads as "Status remains uncertain": an unreachable chain source, no answer,
+    /// an input spent or no longer the wallet's, coins that can't be read.
+    @Test(arguments: [0, 1, 2, 3])
+    func uncertainBoardStaysLockedOnAnyDoubt(doubt: Int) async throws {
+        let (journal, file, id) = try uncertainJournal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let resolved = try await check(journal, id, chain: { () throws -> ChainTransactionStatus? in
+            if doubt == 0 { throw URLError(.cannotConnectToHost) }
+            return doubt == 1 ? nil : .notFound
+        }, unspent: {
+            if doubt == 3 { throw URLError(.cannotConnectToHost) }
+            return doubt == 2 ? ["other:1"] : ["funding:0"]
+        })
+        #expect(!resolved)
+        let saved = try #require(try await journal.load())
+        #expect(saved.uncertainBoard == true && saved.receipt == nil && saved.blocks(.board, ids: []))
+    }
+
+    /// A pending board (or the chain) naming the funding txid: it was boarded. It gets a receipt that keeps
+    /// "Do not board these funds again", and Done stays refused until it confirms.
+    @Test func uncertainBoardFoundIsBoardedAndKeepsDeliveryProtection() async throws {
+        let (journal, file, id) = try uncertainJournal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        #expect(try await check(journal, id, ids: ["exact"]))
         let saved = try #require(try await journal.load())
         #expect(saved.receipt?.broadcastRetryPending == true && saved.blocks(.board, ids: []))
+        await #expect(throws: OnchainFailure.uncertain) { try await journal.acknowledge(id) }
+        #expect(try await journal.loadAll().count == 1)
     }
     /// `notAttempted` still means nothing was recorded: the lock is released and a new review submits.
     @Test func notAttemptedOutcomeAllowsAFreshBoard() async throws {

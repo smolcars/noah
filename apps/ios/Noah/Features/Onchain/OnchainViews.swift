@@ -70,7 +70,7 @@ struct OnchainStatusSection: View {
                     Text("Noah checks again automatically as your wallet syncs.")
                     Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
                     // An uncertain board may be partly recorded: only Check status can release it.
-                    if attempt.overrideAudit == nil, attempt.boardUncertain != true {
+                    if attempt.overrideAudit == nil, attempt.uncertainBoard != true {
                         Button("Override repeat protection…", role: .destructive) { discardID = attempt.id }
                             .disabled(model.busy)
                     }

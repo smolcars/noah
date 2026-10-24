@@ -346,7 +346,7 @@ final class OnchainModel {
             try await dependencies.discard(id)
             attempts = try await dependencies.attempt().filter { $0.overrideAudit?.acknowledgedAt == nil }
             message = "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."
-        } catch { self.error = OnchainFailure.uncertain.errorDescription }
+        } catch { self.error = (error as? OnchainFailure)?.errorDescription ?? OnchainFailure.uncertain.errorDescription }
     }
 
 }

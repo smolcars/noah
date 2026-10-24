@@ -20,15 +20,17 @@ actor OnchainOperationJournal {
         var receipt: OnchainReceipt?
         var txid: String?
         var chainStatusError: String? = nil
-        private enum CodingKeys: String, CodingKey { case quote, receipt, txid, overrideAudit, boardUncertain }
+        private enum CodingKeys: String, CodingKey { case quote, receipt, txid, overrideAudit, uncertainBoard }
         var overrideAudit: OverrideAudit?
         /// FFI 0.7.0's `uncertain` board: bark may have partly recorded it, so repeat protection can't be
-        /// overridden; only Check status proving nothing was boarded releases it.
-        var boardUncertain: Bool?
+        /// overridden; only Check status resolves it (boarded, or proven never boarded). A crash before the
+        /// SDK answered leaves no flag, and today's override.
+        var uncertainBoard: Bool?
         var id: UUID { quote.id }
 
         func blocks(_ action: OnchainAction, ids: [String]) -> Bool {
-            guard overrideAudit == nil, quote.action == action else { return false }
+            // An uncertain board ignores any override: only Check status releases it.
+            guard overrideAudit == nil || uncertainBoard == true, quote.action == action else { return false }
             if action == .board, let receipt, let receiptID = receipt.txid,
                txid == nil || txid == receiptID,
                quote.prepared == nil || quote.prepared?.txid == receiptID,
@@ -131,7 +133,7 @@ actor OnchainOperationJournal {
     func markBoardUncertain(_ id: UUID) throws {
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { $0.id == id }) else { throw OnchainFailure.uncertain }
-        attempts[index].boardUncertain = true
+        attempts[index].uncertainBoard = true
         try save(attempts)
     }
 
@@ -139,7 +141,7 @@ actor OnchainOperationJournal {
     func releaseUnboarded(_ id: UUID) throws {
         guard !running else { throw OnchainFailure.busy }
         let attempts = try loadAll()
-        guard attempts.contains(where: { $0.id == id && $0.boardUncertain == true && $0.receipt == nil }) else { return }
+        guard attempts.contains(where: { $0.id == id && $0.uncertainBoard == true && $0.receipt == nil }) else { return }
         try save(attempts.filter { $0.id != id })
     }
 
@@ -235,7 +237,7 @@ actor OnchainOperationJournal {
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { $0.id == id }),
             attempts[index].receipt == nil, attempts[index].overrideAudit == nil,
-            attempts[index].boardUncertain != true else {
+            attempts[index].uncertainBoard != true else {
             throw OnchainFailure.busy
         }
         attempts[index].overrideAudit = .init(overriddenAt: now)
