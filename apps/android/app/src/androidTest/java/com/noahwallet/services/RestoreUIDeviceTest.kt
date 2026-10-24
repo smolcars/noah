@@ -84,10 +84,13 @@ class RestoreUIDeviceTest {
 
     private fun launch(): Pair<MainActivity, AppModel> {
         val activity = instrumentation.startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
-        lateinit var model: AppModel
-        instrumentation.runOnMainSync { model = ViewModelProvider(activity)[AppModel::class.java] }
-        waitFor("Launch settles") { model.launchState != null }
-        return activity to model
+        var model: AppModel? = null
+        // MainActivity builds its model off the main thread; until it lands the default factory can't make one.
+        waitFor("Launch settles") {
+            instrumentation.runOnMainSync { model = runCatching { ViewModelProvider(activity)[AppModel::class.java] }.getOrNull() }
+            model?.launchState != null
+        }
+        return activity to checkNotNull(model)
     }
     private fun submit() {
         waitFor("Restore submit is enabled") { submitButton() != null }
