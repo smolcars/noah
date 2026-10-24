@@ -28,9 +28,14 @@ AAR's arm64 library byte for byte (`34ed0f7b…`).
   `excludedOutpoints` for the drain probe and the one reviewed preparation; the
   retry-lower loop is gone, the input check and the submit re-check stay, and manual
   Move to Ark excludes nothing.
-- **Uncertain board.** Kept recorded, uncertain and locked; never resubmitted; Check
-  status reconciles it from transactions, pending boards and board history.
-  `NotAttempted` still removes the attempt.
+- **Uncertain board.** Saved with `uncertainBoard`: locked, never resubmitted, and no
+  override unlocks it, across reloads too. Check status settles it: it finds the board
+  (from transactions, pending boards, or board history including each BOARD movement's
+  own `chain_anchor`, so a partial record without a VTXO is found) and keeps delivery
+  protection, or proves nothing was boarded (nothing names the txid, the chain source
+  doesn't know it, every input is still an unspent wallet coin) and removes the attempt
+  ("Boarding was not submitted. Review again when the wallet is ready."). Any doubt keeps
+  it locked. `NotAttempted` still removes the attempt.
 - **Re-checks at submit.** A reorged confirmed-only parent (`PREPARED_INPUTS_UNAVAILABLE`)
   keeps the unavailable-inputs copy; an unreachable chain source (`OTHER`) now reads as
   not submitted for boards and the first prepared-send broadcast, since 0.7.0 throws
