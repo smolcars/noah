@@ -46,7 +46,7 @@ struct ActivityDetail: Equatable {
         case .refunded: status = "Refunded · back in your wallet"; tone = .failure
         case .failed(let none): status = none ? "Failed · nothing left your wallet" : "Failed"; tone = .failure
         case .canceled(let none): status = none ? "Canceled · nothing left your wallet" : "Canceled"; tone = .muted
-        case .exiting: status = "Exiting to the chain"; tone = .pending
+        case .exiting: status = "Exiting"; tone = .pending
         case .inRound: status = "Sending · waiting for an Ark round"; tone = .pending
         case .sending, .confirming:
             tone = .pending

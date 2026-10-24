@@ -112,7 +112,7 @@ object ActivityRules {
             home.failed -> (if (home.unchanged) "Failed · nothing left your wallet" else "Failed") to Tone.failed
             home.canceled -> (if (home.unchanged) "Canceled · nothing left your wallet" else "Canceled") to Tone.muted
             home.pending -> when {
-                record.movementKind == "exit" -> "Exiting to the chain"
+                record.movementKind == "exit" -> "Exiting"
                 record.movementKind in listOf("offboard", "send-onchain") ->
                     if (HistoryMetadata.parse(record.metadataJson ?: "").offboardTxid == null) "Sending · waiting for an Ark round" else "Sending · waiting for confirmations"
                 record.isInternalTransfer -> "Moving to Ark"

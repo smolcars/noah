@@ -16321,42 +16321,6 @@
         }
       }
     },
-    "Exiting to the chain": {
-      "comment": "GT gt_292ce5ce3450f0b4; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exiting to the chain"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saliendo a la cadena"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チェーンへ退出中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "체인으로 출금 중"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tas ut till blockkedjan"
-          }
-        }
-      }
-    },
     "Exits": {
       "comment": "GT gt_5e561017c8169c76; arguments: none",
       "extractionState": "manual",

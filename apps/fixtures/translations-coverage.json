@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1479,
-  "sourceKeys": 1508,
+  "catalogEntries": 1478,
+  "sourceKeys": 1507,
   "coverage": {
     "ios": {
       "used": [
@@ -407,7 +407,6 @@
         "Exited",
         "Exited coins",
         "Exiting",
-        "Exiting to the chain",
         "Exits",
         "Exits progressed. Transactions may have been broadcast or fee-bumped.",
         "Exits use it once it confirms.",
@@ -1729,7 +1728,6 @@
         "Exited",
         "Exited coins",
         "Exiting",
-        "Exiting to the chain",
         "Exits",
         "Exits progressed. Transactions may have been broadcast or fee-bumped.",
         "Exits use it once it confirms.",

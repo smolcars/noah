@@ -461,7 +461,6 @@
   <string name="gt_85fc46c17cd71d1d">"出金済み"</string>
   <string name="gt_7c2f8a4625fab18d">"出金したコイン"</string>
   <string name="gt_4a366d77739e7414">"出金中"</string>
-  <string name="gt_292ce5ce3450f0b4">"チェーンへ退出中"</string>
   <string name="gt_5e561017c8169c76">"退出"</string>
   <string name="gt_db5f066a21225f71">"退出の出金処理を進めました。トランザクションがブロードキャストされたか、手数料が引き上げられた可能性があります。"</string>
   <string name="gt_26377ba9c6b97926">"承認されると出金に使われます。"</string>

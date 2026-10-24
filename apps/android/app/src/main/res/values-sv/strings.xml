@@ -461,7 +461,6 @@
   <string name="gt_85fc46c17cd71d1d">"Nöduttag genomfört"</string>
   <string name="gt_7c2f8a4625fab18d">"Mynt med nöduttag"</string>
   <string name="gt_4a366d77739e7414">"Nöduttag pågår"</string>
-  <string name="gt_292ce5ce3450f0b4">"Tas ut till blockkedjan"</string>
   <string name="gt_5e561017c8169c76">"Nöduttag"</string>
   <string name="gt_db5f066a21225f71">"Nöduttagen har förts vidare. Transaktioner kan ha sänts eller fått höjda avgifter."</string>
   <string name="gt_26377ba9c6b97926">"Uttag använder det när det har bekräftats."</string>
