@@ -118,7 +118,7 @@ struct ExitProgress: Equatable, Sendable {
                 step = index + 1
                 phase = current.status.origin == "wallet" || current.status.origin == nil ? .mempool : .shared
                 // Blocks since Noah first saw it in the mempool (bark keeps a state's height until it changes).
-                if let since = seen[ExitSightings.key(current.txid, current.status.kind)], tip > since { stuck = tip - since }
+                if let since = seen[exit.episode(current)], tip > since { stuck = tip - since }
                 // Its child when bark first recorded it in the mempool: a different one now means a re-bump.
                 let first = exit.records.first { record in
                     record.transactions?.contains { $0.txid == current.txid && $0.status.kind == "awaiting-confirmation" } == true
@@ -151,25 +151,32 @@ extension ExitModel {
     }
 
     /// The transaction parked in `AwaitingCpfpBroadcast`, waiting for a fee child.
-    var parkedTxid: String? {
+    var parkedTxid: String? { parked?.txid }
+
+    /// The parked transaction's current parking episode (`episode(_:)`).
+    var parkedEpisode: String? { parked.map(episode) }
+
+    private var parked: ExitDetails.Transaction? {
         guard state == "Processing", let next = details.transactions?.first(where: { $0.status.block == nil }),
               next.status.kind == "awaiting-cpfp-broadcast" else { return nil }
-        return next.txid
+        return next
     }
 
-    /// bark recorded it parked at an earlier tip too: at least one progress since then failed to fund it.
-    var parkedAcrossProgress: Bool {
-        guard let txid = parkedTxid, let now = details.tip_height else { return false }
-        return historyDetails.contains { record in
-            record.tip_height.map { $0 < now } == true
-                && record.transactions?.contains { $0.txid == txid && $0.status.kind == "awaiting-cpfp-broadcast" } == true
-        }
+    /// `transaction`'s current episode in its status, the key for sightings and evidence: bark records
+    /// every change, so the record where this unbroken run began tells it from an earlier run.
+    func episode(_ transaction: ExitDetails.Transaction) -> String {
+        let records = records
+        var start = records.count - 1
+        while start > 0, records[start - 1].transactions?.contains(where: {
+            $0.txid == transaction.txid && $0.status.kind == transaction.status.kind
+        }) == true { start -= 1 }
+        return "\(transaction.txid)|\(transaction.status.kind)|\(start)"
     }
 }
 
-/// When Noah first saw each exit transaction in its current status: the wallet's tip and the time.
-/// bark keeps a state, height included, until something changes, so its height can't count blocks.
-/// Persisted per wallet.
+/// When Noah first saw each exit transaction in its current status episode (`ExitModel.episode`): the
+/// wallet's tip and the time. bark keeps a state, height included, until something changes, so its
+/// height can't count blocks. Persisted per wallet.
 struct ExitSightings: Codable, Equatable, Sendable {
     struct Sighting: Codable, Equatable, Sendable {
         var tip: UInt32
@@ -177,12 +184,10 @@ struct ExitSightings: Codable, Equatable, Sendable {
     }
     var seen: [String: Sighting] = [:]
 
-    static func key(_ txid: String, _ kind: String) -> String { txid + "|" + kind }
-
     /// Adds what's newly seen and forgets what's no longer current; true when it changed.
     mutating func observe(_ exits: [ExitModel], tip: UInt32, now: Date) -> Bool {
         let current = Set(exits.filter { $0.state == "Processing" }.flatMap { exit in
-            (exit.details.transactions ?? []).filter { $0.status.block == nil }.map { Self.key($0.txid, $0.status.kind) }
+            (exit.details.transactions ?? []).filter { $0.status.block == nil }.map(exit.episode)
         })
         let before = seen
         seen = seen.filter { current.contains($0.key) }
@@ -217,7 +222,8 @@ struct ExitSightings: Codable, Equatable, Sendable {
 
 /// Decision 3. bark 0.8 never reports missing funds: it leaves the transaction in
 /// `AwaitingCpfpBroadcast` and logs a warning. The proof is a confirmed balance below that
-/// package's fee; it clears when funds arrive. No error strings are matched.
+/// package's fee after a progress tried to fund this parking episode; it clears when funds arrive or
+/// the status changes. No error strings are matched.
 enum ExitFunds {
     /// bark's `daemon_sync_interval_secs` default (Noah doesn't set it), plus a margin for a cycle in flight.
     static let cycle: TimeInterval = 60 + 15
@@ -230,10 +236,12 @@ enum ExitFunds {
         (satPerVb * 250 * (parentWeight + childWeight) + 999) / 1000
     }
 
+    /// `proven`: episodes a completed Check the chain left parked. `parkedSince`: Noah's first sighting of
+    /// this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
     static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: Set<String>,
                            parkedSince: Date?, daemonSince: Date?, now: Date) -> Bool {
-        guard let txid = exit.parkedTxid, let packageFee, confirmed < packageFee else { return false }
-        if proven.contains(txid) || exit.parkedAcrossProgress { return true }
+        guard let episode = exit.parkedEpisode, let packageFee, confirmed < packageFee else { return false }
+        if proven.contains(episode) { return true }
         // Only after bark has had a full daemon cycle to fund it, so the label doesn't flash before it tried.
         guard let parkedSince, let daemonSince else { return false }
         return now.timeIntervalSince(max(parkedSince, daemonSince)) >= cycle

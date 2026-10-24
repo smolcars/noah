@@ -541,6 +541,7 @@ final class AppModel {
     }
 
     func appBecameActive() async {
+        await session.appBecameActive()
         guard UIApplication.shared.applicationState == .active else { return }
         foregroundActivation?.revoke()
         let budget = RecurringSubmissionBudget()

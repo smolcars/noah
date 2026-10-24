@@ -476,11 +476,11 @@ extension WalletSession {
                     }
                     let failures = statuses.filter { $0.error != nil }.count
                     // A completed call tried to fund every parked transaction; those still parked had too
-                    // few confirmed funds (Decision 3). Errors mark the check failed: exits may be stale.
-                    let parked = statuses.filter { $0.error == nil }.compactMap {
-                        Self.exitModel(.init(vtxoId: $0.vtxoId, amountSats: 0, state: $0.state, history: nil,
-                                             transactionCount: 0, transactions: [])).parkedTxid
-                    }
+                    // few confirmed funds (Decision 3), in this parking episode only, so the history is
+                    // read again. Errors mark the check failed: exits may be stale.
+                    let tried = Set(statuses.filter { $0.error == nil }.map(\.vtxoId))
+                    let exits = (try? await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)) ?? []
+                    let parked = exits.map(Self.exitModel).filter { tried.contains($0.id) }.compactMap(\.parkedEpisode)
                     await self.recordExitCheck(.init(tip: try? await handles.onchain.tipHeight(), parked: Set(parked),
                                                      failed: failures > 0), walletID: walletID)
                     return OnchainReceipt(

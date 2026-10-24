@@ -48,11 +48,13 @@ actor WalletSession {
         let onchain: OnchainWallet
     }
 
-    /// Since when bark's daemon has been progressing exits (every 60 s) in this session; nil without it.
-    /// The app can't see its cycles.
+    /// Since when bark's daemon has been progressing exits (every 60 s) in this session, restarted when
+    /// the app comes back (it doesn't run while suspended); nil without it. The app can't see its cycles.
     private(set) var daemonSince: Date?
-    /// The app's own last exit progress (Check the chain), per wallet: the tip and the transactions
-    /// still waiting for a fee child after a completed call tried to fund them, or that it failed.
+    func appBecameActive() { daemonSince = daemonSince.map { _ in Date() } }
+    /// The app's own last exit progress (Check the chain), per wallet: the tip and the parking episodes
+    /// (`ExitModel.parkedEpisode`) still waiting for a fee child after a completed call tried to fund
+    /// them, or that it failed.
     struct ExitCheck: Sendable {
         var tip: UInt32?
         var parked: Set<String> = []

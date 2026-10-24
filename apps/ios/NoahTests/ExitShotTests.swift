@@ -170,14 +170,17 @@ struct ExitShotTests {
         overview.packageFees = packageFees
         overview.daemonSince = progressing ? .distantPast : nil
         // A completed Check the chain left these waiting for a fee child.
-        overview.provenParked = [ActivityShotTests.hex("l2"), ActivityShotTests.hex("r3-l2")]
+        overview.provenParked = [episode("l2", "awaiting-cpfp-broadcast"), episode("r3-l2", "awaiting-cpfp-broadcast")]
         overview.childFees = Dictionary(uniqueKeysWithValues: ["c0", "c1", "c2", "c3", "rbf0", "rbf1"].map { (ActivityShotTests.hex($0), $0.hasPrefix("rbf") ? 2_916 : 1_215) })
         overview.received = [ActivityShotTests.hex("claim"): 30_738]
         return overview
     }
 
     /// The "stuck" exit's last transaction was first seen in the mempool three blocks ago.
-    nonisolated static let sightings = ExitSightings(seen: [ExitSightings.key(ActivityShotTests.hex("l1"), "awaiting-confirmation"): .init(tip: tip + 2, at: .distantPast)])
+    nonisolated static let sightings = ExitSightings(seen: [episode("l1", "awaiting-confirmation"): .init(tip: tip + 2, at: .distantPast)])
+
+    /// The fixtures' episodes all began at bark's first record (`ExitModel.episode`).
+    nonisolated static func episode(_ name: String, _ kind: String) -> String { "\(ActivityShotTests.hex(name))|\(kind)|0" }
 
     static func model(_ overview: OnchainOverview, detail: ExitModel? = nil, quote: Bool = true) -> OnchainModel {
         OnchainModel(dependencies: .init(ready: { true }, overview: { overview },

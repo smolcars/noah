@@ -241,7 +241,7 @@ final class OnchainModel {
 
     /// The exit as its screens show it, with the needs-funds inference.
     func progress(_ exit: ExitModel, now: Date = Date()) -> ExitProgress {
-        let parkedSince = exit.parkedTxid.flatMap { sightings.value.seen[ExitSightings.key($0, "awaiting-cpfp-broadcast")]?.at }
+        let parkedSince = exit.parkedEpisode.flatMap { sightings.value.seen[$0]?.at }
         let needsFunds = overview.map {
             ExitFunds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], proven: $0.provenParked,
                                  parkedSince: parkedSince, daemonSince: $0.daemonSince, now: now)
