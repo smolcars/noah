@@ -3,7 +3,6 @@ package com.noahwallet.ui
 import com.noahwallet.ui.WalletModalBottomSheet
 
 import com.noahwallet.localization.tr
-import com.noahwallet.localization.trPlural
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -54,7 +53,7 @@ internal fun TransactionDetail(app: AppModel, row: HistoryTransaction, onRepeat:
         }
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(painterResource(transactionIcon(row)), null, Modifier.size(36.dp), tint = transactionColor(row))
-            Text(if (row.isRenewal) trPlural(summary.status, row.inputVtxos.orEmpty().size.coerceAtLeast(1)) else tr(summary.status),
+            Text(com.noahwallet.ui.activity.statusText(summary.status, row),
                 color = if (summary.tone == com.noahwallet.ui.activity.ActivityRules.Tone.failed) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Unspecified)
             Text(tr(BitcoinAmount.format(row.amount, app.amountUnit, locale)), style = MaterialTheme.typography.headlineLarge)
             Text(tr(row.btcPrice?.let { FiatCurrency.display(row.amount, it, app.preferredCurrency, locale) } ?: "Historical value unavailable"),

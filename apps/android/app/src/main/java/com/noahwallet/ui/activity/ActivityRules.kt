@@ -103,6 +103,8 @@ object ActivityRules {
      * statuses keep today's "Recorded".
      */
     enum class Tone { plain, pending, failed, muted }
+    /** The one status with a plural resource: only a settled renewal counts its coins. */
+    const val renewed = "Renewed {n} coins"
     fun status(row: Row): Pair<String, Tone> {
         val record = row.record; val home = row.home
         return when {
@@ -119,7 +121,7 @@ object ActivityRules {
                 else -> "Sending"
             } to Tone.pending
             record.receiptStatus == "Recorded" -> "Recorded" to Tone.plain
-            record.isRenewal -> "Renewed {n} coins" to Tone.plain
+            record.isRenewal -> renewed to Tone.plain
             record.isInternalTransfer -> "Moved to Ark" to Tone.plain
             record.movementKind == "exit" -> "Exited" to Tone.plain
             home.incoming -> "Received" to Tone.plain
@@ -217,9 +219,10 @@ object ActivityRules {
      */
     fun receipt(row: Row, amount: String, date: String?, txid: String?, t: (String, Array<out Any>) -> String): String {
         val record = row.record
+        val status = status(row).first
         fun line(label: String, value: String) = t(label, emptyArray()) + ": " + value
         return listOfNotNull(
-            t(status(row).first, if (record.isRenewal) arrayOf(record.inputVtxos.orEmpty().size.toString()) else emptyArray()) + " " + amount,
+            t(status, if (status == renewed) arrayOf(record.inputVtxos.orEmpty().size.toString()) else emptyArray()) + " " + amount,
             date?.let { line("Date", it) },
             recipient(record)?.let { line("To", it) },
             line("Via", t(rail(record).label, emptyArray())),

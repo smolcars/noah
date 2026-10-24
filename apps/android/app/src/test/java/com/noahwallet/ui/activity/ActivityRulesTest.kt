@@ -136,6 +136,14 @@ class ActivityRulesTest {
         assertTrue(ActivityRules.receipt(rows(renewal).single(), "−₿45", "Today", null, words).startsWith("Renewed 3 coins −₿45"))
     }
 
+    @Test fun onlyASettledRenewalCountsItsCoins() {
+        // Only "Renewed {n} coins" has a plural resource; a renewal's other lines are plain strings.
+        val renewal = record("r", Date()).copy(movementKind = "refresh", inputVtxos = listOf("a:0", "b:0", "c:0"))
+        val lines = listOf("successful", "pending", "failed", "canceled").map { ActivityRules.status(rows(renewal.copy(movementStatus = it)).single()).first }
+        assertEquals(listOf(ActivityRules.renewed, "Sending", "Failed", "Canceled"), lines)
+        assertTrue(ActivityRules.receipt(rows(renewal.copy(movementStatus = "pending")).single(), "−₿45", "Today", null, words).startsWith("Sending −₿45\n"))
+    }
+
     @Test fun settledLightningFeesComeFromTheBalanceTheyTook() {
         val fixed = "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
         fun fees(record: HistoryTransaction) = rows(record).single().let { ActivityRules.fees(record, it.home) to ActivityRules.total(record, it.home) }

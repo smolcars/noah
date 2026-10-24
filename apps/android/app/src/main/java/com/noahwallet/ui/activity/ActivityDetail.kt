@@ -150,7 +150,7 @@ private fun Header(ui: ActivityUi, row: ActivityRules.Row, wide: Boolean, shared
         Row(Modifier.padding(top = 12.dp).enter(1, wide, shared, elapsed).testTag("activity-detail-status"), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (tone == ActivityRules.Tone.pending) PulseDot(palette.orange)
-            Text(if (record.isRenewal) trPlural(status, record.inputVtxos.orEmpty().size.coerceAtLeast(1)) else tr(status),
+            Text(statusText(status, record),
                 style = ActivityType.status, color = when (tone) {
                     ActivityRules.Tone.failed -> palette.failure; ActivityRules.Tone.muted -> palette.muted; else -> palette.foreground
                 })
@@ -161,6 +161,11 @@ private fun Header(ui: ActivityUi, row: ActivityRules.Row, wide: Boolean, shared
         }
     }
 }
+
+/** A status line's words: a renewal that is pending, failed or canceled says so without counting coins. */
+@Composable
+internal fun statusText(status: String, record: HistoryTransaction) =
+    if (status == ActivityRules.renewed) trPlural(status, record.inputVtxos.orEmpty().size.coerceAtLeast(1)) else tr(status)
 
 /** "$X at the time" for settled rows, today's value for today's and pending rows; none when failed or unpriced. */
 @Composable
@@ -436,7 +441,7 @@ private fun receiptText(ui: ActivityUi, row: ActivityRules.Row): String {
     val resources = androidx.compose.ui.platform.LocalResources.current
     return remember(row, amount, date, resources) {
         ActivityRules.receipt(row, amount, date, ActivityRules.chainTxid(row.record)) { source, arguments ->
-            if (row.record.isRenewal && source == "Renewed {n} coins")
+            if (source == ActivityRules.renewed)
                 com.noahwallet.localization.L10n.plural(context, source, (arguments.firstOrNull() as? String)?.toIntOrNull() ?: 1)
             else com.noahwallet.localization.L10n.text(context, source, *arguments)
         }
