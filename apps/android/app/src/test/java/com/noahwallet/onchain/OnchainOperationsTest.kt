@@ -272,19 +272,18 @@ class OnchainOperationsTest {
         wallet.records["spent"] = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), "spent", 2_500u, 90u, "pubkey",
             VtxoState.Spent, 1u, 500u, true)
         assertTrue(ops.overview(24u).vtxos.none { it.id == "spent" })
-        val coin = checkNotNull(ops.vtxo("spent", 24u))
+        val coin = ops.vtxo("spent", 24u)
         assertEquals("Spent", coin.state); assertEquals(2_500L, coin.amount); assertEquals(90L, coin.expiry)
         // A spent coin is never offered a refresh.
         assertFalse(coin.refreshable)
     } }
 
-    @Test fun aCoinTheWalletHasNoRecordOfIsMissingNotAFailedRead() = runBlocking { fixture { wallet, ops, _, _ ->
-        // bark 0.8's words for it, read from a real wallet.
-        wallet.lookupErrors["gone"] = BarkError("The VTXO with id ${"ab".repeat(32)}:0 cannot be found")
-        assertNull(ops.vtxo("gone", 24u))
-        // Any other error, a database read say, is a failed lookup the screen retries.
-        wallet.lookupErrors["unread"] = BarkError("Error when querying vtxo unread in database")
-        assertTrue(runCatching { ops.vtxo("unread", 24u) }.exceptionOrNull() is BarkError)
+    @Test fun everyFailedCoinLookupIsAFailedReadWhateverBarkSays() = runBlocking { fixture { wallet, ops, _, _ ->
+        // bark-bolt-ffi has no not-found code: neither its "cannot be found" wording nor a database error proves the coin is gone.
+        for (message in listOf("The VTXO with id ${"ab".repeat(32)}:0 cannot be found", "Error when querying vtxo in database")) {
+            wallet.lookupErrors["coin"] = BarkError(message)
+            assertTrue(message, runCatching { ops.vtxo("coin", 24u) }.exceptionOrNull() is BarkError)
+        }
     } }
 
     private suspend fun fixture(body: suspend (Wallet, OnchainOperations, OnchainOperationJournal, File) -> Unit) {

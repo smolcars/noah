@@ -70,7 +70,7 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
         Text(tr("VTXO Details"), style = MaterialTheme.typography.headlineSmall)
         val listed = model.overview?.vtxos?.find { it.id == id }
         // A coin a payment spent isn't in the overview: load it by ID, again after each completed refresh.
-        val stored by produceState<Result<VtxoModel?>?>(null, id, model.revision, listed == null) {
+        val stored by produceState<Result<VtxoModel>?>(null, id, model.revision, listed == null) {
             if (model.overview != null && listed == null) value = model.coin(id)
         }
         val vtxo = listed ?: stored?.getOrNull()
@@ -90,9 +90,9 @@ private fun VtxoDetailScreen(app: AppModel, id: String, back: () -> Unit) {
             if ((vtxo.expired || vtxo.expiring) && vtxo.refreshable) Text(tr("Refresh this VTXO to keep it available."))
             Button({ scope.launch { model.review(OnchainAction.refresh, listOf(id)) } }, enabled = vtxo.refreshable && !model.busy) { Text(tr("Refresh VTXO")) }
         } else if (stored != null) {
-            // The wallet keeps no record of it, or couldn't be read: show what the payment recorded.
+            // Its lookup failed, which proves nothing: what the payment recorded, and no coin actions until a read succeeds.
             DetailValue("VTXO ID", id, true)
-            if (stored?.isFailure == true) Text(tr("Couldn't read wallet status. Pull to refresh."))
+            Text(tr("Couldn't read wallet status. Pull to refresh."))
         } else if (!model.loading && model.overview == null) Text(tr("VTXO is no longer in this view. Check its operation receipt or refresh."))
     }
 }

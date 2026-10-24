@@ -17,14 +17,14 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val discard: suspend (OnchainQuote) -> Unit = {},
         /** Submits Home's Renew, checking under the wallet's locks that every VTXO is still due. */
         val executeRenewal: suspend (OnchainQuote) -> String = { fail(OnchainFailure.unavailable) },
-        /** One coin by ID from the wallet, spent ones included (Activity opens a payment's coins); null when it has no record. */
-        val coin: suspend (String) -> VtxoModel? = { fail(OnchainFailure.unavailable) },
+        /** One coin by ID from the wallet, spent ones included (Activity opens a payment's coins). */
+        val coin: suspend (String) -> VtxoModel = { fail(OnchainFailure.unavailable) },
     )
     /**
-     * A coin the overview doesn't list, such as one a payment spent: the coin, null when the wallet has no record of
-     * it, or the failed lookup, which a refresh retries.
+     * A coin the overview doesn't list, such as one a payment spent, or the failed lookup. bark has no not-found code,
+     * so a failure is unknown, never "no record": a refresh retries it.
      */
-    suspend fun coin(id: String): Result<VtxoModel?> = try { Result.success(dependencies.coin(id)) }
+    suspend fun coin(id: String): Result<VtxoModel> = try { Result.success(dependencies.coin(id)) }
         catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { Result.failure(failure) }
     var overview by mutableStateOf<OnchainOverview?>(null); private set
     /** Counts completed overview reads (pull to refresh, the periodic read), so a coin lookup can retry after each. */
