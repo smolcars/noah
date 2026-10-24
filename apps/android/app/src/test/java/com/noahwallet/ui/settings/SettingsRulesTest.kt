@@ -56,6 +56,16 @@ class SettingsRulesTest {
         assertEquals(SettingsRules.Battery.unrestricted, SettingsRules.battery(optimizationEnabled = false))
     }
 
+    @Test fun deleteChecklistAndTypedDelete() {
+        val checklist = SettingsRules.deleteChecklist(152_742uL, phraseSaved = false, lastBackupAt = 1_700_000_000_000.0, backupStatus = "failed")
+        assertEquals(SettingsRules.DeleteChecklist(152_742, false, 1_700_000_000_000, true), checklist)
+        assertEquals(SettingsRules.DeleteChecklist(null, true, null, false), SettingsRules.deleteChecklist(null, true, null, "success"))
+        assertTrue(SettingsRules.deleteConfirmed("delete"))
+        assertTrue(SettingsRules.deleteConfirmed("  DELETE \n"))
+        assertFalse(SettingsRules.deleteConfirmed("delet"))
+        assertFalse(SettingsRules.deleteConfirmed("delete wallet"))
+    }
+
     @Test fun everyDeepLinkLandsOnItsPageWithSettingsBeneath() {
         val settings = SettingsDestination.Settings
         val links: Map<String, Pair<NavKey, List<NavKey>>> = mapOf(

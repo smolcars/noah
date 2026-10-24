@@ -7,6 +7,12 @@ import android.content.Context
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
+import com.noahwallet.ui.readableWidth
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -97,7 +103,8 @@ internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory
 @Composable
 internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
     com.noahwallet.ui.onboarding.OnboardingSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), padded = false) {
-        com.noahwallet.ui.settings.SettingsColumn {
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().readableWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
             TextButton(close) { Text(tr("Close")) }
             Text(tr("Pending Rounds"), style = MaterialTheme.typography.headlineMedium)
             rounds.forEach { round ->

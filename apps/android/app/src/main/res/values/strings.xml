@@ -412,6 +412,7 @@
   <string name="gt_eb1bbaf775e6c7ab">"Delete encrypted backup?"</string>
   <string name="gt_f335ba3fdc3a04b5">"Delete this backup?"</string>
   <string name="gt_65684f308cb12bf2">"Delete wallet"</string>
+  <string name="gt_21ed2f9e00a509be">"Deleting"</string>
   <string name="gt_472b52f016214da3">"Deliver with"</string>
   <string name="gt_906115657390f367">"Delivered"</string>
   <string name="gt_a0760d3dd093f263">"Delivering"</string>
@@ -658,6 +659,7 @@
   <string name="gt_14f23687c9fe3353">"In about 20 minutes"</string>
   <string name="gt_c1f88e9d6c4145cf">"In progress"</string>
   <string name="gt_f868160d0a466230">"In seconds"</string>
+  <string name="gt_9fff0400bb9e73d5">"In this wallet"</string>
   <plurals name="gt_da31d49e931af4ab">
     <item quantity="one">"In %1$s VTXO"</item>
     <item quantity="other">"In %1$s VTXOs"</item>
@@ -722,6 +724,7 @@
   <string name="gt_eb970eb0951c6cde">"Last"</string>
   <string name="gt_2d90a7570f22b14c">"Last Backup"</string>
   <string name="gt_d947f5e87db8d3fd">"Last attempt: %1$s (%2$s)"</string>
+  <string name="gt_8462b632f3ab7913">"Last backup"</string>
   <string name="gt_fb6ee42c1c065f89">"Last backup %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"Last backup %1$s"</string>
   <string name="gt_1a196f3801a01458">"Last backup %1$s"</string>
@@ -1449,6 +1452,7 @@
   <string name="gt_44f3e818daadd169">"This place provided an invalid link."</string>
   <string name="gt_6d745107d2d026a2">"This recurring payment was stopped before submission."</string>
   <string name="gt_5d5cfeffe0f4ad97">"This refreshes the selected VTXOs in a delegated Ark round."</string>
+  <string name="gt_01d7d06401b5eaad">"This removes the wallet and its recovery phrase from this phone. It can’t be undone."</string>
   <string name="gt_e3475188c78e15ad">"This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."</string>
   <string name="gt_aec6e79ee5778d46">"This review expired. Review the payment again."</string>
   <string name="gt_7d8163bb0233e286">"This saved payment outcome could not be verified. It may have been sent. Check history before sending again."</string>

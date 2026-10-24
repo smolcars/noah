@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -30,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -44,6 +46,8 @@ import com.noahwallet.localization.tr
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.storage.SettingsPreferences
 import com.noahwallet.ui.AppModel
+import com.noahwallet.ui.activity.DetailRow
+import com.noahwallet.ui.activity.ValueKind
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.home.HomeIcons
 import com.noahwallet.ui.home.HomeType
@@ -200,7 +204,7 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
         "unit" -> UnitSheet(model) { sheet = null }
         "currency" -> CurrencySheet(model) { sheet = null }
         "language" -> LanguageSheet(model) { sheet = null }
-        "delete" -> TodaysDeleteDialog(model) { sheet = null }
+        "delete" -> DeleteWalletSheet(model, live, onRecovery = { sheet = null; open(SettingsDestination.Seed) }) { sheet = null }
     }
 }
 
@@ -296,5 +300,53 @@ private fun LanguageSheet(model: AppModel, dismiss: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Delete wallet: what you'd need to restore (balance, phrase, last backup), then typed "delete". The sheet locks while
+ * deleting; success returns to onboarding as today.
+ */
+@Composable
+internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, onRecovery: () -> Unit, dismiss: () -> Unit) {
+    val palette = LocalPalette.current
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
+    val toasts = LocalSettingsToasts.current
+    var typed by rememberSaveable { mutableStateOf("") }
+    var deleting by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val checklist = SettingsRules.deleteChecklist(model.summary?.balance?.totalSats, model.recoveryPhraseBackedUp,
+        live.backup.lastBackupAt, live.backup.lastBackupStatus)
+    val confirmed = SettingsRules.deleteConfirmed(typed)
+    val haptics = rememberHaptics()
+    LaunchedEffect(confirmed) { if (confirmed) haptics.selection() }
+    SettingsSheet({ if (!deleting) dismiss() }, tr("Delete wallet"),
+        tr("This removes the wallet and its recovery phrase from this phone. It can’t be undone."), locked = deleting,
+        modifier = Modifier.testTag("delete-wallet-sheet")) { close ->
+        Column(Modifier.padding(top = 12.dp)) {
+            DetailRow(tr("In this wallet"), checklist.balance?.let { if (model.hidden) "₿••••" else BitcoinAmount.format(it, model.amountUnit, locale) } ?: "—",
+                ValueKind.number, toasts = toasts)
+            DetailRow(tr("Recovery phrase"), if (checklist.phraseSaved) tr("Saved") else tr("Not saved"), toasts = toasts, failed = !checklist.phraseSaved,
+                onClick = if (checklist.phraseSaved || deleting) null else onRecovery)
+            DetailRow(tr("Last backup"), when {
+                checklist.backupFailed -> tr("Failed")
+                checklist.lastBackupAt != null -> java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, locale)
+                    .format(java.util.Date(checklist.lastBackupAt))
+                else -> tr("Never")
+            }, toasts = toasts, failed = checklist.backupFailed, last = true)
+        }
+        SettingsField(typed, { typed = it; error = null }, tr("Type delete to confirm"), Modifier.testTag("delete-wallet-input"), enabled = !deleting,
+            keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
+        error?.let { Text(it, Modifier.padding(top = 10.dp), style = HomeType.line, color = palette.failure) }
+        SheetActions(tr("Cancel"), if (deleting) tr("Deleting") else tr("Delete"), onCancel = close, enabled = confirmed && (!model.busy || deleting),
+            danger = true, loading = deleting, confirmTag = "delete-wallet-confirm", onConfirm = {
+                deleting = true
+                model.action("Couldn't delete wallet. Restart Noah if a restore is pending, then try again.", inline = { message ->
+                    if (message != null) { error = message; deleting = false }
+                }) {
+                    model.deleteWallet()
+                    deleting = false
+                }
+            })
     }
 }

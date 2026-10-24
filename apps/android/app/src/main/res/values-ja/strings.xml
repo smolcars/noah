@@ -412,6 +412,7 @@
   <string name="gt_eb1bbaf775e6c7ab">"暗号化されたバックアップを削除しますか？"</string>
   <string name="gt_f335ba3fdc3a04b5">"Delete this backup?"</string>
   <string name="gt_65684f308cb12bf2">"Delete wallet"</string>
+  <string name="gt_21ed2f9e00a509be">"Deleting"</string>
   <string name="gt_472b52f016214da3">"Deliver with"</string>
   <string name="gt_906115657390f367">"届きました"</string>
   <string name="gt_a0760d3dd093f263">"お届け中"</string>
@@ -658,6 +659,7 @@
   <string name="gt_14f23687c9fe3353">"約20分後"</string>
   <string name="gt_c1f88e9d6c4145cf">"In progress"</string>
   <string name="gt_f868160d0a466230">"数秒で"</string>
+  <string name="gt_9fff0400bb9e73d5">"In this wallet"</string>
   <plurals name="gt_da31d49e931af4ab">
     <item quantity="one">"In %1$s VTXO"</item>
     <item quantity="other">"In %1$s VTXOs"</item>
@@ -722,6 +724,7 @@
   <string name="gt_eb970eb0951c6cde">"Last"</string>
   <string name="gt_2d90a7570f22b14c">"最終バックアップ"</string>
   <string name="gt_d947f5e87db8d3fd">"最後に支払いを試みた日時：%1$s（%2$s）"</string>
+  <string name="gt_8462b632f3ab7913">"Last backup"</string>
   <string name="gt_fb6ee42c1c065f89">"Last backup %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"前回のバックアップ %1$s"</string>
   <string name="gt_1a196f3801a01458">"前回のバックアップ：%1$s"</string>
@@ -1449,6 +1452,7 @@
   <string name="gt_44f3e818daadd169">"この場所に登録されているリンクは無効です。"</string>
   <string name="gt_6d745107d2d026a2">"この定期支払いは送信前に停止されました。"</string>
   <string name="gt_5d5cfeffe0f4ad97">"委任されたArkラウンドで選択したVTXOを更新します。"</string>
+  <string name="gt_01d7d06401b5eaad">"This removes the wallet and its recovery phrase from this phone. It can’t be undone."</string>
   <string name="gt_e3475188c78e15ad">"この端末からウォレットと復元フレーズを削除します。復元フレーズを保存してあることを確認してください。確認のため delete と入力してください。"</string>
   <string name="gt_aec6e79ee5778d46">"確認内容の有効期限が切れました。支払い内容を再確認してください。"</string>
   <string name="gt_7d8163bb0233e286">"保存されたこの支払いの結果を確認できませんでした。送金済みの可能性があります。再送する前に履歴を確認してください。"</string>

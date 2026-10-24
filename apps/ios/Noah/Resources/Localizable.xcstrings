@@ -14749,6 +14749,42 @@
         }
       }
     },
+    "Deleting": {
+      "comment": "GT gt_21ed2f9e00a509be; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting"
+          }
+        }
+      }
+    },
     "Deliver with": {
       "comment": "GT gt_472b52f016214da3; arguments: none",
       "extractionState": "manual",
@@ -23509,6 +23545,42 @@
         }
       }
     },
+    "In this wallet": {
+      "comment": "GT gt_9fff0400bb9e73d5; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In this wallet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In this wallet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In this wallet"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In this wallet"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In this wallet"
+          }
+        }
+      }
+    },
     "In {n} VTXOs": {
       "comment": "GT gt_da31d49e931af4ab; arguments: n",
       "extractionState": "manual",
@@ -25761,6 +25833,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Senaste försöket: %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "Last backup": {
+      "comment": "GT gt_8462b632f3ab7913; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup"
           }
         }
       }
@@ -51885,6 +51993,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "De valda VTXO:erna förnyas i en delegerad Ark-omgång."
+          }
+        }
+      }
+    },
+    "This removes the wallet and its recovery phrase from this phone. It can’t be undone.": {
+      "comment": "GT gt_01d7d06401b5eaad; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the wallet and its recovery phrase from this phone. It can’t be undone."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the wallet and its recovery phrase from this phone. It can’t be undone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the wallet and its recovery phrase from this phone. It can’t be undone."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the wallet and its recovery phrase from this phone. It can’t be undone."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the wallet and its recovery phrase from this phone. It can’t be undone."
           }
         }
       }

@@ -38,6 +38,15 @@ internal object SettingsRules {
     /** Notifications → Battery: Android's battery optimisation for Noah, as the row's value. */
     fun battery(optimizationEnabled: Boolean) = if (optimizationEnabled) Battery.optimized else Battery.unrestricted
 
+    /** The delete sheet's checklist: what you'd need to restore. */
+    data class DeleteChecklist(val balance: Long?, val phraseSaved: Boolean, val lastBackupAt: Long?, val backupFailed: Boolean)
+
+    fun deleteChecklist(totalSats: ULong?, phraseSaved: Boolean, lastBackupAt: Double?, backupStatus: String) =
+        DeleteChecklist(totalSats?.toLong(), phraseSaved, lastBackupAt?.toLong(), backupStatus == "failed")
+
+    /** Typed "delete": trimmed, any case. */
+    fun deleteConfirmed(typed: String) = typed.trim().equals("delete", ignoreCase = true)
+
     /** The version line unlocks debug after five taps, each within two seconds of the last. */
     class DebugTaps(private val window: Long = 2_000, private val needed: Int = 5) {
         private var count = 0
