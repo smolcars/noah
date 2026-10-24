@@ -182,7 +182,7 @@ struct TranslationsTests {
             #expect(content.title == expected.title && content.body == expected.body)
             #expect(content.sound != nil)
             #expect(content.userInfo["notification_type"] as? String == "lightning_payment_received")
-            #expect(!RecurringNotificationRoute.opensSchedules(content.userInfo))
+            #expect(!SettingsRoute.opensSchedules(content.userInfo))
         }
     }
 }

@@ -45,7 +45,7 @@ struct HomeView: View {
     @State private var alert: String?
     @State private var emailFlowOpened = false
     @State private var settingsToast: HomeToast?
-    @State private var recurringRoute = RecurringNotificationRoute.shared
+    @State private var settingsRoute = SettingsRoute.shared
     @Namespace private var settingsZoom
     @State private var scrollY: CGFloat = 0
     @State private var scrollMemory = HomeScrollMemory()
@@ -96,11 +96,11 @@ struct HomeView: View {
         .preference(key: ActivityHidesTabBar.self, value: !window.wide && path.contains(where: \.isSettings))
         .environment(\.settings, settingsNavigator)
         .overlay(alignment: .top) { settingsToastLayer }
-        // A recurring payment notification opens Recurring payments with Settings beneath.
-        .onChange(of: recurringRoute.presented && isActive, initial: true) { _, presented in
-            guard presented else { return }
-            recurringRoute.presented = false
-            path = SettingsPath.deepLink(.recurring)
+        // Activity's links and a recurring payment notification open their page with Settings beneath.
+        .onChange(of: settingsRoute.page != nil && isActive, initial: true) { _, ready in
+            guard ready, let next = settingsRoute.take() else { return }
+            sheet = nil
+            path = next
         }
         .task(id: settingsToast?.id) {
             guard let current = settingsToast else { return }

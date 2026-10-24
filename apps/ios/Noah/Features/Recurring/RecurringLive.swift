@@ -216,13 +216,19 @@ enum RecurringFeePolicy {
     }
 }
 
-/// Keeps a cold-launch tap pending until the wallet's navigation is available.
-@MainActor @Observable final class RecurringNotificationRoute {
-    static let shared = RecurringNotificationRoute()
-    var presented = false
+/// A page Home opens with Settings beneath: Activity's links, or a recurring notification's tap (kept
+/// pending through a cold launch until the wallet's navigation is available).
+@MainActor @Observable final class SettingsRoute {
+    static let shared = SettingsRoute()
+    var page: SettingsPage?
 
     func receive(_ userInfo: [AnyHashable: Any]) {
-        if Self.opensSchedules(userInfo) { presented = true }
+        if Self.opensSchedules(userInfo) { page = .recurring }
+    }
+    /// Home's path for the pending page, once.
+    func take() -> [HomeView.Route]? {
+        defer { page = nil }
+        return page.map { SettingsPath.deepLink($0) }
     }
     nonisolated static func opensSchedules(_ info: [AnyHashable: Any]) -> Bool {
         if let type = info["notification_type"] as? String,

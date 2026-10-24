@@ -74,8 +74,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        guard RecurringNotificationRoute.opensSchedules(response.notification.request.content.userInfo) else { return }
-        await MainActor.run { RecurringNotificationRoute.shared.presented = true }
+        guard SettingsRoute.opensSchedules(response.notification.request.content.userInfo) else { return }
+        await MainActor.run { SettingsRoute.shared.page = .recurring }
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {

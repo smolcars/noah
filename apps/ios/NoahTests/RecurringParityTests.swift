@@ -98,22 +98,22 @@ import Testing
 
     @Test(arguments: ["recurring_payment_reminder", "recurring_payment_result", "recurring_payment_due"])
     func notificationTapRetainsRouteUntilWalletNavigationIsReady(type: String) throws {
-        let route = RecurringNotificationRoute()
+        let route = SettingsRoute()
         let payload = ["notification_type": type]
         let text = String(decoding: try JSONSerialization.data(withJSONObject: payload), as: UTF8.self)
         let variants: [[AnyHashable: Any]] = [payload, ["body": text], ["body": payload],
             ["dataString": text], ["data": payload], ["data": ["body": text]],
             ["UIApplicationLaunchOptionsRemoteNotificationKey": ["body": text]]]
         for variant in variants {
-            route.presented = false
+            route.page = nil
             route.receive(variant)
-            #expect(route.presented)
+            #expect(route.page == .recurring)
             route.receive(["notification_type": "heartbeat"])
-            #expect(route.presented) // An unrelated callback cannot discard a pending tap.
+            #expect(route.page == .recurring) // An unrelated callback cannot discard a pending tap.
         }
-        route.presented = false
+        route.page = nil
         route.receive(["body": "malformed"])
         route.receive(["notification_type": "maintenance"])
-        #expect(!route.presented)
+        #expect(route.page == nil)
     }
 }

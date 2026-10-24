@@ -4,14 +4,6 @@ import SwiftUI
 /// everything today's technical section shows, and Pay again. Activity pushes it on phones and
 /// shows it in the trailing pane on wide windows; Home opens it as a sheet.
 struct TransactionDetailView: View {
-    /// Links out of the detail, resolved here so Home's sheet and both Activity stacks work alike.
-    enum Link: Hashable {
-        /// A coin and the Details section it was listed in.
-        case coin(String, role: String)
-        case exits
-        case recurring(String)
-    }
-
     @Environment(\.locale) private var locale
     @Environment(AppModel.self) private var app
     @Environment(HistoryModel.self) private var history
@@ -85,7 +77,6 @@ struct TransactionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .modifier(DetailChrome(wide: wide, bar: AnyView(paneBar)) { toolbar })
         .tint(NoahTokens.Colors.foreground)
-        .navigationDestination(for: Link.self, destination: destination)
         // Each completed history read re-reads the block row's chain status, as wallet events arrive.
         .task(id: "\(transaction.id):\(history.revision)") { await load() }
         // Wide panes reuse this view for the next selection: nothing of the last payment carries over.
@@ -187,9 +178,9 @@ struct TransactionDetailView: View {
         if let entered = enteredAs { line("Entered as", hidden ? "••••" : entered) }
         if let note = detail.note { line("Note", note, wraps: true) }
         if let recurring = transaction.recurring {
-            link(.recurring(recurring.scheduleID), "Repeats", L10n.text(recurring.interval.description, locale: language))
+            link(.schedule(recurring.scheduleID), "Repeats", L10n.text(recurring.interval.description, locale: language))
         }
-        if transaction.movementKind == "exit" { link(.exits, "Progress", L10n.text("Exit details", locale: language)) }
+        if transaction.movementKind == "exit" { link(.exit, "Progress", L10n.text("Exit details", locale: language)) }
         if let proof = detail.proof {
             line("Proof of payment", proof, mono: true, copy: proof, id: "transaction-detail-preimage")
         }
@@ -317,7 +308,7 @@ struct TransactionDetailView: View {
         if let ids, !ids.isEmpty {
             section(title)
             ForEach(Array(ids.enumerated()), id: \.offset) { index, id in
-                NavigationLink(value: Link.coin(id, role: title)) {
+                Button { SettingsRoute.shared.page = .vtxo(id) } label: {
                     DetailLine(label: L10n.text("Coin {n}", index + 1, locale: language), value: id, compact: true, mono: true, chevron: true)
                 }
                 .buttonStyle(.plain)
@@ -348,8 +339,9 @@ struct TransactionDetailView: View {
                    wraps: wraps, copied: copy != nil && copied == label, onCopy: copy.map { value in { self.copy(value, label) } })
     }
 
-    private func link(_ link: Link, _ label: String, _ value: String) -> some View {
-        NavigationLink(value: link) {
+    /// Home opens the page with Settings beneath, from Home's sheet or Activity alike.
+    private func link(_ page: SettingsPage, _ label: String, _ value: String) -> some View {
+        Button { SettingsRoute.shared.page = page } label: {
             DetailLine(label: L10n.text(label, locale: language), value: value, chevron: true)
         }
         .buttonStyle(.plain)
@@ -422,14 +414,6 @@ struct TransactionDetailView: View {
         .padding(.top, 8)
         .animation(NoahTokens.Motion.travel(reduceMotion), value: toast)
         .allowsHitTesting(false)
-    }
-
-    @ViewBuilder private func destination(_ link: Link) -> some View {
-        switch link {
-        case .coin(let id, _): SettingsHost(page: .vtxo(id))
-        case .exits: UnilateralExitView()
-        case .recurring(let id): SettingsHost(page: .schedule(id))
-        }
     }
 
     // MARK: Actions

@@ -127,7 +127,7 @@ struct WalletTabs: View {
     @State private var send: SendModel
     @State private var scanBlocked = false
     @State private var selection: Tab
-    @State private var recurringRoute = RecurringNotificationRoute.shared
+    @State private var settingsRoute = SettingsRoute.shared
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
     init(history: HistoryModel? = nil, home: HomeModel? = nil, send: SendModel? = nil, receive: ReceiveModel? = nil,
@@ -181,8 +181,8 @@ struct WalletTabs: View {
         .environment(tracker)
         .environment(settingsSummary)
         .environment(\.scanPayment, scanned)
-        // A recurring payment notification: Home opens Recurring payments with Settings beneath.
-        .onChange(of: recurringRoute.presented, initial: true) { _, presented in if presented { selection = .home } }
+        // Activity's links and a recurring payment notification: Home opens the page with Settings beneath.
+        .onChange(of: settingsRoute.page != nil, initial: true) { _, pending in if pending { selection = .home } }
         .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {
             guard app.summary != nil else { return }
             await history.observe(currency: app.preferredCurrency)

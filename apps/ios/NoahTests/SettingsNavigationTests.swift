@@ -15,6 +15,16 @@ struct SettingsNavigationTests {
         #expect(SettingsPath.deepLink(page, from: [.settings, .page(.vtxos), .page(.vtxo("a"))]) == [.settings, .page(page)])
     }
 
+    /// Activity's VTXO, schedule and exit links switch to Home, which opens the page with Settings beneath.
+    @MainActor @Test(arguments: [SettingsPage.vtxo("c:0"), .schedule("s1"), .exit])
+    func activityLinksLandOnHomeWithSettingsBeneath(page: SettingsPage) {
+        let route = SettingsRoute()
+        route.page = page
+        #expect(route.take() == [.settings, .page(page)])
+        #expect(route.page == nil)
+        #expect(route.take() == nil) // Opened once: Home coming back doesn't open it again.
+    }
+
     @Test func phonesPushRowsAndWideWindowsReplaceTheTrailingPage() {
         let open: [Route] = [.settings, .page(.vtxos), .page(.vtxo("a"))]
         #expect(SettingsPath.select(.backup, in: [.settings], wide: false) == [.settings, .page(.backup)])
