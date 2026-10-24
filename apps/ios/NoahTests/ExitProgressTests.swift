@@ -259,3 +259,48 @@ struct ExitHoldTests {
         #expect(await count.value == 1)
     }
 }
+
+/// Decision 8: claiming to this phone's on-chain wallet puts the claimed output in auto-board's
+/// handled ledger, so auto-board never offers it; claims to another wallet don't touch the ledger.
+struct ExitClaimLedgerTests {
+    actor Marks {
+        var txids: [String] = []
+        func add(_ txid: String) { txids.append(txid) }
+    }
+
+    @Test func aClaimToThisPhoneMarksItsOutputOnceSent() async throws {
+        for mine in [true, false] {
+            let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: file) }
+            let wallet = ExitClaimExecutionTests.Wallet()
+            if !mine { await wallet.change("own-external") }
+            let marks = Marks()
+            var access = wallet.access()
+            access.claimedToPhone = { await marks.add($0) }
+            let destination = mine ? ExitClaimExecutionTests.ownAddress : ExitClaimExecutionTests.externalAddress
+            let reviewed = try await WalletSession.claimQuote(ids: ["a"], destination: destination, access: access)
+            _ = try await WalletSession.executeClaim(reviewed, journal: OnchainOperationJournal(file: file), access: access)
+            #expect(await marks.txids == (mine ? ["claim-tx"] : []))
+        }
+    }
+
+    @MainActor @Test func claimedOutputsAreNeverOfferedAndTheRestIsUnchanged() async throws {
+        var disk: String?
+        var store = AutoBoardFunding()
+        store.read = { disk }; store.write = { disk = $0 }
+        try AutoBoardFunding.markClaimed(["claim:0"], walletID: "wallet", store: store)
+        let claimed = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["claim:0"])
+        #expect(try !store.hasUnhandled(claimed))
+        // Auto-board never offers them: it doesn't even ask for a quote.
+        let review = AutoBoardReview(store: store)
+        var quoted = false
+        #expect(try await review.prepare(allowed: { true }, funding: { claimed }, quote: { quoted = true; return nil }, discard: { _ in }) == nil)
+        #expect(!quoted)
+        // A real deposit beside it still counts, as before.
+        #expect(try store.hasUnhandled(.init(walletID: "wallet", outpoints: ["claim:0", "deposit:0"])))
+        // Nothing to mark writes nothing.
+        let before = disk
+        try AutoBoardFunding.markClaimed([], walletID: "wallet", store: store)
+        #expect(disk == before)
+    }
+}

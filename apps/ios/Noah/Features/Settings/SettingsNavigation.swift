@@ -7,8 +7,8 @@ enum SettingsPage: Hashable {
     case backup, recovery
     case vtxos, vtxo(String), onchain
     case recurring, schedule(String), editor(String?)
-    /// Emergency exit: the warning, then Choose, Review, an exit's progress and the list.
-    case exit, exitChoose, exitReview([String]), exitProgress(String), exitList
+    /// Emergency exit: the warning, then Choose, Review, an exit's progress, Claim and the list.
+    case exit, exitChoose, exitReview([String]), exitProgress(String), exitClaim, exitList
     case notifications, advanced, arkServer, esplora, logs, debug
     case feedback, about
 
@@ -18,7 +18,7 @@ enum SettingsPage: Hashable {
         case .lightningAddress, .email: .profile
         case .vtxo: .vtxos
         case .schedule, .editor: .recurring
-        case .exitChoose, .exitReview, .exitProgress, .exitList: .exit
+        case .exitChoose, .exitReview, .exitProgress, .exitClaim, .exitList: .exit
         case .arkServer, .esplora, .logs, .debug: .advanced
         default: self
         }
@@ -95,6 +95,8 @@ struct SettingsFixture {
     var sheet: SettingsRootSheet?
     /// Emergency exit's Choose opens in Choose with these VTXOs selected.
     var exitSelection: [String]?
+    /// Emergency exit's Claim opens to this phone ("phone") or with this address typed.
+    var exitClaimTo: String?
 }
 
 extension EnvironmentValues {

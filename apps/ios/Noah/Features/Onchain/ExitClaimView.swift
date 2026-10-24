@@ -1,0 +1,180 @@
+import SwiftUI
+
+/// Claim (exit.md, Decision 8): every exit that's ready, in one transaction. "To" defaults to
+/// another wallet, an on-chain address for this network only, checked by today's parser; Claim stays
+/// off until it's valid. "This phone's on-chain wallet" claims to a fresh address of this wallet,
+/// and those outputs join auto-board's handled ledger, so Noah never moves them back to Ark.
+struct ExitClaimView: View {
+    @State private var model: OnchainModel
+    @State private var toPhone = false
+    @State private var typed = ""
+    @State private var scanning = false
+    @State private var expired = false
+    @State private var haptics = OnboardingHaptics()
+    @Environment(AppModel.self) private var app
+    @Environment(\.settings) private var settings
+    @Environment(\.locale) private var locale
+    @Environment(\.settingsFixture) private var fixture
+
+    init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
+
+    private var language: String { locale.identifier }
+    private var ready: [ExitModel] { (model.overview?.exits ?? []).filter(\.claimable) }
+    private var address: String { typed.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var valid: Bool { ExitRules.acceptsClaimAddress(address, network: AppVariant.current.rawValue) }
+    /// Where this claim goes now: the typed address once it's valid, or this wallet's fresh address.
+    private var destination: String? {
+        toPhone ? (model.claimDestination.isEmpty ? nil : model.claimDestination) : valid ? address : nil
+    }
+    private var quote: OnchainQuote? {
+        guard let quote = model.quote, quote.action == .claim, quote.destination == destination, destination != nil else { return nil }
+        return quote
+    }
+
+    var body: some View {
+        let money = ExitMoney(app: app, locale: locale)
+        let amount = ready.reduce(0) { $0 + $1.amount }
+        let receive = quote.flatMap { $0.fee == nil ? nil : $0.net }
+        ExitPanes {
+            ExitHeadline(amount: L10n.text("Claim {amount}", money(amount), locale: language),
+                         line: ready.compactMap(\.details.claimable_since?.height).max().map {
+                             L10n.text("Unlocked at block {height}", $0.formatted(.number.locale(locale)), locale: language)
+                         })
+        } trailing: {
+            SettingsSection(title: "To")
+            option(L10n.text("Another wallet", locale: language), selected: !toPhone, id: "exit-claim-other") { choose(phone: false) }
+            if !toPhone {
+                field
+                ExitWarning(text: L10n.text("Check the address. This can’t be undone.", locale: language), symbol: "exclamationmark.shield", muted: !(!address.isEmpty && !valid))
+                if !address.isEmpty && !valid {
+                    SettingsFine(text: L10n.text("Enter an on-chain Bitcoin address for this network.", locale: language), failure: true)
+                }
+            }
+            option(L10n.text("This phone’s on-chain wallet", locale: language), sub: L10n.text("Noah won’t move these back to Ark.", locale: language),
+                   selected: toPhone, id: "exit-claim-phone") { choose(phone: true) }
+                .padding(.top, toPhone ? 0 : 8)
+            VStack(spacing: 0) {
+                SettingsDetailRow(label: L10n.text("Claim fee", locale: language),
+                                  value: quote.map { $0.fee.map(money.about) ?? L10n.text("Unknown", locale: language) } ?? "—", numeric: true)
+                SettingsDetailRow(label: L10n.text("You get", locale: language), value: receive.map(money.about) ?? "—", numeric: true, hairline: false)
+            }
+            .padding(.top, 18)
+            if quote?.feesUnknown == true {
+                ExitWarning(text: L10n.text("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.", locale: language))
+            } else if let quote, let fee = quote.fee, let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: fee, claimOnly: true) {
+                ExitWarning(text: L10n.text(warning, locale: language))
+            }
+            SettingsFine(text: L10n.text("Every exit that’s ready goes in this one transaction. Earlier network fees aren’t taken again.", locale: language))
+            if expired { SettingsFine(text: L10n.text("The estimate expired, so Noah fetched a new one. Check it and hold again.", locale: language)) }
+            OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
+        } footer: {
+            SendHoldButton(amount: money(receive ?? amount), enabled: quote != nil && !model.busy && !ready.isEmpty,
+                           title: receive.map { LocalizedStringKey(L10n.text("Hold to claim {amount}", money($0), locale: language)) } ?? "Hold to claim",
+                           action: "Claim {amount}", confirm: "Claim", id: "exit-hold-claim") { claim() }
+                .id(quote?.id)
+        }
+        .settingsChrome(nil)
+        .onboardingHaptics(haptics)
+        .modifier(OnchainScreen(model: model, presentsReview: false))
+        .sheet(isPresented: $scanning) {
+            SendScanner { value in
+                scanning = false
+                typed = Self.address(fromScan: value)
+            }
+        }
+        .task {
+            switch fixture?.exitClaimTo {
+            case "phone": choose(phone: true)
+            case let address?: typed = address
+            default: break
+            }
+        }
+        // Today's claim quote for the current destination, once it can be priced.
+        .task(id: [destination ?? "", ready.map(\.id).joined(separator: ",")]) {
+            guard let destination, !ready.isEmpty else { return }
+            do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+            while model.loading { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
+            await model.review(.claim, ids: ready.map(\.id), destination: destination)
+        }
+    }
+
+    private var field: some View {
+        HStack(spacing: 8) {
+            TextField(text: $typed, prompt: Text(verbatim: L10n.text("Bitcoin address", locale: language)).foregroundStyle(NoahTokens.Colors.muted)) {
+                Text(verbatim: L10n.text("Bitcoin address", locale: language))
+            }
+            .font(SettingsText.mono)
+            .tint(NoahTokens.Colors.orange)
+            .textInputAutocapitalization(.never).autocorrectionDisabled()
+            .submitLabel(.done)
+            .accessibilityIdentifier("exit-claim-address")
+            PasteButton(payloadType: String.self) { values in
+                Task { @MainActor in typed = values.first.map(Self.address(fromScan:)) ?? typed }
+            }
+            .labelStyle(.iconOnly).buttonBorderShape(.capsule).tint(NoahTokens.Colors.foreground)
+            Button { scanning = true } label: { ActivityCircleIcon(systemName: "qrcode.viewfinder") }
+                .buttonStyle(HomePressStyle())
+                .accessibilityLabel(Text(L10n.text("Scan", locale: language)))
+                .accessibilityIdentifier("exit-claim-scan")
+        }
+        .padding(.leading, 16).padding(.trailing, 6)
+        .frame(minHeight: 54)
+        .glassCompat(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(NoahTokens.Colors.failure, lineWidth: 1.5)
+                .opacity(!address.isEmpty && !valid ? 1 : 0)
+        }
+        .padding(.top, 6).padding(.bottom, 4)
+        .onChange(of: typed) { _, _ in if !toPhone { model.editClaimDestination(address) } }
+    }
+
+    private func option(_ title: String, sub: String? = nil, selected: Bool, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            SettingsRowLabel(title: title, sub: sub, hairline: false) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 22)).foregroundStyle(selected ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
+            }
+        }
+        .buttonStyle(SettingsRowPressStyle())
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier(id)
+    }
+
+    private func choose(phone: Bool) {
+        guard phone != toPhone || phone && model.claimDestination.isEmpty else { return }
+        haptics.play(.selection)
+        toPhone = phone
+        if phone {
+            model.editClaimDestination("")
+            Task { await model.useWalletClaimAddress() }
+        } else {
+            model.editClaimDestination(address)
+        }
+    }
+
+    private func claim() {
+        Task {
+            guard let quote, destination == quote.destination else { return }
+            guard quote.isCurrent else {
+                expired = true
+                await model.review(.claim, ids: quote.ids, destination: quote.destination)
+                return
+            }
+            expired = false
+            await model.confirm()
+            guard model.error == nil else { haptics.play(.error); return }
+            haptics.play(.success)
+            settings.back()
+        }
+    }
+
+    /// A scanned or pasted "bitcoin:" URI's address; anything else as it is (then validated).
+    static func address(fromScan value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.lowercased().hasPrefix("bitcoin:") else { return trimmed }
+        let address = String(trimmed.dropFirst("bitcoin:".count).prefix { $0 != "?" })
+        // QR codes often carry bech32 in capitals; base58 keeps its case.
+        return address == address.uppercased() ? address.lowercased() : address
+    }
+}

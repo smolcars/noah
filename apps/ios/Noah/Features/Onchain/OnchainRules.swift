@@ -77,6 +77,8 @@ struct ExitDetails: Codable, Equatable, Sendable {
     var block: Block?
     var txid: String?
     var height: UInt32? { claimable_height ?? claimable_since?.height ?? block?.height ?? tip_height }
+    /// The claim's transaction, once bark has seen it (in progress or claimed).
+    var claimTxid: String? { claim_txid ?? txid }
 }
 
 struct ExitTimelineItem: Equatable, Sendable {

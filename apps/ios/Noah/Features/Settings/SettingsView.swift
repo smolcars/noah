@@ -565,6 +565,7 @@ struct SettingsPageView: View {
         case .exitChoose: ExitChooseView(model: onchain)
         case .exitReview(let ids): ExitReviewView(ids: ids, model: onchain)
         case .exitProgress(let id): ExitVtxoDetailView(id: id, model: fixture?.onchain())
+        case .exitClaim: ExitClaimView(model: onchain)
         case .exitList: ExitListView()
         case .notifications: NotificationsPage()
         case .advanced: AdvancedPage()

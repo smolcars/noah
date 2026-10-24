@@ -115,7 +115,7 @@ struct ExitVtxoDetailView: View {
         case .claimable:
             Button(L10n.text("Claim {amount}", ExitMoney(app: app, locale: locale)(text.claimable), locale: language)) {
                 haptics.play(.light)
-                settings.open(.exitList)
+                settings.open(.exitClaim)
             }
             .buttonStyle(SettingsActionStyle())
             .accessibilityIdentifier("exit-claim")
@@ -187,7 +187,7 @@ struct ExitVtxoDetailView: View {
                                   failure: progress.phase == .needsFunds && index == progress.confirmed, copy: tx.txid, explorer: explorer(tx.txid))
             }
         }
-        if let claim = exit.details.claim_txid ?? exit.details.txid {
+        if let claim = exit.details.claimTxid {
             SettingsDetailRow(label: L10n.text("Claim transaction", locale: language), value: Self.short(claim), mono: true, compact: true,
                               copy: claim, explorer: explorer(claim))
         }
@@ -270,7 +270,7 @@ struct ExitStatusLine: View {
 
     /// This exit's claim, as journaled (its reviewed destination and fee).
     private var claim: OnchainQuote? { attempts.first { $0.quote.action == .claim && $0.quote.ids.contains(exit.id) }?.quote }
-    private var claimTxid: String? { exit.details.claim_txid ?? exit.details.txid }
+    private var claimTxid: String? { exit.details.claimTxid }
     var received: UInt64? { claimTxid.flatMap { overview?.received[$0] } }
     var claimFee: UInt64? { claim?.fee ?? received.map { exit.amount - min(exit.amount, $0) } }
     /// Roughly what claiming pays out: the amount less today's claim estimate when Noah has one.

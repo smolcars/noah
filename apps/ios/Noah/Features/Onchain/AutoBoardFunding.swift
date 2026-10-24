@@ -55,6 +55,12 @@ struct AutoBoardFunding {
         try !funding.outpoints.subtracting(load().handled[funding.walletID] ?? []).isEmpty
     }
     @discardableResult func markHandled(_ funding: Snapshot) throws -> Bool { try claim(funding) != nil }
+    /// Decision 8: a claim to this phone's on-chain wallet isn't a deposit. Its outputs join the
+    /// handled ledger so auto-board never offers them. On the main actor, with the ledger's other writers.
+    @MainActor static func markClaimed(_ outpoints: Set<String>, walletID: String, store: AutoBoardFunding = .init()) throws {
+        guard !outpoints.isEmpty else { return }
+        try store.markHandled(.init(walletID: walletID, outpoints: outpoints))
+    }
     func release(_ funding: Snapshot, retryAfter: Date) throws {
         var saved = try load()
         saved.handled[funding.walletID] = (saved.handled[funding.walletID] ?? []).subtracting(funding.outpoints)

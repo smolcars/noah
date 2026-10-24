@@ -25,7 +25,7 @@ extension WalletSession {
             // What the exit screens add; optional, so a failed read never hides the exits themselves.
             overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
             let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
-            let claims = Set(models.compactMap { $0.details.claim_txid ?? $0.details.txid })
+            let claims = Set(models.compactMap(\.details.claimTxid))
             for transaction in (try? await handles.onchain.transactions()) ?? [] {
                 if children.contains(transaction.txid), let fee = transaction.onchainFeeSats { overview.childFees[transaction.txid] = fee }
                 if claims.contains(transaction.txid), transaction.balanceChangeSats > 0 {
@@ -131,8 +131,14 @@ extension WalletSession {
         guard !(try await journal.loadAll()).contains(where: { $0.blocks(.board, ids: []) }) else { return nil }
         return try await withOpenWallet { handles in
             guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
-            return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
+            let funding = try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
                 utxos: handles.onchain.utxos(), transactions: handles.onchain.transactions())
+            // An exit claim to this phone is never a deposit, however its claim was recorded.
+            let claims = Set(try await handles.wallet.listAllExits(includeHistory: false, includeTransactions: false)
+                .compactMap { Self.exitModel($0).details.claimTxid })
+            let claimed = funding.outpoints.filter { claims.contains(String($0.prefix { $0 != ":" })) }
+            try await MainActor.run { try AutoBoardFunding.markClaimed(claimed, walletID: funding.walletID) }
+            return funding
         }
     }
 
@@ -216,6 +222,8 @@ extension WalletSession {
         var drain: @Sendable ([String], String) async throws -> ExitClaimTransaction
         var transaction: @Sendable (String) throws -> String = { try extractTxFromPsbt(psbtBase64: $0) }
         var broadcast: @Sendable (String) async throws -> String
+        /// A claim to this phone: its output (the drain's only one) joins auto-board's handled ledger.
+        var claimedToPhone: @Sendable (String) async throws -> Void = { _ in }
     }
 
     private static func claimAccess(_ handles: Handles) -> OnchainClaimAccess {
@@ -227,7 +235,10 @@ extension WalletSession {
             estimate: { try await handles.wallet.estimateEmergencyExitFee(
                 vtxoIds: $0, feeRateSatPerVb: nil, destination: $1) },
             drain: { try await handles.wallet.drainExits(vtxoIds: $0, address: $1, feeRateSatPerVb: nil) },
-            broadcast: { try await handles.wallet.broadcastTx(txHex: $0) })
+            broadcast: { try await handles.wallet.broadcastTx(txHex: $0) },
+            claimedToPhone: { [walletID = handles.wallet.fingerprint()] txid in
+                try await MainActor.run { try AutoBoardFunding.markClaimed(["\(txid):0"], walletID: walletID) }
+            })
     }
 
     static func claimQuote(
@@ -276,6 +287,8 @@ extension WalletSession {
             let txid: String
             do { txid = try await access.broadcast(tx) }
             catch { throw OnchainFailure.uncertain }
+            // Sent: a failed ledger write must not make it look unsent; auto-board's own read marks it too.
+            if quote.destinationIsMine == true { try? await access.claimedToPhone(txid) }
             return OnchainReceipt(message: "Claim submitted. Refresh to check confirmation.", txid: txid)
         }
     }
