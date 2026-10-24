@@ -258,7 +258,6 @@
   <string name="gt_cea4d2e010b8fd52">"선택 해제"</string>
   <string name="gt_05ea88a85f558c4c">"서버 등록 정보를 삭제합니다. 다시 등록해야 합니다."</string>
   <string name="gt_7d9eb7acb13e2462">"닫기"</string>
-  <string name="gt_56437a90a2335d00">"결제 상세 정보 닫기"</string>
   <string name="gt_dfc885030d22671d">"장소 상세 정보 닫기"</string>
   <string name="gt_55656b5e434f4c06">"검색 닫기"</string>
   <string name="gt_c08aa5bbc4491798">"지갑을 닫고 다시 활성화할 때까지 모든 지갑 작업 비활성화"</string>
@@ -490,7 +489,6 @@
   <string name="gt_62d2c6ab601628f3">"출금 거래가 준비되었으며 모니터링이 진행되었습니다."</string>
   <string name="gt_efe13cdfa8a35c1e">"출금 가중치(WU)"</string>
   <string name="gt_85fc46c17cd71d1d">"출금됨"</string>
-  <string name="gt_f27f33ca7ae65032">"출금된 VTXO"</string>
   <string name="gt_7c2f8a4625fab18d">"출금된 코인"</string>
   <string name="gt_4a366d77739e7414">"출금 중"</string>
   <string name="gt_292ce5ce3450f0b4">"체인으로 출금 중"</string>
@@ -577,10 +575,8 @@
   <string name="gt_c41b2bdf4c4d8c50">"보안을 위해 숨김"</string>
   <string name="gt_f6b0718e33d9868e">"키보드 숨기기"</string>
   <string name="gt_a02180533bdc7fad">"장소 숨기기"</string>
-  <string name="gt_63a216f458c2aacd">"기술 세부 정보 숨기기"</string>
   <string name="gt_920ac8601c18daac">"지갑 잔액 숨기기"</string>
   <string name="gt_31f47a7b7c67fe38">"과거 가격 API"</string>
-  <string name="gt_f622cc11b8240847">"과거 가치를 확인할 수 없습니다"</string>
   <string name="gt_7f1929550de947a7">"내역 내보내기 실패"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"내역 불러오기 실패"</string>
   <string name="gt_5013616d3cb50e40">"길게 눌러 보내기"</string>
@@ -601,7 +597,6 @@
   <string name="gt_e301820ac8393100">"수신"</string>
   <string name="gt_544bf107f0c7d65e">"라이트닝으로 들어오는 중"</string>
   <string name="gt_170322a32f3c35b2">"정보"</string>
-  <string name="gt_dcffa46717072f05">"입력 VTXO"</string>
   <string name="gt_7abc49dfa87bc183">"입력"</string>
   <string name="gt_e1c9b0d0a93ba96f">"Ark 자금 확인 및 갱신"</string>
   <string name="gt_ff67ecdfc6ccee10">"푸시 알림을 받으려면 F-Droid에서 \"ntfy\"와 같은 배포 앱을 설치하세요."</string>
@@ -875,7 +870,6 @@
   <string name="gt_eb4bbb3d312d0b21">"코인 상세 정보를 엽니다"</string>
   <string name="gt_f893fab7e39f5540">"그렇지 않으면 Android가 Noah를 일시 중지해 결제가 도착하지 않을 수 있습니다."</string>
   <string name="gt_3619cf0b90923a4b">"송신"</string>
-  <string name="gt_5830129e672b39a9">"출력 VTXO"</string>
   <string name="gt_84c9bc73297ace6e">"재정의된 시도"</string>
   <string name="gt_c11409e54af3960d">"재정의 감사 기록 저장소를 사용할 수 없습니다"</string>
   <string name="gt_b896460456edd89b">"재정의 확인"</string>
@@ -894,7 +888,6 @@
   <string name="gt_046aa79048e8f8a5">"라이트닝으로 결제 중"</string>
   <string name="gt_d9c9afd836811e5a">"결제 ID"</string>
   <string name="gt_3450b635b99ae5ff">"결제 확정됨"</string>
-  <string name="gt_503618293b5ece01">"결제 상세 정보"</string>
   <string name="gt_bc38541e91fe8160">"결제가 완료되지 않았습니다"</string>
   <string name="gt_17aadc092fe66088">"결제 실패"</string>
   <string name="gt_096045f8f17f3bad">"결제 해시"</string>
@@ -1030,7 +1023,6 @@
     <item quantity="other">"코인 %1$s개 갱신됨"</item>
   </plurals>
   <string name="gt_b6b7a0065808a62e">"반복"</string>
-  <string name="gt_9a180349dd1464e0">"결제 반복"</string>
   <string name="gt_2f701cdd590b11d8">"중복 결제 방지 해제됨"</string>
   <string name="gt_dc11f56227629a10">"중복 방지가 해제되었습니다. 기존 시도 기록은 그대로 저장되어 있습니다. 다시 제출하기 전에 현재 지갑 상태를 확인하세요."</string>
   <string name="gt_0e878c81671aa8dc">"중복 방지 무시됨: "</string>
@@ -1077,7 +1069,6 @@
   <string name="gt_5094b5ed60506f03">"라운드 논스"</string>
   <string name="gt_4725c4e98951924f">"라운드 및 만료"</string>
   <string name="gt_9dc630eaa7a65934">"라운드 진행 중"</string>
-  <string name="gt_adc74704d65d5cc9">"경로"</string>
   <string name="gt_7470c75c087553d4">"결제 시점이 된 항목 지금 처리"</string>
   <string name="gt_df00e58b3325e786">"백그라운드에서 실행 중"</string>
   <string name="gt_4977a7e5bb3675c4">"실행 중..."</string>
@@ -1219,7 +1210,6 @@
   <string name="gt_8a046cc90ab0a981">"동기화 중…"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"사용 중"</string>
-  <string name="gt_890ab358a55d7fce">"기술 세부 정보"</string>
   <string name="gt_55c7eb36ed47d5f6">"Telegram 지원"</string>
   <string name="gt_04ba45dd2525a37f">"Telegram 지원"</string>
   <string name="gt_0b38e7e7a0f80600">"엔드포인트 테스트 및 저장"</string>
@@ -1487,7 +1477,6 @@
   <string name="gt_f195f8e226312c3a">"모든 준비가 끝났어요"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
-  <string name="gt_b5c755aaab1038b3">"목적지"</string>
   <string name="gt_7d7894104be6c089">"예: 임대료, 기부, VPN"</string>
   <string name="gt_140a2c3b9322734d">"fiatjaf"</string>
   <string name="gt_ac13979d20e7673e">"보낸 사람: %1$s"</string>

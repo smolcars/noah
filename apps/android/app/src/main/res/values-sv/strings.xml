@@ -258,7 +258,6 @@
   <string name="gt_cea4d2e010b8fd52">"Rensa val"</string>
   <string name="gt_05ea88a85f558c4c">"Ta bort din registrering på servern. Du behöver registrera dig igen."</string>
   <string name="gt_7d9eb7acb13e2462">"Stäng"</string>
-  <string name="gt_56437a90a2335d00">"Stäng betalningsuppgifterna"</string>
   <string name="gt_dfc885030d22671d">"Stäng platsinformationen"</string>
   <string name="gt_55656b5e434f4c06">"Stäng sökningen"</string>
   <string name="gt_c08aa5bbc4491798">"Stäng plånboken och inaktivera alla plånboksåtgärder tills de aktiveras igen"</string>
@@ -490,7 +489,6 @@
   <string name="gt_62d2c6ab601628f3">"Nöduttagstransaktioner förbereddes och övervakades."</string>
   <string name="gt_efe13cdfa8a35c1e">"Nöduttagets vikt (WU)"</string>
   <string name="gt_85fc46c17cd71d1d">"Nöduttag genomfört"</string>
-  <string name="gt_f27f33ca7ae65032">"VTXO:er med genomförda nöduttag"</string>
   <string name="gt_7c2f8a4625fab18d">"Mynt med nöduttag"</string>
   <string name="gt_4a366d77739e7414">"Nöduttag pågår"</string>
   <string name="gt_292ce5ce3450f0b4">"Tas ut till blockkedjan"</string>
@@ -577,10 +575,8 @@
   <string name="gt_c41b2bdf4c4d8c50">"Dolt av säkerhetsskäl"</string>
   <string name="gt_f6b0718e33d9868e">"Dölj tangentbordet"</string>
   <string name="gt_a02180533bdc7fad">"Dölj platser"</string>
-  <string name="gt_63a216f458c2aacd">"Dölj tekniska detaljer"</string>
   <string name="gt_920ac8601c18daac">"Dölj plånbokens saldo"</string>
   <string name="gt_31f47a7b7c67fe38">"API för historiska priser"</string>
-  <string name="gt_f622cc11b8240847">"Historiskt värde saknas"</string>
   <string name="gt_7f1929550de947a7">"Det gick inte att exportera historiken"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"Det gick inte att läsa historiken"</string>
   <string name="gt_5013616d3cb50e40">"Håll in för att skicka"</string>
@@ -601,7 +597,6 @@
   <string name="gt_e301820ac8393100">"Inkommande"</string>
   <string name="gt_544bf107f0c7d65e">"Inkommande via Lightning"</string>
   <string name="gt_170322a32f3c35b2">"Info"</string>
-  <string name="gt_dcffa46717072f05">"Ingående VTXO:er"</string>
   <string name="gt_7abc49dfa87bc183">"Ingångar"</string>
   <string name="gt_e1c9b0d0a93ba96f">"Granska och förnya dina Ark-medel"</string>
   <string name="gt_ff67ecdfc6ccee10">"Installera en distributörsapp som ”ntfy” från F-Droid för att aktivera pushaviseringar."</string>
@@ -875,7 +870,6 @@
   <string name="gt_eb4bbb3d312d0b21">"Öppnar myntets detaljer"</string>
   <string name="gt_f893fab7e39f5540">"Annars kan Android pausa Noah, och betalningar kan sluta komma fram."</string>
   <string name="gt_3619cf0b90923a4b">"Utgående"</string>
-  <string name="gt_5830129e672b39a9">"Utgående VTXO:er"</string>
   <string name="gt_84c9bc73297ace6e">"Åsidosatt försök"</string>
   <string name="gt_c11409e54af3960d">"Lagring av granskningslogg för åsidosättanden är inte tillgänglig"</string>
   <string name="gt_b896460456edd89b">"Bekräftelse av åsidosättande"</string>
@@ -894,7 +888,6 @@
   <string name="gt_046aa79048e8f8a5">"Betalar via Lightning"</string>
   <string name="gt_d9c9afd836811e5a">"Betalnings-ID"</string>
   <string name="gt_3450b635b99ae5ff">"Betalning bekräftad"</string>
-  <string name="gt_503618293b5ece01">"Betalningsuppgifter"</string>
   <string name="gt_bc38541e91fe8160">"Betalningen slutfördes inte"</string>
   <string name="gt_17aadc092fe66088">"Betalningen misslyckades"</string>
   <string name="gt_096045f8f17f3bad">"Betalningshash"</string>
@@ -1030,7 +1023,6 @@
     <item quantity="other">"Förnyade %1$s mynt"</item>
   </plurals>
   <string name="gt_b6b7a0065808a62e">"Upprepa"</string>
-  <string name="gt_9a180349dd1464e0">"Upprepa betalning"</string>
   <string name="gt_2f701cdd590b11d8">"Skyddet mot upprepning har åsidosatts"</string>
   <string name="gt_dc11f56227629a10">"Skyddet mot upprepning har åsidosatts. Det ursprungliga försöket är fortfarande sparat. Granska plånbokens aktuella tillstånd innan du skickar igen."</string>
   <string name="gt_0e878c81671aa8dc">"Skydd mot upprepning åsidosatt: "</string>
@@ -1077,7 +1069,6 @@
   <string name="gt_5094b5ed60506f03">"Noncer per omgång"</string>
   <string name="gt_4725c4e98951924f">"Omgångar &amp; utgångstid"</string>
   <string name="gt_9dc630eaa7a65934">"Omgångar pågår"</string>
-  <string name="gt_adc74704d65d5cc9">"Betalningsväg"</string>
   <string name="gt_7470c75c087553d4">"Genomför förfallna betalningar nu"</string>
   <string name="gt_df00e58b3325e786">"Körs i bakgrunden"</string>
   <string name="gt_4977a7e5bb3675c4">"Körs..."</string>
@@ -1219,7 +1210,6 @@
   <string name="gt_8a046cc90ab0a981">"Synkroniserar…"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"Upptaget"</string>
-  <string name="gt_890ab358a55d7fce">"Tekniska detaljer"</string>
   <string name="gt_55c7eb36ed47d5f6">"Support via Telegram"</string>
   <string name="gt_04ba45dd2525a37f">"Support via Telegram"</string>
   <string name="gt_0b38e7e7a0f80600">"Testa &amp; spara slutpunkt"</string>
@@ -1487,7 +1477,6 @@
   <string name="gt_f195f8e226312c3a">"Allt är klart"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
-  <string name="gt_b5c755aaab1038b3">"destination"</string>
   <string name="gt_7d7894104be6c089">"t.ex. hyra, donation, VPN"</string>
   <string name="gt_140a2c3b9322734d">"fiatjaf"</string>
   <string name="gt_ac13979d20e7673e">"från %1$s"</string>

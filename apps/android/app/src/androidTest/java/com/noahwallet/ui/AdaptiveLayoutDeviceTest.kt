@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -92,10 +93,17 @@ class AdaptiveLayoutDeviceTest {
             } }
             show("history") { ActivityScreen(model, {}) }
             show("btc-map") { com.noahwallet.btcmap.BtcMapScreen {} }
-            show("history-detail") { TransactionDetail(model, com.noahwallet.history.HistoryTransaction(
-                "layout-fixture", "Arkoor", 12345, "2026-10-20T12:30:00Z", "outgoing",
-                destination = "tark1" + "q".repeat(160), movementStatus = "successful", offchainFeeSat = 12,
-                intendedBalanceSat = -12357, effectiveBalanceSat = -12357), {}, {}) }
+            show("history-detail") {
+                val state = com.noahwallet.ui.activity.rememberActivityState()
+                remember { state.open("layout-fixture") }
+                val (ui, actions) = paymentDetail(model, state, null, {}, {})
+                com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
+                    HomePaymentSheet(ui.copy(records = listOf(com.noahwallet.history.HistoryTransaction(
+                        "layout-fixture", "Arkoor", 12345, "2026-10-20T12:30:00Z", "outgoing",
+                        destination = "tark1" + "q".repeat(160), movementStatus = "successful", offchainFeeSat = 12,
+                        intendedBalanceSat = -12357, effectiveBalanceSat = -12357))), state, actions)
+                }
+            }
             lateinit var mapModel: com.noahwallet.btcmap.BtcMapModel
             instrumentation.runOnMainSync { mapModel = ViewModelProvider(activity)["btc-map", com.noahwallet.btcmap.BtcMapModel::class.java] }
             kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) { mapModel.load() }

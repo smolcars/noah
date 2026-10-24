@@ -258,7 +258,6 @@
   <string name="gt_cea4d2e010b8fd52">"Clear selection"</string>
   <string name="gt_05ea88a85f558c4c">"Clear your registration with the server. You will need to register again."</string>
   <string name="gt_7d9eb7acb13e2462">"Close"</string>
-  <string name="gt_56437a90a2335d00">"Close payment details"</string>
   <string name="gt_dfc885030d22671d">"Close place details"</string>
   <string name="gt_55656b5e434f4c06">"Close search"</string>
   <string name="gt_c08aa5bbc4491798">"Close the wallet and disable all wallet operations until re-enabled"</string>
@@ -490,7 +489,6 @@
   <string name="gt_62d2c6ab601628f3">"Exit transactions were prepared and monitored."</string>
   <string name="gt_efe13cdfa8a35c1e">"Exit weight (WU)"</string>
   <string name="gt_85fc46c17cd71d1d">"Exited"</string>
-  <string name="gt_f27f33ca7ae65032">"Exited VTXOs"</string>
   <string name="gt_7c2f8a4625fab18d">"Exited coins"</string>
   <string name="gt_4a366d77739e7414">"Exiting"</string>
   <string name="gt_292ce5ce3450f0b4">"Exiting to the chain"</string>
@@ -577,10 +575,8 @@
   <string name="gt_c41b2bdf4c4d8c50">"Hidden for your security"</string>
   <string name="gt_f6b0718e33d9868e">"Hide keyboard"</string>
   <string name="gt_a02180533bdc7fad">"Hide places"</string>
-  <string name="gt_63a216f458c2aacd">"Hide technical details"</string>
   <string name="gt_920ac8601c18daac">"Hide wallet balance"</string>
   <string name="gt_31f47a7b7c67fe38">"Historical price API"</string>
-  <string name="gt_f622cc11b8240847">"Historical value unavailable"</string>
   <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"History read failed"</string>
   <string name="gt_5013616d3cb50e40">"Hold to send"</string>
@@ -601,7 +597,6 @@
   <string name="gt_e301820ac8393100">"Incoming"</string>
   <string name="gt_544bf107f0c7d65e">"Incoming over Lightning"</string>
   <string name="gt_170322a32f3c35b2">"Info"</string>
-  <string name="gt_dcffa46717072f05">"Input VTXOs"</string>
   <string name="gt_7abc49dfa87bc183">"Inputs"</string>
   <string name="gt_e1c9b0d0a93ba96f">"Inspect and refresh your Ark funds"</string>
   <string name="gt_ff67ecdfc6ccee10">"Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."</string>
@@ -875,7 +870,6 @@
   <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
   <string name="gt_f893fab7e39f5540">"Otherwise Android may pause Noah, and payments could stop arriving."</string>
   <string name="gt_3619cf0b90923a4b">"Outgoing"</string>
-  <string name="gt_5830129e672b39a9">"Output VTXOs"</string>
   <string name="gt_84c9bc73297ace6e">"Overridden attempt"</string>
   <string name="gt_c11409e54af3960d">"Override audit storage unavailable"</string>
   <string name="gt_b896460456edd89b">"Override confirmation"</string>
@@ -894,7 +888,6 @@
   <string name="gt_046aa79048e8f8a5">"Paying over Lightning"</string>
   <string name="gt_d9c9afd836811e5a">"Payment ID"</string>
   <string name="gt_3450b635b99ae5ff">"Payment confirmed"</string>
-  <string name="gt_503618293b5ece01">"Payment details"</string>
   <string name="gt_bc38541e91fe8160">"Payment did not complete"</string>
   <string name="gt_17aadc092fe66088">"Payment failed"</string>
   <string name="gt_096045f8f17f3bad">"Payment hash"</string>
@@ -1030,7 +1023,6 @@
     <item quantity="other">"Renewed %1$s coins"</item>
   </plurals>
   <string name="gt_b6b7a0065808a62e">"Repeat"</string>
-  <string name="gt_9a180349dd1464e0">"Repeat payment"</string>
   <string name="gt_2f701cdd590b11d8">"Repeat protection overridden"</string>
   <string name="gt_dc11f56227629a10">"Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."</string>
   <string name="gt_0e878c81671aa8dc">"Repeat protection overridden: "</string>
@@ -1077,7 +1069,6 @@
   <string name="gt_5094b5ed60506f03">"Round nonces"</string>
   <string name="gt_4725c4e98951924f">"Rounds &amp; Expiry"</string>
   <string name="gt_9dc630eaa7a65934">"Rounds in progress"</string>
-  <string name="gt_adc74704d65d5cc9">"Route"</string>
   <string name="gt_7470c75c087553d4">"Run due payments now"</string>
   <string name="gt_df00e58b3325e786">"Running in background"</string>
   <string name="gt_4977a7e5bb3675c4">"Running..."</string>
@@ -1219,7 +1210,6 @@
   <string name="gt_8a046cc90ab0a981">"Syncing…"</string>
   <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"Taken"</string>
-  <string name="gt_890ab358a55d7fce">"Technical details"</string>
   <string name="gt_55c7eb36ed47d5f6">"Telegram Support"</string>
   <string name="gt_04ba45dd2525a37f">"Telegram support"</string>
   <string name="gt_0b38e7e7a0f80600">"Test &amp; Save Endpoint"</string>
@@ -1487,7 +1477,6 @@
   <string name="gt_f195f8e226312c3a">"You’re all set"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
-  <string name="gt_b5c755aaab1038b3">"destination"</string>
   <string name="gt_7d7894104be6c089">"e.g. Rent, Donation, VPN"</string>
   <string name="gt_140a2c3b9322734d">"fiatjaf"</string>
   <string name="gt_ac13979d20e7673e">"from %1$s"</string>

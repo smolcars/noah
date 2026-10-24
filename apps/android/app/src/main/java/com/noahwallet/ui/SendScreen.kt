@@ -3,6 +3,9 @@ package com.noahwallet.ui
 import com.noahwallet.ui.WalletAlertDialog
 
 import com.noahwallet.localization.tr
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
@@ -18,8 +21,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.noahwallet.formatting.FiatCurrency
 import com.noahwallet.history.HistoryTransaction
 import androidx.compose.ui.platform.LocalContext
@@ -298,6 +304,28 @@ internal fun keypadInput(amount: String, key: String?, decimal: Boolean): String
         dismissButton = { TextButton(onClick = { overrideStep = 0 }) { Text(tr("Keep checking")) } })
 }
 
+@Composable
+private fun CopyButton(label: String, value: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var copied by remember(value) { mutableStateOf(false) }
+    val copyLabel = tr("Copy {label}", tr(label))
+    TextButton({
+        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value))
+        copied = true
+    }, modifier.semantics { contentDescription = copyLabel }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(if (copied) tr("Copied") else copyLabel) }
+}
+@Composable
+internal fun DetailValue(label: String, value: String, copyable: Boolean = false, modifier: Modifier = Modifier,
+    displayedValue: String = value, copyModifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr(label), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (copyable) CopyButton(label, value, copyModifier)
+        }
+        SelectionContainer { Text(tr(displayedValue)) }
+        HorizontalDivider(Modifier.padding(top = 8.dp))
+    }
+}
 
 /** Configuration recreation retains only presentation; SendRuntime still owns every submission. */
 internal class SendPresentation(val model: SendModel) : ViewModel() {

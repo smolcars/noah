@@ -1,9 +1,12 @@
 package com.noahwallet.ui.activity
 
+import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.history.*
 import com.noahwallet.ui.home.HomeDays
 import com.noahwallet.ui.home.rowAmount
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.Calendar
@@ -234,5 +237,30 @@ class ActivityRulesTest {
         // Movement placeholders and Ark payments name none.
         assertNull(ActivityRules.chainTxid(record("p", Date(), type = "Onchain").copy(txid = "movement-104")))
         assertNull(ActivityRules.chainTxid(record("a", Date()).copy(txid = coin)))
+    }
+
+    @Test fun aFailedSendNeverReadsSentOrShowsItsPlannedFee() {
+        fun send(status: String, effective: Long, fee: Long, outputs: List<String> = emptyList()) = HistoryTransaction(
+            "movement-7", "Lnurl", 5_000, HistoryRules.isoDate(Date()), "outgoing", source = "ark", destination = "bob@getalby.com",
+            movementId = 7u, movementStatus = status, subsystemName = "bark.lightning_send", subsystemKind = "send",
+            intendedBalanceSat = -5_000, effectiveBalanceSat = effective, offchainFeeSat = fee,
+            sentTo = listOf(HistoryTransaction.Destination("bob@getalby.com", 5_000, "lightning-address")), outputVtxos = outputs)
+        fun summary(record: HistoryTransaction) = rows(record).single().let { ActivityRules.status(it) to ActivityRules.fees(record, it.home) }
+        val none = listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.None))
+        // bark 0.8 keeps the planned fee on a send that never left.
+        assertEquals(("Failed · nothing left your wallet" to ActivityRules.Tone.failed) to none, summary(send("failed", 0, 15)))
+        assertEquals(("Refunded · back in your wallet" to ActivityRules.Tone.failed) to none, summary(send("failed", 0, 0, outputs = listOf("revoked:0"))))
+        assertEquals(("Sent" to ActivityRules.Tone.plain) to listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(15))),
+            summary(send("successful", -5_015, 15)))
+    }
+
+    @Test fun aBoardShowsTheArkFeeItRecorded() {
+        fun fees(record: HistoryTransaction) = ActivityRules.fees(record, rows(record).single().home)
+        // The shared fixture's successful board without metadata: no network fee, a 500-sat Ark fee.
+        val case = SharedFixtures.load("transaction-history").single { it.name == "bark.board:board successful" }
+        val board = Json { ignoreUnknownKeys = true }.decodeFromJsonElement(HistoryTransaction.serializer(), case.expected.jsonObject.getValue("transaction"))
+        assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(500))), fees(board))
+        // A board that recorded no fee shows none ("Free" is a claim for sends).
+        assertEquals(emptyList<ActivityRules.FeeLine>(), fees(board.copy(offchainFeeSat = 0)))
     }
 }
