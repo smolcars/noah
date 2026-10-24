@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Exits (exit.md, "Exits list"): every exit bark tracks (`listAllExits`), grouped Ready to claim,
 /// Exiting and Finished, each with its phase on one line. When two or more live exits share a
-/// transaction, the shared path is drawn once above them (Decision 6). Today's status filter is in
-/// the bar.
+/// transaction, the shared path is drawn once above them (Decision 6), each connected group in its
+/// own picture. Today's status filter is in the bar.
 struct ExitListView: View {
     @State private var model: OnchainModel
     @State private var filter: String?
@@ -21,16 +21,16 @@ struct ExitListView: View {
     var body: some View {
         let money = ExitMoney(app: app, locale: locale)
         let shown = exits.filter { filter == nil || $0.state == filter }
-        let shared = ExitSharing.groups(exits).max { $0.count < $1.count }
+        let shared = ExitSharing.groups(exits)
         ExitPanes {
             Text(verbatim: L10n.text("{n} in progress · {count} ready to claim", exits.filter { ExitRules.live($0.state) && !$0.claimable }.count.formatted(),
                                      ready.count.formatted(), locale: language))
                 .noahText(SettingsText.line).foregroundStyle(NoahTokens.Colors.muted)
-            if let shared {
-                ExitSharedPicture(exits: shared, amounts: Dictionary(shared.map { ($0.id, money($0.amount)) }, uniquingKeysWith: { a, _ in a })).frame(height: 250).padding(.top, 14)
-                let paths = shared.reduce(0) { $0 + $1.path.count }, unique = Set(shared.flatMap { $0.path.map(\.txid) }).count
+            ForEach(shared, id: \.first?.id) { group in
+                ExitSharedPicture(exits: group, amounts: Dictionary(group.map { ($0.id, money($0.amount)) }, uniquingKeysWith: { a, _ in a })).frame(height: 250).padding(.top, 14)
+                let paths = group.reduce(0) { $0 + $1.path.count }, unique = Set(group.flatMap { $0.path.map(\.txid) }).count
                 SettingsFine(text: L10n.text("{n} exits from one round: {count} transactions, not {total}. Shared ones are sent and paid once.",
-                                             shared.count.formatted(), unique.formatted(), paths.formatted(), locale: language))
+                                             group.count.formatted(), unique.formatted(), paths.formatted(), locale: language))
                     .multilineTextAlignment(.center).frame(maxWidth: .infinity)
             }
         } trailing: {
@@ -182,6 +182,13 @@ struct ExitSharedPicture: View {
 
     private struct Node { var txid: String; var depth: Int; var status: ExitDetails.Transaction.Status; var children: [Int] = []; var x = 0.0 }
 
+    /// The round's block line and the spacing between levels, from the deepest path (`depth`
+    /// transactions): the coins and their labels stay inside however long the paths.
+    static func levels(height: Double, depth: Int) -> (y0: Double, gap: Double) {
+        let y0 = min(height - 44, (height + 190) / 2)
+        return (y0, min(32, (y0 - 60) / Double(max(1, depth))))
+    }
+
     var body: some View {
         Canvas { context, size in
             let colors = MotionColors.theme(colorScheme)
@@ -203,8 +210,7 @@ struct ExitSharedPicture: View {
                 }
                 if let parent { coins.append((parent, exit)) }
             }
-            let depth = Double((exits.map(\.path.count).max() ?? 1))
-            let y0 = min(size.height - 44, (size.height + 190) / 2), gap = min(32, (y0 - 60) / max(1, depth))
+            let (y0, gap) = Self.levels(height: size.height, depth: exits.map(\.path.count).max() ?? 1)
             let width = size.width - 60
             // Coins spread evenly; each transaction sits over the middle of what hangs from it.
             var order: [Int] = []

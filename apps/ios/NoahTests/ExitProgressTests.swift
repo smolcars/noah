@@ -344,6 +344,18 @@ struct ExitProgressTests {
         #expect(ExitSharing.groups([c, waiting]).map { $0.map(\.id) } == [["c", "w"]])
         let claimed = Self.exit("Claimed", .init(kind: "claimed"), history: [Self.processing([Self.tx("r2", "confirmed", height: 101)])], id: "x")
         #expect(ExitSharing.groups([c, claimed]).isEmpty)
+        // Each connected group is its own picture.
+        #expect(ExitSharing.groups([a, b, c, waiting]).map { $0.map(\.id) } == [["a", "b"], ["c", "w"]])
+    }
+
+    @Test func longSharedPathsKeepTheirCoinsAndLabelsInside() {
+        // Tree hops plus checkpoint or arkoor hops: up to 8 transactions, and some room past that.
+        for depth in 1...12 {
+            let (y0, gap) = ExitSharedPicture.levels(height: 250, depth: depth)
+            // The coin hangs a level below the last transaction; its 12 pt radius and the label 21 pt above it.
+            let coin = y0 - 26 - Double(depth) * gap
+            #expect(coin - 21 - 7 >= 0 && gap > 0, "\(depth) transactions")
+        }
     }
 
     @Test func claimToAnotherWalletTakesThisNetworksAddressesOnly() {
