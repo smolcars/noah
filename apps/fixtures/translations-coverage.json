@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1477,
-  "sourceKeys": 1506,
+  "catalogEntries": 1478,
+  "sourceKeys": 1507,
   "coverage": {
     "ios": {
       "used": [
@@ -2424,6 +2424,7 @@
         "These words don’t form a valid phrase.",
         "This Lightning invoice has expired. Request a new invoice.",
         "This QR contains only your Lightning address.",
+        "This VTXO can't be exited.",
         "This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status.",
         "This VTXO was already spent, so it can’t exit.",
         "This address isn't in your Noah wallet. The claimed funds will be sent there.",

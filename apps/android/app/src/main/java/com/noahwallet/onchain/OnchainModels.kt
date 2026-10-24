@@ -110,8 +110,8 @@ data class OnchainOverview(val walletID: String, val vtxos: List<VtxoModel>, val
 class ExitEstimateUnavailable(val review: OnchainQuote) : Exception() {
     companion object {
         fun allowsFallback(error: Exception): Boolean = when (error) {
-            // SDK 0.5.0 collapses transport, fee-rate and some exit validation failures into Other (RN parity).
-            is BarkError -> error.code == BarkErrorCode.OTHER
+            // Transport and other untyped failures stay Other (RN parity); SDK 0.7.0 types a fee-rate overflow and an unreachable chain.
+            is BarkError -> error.code == BarkErrorCode.OTHER || error.code == BarkErrorCode.INVALID_FEE_RATE || error.code in ExitErrors.chain
             is OnchainException -> error.reason == OnchainFailure.unavailable
             is java.net.SocketException, is java.net.SocketTimeoutException, is java.net.UnknownHostException,
             is java.io.InterruptedIOException, is kotlinx.coroutines.TimeoutCancellationException -> true
@@ -124,3 +124,27 @@ class ExitEstimateUnavailable(val review: OnchainQuote) : Exception() {
         return ExitEstimateUnavailable(review.copy(id = original.id, createdAt = original.createdAt, unknownFeeConsent = null))
     }
 }
+
+/** SDK 0.7.0's typed exit errors, read by code, never by message. */
+internal object ExitErrors {
+    /** bark can never exit the VTXO, so there's nothing to retry. */
+    val never = setOf(BarkErrorCode.EXIT_NON_STANDARD_VTXO, BarkErrorCode.EXIT_DUST_LIMIT, BarkErrorCode.EXIT_VTXO_ALREADY_SPENT,
+        BarkErrorCode.EXIT_VTXO_ALREADY_EXITED, BarkErrorCode.EXIT_VTXO_SWEPT, BarkErrorCode.EXIT_UNKNOWN_VTXO,
+        BarkErrorCode.EXIT_CYCLIC_TRANSACTIONS, BarkErrorCode.EXIT_MISSING_ANCHOR_OUTPUT)
+    /** The chain source is unavailable: try again later. */
+    val chain = setOf(BarkErrorCode.EXIT_TRANSACTION_RETRIEVAL_FAILURE, BarkErrorCode.EXIT_TIP_RETRIEVAL_FAILURE,
+        BarkErrorCode.EXIT_BLOCK_RETRIEVAL_FAILURE, BarkErrorCode.EXIT_ANCESTOR_RETRIEVAL_FAILURE)
+    /** The reason shown: the exit spec's words where they fit. */
+    fun reason(code: BarkErrorCode) = when (code) {
+        BarkErrorCode.EXIT_VTXO_ALREADY_SPENT -> "Already spent"
+        BarkErrorCode.EXIT_VTXO_SWEPT -> "Swept"
+        else -> "This VTXO can't be exited."
+    }
+    /** [error] as a refusal, naming bark's VTXO or else the only one of [ids]; null when it's not a refusal. */
+    fun refusal(error: Exception, ids: List<String>): ExitNotPossible? = (error as? BarkError)?.takeIf { it.code in never }
+        ?.let { ExitNotPossible(it.vtxoId ?: ids.singleOrNull(), reason(it.code)) }
+    /** VTXOs bark refused to exit while the app runs, with their reason: Choose VTXOs leaves them out of every selection. */
+    val refused = androidx.compose.runtime.mutableStateMapOf<String, String>()
+}
+/** bark can never exit [vtxoId] (unnamed when null); the message is the reason shown. No estimate fallback is offered. */
+class ExitNotPossible(val vtxoId: String?, reason: String) : Exception(reason)

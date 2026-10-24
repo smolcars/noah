@@ -1242,6 +1242,7 @@
   <string name="gt_2f1c3676c41f927f">"Orden bildar ingen giltig fras."</string>
   <string name="gt_23333df084dfad80">"Den här Lightning-fakturan har gått ut. Begär en ny betalningsbegäran."</string>
   <string name="gt_74bb47afc8d3b8c4">"Den här QR-koden innehåller bara din Lightning-adress."</string>
+  <string name="gt_064ce079abb02910">"Den här VTXO:n kan inte tas ut."</string>
   <string name="gt_1d4b5ac7d8751913">"Den här VTXO:n finns inte längre bland plånbokens aktuella VTXO:er. Uppdatera för att kontrollera dess status."</string>
   <string name="gt_4cbed14dc727aedc">"Den här VTXO:n har redan spenderats, så den kan inte tas ut."</string>
   <string name="gt_69d8d757288ce17b">"Den här adressen tillhör inte din Noah-plånbok. De inlösta medlen skickas dit."</string>

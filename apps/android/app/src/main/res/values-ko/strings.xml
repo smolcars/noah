@@ -1242,6 +1242,7 @@
   <string name="gt_2f1c3676c41f927f">"이 단어들은 올바른 문구가 아닙니다."</string>
   <string name="gt_23333df084dfad80">"이 라이트닝 인보이스는 만료되었습니다. 새 결제 요청서를 요청해 주세요."</string>
   <string name="gt_74bb47afc8d3b8c4">"이 QR 코드에는 라이트닝 주소만 포함되어 있습니다."</string>
+  <string name="gt_064ce079abb02910">"이 VTXO는 출금할 수 없습니다."</string>
   <string name="gt_1d4b5ac7d8751913">"이 VTXO는 더 이상 지갑의 현재 VTXO 목록에 없습니다. 새로고침하여 상태를 확인하세요."</string>
   <string name="gt_4cbed14dc727aedc">"이 VTXO는 이미 사용되어 출금할 수 없어요."</string>
   <string name="gt_69d8d757288ce17b">"이 주소는 내 Noah 지갑에 속하지 않습니다. 수령할 자금은 이 주소로 전송됩니다."</string>

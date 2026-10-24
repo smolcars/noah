@@ -74,13 +74,79 @@ class OnchainOperationsTest {
                 wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
                 wallet.estimateError = error
                 val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null) }.exceptionOrNull()
-                val allowed = error is BarkError && error.code == BarkErrorCode.OTHER || error is java.net.SocketTimeoutException || error is java.net.UnknownHostException
+                // Untyped failures, an unreachable chain and a fee-rate overflow keep today's fallback; refusals offer none.
+                val allowed = error is BarkError && (error.code == BarkErrorCode.OTHER || error.code == BarkErrorCode.INVALID_FEE_RATE ||
+                    error.code in ExitErrors.chain) || error is java.net.SocketTimeoutException || error is java.net.UnknownHostException
                 assertEquals("$action / $error", allowed, failure is ExitEstimateUnavailable)
-                if (!allowed) assertSame(error, failure)
+                if (error is BarkError && error.code in ExitErrors.never) assertTrue("$action / ${error.code}", failure is ExitNotPossible)
+                else if (!allowed) assertSame(error, failure)
                 assertEquals(1, wallet.estimates); assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
             }
         }
     }
+    @Test fun aNeverExitableEstimateShowsWhyOffersNoFallbackAndLeavesTheSelection() = runBlocking {
+        val cases = mapOf(BarkErrorCode.EXIT_VTXO_ALREADY_SPENT to "Already spent", BarkErrorCode.EXIT_VTXO_SWEPT to "Swept") +
+            (ExitErrors.never - BarkErrorCode.EXIT_VTXO_ALREADY_SPENT - BarkErrorCode.EXIT_VTXO_SWEPT).associateWith { "This VTXO can't be exited." }
+        for ((code, reason) in cases) fixture { wallet, _, journal, _ ->
+            val refused = mutableMapOf<String, String>()
+            val ops = OnchainOperations(wallet, journal, refused = refused)
+            wallet.items = listOf(Wallet.vtxo("a"), Wallet.vtxo("b"))
+            wallet.estimateError = BarkError("untrusted diagnostic", code, vtxoId = "b")
+            val failure = runCatching { ops.quote(OnchainAction.startExit, listOf("a", "b")) }.exceptionOrNull() as ExitNotPossible
+            assertEquals(code.name, reason, failure.message); assertEquals("b", failure.vtxoId)
+            assertEquals("Choose VTXOs leaves it out", mapOf("b" to reason), refused)
+            // Without a VTXO named, a standalone estimate still knows which one it asked about.
+            wallet.estimateError = BarkError("untrusted diagnostic", code)
+            assertEquals(mapOf("a" to null), ops.exitCosts(listOf("a")))
+            assertEquals(mapOf("b" to reason, "a" to reason), refused)
+            assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
+        }
+    }
+    @Test fun anUnavailableChainKeepsTodaysEstimateFallbackAndNothingIsRefused() = runBlocking {
+        for (code in ExitErrors.chain + BarkErrorCode.INVALID_FEE_RATE) fixture { wallet, _, journal, _ ->
+            val refused = mutableMapOf<String, String>()
+            val ops = OnchainOperations(wallet, journal, refused = refused)
+            wallet.estimateError = BarkError("untrusted diagnostic", code, vtxoId = "a")
+            assertEquals(mapOf("a" to null), ops.exitCosts(listOf("a")))
+            val unknown = (runCatching { ops.quote(OnchainAction.startExit, listOf("a")) }.exceptionOrNull() as ExitEstimateUnavailable).review
+            ops.execute(unknown.copy(unknownFeeConsent = unknown.id))
+            assertEquals(code.name, listOf("start"), wallet.calls)
+            assertTrue(refused.isEmpty())
+        }
+    }
+    @Test fun aRefusedStartShowsWhyKeepsNoAttemptAndForgetsTheRun() = runBlocking { fixture { wallet, _, journal, _ ->
+        val refused = mutableMapOf<String, String>()
+        val ops = OnchainOperations(wallet, journal, refused = refused)
+        wallet.estimateError = java.net.SocketTimeoutException()
+        val unknown = (runCatching { ops.quote(OnchainAction.startExit, listOf("a")) }.exceptionOrNull() as ExitEstimateUnavailable).review
+        wallet.startError = BarkError("untrusted diagnostic", BarkErrorCode.EXIT_NON_STANDARD_VTXO, vtxoId = "a")
+        val forgotten = mutableListOf<List<String>>()
+        val failure = runCatching { ops.execute(unknown.copy(unknownFeeConsent = unknown.id), newRun = { forgotten += it }) }.exceptionOrNull()
+        assertEquals("This VTXO can't be exited.", (failure as ExitNotPossible).message)
+        assertEquals(mapOf("a" to "This VTXO can't be exited."), refused)
+        assertTrue("not uncertain: nothing blocks another review", journal.loadAll().isEmpty())
+        assertEquals("bark may have registered others first", listOf(listOf("a")), forgotten)
+        // Any other start failure stays uncertain, as today.
+        wallet.startError = BarkError("untrusted diagnostic", BarkErrorCode.OTHER)
+        assertEquals(OnchainFailure.uncertain, (runCatching { ops.execute(unknown.copy(id = "second", unknownFeeConsent = "second")) }.exceptionOrNull() as OnchainException).reason)
+    } }
+    @Test fun progressReadsEachStatusErrorByItsCode() = runBlocking { fixture { wallet, ops, journal, _ ->
+        wallet.active = listOf("a", "b", "c").map { ExitVtxo(it, 30_000u, ExitState.Start(100u), false) }
+        val short = BarkError("untrusted diagnostic", BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS, neededSats = 5_000u, availableSats = 1_200u)
+        wallet.progressStatuses = listOf(ExitProgressStatus("a", ExitState.Start(100u), short), ExitProgressStatus("b", ExitState.Start(100u), null),
+            ExitProgressStatus("c", ExitState.Start(100u), null))
+        var reported: Map<String, Long>? = null
+        assertEquals("short of funds is evidence, not a failure", OnchainReceipt.progressedMessage,
+            ops.execute(ops.quote(OnchainAction.progress, listOf("a", "b", "c")), shortOfFunds = { reported = it }))
+        assertEquals(mapOf("a" to 5_000L), reported)
+        journal.acknowledge(journal.loadAll().single().id)
+        wallet.progressStatuses = listOf(ExitProgressStatus("a", ExitState.Start(100u), short),
+            ExitProgressStatus("b", ExitState.Start(100u), BarkError("untrusted diagnostic", BarkErrorCode.EXIT_TIP_RETRIEVAL_FAILURE)),
+            ExitProgressStatus("c", ExitState.Start(100u), BarkError("untrusted diagnostic", BarkErrorCode.OTHER)))
+        val message = ops.execute(ops.quote(OnchainAction.progress, listOf("a", "b", "c")), shortOfFunds = { reported = it })
+        assertTrue(message, message.startsWith("Exit progression returned 2 errors."))
+        assertEquals(mapOf("a" to 5_000L), reported)
+    } }
     @Test fun confirmationEstimatorFailureKeepsReviewIdentityScopeAndDeadline() = runBlocking {
         for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, _, journal, _ ->
             var now = 100_000L
@@ -273,7 +339,10 @@ class OnchainOperationsTest {
         }
         /** Runs inside start and cancel, so a test can hold them while their caller is canceled. */
         var duringMutation: suspend () -> Unit = {}
-        override suspend fun start(ids: List<String>) { duringMutation(); calls.add("start"); ids.forEach { states[it] = ExitState.Start(100u) } }
+        var startError: Exception? = null
+        override suspend fun start(ids: List<String>) { duringMutation(); calls.add("start"); startError?.let { throw it }; ids.forEach { states[it] = ExitState.Start(100u) } }
+        var progressStatuses = emptyList<ExitProgressStatus>()
+        override suspend fun progress(feeRate: Long?): List<ExitProgressStatus> { calls.add("progress"); return progressStatuses }
         override suspend fun cancel(id: String): Boolean { duringMutation(); calls.add("cancel"); return cancelResult }
         override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { drainDestinations.add(destination); calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }

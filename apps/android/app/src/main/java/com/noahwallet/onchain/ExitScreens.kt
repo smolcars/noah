@@ -260,7 +260,7 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
         // bark's estimate for exactly the selection (shared transactions once); read-only.
         estimate = { ids -> try { withContext(Dispatchers.IO) { app.session.quoteOnchain(OnchainAction.startExit, ids) } }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } },
-        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }) { OnchainStatus(app, model) }
+        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }, refused = ExitErrors.refused) { OnchainStatus(app, model) }
     deposit?.let { need -> if (!app.isWalletSuspended) ExitDepositSheet(app, need) { deposit = null } }
 }
 
@@ -268,7 +268,8 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
 internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCosts.Cost?>?, confirmed: Long?, loading: Boolean, ready: Boolean,
                                suspended: Boolean, busy: Boolean, money: (Long) -> String, back: (() -> Unit)?,
                                estimate: suspend (List<String>) -> OnchainQuote?, review: (List<String>) -> Unit, deposit: (Long) -> Unit,
-                               initial: List<String>? = null, retry: () -> Unit = {}, status: @Composable () -> Unit = {}) {
+                               initial: List<String>? = null, retry: () -> Unit = {}, refused: Map<String, String> = emptyMap(),
+                               status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current
@@ -276,9 +277,10 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     var picked by rememberSaveable { mutableStateOf(initial.orEmpty()) }
     val vtxos = all.sortedByDescending { it.amount }
     // "All" is fixed only once every VTXO is classified: until then it might hold one that costs more than it's worth.
-    val unknown = if (costs == null) 0 else vtxos.count { it.eligible && costs[it.id] == null }
+    val unknown = if (costs == null) 0 else vtxos.count { ExitCosts.barred(it, refused) == null && costs[it.id] == null }
     val classified = costs != null && unknown == 0
-    val chosen = if (everything) ExitCosts.all(vtxos, costs.orEmpty()) else vtxos.filter { it.id in picked && it.eligible }
+    // No selection or total holds a VTXO that can't be selected, whatever was picked before.
+    val chosen = if (everything) ExitCosts.all(vtxos, costs.orEmpty(), refused) else vtxos.filter { it.id in picked && ExitCosts.barred(it, refused) == null }
     val ids = chosen.map { it.id }
     // Only when the selection changes: never on the page's periodic read.
     val quote by produceState<OnchainQuote?>(null, ids, classified) {
@@ -306,7 +308,8 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
             vtxos.isEmpty() -> FinePrint(tr("No eligible spendable VTXOs."))
             else -> Column(Modifier.padding(top = 6.dp)) {
                 vtxos.forEachIndexed { index, vtxo ->
-                    ChooseRow(vtxo, costs?.get(vtxo.id), if (everything) null else vtxo.id in picked, money, divider = index < vtxos.lastIndex) {
+                    ChooseRow(vtxo, costs?.get(vtxo.id), if (everything) null else vtxo.id in picked, money, divider = index < vtxos.lastIndex,
+                        refused = refused) {
                         haptics.selection(); picked = if (vtxo.id in picked) picked - vtxo.id else picked + vtxo.id
                     }
                 }
@@ -354,28 +357,34 @@ internal fun TotalRow(label: String, value: String) {
     }
 }
 
-/** A VTXO to choose (prototype `vtxoRow`): a checkbox in Choose, the coin in All; ones that can't exit are dimmed. */
+/**
+ * A VTXO to choose (prototype `vtxoRow`): a checkbox in Choose, the coin in All; ones that can't exit are dimmed.
+ * [refused]: VTXOs bark refused to exit, with their reason.
+ */
 @Composable
-private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?, money: (Long) -> String, divider: Boolean, toggle: () -> Unit) {
+private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?, money: (Long) -> String, divider: Boolean,
+                      refused: Map<String, String>, toggle: () -> Unit) {
     val palette = LocalPalette.current
     val uneconomic = ExitCosts.uneconomic(vtxo, cost)
-    val sub = when {
-        vtxo.state == "Locked" -> tr("In use right now")
-        vtxo.amount < ExitRules.dust -> tr("Too small to exit · under {amount}", money(ExitRules.dust))
-        !vtxo.eligible -> vtxo.status
-        uneconomic -> tr("Fees more than it’s worth")
-        else -> expiresText(vtxo)
+    val barred = ExitCosts.barred(vtxo, refused)
+    val exitable = barred == null
+    val sub = when (barred) {
+        ExitCosts.Barred.locked -> tr("In use right now")
+        ExitCosts.Barred.dust -> tr("Too small to exit · under {amount}", money(ExitRules.dust))
+        ExitCosts.Barred.state -> vtxo.status
+        ExitCosts.Barred.refused -> tr(refused.getValue(vtxo.id))
+        null -> if (uneconomic) tr("Fees more than it’s worth") else expiresText(vtxo)
     }
     val picking = checked != null
     Row(Modifier.fillMaxWidth().heightIn(min = 62.dp).drawBehind {
         if (divider) drawRect(palette.hairline, Offset(54.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 54.dp.toPx(), 1.dp.toPx()))
-    }.then(if (picking) Modifier.clickable(enabled = vtxo.eligible, role = Role.Checkbox, onClick = toggle) else Modifier)
-        .semantics(mergeDescendants = true) { if (picking) toggleableState = androidx.compose.ui.state.ToggleableState(checked == true) }
-        .graphicsLayer { alpha = if (vtxo.eligible) 1f else .45f }.testTag("exit-vtxo-${vtxo.id.take(12)}"),
+    }.then(if (picking) Modifier.clickable(enabled = exitable, role = Role.Checkbox, onClick = toggle) else Modifier)
+        .semantics(mergeDescendants = true) { if (picking) toggleableState = androidx.compose.ui.state.ToggleableState(checked == true && exitable) }
+        .graphicsLayer { alpha = if (exitable) 1f else .45f }.testTag("exit-vtxo-${vtxo.id.take(12)}"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
             if (!picking) ExitCoin(32.dp)
-            else if (vtxo.eligible) Box(Modifier.size(20.dp).background(if (checked == true) palette.foreground else palette.background, RoundedCornerShape(6.dp))
+            else if (exitable) Box(Modifier.size(20.dp).background(if (checked == true) palette.foreground else palette.background, RoundedCornerShape(6.dp))
                 .then(if (checked == true) Modifier else Modifier.drawBehind {
                     drawRoundRect(palette.muted, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
@@ -385,7 +394,7 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
         }
         Column(Modifier.weight(1f)) {
             Text(money(vtxo.amount), style = HomeType.amount, color = palette.foreground, maxLines = 1)
-            Text(sub, style = HomeType.small, color = if (uneconomic) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

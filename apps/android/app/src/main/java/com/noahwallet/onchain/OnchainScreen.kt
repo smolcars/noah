@@ -48,7 +48,7 @@ internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletS
         if (!ready()) fail(OnchainFailure.unavailable)
         // A started or canceled exit begins a new run: its old proof and tips must not carry over, even if this caller is gone.
         session.executeOnchain(quote, keepOnchain = { funding.keep(quote.walletID, it) }, recordClaim = claims::add,
-            newRun = { ExitFunding.shared.forget(it); seen.forget(it) })
+            newRun = { ExitFunding.shared.forget(it); seen.forget(it) }, shortOfFunds = ExitFunding.shared::reported)
     } },
     attempts = { withContext(Dispatchers.IO) { session.onchainJournal.loadAll() } },
     acknowledge = { id -> lifecycle.withWalletMutation {

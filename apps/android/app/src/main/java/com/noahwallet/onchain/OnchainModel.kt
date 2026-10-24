@@ -113,7 +113,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         catch (failure: ExitEstimateUnavailable) {
             if (token == generation && dependencies.ready()) estimateFallback = failure.review
         }
-        catch (failure: Exception) { if (token == generation) error = (failure as? OnchainException)?.message ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready." }
+        catch (failure: Exception) { if (token == generation) error = (failure as? OnchainException ?: failure as? ExitNotPossible)?.message ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready." }
         finally { busy = false }
     }
     fun continueWithoutEstimate() {
@@ -140,7 +140,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
                 catch (expired: OnchainException) { error = expired.message }
             }
         }
-        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text }
+        catch (failure: Exception) { error = (failure as? OnchainException ?: failure as? ExitNotPossible)?.message ?: OnchainFailure.uncertain.text }
         finally { withContext(NonCancellable) { dependencies.discard(reviewed) }; busy = false }
         val submissionError = error
         load()

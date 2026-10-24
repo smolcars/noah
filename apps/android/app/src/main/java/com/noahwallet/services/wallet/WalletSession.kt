@@ -399,7 +399,7 @@ class WalletSession internal constructor(
     private val onchainMutation = Mutex()
     val onchainJournal = OnchainOperationJournal(File(location.directory, "noah-onchain-attempt.json"))
     private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal,
-        ready = { !isSuspended() && !WalletBackgroundActivity.isRunning })
+        ready = { !isSuspended() && !WalletBackgroundActivity.isRunning }, refused = com.noahwallet.onchain.ExitErrors.refused)
     suspend fun onchainOverview(): OnchainOverview = withM6 {
         onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
     }
@@ -422,10 +422,10 @@ class WalletSession internal constructor(
     suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false,
                                keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
                                recordClaim: (com.noahwallet.onchain.ExitClaimRecords.Record) -> Unit = {},
-                               newRun: (List<String>) -> Unit = {}): String = withM6 { handles ->
+                               newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6 { handles ->
         val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
         onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
-            recordClaim = recordClaim, newRun = newRun) }
+            recordClaim = recordClaim, newRun = newRun, shortOfFunds = shortOfFunds) }
     }
     internal suspend fun exitCosts(ids: List<String>): Map<String, com.noahwallet.onchain.ExitCosts.Cost?> = withM6 { onchainOperations(it).exitCosts(ids) }
     suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->

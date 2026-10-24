@@ -44101,6 +44101,42 @@
         }
       }
     },
+    "This VTXO can't be exited.": {
+      "comment": "GT gt_064ce079abb02910; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This VTXO can't be exited."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este VTXO no se puede sacar."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このVTXOは出金できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 VTXO는 출금할 수 없습니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den här VTXO:n kan inte tas ut."
+          }
+        }
+      }
+    },
     "This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status.": {
       "comment": "GT gt_1d4b5ac7d8751913; arguments: none",
       "extractionState": "manual",

@@ -121,6 +121,8 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
             save(read().map { if (it.id == quote.id) it.copy(receipt = receipt) else it })
             receipt.message
         } catch (error: Exception) {
+            // bark refused the start: bark's exits list shows any exit it registered first, and starting again skips those.
+            if (error is ExitNotPossible) { save(read().filter { it.id != quote.id }); throw error }
             val failure = if (quote.preparedBoard != null) (error as? BoardNotSubmitted)?.reason
                 else OnchainSubmission.preBroadcast(error, quote.action)
             if (failure != null) { save(read().filter { it.id != quote.id }); fail(failure) }

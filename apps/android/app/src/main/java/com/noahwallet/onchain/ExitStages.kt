@@ -219,11 +219,14 @@ class ExitClaimRecords(private val read: () -> String?, private val write: (Stri
 /**
  * "Needs on-chain funds" is inferred (exit.md, Decision 3): bark 0.8 leaves a transaction it can't pay for in
  * AwaitingCpfpBroadcast and only logs a warning. It shows while the confirmed on-chain balance is below that package's
- * fee, once bark has had a chance to pay, and clears as soon as the balance covers it. Never from error text.
+ * fee, once bark has had a chance to pay, and clears as soon as the balance covers it. Never from error text. When a
+ * Check the chain reports it by code (SDK 0.7.0), that's direct evidence, with what bark needs.
  */
 internal class ExitFunding(private val interval: Long, private val now: () -> Long = { android.os.SystemClock.uptimeMillis() }) {
     private class Parked(val run: Long?, val since: Long, var tried: Boolean = false)
     private val parked = mutableMapOf<String, Parked>()
+    /** What bark said each exit needs, from the last Check the chain that reported confirmed funds short. */
+    private var reported = emptyMap<String, Long>()
     /** The last Check the chain didn't complete: Noah's evidence that nothing progresses exits. */
     var checkFailed by mutableStateOf(false); private set
 
@@ -238,8 +241,16 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
             val tried = entry.tried || (run != null && now() - entry.since >= interval)
             val fee = exit.nextPackageFee
             tried && fee != null && confirmed < fee
-        }.values.map { it.id }.toSet()
+        }.values.map { it.id }.toSet() + exits.filter { exit -> reported[exit.id]?.let { exit.state !in ExitTimeline.terminal && confirmed < it } == true }.map { it.id }
     }
+
+    /** A Check the chain's statuses short of confirmed funds: what bark needs for each exit ([needed]). */
+    @Synchronized
+    fun reported(needed: Map<String, Long>) { reported = needed }
+
+    /** What bark last said exit [id] needs, if it said so. */
+    @Synchronized
+    fun needed(id: String): Long? = reported[id]
 
     /** A Check the chain ended: if it [completed], bark tried to pay every transaction parked in [exits], read before or after it. */
     @Synchronized
@@ -250,7 +261,7 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
 
     /** Started or canceled: the exits' proof is from a run that's over. */
     @Synchronized
-    fun forget(ids: Collection<String>) { parked.keys.removeAll { key -> ids.any { key.startsWith("$it/") } } }
+    fun forget(ids: Collection<String>) { parked.keys.removeAll { key -> ids.any { key.startsWith("$it/") } }; reported = reported - ids.toSet() }
 
     /** Noah went to the background, where bark's daemon may not run: waiting time starts over; a completed check still counts. */
     @Synchronized
@@ -276,8 +287,20 @@ internal object ExitCosts {
 
     fun uneconomic(vtxo: VtxoModel, cost: Cost?) = vtxo.eligible && cost != null && cost.total >= vtxo.amount
 
+    /** Why Choose VTXOs can't select a VTXO, or null: today's rules (in use, too small, not spendable) come first. */
+    enum class Barred { locked, dust, state, refused }
+    /** [refused]: VTXOs bark refused to exit, with their reason. */
+    fun barred(vtxo: VtxoModel, refused: Map<String, String> = emptyMap()): Barred? = when {
+        vtxo.state == "Locked" -> Barred.locked
+        vtxo.amount < ExitRules.dust -> Barred.dust
+        !vtxo.eligible -> Barred.state
+        vtxo.id in refused -> Barred.refused
+        else -> null
+    }
+
     /** "All": every VTXO that can exit and is worth exiting. An unknown cost isn't evidence against it. */
-    fun all(vtxos: List<VtxoModel>, costs: Map<String, Cost?>) = vtxos.filter { it.eligible && !uneconomic(it, costs[it.id]) }
+    fun all(vtxos: List<VtxoModel>, costs: Map<String, Cost?>, refused: Map<String, String> = emptyMap()) =
+        vtxos.filter { barred(it, refused) == null && !uneconomic(it, costs[it.id]) }
 
     /** What "All" leaves out: too small to exit (today's dust rule), locked, and costing more than they're worth. */
     data class LeftOut(val dust: Long, val locked: Long, val uneconomic: Long)

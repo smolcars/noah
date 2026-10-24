@@ -57,6 +57,20 @@ class OnchainModelTest {
         model.confirm()
         assertEquals(listOf("renewal", "execute"), submitted)
     }
+    @Test fun aRefusedExitShowsBarksReasonWithoutAFallback() = runBlocking {
+        for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) {
+            var refuseAtSubmit = false
+            val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") },
+                { a, ids, _, destination -> if (!refuseAtSubmit) throw ExitNotPossible("a", "Swept"); OnchainQuote(a, "wallet", ids, destination, 30_000, fee = 262, chainFee = 0) },
+                { throw ExitNotPossible(null, "This VTXO can't be exited.") }, { emptyList() }, {}, { false }, {}, { null }, {}))
+            model.review(action, listOf("a"), destination = "address")
+            assertEquals("Swept", model.error); assertNull(model.estimateFallback); assertNull(model.quote)
+            refuseAtSubmit = true
+            model.review(action, listOf("a"), destination = "address")
+            model.confirm()
+            assertEquals("not the uncertain copy", "This VTXO can't be exited.", model.error); assertNull(model.estimateFallback)
+        }
+    }
     @Test fun failedPreparationOffersNoFallbackAndSuccessfulQuoteStaysNormal() = runBlocking {
         val fake = Fake(); val model = OnchainModel(fake.dependencies())
         fake.failPreparation = true; model.review(OnchainAction.startExit, listOf("a"))

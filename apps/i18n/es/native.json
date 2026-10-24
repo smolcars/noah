@@ -2075,5 +2075,6 @@
   "gt_942dd82f7e0ad733_other": "No se pudieron comprobar las comisiones de {{n}} VTXOs, así que Todos espera. Elígelos uno por uno o inténtalo de nuevo.",
   "gt_d59c8e3fe94700c0": "La transferencia automática a Ark no ofreció ningún depósito: cada preparación gastaba una reclamación de salida a este teléfono",
   "gt_113e303aa9642dc1": "El camino de tu VTXO hasta la cadena",
-  "gt_545eb93f8194bd47": "Noah no ha revisado la cadena para esta salida desde hace un rato. Revisarla también puede enviar o subir la comisión de sus transacciones."
+  "gt_545eb93f8194bd47": "Noah no ha revisado la cadena para esta salida desde hace un rato. Revisarla también puede enviar o subir la comisión de sus transacciones.",
+  "gt_064ce079abb02910": "Este VTXO no se puede sacar."
 }

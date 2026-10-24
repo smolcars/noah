@@ -69,7 +69,8 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     val haptics = rememberHaptics()
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
-    val exit = model.exit ?: overview?.exits?.find { it.id == id }
+    // What bark said the waiting package needs, when a check reported funds short: the amount to add comes from it.
+    val exit = (model.exit ?: overview?.exits?.find { it.id == id })?.let { e -> ExitFunding.shared.needed(e.id)?.let { e.copy(nextPackageFee = it) } ?: e }
     val exits = overview?.exits.orEmpty().map { exit -> model.exit?.takeIf { it.id == exit.id } ?: exit }
     val seenStore = remember(app.settings) { ExitSeen.stored(app.settings) }
     // Recomputed on each completed read (every minute, as before), even an unchanged one; never a timer of its own.

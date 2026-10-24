@@ -1242,6 +1242,7 @@
   <string name="gt_2f1c3676c41f927f">"これらの単語は有効なフレーズになりません。"</string>
   <string name="gt_23333df084dfad80">"このライトニング請求書は期限切れです。新しい請求書をリクエストしてください。"</string>
   <string name="gt_74bb47afc8d3b8c4">"このQRコードに含まれるのは、ご自身のライトニングアドレスのみです。"</string>
+  <string name="gt_064ce079abb02910">"このVTXOは出金できません。"</string>
   <string name="gt_1d4b5ac7d8751913">"このVTXOは、ウォレット内の現在のVTXO一覧には含まれていません。更新して状況を確認してください。"</string>
   <string name="gt_4cbed14dc727aedc">"このVTXOはすでに使用されているため、出金できません。"</string>
   <string name="gt_69d8d757288ce17b">"このアドレスは、お使いのNoahウォレットのアドレスではありません。受け取る資金はこのアドレスに送られます。"</string>

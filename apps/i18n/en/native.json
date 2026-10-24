@@ -28,6 +28,7 @@
   "gt_05421802af3d82be": "{{amount}} available",
   "gt_05f4e6f4ede4a216": "Claim Exits",
   "gt_0632ba4767ab1888": "{{amount}} at the time",
+  "gt_064ce079abb02910": "This VTXO can't be exited.",
   "gt_065277fcb38b2217": "Continue without estimate",
   "gt_0682d833fd5c9126": "Share app logs",
   "gt_068deca46a360c34": "{{n}} h",

@@ -234,7 +234,35 @@ class ExitStagesTest {
         assertEquals("only the parked transaction shows it", null, ExitStages.of(exit("Processing", processing(100, *path("verify-inputs"))), 100, needsFunds = true).attention)
     }
 
+    @Test fun aCheckThatReportsFundsShortIsDirectEvidenceWithWhatBarkNeeds() {
+        val funding = ExitFunding(75_000) { 0 }
+        // No waiting time and no package fee known: bark's own report is enough.
+        val unpriced = parked.copy(nextPackageFee = null)
+        assertTrue(funding.needsFunds(listOf(unpriced), 0, 1).isEmpty())
+        funding.reported(mapOf("v1" to 4_000))
+        assertEquals(4_000L, funding.needed("v1"))
+        assertEquals(setOf("v1"), funding.needsFunds(listOf(unpriced), 3_999, 1))
+        assertTrue("funds arrived", funding.needsFunds(listOf(unpriced), 4_000, 1).isEmpty())
+        assertTrue("not once it's over", funding.needsFunds(listOf(unpriced.copy(state = "Canceled")), 0, 1).isEmpty())
+        // A later check replaces it; a start or cancel forgets it.
+        funding.reported(emptyMap()); assertNull(funding.needed("v1"))
+        funding.reported(mapOf("v1" to 4_000)); funding.forget(listOf("v1"))
+        assertNull(funding.needed("v1")); assertTrue(funding.needsFunds(listOf(unpriced), 0, 1).isEmpty())
+    }
+
     private fun vtxo(id: String, amount: Long, state: String = "Spendable") = VtxoModel(id, amount, 1_000, state, "round", 4, 0, true, "", 144, "a:0", "p:0", false, 100)
+
+    @Test fun vtxosBarkRefusedShowWhyAndAreLeftOutOfEverySelection() {
+        val open = vtxo("open", 31_000); val spent = vtxo("spent", 20_000); val dust = vtxo("dust", 290); val locked = vtxo("locked", 9_000, "Locked")
+        val refused = mapOf("spent" to "Already spent", "dust" to "This VTXO can't be exited.", "locked" to "Swept")
+        assertEquals(ExitCosts.Barred.refused, ExitCosts.barred(spent, refused))
+        assertEquals("today's labels come first", ExitCosts.Barred.dust, ExitCosts.barred(dust, refused))
+        assertEquals(ExitCosts.Barred.locked, ExitCosts.barred(locked, refused))
+        assertNull(ExitCosts.barred(open, refused))
+        val cost = ExitCosts.Cost(5_533, 262, 4)
+        assertEquals(listOf(open), ExitCosts.all(listOf(open, spent, dust, locked), mapOf("open" to cost, "spent" to cost), refused))
+        assertEquals("without a refusal it's chosen as before", listOf(open, spent), ExitCosts.all(listOf(open, spent), mapOf("open" to cost, "spent" to cost)))
+    }
 
     @Test fun uneconomicVtxosAreLabelledAndLeftOutOfAll() {
         val big = vtxo("big", 31_000); val small = vtxo("small", 5_000); val dust = vtxo("dust", 290); val locked = vtxo("locked", 710, "Locked"); val unknown = vtxo("unknown", 4_000)

@@ -8,7 +8,11 @@ internal class OnchainOperations(
     private val wallet: OnchainWalletAccess, private val journal: OnchainOperationJournal,
     private val ready: () -> Boolean = { true },
     private val now: () -> Long = System::currentTimeMillis,
+    /** VTXOs bark refused to exit, with their reason ([ExitErrors.refused] in the app). */
+    private val refused: MutableMap<String, String> = mutableMapOf(),
 ) {
+    /** A refusal for [ids], noted against its VTXO. */
+    private fun refusal(error: Exception, ids: List<String>) = ExitErrors.refusal(error, ids)?.also { r -> r.vtxoId?.let { refused[it] = checkNotNull(r.message) } }
     suspend fun overview(threshold: UInt): OnchainOverview {
         val tip = wallet.tip()
         val expiring = wallet.expiring(threshold)
@@ -37,13 +41,13 @@ internal class OnchainOperations(
             exit.copy(childFees = exit.packages.mapNotNull { p -> p.childTxid?.let { id -> fees[id]?.let { id to it } } }.toMap(), nextPackageFee = next)
         }
     }
-    /** Decision 4: each VTXO's own exit estimate (bark's, for it alone), or null where bark can't estimate it now. */
+    /** Decision 4: each VTXO's own exit estimate (bark's, for it alone), or null where bark can't estimate it now or refuses it. */
     // shortcut: the standalone estimate, so siblings carry their shared path each; split it once bark-bolt-ffi's estimate has per-transaction data.
     suspend fun exitCosts(ids: List<String>): Map<String, ExitCosts.Cost?> {
         if (!ready()) fail(OnchainFailure.unavailable)
         return ids.associateWith { id ->
             try { wallet.exitFee(listOf(id), null).let { ExitCosts.Cost(it.exitBroadcastFeeSats.toLong(), it.claimFeeSats.toLong(), it.txsToBroadcast.toLong()) } }
-            catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+            catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { refusal(failure, listOf(id)); null }
         }
     }
     private suspend fun renewable(ids: List<String>, threshold: UInt): Boolean {
@@ -175,6 +179,8 @@ internal class OnchainOperations(
         if (!estimate && fallbackAllowed) return unknown
         val fee = try { wallet.exitFee(validated.ids, validated.destination) }
         catch (failure: Exception) {
+            // Starting would fail the same way, so no "Continue without estimate".
+            refusal(failure, validated.ids)?.let { throw it }
             if (fallbackAllowed && ExitEstimateUnavailable.allowsFallback(failure)) throw ExitEstimateUnavailable(unknown)
             throw failure
         }
@@ -198,7 +204,8 @@ internal class OnchainOperations(
      */
     suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
                         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
-                        recordClaim: (ExitClaimRecords.Record) -> Unit = {}, newRun: (List<String>) -> Unit = {}): String {
+                        recordClaim: (ExitClaimRecords.Record) -> Unit = {}, newRun: (List<String>) -> Unit = {},
+                        shortOfFunds: (Map<String, Long>) -> Unit = {}): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding(kept) != funding)) fail(OnchainFailure.changed)
@@ -240,12 +247,19 @@ internal class OnchainOperations(
                 }
                 OnchainAction.refresh -> OnchainReceipt(wallet.refresh(reviewed.ids)?.let { "Refresh submitted to delegated round ${it.id}." } ?: "No refresh round was needed.")
                 OnchainAction.startExit -> {
-                    wallet.start(reviewed.ids)
+                    // bark refuses a VTXO after registering the ones before it, which it skips when they're started again.
+                    val refusedStart = try { wallet.start(reviewed.ids); null } catch (error: BarkError) { refusal(error, reviewed.ids) ?: throw error }
                     runCatching { newRun(reviewed.ids) }
+                    refusedStart?.let { throw it }
                     OnchainReceipt("Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance.")
                 }
                 OnchainAction.progress -> {
-                    val failures = wallet.progress(reviewed.feeRate).count { it.error != null }
+                    val statuses = wallet.progress(reviewed.feeRate)
+                    // Short of confirmed funds is bark's own evidence, with what it needs; bark 0.8.0's CPFP never reports it.
+                    val short = statuses.mapNotNull { status -> status.error?.takeIf { it.code == BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS }
+                        ?.let { status.vtxoId to (it.neededSats?.toLong() ?: 0) } }.toMap()
+                    runCatching { shortOfFunds(short) }
+                    val failures = statuses.count { status -> status.error?.let { it.code != BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS } == true }
                     OnchainReceipt(if (failures == 0) OnchainReceipt.progressedMessage
                         else "Exit progression returned $failures errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 }
