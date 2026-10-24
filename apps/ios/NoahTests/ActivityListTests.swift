@@ -68,6 +68,20 @@ struct ActivityListTests {
         #expect(ActivityList.kindWords(pending, locale: "en").contains("Sending"))
     }
 
+    @Test func searchMatchesTheShownAmountOnly() {
+        // An amountless retry: attempt 1's 1,000 is on record, the proven debit is 2,080.
+        var paid = Self.row("movement-4", "2026-10-22T12:00:00Z", amount: 1_000, direction: "outgoing", type: "Bolt11")
+        paid.subsystemName = "bark.lightning_send"
+        paid.sentTo = [.init(destination: ActivityMappingTests.amountlessInvoice, amount_sat: 1_000, paymentMethod: "invoice")]
+        paid.effectiveBalanceSat = -2_080
+        #expect(ActivityList.matches(paid, query: "2,080", words: []))
+        #expect(!ActivityList.matches(paid, query: "1000", words: []))
+        // No proven amount: no amount matches at all.
+        paid.effectiveBalanceSat = nil
+        #expect(!ActivityList.matches(paid, query: "1000", words: []) && !ActivityList.matches(paid, query: "2080", words: []))
+        #expect(ActivityList.matches(paid, query: "movement-4", words: []), "other fields still match")
+    }
+
     @Test func filterNarrowsRowsAndNamesItsEmptyState() {
         let ark = Self.row("ark", "2026-10-22T12:00:00Z")
         let lightning = Self.row("ln", "2026-10-22T12:00:00Z", type: "Bolt11")

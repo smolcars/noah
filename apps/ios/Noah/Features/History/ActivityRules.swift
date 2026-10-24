@@ -27,7 +27,9 @@ enum ActivityList {
         guard !needle.isEmpty else { return true }
         // "2,100", "2 100" and "2100" all find a ₿2,100 payment.
         let digits = needle.filter { ![",", ".", "'", " ", "\u{00A0}", "\u{202F}", "_"].contains($0) }
-        if !digits.isEmpty, digits.allSatisfy(\.isASCIIDigit), String(transaction.amount).contains(digits) { return true }
+        // The amount shown, so an amountless retry never matches its first attempt's number.
+        if !digits.isEmpty, digits.allSatisfy(\.isASCIIDigit), let amount = transaction.shownAmount,
+           String(amount).contains(digits) { return true }
         let fields: [String?] = [
             transaction.destination, transaction.repeatPayment?.destination, transaction.repeatPayment?.comment,
             transaction.paymentDescription, transaction.recurring?.name, transaction.txid, transaction.paymentHash,
