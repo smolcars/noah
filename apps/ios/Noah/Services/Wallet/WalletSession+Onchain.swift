@@ -14,8 +14,9 @@ extension WalletSession {
             let vtxos = try await handles.wallet.vtxos().map {
                 Self.vtxoModel($0, tip: tip, expiring: expiring)
             }
+            let runs = Self.exitRuns(handles)
             let models = try await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)
-                .map(Self.exitModel)
+                .map { Self.exitModel($0, runs: runs) }
             var overview = OnchainOverview(
                 walletID: handles.wallet.fingerprint(), vtxos: vtxos, exits: models,
                 confirmed: try await handles.onchain.balance().confirmedSats, tip: tip,
@@ -91,15 +92,20 @@ extension WalletSession {
     func exitDetail(_ id: String) async throws -> ExitModel? {
         try await withOpenWallet { handles in
             try await handles.wallet.getExitStatus(vtxoId: id, includeHistory: true, includeTransactions: false)
-                .map(Self.exitModel)
+                .map { Self.exitModel($0, runs: Self.exitRuns(handles)) }
         }
     }
 
-    static func exitModel(_ status: ExitTransactionStatus) -> ExitModel {
+    static func exitModel(_ status: ExitTransactionStatus, runs: [String: String] = [:]) -> ExitModel {
         let current = Self.exitState(status.state)
         let history = (status.history ?? []).map(Self.exitState)
         return .init(id: status.vtxoId, amount: status.amountSats, state: current.0, details: current.1,
-                     history: history.map(\.0), historyDetails: history.map(\.1), claimable: current.0 == "Claimable")
+                     history: history.map(\.0), historyDetails: history.map(\.1), claimable: current.0 == "Claimable",
+                     run: runs[status.vtxoId] ?? "")
+    }
+
+    private static func exitRuns(_ handles: Handles) -> [String: String] {
+        ExitRuns.Store(key: ExitRuns.key).load(walletID: handles.wallet.fingerprint()) ?? [:]
     }
 
     func exitDepositAddress() async throws -> String {
@@ -298,6 +304,8 @@ extension WalletSession {
         var spendable: @Sendable () async throws -> [String: UInt64]
         var estimate: @Sendable ([String]) async throws -> EmergencyExitFeeEstimate
         var start: @Sendable ([String]) async throws -> Void
+        /// Just before the start: a new run for each exit (`ExitRuns`), so nothing from an earlier run counts.
+        var began: @Sendable ([String]) async throws -> Void = { _ in }
     }
 
     private static func startAccess(_ handles: Handles) -> OnchainStartAccess {
@@ -338,6 +346,8 @@ extension WalletSession {
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
         guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
         return try await journal.perform(quote) {
+            // Best-effort: the earlier run's proof is cleared first, and its sightings end with its status.
+            try? await access.began(quote.ids)
             try await access.start(quote.ids)
             return "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
         }
@@ -505,7 +515,13 @@ extension WalletSession {
                 return try await Self.executeClaim(quote, journal: journal, access: Self.claimAccess(handles))
             }
             if quote.action == .startExit {
-                return try await Self.executeStart(quote, journal: journal, access: Self.startAccess(handles))
+                var access = Self.startAccess(handles)
+                let walletID = handles.wallet.fingerprint()
+                access.began = { ids in
+                    await self.forgetExitProof(ids, walletID: walletID)
+                    try ExitRuns.begin(ids, walletID: walletID)
+                }
+                return try await Self.executeStart(quote, journal: journal, access: access)
             }
             guard ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
             guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
@@ -541,10 +557,11 @@ extension WalletSession {
                     // A completed call tried to fund every parked transaction; those still parked had too
                     // few confirmed funds (Decision 3), in this parking episode only, so the history is
                     // read again. Errors mark the check failed: exits may be stale.
-                    let tried = Set(statuses.filter { $0.error == nil }.map(\.vtxoId))
+                    let tried = Set(statuses.filter { $0.error == nil }.map(\.vtxoId)), runs = Self.exitRuns(handles)
                     let exits = (try? await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)) ?? []
-                    let parked = exits.map(Self.exitModel).filter { tried.contains($0.id) }.compactMap(\.parkedEpisode)
-                    await self.recordExitCheck(.init(tip: try? await handles.onchain.tipHeight(), parked: Set(parked),
+                    let parked = exits.map { Self.exitModel($0, runs: runs) }.filter { tried.contains($0.id) }
+                        .compactMap { exit in exit.parkedEpisode.map { (exit.id, $0) } }
+                    await self.recordExitCheck(.init(tip: try? await handles.onchain.tipHeight(), parked: Dictionary(parked, uniquingKeysWith: { a, _ in a }),
                                                      failed: failures > 0), walletID: walletID)
                     return OnchainReceipt(
                         message: failures == 0
@@ -555,6 +572,7 @@ extension WalletSession {
                 case .cancel:
                     let result = try await handles.wallet.cancelExit(vtxoId: quote.ids[0])
                     guard result.canceled else { throw OnchainFailure.cancellationRefused }
+                    await self.forgetExitProof(quote.ids, walletID: handles.wallet.fingerprint())
                     return "Exit canceled. The VTXO remains spendable."
                 }
             }

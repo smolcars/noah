@@ -40,6 +40,8 @@ struct ExitModel: Identifiable, Equatable, Sendable {
     var history: [String]
     var historyDetails: [ExitDetails]
     var claimable: Bool
+    /// Noah's id for this run of the exit (`ExitRuns`); empty for exits started before Noah kept one.
+    var run = ""
     var cancelable: Bool {
         ExitRules.cancelable(
             state: state, finalTransactionKind: details.transactions?.last?.status.kind)
@@ -70,10 +72,10 @@ struct OnchainOverview: Sendable {
     var claimRecords: [String: ExitClaimRecord] = [:]
     /// Since when bark's daemon has been progressing exits in this session; nil without it.
     var daemonSince: Date? = .distantPast
-    /// The app's own last exit progress (Check the chain): its tip, the parking episodes it left waiting
-    /// for a fee child after trying to fund them, and whether it failed.
+    /// The app's own last exit progress (Check the chain): its tip, the parking episode it left waiting
+    /// for a fee child after trying to fund it, by exit, and whether it failed.
     var checkedTip: UInt32?
-    var provenParked: Set<String> = []
+    var provenParked: [String: String] = [:]
     var checkFailed = false
 }
 

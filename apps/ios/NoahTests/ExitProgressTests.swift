@@ -160,7 +160,7 @@ struct ExitProgressTests {
         let exit = Self.exit("Processing", Self.processing(txs, tip: 101))
         #expect(exit.parkedTxid == "l2" && exit.parkedEpisode == "l2|awaiting-cpfp-broadcast|0")
         let t0 = Date(timeIntervalSince1970: 1_000)
-        func needs(_ confirmed: UInt64 = 310, fee: UInt64? = 1_215, proven: Set<String> = [], seen: Date? = t0, daemon: Date? = .distantPast,
+        func needs(_ confirmed: UInt64 = 310, fee: UInt64? = 1_215, proven: [String: String] = [:], seen: Date? = t0, daemon: Date? = .distantPast,
                    at seconds: TimeInterval, _ subject: ExitModel = exit) -> Bool {
             ExitFunds.needsFunds(subject, confirmed: confirmed, packageFee: fee, proven: proven, parkedSince: seen, daemonSince: daemon,
                                  now: t0.addingTimeInterval(seconds))
@@ -172,12 +172,14 @@ struct ExitProgressTests {
         // The daemon started after it parked: the cycle counts from then.
         #expect(!needs(daemon: t0.addingTimeInterval(30), at: 75) && needs(daemon: t0.addingTimeInterval(30), at: 105))
         // Without the daemon, elapsed time proves nothing; a completed Check the chain does.
-        let proof: Set<String> = ["l2|awaiting-cpfp-broadcast|0"]
+        let proof = ["v": "l2|awaiting-cpfp-broadcast|0"]
         #expect(!needs(daemon: nil, at: 10_000) && needs(proven: proof, daemon: nil, at: 0))
         // Funds arrive, or nothing to compare against: cleared.
         #expect(!needs(1_215, at: 10_000) && !needs(fee: nil, proven: proof, at: 10_000))
         // Proof for another transaction doesn't carry over; once it has its child it isn't parked.
-        #expect(!needs(proven: ["root|awaiting-cpfp-broadcast|0"], daemon: nil, at: 0))
+        #expect(!needs(proven: ["v": "root|awaiting-cpfp-broadcast|0"], daemon: nil, at: 0))
+        // Proof for another exit doesn't either.
+        #expect(!needs(proven: ["w": "l2|awaiting-cpfp-broadcast|0"], daemon: nil, at: 0))
         var moved = txs
         moved[1] = Self.tx("l2", "awaiting-confirmation", child: "c1", origin: "wallet")
         let paid = Self.processing(moved, tip: 101)
@@ -195,7 +197,35 @@ struct ExitProgressTests {
         let since = sightings.seen[again.parkedEpisode!]?.at
         #expect(since == t0.addingTimeInterval(600))
         #expect(!needs(seen: since, at: 674, again) && needs(seen: since, at: 675, again))
-        #expect(needs(proven: [again.parkedEpisode!], daemon: nil, at: 0, again))
+        #expect(needs(proven: ["v": again.parkedEpisode!], daemon: nil, at: 0, again))
+    }
+
+    @Test func aRestartedExitIsANewRun() {
+        // bark restarts a cancelled exit with an empty history: the same transactions, the same record index.
+        var txs = Self.path.map { Self.tx($0, "verify-inputs") }
+        txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
+        var first = Self.exit("Processing", Self.processing(txs)), again = first
+        first.run = "r1"; again.run = "r2"
+        #expect(first.parkedEpisode == "root|awaiting-cpfp-broadcast|0|r1" && again.parkedEpisode == "root|awaiting-cpfp-broadcast|0|r2")
+        #expect(ExitFunds.needsFunds(first, confirmed: 100, packageFee: 1_215, proven: ["v": first.parkedEpisode!], parkedSince: nil, daemonSince: nil, now: Date()))
+        #expect(!ExitFunds.needsFunds(again, confirmed: 100, packageFee: 1_215, proven: ["v": first.parkedEpisode!], parkedSince: nil, daemonSince: nil, now: Date()))
+        var sightings = ExitSightings()
+        _ = sightings.observe([first], tip: 100, now: Date(timeIntervalSince1970: 1))
+        #expect(sightings.seen[again.parkedEpisode!] == nil)
+        // Each start writes a new run per VTXO.
+        let disk = Disk(), store = ExitRuns.Store(read: { disk.value }, write: { disk.value = $0 })
+        try? ExitRuns.begin(["v"], walletID: "a", store: store)
+        let one = store.load(walletID: "a")?["v"]
+        try? ExitRuns.begin(["v"], walletID: "a", store: store)
+        #expect(one != nil && store.load(walletID: "a")?["v"] != one)
+    }
+
+    @Test func cancellingOrStartingForgetsThatExitsProof() async {
+        let session = WalletSession(variant: .regtest, location: WalletDataLocation(variant: .regtest,
+            documentsDirectory: FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)))
+        await session.recordExitCheck(.init(tip: 100, parked: ["a": "x|awaiting-cpfp-broadcast|0", "b": "y|awaiting-cpfp-broadcast|0"]), walletID: "w")
+        await session.forgetExitProof(["a"], walletID: "w")
+        #expect(await session.exitChecks["w"]?.parked == ["b": "y|awaiting-cpfp-broadcast|0"])
     }
 
     @Test func barkHistoryIsNoEvidence() {
@@ -205,8 +235,8 @@ struct ExitProgressTests {
         txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
         let exit = Self.exit("Processing", Self.processing(txs, tip: 102), history: [Self.processing(txs, tip: 100)])
         #expect(exit.parkedEpisode == "root|awaiting-cpfp-broadcast|0")
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [], parkedSince: nil, daemonSince: nil, now: Date()))
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [], parkedSince: nil, daemonSince: .distantPast, now: Date()))
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [:], parkedSince: nil, daemonSince: nil, now: Date()))
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [:], parkedSince: nil, daemonSince: .distantPast, now: Date()))
     }
 
     @Test func sightingsKeepTheFirstTipAndForgetWhatMovedOn() throws {
@@ -248,7 +278,7 @@ struct ExitProgressTests {
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
         txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
         let exit = Self.exit("Processing", Self.processing(txs, tip: 100))
-        #expect(ExitFunds.needsFunds(exit, confirmed: 1_180, packageFee: 1_215, proven: ["root|awaiting-cpfp-broadcast|0"],
+        #expect(ExitFunds.needsFunds(exit, confirmed: 1_180, packageFee: 1_215, proven: ["v": "root|awaiting-cpfp-broadcast|0"],
                                      parkedSince: nil, daemonSince: nil, now: Date()))
     }
 
@@ -744,8 +774,11 @@ struct ExitRestartTests {
 
     actor StartWallet {
         var starts: [[String]] = []
+        /// What happened, in order: Noah's new run, then bark's start.
+        var events: [String] = []
         var estimatorFails = false
-        func start(_ ids: [String]) { starts.append(ids) }
+        func start(_ ids: [String]) { starts.append(ids); events.append("start") }
+        func began() { events.append("run") }
         func failEstimates() { estimatorFails = true }
         func estimate() throws -> EmergencyExitFeeEstimate {
             if estimatorFails { throw OnchainFailure.unavailable }
@@ -754,7 +787,7 @@ struct ExitRestartTests {
         /// bark still lists the VTXO as spendable: only the journal stops a second start.
         nonisolated func access() -> WalletSession.OnchainStartAccess {
             .init(walletID: "wallet", confirmed: { 18_400 }, spendable: { ["v": 31_000] },
-                  estimate: { _ in try await self.estimate() }, start: { await self.start($0) })
+                  estimate: { _ in try await self.estimate() }, start: { await self.start($0) }, began: { _ in await self.began() })
         }
     }
 
@@ -810,6 +843,7 @@ struct ExitRestartTests {
         #expect(first.quote?.fee == 262 && first.quote?.chainFee == 5_533)
         await Self.hold(first)
         #expect(await wallet.starts == [["v"]])
+        #expect(await wallet.events == ["run", "start"])
         await Self.reactivate(first, .startExit, ids: ["v"])
         #expect(first.quote == nil && first.error != nil)
         let restarted = launch()

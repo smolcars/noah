@@ -161,9 +161,11 @@ extension ExitModel {
     }
 
     /// `transaction`'s current episode in its status, the key for sightings and evidence: bark records
-    /// every change, so the record where this unbroken run began tells it from an earlier run.
+    /// every change, so the record where this unbroken run began tells it from an earlier one. bark
+    /// restarts a cancelled exit with an empty history, so Noah's run id tells the exit's runs apart.
     func episode(_ transaction: ExitDetails.Transaction) -> String {
-        "\(transaction.txid)|\(transaction.status.kind)|\(runStart(transaction))"
+        let key = "\(transaction.txid)|\(transaction.status.kind)|\(runStart(transaction))"
+        return run.isEmpty ? key : key + "|" + run
     }
 
     /// The index in `records` where `transaction`'s current unbroken run in its status began.
@@ -202,6 +204,18 @@ struct ExitSightings: Codable, Equatable, Sendable {
 
     static let key = "native-exit-sightings-v1"
     typealias Store = ExitWalletStore<ExitSightings>
+}
+
+/// Noah's id for each exit run, by VTXO, new each time it starts one (`ExitModel.run`).
+enum ExitRuns {
+    static let key = "native-exit-runs-v1"
+    typealias Store = ExitWalletStore<[String: String]>
+
+    static func begin(_ ids: [String], walletID: String, store: Store = .init(key: key)) throws {
+        var runs = store.load(walletID: walletID) ?? [:]
+        for id in ids { runs[id] = UUID().uuidString }
+        try store.save(runs, walletID: walletID)
+    }
 }
 
 /// A claim Noah built (Sol I): its drain's fee, the exits it covers and where it went, by claim
@@ -255,12 +269,12 @@ enum ExitFunds {
         (satPerVb * 250 * (parentWeight + childWeight) + 999) / 1000
     }
 
-    /// `proven`: episodes a completed Check the chain left parked. `parkedSince`: Noah's first sighting of
-    /// this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
-    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: Set<String>,
+    /// `proven`: the episode a completed Check the chain left parked, by exit. `parkedSince`: Noah's first
+    /// sighting of this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
+    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: [String: String],
                            parkedSince: Date?, daemonSince: Date?, now: Date) -> Bool {
         guard let episode = exit.parkedEpisode, let packageFee, confirmed < packageFee else { return false }
-        if proven.contains(episode) { return true }
+        if proven[exit.id] == episode { return true }
         // Only after bark has had a full daemon cycle to fund it, so the label doesn't flash before it tried.
         guard let parkedSince, let daemonSince else { return false }
         return now.timeIntervalSince(max(parkedSince, daemonSince)) >= cycle

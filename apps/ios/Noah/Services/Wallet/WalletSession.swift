@@ -53,16 +53,20 @@ actor WalletSession {
     /// starts and cleared wherever it stops. The app can't see its cycles.
     private(set) var daemonSince: Date?
     func appBecameActive() { daemonSince = daemonSince.map { _ in Date() } }
-    /// The app's own last exit progress (Check the chain), per wallet: the tip and the parking episodes
+    /// The app's own last exit progress (Check the chain), per wallet: the tip, the parking episode
     /// (`ExitModel.parkedEpisode`) still waiting for a fee child after a completed call tried to fund
-    /// them, or that it failed.
+    /// it, by exit, or that it failed.
     struct ExitCheck: Sendable {
         var tip: UInt32?
-        var parked: Set<String> = []
+        var parked: [String: String] = [:]
         var failed = false
     }
     private(set) var exitChecks: [String: ExitCheck] = [:]
     func recordExitCheck(_ check: ExitCheck, walletID: String) { exitChecks[walletID] = check }
+    /// Cancelling or starting these exits ends their run: its proof no longer says anything.
+    func forgetExitProof(_ ids: [String], walletID: String) {
+        for id in ids { exitChecks[walletID]?.parked[id] = nil }
+    }
     func recordFailedExitCheck(walletID: String) { exitChecks[walletID, default: .init()].failed = true }
 
     private enum State {
