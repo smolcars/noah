@@ -20,8 +20,11 @@ actor OnchainOperationJournal {
         var receipt: OnchainReceipt?
         var txid: String?
         var chainStatusError: String? = nil
-        private enum CodingKeys: String, CodingKey { case quote, receipt, txid, overrideAudit }
+        private enum CodingKeys: String, CodingKey { case quote, receipt, txid, overrideAudit, boardUncertain }
         var overrideAudit: OverrideAudit?
+        /// FFI 0.7.0's `uncertain` board: bark may have partly recorded it, so repeat protection can't be
+        /// overridden; only Check status proving nothing was boarded releases it.
+        var boardUncertain: Bool?
         var id: UUID { quote.id }
 
         func blocks(_ action: OnchainAction, ids: [String]) -> Bool {
@@ -125,6 +128,21 @@ actor OnchainOperationJournal {
     }
     func recordTransaction(_ txid: String, for id: UUID) throws { try update(id, txid: txid) }
 
+    func markBoardUncertain(_ id: UUID) throws {
+        var attempts = try loadAll()
+        guard let index = attempts.firstIndex(where: { $0.id == id }) else { throw OnchainFailure.uncertain }
+        attempts[index].boardUncertain = true
+        try save(attempts)
+    }
+
+    /// An uncertain board Check status proved was never boarded: nothing left to protect, so it goes.
+    func releaseUnboarded(_ id: UUID) throws {
+        guard !running else { throw OnchainFailure.busy }
+        let attempts = try loadAll()
+        guard attempts.contains(where: { $0.id == id && $0.boardUncertain == true && $0.receipt == nil }) else { return }
+        try save(attempts.filter { $0.id != id })
+    }
+
     func recordStatusError(for id: UUID) throws {
         guard !running else { return }
         guard statusErrors[id] != ChainTransactionStatus.errorText else { return }
@@ -210,7 +228,8 @@ actor OnchainOperationJournal {
         guard !running else { throw OnchainFailure.busy }
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { $0.id == id }),
-            attempts[index].receipt == nil, attempts[index].overrideAudit == nil else {
+            attempts[index].receipt == nil, attempts[index].overrideAudit == nil,
+            attempts[index].boardUncertain != true else {
             throw OnchainFailure.busy
         }
         attempts[index].overrideAudit = .init(overriddenAt: now)

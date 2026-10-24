@@ -541,6 +541,61 @@ struct BoardPreparedTests {
         #expect(try await journal.loadAll().map(\.id) == (failure == .uncertain ? [quote.id] : []))
         #expect(await calls.discarded == [quote.id])
     }
+    /// An uncertain board may be partly recorded (a BOARD movement before its checkpoint): repeat protection
+    /// can't be overridden into a second board, even after a reload. Only Check status proving nothing was
+    /// boarded releases it.
+    @Test func uncertainBoardCantBeOverriddenUntilNothingWasBoarded() async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let session = WalletSession()
+        let calls = Calls()
+        let quote = Self.quote
+        await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
+            await calls.submit(.init(txid: "exact", broadcast: .uncertain(reason: "private diagnostic"), vtxoIds: []))
+        })
+        await #expect(throws: OnchainFailure.uncertain) {
+            try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })
+        }
+        var second = Self.quote
+        second.id = UUID()
+        for current in [journal, OnchainOperationJournal(file: file)] {
+            #expect(try await current.load()?.boardUncertain == true)
+            await #expect(throws: OnchainFailure.busy) { try await current.discardUncertain(quote.id) }
+            await #expect(throws: OnchainFailure.busy) { try await current.perform(second) { "second board" } }
+        }
+        let reloaded = OnchainOperationJournal(file: file)
+        func check(_ chain: ChainTransactionStatus? = .notFound, ids: Set<String> = [], anchors: Set<String> = [],
+                   unspent: Set<String> = ["funding:0"]) async throws -> Bool {
+            try await WalletSession.checkOnchainAttempt(quote.id, journal: reloaded, reads: .init(
+                walletID: "wallet", transactionIDs: { ids }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
+                transactionStatus: { _ in chain }, boardAnchors: { anchors }, unspent: { unspent }))
+        }
+        // A BOARD movement anchored to the funding txid, with no pending board, VTXO or chain transaction: kept.
+        #expect(try await !check(anchors: ["exact"]))
+        // Its input spent elsewhere, or a chain source that can't say: kept.
+        #expect(try await !check(unspent: []))
+        #expect(try await !check(nil))
+        #expect(try await reloaded.load()?.boardUncertain == true)
+        // Nothing anywhere and the input still unspent: released, and a fresh board may go.
+        #expect(try await check())
+        #expect(try await reloaded.loadAll().isEmpty)
+        _ = try await reloaded.perform(second) { "second board" }
+        #expect(await calls.submitted == 1)
+    }
+    /// A pending board or the chain finding the funding txid still resolves it as boarded (never released).
+    @Test func uncertainBoardFoundByItsTxidResolvesAsBoarded() async throws {
+        let (journal, file) = journal()
+        defer { try? FileManager.default.removeItem(at: file) }
+        var attempt = OnchainOperationJournal.Attempt(quote: Self.quote)
+        attempt.txid = "exact"
+        attempt.boardUncertain = true
+        try JSONEncoder().encode([attempt]).write(to: file)
+        #expect(try await WalletSession.checkOnchainAttempt(Self.quote.id, journal: journal, reads: .init(
+            walletID: "wallet", transactionIDs: { [] }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
+            transactionStatus: { _ in .inMempool }, unspent: { ["funding:0"] })))
+        let saved = try #require(try await journal.load())
+        #expect(saved.receipt?.broadcastRetryPending == true && saved.blocks(.board, ids: []))
+    }
     /// `notAttempted` still means nothing was recorded: the lock is released and a new review submits.
     @Test func notAttemptedOutcomeAllowsAFreshBoard() async throws {
         let (journal, file) = journal()

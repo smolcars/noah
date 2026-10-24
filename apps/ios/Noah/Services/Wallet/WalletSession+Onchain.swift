@@ -699,7 +699,18 @@ extension WalletSession {
                     guard let status = try await handles.wallet.getExitStatus(
                         vtxoId: id, includeHistory: true, includeTransactions: false) else { return nil }
                     return Self.exitState(status.state).0
-                }, transactionStatus: { .init(try await handles.wallet.transactionStatus(txid: $0)) }))
+                }, transactionStatus: { .init(try await handles.wallet.transactionStatus(txid: $0)) },
+                // bark can write a BOARD movement before its pending board and VTXO (bark-bolt-ffi's board_recorded).
+                boardAnchors: {
+                    Set(try await handles.wallet.history().compactMap {
+                        HistoryMetadata.parse($0.metadataJson).chainAnchor.map { String($0.prefix { $0 != ":" }) }
+                    })
+                },
+                unspent: {
+                    Set(try await handles.onchain.utxos().compactMap {
+                        if case let .local(point, _, _) = $0 { "\(point.txid):\(point.vout)" } else { nil }
+                    })
+                }))
         }
     }
 
@@ -710,6 +721,10 @@ extension WalletSession {
         var vtxoState: @Sendable (String) async throws -> String
         var exitState: @Sendable (String) async throws -> String?
         var transactionStatus: @Sendable (String) async throws -> ChainTransactionStatus? = { _ in nil }
+        /// Funding txids BOARD movements are anchored to (their metadata's `chain_anchor`).
+        var boardAnchors: @Sendable () async throws -> Set<String> = { [] }
+        /// The wallet's unspent outpoints ("txid:vout").
+        var unspent: @Sendable () async throws -> Set<String> = { [] }
     }
 
     static func checkOnchainAttempt(
@@ -724,19 +739,29 @@ extension WalletSession {
             evidence.exitStates[id] = try await reads.exitState(id)
         }
         var resolved = try await journal.reconcile(id, evidence: evidence)
+        var chain: ChainTransactionStatus?
         if let txid = attempt.txid ?? attempt.receipt?.txid {
-            let status: ChainTransactionStatus?
-            do { status = try await reads.transactionStatus(txid) }
+            do { chain = try await reads.transactionStatus(txid) }
             catch {
                 try await journal.recordStatusError(for: id)
                 return resolved || attempt.receipt != nil
             }
-            if let status {
+            if let status = chain {
                 if status != .notFound {
                     evidence.transactionIDs.insert(txid)
                     if !resolved { resolved = try await journal.reconcile(id, evidence: evidence) }
                 }
                 try await journal.observe(status, for: id)
+            }
+        }
+        // FFI 0.7.0's uncertain board is released only once nothing was boarded: the chain source doesn't know its
+        // funding txid, no cached transaction, pending board or BOARD movement has it, and every input is unspent.
+        if !resolved, attempt.boardUncertain == true, let txid = attempt.txid, chain == .notFound,
+           !evidence.transactionIDs.contains(txid), let inputs = attempt.quote.prepared?.inputs, !inputs.isEmpty {
+            let unspent = try await reads.unspent()
+            if inputs.allSatisfy({ unspent.contains("\($0.txid):\($0.vout)") }), try await !reads.boardAnchors().contains(txid) {
+                try await journal.releaseUnboarded(id)
+                return true
             }
         }
         return resolved || attempt.receipt != nil

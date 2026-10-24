@@ -132,6 +132,7 @@ extension WalletSession {
                 catch let error as BarkError where OnchainSubmission.boardFailure(error) == nil {
                     throw OnchainFailure.boardNotAttempted
                 }
+                if case .uncertain = result.broadcast { try await journal.markBoardUncertain(quote.id) }
                 return try OnchainSubmission.boardReceipt(result, quote: quote)
             }
             await discardBoard(quote, includingClaimed: true)
