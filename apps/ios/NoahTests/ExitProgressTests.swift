@@ -101,6 +101,22 @@ struct ExitProgressTests {
         now[0] = Self.tx("root", "awaiting-confirmation", child: "c0-rbf", origin: "wallet")
         let bumped = ExitProgress(Self.exit("Processing", Self.processing(now, tip: 101), history: [Self.processing(first, tip: 100)]), tip: 101, seen: seen)
         #expect(bumped.bumped && bumped.stuck == 1)
+
+        // Evicted, parked, then a fresh child at the same rate: a new episode. The old child isn't a rise,
+        // and the old sighting doesn't count blocks for this one.
+        var parked = first
+        parked[0] = Self.tx("root", "awaiting-cpfp-broadcast")
+        now[0] = Self.tx("root", "awaiting-confirmation", child: "c1", origin: "wallet")
+        let history = [Self.processing(first, tip: 100), Self.processing(parked, tip: 102)]
+        let fresh = Self.exit("Processing", Self.processing(now, tip: 103), history: history)
+        #expect(fresh.episode(now[0]) == "root|awaiting-confirmation|2")
+        let again = ExitProgress(fresh, tip: 105, seen: seen.merging(["root|awaiting-confirmation|2": 103]) { $1 })
+        #expect(!again.bumped && again.stuck == 2)
+        #expect(ExitProgress(fresh, tip: 105, seen: seen).stuck == 0)
+        // Bumped within the new episode: a rise again.
+        var rebumped = now
+        rebumped[0] = Self.tx("root", "awaiting-confirmation", child: "c1-rbf", origin: "wallet")
+        #expect(ExitProgress(Self.exit("Processing", Self.processing(rebumped, tip: 104), history: history + [Self.processing(now, tip: 103)]), tip: 104).bumped)
     }
 
     @Test func staleOnlyWithEvidenceThatNothingProgresses() {

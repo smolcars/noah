@@ -119,11 +119,9 @@ struct ExitProgress: Equatable, Sendable {
                 phase = current.status.origin == "wallet" || current.status.origin == nil ? .mempool : .shared
                 // Blocks since Noah first saw it in the mempool (bark keeps a state's height until it changes).
                 if let since = seen[exit.episode(current)], tip > since { stuck = tip - since }
-                // Its child when bark first recorded it in the mempool: a different one now means a re-bump.
-                let first = exit.records.first { record in
-                    record.transactions?.contains { $0.txid == current.txid && $0.status.kind == "awaiting-confirmation" } == true
-                }
-                let child = first?.transactions?.first { $0.txid == current.txid }?.status.child_txid
+                // Its child when bark first recorded it in the mempool this episode: a different one now
+                // means a re-bump. Children from before an eviction or reorg don't count.
+                let child = exit.records[exit.runStart(current)].transactions?.first { $0.txid == current.txid }?.status.child_txid
                 bumped = child != nil && current.status.child_txid != nil && child != current.status.child_txid
             default:
                 // Waiting for its parent's block: the root's parent is the round, already on-chain.
@@ -165,12 +163,17 @@ extension ExitModel {
     /// `transaction`'s current episode in its status, the key for sightings and evidence: bark records
     /// every change, so the record where this unbroken run began tells it from an earlier run.
     func episode(_ transaction: ExitDetails.Transaction) -> String {
+        "\(transaction.txid)|\(transaction.status.kind)|\(runStart(transaction))"
+    }
+
+    /// The index in `records` where `transaction`'s current unbroken run in its status began.
+    func runStart(_ transaction: ExitDetails.Transaction) -> Int {
         let records = records
         var start = records.count - 1
         while start > 0, records[start - 1].transactions?.contains(where: {
             $0.txid == transaction.txid && $0.status.kind == transaction.status.kind
         }) == true { start -= 1 }
-        return "\(transaction.txid)|\(transaction.status.kind)|\(start)"
+        return start
     }
 }
 
