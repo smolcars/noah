@@ -126,6 +126,20 @@ struct ActivityDetail: Equatable {
         return -effective - actual
     }
 
+    /// The header's fiat line, for the amount shown: the historical price for settled rows, the current one
+    /// for today's and pending rows. None for failed and canceled rows, or without an amount or a price.
+    static func fiat(_ transaction: HistoryTransaction, current: Double?, currency: String, locale: Locale,
+                     now: Date = Date(), calendar: Calendar = .current) -> String? {
+        guard !HomeActivityRow(transaction, ownDomain: "").status.isUnsuccessful, let sats = transaction.shownAmount else { return nil }
+        let today = transaction.timestamp.map { calendar.isDate($0, inSameDayAs: now) } ?? true
+        if !transaction.isPending, !today, transaction.dateLabel == nil, let historical = transaction.btcPrice {
+            let amount = FiatCurrency.display(sats: sats, btcPrice: historical, currency: currency, locale: locale)
+            return L10n.text("{amount} at the time", amount, locale: locale.identifier)
+        }
+        guard let price = current ?? transaction.btcPrice else { return nil }
+        return FiatCurrency.display(sats: sats, btcPrice: price, currency: currency, locale: locale)
+    }
+
     /// Confirmations an Ark-funded on-chain send waits for; a wallet send needs one.
     static func requiredConfirmations(_ transaction: HistoryTransaction, variant: AppVariant = .current) -> Int {
         ["offboard", "send-onchain"].contains(transaction.movementKind)

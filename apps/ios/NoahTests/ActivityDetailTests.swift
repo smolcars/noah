@@ -181,6 +181,26 @@ struct ActivityDetailTests {
         #expect(Self.lightningSend().shownAmount == 4_842)
     }
 
+    @Test func theFiatLinePricesTheShownAmount() throws {
+        let english = Locale(identifier: "en_US")
+        let now = try #require(HistoryRules.parseDate("2026-10-23T12:00:00Z"))
+        var paid = Self.lightningSend(to: ActivityMappingTests.amountlessInvoice, fee: 80)
+        paid.date = "2026-10-20T12:00:00.000Z"
+        paid.sentTo = [.init(destination: ActivityMappingTests.amountlessInvoice, amount_sat: 1_000, paymentMethod: "invoice")]
+        paid.amount = 1_000
+        paid.effectiveBalanceSat = -2_080
+        paid.btcPrice = 100_000
+        // 2,080 sats at the payment's own price, never attempt 1's 1,000.
+        #expect(ActivityDetail.fiat(paid, current: nil, currency: "USD", locale: english, now: now) == "$2.08 at the time")
+        paid.effectiveBalanceSat = nil
+        #expect(ActivityDetail.fiat(paid, current: 90_000, currency: "USD", locale: english, now: now) == nil)
+        // Today's rows use the current price; failed ones show none.
+        var today = Self.lightningSend()
+        today.date = "2026-10-23T09:00:00.000Z"
+        #expect(ActivityDetail.fiat(today, current: 100_000, currency: "USD", locale: english, now: now) == "$4.84")
+        #expect(ActivityDetail.fiat(Self.lightningSend(status: "failed"), current: 100_000, currency: "USD", locale: english, now: now) == nil)
+    }
+
     @Test func receivesShowARecordedFeeButNeverFree() {
         var receive = Self.lightningReceive()
         receive.offchainFeeSat = 104

@@ -142,17 +142,9 @@ struct TransactionDetailView: View {
         return L10n.text(detail.status, locale: language)
     }
 
-    /// The historical price for settled rows, the current one for today's and pending rows.
     private var fiat: String? {
-        guard !detail.unsuccessful else { return nil }
-        if hidden { return HomeModel.hiddenFiat(currency: app.preferredCurrency) }
-        let today = transaction.timestamp.map { Calendar.current.isDateInToday($0) } ?? true
-        if !transaction.isPending, !today, transaction.dateLabel == nil, let historical = transaction.btcPrice {
-            let amount = FiatCurrency.display(sats: transaction.amount, btcPrice: historical, currency: app.preferredCurrency, locale: locale)
-            return L10n.text("{amount} at the time", amount, locale: language)
-        }
-        guard let price = reads.price(for: transaction.id) ?? transaction.btcPrice else { return nil }
-        return FiatCurrency.display(sats: transaction.amount, btcPrice: price, currency: app.preferredCurrency, locale: locale)
+        if hidden && !detail.unsuccessful && transaction.shownAmount != nil { return HomeModel.hiddenFiat(currency: app.preferredCurrency) }
+        return ActivityDetail.fiat(transaction, current: reads.price(for: transaction.id), currency: app.preferredCurrency, locale: locale)
     }
 
     @ViewBuilder private func blockRow(_ txid: String) -> some View {
