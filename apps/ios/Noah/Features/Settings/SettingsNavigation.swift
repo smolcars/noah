@@ -7,7 +7,8 @@ enum SettingsPage: Hashable {
     case backup, recovery
     case vtxos, vtxo(String), onchain
     case recurring, schedule(String), editor(String?)
-    case exit
+    /// Emergency exit: the warning, then Choose, an exit's progress and the list.
+    case exit, exitChoose, exitProgress(String), exitList
     case notifications, advanced, arkServer, esplora, logs, debug
     case feedback, about
 
@@ -17,6 +18,7 @@ enum SettingsPage: Hashable {
         case .lightningAddress, .email: .profile
         case .vtxo: .vtxos
         case .schedule, .editor: .recurring
+        case .exitChoose, .exitProgress, .exitList: .exit
         case .arkServer, .esplora, .logs, .debug: .advanced
         default: self
         }
@@ -88,6 +90,8 @@ struct SettingsFixture {
     var boardingMinimum: UInt64?
     /// A root sheet open on arrival (Delete wallet).
     var sheet: SettingsRootSheet?
+    /// Emergency exit's Choose opens in Choose with these VTXOs selected.
+    var exitSelection: [String]?
 }
 
 extension EnvironmentValues {

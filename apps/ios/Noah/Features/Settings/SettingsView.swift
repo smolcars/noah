@@ -561,7 +561,10 @@ struct SettingsPageView: View {
         case .schedule(let id): RecurringSchedulePage(id: id, executor: executor)
         case .editor(let id):
             RecurringPaymentEditorView(executor: executor, schedule: id.flatMap { id in executor.schedules.first { $0.id == id } })
-        case .exit: UnilateralExitView()
+        case .exit: UnilateralExitView(model: onchain)
+        case .exitChoose: ExitChooseView(model: onchain)
+        case .exitProgress(let id): ExitVtxoDetailView(id: id, model: fixture?.onchain())
+        case .exitList: ExitListView()
         case .notifications: NotificationsPage()
         case .advanced: AdvancedPage()
         case .arkServer: ArkInfoView()
