@@ -221,3 +221,41 @@ struct ExitProgressTests {
         #expect(!ExitRules.acceptsClaimAddress("bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202", network: "mainnet"))
     }
 }
+
+/// Hold to start and hold to claim confirm through the model, which submits a review at most once.
+@MainActor
+struct ExitHoldTests {
+    actor Count {
+        var value = 0
+        func hit() { value += 1 }
+    }
+
+    static func model(_ count: Count) -> OnchainModel {
+        let overview = OnchainOverview(walletID: "w", vtxos: [], exits: [], confirmed: 18_400, tip: 100, pendingTotal: 0, claimableHeight: nil)
+        return OnchainModel(dependencies: .init(ready: { true }, overview: { overview },
+            quote: { action, ids, _, destination in
+                .init(action: action, walletID: "w", ids: ids, destination: destination, amount: 31_000, fee: 262,
+                      chainFee: action == .claim ? 0 : 5_533, confirmed: 18_400)
+            },
+            execute: { _ in
+                await count.hit()
+                try await Task.sleep(for: .milliseconds(100))
+                return "Submitted."
+            }, attempt: { [] }, acknowledge: { _ in }))
+    }
+
+    @Test(arguments: [OnchainAction.startExit, .claim]) func aHeldReviewSubmitsOnce(action: OnchainAction) async {
+        let count = Count()
+        let model = Self.model(count)
+        await model.review(action, ids: ["v"], destination: action == .claim ? "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202" : nil)
+        #expect(model.quote != nil)
+        // Two holds (a pose change rebuilt the button, or VoiceOver's action raced a finger).
+        async let first: Void = model.confirm()
+        async let second: Void = model.confirm()
+        _ = await (first, second)
+        #expect(await count.value == 1)
+        // The review is spent: holding again submits nothing.
+        await model.confirm()
+        #expect(await count.value == 1)
+    }
+}

@@ -630,6 +630,10 @@ struct HomeView: View {
                 guard !path.isEmpty else { return }
                 if window.wide { quietly { _ = path.removeLast() } } else { path.removeLast() }
             },
+            swap: { base, page in
+                let next = (path.lastIndex(of: .page(base)).map { Array(path.prefix(through: $0)) } ?? path) + [.page(page)]
+                if window.wide { quietly { path = next } } else { path = next }
+            },
             leave: { page in
                 guard let page, path.last == .page(page) else { return }
                 if window.wide { quietly { _ = path.removeLast() } } else { path.removeLast() }

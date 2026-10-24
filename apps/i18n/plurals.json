@@ -94,5 +94,9 @@
   "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.": {
     "one": "One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions.",
     "other": "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions."
+  },
+  "{n} VTXOs · {count} transactions": {
+    "one": "{n} VTXO · {count} transactions",
+    "other": "{n} VTXOs · {count} transactions"
   }
 }

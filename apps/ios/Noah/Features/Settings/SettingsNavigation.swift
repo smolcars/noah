@@ -7,8 +7,8 @@ enum SettingsPage: Hashable {
     case backup, recovery
     case vtxos, vtxo(String), onchain
     case recurring, schedule(String), editor(String?)
-    /// Emergency exit: the warning, then Choose, an exit's progress and the list.
-    case exit, exitChoose, exitProgress(String), exitList
+    /// Emergency exit: the warning, then Choose, Review, an exit's progress and the list.
+    case exit, exitChoose, exitReview([String]), exitProgress(String), exitList
     case notifications, advanced, arkServer, esplora, logs, debug
     case feedback, about
 
@@ -18,7 +18,7 @@ enum SettingsPage: Hashable {
         case .lightningAddress, .email: .profile
         case .vtxo: .vtxos
         case .schedule, .editor: .recurring
-        case .exitChoose, .exitProgress, .exitList: .exit
+        case .exitChoose, .exitReview, .exitProgress, .exitList: .exit
         case .arkServer, .esplora, .logs, .debug: .advanced
         default: self
         }
@@ -59,6 +59,9 @@ struct SettingsNavigator {
     var open: (SettingsPage) -> Void = { _ in }
     /// Back from a page.
     var back: () -> Void = {}
+    /// Back to `base` (a page under this one), then opens `page` over it: a started exit replaces
+    /// Choose and Review with its progress.
+    var swap: (_ base: SettingsPage, _ page: SettingsPage) -> Void = { _, _ in }
     /// Back from this page after something slow finished, only if it's still the one on top:
     /// you may have moved on while it saved.
     var leave: (SettingsPage?) -> Void = { _ in }
@@ -73,8 +76,8 @@ struct SettingsNavigator {
     /// pages and My code push, Back dismisses.
     static func standalone(push: @escaping (SettingsPage) -> Void, myCode: @escaping () -> Void, pushed: @escaping () -> Bool,
                            dismiss: @escaping () -> Void) -> Self {
-        SettingsNavigator(select: push, open: push, back: dismiss, leave: { _ in if !pushed() { dismiss() } },
-                          close: dismiss, myCode: myCode)
+        SettingsNavigator(select: push, open: push, back: dismiss, swap: { _, page in push(page) },
+                          leave: { _ in if !pushed() { dismiss() } }, close: dismiss, myCode: myCode)
     }
 }
 

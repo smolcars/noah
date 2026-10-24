@@ -10,6 +10,11 @@ struct SendHoldButton: View {
     /// The formatted amount, for the accessibility action and its confirmation.
     let amount: String
     var enabled = true
+    /// Exit's holds reuse it: the pill's words, the action's title ("Send {amount}") and its confirm button.
+    var title: LocalizedStringKey = "Hold to send"
+    var action: String = "Send {amount}"
+    var confirm: LocalizedStringKey = "Send"
+    var id = "send-hold"
     let onConfirm: () -> Void
 
     static let duration = 0.8
@@ -26,10 +31,10 @@ struct SendHoldButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
 
-    private var actionTitle: String { L10n.text("Send {amount}", amount, locale: locale.identifier) }
+    private var actionTitle: String { L10n.text(action, amount, locale: locale.identifier) }
 
     var body: some View {
-        Text("Hold to send")
+        Text(title)
             .noahText(NoahTokens.Typography.button)
             .lineLimit(1)
             .foregroundStyle(NoahTokens.Colors.background)
@@ -60,14 +65,14 @@ struct SendHoldButton: View {
             .allowsHitTesting(enabled && !fired)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: actionTitle))
-            .accessibilityHint(Text("Hold to send"))
+            .accessibilityHint(Text(title))
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { if enabled && !fired { confirming = true } }
             .accessibilityAction(named: Text(verbatim: actionTitle)) { if enabled && !fired { confirming = true } }
-            .accessibilityIdentifier("send-hold")
+            .accessibilityIdentifier(id)
             .alert(Text(verbatim: actionTitle), isPresented: $confirming) {
                 Button("Cancel", role: .cancel) {}
-                Button("Send") { fire() }
+                Button(confirm) { fire() }
             }
             .onboardingHaptics(haptics)
             .onDisappear { ticks?.cancel() }

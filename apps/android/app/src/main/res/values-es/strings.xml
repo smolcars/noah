@@ -30,6 +30,7 @@
   <string name="gt_9fd728c66c9a256b">"Añadir"</string>
   <string name="gt_322c0e13ef4fa485">"Añadir una nota"</string>
   <string name="gt_2f0183c4e7f054bf">"Primero añade unos %1$s en cadena. La comisión de cada transacción de salida sale de ahí."</string>
+  <string name="gt_cbad6124846a30ad">"Add about %1$s on-chain first. Each exit transaction’s fee comes from there."</string>
   <string name="gt_b5ff9ca4a77d7d6e">"Añade unos %1$s en cadena. Noah envía la siguiente transacción cuando se confirmen."</string>
   <string name="gt_223e44268146e60d">"Añadir importe"</string>
   <string name="gt_82767841e4f8c995">"Añade primero un importe"</string>
@@ -190,7 +191,6 @@
   <string name="gt_01c437c9f900b81f">"Depósito enviado. Los fondos podrán gastarse cuando se complete el depósito."</string>
   <string name="gt_8fed00ef8e09c48a">"No se envió el depósito. Revísalo de nuevo cuando la billetera esté lista."</string>
   <string name="gt_479ad21ac9096236">"Abajo"</string>
-  <string name="gt_df5e7d755dafe5a8">"Las comisiones de difusión se pagan por separado con fondos confirmados en cadena. Deposita Bitcoin y espera la confirmación antes de avanzar en una salida. El importe necesario puede variar."</string>
   <string name="gt_4f8d20d681709634">"Se desconoce si hay fondos suficientes para la difusión; se necesitan fondos confirmados en la cadena."</string>
   <string name="gt_a27a4742cc2eca3e">"Difundir sin estimación"</string>
   <string name="gt_b2c48022f83bafa7">"CAD"</string>
@@ -222,6 +222,7 @@
   <string name="gt_4c00b0a7252c0827">"No se puede publicar el registro de la billetera"</string>
   <string name="gt_31a90f3cda2dfb7b">"No se pueden leer las propiedades de la billetera bark"</string>
   <string name="gt_ca985bb90dcf0a7b">"No se pueden leer los archivos preparados"</string>
+  <string name="gt_baa67160c5bcf450">"Can’t be undone"</string>
   <string name="gt_1478662458cf20d0">"Anclaje en la cadena"</string>
   <string name="gt_70cc1886428b724b">"Estado en la cadena"</string>
   <string name="gt_028afe3eebb92266">"Cambiar importe"</string>
@@ -313,7 +314,6 @@
   <string name="gt_8d525e5f158b9afe">"Copiado"</string>
   <string name="gt_bcec6f578c46c325">"Copiado · se borra en 2 minutos"</string>
   <string name="gt_e21f935f11d7e966">"Copiar"</string>
-  <string name="gt_ca778115cc05083c">"Copiar dirección de Bitcoin"</string>
   <string name="gt_5a531e363a276b20">"Copiar punto de acceso"</string>
   <string name="gt_3664cca676c6d7bd">"Copiar dirección Lightning"</string>
   <string name="gt_97aa37b889c4ee5f">"Copiar dirección: %1$s"</string>
@@ -413,7 +413,6 @@
   <string name="gt_472b52f016214da3">"Entregar con"</string>
   <string name="gt_906115657390f367">"Entregado"</string>
   <string name="gt_a0760d3dd093f263">"Entregando"</string>
-  <string name="gt_ae79af44798ae9ee">"Depositar fondos en la cadena"</string>
   <string name="gt_526e0087cc3f254d">"Descripción"</string>
   <string name="gt_293d404a500f5f9a">"Destino"</string>
   <string name="gt_45989de49fb7f66d">"Detalles"</string>
@@ -445,9 +444,9 @@
   <string name="gt_50d8230c905d564f">"El correo es opcional. Noah solo lo usa para enviar avisos urgentes sobre la seguridad de tu billetera, por ejemplo, cuando tus VTXO están a punto de vencer y necesitas conectarte para renovarlos."</string>
   <string name="gt_bdfb1e4f00c73e98">"Correo verificado"</string>
   <string name="gt_3a9f176a663d540d">"Correo de emergencia"</string>
-  <string name="gt_a9214c2e38df7318">"Salida de emergencia"</string>
   <string name="gt_b8eea92a324ae5b4">"Salida de emergencia"</string>
   <string name="gt_6b37661a5dd8e8ae">"Solo para emergencias. Saca tu bitcoin de Ark sin el servidor de Ark."</string>
+  <string name="gt_4f5556b1b428d358">"Emergency use only. It takes your bitcoin out of Ark without Ark’s server."</string>
   <string name="gt_cade2f4efb6f7c99">"Emulador"</string>
   <string name="gt_1cd009ba27e712a8">"Activar la autenticación de la billetera"</string>
   <string name="gt_732891401030ce05">"Se cifra con tu frase de recuperación antes de salir de este teléfono."</string>
@@ -547,6 +546,7 @@
     <item quantity="one">"Vence en %1$s hora"</item>
     <item quantity="other">"Vence en %1$s horas"</item>
   </plurals>
+  <string name="gt_43315d79d02c7823">"Expires in %1$s"</string>
   <string name="gt_ff44a401445c99df">"Por vencer"</string>
   <string name="gt_c39d646f10769b07">"Explorador"</string>
   <string name="gt_3664895579f0a7e6">"Exportar"</string>
@@ -578,6 +578,7 @@
   <string name="gt_aac77df347205252">"Comentarios"</string>
   <string name="gt_779ff4584d72f733">"Las comisiones superan lo que valen estos VTXOs."</string>
   <string name="gt_e2a3937904b6bf08">"Las comisiones superan su valor"</string>
+  <string name="gt_e45e304fea7e1b7b">"Fees more than it’s worth"</string>
   <string name="gt_35c1c9ca10618cf1">"Comisiones pagadas"</string>
   <string name="gt_c8e5709f89baf900">"Subieron las comisiones, así que Noah pagó más"</string>
   <string name="gt_ea3a58f8b849ff21">"Subieron las comisiones. Pagando más"</string>
@@ -657,6 +658,7 @@
   <string name="gt_0764de2c3a61c282">"En un bloque"</string>
   <string name="gt_1016441cc23c561f">"En una ronda"</string>
   <string name="gt_14f23687c9fe3353">"En unos 20 minutos"</string>
+  <string name="gt_2d6250023c794435">"In about %1$s"</string>
   <string name="gt_c1f88e9d6c4145cf">"En curso"</string>
   <string name="gt_f868160d0a466230">"En segundos"</string>
   <string name="gt_9fff0400bb9e73d5">"En esta billetera"</string>
@@ -734,6 +736,9 @@
   <string name="gt_8d889b2a0398edd9">"Excluidos porque las comisiones superan su valor: %1$s. Elígelos para sacarlos de todos modos."</string>
   <string name="gt_71dd91736743204f">"Excluidos por estar en uso ahora: %1$s."</string>
   <string name="gt_1b02259449b4abf0">"Excluidos por ser demasiado pequeños para salir: %1$s."</string>
+  <string name="gt_4f14b3e9b20d43a4">"Left out: %1$s that costs more in fees than it’s worth. Choose it to exit anyway."</string>
+  <string name="gt_a3b3e07f52c173b1">"Left out: %1$s, in use right now."</string>
+  <string name="gt_1d78b52b9fdeac1c">"Left out: %1$s, too small to exit."</string>
   <string name="gt_68dc9d6d2e2e87ef">"Función de retorno heredada de Android"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Deja que Noah funcione en segundo plano"</string>
   <string name="gt_e085922bf6346107">"Permite que Noah se active para Lightning"</string>
@@ -907,6 +912,7 @@
   <string name="gt_286c0deecb39be99">"Noah realiza este pago automáticamente con tu saldo de Ark. Solo se autorizan pagos a este destinatario por este importe, y puedes pausarlos o cancelarlos en cualquier momento."</string>
   <string name="gt_4ad1be4370f0322f">"Soporte de Noah"</string>
   <string name="gt_c31c87ce77cb431b">"Después Noah envía las transacciones de la salida y sube sus comisiones por sí solo, pagando con tu bitcoin en cadena. Las comisiones son estimaciones. Solo la comisión de reclamación se descuenta del importe. Puedes cancelar hasta que se envíe la última transacción."</string>
+  <string name="gt_f3727b33f0798006">"Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Usuario de Noah"</string>
   <string name="gt_f802f9f1257fc080">"Noah se interrumpió durante el envío de este pago. Revisa tu historial de transacciones antes de reanudarlo."</string>
   <string name="gt_0c304c0eb596d6e9">"Noah no los devolverá a Ark."</string>
@@ -1077,7 +1083,6 @@
   <string name="gt_c8233e7b49d45fa5">"Pago conciliado; no se pudieron guardar los metadatos de repetición"</string>
   <string name="gt_c7175fa7a0db0d3c">"Registrado"</string>
   <string name="gt_e4cea0827a11aed0">"Registrado en"</string>
-  <string name="gt_3b208c8df3744b19">"Recupera tus fondos de Ark en cadena si el servidor Ark no está disponible. Las salidas requieren fondos confirmados en cadena para cubrir las comisiones de difusión y un plazo de bloqueo antes de poder reclamar los fondos."</string>
   <string name="gt_41edd3f47328da5a">"Frase de recuperación"</string>
   <string name="gt_512d764f27c017d9">"Frase de recuperación encontrada"</string>
   <string name="gt_9b40b8e408567040">"Frase de recuperación oculta"</string>
@@ -1185,9 +1190,7 @@
   <string name="gt_0cde499fcb0c92da">"Revisar reclamación"</string>
   <string name="gt_d4ea61c79c9b77d6">"Revisar de nuevo"</string>
   <string name="gt_25aa0f37b47607b3">"Revisar y pagar"</string>
-  <string name="gt_8b3cd108890cf4d0">"Revisar salida de toda la billetera"</string>
   <string name="gt_c9e91fec986cc876">"Revisar la salida"</string>
-  <string name="gt_7c434cbd5c50154f">"Revisar salida seleccionada"</string>
   <string name="gt_8b3426dcf53c3f35">"Importe revisado"</string>
   <string name="gt_883361d5d682a157">"Derecha"</string>
   <string name="gt_90c56699eca1d0e9">"Ronda #%1$s"</string>
@@ -1237,7 +1240,6 @@
   <string name="gt_a0066e88129f5f98">"Seleccionar distribuidor"</string>
   <string name="gt_0834cfb81fbae767">"Seleccionar VTXOs"</string>
   <string name="gt_0bdc583e8496eb4a">"Selecciona un pago"</string>
-  <string name="gt_ba6afbdcb15d6321">"Seleccionar todos los VTXO aptos"</string>
   <string name="gt_a81bdedbd0dccc7d">"Seleccionar los próximos a vencer"</string>
   <string name="gt_70f58736b63e2c9e">"Seleccionar los visibles"</string>
   <string name="gt_3b18955703b2ebc3">"Captura de pantalla seleccionada"</string>
@@ -1297,8 +1299,8 @@
   <string name="gt_ecd0abf6250c1885">"Iniciar un nuevo pago"</string>
   <string name="gt_d65d3a6d1c27a19c">"Iniciar un nuevo pago tras revisar el historial"</string>
   <string name="gt_8a565d98b83e392b">"Iniciar un nuevo pago de todos modos"</string>
-  <string name="gt_e51e8c039fe7960f">"Iniciar una salida"</string>
   <string name="gt_499f9885f21d51cb">"Iniciar salida"</string>
+  <string name="gt_006e7c35fe22b34d">"Start exit of %1$s"</string>
   <string name="gt_ecbc89cd37a03734">"Iniciado"</string>
   <string name="gt_aeed4d26bb5f0c31">"Iniciando"</string>
   <string name="gt_96b98008aedf83c7">"Iniciando restauración..."</string>
@@ -1322,7 +1324,6 @@
   <string name="gt_f3686bb328c6d408">"Exitoso"</string>
   <string name="gt_4ed227040fbcab82">"Correctos: %1$s"</string>
   <string name="gt_cc5ca35c0cd158c2">"Registro en el servidor completado correctamente"</string>
-  <string name="gt_47681e105e10cd08">"Depósito sugerido"</string>
   <string name="gt_479b9ae48026aec9">"Código de soporte: SEED_INVALID. No se pudo validar la frase de recuperación guardada. Mantén esta aplicación instalada y contacta con el soporte de Noah en github.com/smolcars/noah. Nunca envíes a nadie tu frase de recuperación, claves privadas ni una base de datos de billetera."</string>
   <string name="gt_2dd46d7515a9b8c0">"Código de soporte: WALLET_CONFLICT. Noah encontró registros de billeteras que no se pueden vincular de forma segura. Mantén esta aplicación instalada y contacta con el soporte de Noah en github.com/smolcars/noah. Nunca envíes a nadie tu frase de recuperación, claves privadas ni una base de datos de billetera."</string>
   <string name="gt_4948e134182f8420">"Suspender"</string>
@@ -1367,6 +1368,7 @@
   <string name="gt_df6a48e216ac21de">"La fecha de finalización debe ser posterior a la del primer pago."</string>
   <string name="gt_484e981fd02917fd">"El punto de acceso devolvió un hash de bloque no válido."</string>
   <string name="gt_bdc5357f6c436b9a">"El punto de acceso devolvió una altura de bloque no válida."</string>
+  <string name="gt_39db8b49d1a02440">"The estimate expired, so Noah fetched a new one. Check it and hold again."</string>
   <string name="gt_b9a29cac0fe5fb88">"La comisión estimada de reclamación consume todo el importe recuperado. Puede que no sea posible reclamar los fondos."</string>
   <string name="gt_4a8ba04fea3d038c">"El importe exacto depende de la comisión de red en el momento del envío. El total corresponde exactamente a las monedas revisadas."</string>
   <string name="gt_81c0bccea7fed72c">"La comisión y el total son estimaciones basadas en dos entradas y dos salidas. Los valores finales pueden ser mayores si se necesitan más monedas."</string>
@@ -1541,7 +1543,6 @@
   <string name="gt_0a32a9c29b63eb4e">"VTXO desbloqueado"</string>
   <string name="gt_9e4d55257ab31314">"VTXO %1$s…, %2$s, %3$s, %4$s"</string>
   <string name="gt_d8a3ba6381971636">"VTXOs"</string>
-  <string name="gt_2e1c5b1d82d2d6e7">"Los VTXOs de menos de 330 sats no permiten la salida en cadena."</string>
   <string name="gt_fbf9a3d817acb63b">"VTXOs seleccionados"</string>
   <string name="gt_72d4d360dea4e316">"VTXOs seleccionados: %1$s"</string>
   <string name="gt_f414d2a540db754b">"Validando copia de seguridad…"</string>
@@ -1683,6 +1684,7 @@
   <string name="gt_1cfd3ae82c2e9be1">"Se ha enviado %1$s a %2$s."</string>
   <string name="gt_16d7d21cf4846790">"Aún no se ha podido enviar %1$s a %2$s: %3$s"</string>
   <string name="gt_e4687b2d37b4a9a5">"Mañana se enviará %1$s a %2$s."</string>
+  <string name="gt_2af449b05cd95d7f">"%1$s · fees %2$s"</string>
   <string name="gt_643409a7df643204">"%1$s · comisiones ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · en Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · parte de %2$s para %3$s salidas"</string>
@@ -1709,6 +1711,10 @@
   <plurals name="gt_f7957bd8d410be30">
     <item quantity="one">"%1$s VTXO vence en menos de un día"</item>
     <item quantity="other">"%1$s VTXOs vencen en menos de un día"</item>
+  </plurals>
+  <plurals name="gt_67804ae8e6858e64">
+    <item quantity="one">"%1$s VTXO · %2$s transactions"</item>
+    <item quantity="other">"%1$s VTXOs · %2$s transactions"</item>
   </plurals>
   <string name="gt_f4d60c7d0545f547">"Activos: %1$s"</string>
   <string name="gt_00f904d64507e53f">"%1$s bloques"</string>
@@ -1756,6 +1762,7 @@
   <string name="gt_6f18db1fb525f402">"%1$s sem"</string>
   <string name="gt_7668781bc1fd97f9">"%1$s palabras que restauran tu billetera."</string>
   <string name="gt_aa8514512b5c8c67">"%1$s wu"</string>
+  <string name="gt_30b5b5d939eece20">"%1$s · %2$s transactions"</string>
   <string name="gt_484a569a13e053cd">"%1$s sat/vB"</string>
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, sube cuando suben las tasas"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · compartida"</string>

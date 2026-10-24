@@ -151,7 +151,7 @@ struct ExitChooseView: View {
             }
             Button(L10n.text("Review exit", locale: language)) {
                 haptics.play(.light)
-                Task { await model.review(.startExit, ids: selection.map(\.id)) }
+                settings.open(.exitReview(selection.map(\.id)))
             }
             .buttonStyle(SettingsActionStyle())
             .disabled(selection.isEmpty || model.locked)
@@ -194,6 +194,108 @@ struct ExitChooseView: View {
     private func toggle(_ vtxo: VtxoModel) {
         haptics.play(.selection)
         if selected.contains(vtxo.id) { selected.remove(vtxo.id) } else { selected.insert(vtxo.id) }
+    }
+}
+
+/// Review: what starting costs and when it becomes claimable, today's consent as one paragraph,
+/// then hold to start (VoiceOver gets a standard action with a system confirmation). The review is
+/// today's start quote: it expires after 30 s and is fetched again rather than submitted stale.
+struct ExitReviewView: View {
+    let ids: [String]
+    @State private var model: OnchainModel
+    @State private var expired = false
+    /// For the transaction count and when it becomes claimable; the quote carries the fees.
+    @State private var estimate: EmergencyExitFeeEstimate?
+    @State private var haptics = OnboardingHaptics()
+    @Environment(AppModel.self) private var app
+    @Environment(\.settings) private var settings
+    @Environment(\.locale) private var locale
+
+    init(ids: [String], model: OnchainModel = OnchainModel()) {
+        self.ids = ids
+        _model = State(initialValue: model)
+    }
+
+    private var language: String { locale.identifier }
+
+    var body: some View {
+        let money = ExitMoney(app: app, locale: locale)
+        let quote = model.quote?.action == .startExit ? model.quote : nil
+        let amount = quote?.amount ?? (model.overview?.vtxos ?? []).filter { ids.contains($0.id) }.reduce(0) { $0 + $1.amount }
+        ExitPanes {
+            ExitHeadline(amount: L10n.text("Exit {amount}", money(amount), locale: language),
+                         line: estimate.map { L10n.plural("{n} VTXOs · {count} transactions", count: ids.count, $0.txsToBroadcast.formatted(), locale: language) })
+        } trailing: {
+            if let quote {
+                VStack(spacing: 0) {
+                    if let fee = quote.fee, let chainFee = quote.chainFee {
+                        SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
+                        SettingsDetailRow(label: L10n.text("Paid from", locale: language),
+                                          value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language))
+                        SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
+                        if let delta = model.overview?.exitDelta, let estimate {
+                            // One block per transaction along a path at most, then the timelock.
+                            SettingsDetailRow(label: L10n.text("Claimable", locale: language),
+                                              value: L10n.text("In about {time}", VtxoList.span(Int64(delta) + Int64(estimate.txsToBroadcast), locale: language), locale: language))
+                        }
+                        if let rate = quote.feeRate {
+                            SettingsDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
+                        }
+                        SettingsDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false)
+                    } else {
+                        SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language))
+                        SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
+                    }
+                }
+                .padding(.top, 22)
+                if quote.feesUnknown {
+                    ExitWarning(text: L10n.text("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.", locale: language))
+                    ExitWarning(text: L10n.text("Broadcast funding status is unknown; confirmed onchain funds are required.", locale: language), muted: true)
+                } else if !quote.fundable, let chainFee = quote.chainFee {
+                    ExitWarning(text: L10n.text("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
+                                                money(chainFee - min(chainFee, quote.confirmed)), locale: language))
+                }
+                if let fee = quote.fee, quote.chainFee != nil,
+                   let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: quote.totalFee, claimOnly: false) {
+                    ExitWarning(text: L10n.text(warning, locale: language))
+                }
+                SettingsFine(text: L10n.text("Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.", locale: language))
+            } else if model.busy {
+                ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
+            }
+            if expired { SettingsFine(text: L10n.text("The estimate expired, so Noah fetched a new one. Check it and hold again.", locale: language)) }
+            OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
+        } footer: {
+            SendHoldButton(amount: money(amount), enabled: quote != nil && !model.busy, title: "Hold to start exit",
+                           action: "Start exit of {amount}", confirm: "Start exit", id: "exit-hold-start") { start() }
+                // One hold per review: a fresh quote gets a fresh button.
+                .id(quote?.id)
+        }
+        .settingsChrome(nil)
+        .onboardingHaptics(haptics)
+        .modifier(OnchainScreen(model: model, presentsReview: false))
+        .task {
+            // After the page's first read: a review invalidates any read still in flight.
+            while model.loading { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
+            await model.review(.startExit, ids: ids)
+            estimate = await model.exitEstimate(ids)
+        }
+    }
+
+    private func start() {
+        Task {
+            guard let quote = model.quote, quote.action == .startExit else { return }
+            guard quote.isCurrent else {
+                expired = true
+                await model.review(.startExit, ids: ids)
+                return
+            }
+            expired = false
+            await model.confirm()
+            guard model.error == nil else { haptics.play(.error); return }
+            haptics.play(.success)
+            settings.swap(.exit, ids.count == 1 ? .exitProgress(ids[0]) : .exitList)
+        }
     }
 }
 
