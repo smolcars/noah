@@ -142,6 +142,7 @@ struct ExitVtxoDetailView: View {
             Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(text.need) }
                 .buttonStyle(SettingsActionStyle())
                 .accessibilityIdentifier("exit-add-funds")
+            checkAndCancel(progress, primary: false)
         case .claimed, .canceled, .alreadySpent, .swept:
             Button(L10n.text("Done", locale: language)) { settings.back() }
                 .buttonStyle(SettingsActionStyle())
@@ -149,26 +150,31 @@ struct ExitVtxoDetailView: View {
         case .claiming:
             EmptyView()
         default:
-            Group {
-                if progress.stale {
-                    Button(L10n.text("Check the chain", locale: language)) { check() }.buttonStyle(SettingsActionStyle())
-                } else {
-                    Button(L10n.text("Check the chain", locale: language)) { check() }
-                        .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
-                }
+            checkAndCancel(progress, primary: progress.stale)
+        }
+    }
+
+    /// Check the chain (the main action when the exit is stale) and, while bark allows it, Cancel exit.
+    @ViewBuilder private func checkAndCancel(_ progress: ExitProgress, primary: Bool) -> some View {
+        Group {
+            if primary {
+                Button(L10n.text("Check the chain", locale: language)) { check() }.buttonStyle(SettingsActionStyle())
+            } else {
+                Button(L10n.text("Check the chain", locale: language)) { check() }
+                    .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
             }
-            .disabled(model.locked || live.isEmpty)
-            .accessibilityIdentifier("exit-check")
-            if progress.cancelable {
-                Button(L10n.text("Cancel exit", locale: language)) {
-                    haptics.play(.warning)
-                    Task { await model.review(.cancel, ids: [id]) }
-                }
-                .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
-                .frame(minHeight: NoahTokens.Size.hitTarget)
-                .disabled(model.locked)
-                .accessibilityIdentifier("exit-cancel")
+        }
+        .disabled(model.locked || live.isEmpty)
+        .accessibilityIdentifier("exit-check")
+        if progress.cancelable {
+            Button(L10n.text("Cancel exit", locale: language)) {
+                haptics.play(.warning)
+                Task { await model.review(.cancel, ids: [id]) }
             }
+            .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
+            .frame(minHeight: NoahTokens.Size.hitTarget)
+            .disabled(model.locked)
+            .accessibilityIdentifier("exit-cancel")
         }
     }
 
