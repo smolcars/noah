@@ -899,10 +899,6 @@
   <string name="gt_2588c7db9f3fe277">"Noah är låst"</string>
   <string name="gt_f590e31a6eb944e2">"Noah håller fortfarande på att slutföra en säkerhetskopiering. Försök igen om en stund."</string>
   <string name="gt_0450659e5fbd54ab">"Noah kontrollerar inte blockkedjan för det här uttaget just nu. Använd Kontrollera blockkedjan för att föra det vidare."</string>
-  <plurals name="gt_5063ccfc0bf26542">
-    <item quantity="one">"Noah kontrollerade det här uttaget senast för %1$s block sedan, vid block %2$s. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."</item>
-    <item quantity="other">"Noah kontrollerade det här uttaget senast för %1$s block sedan, vid block %2$s. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."</item>
-  </plurals>
   <string name="gt_338e68cc4323f294">"Aviseringar från Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registrerar plånboken hos servern igen. Din plånbok finns kvar."</string>
   <string name="gt_286c0deecb39be99">"Noah skickar den här betalningen automatiskt från ditt Ark-saldo. Betalningen får bara skickas till den här mottagaren och med det här beloppet. Du kan pausa eller avsluta den när som helst."</string>
@@ -1419,6 +1415,7 @@
   <string name="gt_dfa27aa18fe3eb7c">"Det här skiljer sig från de %1$s sats du granskade."</string>
   <string name="gt_9e3a6e3e9bd56700">"Detta avbryter inte den ursprungliga åtgärden. Om du skickar igen kan ytterligare medel förbrukas eller avgifter tillkomma. Noah sparar försöket och kontrollerar dess status när plånboken synkroniseras."</string>
   <string name="gt_f2faa6b386bacbee">"Det här nöduttaget kan inte längre avbrytas. Dess slutliga transaktion kan redan ha sänts. Uppdatera statusen."</string>
+  <string name="gt_dc8cb064d1762d2f">"Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner."</string>
   <string name="gt_dbccb7274b22662b">"Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %1$s, för %2$s block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."</string>
   <string name="gt_5ed0c20bff01c0ca">"Den här betalningsbegäran är redan betald. Betalningen för det här tillfället skickades inte igen. Kontrollera mottagaren innan du återupptar."</string>
   <string name="gt_acec76ba83ee20ef">"Den här fakturan är redan betald: %1$s"</string>

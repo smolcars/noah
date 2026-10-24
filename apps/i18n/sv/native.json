@@ -2069,6 +2069,5 @@
   "gt_0450659e5fbd54ab": "Noah kontrollerar inte blockkedjan för det här uttaget just nu. Använd Kontrollera blockkedjan för att föra det vidare.",
   "gt_09e4665e49aef548_one": "Ett inlösen för {{n}} uttag: {{amount}} mottaget efter en avgift på {{fee}}.",
   "gt_09e4665e49aef548_other": "Ett inlösen för {{n}} uttag: {{amount}} mottaget efter en avgift på {{fee}}.",
-  "gt_5063ccfc0bf26542_one": "Noah kontrollerade det här uttaget senast för {{n}} block sedan, vid block {{height}}. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner.",
-  "gt_5063ccfc0bf26542_other": "Noah kontrollerade det här uttaget senast för {{n}} block sedan, vid block {{height}}. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."
+  "gt_dc8cb064d1762d2f": "Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner."
 }

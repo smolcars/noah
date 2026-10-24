@@ -2069,6 +2069,5 @@
   "gt_0450659e5fbd54ab": "Noah no está consultando la cadena para esta salida ahora mismo. Usa Consultar la cadena para avanzarla.",
   "gt_09e4665e49aef548_one": "Una reclamación para {{n}} salida: {{amount}} recibidos tras una comisión de {{fee}}.",
   "gt_09e4665e49aef548_other": "Una reclamación para {{n}} salidas: {{amount}} recibidos tras una comisión de {{fee}}.",
-  "gt_5063ccfc0bf26542_one": "Noah consultó esta salida por última vez hace {{n}} bloque, en el bloque {{height}}. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión.",
-  "gt_5063ccfc0bf26542_other": "Noah consultó esta salida por última vez hace {{n}} bloques, en el bloque {{height}}. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión."
+  "gt_dc8cb064d1762d2f": "Esta salida va por detrás de la altura actual de la cadena. Usa Consultar la cadena para revisarla; también puede enviar transacciones de salida."
 }

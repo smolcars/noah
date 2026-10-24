@@ -899,10 +899,6 @@
   <string name="gt_2588c7db9f3fe277">"Noah está bloqueado"</string>
   <string name="gt_f590e31a6eb944e2">"Noah aún está terminando una copia de seguridad. Inténtalo de nuevo en un momento."</string>
   <string name="gt_0450659e5fbd54ab">"Noah no está consultando la cadena para esta salida ahora mismo. Usa Consultar la cadena para avanzarla."</string>
-  <plurals name="gt_5063ccfc0bf26542">
-    <item quantity="one">"Noah consultó esta salida por última vez hace %1$s bloque, en el bloque %2$s. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión."</item>
-    <item quantity="other">"Noah consultó esta salida por última vez hace %1$s bloques, en el bloque %2$s. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión."</item>
-  </plurals>
   <string name="gt_338e68cc4323f294">"Notificaciones de Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah vuelve a registrar esta billetera en el servidor. Tu billetera se conserva."</string>
   <string name="gt_286c0deecb39be99">"Noah realiza este pago automáticamente con tu saldo de Ark. Solo se autorizan pagos a este destinatario por este importe, y puedes pausarlos o cancelarlos en cualquier momento."</string>
@@ -1419,6 +1415,7 @@
   <string name="gt_dfa27aa18fe3eb7c">"Este importe no coincide con los %1$s sats que revisaste."</string>
   <string name="gt_9e3a6e3e9bd56700">"Esto no cancela la operación original. Volver a enviarla puede suponer un gasto adicional de fondos o comisiones. Noah conserva este intento y comprueba su estado mientras tu billetera se sincroniza."</string>
   <string name="gt_f2faa6b386bacbee">"Esta salida ya no se puede cancelar. Es posible que su transacción final ya se haya difundido. Actualiza su estado."</string>
+  <string name="gt_dc8cb064d1762d2f">"Esta salida va por detrás de la altura actual de la cadena. Usa Consultar la cadena para revisarla; también puede enviar transacciones de salida."</string>
   <string name="gt_dbccb7274b22662b">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %1$s, hace %2$s bloques. Revisar la cadena también puede enviar transacciones de salida."</string>
   <string name="gt_5ed0c20bff01c0ca">"Esta solicitud de pago ya está pagada. Este pago programado no se volvió a enviar. Comprueba el destinatario antes de reanudar."</string>
   <string name="gt_acec76ba83ee20ef">"Esta factura ya se pagó: %1$s"</string>

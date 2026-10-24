@@ -7,7 +7,7 @@
     "sv"
   ],
   "catalogEntries": 1692,
-  "sourceKeys": 1722,
+  "sourceKeys": 1721,
   "coverage": {
     "ios": {
       "used": [
@@ -691,7 +691,6 @@
         "Noah is in beta. Only keep what you’re comfortable losing.",
         "Noah is locked",
         "Noah isn’t checking the chain for this exit right now. Use Check the chain to move it on.",
-        "Noah last checked this exit {n} blocks ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions.",
         "Noah registers this wallet with the server again. Your wallet stays.",
         "Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.",
         "Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.",
@@ -1110,6 +1109,7 @@
         "This differs from the {nativeValue1} sats you reviewed.",
         "This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs.",
         "This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status.",
+        "This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions.",
         "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.",
         "This invoice was already paid: {amount}",
         "This is a login link, not a payment request",

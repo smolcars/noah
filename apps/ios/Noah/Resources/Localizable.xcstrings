@@ -31993,102 +31993,6 @@
         }
       }
     },
-    "Noah last checked this exit {n} blocks ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions.": {
-      "comment": "GT gt_5063ccfc0bf26542; arguments: n, height",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah last checked this exit %1$lld block ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah last checked this exit %1$lld blocks ago, at block %2$@. Use Check the chain to move it on; it can also send or fee-bump its transactions."
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah consultó esta salida por última vez hace %1$lld bloque, en el bloque %2$@. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah consultó esta salida por última vez hace %1$lld bloques, en el bloque %2$@. Usa Consultar la cadena para avanzarla; también puede enviar sus transacciones o subir su comisión."
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noahがこの出金を最後に確認したのは%1$lldブロック前、ブロック %2$@ です。「チェーンを確認」で進めてください。トランザクションの送信や手数料の引き上げが行われることもあります。"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noahがこの出金を最後に確認したのは%1$lldブロック前、ブロック %2$@ です。「チェーンを確認」で進めてください。トランザクションの送信や手数料の引き上げが行われることもあります。"
-                }
-              }
-            }
-          }
-        },
-        "ko": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah가 이 출금을 마지막으로 확인한 건 %1$lld블록 전, 블록 %2$@이에요. ‘체인 확인’으로 진행하세요. 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah가 이 출금을 마지막으로 확인한 건 %1$lld블록 전, 블록 %2$@이에요. ‘체인 확인’으로 진행하세요. 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."
-                }
-              }
-            }
-          }
-        },
-        "sv": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah kontrollerade det här uttaget senast för %1$lld block sedan, vid block %2$@. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noah kontrollerade det här uttaget senast för %1$lld block sedan, vid block %2$@. Använd Kontrollera blockkedjan för att föra det vidare; det kan också skicka eller höja avgiften för dess transaktioner."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "Noah notifications": {
       "comment": "GT gt_338e68cc4323f294; arguments: none",
       "extractionState": "manual",
@@ -50469,6 +50373,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det här nöduttaget kan inte längre avbrytas. Dess slutliga transaktion kan redan ha sänts. Uppdatera statusen."
+          }
+        }
+      }
+    },
+    "This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions.": {
+      "comment": "GT gt_dc8cb064d1762d2f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta salida va por detrás de la altura actual de la cadena. Usa Consultar la cadena para revisarla; también puede enviar transacciones de salida."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この出金は現在のチェーンの高さより遅れています。「チェーンを確認」で確認してください。出金トランザクションが送信されることもあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 출금은 현재 체인 높이보다 뒤처져 있어요. ‘체인 확인’으로 확인하세요. 출금 트랜잭션을 보낼 수도 있어요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner."
           }
         }
       }

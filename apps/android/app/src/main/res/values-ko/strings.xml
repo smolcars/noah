@@ -899,10 +899,6 @@
   <string name="gt_2588c7db9f3fe277">"Noah가 잠겨 있어요"</string>
   <string name="gt_f590e31a6eb944e2">"Noah에서 백업을 마무리하는 중입니다. 잠시 후 다시 시도하세요."</string>
   <string name="gt_0450659e5fbd54ab">"지금 Noah가 이 출금의 체인을 확인하지 않고 있어요. ‘체인 확인’으로 진행하세요."</string>
-  <plurals name="gt_5063ccfc0bf26542">
-    <item quantity="one">"Noah가 이 출금을 마지막으로 확인한 건 %1$s블록 전, 블록 %2$s이에요. ‘체인 확인’으로 진행하세요. 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."</item>
-    <item quantity="other">"Noah가 이 출금을 마지막으로 확인한 건 %1$s블록 전, 블록 %2$s이에요. ‘체인 확인’으로 진행하세요. 트랜잭션을 보내거나 수수료를 올릴 수도 있어요."</item>
-  </plurals>
   <string name="gt_338e68cc4323f294">"Noah 알림"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah가 이 지갑을 서버에 다시 등록해요. 지갑은 그대로 유지돼요."</string>
   <string name="gt_286c0deecb39be99">"Noah가 Ark 잔액에서 자동으로 결제합니다. 지정된 받는 사람에게 정해진 금액만 결제되며, 언제든지 일시 중지하거나 취소할 수 있습니다."</string>
@@ -1419,6 +1415,7 @@
   <string name="gt_dfa27aa18fe3eb7c">"앞서 확인한 %1$s sats와 다른 금액입니다."</string>
   <string name="gt_9e3a6e3e9bd56700">"기존 작업은 취소되지 않습니다. 다시 제출하면 자금이나 수수료가 추가로 지출될 수 있습니다. Noah는 이번 시도를 기록해 두고 지갑 동기화 중에 상태를 확인합니다."</string>
   <string name="gt_f2faa6b386bacbee">"이 출금은 더 이상 취소할 수 없습니다. 최종 거래가 이미 전파되었을 수 있습니다. 상태를 새로 고치세요."</string>
+  <string name="gt_dc8cb064d1762d2f">"이 출금은 현재 체인 높이보다 뒤처져 있어요. ‘체인 확인’으로 확인하세요. 출금 트랜잭션을 보낼 수도 있어요."</string>
   <string name="gt_dbccb7274b22662b">"이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %1$s(%2$s블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."</string>
   <string name="gt_5ed0c20bff01c0ca">"이 결제 요청서는 이미 결제되었습니다. 이번 회차에는 다시 전송하지 않았습니다. 재개하기 전에 받는 사람에게 확인하세요."</string>
   <string name="gt_acec76ba83ee20ef">"이미 결제된 인보이스입니다: %1$s"</string>
