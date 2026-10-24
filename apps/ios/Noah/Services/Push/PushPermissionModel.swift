@@ -1,4 +1,5 @@
 import Observation
+import UIKit
 import UserNotifications
 
 /// Expo's general permission status maps provisional/ephemeral to undetermined.
@@ -38,17 +39,29 @@ final class PushPermissionModel {
 
     private(set) var status: Status = .checking
     private(set) var isRequesting = false
+    /// For payment links, not the UI: a status read that started and finished since the app last
+    /// left the background. A grant read before Settings changed it mustn't release a held link.
+    private var answeredSinceBackground = false
+    @ObservationIgnored private var backgrounds = 0
     private let dependencies: Dependencies
     private var generation = 0
 
-    init(dependencies: Dependencies = .live) { self.dependencies = dependencies }
+    init(dependencies: Dependencies = .live, center: NotificationCenter = .default) {
+        self.dependencies = dependencies
+        _ = center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.backgrounds += 1
+                self?.answeredSinceBackground = false
+            }
+        }
+    }
 
     func blocksWallet(initialized: Bool) -> Bool {
         initialized && dependencies.isPhysicalDevice && status == .denied
     }
 
-    /// `blocksWallet` has its answer: always on a simulator, on a device once a status has been read.
-    var settled: Bool { !dependencies.isPhysicalDevice || status != .checking }
+    /// `blocksWallet` has a current answer: always on a simulator; on a device, once read since the background.
+    var settled: Bool { !dependencies.isPhysicalDevice || answeredSinceBackground }
 
     enum OnboardingStep: Equatable {
         case proceed
@@ -72,9 +85,12 @@ final class PushPermissionModel {
 
     func refresh() async {
         generation += 1
-        let current = generation
+        let current = generation, since = backgrounds
         guard dependencies.isPhysicalDevice else { status = .checking; return }
-        if let value = try? await dependencies.status(), current == generation { status = value }
+        if let value = try? await dependencies.status(), current == generation {
+            status = value
+            if since == backgrounds { answeredSinceBackground = true }
+        }
     }
 
     func retry(request: Bool) async {
