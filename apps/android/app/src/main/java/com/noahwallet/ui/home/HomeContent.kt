@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
@@ -101,6 +102,8 @@ class HomeToasts { var current by mutableStateOf<HomeToastMessage?>(null); fun s
 
 class HomeActions(
     val myCode: () -> Unit = {}, val scan: () -> Unit = {}, val settings: () -> Unit = {}, val map: () -> Unit = {},
+    /** The suspended state's "Open Settings": Advanced, where Suspend wallet is. */
+    val suspended: () -> Unit = settings,
     val toggleHidden: () -> Unit = {}, val seeAll: () -> Unit = {}, val openRow: (String) -> Unit = {}, val profile: () -> Unit = {},
     val nudge: (HomeRules.Nudge) -> Unit = {}, val dismiss: (HomeRules.Nudge) -> Unit = {}, val rounds: () -> Unit = {},
     val refresh: () -> Unit = {},
@@ -156,7 +159,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     // The prototype's entrance: top bar, balance, fiat, status (when shown), nudge, card or Recent, map; 40 ms apart.
     val after = if (ui.status != null) 40L else 0L
     @Composable fun Leading(tuck: Float) {
-        if (state == HomeRules.State.suspended) { Box(Modifier.rise(entered, 100, 14f, reduceMotion)) { Suspended(actions.settings) }; return }
+        if (state == HomeRules.State.suspended) { Box(Modifier.rise(entered, 100, 14f, reduceMotion)) { Suspended(actions.suspended) }; return }
         BalanceBlock(ui, shownTotal, tuck, entered, onTap = openSheet, onToggle = toggle)
         Box(Modifier.padding(top = 10.dp).height(20.dp).rise(entered, 140, 14f, reduceMotion)) {
             ui.fiat?.let { Text(it, style = HomeType.line, color = palette.muted, maxLines = 1) }
@@ -307,7 +310,9 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
             {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
-                    CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button")) { haptics.light(); actions.settings() }
+                    val entry = com.noahwallet.ui.settings.LocalSettingsEntry.current
+                    CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button").then(if (entry == null) Modifier
+                        else Modifier.onGloballyPositioned { entry.gear = it.boundsInWindow() })) { haptics.light(); actions.settings() }
                 }
             },
         ), Modifier.fillMaxSize()) { (chip, mini, buttons), constraints ->

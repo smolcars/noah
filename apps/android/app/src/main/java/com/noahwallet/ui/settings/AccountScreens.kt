@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import com.noahwallet.BuildConfig
-import com.noahwallet.formatting.FiatCurrency
 import com.noahwallet.services.server.Nostr
 import com.noahwallet.services.storage.SettingsPreferences
 import com.noahwallet.services.wallet.WalletConfiguration
@@ -23,7 +22,6 @@ import com.noahwallet.ui.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
-import java.util.Currency
 import java.util.Locale
 
 @Composable
@@ -66,54 +64,6 @@ fun ProfileScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
         SectionTitle("Public Keys")
         if (key.isNotEmpty()) CopyRow("Wallet public key", key)
         Nostr.npub(server.nostrPubkey).takeIf { it.isNotEmpty() }?.let { CopyRow("Nostr Public Key", it) }
-    }
-}
-
-internal fun limitedProfileName(value: String): String = value.take(80).dropLastWhile { it.isHighSurrogate() }
-
-internal fun preferenceName(kind: SettingsDestination, code: String, locale: Locale): String = when (kind) {
-    SettingsDestination.Language -> Locale.forLanguageTag(code).getDisplayLanguage(Locale.forLanguageTag(code)).replaceFirstChar { it.titlecase() }
-    SettingsDestination.Currency -> Currency.getInstance(code).getDisplayName(locale)
-    else -> if (code == "sats") "Satoshis" else "Bitcoin (BIP-177)"
-}
-
-internal fun preferenceDetail(kind: SettingsDestination, code: String, locale: Locale): String =
-    if (kind == SettingsDestination.Unit) com.noahwallet.formatting.BitcoinAmount.format(1234,
-        com.noahwallet.formatting.BitcoinAmountUnit.valueOf(code), locale) else code.uppercase(Locale.ROOT)
-
-internal fun preferenceSummary(kind: SettingsDestination, code: String, locale: Locale): String = when (kind) {
-    SettingsDestination.Language -> preferenceName(kind, code, locale)
-    SettingsDestination.Currency -> "$code · ${preferenceName(kind, code, locale)}"
-    else -> "${preferenceName(kind, code, locale)} · ${preferenceDetail(kind, code, locale)}"
-}
-
-@Composable
-fun PreferenceScreen(model: AppModel, kind: SettingsDestination, onSelected: () -> Unit) {
-    val locale = Locale.forLanguageTag(model.localeIdentifier)
-    val options = when (kind) {
-        SettingsDestination.Language -> listOf("en", "es", "ja", "ko", "sv")
-        SettingsDestination.Currency -> FiatCurrency.supported.toList()
-        else -> listOf("bip177", "sats")
-    }
-    val selected = when (kind) {
-        SettingsDestination.Language -> model.localeIdentifier
-        SettingsDestination.Currency -> model.preferredCurrency
-        else -> model.amountUnit.name
-    }
-    SettingsColumn {
-        options.forEach { code ->
-            val label = preferenceName(kind, code, locale)
-            SettingRow(label, preferenceDetail(kind, code, locale) + if (selected == code) " · ${tr("Selected")}" else "", modifier = Modifier.testTag("preference-$code")) {
-                model.action("Couldn't save your preference.") {
-                    when (kind) {
-                        SettingsDestination.Language -> model.setLanguage(code)
-                        SettingsDestination.Currency -> model.preference("preferredCurrency", code)
-                        else -> model.preference("bitcoinAmountUnit", code)
-                    }
-                    onSelected()
-                }
-            }
-        }
     }
 }
 

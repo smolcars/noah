@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- docs/native-rewrite/design/settings-v1.html icon; tinted by Icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#00000000" android:strokeColor="#FF000000" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M7.2 18.6A9.6 9.6 0 0 0 9 13v-1.6a3 3 0 0 1 6 0v1.1M12 11.6v1.6c0 3.2-.9 5.8-2.6 7.8M15.1 15.6a14 14 0 0 1-1.5 5M4.6 15.4c.3-.9.4-1.8.4-2.8v-1.3a7 7 0 0 1 11.2-5.6M19 11.3v1.3c0 1.2-.1 2.4-.3 3.5" />
+</vector>

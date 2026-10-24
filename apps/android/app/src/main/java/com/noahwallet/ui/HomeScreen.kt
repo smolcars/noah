@@ -34,7 +34,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, onViewAll: () -> Unit,
-               onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (SettingsDestination) -> Unit, onQR: (scan: Boolean) -> Unit, onBackup: () -> Unit = {},
+               onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (androidx.navigation3.runtime.NavKey) -> Unit, onQR: (scan: Boolean) -> Unit, onBackup: () -> Unit = {},
                onProfile: () -> Unit = {}, onRenew: (List<String>) -> Unit = {}, settings: () -> Unit) {
     val appColors = MaterialTheme.colorScheme
     val appTypography = MaterialTheme.typography
@@ -162,7 +162,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
         rows = rows, historyError = model.history.error, newRows = newRows, retrying = signals.retrying, now = Date(),
     )
     val actions = HomeActions(
-        myCode = { onQR(false) }, scan = { onQR(true) }, settings = settings, map = { onOverlay("map") },
+        myCode = { onQR(false) }, scan = { onQR(true) }, settings = settings, suspended = { onSettings(SettingsDestination.Advanced) }, map = { onOverlay("map") },
         toggleHidden = model::toggleBalance, seeAll = onViewAll, openRow = { detail.open(it) }, profile = onProfile,
         nudge = { nudge ->
             when (nudge) {

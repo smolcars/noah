@@ -3,7 +3,6 @@ package com.noahwallet.ui.settings
 import com.noahwallet.ui.WalletAlertDialog
 
 import com.noahwallet.localization.tr
-import android.os.SystemClock
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,58 +17,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import androidx.fragment.app.FragmentActivity
-import androidx.navigation3.runtime.NavKey
-import com.noahwallet.BuildConfig
 import com.noahwallet.services.storage.*
-import com.noahwallet.api.generated.models.AuthorizeMailboxPayload
 import com.noahwallet.ui.*
-import kotlinx.coroutines.delay
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-
-@Serializable
-enum class SettingsDestination(val title: String) : NavKey {
-    Settings("Settings"), Profile("Profile"), Language("Language"), Currency("Currency"), Unit("Bitcoin Unit"),
-    Backup("Backup & Restore"), Seed("Your Recovery Phrase"), Ark("Ark Info"), Esplora("Edit Esplora API"), Export("Export Database"),
-    Logs("Logs"), Feedback("Send Feedback"), Story("Noah's Ark Story"), Debug("Debug"),
-    Recurring("Recurring payments"), Vtxos("VTXOs"), Board("Board to Ark"), Exits("Emergency Exit"),
-    Email("Emergency Email"), Lightning("Lightning Address"), Battery("Battery Optimization"), UnifiedPush("UnifiedPush"),
-}
-
-internal enum class WalletSettingsRow { Seed, Vtxos, Exits, Recurring, Backup, UnifiedPush, Board, AutoBoard, Biometrics, Mailbox, Battery }
-
-internal fun walletSettingsRows(unifiedPush: Boolean, biometrics: Boolean) = WalletSettingsRow.entries.filter {
-    (it != WalletSettingsRow.UnifiedPush || unifiedPush) && (it != WalletSettingsRow.Biometrics || biometrics)
-}
-
-@Composable
-fun SettingsPage(model: AppModel, destination: SettingsDestination, onBack: () -> Unit, navigate: (SettingsDestination) -> Unit) {
-    Box(Modifier.fillMaxSize().readableWidth()) {
-        when (destination) {
-            SettingsDestination.Settings -> SettingsScreen(model, navigate)
-            SettingsDestination.Profile -> ProfileScreen(model, navigate)
-            SettingsDestination.Language, SettingsDestination.Currency, SettingsDestination.Unit -> PreferenceScreen(model, destination, onBack)
-            SettingsDestination.Backup -> BackupSettingsScreen(model)
-            SettingsDestination.Seed -> MnemonicScreen(model, onBackedUp = onBack)
-            SettingsDestination.Ark -> ArkInfoScreen(model, navigate)
-            SettingsDestination.Esplora -> EsploraSettingsScreen(model)
-            SettingsDestination.Export -> ExportScreen(model)
-            SettingsDestination.Logs -> LogScreen(model)
-            SettingsDestination.Feedback -> FeedbackScreen(model)
-            SettingsDestination.Story -> StoryScreen()
-            SettingsDestination.Debug -> if (model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isDebugModeEnabled == true) DebugScreen(model)
-            SettingsDestination.Email -> EmergencyEmailScreen(model) { navigate(SettingsDestination.Profile) }
-            SettingsDestination.Lightning -> LightningScreen(model) { navigate(SettingsDestination.Profile) }
-            SettingsDestination.Battery -> BatteryScreen()
-            SettingsDestination.UnifiedPush -> com.noahwallet.ui.launch.UnifiedPushScreen(fromOnboarding = false) { navigate(SettingsDestination.Settings) }
-            SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringPaymentsScreen(model)
-            SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosScreen(model)
-            SettingsDestination.Board -> com.noahwallet.onchain.BoardArkScreen(model)
-            SettingsDestination.Exits -> com.noahwallet.onchain.UnilateralExitScreen(model)
-        }
-    }
-}
 
 @Composable
 fun SettingsColumn(content: @Composable ColumnScope.() -> Unit) {
@@ -102,108 +52,92 @@ fun SettingToggle(title: String, detail: String, checked: Boolean, enabled: Bool
     }
 }
 
+/** Today's notification rows from the old list, until Notifications is rebuilt. */
 @Composable
-private fun SettingsScreen(model: AppModel, navigate: (SettingsDestination) -> Unit) {
-    var wallet by remember { mutableStateOf(model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()) }
-    var autoBoard by remember { mutableStateOf(SettingsPreferences.transaction(model.settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false) }
+internal fun TodaysNotifications(model: AppModel, nav: SettingsNav) {
     var server by remember { mutableStateOf(model.server.state) }
-    var taps by remember { mutableIntStateOf(0) }
-    var lastTap by remember { mutableLongStateOf(0L) }
-    var confirmation by remember { mutableStateOf<String?>(null) }
-    var deleteText by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
-    var threshold by remember { mutableStateOf<ULong?>(null) }
-    val activity = LocalContext.current as FragmentActivity
-    val uri = LocalUriHandler.current
-    LaunchedEffect(model.isWalletSuspended) { if (com.noahwallet.onchain.onchainReady(model)) threshold = runCatching { model.session.boardingMinimum()?.toULong() }.getOrNull() }
-    LaunchedEffect(taps) { if (taps > 0) { delay(2000); taps = 0 } }
     SettingsColumn {
-        SettingRow("Noah's Ark Story", "Listen to the story behind Noah") { navigate(SettingsDestination.Story) }
-        SectionTitle("Account")
-        SettingRow("Profile", "Name, Lightning address, emergency email, and public key", modifier = Modifier.testTag("settings-profile")) { navigate(SettingsDestination.Profile) }
-        SettingRow("Language", preferenceSummary(SettingsDestination.Language, model.localeIdentifier, java.util.Locale.forLanguageTag(model.localeIdentifier))) { navigate(SettingsDestination.Language) }
-        SettingRow("Currency", preferenceSummary(SettingsDestination.Currency, model.preferredCurrency, java.util.Locale.forLanguageTag(model.localeIdentifier)), modifier = Modifier.testTag("settings-currency")) { navigate(SettingsDestination.Currency) }
-        SettingRow("Bitcoin Unit", preferenceSummary(SettingsDestination.Unit, model.amountUnit.name, java.util.Locale.forLanguageTag(model.localeIdentifier)), modifier = Modifier.testTag("settings-bitcoinUnit")) { navigate(SettingsDestination.Unit) }
-        SectionTitle("Info")
-        SettingRow("Ark Info", "Ark server, wallet, and explorer configuration") { navigate(SettingsDestination.Ark) }
-        SectionTitle("Wallet")
-        walletSettingsRows(com.noahwallet.ui.launch.PlatformAccess.unifiedPush(LocalContext.current),
-            WalletLock.available(activity) || model.walletLock.enabled).forEach { row ->
-            when (row) {
-                WalletSettingsRow.Seed -> SettingRow("Show Seed Phrase", "Keep your recovery phrase safe. Never share it.") { navigate(SettingsDestination.Seed) }
-                WalletSettingsRow.Vtxos -> SettingRow("Show VTXOs", "Inspect and refresh your Ark funds", modifier = Modifier.testTag("settings-vtxos")) { navigate(SettingsDestination.Vtxos) }
-                WalletSettingsRow.Exits -> SettingRow("Emergency Exit", "Recover Ark funds onchain", modifier = Modifier.testTag("settings-emergencyExit")) { navigate(SettingsDestination.Exits) }
-                WalletSettingsRow.Recurring -> SettingRow("Recurring Payments", "Automatic payments from your Ark balance", modifier = Modifier.testTag("settings-recurring-payments")) { navigate(SettingsDestination.Recurring) }
-                WalletSettingsRow.Backup -> SettingRow("Backup & Restore", "Automatic and manual encrypted backups", modifier = Modifier.testTag("settings-backup")) { navigate(SettingsDestination.Backup) }
-                WalletSettingsRow.UnifiedPush -> SettingRow("UnifiedPush", "Configure push notifications") { navigate(SettingsDestination.UnifiedPush) }
-                WalletSettingsRow.Board -> SettingRow("Board to Ark", "Move onchain bitcoin into Ark", modifier = Modifier.testTag("settings-board-ark")) { navigate(SettingsDestination.Board) }
-                WalletSettingsRow.AutoBoard -> SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
-                    autoBoard, !model.busy) { value ->
-                    model.action("Couldn't save auto-board preference.") {
-                        model.settings.set(SettingsPreferences.autoBoard(model.settings.string("transaction-storage"), value), "transaction-storage")
-                        autoBoard = value
-                    }
-                }
-                WalletSettingsRow.Biometrics -> {
-                    SettingToggle("Biometric Authentication", "Require authentication to unlock your wallet", model.walletLock.enabled, !model.walletLock.authenticating) {
-                        model.action("Couldn't save authentication preference.") { model.walletLock.setEnabled(activity, it) }
-                    }
-                    model.walletLock.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-                }
-                WalletSettingsRow.Mailbox -> SettingToggle("Mailbox Notifications", "Allow Noah to wake the app to claim incoming payments", server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
-                    model.action("Couldn't update mailbox notifications.") {
-                        model.server.setMailboxEnabled(it)
-                        server = model.server.state
-                    }
-                }
-                WalletSettingsRow.Battery -> SettingRow("Battery Optimization", "Allow background wallet notifications") { navigate(SettingsDestination.Battery) }
+        SettingToggle("Mailbox Notifications", "Allow Noah to wake the app to claim incoming payments", server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
+            model.action("Couldn't update mailbox notifications.") {
+                model.server.setMailboxEnabled(it)
+                server = model.server.state
             }
         }
-        SectionTitle("Debug")
-        SettingRow("Show Logs", "Application logs") { navigate(SettingsDestination.Logs) }
-        SettingRow("Reset Server Registration", "Register this wallet and push notifications again", !model.busy && !model.isWalletSuspended) { confirmation = "reset" }
-        SettingRow("Send Feedback", "Report bugs or share feedback") { navigate(SettingsDestination.Feedback) }
-        if (wallet.isDebugModeEnabled == true) SettingRow("Debug Screen", "Advanced developer actions") { navigate(SettingsDestination.Debug) }
+        SettingRow("Battery Optimization", "Allow background wallet notifications") { nav.open(SettingsDestination.Battery) }
+        if (com.noahwallet.ui.launch.PlatformAccess.unifiedPush(LocalContext.current)) SettingRow("UnifiedPush", "Configure push notifications") { nav.open(SettingsDestination.UnifiedPush) }
+    }
+}
+
+/** Today's info, debug and danger-zone rows from the old list, until Advanced is rebuilt. */
+@Composable
+internal fun TodaysAdvanced(model: AppModel, nav: SettingsNav, live: SettingsLive) {
+    var autoBoard by remember { mutableStateOf(SettingsPreferences.transaction(model.settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false) }
+    var resetting by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var threshold by remember { mutableStateOf<ULong?>(null) }
+    LaunchedEffect(model.isWalletSuspended) { if (com.noahwallet.onchain.onchainReady(model)) threshold = runCatching { model.session.boardingMinimum()?.toULong() }.getOrNull() }
+    SettingsColumn {
+        SettingRow("Ark Info", "Ark server, wallet, and explorer configuration") { nav.open(SettingsDestination.Ark) }
+        SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
+            autoBoard, !model.busy) { value ->
+            model.action("Couldn't save auto-board preference.") {
+                model.settings.set(SettingsPreferences.autoBoard(model.settings.string("transaction-storage"), value), "transaction-storage")
+                autoBoard = value
+            }
+        }
+        SettingRow("Show Logs", "Application logs") { nav.open(SettingsDestination.Logs) }
+        SettingRow("Reset Server Registration", "Register this wallet and push notifications again", !model.busy && !model.isWalletSuspended) { resetting = true }
+        if (live.debug) SettingRow("Debug Screen", "Advanced developer actions") { nav.open(SettingsDestination.Debug) }
         SectionTitle("Danger Zone")
         SettingToggle("Suspend Wallet", "Close the wallet and disable all wallet operations until re-enabled", model.isWalletSuspended, !model.busy) { suspend ->
             model.action("Couldn't change wallet suspension. Please try again.") { if (suspend) model.suspendWallet() else model.resumeWallet() }
         }
-        SettingRow("Export Database", "Create an encrypted .noahbackup file", !model.isWalletSuspended) { navigate(SettingsDestination.Export) }
-        TextButton({ deleteText = ""; confirmation = "delete" }, enabled = !model.busy) { Text(tr("Delete Wallet"), color = MaterialTheme.colorScheme.error) }
-        HorizontalDivider()
-        TextButton({
-            if (wallet.isDebugModeEnabled != true) {
-                val now = SystemClock.elapsedRealtime()
-                taps = if (now - lastTap < 2000) taps + 1 else 1
-                lastTap = now
-                if (taps >= 5) {
-                    wallet = (model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()).copy(isDebugModeEnabled = true)
-                    model.settings.setPersistedState(wallet, PersistedWalletState.key, 0); taps = 0
-                }
-            }
-        }) { Text(tr("v${BuildConfig.VERSION_NAME}" + if (taps > 0) tr(" ({count} taps to unlock debug)", 5 - taps) else "")) }
-        Text(tr("Made with ❤️ from Noah team"), style = MaterialTheme.typography.bodySmall)
-        TextButton({ uri.openUri("https://t.me/blixtwallet/605026") }) { Text(tr("Telegram support")) }
-        TextButton({ uri.openUri("https://github.com/smolcars/noah") }) { Text(tr("Noah on GitHub")) }
+        SettingRow("Export Database", "Create an encrypted .noahbackup file", !model.isWalletSuspended) { nav.open(SettingsDestination.Export) }
         message?.let { Text(tr(it)) }
         if (model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     }
-    confirmation?.let { action ->
-        WalletAlertDialog(onDismissRequest = { if (!model.busy) confirmation = null },
-            title = { Text(tr(if (action == "delete") "Delete Wallet" else "Reset Server Registration")) },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(tr(if (action == "delete") "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."
-                    else "Clear local server registration and register again? Your wallet will be kept."))
-                if (action == "delete") OutlinedTextField(deleteText, { deleteText = it }, label = { Text(tr("delete")) }, modifier = Modifier.testTag("delete-wallet-input"), enabled = !model.busy, singleLine = true)
-            } },
-            dismissButton = { TextButton({ confirmation = null }, enabled = !model.busy) { Text(tr("Cancel")) } },
-            confirmButton = { TextButton({
-                model.action(if (action == "delete") "Couldn't delete wallet. Restart Noah if a restore is pending, then try again." else "Couldn't register again. Please retry.") {
-                    if (action == "delete") model.deleteWallet() else { model.reRegisterWithServer(); message = "Registered with the server again"; server = model.server.state }
-                    confirmation = null
-                }
-            }, modifier = Modifier.testTag("delete-wallet-confirm"), enabled = !model.busy && (action != "delete" || deleteText.trim().equals("delete", true))) {
-                Text(tr(if (model.busy) "Please wait…" else if (action == "delete") "Delete Wallet" else "Reset"), color = MaterialTheme.colorScheme.error)
-            } })
+    if (resetting) WalletAlertDialog(onDismissRequest = { if (!model.busy) resetting = false },
+        title = { Text(tr("Reset Server Registration")) },
+        text = { Text(tr("Clear local server registration and register again? Your wallet will be kept.")) },
+        dismissButton = { TextButton({ resetting = false }, enabled = !model.busy) { Text(tr("Cancel")) } },
+        confirmButton = { TextButton({
+            model.action("Couldn't register again. Please retry.") {
+                model.reRegisterWithServer(); message = "Registered with the server again"
+                resetting = false
+            }
+        }, enabled = !model.busy) { Text(tr(if (model.busy) "Please wait…" else "Reset"), color = MaterialTheme.colorScheme.error) } })
+}
+
+/** Today's story and links from the old list, until About is rebuilt. */
+@Composable
+internal fun TodaysAbout() {
+    val uri = LocalUriHandler.current
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f)) { StoryScreen() }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            TextButton({ uri.openUri("https://t.me/blixtwallet/605026") }) { Text(tr("Telegram support")) }
+            TextButton({ uri.openUri("https://github.com/smolcars/noah") }) { Text(tr("Noah on GitHub")) }
+        }
     }
+}
+
+/** Today's delete confirmation from the old list, until the delete sheet. */
+@Composable
+internal fun TodaysDeleteDialog(model: AppModel, dismiss: () -> Unit) {
+    var deleteText by remember { mutableStateOf("") }
+    WalletAlertDialog(onDismissRequest = { if (!model.busy) dismiss() },
+        title = { Text(tr("Delete Wallet")) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(tr("This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."))
+            OutlinedTextField(deleteText, { deleteText = it }, label = { Text(tr("delete")) }, modifier = Modifier.testTag("delete-wallet-input"), enabled = !model.busy, singleLine = true)
+        } },
+        dismissButton = { TextButton(dismiss, enabled = !model.busy) { Text(tr("Cancel")) } },
+        confirmButton = { TextButton({
+            model.action("Couldn't delete wallet. Restart Noah if a restore is pending, then try again.") {
+                model.deleteWallet()
+                dismiss()
+            }
+        }, modifier = Modifier.testTag("delete-wallet-confirm"), enabled = !model.busy && deleteText.trim().equals("delete", true)) {
+            Text(tr(if (model.busy) "Please wait…" else "Delete Wallet"), color = MaterialTheme.colorScheme.error)
+        } })
 }

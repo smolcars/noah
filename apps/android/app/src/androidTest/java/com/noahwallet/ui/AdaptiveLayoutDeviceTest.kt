@@ -112,7 +112,10 @@ class AdaptiveLayoutDeviceTest {
                 show("btc-map-detail") { com.noahwallet.btcmap.BtcMapScreen {} }
             }
             for (destination in SettingsDestination.entries.filter { it != SettingsDestination.Seed }) {
-                show("settings-${destination.name}") { SettingsPage(model, destination, {}, {}) }
+                show("settings-${destination.name}", chrome = false) {
+                    val stack = androidx.navigation3.runtime.rememberNavBackStack(*SettingsRoutes.chain(destination).toTypedArray())
+                    SettingsHost(model, stack, {}, {})
+                }
             }
             val executor = com.noahwallet.recurring.RecurringRuntime.shared(context).executor
             show("recurring-editor") { com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, null) {} }

@@ -140,7 +140,7 @@ private fun LanguageSheet(model: AppModel, presentation: OnboardingPresentation)
                     }
                 }.semantics { this.selected = selected },
                 verticalAlignment = Alignment.CenterVertically) {
-                Text(preferenceName(com.noahwallet.ui.settings.SettingsDestination.Language, code, locale), Modifier.weight(1f),
+                Text(preferenceName(com.noahwallet.ui.settings.Preference.language, code, locale), Modifier.weight(1f),
                     style = NoahTokens.Typography.body, color = palette.foreground)
                 if (selected) CheckIcon(palette.orange)
             }

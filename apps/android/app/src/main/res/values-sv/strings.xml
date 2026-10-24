@@ -13,6 +13,7 @@
   <string name="gt_5e75885111cddfc6">"AUD"</string>
   <string name="gt_d58fd353bb1b174f">"Cirka 20 min · uppskattad avgift %1$s"</string>
   <string name="gt_388e5f8e82667507">"Cirka 20 min · %1$s i avgift"</string>
+  <string name="gt_962a08a8878d9a42">"About Noah"</string>
   <string name="gt_7e1b0d5641f2640c">"Konto"</string>
   <string name="gt_df717e92d8745fc7">"Bekräfta att du har sett den aktuella betalningen innan du godkänner den igen."</string>
   <string name="gt_64cff1319d2fd2cb">"Åtgärd"</string>
@@ -36,6 +37,7 @@
   <string name="gt_56ef8f20955f2564">"Adress"</string>
   <string name="gt_a2617581771209f9">"Adressen har kopierats"</string>
   <string name="gt_abab57a3c4edabb6">"Adressen för parametern %1$s tillhör fel nätverk"</string>
+  <string name="gt_9f088dbebd6c3c70">"Advanced"</string>
   <string name="gt_60784a76bfa6f1e6">"Avancerade felsökningsåtgärder för utvecklare"</string>
   <string name="gt_eb6c016d2a3f5c97">"Avancerade utvecklaråtgärder"</string>
   <string name="gt_7b68fe5510851da3">"Efter"</string>
@@ -68,8 +70,11 @@
   <string name="gt_22b587b11be36edd">"Förankringspunkt"</string>
   <string name="gt_dea19a697a27a904">"Android SDK byggt för"</string>
   <string name="gt_15ea390b9d935697">"En annan Lightning-betalning pågår fortfarande. Försök igen när den är klar."</string>
+  <string name="gt_0d04bfeb7d64b71c">"App"</string>
+  <string name="gt_b0d015fdadc38e33">"App lock"</string>
   <string name="gt_2b16e2ecee477adb">"Verkar ha gått igenom – kontrollera Historik"</string>
   <string name="gt_ac08210c6e686e23">"Apploggar"</string>
+  <string name="gt_6007acbe30b2cd98">"Approve"</string>
   <string name="gt_d052399ec796a8de">"Godkänn och återuppta"</string>
   <string name="gt_c82d9996442489a6">"Är du säker på att du vill återställa din serverregistrering? Din plånbok raderas inte, men du behöver registrera dig på servern igen."</string>
   <string name="gt_8d88dedacd0ed60a">"Ark"</string>
@@ -108,9 +113,7 @@
   <string name="gt_4190475b52357e7a">"Autentiseringen misslyckades. Försök igen."</string>
   <string name="gt_2d5daf05c622b8f0">"Auto-board till Ark"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Tröskelvärdet för Auto-board är inte tillgängligt"</string>
-  <string name="gt_32660e2874827305">"Automatiska och manuella krypterade säkerhetskopior"</string>
   <string name="gt_168ae9aa2da9e959">"Den automatiska betalningen till %1$s hoppades över. Öppna schemat för att granska avgiften och betala manuellt."</string>
-  <string name="gt_15ad603144760542">"Automatiska betalningar från ditt Ark-saldo"</string>
   <string name="gt_40ffd8e019ebd77e">"Automatiska betalningar från ditt Ark-saldo. Gränserna för Lightning-avgifter baseras på Arks publicerade avgifter, upp till 2 % eller 200 sats, beroende på vilket som är högst. Betalningar över gränsen kräver manuellt godkännande. Låt aviseringarna vara aktiverade."</string>
   <string name="gt_07dc7c7250e1ca47">"Automatiska betalningar från ditt Ark-saldo. Lightning-avgifter får varken överstiga den angivna avgiften eller serverns avgiftsgräns för värsta fall. Ark-betalningar måste vara avgiftsfria. Andra betalningar kräver manuellt godkännande. Låt aviseringar vara aktiverade."</string>
   <string name="gt_68afa57a1a60064b">"Kryptera din plånbok och säkerhetskopiera den automatiskt eller manuellt."</string>
@@ -132,6 +135,7 @@
   <string name="gt_2f2ccea17e5795d8">"Säkerhetskopierad"</string>
   <string name="gt_b77fead35a79fc03">"En bakgrundsuppgift pågår..."</string>
   <string name="gt_f30a86f86c64f448">"Säkerhetskopierar plånboken"</string>
+  <string name="gt_bc51147d52aba178">"Backing up…"</string>
   <string name="gt_838557924a5cdfb2">"Säkerhetskopiering"</string>
   <string name="gt_a8efaee30dab9afd">"Säkerhetskopiering &amp; återställning"</string>
   <string name="gt_f5b526c5f899bdc2">"Säkerhetskopiera nu"</string>
@@ -144,6 +148,7 @@
   <string name="gt_d05e07b7c14e596a">"Saldo"</string>
   <string name="gt_415dbb79e7e425e7">"Saldoförändring"</string>
   <string name="gt_82f7047c9e44772d">"Bakgrundskartan är inte tillgänglig · Försök igen"</string>
+  <string name="gt_dfcb7c1619d5abd1">"Battery"</string>
   <string name="gt_0363faa7a9734ded">"Batterioptimering"</string>
   <string name="gt_d80412512553e428">"Batterioptimering är inaktiverad för Noah."</string>
   <string name="gt_684f75e8eac9b75b">"Batterioptimering kan fördröja betalningar i bakgrunden."</string>
@@ -152,6 +157,7 @@
   <string name="gt_c47d21c643c02c57">"Bäst"</string>
   <string name="gt_703390318bd55aef">"Beta"</string>
   <string name="gt_2b680906402b453b">"Biometrisk autentisering"</string>
+  <string name="gt_b4056df6691f8dc7">"Bitcoin"</string>
   <string name="gt_a7b822040637297e">"Bitcoin (BIP-177)"</string>
   <string name="gt_5538c35c05d2ea68">"Bitcoin-karta"</string>
   <string name="gt_804b771b7a7895d6">"Bitcoin-enhet"</string>
@@ -163,6 +169,7 @@
   <string name="gt_49f6aed17460951e">"Karta över handlare som tar emot Bitcoin"</string>
   <string name="gt_a0b46a50136c0cc2">"Betalningsbegäran för Bitcoin"</string>
   <string name="gt_309f770f53455954">"Bitcoin-platser"</string>
+  <string name="gt_9ee95317954f93fd">"Bitcoin unit"</string>
   <string name="gt_f3feeab7f812d05e">"Bitcoin, Ark och Lightning för %1$s"</string>
   <string name="gt_a800b1a6af330022">"Bitcoin, helt enkelt."</string>
   <string name="gt_165fb7b76f269989">"Bitcoind RPC"</string>
@@ -373,6 +380,8 @@
   <string name="gt_01f5e36f742d6610">"Datum, belopp, avgifter, priser, ID:n och mottagare"</string>
   <string name="gt_1a03bd2fd107c453">"Felsökning"</string>
   <string name="gt_6168260eb938c95d">"Felsökningsvy"</string>
+  <string name="gt_3479a30b178c2355">"Debug is on"</string>
+  <string name="gt_7bd159967356a176">"Debug on"</string>
   <string name="gt_2d33cff196396113">"Avkoda VTXO-hex"</string>
   <string name="gt_21b111cbfe6e8fca">"Standard"</string>
   <string name="gt_a53809d541246272">"Standardslutpunkt"</string>
@@ -382,6 +391,7 @@
   <string name="gt_0f660a06f09eb8b2">"Radera plånbok"</string>
   <string name="gt_8c643f5a37c9c83e">"Radera siffra"</string>
   <string name="gt_eb1bbaf775e6c7ab">"Ta bort krypterad säkerhetskopia?"</string>
+  <string name="gt_65684f308cb12bf2">"Delete wallet"</string>
   <string name="gt_906115657390f367">"Levererad"</string>
   <string name="gt_a0760d3dd093f263">"Levereras"</string>
   <string name="gt_ae79af44798ae9ee">"Sätt in medel på kedjan"</string>
@@ -396,6 +406,7 @@
   <string name="gt_22285980b45cde91">"Inaktivera alla plånboksfunktioner. Plånboken stängs och läses inte in förrän den aktiveras igen."</string>
   <string name="gt_4c5e9e2b90ab535d">"Inaktivera autentisering för plånboken"</string>
   <string name="gt_de55d749452d746b">"Stäng uppmaningen om e-postadress för nödfall"</string>
+  <string name="gt_34e108c0896d0158">"Display"</string>
   <string name="gt_11a6767d5674c7e4">"Klart"</string>
   <string name="gt_860e7995708f4744">"Klar med valet"</string>
   <string name="gt_5655e4c5f2e921a8">"Ta bort VTXO"</string>
@@ -421,6 +432,7 @@
   <string name="gt_bdfb1e4f00c73e98">"E-post verifierad"</string>
   <string name="gt_3a9f176a663d540d">"E-postadress för nödfall"</string>
   <string name="gt_a9214c2e38df7318">"Nöduttag"</string>
+  <string name="gt_b8eea92a324ae5b4">"Emergency exit"</string>
   <string name="gt_cade2f4efb6f7c99">"Emulator"</string>
   <string name="gt_ae08e4962577a7b8">"Aktivera automatisk säkerhetskopiering"</string>
   <string name="gt_1cd009ba27e712a8">"Aktivera autentisering för plånboken"</string>
@@ -451,6 +463,7 @@
   <string name="gt_2c41befe9ea4cd5c">"Angivet som"</string>
   <string name="gt_54a0e8c17ebb21a1">"Fel"</string>
   <string name="gt_a464fa0760351f31">"Fel: %1$s"</string>
+  <string name="gt_7107b114487556ea">"Esplora"</string>
   <string name="gt_4aca231490486ddf">"Bas-URL för Esplora API"</string>
   <string name="gt_dea4969e1e0f5ab1">"Esplora API · Anpassad slutpunkt"</string>
   <string name="gt_673e1f4d5ca309f4">"Esplora API · Noah-standard"</string>
@@ -512,6 +525,7 @@
   <string name="gt_4e1bb930def7915b">"Exporten är klar"</string>
   <string name="gt_eb42aff5f2d19617">"Exportera Databas"</string>
   <string name="gt_50757c7bc28c5d13">"Exportera aktivitet"</string>
+  <string name="gt_d9d979c63132b44e">"Export file"</string>
   <string name="gt_c640fca7c7010571">"Exportera transaktioner"</string>
   <string name="gt_a2dd9cbb7013bb70">"Exporterar…"</string>
   <string name="gt_a3b205a9ee2b931f">"FIAT"</string>
@@ -530,7 +544,9 @@
   <string name="gt_66e1aeba4a28b81e">"Avgifterna kan inte beräknas. Avgifterna och beloppet du får är okända. Fortsätt utan beräkning endast om du accepterar denna osäkerhet."</string>
   <string name="gt_26290dab5e50b113">"Avgift för den befintliga betalningen: %1$s sats"</string>
   <string name="gt_6c6cc6eb80efa410">"Avgiftssats"</string>
+  <string name="gt_aac77df347205252">"Feedback"</string>
   <string name="gt_c7e61b7092a55da5">"Hämtar säkerhetskopia…"</string>
+  <string name="gt_2a246cca8735d1b7">"Fewer"</string>
   <string name="gt_1369793595356d9d">"Fiatkurs inte tillgänglig: %1$s"</string>
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
   <string name="gt_f4ed8fa656b74c5d">"Slutgiltig"</string>
@@ -547,6 +563,7 @@
   <string name="gt_e41727ad36a36410">"Första blockhöjd: %1$s"</string>
   <string name="gt_45650656cfdd8260">"Första betalningen"</string>
   <string name="gt_48f1e8beb4c38745">"Mat &amp; dryck"</string>
+  <string name="gt_8aa38c1af4a2e0e9">"For prices next to your bitcoin."</string>
   <string name="gt_16e335b86c93460e">"För brådskande plånboksvarningar"</string>
   <string name="gt_fa455979bb8dbab9">"Endast för %1$s"</string>
   <string name="gt_db31b5552174642e">"Om du tar bort det här försöket avbryts varken Barks lagrade transaktion eller framtida försök att sända den. Betalningen kan fortfarande slutföras. Kontrollera först hela plånbokshistoriken och stäm av med mottagaren. Om du skickar igen kan du betala två gånger, och det går inte att ångra den första betalningen."</string>
@@ -572,7 +589,9 @@
   <string name="gt_f7202940b694d0d1">"Utgångsdelta för HTLC-sändning"</string>
   <string name="gt_c02479b6e3bd01fb">"HTTP-fel"</string>
   <string name="gt_0a5639302aa6c182">"Har du kontrollerat?"</string>
+  <string name="gt_b79cac926e0b2e34">"Help"</string>
   <string name="gt_c41b2bdf4c4d8c50">"Dolt av säkerhetsskäl"</string>
+  <string name="gt_2ae92318e0d70a21">"Hide amounts"</string>
   <string name="gt_f6b0718e33d9868e">"Dölj tangentbordet"</string>
   <string name="gt_a02180533bdc7fad">"Dölj platser"</string>
   <string name="gt_920ac8601c18daac">"Dölj plånbokens saldo"</string>
@@ -582,6 +601,7 @@
   <string name="gt_5013616d3cb50e40">"Håll in för att skicka"</string>
   <string name="gt_3a78695388b38b5c">"Hem"</string>
   <string name="gt_28b8708f20cec955">"Timmar: %1$s"</string>
+  <string name="gt_44f51ff976b00dd3">"How amounts are written."</string>
   <string name="gt_d6b7a9baccadd4b1">"Så skickar du %1$s"</string>
   <string name="gt_4c2a3b5df96f8af7">"Jag har redan en plånbok"</string>
   <string name="gt_ef9a2be3b826ee15">"Jag har kontrollerat historiken"</string>
@@ -593,12 +613,12 @@
   <string name="gt_86a486e897edd1bc">"Importera VTXO"</string>
   <string name="gt_1016441cc23c561f">"I en omgång"</string>
   <string name="gt_14f23687c9fe3353">"Om cirka 20 minuter"</string>
+  <string name="gt_c1f88e9d6c4145cf">"In progress"</string>
   <string name="gt_f868160d0a466230">"Inom några sekunder"</string>
   <string name="gt_e301820ac8393100">"Inkommande"</string>
   <string name="gt_544bf107f0c7d65e">"Inkommande via Lightning"</string>
   <string name="gt_170322a32f3c35b2">"Info"</string>
   <string name="gt_7abc49dfa87bc183">"Ingångar"</string>
-  <string name="gt_e1c9b0d0a93ba96f">"Granska och förnya dina Ark-medel"</string>
   <string name="gt_ff67ecdfc6ccee10">"Installera en distributörsapp som ”ntfy” från F-Droid för att aktivera pushaviseringar."</string>
   <string name="gt_b24147c47f1ae370">"Installerar plånbok…"</string>
   <string name="gt_ddd409663e0a1d7b">"Direkt och gratis från Ark-plånböcker"</string>
@@ -641,7 +661,6 @@
   <string name="gt_942c9e0587fb1e92">"Behåll betalning"</string>
   <string name="gt_1223a5e3f6a37070">"Låt vara stoppad"</string>
   <string name="gt_b9ad2e4e8954b13e">"Fortsätt vänta"</string>
-  <string name="gt_a85f6633b75add37">"Förvara din återställningsfras säkert. Dela den aldrig med någon."</string>
   <string name="gt_f0d66a79c138e951">"Nycklar"</string>
   <string name="gt_f5387f9bb6ed7031">"Typ"</string>
   <string name="gt_4993449490bbc0ac">"Beskrivningshashen för LNURL-betalningsbegäran stämmer inte överens med slutpunktens metadata"</string>
@@ -674,7 +693,6 @@
   <string name="gt_b93018eee5c09c88">"Lightning-mottagning %1$s. Skapa en ny betalningsbegäran och försök igen."</string>
   <string name="gt_0ceef1fc78ab9b23">"Visa säkerhetskopior"</string>
   <string name="gt_5d3789ebb7f966b3">"Lyssna på bibelberättelsen som gav vår plånbok dess namn"</string>
-  <string name="gt_e851e05304f58fa3">"Lyssna på berättelsen bakom Noah"</string>
   <string name="gt_de1a03ce5fcc3be8">"Aktuell information är inte tillgänglig. De medföljande platserna fungerar fortfarande offline."</string>
   <string name="gt_2c32f9b6d605e55b">"Lnurl"</string>
   <string name="gt_0acd8adfdd7a6796">"Läser in aktivitet"</string>
@@ -723,7 +741,6 @@
   <string name="gt_656ea5e06bac3d88">"Pluralresurs saknas: %1$s"</string>
   <string name="gt_9b11f6b707d2a03e">"Varje månad"</string>
   <string name="gt_d47d7cb0e4f8fd2b">"Mer"</string>
-  <string name="gt_6a1756ecb05ed667">"Flytta bitcoin från blockkedjan till Ark"</string>
   <string name="gt_95e949f1c9e6a26a">"Flytta bitcoin från kedjan till Ark för snabba betalningar med låga avgifter."</string>
   <string name="gt_85720a9d10dec1ca">"Flytta bitcoin på blockkedjan till Ark med just den här signerade finansieringstransaktionen. Insättningsbeloppet inkluderar Ark-avgiften. Avgiften på blockkedjan tillkommer. Medlen kan användas när insättningen är klar. Den här granskningen är giltig i två minuter."</string>
   <string name="gt_a571fc41c8ac198d">"Flytta bitcoin på blockkedjan till Ark. Beloppen och avgifterna som visas är exakta för den här förberedda transaktionen. Medlen kan användas när insättningen är klar."</string>
@@ -736,7 +753,6 @@
   <string name="gt_3572a3960baa6c42">"Min plats"</string>
   <string name="gt_dcd1d5223f73b3a9">"Namn"</string>
   <string name="gt_08b82a4eb2dc737a">"Namn och ämne får vara högst 150 byte vardera och meddelandet högst 60 000 byte."</string>
-  <string name="gt_efd68f48bc8ba6ae">"Namn, Lightning-adress, e-postadress för nödfall och offentlig nyckel"</string>
   <string name="gt_d4fd0214dbc9257c">"Namn, adress eller faktura"</string>
   <string name="gt_d0f6065e2fd9c18f">"Namn, ämne och meddelande krävs."</string>
   <string name="gt_db8cd782f1a84739">"Kunde inte spara plattformens inställningar"</string>
@@ -824,17 +840,20 @@
   <string name="gt_51d97932518a114f">"Offentlig Nostr-nyckel (valfritt)"</string>
   <string name="gt_b94b03f4cd232a39">"Publika Nostr-nycklar måste använda npub-kodning"</string>
   <string name="gt_ca374c23ed92ea82">"Inte registrerad"</string>
+  <string name="gt_22b3467c1ba90e48">"Not saved"</string>
   <string name="gt_15133907259330da">"Inte verifierad"</string>
   <string name="gt_d8da2c49df39d91d">"Anteckning"</string>
   <string name="gt_f9b73e1abc37cf5b">"Meddelande (valfritt)"</string>
   <string name="gt_0f03e776ef5cf27e">"Anteckningen får vara högst 639 tecken"</string>
   <string name="gt_045f910e6b3ce120">"Anteckningen får vara högst 639 tecken."</string>
+  <string name="gt_788011833a5a0f22">"Notifications"</string>
   <string name="gt_54ee6b72ca5e79e6">"Aviseringar krävs"</string>
   <string name="gt_fce40565eda8090e">"Med aviseringar kan Noah ta emot betalningar och förnya din bitcoin innan den löper ut."</string>
   <string name="gt_44d87512663a5641">"Noto Sans Regular"</string>
   <string name="gt_fe18013d93d22f4f">"Nu"</string>
   <string name="gt_c28fbd1a8ec4cf5b">"Antal betalningar"</string>
   <string name="gt_565339bc4d33d728">"OK"</string>
+  <string name="gt_ca7981b46ecf2c17">"Off"</string>
   <string name="gt_9053e68ef6e93119">"Ta ut"</string>
   <string name="gt_4346ebb57ce73858">"Ta ut allt"</string>
   <string name="gt_be6732e03c5060e3">"Ta ut alla medel?"</string>
@@ -842,6 +861,7 @@
   <string name="gt_0cf57c63eb976556">"Erbjudande"</string>
   <string name="gt_fb66d67e9d15c425">"Platser i offlineläge · realtidsuppdateringar är inte tillgängliga"</string>
   <string name="gt_bcdc043150cee3c5">"Frånkopplad · Försök igen"</string>
+  <string name="gt_130011756125313c">"On"</string>
   <string name="gt_93ced7a46f90b0f1">"Ett visst datum"</string>
   <string name="gt_8596d4a93b3d33a1">"På blockkedjan"</string>
   <string name="gt_af283a1c9bacc979">"On-chain-adress"</string>
@@ -960,9 +980,9 @@
   <string name="gt_3fed24d17905877f">"Mottagare verifierad"</string>
   <string name="gt_c8233e7b49d45fa5">"Betalningen har stämts av. Metadata för upprepning kunde inte sparas"</string>
   <string name="gt_c7175fa7a0db0d3c">"Registrerad"</string>
-  <string name="gt_17c2b7f7da446b5c">"Återvinn Ark-medel på blockkedjan"</string>
   <string name="gt_0b9971b0e0b4f0e1">"Återfå medel om Ark-servern inte är tillgänglig."</string>
   <string name="gt_3b208c8df3744b19">"Återför dina Ark-medel till blockkedjan om Ark-servern inte är tillgänglig. Nöduttag kräver bekräftade medel på blockkedjan för sändningsavgifter, och ett tidslås måste löpa ut innan medlen kan lösas in."</string>
+  <string name="gt_41edd3f47328da5a">"Recovery phrase"</string>
   <string name="gt_512d764f27c017d9">"Återställningsfras hittad"</string>
   <string name="gt_42340084a768bf70">"Återställningsfras behövs"</string>
   <string name="gt_c0c06e547b1b55e1">"Återkommande"</string>
@@ -1028,10 +1048,8 @@
   <string name="gt_0e878c81671aa8dc">"Skydd mot upprepning åsidosatt: "</string>
   <string name="gt_92ee0233f01396ac">"Upprepas"</string>
   <string name="gt_c084c45b8820459d">"Rapportera ett fel eller berätta hur Noah kan bli bättre."</string>
-  <string name="gt_0e4ca5508bb39bf5">"Rapportera fel eller lämna synpunkter"</string>
   <string name="gt_1adc3ea3fdbcbb26">"Rapportera fel eller lämna synpunkter till Noah-teamet"</string>
   <string name="gt_fae09a4a2a5c48bb">"Begär åtkomst till kameran…"</string>
-  <string name="gt_e7e0eccff098717d">"Kräv autentisering för att låsa upp plånboken"</string>
   <string name="gt_1c7052816e70489e">"Kräv biometrisk autentisering för att låsa upp din plånbok"</string>
   <string name="gt_ab6b06887f08fcb1">"Antal bekräftelser som krävs för insättning"</string>
   <string name="gt_1f94843777aed851">"Skicka igen"</string>
@@ -1105,6 +1123,7 @@
   <string name="gt_26a08e3cf397b095">"Den säkra filen kan inte läsas"</string>
   <string name="gt_6e5835bc30b172d3">"Säker nyckel inte tillgänglig"</string>
   <string name="gt_60e65c7b7c95778d">"Säker lagring inte tillgänglig"</string>
+  <string name="gt_8f6fb4eb7f42c0e2">"Security"</string>
   <string name="gt_d7a8c446069a0585">"Visa alla"</string>
   <string name="gt_9c251e1192d16e65">"Syns i nätverket"</string>
   <string name="gt_2a78025de6aae5e7">"Välj"</string>
@@ -1200,6 +1219,7 @@
   <string name="gt_479b9ae48026aec9">"Supportkod: SEED_INVALID. Den sparade återställningsfrasen kunde inte valideras. Låt appen vara installerad och kontakta Noahs support på github.com/smolcars/noah. Skicka aldrig din återställningsfras, dina privata nycklar eller en plånboksdatabas till någon."</string>
   <string name="gt_2dd46d7515a9b8c0">"Supportkod: WALLET_CONFLICT. Noah hittade plånboksposter som inte kan matchas på ett säkert sätt. Låt appen vara installerad och kontakta Noahs support på github.com/smolcars/noah. Skicka aldrig din återställningsfras, dina privata nycklar eller en plånboksdatabas till någon."</string>
   <string name="gt_f58b620caacbfc69">"Inaktivera plånboken"</string>
+  <string name="gt_e392a3891c070abe">"Suspended"</string>
   <string name="gt_f13735d87fed3876">"Byter med Ark"</string>
   <string name="gt_e33c6493161b3d66">"Tömd"</string>
   <string name="gt_4faef8c86f8b1bfe">"Byt valuta för beloppet"</string>
@@ -1405,6 +1425,7 @@
   <string name="gt_87672f62ea3f7a51">"Verifierad %1$s"</string>
   <string name="gt_9ae9fbbcb1c80ca9">"Verifiera e-postadress"</string>
   <string name="gt_6883dd409f6d48a8">"Kontrollerar att återställningsfrasen är sparad…"</string>
+  <string name="gt_dd167905de0defca">"Version"</string>
   <string name="gt_2ed8b8066255f7d2">"Via"</string>
   <string name="gt_14b46acaa1ff5b8c">"Visa inställningar för Ark-servern, plånboken och blockutforskaren."</string>
   <string name="gt_4ff6313a5999c4f2">"Visa programloggar för felsökning"</string>
@@ -1476,6 +1497,7 @@
   <string name="gt_23a3ca761b70abf7">"Din plånbok är inte redo. Försök igen."</string>
   <string name="gt_f195f8e226312c3a">"Allt är klart"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
+  <string name="gt_0b8e9e995d8d77f1">"debug"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_7d7894104be6c089">"t.ex. hyra, donation, VPN"</string>
   <string name="gt_140a2c3b9322734d">"fiatjaf"</string>
@@ -1484,6 +1506,7 @@
   <string name="gt_7749eed65c4e3535">"name@domain.com, ark1… eller lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"nästa"</string>
   <string name="gt_a6c585be6cfb7f0f">"npub1..."</string>
+  <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_688897c430ce4d33">"till %1$s"</string>
   <string name="gt_43cfd880a046a5da">"till %1$s"</string>
   <string name="gt_3e4443e52275a9a0">"okänt fel"</string>
@@ -1531,6 +1554,8 @@
     <item quantity="one">"%1$s Lightning-betalning som CSV-fil."</item>
     <item quantity="other">"%1$s Lightning-betalningar som CSV-fil."</item>
   </plurals>
+  <string name="gt_f4d60c7d0545f547">"%1$s active"</string>
+  <string name="gt_76c569f37720fa3d">"%1$s more to turn on debug"</string>
   <string name="gt_3612e1cd7501afab">"%1$s av %2$s"</string>
   <plurals name="gt_cbc409d6a950d6e9">
     <item quantity="one">"%1$s betalning på kedjan som CSV-fil."</item>

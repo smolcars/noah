@@ -202,7 +202,7 @@ private fun blockWait(ui: ActivityUi, record: HistoryTransaction, home: HomeRow)
 
 /** Send's mempool-style block row: the next block holding your dot, then "Confirmed in block N · 1 of 2". */
 @Composable
-private fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, locale: java.util.Locale) {
+internal fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, locale: java.util.Locale) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val measurer = rememberTextMeasurer()
@@ -230,11 +230,14 @@ private fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, locale
     Text(line, Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }, style = HomeType.line.copy(fontWeight = FontWeight.Medium), color = palette.muted)
 }
 
-/** A detail row: label on the left, value (with copy, the explorer or a chevron) on the right. */
+/**
+ * A detail row: label on the left, value (with copy, the explorer or a chevron) on the right. Settings adds an orange
+ * [dot] or verified [ok] mark before the value and a [failed] value in red.
+ */
 @Composable
-private fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind.text, copy: String? = null, explorer: String? = null,
+internal fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind.text, copy: String? = null, explorer: String? = null,
                       glyph: Int? = null, small: Boolean = false, toasts: HomeToasts, onExplorer: (String) -> Unit = {}, last: Boolean = false,
-                      onClick: (() -> Unit)? = null) {
+                      dot: Boolean = false, ok: Boolean = false, failed: Boolean = false, onClick: (() -> Unit)? = null) {
     val palette = LocalPalette.current
     val style = when (kind) {
         ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono
@@ -246,8 +249,12 @@ private fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind.
         Text(tr(label), style = ActivityType.label.let { if (small) it.copy(fontSize = 15.sp) else it }, color = palette.muted, maxLines = 1)
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             glyph?.let { Icon(painterResource(it), null, Modifier.size(16.dp), tint = palette.foreground) }
+            if (dot) Box(Modifier.size(8.dp).background(palette.orange, CircleShape))
             SelectionContainer(Modifier.weight(1f, fill = false)) {
-                Text(value, style = style, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+                Text(value, style = style, color = if (failed) palette.failure else palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+            }
+            if (ok) Box(Modifier.size(16.dp).background(palette.orange, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(painterResource(R.drawable.ic_activity_check), null, Modifier.size(11.dp), tint = androidx.compose.ui.graphics.Color.White)
             }
             copy?.let { CopyIcon(label, it, toasts) }
             explorer?.let { url ->
@@ -264,7 +271,7 @@ private fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind.
 
 /** A long technical value under its label, in full, so it can still be selected; copy beside the label. */
 @Composable
-private fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy: Boolean = true) {
+internal fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy: Boolean = true) {
     val palette = LocalPalette.current
     Column(Modifier.fillMaxWidth().drawBehind { drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
         .padding(vertical = 10.dp)) {
@@ -280,7 +287,7 @@ internal enum class ValueKind { text, number, mono }
 
 /** Copy: the icon turns into a check, with a "Copied" toast and a success haptic. */
 @Composable
-private fun CopyIcon(label: String, value: String, toasts: HomeToasts) {
+internal fun CopyIcon(label: String, value: String, toasts: HomeToasts) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val context = LocalContext.current
@@ -368,12 +375,18 @@ private fun longDate(date: java.util.Date?, ui: ActivityUi): String {
 @Composable
 private fun DetailsSection(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityActions, state: ActivityState, toasts: HomeToasts,
                            scroll: androidx.compose.foundation.ScrollState, modifier: Modifier) {
+    Details(state.details, { state.details = it }, scroll, modifier) { TechnicalRows(ui, row.record, actions, toasts) }
+}
+
+/** Collapsed "Details": the row turns its chevron and the rows open with the soft spring, scrolling them into view. */
+@Composable
+internal fun Details(open: Boolean, onOpen: (Boolean) -> Unit, scroll: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier,
+                     content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val reduceMotion = LocalReduceMotion.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val open = state.details
     val turn by animateFloatAsState(if (open) 90f else 0f, if (reduceMotion) tween(0) else tween(300), label = "details")
     Column(modifier.padding(top = 18.dp)) {
         val expanded = tr("Expanded"); val collapsed = tr("Collapsed")
@@ -381,7 +394,7 @@ private fun DetailsSection(ui: ActivityUi, row: ActivityRules.Row, actions: Acti
             drawRect(palette.hairline, Offset.Zero, Size(size.width, 1.dp.toPx()))
             drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
         }.clickable(role = Role.Button) {
-            haptics.selection(); state.details = !open
+            haptics.selection(); onOpen(!open)
             if (!open) scope.launch { delay(120); scroll.animateScrollTo(scroll.value + with(density) { 220.dp.roundToPx() }) }
         }.semantics { stateDescription = if (open) expanded else collapsed }.testTag("activity-details-toggle"), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Details"), Modifier.weight(1f), style = ActivityType.value, color = palette.foreground)
@@ -390,7 +403,7 @@ private fun DetailsSection(ui: ActivityUi, row: ActivityRules.Row, actions: Acti
         AnimatedVisibility(open, enter = if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
             else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
             exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f, 157.9137f))) {
-            Column(Modifier.testTag("activity-details")) { TechnicalRows(ui, row.record, actions, toasts) }
+            Column(Modifier.testTag("activity-details"), content = content)
         }
     }
 }

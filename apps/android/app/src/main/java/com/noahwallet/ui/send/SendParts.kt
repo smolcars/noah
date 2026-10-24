@@ -432,19 +432,27 @@ internal fun PhaseText(text: String?, done: Boolean, modifier: Modifier = Modifi
  * variant. Long labels (and longer languages) shrink to fit rather than clip.
  */
 @Composable
-internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, outlined: Boolean = false, height: Dp = 52.dp, onClick: () -> Unit) {
+internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, outlined: Boolean = false, height: Dp = 52.dp,
+                       danger: Boolean = false, loading: Boolean = false, icon: Int? = null, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && !LocalReduceMotion.current) .97f else 1f, NoahTokens.Motion.tap(), label = "pill")
     val shape = RoundedCornerShape(height / 2)
     val style = if (height < 52.dp) SendType.pill.copy(fontSize = 16.sp, lineHeight = 20.sp) else SendType.pill
-    Box(modifier.height(height).graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled) 1f else .28f }
-        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape, palette.foreground))
-        .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled, role = Role.Button, onClick = onClick)
+    // Red only while it can act (prototype `.pill.bad:disabled`): a disabled destructive pill looks like any other.
+    val red = danger && enabled
+    val ink = if (outlined) palette.foreground else if (red) Color.White else palette.background
+    Box(modifier.height(height).graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled || loading) 1f else .28f }
+        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape, if (red) palette.failure else palette.foreground))
+        .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled && !loading, role = Role.Button, onClick = onClick)
         .padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-        androidx.compose.foundation.text.BasicText(title, style = style.copy(color = if (outlined) palette.foreground else palette.background, textAlign = TextAlign.Center),
-            maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = ink, strokeWidth = 2.dp)
+            else icon?.let { Icon(painterResource(it), null, Modifier.size(20.dp), tint = ink) }
+            androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center),
+                maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
+        }
     }
 }
 
