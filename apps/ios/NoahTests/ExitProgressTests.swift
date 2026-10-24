@@ -93,27 +93,24 @@ struct ExitProgressTests {
         var first = Self.path.map { Self.tx($0, "verify-inputs") }
         first[0] = Self.tx("root", "awaiting-confirmation", child: "c0", origin: "wallet")
         var now = first
-        now[0] = Self.tx("root", "awaiting-confirmation", child: "c0", origin: "wallet")
-        let stuck = ExitProgress(Self.exit("Processing", Self.processing(now, tip: 103), history: [Self.processing(first, tip: 100)]), tip: 103)
+        let seen = [ExitSightings.key("root", "awaiting-confirmation"): UInt32(100)]
+        let stuck = ExitProgress(Self.exit("Processing", Self.processing(now, tip: 100), history: [Self.processing(first, tip: 100)]), tip: 103, seen: seen)
         #expect(stuck.phase == .mempool && stuck.stuck == 3 && !stuck.bumped)
 
         now[0] = Self.tx("root", "awaiting-confirmation", child: "c0-rbf", origin: "wallet")
-        let bumped = ExitProgress(Self.exit("Processing", Self.processing(now, tip: 101), history: [Self.processing(first, tip: 100)]), tip: 101)
+        let bumped = ExitProgress(Self.exit("Processing", Self.processing(now, tip: 101), history: [Self.processing(first, tip: 100)]), tip: 101, seen: seen)
         #expect(bumped.bumped && bumped.stuck == 1)
     }
 
-    @Test func staleOnlyWhileNothingProgressesASendingExit() {
+    @Test func staleOnlyWithEvidenceThatNothingProgresses() {
         let behind = Self.exit("Processing", Self.processing(Self.path.map { Self.tx($0, "verify-inputs") }, tip: 90))
-        // bark's daemon checks every exit each minute while it runs: never stale, however old the record.
+        // bark's daemon keeps exits current while it runs: never stale, however old bark's record.
         #expect(!ExitProgress(behind, tip: 100).stale)
-        // Without it, the last progress there was is the app's own check, or bark's record.
+        // No daemon, or the last Check the chain failed.
         #expect(ExitProgress(behind, tip: 100, progressing: false).stale)
-        #expect(!ExitProgress(behind, tip: 91, progressing: false).stale)
-        #expect(!ExitProgress(behind, tip: 100, checkedTip: 99, progressing: false).stale)
-        #expect(ExitProgress(behind, tip: 100, checkedTip: 98, progressing: false).stale)
-        #expect(ExitProgress(behind, tip: 100, checkedTip: 98, progressing: false).checked == 98)
-        // "Last checked" is the app's own check, never bark's frozen height.
+        // "Last checked" is Noah's own check, never bark's frozen height.
         #expect(ExitProgress(behind, tip: 100).checked == nil)
+        #expect(ExitProgress(behind, tip: 100, checkedTip: 98).checked == 98)
         // Waiting exits are never stale.
         let waiting = Self.exit("AwaitingDelta", .init(kind: "awaiting-delta", tip_height: 90, claimable_height: 234))
         #expect(!ExitProgress(waiting, tip: 150, progressing: false).stale)
@@ -127,27 +124,62 @@ struct ExitProgressTests {
 
     // MARK: Decision 3
 
-    @Test func needsFundsNeedsACompletedProgressThatLeftItParked() {
+    @Test func needsFundsNeedsFundsShortAndACycleThatTried() {
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
         txs[0] = Self.tx("root", "confirmed", height: 101)
         txs[1] = Self.tx("l2", "awaiting-cpfp-broadcast")
         let exit = Self.exit("Processing", Self.processing(txs, tip: 101))
         #expect(exit.parkedTxid == "l2")
-        // Parked with too few funds, but no completed progress has tried it yet: no claim of missing funds.
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 310, packageFee: 1_215, proven: []))
-        // A completed Check the chain left it parked.
-        #expect(ExitFunds.needsFunds(exit, confirmed: 310, packageFee: 1_215, proven: ["l2"]))
-        // Funds arrive: enough confirmed for the package.
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 1_215, packageFee: 1_215, proven: ["l2"]))
-        // No package fee known: nothing is inferred.
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 0, packageFee: nil, proven: ["l2"]))
-        // Proof for another transaction doesn't carry over.
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 0, packageFee: 1_215, proven: ["root"]))
-        // It got its child: no longer parked.
+        let t0 = Date(timeIntervalSince1970: 1_000)
+        func needs(_ confirmed: UInt64 = 310, fee: UInt64? = 1_215, proven: Set<String> = [], seen: Date? = t0, daemon: Date? = .distantPast,
+                   at seconds: TimeInterval, _ subject: ExitModel = exit) -> Bool {
+            ExitFunds.needsFunds(subject, confirmed: confirmed, packageFee: fee, proven: proven, parkedSince: seen, daemonSince: daemon,
+                                 now: t0.addingTimeInterval(seconds))
+        }
+        // Funds short, but bark hasn't had a full daemon cycle to try yet: no label.
+        #expect(!needs(at: 0) && !needs(at: 74))
+        // One daemon interval and its margin since Noah first saw it parked.
+        #expect(needs(at: 75))
+        // The daemon started after it parked: the cycle counts from then.
+        #expect(!needs(daemon: t0.addingTimeInterval(30), at: 75) && needs(daemon: t0.addingTimeInterval(30), at: 105))
+        // Without the daemon, elapsed time proves nothing; a completed Check the chain does.
+        #expect(!needs(daemon: nil, at: 10_000) && needs(proven: ["l2"], daemon: nil, at: 0))
+        // Funds arrive, or nothing to compare against: cleared.
+        #expect(!needs(1_215, at: 10_000) && !needs(fee: nil, proven: ["l2"], at: 10_000))
+        // Proof for another transaction doesn't carry over; once it has its child it isn't parked.
+        #expect(!needs(proven: ["root"], daemon: nil, at: 0))
         var moved = txs
         moved[1] = Self.tx("l2", "awaiting-confirmation", child: "c1", origin: "wallet")
-        #expect(!ExitFunds.needsFunds(Self.exit("Processing", Self.processing(moved, tip: 101)), confirmed: 0, packageFee: 1_215, proven: ["l2"]))
+        #expect(!needs(proven: ["l2"], at: 10_000, Self.exit("Processing", Self.processing(moved, tip: 101))))
     }
+
+    @Test func sightingsKeepTheFirstTipAndForgetWhatMovedOn() throws {
+        var txs = Self.path.map { Self.tx($0, "verify-inputs") }
+        txs[0] = Self.tx("root", "awaiting-confirmation", child: "c0", origin: "wallet")
+        let exit = Self.exit("Processing", Self.processing(txs, tip: 100))
+        var sightings = ExitSightings()
+        let added = sightings.observe([exit], tip: 100, now: Date(timeIntervalSince1970: 1))
+        #expect(added)
+        // Seen again later: the first sighting stays.
+        let again = sightings.observe([exit], tip: 104, now: Date(timeIntervalSince1970: 500))
+        #expect(!again)
+        #expect(sightings.tips[ExitSightings.key("root", "awaiting-confirmation")] == 100)
+        // A new status is a new sighting; the old one is forgotten.
+        txs[0] = Self.tx("root", "confirmed", height: 105)
+        txs[1] = Self.tx("l2", "awaiting-cpfp-broadcast")
+        let moved = sightings.observe([Self.exit("Processing", Self.processing(txs, tip: 105))], tip: 105, now: Date(timeIntervalSince1970: 600))
+        #expect(moved)
+        #expect(sightings.seen.keys.contains(ExitSightings.key("l2", "awaiting-cpfp-broadcast")))
+        #expect(sightings.tips[ExitSightings.key("root", "awaiting-confirmation")] == nil)
+        // Persisted per wallet, across launches.
+        let disk = Disk()
+        let store = ExitSightings.Store(read: { disk.value }, write: { disk.value = $0 })
+        try store.save(sightings, walletID: "a")
+        #expect(ExitSightings.Store(read: { disk.value }, write: { _ in }).load(walletID: "a") == sightings)
+        #expect(store.load(walletID: "b") == ExitSightings())
+    }
+
+    final class Disk: @unchecked Sendable { var value: String? }
 
     @Test func barkHistoryProvesAProgressCycleAlready() {
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
@@ -155,19 +187,20 @@ struct ExitProgressTests {
         let earlier = Self.processing(txs, tip: 100)
         let exit = Self.exit("Processing", Self.processing(txs, tip: 102), history: [earlier])
         #expect(exit.parkedAcrossProgress)
-        #expect(ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: []))
+        #expect(ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [], parkedSince: nil, daemonSince: nil, now: Date()))
         // Same tip: one progress only.
         let same = Self.exit("Processing", Self.processing(txs, tip: 100), history: [earlier])
         #expect(!same.parkedAcrossProgress)
     }
 
-    @Test func mempoolWaitCountsAgainstTheChainTip() {
+    @Test func mempoolWaitCountsFromNoahsFirstSighting() {
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
         txs[0] = Self.tx("root", "awaiting-confirmation", child: "c0", origin: "wallet")
-        // bark keeps the state, height included, while nothing changes: the chain's tip counts the blocks.
+        // bark keeps the state, height included, while nothing changes: Noah's sighting counts the blocks.
         let frozen = Self.exit("Processing", Self.processing(txs, tip: 100))
-        #expect(ExitProgress(frozen, tip: 100).stuck == 0)
-        #expect(ExitProgress(frozen, tip: 104).stuck == 4)
+        let seen = [ExitSightings.key("root", "awaiting-confirmation"): UInt32(101)]
+        #expect(ExitProgress(frozen, tip: 104, seen: seen).stuck == 3)
+        #expect(ExitProgress(frozen, tip: 104).stuck == 0)
     }
 
     @Test func aBatchedClaimsFeeIsSplitSoThePartsAddUp() {
@@ -195,19 +228,13 @@ struct ExitProgressTests {
         }
     }
 
-    @Test func feesMoreThanItsWorthCountsSharedTransactionsOnce() async throws {
+    @Test func feesMoreThanItsWorthPricesEachVtxoOnItsOwn() async throws {
         // A and B share the round's root; C is alone in its round.
         let paths = ["a": ["r1", "a"], "b": ["r1", "b"], "c": ["r2", "c"]]
-        let vtxos = [Self.vtxo("a", 1_500), Self.vtxo("b", 1_100), Self.vtxo("c", 2_000)]
+        let vtxos = [Self.vtxo("a", 2_100), Self.vtxo("b", 1_100), Self.vtxo("c", 2_200)]
         let flagged = try await ExitEconomics.uneconomic(vtxos, estimate: Self.estimator(paths))
-        // Standalone, A would cost 2,100. Its share is its own leaf and claim input: 1,100 < 1,500.
-        #expect(!flagged.contains("a"))
-        // B's share, 1,100, meets its amount.
-        #expect(flagged.contains("b"))
-        // C pays its whole path, 2,100, more than 2,000.
-        #expect(flagged.contains("c"))
-        // Alone, a VTXO's share is the whole estimate (never the empty list).
-        #expect(try await ExitEconomics.uneconomic([Self.vtxo("a", 2_100)], estimate: Self.estimator(paths)) == ["a"])
+        // Each carries its whole path and a claim input on its own: 2,100. A and B meet it; C is worth more.
+        #expect(flagged == ["a", "b"])
         #expect(try await ExitEconomics.uneconomic([], estimate: Self.estimator(paths)).isEmpty)
     }
 

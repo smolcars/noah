@@ -115,10 +115,6 @@
     "one": "{n} block · {time}",
     "other": "{n} blocks · {time}"
   },
-  "Noah last checked this exit {n} blocks ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions.": {
-    "one": "Noah last checked this exit {n} block ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions.",
-    "other": "Noah last checked this exit {n} blocks ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions."
-  },
   "One claim for {n} exits: {amount} received after a {fee} fee.": {
     "one": "One claim for {n} exit: {amount} received after a {fee} fee.",
     "other": "One claim for {n} exits: {amount} received after a {fee} fee."

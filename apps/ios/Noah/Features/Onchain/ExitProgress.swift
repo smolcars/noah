@@ -35,7 +35,7 @@ struct ExitProgress: Equatable, Sendable {
     var step: Int?
     /// Each transaction's block, root first.
     var heights: [UInt32?] = []
-    /// Blocks mined since the transaction in flight reached the mempool.
+    /// Blocks mined since Noah first saw the transaction in flight in the mempool.
     var stuck: UInt32 = 0
     /// Its fee child was replaced: the fast rate rose and Noah paid more.
     var bumped = false
@@ -44,8 +44,8 @@ struct ExitProgress: Equatable, Sendable {
     /// The tip at the app's own last completed progress (Check the chain). bark keeps a state's
     /// height until something changes, so that height isn't when it last checked.
     var checked: UInt32?
-    /// Still sending while nothing progresses it: bark's daemon isn't running in this session and the
-    /// app's last progress is two or more blocks old. While the daemon runs, bark checks every minute.
+    /// Still sending while Noah has evidence nothing progresses it: the last Check the chain failed,
+    /// or the wallet is open without bark's daemon (which otherwise keeps exits current).
     var stale = false
     var cancelable = false
 
@@ -69,18 +69,15 @@ struct ExitProgress: Equatable, Sendable {
 
     init(phase: Phase) { self.phase = phase }
 
-    /// `claimSent`: Noah journaled a broadcast claim for it that bark hasn't seen yet. `checkedTip`
-    /// and `progressing`: the app's last completed progress, and whether bark's daemon is running.
+    /// `tip` is the wallet's tip. `claimSent`: Noah journaled a broadcast claim bark hasn't seen yet.
+    /// `checkedTip`: Noah's last completed Check the chain. `progressing`: bark's daemon runs and the
+    /// last Check didn't fail. `seen`: the tip at which Noah first saw each transaction in its status.
     init(_ exit: ExitModel, tip: UInt32, needsFunds: Bool = false, claimSent: Bool = false,
-         checkedTip: UInt32? = nil, progressing: Bool = true) {
+         checkedTip: UInt32? = nil, progressing: Bool = true, seen: [String: UInt32] = [:]) {
         let details = exit.details
         checked = checkedTip
         cancelable = exit.cancelable
-        defer {
-            // Without the daemon or a check of its own, the recorded height is the last progress there was.
-            let last = checkedTip ?? details.tip_height
-            stale = !progressing && ["Start", "Processing"].contains(exit.state) && last.map { tip >= $0 + 2 } == true
-        }
+        stale = !progressing && ["Start", "Processing"].contains(exit.state)
         let path = exit.path
         total = path.count
         heights = path.map { $0.status.block?.height }
@@ -120,12 +117,12 @@ struct ExitProgress: Equatable, Sendable {
             case "awaiting-confirmation":
                 step = index + 1
                 phase = current.status.origin == "wallet" || current.status.origin == nil ? .mempool : .shared
-                // The first record of this transaction in the mempool: blocks since then, and its child then.
+                // Blocks since Noah first saw it in the mempool (bark keeps a state's height until it changes).
+                if let since = seen[ExitSightings.key(current.txid, current.status.kind)], tip > since { stuck = tip - since }
+                // Its child when bark first recorded it in the mempool: a different one now means a re-bump.
                 let first = exit.records.first { record in
                     record.transactions?.contains { $0.txid == current.txid && $0.status.kind == "awaiting-confirmation" } == true
                 }
-                // Blocks mined since: against the chain's tip, as bark keeps the state's height until it changes.
-                if let first, let since = first.tip_height, tip > since { stuck = tip - since }
                 let child = first?.transactions?.first { $0.txid == current.txid }?.status.child_txid
                 bumped = child != nil && current.status.child_txid != nil && child != current.status.child_txid
             default:
@@ -163,38 +160,79 @@ extension ExitModel {
     }
 }
 
-/// Decision 3. bark 0.8 never reports missing funds: it leaves the transaction in
-/// `AwaitingCpfpBroadcast` and logs a warning. Within one progress call bark persists the parked
-/// state, tries to build the fee child, then reads the state again; so a transaction still parked
-/// after a completed call had too few confirmed funds. The proof is that call: the app's own
-/// progress (`proven`, from Check the chain) or bark's record of it parked at an earlier tip. A failed
-/// call proves nothing, elapsed time proves nothing, and no error strings are matched. It then needs
-/// the confirmed balance below the package's fee; it clears when funds arrive or it moves on.
-enum ExitFunds {
-    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: Set<String>) -> Bool {
-        guard let txid = exit.parkedTxid, let packageFee, confirmed < packageFee else { return false }
-        return proven.contains(txid) || exit.parkedAcrossProgress
+/// When Noah first saw each exit transaction in its current status: the wallet's tip and the time.
+/// bark keeps a state, height included, until something changes, so its height can't count blocks.
+/// Persisted per wallet.
+struct ExitSightings: Codable, Equatable, Sendable {
+    struct Sighting: Codable, Equatable, Sendable {
+        var tip: UInt32
+        var at: Date
+    }
+    var seen: [String: Sighting] = [:]
+
+    static func key(_ txid: String, _ kind: String) -> String { txid + "|" + kind }
+
+    /// Adds what's newly seen and forgets what's no longer current; true when it changed.
+    mutating func observe(_ exits: [ExitModel], tip: UInt32, now: Date) -> Bool {
+        let current = Set(exits.filter { $0.state == "Processing" }.flatMap { exit in
+            (exit.details.transactions ?? []).filter { $0.status.block == nil }.map { Self.key($0.txid, $0.status.kind) }
+        })
+        let before = seen
+        seen = seen.filter { current.contains($0.key) }
+        for key in current where seen[key] == nil { seen[key] = .init(tip: tip, at: now) }
+        return seen != before
+    }
+
+    var tips: [String: UInt32] { seen.mapValues(\.tip) }
+
+    struct Store: Sendable {
+        static let key = "native-exit-sightings-v1"
+        var read: @Sendable () -> String?
+        var write: @Sendable (String) throws -> Void
+        init(storage: SettingsStorage = .shared) {
+            read = { storage.string(forKey: Self.key) }
+            write = { try storage.setDurably($0, forKey: Self.key) }
+        }
+        init(read: @escaping @Sendable () -> String?, write: @escaping @Sendable (String) throws -> Void) {
+            self.read = read; self.write = write
+        }
+        private func all() -> [String: ExitSightings] {
+            read().flatMap { try? JSONDecoder().decode([String: ExitSightings].self, from: Data($0.utf8)) } ?? [:]
+        }
+        func load(walletID: String) -> ExitSightings { all()[walletID] ?? .init() }
+        func save(_ sightings: ExitSightings, walletID: String) throws {
+            var all = all()
+            all[walletID] = sightings
+            try write(String(decoding: JSONEncoder().encode(all), as: UTF8.self))
+        }
     }
 }
 
-/// Decision 4: "Fees more than it's worth" on each VTXO whose own share of the exit fees is at
-/// least its amount. Its share is what it adds to exiting all eligible VTXOs, so a transaction it
-/// shares with others is counted once, for the set, not again for it.
+/// Decision 3. bark 0.8 never reports missing funds: it leaves the transaction in
+/// `AwaitingCpfpBroadcast` and logs a warning. The proof is a confirmed balance below that
+/// package's fee; it clears when funds arrive. No error strings are matched.
+enum ExitFunds {
+    /// bark's `daemon_sync_interval_secs` default (Noah doesn't set it), plus a margin for a cycle in flight.
+    static let cycle: TimeInterval = 60 + 15
+
+    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: Set<String>,
+                           parkedSince: Date?, daemonSince: Date?, now: Date) -> Bool {
+        guard let txid = exit.parkedTxid, let packageFee, confirmed < packageFee else { return false }
+        if proven.contains(txid) || exit.parkedAcrossProgress { return true }
+        // Only after bark has had a full daemon cycle to fund it, so the label doesn't flash before it tried.
+        guard let parkedSince, let daemonSince else { return false }
+        return now.timeIntervalSince(max(parkedSince, daemonSince)) >= cycle
+    }
+}
+
+/// Decision 4: "Fees more than it's worth" on each VTXO whose estimated exit fees (broadcast and
+/// claim) are at least its amount. Each VTXO is priced on its own, the conservative side: siblings
+/// each carry their shared path, so it never adds an uneconomic VTXO to All.
 enum ExitEconomics {
-    /// `estimate` prices a set of VTXOs (broadcast plus claim, deduplicated across shared
-    /// transactions, as bark's estimator does).
-    // shortcut: n + 1 estimates, each signing a dummy claim of up to n inputs; precompute per round if wallets hold hundreds of VTXOs.
+    // shortcut: standalone estimates, as bark-bolt-ffi's estimate gives only set totals; deduplicate shared transactions once it exposes per-transaction estimate data.
     static func uneconomic(_ vtxos: [VtxoModel], estimate: @Sendable ([String]) async throws -> UInt64) async throws -> Set<String> {
-        let ids = vtxos.map(\.id)
-        guard !ids.isEmpty else { return [] }
-        let all = try await estimate(ids)
         var result = Set<String>()
-        for vtxo in vtxos {
-            let rest = ids.filter { $0 != vtxo.id }
-            // An empty list would price the whole wallet, so the last one's share is the whole estimate.
-            let without = rest.isEmpty ? 0 : try await estimate(rest)
-            if all - min(all, without) >= vtxo.amount { result.insert(vtxo.id) }
-        }
+        for vtxo in vtxos where try await estimate([vtxo.id]) >= vtxo.amount { result.insert(vtxo.id) }
         return result
     }
 

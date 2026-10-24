@@ -20,6 +20,8 @@ final class OnchainModel {
         var claimOwnership: @Sendable (String) async throws -> Bool = { _ in throw OnchainFailure.unavailable }
         var discardReview: @Sendable (OnchainQuote) async -> Void = { _ in }
         var estimate: @Sendable ([String]) async throws -> EmergencyExitFeeEstimate = { _ in throw OnchainFailure.unavailable }
+        /// Where Noah keeps when it first saw each exit transaction in its status (in memory unless given).
+        var sightings: ExitSightings.Store? = nil
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -41,7 +43,8 @@ final class OnchainModel {
                 claimAddress: { try await session.exitDepositAddress() },
                 claimOwnership: { try await session.exitClaimDestinationIsMine($0) },
                 discardReview: { await session.discardBoard($0) },
-                estimate: { try await session.exitEstimate($0) })
+                estimate: { try await session.exitEstimate($0) },
+                sightings: .init())
         }
 
         /// Home's Renew: the same review, submitted through the renewal path that rechecks
@@ -149,6 +152,10 @@ final class OnchainModel {
             let latest = try await dependencies.overview()
             guard await dependencies.ready(), token == generation else { return }
             overview = latest
+            var seen = sightings.walletID == latest.walletID ? sightings.value
+                : dependencies.sightings?.load(walletID: latest.walletID) ?? .init()
+            if seen.observe(latest.exits, tip: latest.tip, now: Date()) { try? dependencies.sightings?.save(seen, walletID: latest.walletID) }
+            sightings = (latest.walletID, seen)
             error = statusFailed ? "Couldn't check network status. Showing the last known status." : nil
         } catch {
             self.error =
@@ -229,14 +236,20 @@ final class OnchainModel {
         await load()
         if let submissionError { error = submissionError }
     }
+    /// When this wallet's exit transactions were first seen in their status.
+    private(set) var sightings: (walletID: String, value: ExitSightings) = ("", .init())
+
     /// The exit as its screens show it, with the needs-funds inference.
-    func progress(_ exit: ExitModel) -> ExitProgress {
+    func progress(_ exit: ExitModel, now: Date = Date()) -> ExitProgress {
+        let parkedSince = exit.parkedTxid.flatMap { sightings.value.seen[ExitSightings.key($0, "awaiting-cpfp-broadcast")]?.at }
         let needsFunds = overview.map {
-            ExitFunds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], proven: $0.provenParked)
+            ExitFunds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], proven: $0.provenParked,
+                                 parkedSince: parkedSince, daemonSince: $0.daemonSince, now: now)
         } ?? false
         let claimSent = attempts.contains { $0.quote.action == .claim && $0.quote.ids.contains(exit.id) && $0.receipt?.txid != nil }
         return ExitProgress(exit, tip: overview?.tip ?? exit.details.tip_height ?? 0, needsFunds: needsFunds, claimSent: claimSent,
-                            checkedTip: overview?.checkedTip, progressing: overview?.progressing ?? true)
+                            checkedTip: overview?.checkedTip,
+                            progressing: overview.map { $0.daemonSince != nil && !$0.checkFailed } ?? true, seen: sightings.value.tips)
     }
 
     /// The exit estimate for a selection, or nil when it can't be read (the review still offers

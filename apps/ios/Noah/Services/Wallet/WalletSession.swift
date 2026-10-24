@@ -48,16 +48,19 @@ actor WalletSession {
         let onchain: OnchainWallet
     }
 
-    /// bark's daemon progresses exits (every 60 s) while this session runs it; the app can't see its cycles.
-    private(set) var runsDaemon = false
-    /// The app's own last completed exit progress (Check the chain), per wallet: the tip then, and the
-    /// transactions still waiting for a fee child after that call tried to fund them.
+    /// Since when bark's daemon has been progressing exits (every 60 s) in this session; nil without it.
+    /// The app can't see its cycles.
+    private(set) var daemonSince: Date?
+    /// The app's own last exit progress (Check the chain), per wallet: the tip and the transactions
+    /// still waiting for a fee child after a completed call tried to fund them, or that it failed.
     struct ExitCheck: Sendable {
-        var tip: UInt32
-        var parked: Set<String>
+        var tip: UInt32?
+        var parked: Set<String> = []
+        var failed = false
     }
     private(set) var exitChecks: [String: ExitCheck] = [:]
     func recordExitCheck(_ check: ExitCheck, walletID: String) { exitChecks[walletID] = check }
+    func recordFailedExitCheck(walletID: String) { exitChecks[walletID, default: .init()].failed = true }
 
     private enum State {
         case closed
@@ -190,7 +193,7 @@ actor WalletSession {
                 }
                 let daemon = runDaemon && Self.backgroundOwner == nil
                 let handles = try await opener(mnemonic, datadir, daemon, appVersion, false)
-                runsDaemon = daemon
+                daemonSince = daemon ? Date() : nil
                 state = .open(handles)
                 return handles
             } catch {
@@ -351,7 +354,7 @@ actor WalletSession {
         let opener = self.opener
         let datadir = location.directory.path
         let handles = try await Task { try await opener(mnemonic, datadir, runDaemon, appVersion, true) }.value
-        runsDaemon = runDaemon
+        daemonSince = runDaemon ? Date() : nil
         do {
             // RN creation persists key 0 before peeking its registration address.
             _ = try await Task { try await handles.wallet.deriveStoreNextKeypair() }.value

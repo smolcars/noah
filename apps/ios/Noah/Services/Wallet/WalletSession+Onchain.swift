@@ -23,10 +23,11 @@ extension WalletSession {
                 claimableHeight: try await handles.wallet.allExitsClaimableAtHeight())
             // What the exit screens add; optional, so a failed read never hides the exits themselves.
             overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
-            overview.progressing = await self.runsDaemon
+            overview.daemonSince = await self.daemonSince
             if let check = await self.exitChecks[overview.walletID] {
                 overview.checkedTip = check.tip
                 overview.provenParked = check.parked
+                overview.checkFailed = check.failed
             }
             guard !models.isEmpty else { return overview }
             let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
@@ -448,17 +449,22 @@ extension WalletSession {
                     try await handles.wallet.startExitForVtxos(vtxoIds: quote.ids)
                     return "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
                 case .progress:
-                    let statuses = try await handles.wallet.progressExits(feeRateSatPerVb: quote.feeRate)
+                    let walletID = handles.wallet.fingerprint()
+                    let statuses: [ExitProgressStatus]
+                    do { statuses = try await handles.wallet.progressExits(feeRateSatPerVb: quote.feeRate) }
+                    catch {
+                        await self.recordFailedExitCheck(walletID: walletID)
+                        throw error
+                    }
                     let failures = statuses.filter { $0.error != nil }.count
                     // A completed call tried to fund every parked transaction; those still parked had too
-                    // few confirmed funds (Decision 3). Exits it failed on prove nothing.
-                    if let tip = try? await handles.onchain.tipHeight() {
-                        let parked = statuses.filter { $0.error == nil }.compactMap {
-                            Self.exitModel(.init(vtxoId: $0.vtxoId, amountSats: 0, state: $0.state, history: nil,
-                                                 transactionCount: 0, transactions: [])).parkedTxid
-                        }
-                        await self.recordExitCheck(.init(tip: tip, parked: Set(parked)), walletID: handles.wallet.fingerprint())
+                    // few confirmed funds (Decision 3). Errors mark the check failed: exits may be stale.
+                    let parked = statuses.filter { $0.error == nil }.compactMap {
+                        Self.exitModel(.init(vtxoId: $0.vtxoId, amountSats: 0, state: $0.state, history: nil,
+                                             transactionCount: 0, transactions: [])).parkedTxid
                     }
+                    await self.recordExitCheck(.init(tip: try? await handles.onchain.tipHeight(), parked: Set(parked),
+                                                     failed: failures > 0), walletID: walletID)
                     return OnchainReceipt(
                         message: failures == 0
                             ? "Exits progressed. Transactions may have been broadcast or fee-bumped."

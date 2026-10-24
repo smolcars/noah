@@ -62,9 +62,8 @@ struct ExitVtxoDetailView: View {
                     if progress.phase == .needsFunds, let need = text.need {
                         ExitWarning(text: L10n.text("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need), locale: language))
                     }
-                    if progress.stale, let checked = progress.checked ?? exit.details.tip_height {
-                        ExitWarning(text: L10n.plural("Noah last checked this exit {n} blocks ago, at block {height}. Use Check the chain to move it on; it can also send or fee-bump its transactions.",
-                                                      count: Int(tip - min(tip, checked)), checked.formatted(.number.locale(locale)), locale: language),
+                    if progress.stale {
+                        ExitWarning(text: L10n.text("This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions.", locale: language),
                                     symbol: "clock", muted: true)
                     }
                     VStack(spacing: 0) {

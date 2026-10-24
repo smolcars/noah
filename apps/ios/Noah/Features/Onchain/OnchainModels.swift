@@ -66,12 +66,13 @@ struct OnchainOverview: Sendable {
     var received: [String: UInt64] = [:]
     /// Decision 3: a parked exit's next package fee (bark's estimate without its margin, per transaction).
     var packageFees: [String: UInt64] = [:]
-    /// bark's daemon is progressing exits in this session.
-    var progressing = true
-    /// The tip at the app's own last completed exit progress (Check the chain), if any.
+    /// Since when bark's daemon has been progressing exits in this session; nil without it.
+    var daemonSince: Date? = .distantPast
+    /// The app's own last exit progress (Check the chain): its tip, the transactions it left waiting
+    /// for a fee child after trying to fund them, and whether it failed.
     var checkedTip: UInt32?
-    /// Transactions that call left waiting for a fee child after trying to fund them.
     var provenParked: Set<String> = []
+    var checkFailed = false
 }
 
 enum OnchainAction: String, Codable, Sendable {
