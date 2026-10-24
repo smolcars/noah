@@ -42,11 +42,17 @@ extension WalletSession {
                     overview.received[transaction.txid] = UInt64(transaction.balanceChangeSats)
                 }
             }
-            for exit in models where exit.parkedTxid != nil {
-                guard let estimate = try? await handles.wallet.estimateEmergencyExitFee(
-                    vtxoIds: [exit.id], feeRateSatPerVb: nil, destination: nil, feeMargin: 1), estimate.txsToBroadcast > 0
+            // The parked package's own fee: its parent's weight and bark's canonical child at the rate bark's
+            // exits pay (its estimate's). Unpriced, needs-funds stays unknown.
+            for exit in models {
+                guard let txid = exit.parkedTxid,
+                      let status = try? await handles.wallet.getExitStatus(vtxoId: exit.id, includeHistory: false, includeTransactions: true),
+                      let hex = status.transactions.first(where: { $0.parentTxid == txid })?.parentTxHex,
+                      let weight = BitcoinTransaction.weight(hex: hex),
+                      let rate = try? await handles.wallet.estimateEmergencyExitFee(
+                          vtxoIds: [exit.id], feeRateSatPerVb: nil, destination: nil, feeMargin: 1).feeRateSatPerVb
                 else { continue }
-                overview.packageFees[exit.id] = estimate.exitBroadcastFeeSats / estimate.txsToBroadcast
+                overview.packageFees[exit.id] = ExitFunds.packageFee(parentWeight: weight, satPerVb: rate)
             }
             return overview
         }

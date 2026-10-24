@@ -104,10 +104,14 @@ struct AutoBoardFunding {
     }
 }
 
-/// A raw transaction's id before it's sent: double SHA-256 of its serialization without witness
-/// data, byte-reversed. nil when the hex isn't one well-formed transaction.
+/// A raw transaction read before it's sent: its id (double SHA-256 of its serialization without
+/// witness data, byte-reversed) and its weight. nil when the hex isn't one well-formed transaction.
 enum BitcoinTransaction {
-    static func txid(hex: String) -> String? {
+    static func txid(hex: String) -> String? { parse(hex: hex)?.txid }
+
+    static func weight(hex: String) -> UInt64? { parse(hex: hex)?.weight }
+
+    static func parse(hex: String) -> (txid: String, weight: UInt64)? {
         guard hex.count % 2 == 0 else { return nil }
         var bytes: [UInt8] = []
         bytes.reserveCapacity(hex.count / 2)
@@ -159,7 +163,7 @@ enum BitcoinTransaction {
         guard skip(4), at == bytes.count else { return nil }
         let stripped = Array(bytes[0..<4]) + Array(bytes[bodyStart..<bodyEnd]) + Array(bytes[(bytes.count - 4)...])
         let hash = SHA256.hash(data: Data(SHA256.hash(data: Data(stripped))))
-        return hash.reversed().map { String(format: "%02x", $0) }.joined()
+        return (hash.reversed().map { String(format: "%02x", $0) }.joined(), UInt64(stripped.count * 3 + bytes.count))
     }
 }
 

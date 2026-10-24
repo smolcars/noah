@@ -193,6 +193,21 @@ struct ExitProgressTests {
 
     final class Disk: @unchecked Sendable { var value: String? }
 
+    @Test func theParkedPackageIsPricedItselfNotAsAnAverage() {
+        // A root of 2,821 WU (705 vB) and bark's 609 WU child at 1 sat/vB: 3,430 WU, 858 sats.
+        #expect(ExitFunds.packageFee(parentWeight: 2_821, satPerVb: 1) == 858)
+        // Rounded up, as bark's package_fee: 3,432 WU is exactly 858 sats, one more weight unit is 859.
+        #expect(ExitFunds.packageFee(parentWeight: 2_823, satPerVb: 1) == 858)
+        #expect(ExitFunds.packageFee(parentWeight: 2_824, satPerVb: 1) == 859)
+        #expect(ExitFunds.packageFee(parentWeight: 470, satPerVb: 10) == 2_698)
+        // 1,180 confirmed against the root's 1,215 (not the path's 1,152 average): it needs funds.
+        var txs = Self.path.map { Self.tx($0, "verify-inputs") }
+        txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
+        let exit = Self.exit("Processing", Self.processing(txs, tip: 100))
+        #expect(ExitFunds.needsFunds(exit, confirmed: 1_180, packageFee: 1_215, proven: ["root"],
+                                     parkedSince: nil, daemonSince: nil, now: Date()))
+    }
+
     @Test func barkHistoryProvesAProgressCycleAlready() {
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
         txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
@@ -404,6 +419,8 @@ struct ExitClaimAutoBoardTests {
 
     @Test func aClaimsTxidIsKnownBeforeItsSent() {
         #expect(BitcoinTransaction.txid(hex: ExitClaimExecutionTests.claimTransaction) == ExitClaimExecutionTests.claimTxid)
+        // bitcoind's weight for the same transaction.
+        #expect(BitcoinTransaction.weight(hex: ExitClaimExecutionTests.claimTransaction) == 470)
         for broken in ["", "zz", String(ExitClaimExecutionTests.claimTransaction.dropLast(2)), ExitClaimExecutionTests.claimTransaction + "00"] {
             #expect(BitcoinTransaction.txid(hex: broken) == nil)
         }

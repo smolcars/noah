@@ -222,6 +222,14 @@ enum ExitFunds {
     /// bark's `daemon_sync_interval_secs` default (Noah doesn't set it), plus a margin for a cycle in flight.
     static let cycle: TimeInterval = 60 + 15
 
+    /// bark's canonical CPFP child (estimate.rs `canonical_cpfp_child_weight`): P2A and P2TR key-spend in, P2TR out.
+    static let childWeight: UInt64 = 609
+
+    /// A zero-fee exit transaction's package fee at `satPerVb` (bark's `package_fee`, rounded up).
+    static func packageFee(parentWeight: UInt64, satPerVb: UInt64, childWeight: UInt64 = childWeight) -> UInt64 {
+        (satPerVb * 250 * (parentWeight + childWeight) + 999) / 1000
+    }
+
     static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: Set<String>,
                            parkedSince: Date?, daemonSince: Date?, now: Date) -> Bool {
         guard let txid = exit.parkedTxid, let packageFee, confirmed < packageFee else { return false }
