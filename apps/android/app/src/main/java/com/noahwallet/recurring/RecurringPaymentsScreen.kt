@@ -173,6 +173,9 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String) {
     var cancelling by rememberSaveable { mutableStateOf(false) }
     var overrideStep by rememberSaveable { mutableIntStateOf(0) }
     var review by remember { mutableStateOf<RecurringExecutor.Review?>(null) }
+    var preparing by remember { mutableStateOf(false) }
+    // An approval being prepared or open: an OS link can't replace it.
+    com.noahwallet.ui.ReviewOpen(app.openReviews, review != null || preparing)
     var actionError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { executor.reload(); loaded = true }
     val s = findSchedule(executor.schedules, id)
@@ -195,7 +198,7 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String) {
     SettingsFrame(tr("Recurring payment"), nav.back, hero = true, foot = when {
         s.status == "needs_approval" -> ({
             FootPill(tr("Review and pay"), Modifier.testTag("recurring-review-pay"), enabled = !executor.running && !executor.controller.locked && !app.isWalletSuspended) {
-                act { review = executor.review(s.id) }
+                act { preparing = true; try { review = executor.review(s.id) } finally { preparing = false } }
             }
         })
         adjustable -> ({ FootPill(resumeTitle, Modifier.testTag("recurring-pause-resume"), outlined = s.status == "active", enabled = canResume) { pauseOrResume() } })

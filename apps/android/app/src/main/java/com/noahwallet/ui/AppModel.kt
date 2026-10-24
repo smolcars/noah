@@ -142,6 +142,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var recurringNotification by mutableStateOf(false)
     var autoBoardSuccessBanner by mutableStateOf<Pair<Long, Long>?>(null)
     var scannedDestination by mutableStateOf<String?>(null)
+    /** Send reviews and recurring approvals on screen ([ReviewOpen]); an OS link is rejected while any is open. */
+    val openReviews = mutableIntStateOf(0)
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
     /** The expiring VTXOs Home's Renew nudge hands to today's VTXO refresh review; consumed once. */
     var renewVtxos by mutableStateOf<List<String>?>(null)

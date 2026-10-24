@@ -2,6 +2,9 @@ package com.noahwallet.ui
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,7 +17,7 @@ import com.noahwallet.send.SendController
  */
 class PaymentLinks : ViewModel() {
     var pending by mutableStateOf<String?>(null); private set
-    /** Send was holding a payment when the last link came. */
+    /** A payment, review or approval was in progress when the last link came. */
     var blocked by mutableStateOf(false)
 
     /** [savedState]: an activity restored from saved state took its intent when it was first created. */
@@ -26,18 +29,27 @@ class PaymentLinks : ViewModel() {
 
     fun drop() { pending = null }
 
-    /** Gives the link to [scan] once Send has read its saved payment; a payment in flight keeps Send and blocks it instead. */
-    fun deliver(send: SendController, scan: (String) -> Unit, showSend: () -> Unit) {
+    /**
+     * Gives the link to [scan] once Send has read its saved payment. A payment in flight, or a Send review or recurring
+     * approval [reviewing], rejects it before anything moves: the screen and the payment stay exactly as they are.
+     */
+    fun deliver(send: SendController, reviewing: Boolean, scan: (String) -> Unit) {
         val link = pending ?: return
         if (send.loading) return
         pending = null
-        if (send.locked) { blocked = true; showSend() } else scan(link)
+        if (send.locked || reviewing) blocked = true else scan(link)
     }
 
     companion object {
         val schemes = setOf("bitcoin", "lightning", "lnurlp")
         const val blockedMessage = "Finish the current payment before opening another payment request."
     }
+}
+
+/** Holds [count] up while [open]: a Send review or recurring approval that an OS link mustn't replace. */
+@Composable
+internal fun ReviewOpen(count: MutableIntState, open: Boolean) {
+    if (open) DisposableEffect(count) { count.intValue++; onDispose { count.intValue-- } }
 }
 
 /** What a held link does at the launch gate. */

@@ -71,7 +71,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     if (links != null) {
         val context = androidx.compose.ui.platform.LocalContext.current
         val send = remember(context) { com.noahwallet.send.SendRuntime.shared(context).controller }
-        LaunchedEffect(links.pending, send.loading) { links.deliver(send, ::scanned, ::showSend) }
+        LaunchedEffect(links.pending, send.loading) { links.deliver(send, model.openReviews.intValue > 0, ::scanned) }
         if (links.blocked) WalletAlertDialog(onDismissRequest = { links.blocked = false },
             title = { Text(tr("Payment in progress")) }, text = { Text(tr(PaymentLinks.blockedMessage)) },
             confirmButton = { androidx.compose.material3.TextButton({ links.blocked = false }) { Text(tr("OK")) } })

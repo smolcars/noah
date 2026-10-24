@@ -185,6 +185,8 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     SideEffect { tabBar(hideBar && !scanner) }
     DisposableEffect(Unit) { onDispose { tabBar(false) } }
     BackHandler(!controller.locked && !model.busy && (model.stage != SendStage.amount || model.progress.recipientConfirmed)) { model.back() }
+    // Preparing or showing a review: an OS link can't replace it.
+    ReviewOpen(app.openReviews, model.stage == SendStage.review)
     if (scanner) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge()) {
             SendScanner(onClose = { scanner = false }) { value -> scanner = false; scope.launch { model.importRecipient(value) } }
