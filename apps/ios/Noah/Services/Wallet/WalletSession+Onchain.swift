@@ -75,6 +75,14 @@ extension WalletSession {
         }
     }
 
+    /// What bark's whole-wallet exit wouldn't start (FFI 0.7.0's `excludedVtxos` for `vtxoIds: []`):
+    /// non-standard VTXOs, dust included. Read-only; only the left-out list is used, never its prices.
+    func exitExclusions() async throws -> [ExcludedExitVtxo] {
+        try await withOpenWallet {
+            try await $0.wallet.estimateEmergencyExitFee(vtxoIds: [], feeRateSatPerVb: nil, destination: nil).excludedVtxos
+        }
+    }
+
     /// One coin by ID, spent ones included (Activity's coin links): nil when the wallet has no such
     /// coin, a throw when it couldn't be read. A tip that can't be read leaves it at 0.
     func vtxo(_ id: String) async throws -> VtxoModel? {

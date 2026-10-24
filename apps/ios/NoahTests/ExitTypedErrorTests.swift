@@ -106,6 +106,28 @@ struct ExitTypedErrorTests {
         #expect(ExitEconomics.all(vtxos, costs: costs.merging(["c": .worthIt]) { $1 }).map(\.id) == ["a", "c"])
     }
 
+    /// FFI 0.7.0's "All" estimate lists what bark's whole-wallet exit leaves out instead of failing.
+    @MainActor @Test func wholeWalletExclusionsRenewFirstAndStayOutOfAll() async {
+        let calls = OnchainModelTests.Calls()
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.exclusions = {
+            [.init(vtxoId: "b", amountSats: 24_500, code: .exitNonStandardVtxo, message: "private"),
+             .init(vtxoId: "x", amountSats: 900, code: .other, message: "private")]
+        }
+        let model = OnchainModel(dependencies: dependencies)
+        let excluded = await model.exitExclusions()
+        #expect(Set(excluded.keys) == ["b", "x"] && excluded.values.allSatisfy(\.renewFirst))
+        let vtxos = [ExitProgressTests.vtxo("a", 31_000), ExitProgressTests.vtxo("b", 24_500)]
+        let costs: [String: ExitEconomics.Cost] = ["a": .worthIt, "b": .refused(excluded["b"]!)]
+        #expect(ExitEconomics.classified(vtxos, costs: costs))
+        #expect(ExitEconomics.all(vtxos, costs: costs).map(\.id) == ["a"])
+        // Unreadable: nothing is marked, and each VTXO's own estimate still refuses it.
+        dependencies.exclusions = { throw Self.error(.exitTipRetrievalFailure) }
+        #expect(await OnchainModel(dependencies: dependencies).exitExclusions().isEmpty)
+        await calls.setReady(false)
+        #expect(await model.exitExclusions().isEmpty)
+    }
+
     @Test func progressReadsEachExitsErrorByItsCode() {
         func status(_ id: String, _ error: BarkError?) -> ExitProgressStatus {
             .init(vtxoId: id, state: .processing(tipHeight: 101, transactions: []), error: error)

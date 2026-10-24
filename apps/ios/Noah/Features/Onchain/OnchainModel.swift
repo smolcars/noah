@@ -20,6 +20,7 @@ final class OnchainModel {
         var claimOwnership: @Sendable (String) async throws -> Bool = { _ in throw OnchainFailure.unavailable }
         var discardReview: @Sendable (OnchainQuote) async -> Void = { _ in }
         var estimate: @Sendable ([String]) async throws -> EmergencyExitFeeEstimate = { _ in throw OnchainFailure.unavailable }
+        var exclusions: @Sendable () async throws -> [ExcludedExitVtxo] = { [] }
         /// Where Noah keeps when it first saw each exit transaction in its status (in memory unless given).
         var sightings: ExitSightings.Store? = nil
         static func live(session: WalletSession = .shared) -> Self {
@@ -44,6 +45,7 @@ final class OnchainModel {
                 claimOwnership: { try await session.exitClaimDestinationIsMine($0) },
                 discardReview: { await session.discardBoard($0) },
                 estimate: { try await session.exitEstimate($0) },
+                exclusions: { try await session.exitExclusions() },
                 sightings: .init(key: ExitSightings.key))
         }
 
@@ -279,6 +281,15 @@ final class OnchainModel {
             exitRefusal = ExitRefusal(error)
             return nil
         }
+    }
+
+    /// The VTXOs bark's whole-wallet exit leaves out, to renew first; none when that can't be read
+    /// (each VTXO's own estimate still refuses them).
+    func exitExclusions() async -> [String: ExitRefusal] {
+        guard await dependencies.ready(), let excluded = try? await dependencies.exclusions() else { return [:] }
+        // Non-standard, or (code Other) not loadable: either way renewing it is the way out.
+        return Dictionary(excluded.map { ($0.vtxoId, ExitRefusal(code: .exitNonStandardVtxo, vtxoID: $0.vtxoId)) },
+                          uniquingKeysWith: { a, _ in a })
     }
 
     /// Decision 4: each VTXO's classification, `.failed` where bark couldn't estimate it.
