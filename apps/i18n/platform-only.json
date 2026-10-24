@@ -64,7 +64,6 @@
     "Optic ID": "platform: iOS names the device's biometric (Face ID, Touch ID or Optic ID)",
     "Override confirmation": "parity-gap (layout): iOS folds an override's audit text into a disclosure; Android lists it",
     "Paste payment request": "parity-gap (layout): iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera",
-    "Payment in progress": "parity-gap: only iOS stops a scan while a payment is open (the deep-link work adds the Android side)",
     "Playback position": "parity-gap: Android's story player slider has no accessibility label",
     "Possible related payment in History": "parity-gap: iOS's may-have-been-sent result lists history candidates, possible txids and the reviewed amount; Android's doesn't",
     "Push permission not granted": "parity-gap: Android's debug push action shows the raw registration outcome instead (debug-only, shown verbatim)",
