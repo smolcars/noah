@@ -47,8 +47,10 @@ internal object ExitFixtures {
         fees = (0..3).associate { "fee$it" to 1_150L }, children = (0..3).associate { it to ("fee$it" to "wallet") })
     val wait = exit("AwaitingDelta", ExitDetails(kind = "awaiting-delta", tip_height = tip + 49, confirmed_block = ExitDetails.Block(tip + 4), claimable_height = tip + 148),
         history = listOf(onchain.details), fees = onchain.childFees, children = onchain.packages.mapIndexedNotNull { i, p -> p.childTxid?.let { i to (it to "wallet") } }.toMap())
-    val claimable = wait.copy(state = "Claimable", details = ExitDetails(kind = "claimable", tip_height = tip + 148, claimable_since = ExitDetails.Block(tip + 148)))
-    val claiming = wait.copy(state = "ClaimInProgress", details = ExitDetails(kind = "claim-in-progress", tip_height = tip + 148, claimable_since = ExitDetails.Block(tip + 148), claim_txid = txid("claim")))
+    // bark's history keeps the wait, which holds the timelock's start and end.
+    val claimable = wait.copy(state = "Claimable", details = ExitDetails(kind = "claimable", tip_height = tip + 148, claimable_since = ExitDetails.Block(tip + 148)),
+        history = listOf("Start", "Processing", "AwaitingDelta"), historyDetails = listOf(start.details, onchain.details, wait.details))
+    val claiming = claimable.copy(state = "ClaimInProgress", details = ExitDetails(kind = "claim-in-progress", tip_height = tip + 148, claimable_since = ExitDetails.Block(tip + 148), claim_txid = txid("claim")))
     val claimed = wait.copy(state = "Claimed", details = ExitDetails(kind = "claimed", tip_height = tip + 149, block = ExitDetails.Block(tip + 149), txid = txid("claim")),
         history = listOf("Start", "Processing", "AwaitingDelta"), historyDetails = listOf(start.details, onchain.details, wait.details))
     val nofunds = exit("Processing", processing(tip + 1, tx(0, "confirmed", "fee1", tip + 1), tx(1, "awaiting-cpfp-broadcast"), tx(2, "verify-inputs"), tx(3, "verify-inputs")),
