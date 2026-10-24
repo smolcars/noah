@@ -607,8 +607,7 @@ private struct ActivityCoinView: View {
     @Environment(HistoryModel.self) private var history
     @Environment(AppModel.self) private var app
     @Environment(\.locale) private var locale
-    @State private var coin: VtxoModel?
-    @State private var loaded = false
+    @State private var read = ActivityCoinRead()
 
     var body: some View {
         ScrollView {
@@ -616,15 +615,22 @@ private struct ActivityCoinView: View {
                 Text(LocalizedStringKey(role)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
                     .padding(.bottom, 6)
                 line("VTXO ID", id, mono: true)
-                if let coin {
+                switch read.state {
+                case .coin(let coin):
                     line("Amount", app.isBalanceHidden ? "₿••••" : BitcoinAmount.format(sats: Int64(clamping: coin.amount), unit: app.amountUnit, locale: locale),
                          numeric: true)
                     line("State", L10n.text(coin.state, locale: locale.identifier))
                     line("Expiry Height", coin.expiry.formatted(.number.locale(locale)))
                     line("Point", coin.point, mono: true)
                     line("Anchor Point", coin.anchorPoint, mono: true)
-                } else if !loaded {
+                case .loading:
                     ProgressView().frame(maxWidth: .infinity).padding(.top, 24)
+                case .unknown:
+                    // Read-only either way: no coin actions here.
+                    Text("Couldn't read wallet status. Pull to refresh.")
+                        .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                        .padding(.top, 14)
+                        .accessibilityIdentifier("activity-coin-unknown")
                 }
             }
             .foregroundStyle(NoahTokens.Colors.foreground)
@@ -633,16 +639,29 @@ private struct ActivityCoinView: View {
         .background(NoahTokens.Colors.background.ignoresSafeArea())
         .navigationTitle("VTXO Details")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: id) {
-            coin = await history.coin(id)
-            loaded = true
-        }
+        .refreshable { await read.load(id, history: history) }
+        // Retries after every completed history read.
+        .task(id: "\(id):\(history.revision)") { await read.load(id, history: history) }
     }
 
     private func line(_ label: String, _ value: String, mono: Bool = false, numeric: Bool = false) -> some View {
         DetailLine(label: L10n.text(label, locale: locale.identifier), value: value, mono: mono, numeric: numeric, wraps: mono,
                    onCopy: mono ? { UIPasteboard.general.setItems([[UIPasteboard.typeAutomatic: value]],
                                                                  options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)]) } : nil)
+    }
+}
+
+/// One coin, read by ID. bark-bolt-ffi 0.6.0 has no typed "not found", so any failed lookup is unknown (never
+/// matched on bark's error text), and a cancelled read writes nothing.
+@MainActor @Observable
+final class ActivityCoinRead {
+    enum State: Equatable { case loading, coin(VtxoModel), unknown }
+    private(set) var state = State.loading
+
+    func load(_ id: String, history: HistoryModel) async {
+        let coin = await history.coin(id)
+        guard !Task.isCancelled else { return }
+        state = coin.map(State.coin) ?? .unknown
     }
 }
 

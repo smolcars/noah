@@ -395,3 +395,43 @@ struct ActivitySharePlacementTests {
         #expect(controller.popoverPresentationController?.sourceRect == button)
     }
 }
+
+/// A coin opened from a payment's Details.
+@MainActor
+struct ActivityCoinReadTests {
+    nonisolated static let coin = VtxoModel(id: "c:0", amount: 1_906, expiry: 1_317, state: "Spent", kind: "Arkoor", exitDepth: 1,
+                                exitWeight: 500, registered: true, serverPubkey: "02", exitDelta: 144, anchorPoint: "a:0",
+                                point: "c:0", expiring: false, tip: 900)
+
+    static func history(_ coin: @escaping @Sendable (String) async throws -> VtxoModel?) -> HistoryModel {
+        HistoryModel(dependencies: .init(load: { [] }, sync: {}, changes: { AsyncThrowingStream { $0.finish() } },
+                                         blockTime: { _ in nil }, price: { _, _ in nil }, coin: coin))
+    }
+
+    @Test func anyLookupFailureIsUnknown() async {
+        let read = ActivityCoinRead()
+        await read.load("c:0", history: Self.history { _ in Self.coin })
+        #expect(read.state == .coin(Self.coin))
+        // Whatever bark says (a missing coin or anything else), it's unknown; never decided from its text.
+        struct Missing: Error {}
+        await read.load("c:0", history: Self.history { _ in throw Missing() })
+        #expect(read.state == .unknown)
+        await read.load("c:0", history: Self.history { _ in nil })
+        #expect(read.state == .unknown)
+    }
+
+    @Test func aCancelledLookupWritesNothing() async {
+        let gate = ActivityDetailReadsTests.Gate()
+        let history = Self.history { _ in
+            for await _ in gate.stream { return Self.coin }
+            return nil
+        }
+        let read = ActivityCoinRead()
+        let task = Task { await read.load("c:0", history: history) }
+        await Task.yield()
+        task.cancel()
+        gate.continuation.yield(.inMempool)
+        await task.value
+        #expect(read.state == .loading)
+    }
+}
