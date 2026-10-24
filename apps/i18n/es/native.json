@@ -1105,6 +1105,8 @@
   "gt_8e5d375aee547cf8": "Demasiado pequeño para salir · menos de {{amount}}",
   "gt_8e71221ac7fa5a0e": "Cuesta comisiones en cadena",
   "gt_8e8252533cde7bc4": "Disponible para gastar",
+  "gt_8e909a1137e15c7e_one": "Una salida está por detrás de la altura actual de la cadena. Usa Revisar la cadena en ella; esto también puede difundir transacciones de salida.",
+  "gt_8e909a1137e15c7e_other": "{{n}} salidas están por detrás de la altura actual de la cadena. Usa Revisar la cadena en cualquiera de ellas; esto también puede difundir transacciones de salida.",
   "gt_8eca82bae0ce426b": "hasta {{fee}}",
   "gt_8f6fb4eb7f42c0e2": "Seguridad",
   "gt_8fed00ef8e09c48a": "No se envió el depósito. Revísalo de nuevo cuando la billetera esté lista.",

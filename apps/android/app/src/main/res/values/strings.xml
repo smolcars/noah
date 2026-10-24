@@ -1715,6 +1715,10 @@
     <item quantity="one">"%1$s day"</item>
     <item quantity="other">"%1$s days"</item>
   </plurals>
+  <plurals name="gt_8e909a1137e15c7e">
+    <item quantity="one">"One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions."</item>
+    <item quantity="other">"%1$s exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions."</item>
+  </plurals>
   <string name="gt_8338b13e065297c7">"%1$s exits from one round: %2$s transactions, not %3$s. Shared ones are sent and paid once."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>
   <plurals name="gt_e2f49aad27ca4b0f">

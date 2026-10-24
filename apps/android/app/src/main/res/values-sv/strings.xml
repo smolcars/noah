@@ -1715,6 +1715,10 @@
     <item quantity="one">"%1$s dag"</item>
     <item quantity="other">"%1$s dagar"</item>
   </plurals>
+  <plurals name="gt_8e909a1137e15c7e">
+    <item quantity="one">"Ett nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på det. Det kan även innebära att nöduttagstransaktioner sänds."</item>
+    <item quantity="other">"%1$s nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på något av dem. Det kan även innebära att nöduttagstransaktioner sänds."</item>
+  </plurals>
   <string name="gt_8338b13e065297c7">"%1$s nöduttag från samma runda: %2$s transaktioner, inte %3$s. Delade skickas och betalas en gång."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>
   <plurals name="gt_e2f49aad27ca4b0f">

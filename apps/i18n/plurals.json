@@ -90,5 +90,9 @@
   "Your bitcoin sits at the end of a path of {n} transactions in the round's tree. The round's own transaction is already on-chain.": {
     "one": "Your bitcoin sits at the end of a path of one transaction in the round's tree. The round's own transaction is already on-chain.",
     "other": "Your bitcoin sits at the end of a path of {n} transactions in the round's tree. The round's own transaction is already on-chain."
+  },
+  "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.": {
+    "one": "One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions.",
+    "other": "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions."
   }
 }

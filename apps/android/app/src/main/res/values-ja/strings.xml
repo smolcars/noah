@@ -1715,6 +1715,10 @@
     <item quantity="one">"%1$s日"</item>
     <item quantity="other">"%1$s日"</item>
   </plurals>
+  <plurals name="gt_8e909a1137e15c7e">
+    <item quantity="one">"1件の出金が現在のチェーンの高さより遅れています。その出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"</item>
+    <item quantity="other">"%1$s件の出金が現在のチェーンの高さより遅れています。いずれかの出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"</item>
+  </plurals>
   <string name="gt_8338b13e065297c7">"同じラウンドからの%1$s件の出金：トランザクションは%3$s件ではなく%2$s件です。共有するものは1回だけ送信・支払いされます。"</string>
   <string name="gt_068deca46a360c34">"%1$s時間"</string>
   <plurals name="gt_e2f49aad27ca4b0f">

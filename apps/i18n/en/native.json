@@ -930,6 +930,8 @@
   "gt_8e5d375aee547cf8": "Too small to exit · under {{amount}}",
   "gt_8e71221ac7fa5a0e": "Costs on-chain fees",
   "gt_8e8252533cde7bc4": "Spendable",
+  "gt_8e909a1137e15c7e_one": "One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions.",
+  "gt_8e909a1137e15c7e_other": "{{n}} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.",
   "gt_8eca82bae0ce426b": "up to {{fee}}",
   "gt_8f6fb4eb7f42c0e2": "Security",
   "gt_8fed00ef8e09c48a": "Boarding was not submitted. Review again when the wallet is ready.",

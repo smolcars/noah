@@ -1105,6 +1105,8 @@
   "gt_8e5d375aee547cf8": "För liten för ett nöduttag · under {{amount}}",
   "gt_8e71221ac7fa5a0e": "Kostar avgifter på blockkedjan",
   "gt_8e8252533cde7bc4": "Kan användas",
+  "gt_8e909a1137e15c7e_one": "Ett nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på det. Det kan även innebära att nöduttagstransaktioner sänds.",
+  "gt_8e909a1137e15c7e_other": "{{n}} nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på något av dem. Det kan även innebära att nöduttagstransaktioner sänds.",
   "gt_8eca82bae0ce426b": "upp till {{fee}}",
   "gt_8f6fb4eb7f42c0e2": "Säkerhet",
   "gt_8fed00ef8e09c48a": "Insättningen skickades inte. Granska igen när plånboken är redo.",

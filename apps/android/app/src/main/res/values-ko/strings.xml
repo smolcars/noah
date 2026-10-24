@@ -1715,6 +1715,10 @@
     <item quantity="one">"%1$s일"</item>
     <item quantity="other">"%1$s일"</item>
   </plurals>
+  <plurals name="gt_8e909a1137e15c7e">
+    <item quantity="one">"출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 해당 출금에서 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."</item>
+    <item quantity="other">"출금 %1$s건이 현재 체인 높이보다 뒤처져 있습니다. 아무 출금에서나 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."</item>
+  </plurals>
   <string name="gt_8338b13e065297c7">"같은 라운드에서 나온 출금 %1$s건: 거래 %3$s개가 아니라 %2$s개입니다. 함께 쓰는 거래는 한 번만 보내고 지불합니다."</string>
   <string name="gt_068deca46a360c34">"%1$s시간"</string>
   <plurals name="gt_e2f49aad27ca4b0f">

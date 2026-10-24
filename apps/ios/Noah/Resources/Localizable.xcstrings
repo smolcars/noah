@@ -60889,6 +60889,102 @@
         }
       }
     },
+    "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.": {
+      "comment": "GT gt_8e909a1137e15c7e; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Una salida está por detrás de la altura actual de la cadena. Usa Revisar la cadena en ella; esto también puede difundir transacciones de salida."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld salidas están por detrás de la altura actual de la cadena. Usa Revisar la cadena en cualquiera de ellas; esto también puede difundir transacciones de salida."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "1件の出金が現在のチェーンの高さより遅れています。その出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld件の出金が現在のチェーンの高さより遅れています。いずれかの出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 해당 출금에서 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "출금 %1$lld건이 현재 체인 높이보다 뒤처져 있습니다. 아무 출금에서나 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Ett nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på det. Det kan även innebära att nöduttagstransaktioner sänds."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på något av dem. Det kan även innebära att nöduttagstransaktioner sänds."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "{n} exits from one round: {count} transactions, not {total}. Shared ones are sent and paid once.": {
       "comment": "GT gt_8338b13e065297c7; arguments: n, count, total",
       "extractionState": "manual",

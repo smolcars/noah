@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1689,
-  "sourceKeys": 1712,
+  "catalogEntries": 1690,
+  "sourceKeys": 1714,
   "coverage": {
     "ios": {
       "used": [
@@ -2602,7 +2602,6 @@
         "via Ark · just now",
         "via Lightning · just now",
         "you@example.com",
-        "{_gt_value_4} exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions.",
         "{_gt_value_4} places{_gt_value_3}",
         "{action}?",
         "{amount} arriving",
@@ -2629,6 +2628,7 @@
         "{n} blocks",
         "{n} d",
         "{n} days",
+        "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.",
         "{n} exits from one round: {count} transactions, not {total}. Shared ones are sent and paid once.",
         "{n} h",
         "{n} hours",

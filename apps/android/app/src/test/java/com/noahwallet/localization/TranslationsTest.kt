@@ -102,7 +102,8 @@ class TranslationsTest {
             .getValue("android").jsonObject.getValue("used").jsonArray.map { it.jsonPrimitive.content }.toSet()
         val plurals = SharedFixtures.document("translations").jsonObject.getValue("plurals").jsonArray
             .filter { it.jsonObject.getValue("source").jsonPrimitive.content in used }
-        assertEquals(2, plurals.size)
+        // The places count; the exits list's stale warning now has its own native plural.
+        assertEquals(1, plurals.size)
         for (locale in LegacyLocale.supported) {
             language(locale)
             for (plural in plurals) {

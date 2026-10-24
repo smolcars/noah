@@ -1715,6 +1715,10 @@
     <item quantity="one">"%1$s día"</item>
     <item quantity="other">"%1$s días"</item>
   </plurals>
+  <plurals name="gt_8e909a1137e15c7e">
+    <item quantity="one">"Una salida está por detrás de la altura actual de la cadena. Usa Revisar la cadena en ella; esto también puede difundir transacciones de salida."</item>
+    <item quantity="other">"%1$s salidas están por detrás de la altura actual de la cadena. Usa Revisar la cadena en cualquiera de ellas; esto también puede difundir transacciones de salida."</item>
+  </plurals>
   <string name="gt_8338b13e065297c7">"%1$s salidas de una misma ronda: %2$s transacciones, no %3$s. Las compartidas se envían y se pagan una vez."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>
   <plurals name="gt_e2f49aad27ca4b0f">
