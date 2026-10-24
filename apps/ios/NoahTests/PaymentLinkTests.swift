@@ -60,9 +60,9 @@ struct PaymentLinkTests {
         var lock = BiometricLockPolicy(enabled: true)
         let route = PaymentLinkRoute()
         let value = "lightning:\(Self.invoice)"
-        route.receive(try #require(URL(string: value)), gate: Gate(phase: .launching, onboarding: false, gated: false, locked: lock.locked))
+        route.receive(try #require(URL(string: value)), gate: Gate(phase: .launching, onboarding: false, gated: false, settling: false, locked: lock.locked))
         #expect(route.pending == value)
-        var gate: Gate { Gate(phase: .wallet, onboarding: false, gated: false, locked: lock.locked) }
+        var gate: Gate { Gate(phase: .wallet, onboarding: false, gated: false, settling: false, locked: lock.locked) }
         #expect(gate == .hold)
         #expect(route.take(gate) == nil)
         #expect(route.pending == value)
@@ -97,10 +97,10 @@ struct PaymentLinkTests {
         }
         // Suspended or notifications required (`gated`), restore's closing onboarding moment, and the other phases.
         for locked in [false, true] {
-            #expect(Gate(phase: .wallet, onboarding: false, gated: true, locked: locked) == .ignore)
-            #expect(Gate(phase: .wallet, onboarding: true, gated: false, locked: locked) == .ignore)
-            #expect(Gate(phase: .restoreIncomplete, onboarding: false, gated: false, locked: locked) == .ignore)
-            #expect(Gate(phase: .blocked(.secureStorageUnavailable), onboarding: false, gated: false, locked: locked) == .ignore)
+            #expect(Gate(phase: .wallet, onboarding: false, gated: true, settling: false, locked: locked) == .ignore)
+            #expect(Gate(phase: .wallet, onboarding: true, gated: false, settling: false, locked: locked) == .ignore)
+            #expect(Gate(phase: .restoreIncomplete, onboarding: false, gated: false, settling: false, locked: locked) == .ignore)
+            #expect(Gate(phase: .blocked(.secureStorageUnavailable), onboarding: false, gated: false, settling: false, locked: locked) == .ignore)
         }
         let route = PaymentLinkRoute()
         route.receive(url, gate: .hold)
@@ -162,7 +162,7 @@ struct PaymentLinkTests {
         let url = try #require(URL(string: "bitcoin:\(Self.address)?amount=0.0001"))
         var lock = BiometricLockPolicy(enabled: true)
         var gated = true // Suspended or notifications required, behind the lock.
-        var gate: Gate { Gate(phase: .wallet, onboarding: false, gated: gated, locked: lock.locked) }
+        var gate: Gate { Gate(phase: .wallet, onboarding: false, gated: gated, settling: false, locked: lock.locked) }
         let route = PaymentLinkRoute()
         route.receive(url, gate: gate)
         #expect(gate == .ignore && route.pending == nil)
@@ -172,7 +172,7 @@ struct PaymentLinkTests {
         #expect(gate == .open)
         #expect(route.take(gate) == nil)
         // A launch gate (recovery) decides the same way while locked.
-        route.receive(url, gate: Gate(phase: .blocked(.walletDataWithoutSeed), onboarding: false, gated: false, locked: true))
+        route.receive(url, gate: Gate(phase: .blocked(.walletDataWithoutSeed), onboarding: false, gated: false, settling: false, locked: true))
         #expect(route.pending == nil)
     }
 
@@ -196,5 +196,23 @@ struct PaymentLinkTests {
         #expect(funded.showReview)
         #expect(!(await PaymentLinkRoute.apply(other, to: funded)))
         #expect(funded.destination == invoice && funded.showReview)
+    }
+
+    @Test func theCustomServerMessageDropsALinkEvenWhileLockedAndRecoveryDoesNotBringItBack() throws {
+        let url = try #require(URL(string: "lightning:\(Self.invoice)"))
+        var lock = BiometricLockPolicy(enabled: true)
+        let route = PaymentLinkRoute()
+        // "The custom server isn't responding" shows while launching; AppModel passes it as a known gate.
+        let arrival = Gate(phase: .launching, onboarding: false, gated: true, settling: false, locked: lock.locked)
+        #expect(arrival == .ignore) // A known gate wins over launching and the lock.
+        route.receive(url, gate: arrival)
+        #expect(route.pending == nil)
+        // The server recovers and the wallet opens, still locked; then the user unlocks.
+        var gate: Gate { Gate(phase: .wallet, onboarding: false, gated: false, settling: false, locked: lock.locked) }
+        #expect(gate == .hold && route.take(gate) == nil)
+        lock.authenticated(generation: lock.generation)
+        #expect(gate == .open && route.take(gate) == nil)
+        // Only the lock or an unanswered gate holds a link.
+        #expect(Gate(phase: .wallet, onboarding: false, gated: false, settling: true, locked: false) == .hold)
     }
 }

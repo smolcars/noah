@@ -99,12 +99,13 @@ final class AppModel {
     let variant = AppVariant.current
     let session = WalletSession.shared
     let versionCheck = AppVersionCheck()
-    let pushPermission = PushPermissionModel()
+    let pushPermission: PushPermissionModel
     let walletLock: WalletLock
     let paymentLink = PaymentLinkRoute()
     var paymentLinkGate: PaymentLinkRoute.Gate {
         .init(phase: phase, onboarding: holdsOnboardingAfterRestore,
-              gated: isWalletSuspended || pushPermission.blocksWallet(initialized: true), locked: walletLock.policy.locked)
+              gated: isWalletSuspended || pushPermission.blocksWallet(initialized: true) || (phase == .launching && customServerUnresponsive),
+              settling: !pushPermission.settled, locked: walletLock.policy.locked)
     }
     let server: ServerRegistration
     private let log = AppLog("app")
@@ -121,8 +122,10 @@ final class AppModel {
     @ObservationIgnored private let lifecycle = WalletLifecycle(dependencies: .live())
 
     init(settings: SettingsStorage = .shared, readLaunchState: @escaping () -> LaunchState = { .current() },
-         settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() }) {
+         settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() },
+         pushPermission: PushPermissionModel = PushPermissionModel()) {
         self.settings = settings
+        self.pushPermission = pushPermission
         walletLock = WalletLock(settings: settings)
         self.readLaunchState = readLaunchState
         self.settleRestore = settleRestore

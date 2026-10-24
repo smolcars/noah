@@ -63,10 +63,13 @@ final class PaymentLinkRoute {
     enum Gate: Equatable {
         case hold, ignore, open
 
-        init(phase: AppModel.Phase, onboarding: Bool, gated: Bool, locked: Bool) {
+        /// A known gate decides on arrival, even while launching or locked. `settling`: a gate's
+        /// answer isn't in yet, so Send mustn't start on a link that gate may still take back.
+        init(phase: AppModel.Phase, onboarding: Bool, gated: Bool, settling: Bool, locked: Bool) {
+            guard !gated else { self = .ignore; return }
             switch phase {
             case .launching: self = .hold
-            case .wallet where !onboarding && !gated: self = locked ? .hold : .open
+            case .wallet where !onboarding: self = locked || settling ? .hold : .open
             default: self = .ignore
             }
         }

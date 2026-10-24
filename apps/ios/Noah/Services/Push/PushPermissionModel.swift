@@ -47,6 +47,9 @@ final class PushPermissionModel {
         initialized && dependencies.isPhysicalDevice && status == .denied
     }
 
+    /// `blocksWallet` has its answer: always on a simulator, on a device once a status has been read.
+    var settled: Bool { !dependencies.isPhysicalDevice || status != .checking }
+
     enum OnboardingStep: Equatable {
         case proceed
         /// Denied: only Settings can turn notifications back on.
