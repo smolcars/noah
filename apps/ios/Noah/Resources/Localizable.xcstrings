@@ -2485,6 +2485,42 @@
         }
       }
     },
+    "Anchor": {
+      "comment": "GT gt_a4ae750b610e875e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anchor"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anchor"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anchor"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anchor"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anchor"
+          }
+        }
+      }
+    },
     "Anchor Point": {
       "comment": "GT gt_22b587b11be36edd; arguments: none",
       "extractionState": "manual",
@@ -3673,6 +3709,42 @@
         }
       }
     },
+    "Arrives in Ark": {
+      "comment": "GT gt_859a013e803dbdc6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrives in Ark"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrives in Ark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrives in Ark"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrives in Ark"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrives in Ark"
+          }
+        }
+      }
+    },
     "Arriving": {
       "comment": "GT gt_5dda9fcf2694981e; arguments: none",
       "extractionState": "manual",
@@ -3745,42 +3817,6 @@
         }
       }
     },
-    "Ask to board when onchain funds cover {nativeValue1} sats, fees, and a 5,000 sats reserve.": {
-      "comment": "GT gt_0c2d9eae6632bce6; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ask to board when onchain funds cover %1$@ sats, fees, and a 5,000 sats reserve."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Preguntar si deseas depositar cuando los fondos en cadena cubran %1$@ sats, las comisiones y una reserva de 5000 sats."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "オンチェーン資金で%1$@ sats、手数料、予備資金5,000 satsをまかなえる場合に、Arkへの入金を提案します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "온체인 자금으로 %1$@ sats, 수수료, 예비 자금 5,000 sats를 충당할 수 있으면 입금 여부를 묻습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fråga om insättning när medlen på blockkedjan täcker %1$@ sats, avgifter och en reserv på 5 000 sats."
-          }
-        }
-      }
-    },
     "Asks for {amount}": {
       "comment": "GT gt_e3c03bb0dee641c5; arguments: amount",
       "extractionState": "manual",
@@ -3813,6 +3849,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Begär %1$@"
+          }
+        }
+      }
+    },
+    "Asks when you have {amount} or more": {
+      "comment": "GT gt_c6dd438b37364cad; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asks when you have %1$@ or more"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asks when you have %1$@ or more"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asks when you have %1$@ or more"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asks when you have %1$@ or more"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asks when you have %1$@ or more"
           }
         }
       }
@@ -4749,42 +4821,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tillbaka i din plånbok"
-          }
-        }
-      }
-    },
-    "Back to VTXOs": {
-      "comment": "GT gt_3d61c6595d4cb00e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Back to VTXOs"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Volver a los VTXOs"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXO一覧に戻る"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VTXO 목록으로 돌아가기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tillbaka till VTXO:er"
           }
         }
       }
@@ -6301,6 +6337,42 @@
         }
       }
     },
+    "Bitcoin in Ark moves instantly and costs less to send.": {
+      "comment": "GT gt_d02d0e8a04250582; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin in Ark moves instantly and costs less to send."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin in Ark moves instantly and costs less to send."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin in Ark moves instantly and costs less to send."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin in Ark moves instantly and costs less to send."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin in Ark moves instantly and costs less to send."
+          }
+        }
+      }
+    },
     "Bitcoin merchant map": {
       "comment": "GT gt_49f6aed17460951e; arguments: none",
       "extractionState": "manual",
@@ -6441,6 +6513,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bitcoin unit"
+          }
+        }
+      }
+    },
+    "Bitcoin you receive shows up here as VTXOs.": {
+      "comment": "GT gt_5c2d9cf515bae495; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin you receive shows up here as VTXOs."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin you receive shows up here as VTXOs."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin you receive shows up here as VTXOs."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin you receive shows up here as VTXOs."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitcoin you receive shows up here as VTXOs."
           }
         }
       }
@@ -6733,6 +6841,42 @@
         }
       }
     },
+    "Block {height} · {id}": {
+      "comment": "GT gt_52d8701c498a04d0; arguments: height, id",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block %1$@ · %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block %1$@ · %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block %1$@ · %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block %1$@ · %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block %1$@ · %2$@"
+          }
+        }
+      }
+    },
     "Block {nativeValue1}": {
       "comment": "GT gt_d20282998912f670; arguments: nativeValue1",
       "extractionState": "manual",
@@ -6801,6 +6945,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Block tills giltigheten går ut"
+          }
+        }
+      }
+    },
+    "Blocks left": {
+      "comment": "GT gt_b9dba3190e1924dc; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocks left"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocks left"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocks left"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocks left"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocks left"
           }
         }
       }
@@ -13681,6 +13861,42 @@
         }
       }
     },
+    "Current block": {
+      "comment": "GT gt_6f67e38df081e623; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current block"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current block"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current block"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current block"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current block"
+          }
+        }
+      }
+    },
     "Custom": {
       "comment": "GT gt_494ca78f7374e46f; arguments: none",
       "extractionState": "manual",
@@ -15117,42 +15333,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Klart"
-          }
-        }
-      }
-    },
-    "Done selecting": {
-      "comment": "GT gt_860e7995708f4744; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Done selecting"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finalizar selección"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選択を完了"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "선택 완료"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klar med valet"
           }
         }
       }
@@ -18037,6 +18217,42 @@
         }
       }
     },
+    "Exit delta": {
+      "comment": "GT gt_1efedf4f4378da10; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit delta"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit delta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit delta"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit delta"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit delta"
+          }
+        }
+      }
+    },
     "Exit depth": {
       "comment": "GT gt_22b3b7a335275593; arguments: none",
       "extractionState": "manual",
@@ -18505,38 +18721,38 @@
         }
       }
     },
-    "Exit weight (WU)": {
-      "comment": "GT gt_efe13cdfa8a35c1e; arguments: none",
+    "Exit weight": {
+      "comment": "GT gt_16d94f2461c3f1a9; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exit weight (WU)"
+            "value": "Exit weight"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Peso de salida (WU)"
+            "value": "Exit weight"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出のウェイト（WU）"
+            "value": "Exit weight"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "출금 가중치(WU)"
+            "value": "Exit weight"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nöduttagets vikt (WU)"
+            "value": "Exit weight"
           }
         }
       }
@@ -18865,38 +19081,38 @@
         }
       }
     },
-    "Expires at block {_gt_value_2}": {
-      "comment": "GT gt_4d0c32fda44c7f3b; arguments: _gt_value_2",
+    "Expires": {
+      "comment": "GT gt_f6725f3af08a06a2; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Expires at block %1$@"
+            "value": "Expires"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Caduca en el bloque %1$@"
+            "value": "Expires"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ブロック%1$@で期限切れ"
+            "value": "Expires"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "블록 %1$@에서 만료"
+            "value": "Expires"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Går ut vid block %1$@"
+            "value": "Expires"
           }
         }
       }
@@ -18933,6 +19149,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "Löper ut inom en timme"
+          }
+        }
+      }
+    },
+    "Expires in {n} days": {
+      "comment": "GT gt_f43156479fea31f4; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expires in %1$lld days"
+                }
+              }
+            }
           }
         }
       }
@@ -21049,6 +21361,42 @@
         }
       }
     },
+    "From your on-chain balance.": {
+      "comment": "GT gt_13bbc1285eb22070; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your on-chain balance."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your on-chain balance."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your on-chain balance."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your on-chain balance."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your on-chain balance."
+          }
+        }
+      }
+    },
     "Funding inputs": {
       "comment": "GT gt_c41e04a73516abe6; arguments: none",
       "extractionState": "manual",
@@ -22705,6 +23053,102 @@
         }
       }
     },
+    "In {n} VTXOs": {
+      "comment": "GT gt_da31d49e931af4ab; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXO"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXOs"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXO"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXOs"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXO"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXOs"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXO"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXOs"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXO"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "In %1$lld VTXOs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Incoming": {
       "comment": "GT gt_e301820ac8393100; arguments: none",
       "extractionState": "manual",
@@ -23893,6 +24337,42 @@
         }
       }
     },
+    "It needs {n} confirmations to arrive.": {
+      "comment": "GT gt_5002fe6fff33796d; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It needs %1$@ confirmations to arrive."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It needs %1$@ confirmations to arrive."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It needs %1$@ confirmations to arrive."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It needs %1$@ confirmations to arrive."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It needs %1$@ confirmations to arrive."
+          }
+        }
+      }
+    },
     "I’ve written it down": {
       "comment": "GT gt_97812286b5d2cb4b; arguments: none",
       "extractionState": "manual",
@@ -24037,6 +24517,42 @@
         }
       }
     },
+    "Joined the next round": {
+      "comment": "GT gt_e974c22e5e4182dc; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joined the next round"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joined the next round"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joined the next round"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joined the next round"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joined the next round"
+          }
+        }
+      }
+    },
     "Joining the Ark": {
       "comment": "GT gt_a1487c34b5c577e1; arguments: none",
       "extractionState": "manual",
@@ -24069,6 +24585,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ansluter till Ark"
+          }
+        }
+      }
+    },
+    "Joins the next Ark round, so it stays spendable.": {
+      "comment": "GT gt_8ddd9ab865d79c7c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so it stays spendable."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so it stays spendable."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so it stays spendable."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so it stays spendable."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so it stays spendable."
+          }
+        }
+      }
+    },
+    "Joins the next Ark round, so they stay spendable.": {
+      "comment": "GT gt_3e0916d27e6bf4cf; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so they stay spendable."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so they stay spendable."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so they stay spendable."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so they stay spendable."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joins the next Ark round, so they stay spendable."
           }
         }
       }
@@ -24393,42 +24981,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nycklar"
-          }
-        }
-      }
-    },
-    "Kind": {
-      "comment": "GT gt_f5387f9bb6ed7031; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kind"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tipo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "種類"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "종류"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typ"
           }
         }
       }
@@ -27313,6 +27865,78 @@
         }
       }
     },
+    "Move": {
+      "comment": "GT gt_6ecc3df6bffdd06c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        }
+      }
+    },
+    "Move automatically": {
+      "comment": "GT gt_ae88a18039eabe64; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move automatically"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move automatically"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move automatically"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move automatically"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move automatically"
+          }
+        }
+      }
+    },
     "Move onchain bitcoin into Ark for fast, low-cost payments.": {
       "comment": "GT gt_95e949f1c9e6a26a; arguments: none",
       "extractionState": "manual",
@@ -27417,6 +28041,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flytta bitcoin på blockkedjan till Ark. Beloppen och avgifterna som visas är exakta för den här förberedda transaktionen. Medlen kan användas när insättningen är klar."
+          }
+        }
+      }
+    },
+    "Move to Ark": {
+      "comment": "GT gt_44541f362e819e01; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Ark"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Ark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Ark"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Ark"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Ark"
           }
         }
       }
@@ -27561,6 +28221,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flyttas till Ark"
+          }
+        }
+      }
+    },
+    "Moving {amount} to Ark": {
+      "comment": "GT gt_a29d635845ca0cd8; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving %1$@ to Ark"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving %1$@ to Ark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving %1$@ to Ark"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving %1$@ to Ark"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving %1$@ to Ark"
           }
         }
       }
@@ -28357,6 +29053,42 @@
         }
       }
     },
+    "Next expiry in {time} · renews automatically": {
+      "comment": "GT gt_bd26eee14731169d; arguments: time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next expiry in %1$@ · renews automatically"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next expiry in %1$@ · renews automatically"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next expiry in %1$@ · renews automatically"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next expiry in %1$@ · renews automatically"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next expiry in %1$@ · renews automatically"
+          }
+        }
+      }
+    },
     "Next payment: {_gt_value_2}": {
       "comment": "GT gt_83a4672409350abd; arguments: _gt_value_2",
       "extractionState": "manual",
@@ -28533,6 +29265,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga VTXO:er i den här vyn."
+          }
+        }
+      }
+    },
+    "No VTXOs yet": {
+      "comment": "GT gt_9c922c642a31a549; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No VTXOs yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No VTXOs yet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No VTXOs yet"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No VTXOs yet"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No VTXOs yet"
           }
         }
       }
@@ -37357,6 +38125,42 @@
         }
       }
     },
+    "Refresh list": {
+      "comment": "GT gt_3cf8d66227384dc2; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh list"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh list"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh list"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh list"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh list"
+          }
+        }
+      }
+    },
     "Refresh network status": {
       "comment": "GT gt_ffc1364cefebd7a2; arguments: none",
       "extractionState": "manual",
@@ -38149,6 +38953,78 @@
         }
       }
     },
+    "Renew this VTXO": {
+      "comment": "GT gt_e32344915fd29a53; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO"
+          }
+        }
+      }
+    },
+    "Renew this VTXO to keep it available.": {
+      "comment": "GT gt_b44a676f499031ee; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO to keep it available."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO to keep it available."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO to keep it available."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO to keep it available."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO to keep it available."
+          }
+        }
+      }
+    },
     "Renew {amount}": {
       "comment": "GT gt_46e6876f99389ec8; arguments: amount",
       "extractionState": "manual",
@@ -38181,6 +39057,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Förnya %1$@"
+          }
+        }
+      }
+    },
+    "Renew {n}": {
+      "comment": "GT gt_b72aebe90513cba1; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@"
+          }
+        }
+      }
+    },
+    "Renew {n} VTXOs": {
+      "comment": "GT gt_51ccf0d08c7d2b01; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@ VTXOs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@ VTXOs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@ VTXOs"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@ VTXOs"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew %1$@ VTXOs"
           }
         }
       }
@@ -39501,6 +40449,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Försök registrera igen"
+          }
+        }
+      }
+    },
+    "Review": {
+      "comment": "GT gt_aff0766a5290e117; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
           }
         }
       }
@@ -42421,6 +43405,42 @@
         }
       }
     },
+    "Server key": {
+      "comment": "GT gt_c653cd477710322c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server key"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server key"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server key"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server key"
+          }
+        }
+      }
+    },
     "Server pubkey": {
       "comment": "GT gt_ef96f6d2d26067b1; arguments: none",
       "extractionState": "manual",
@@ -43317,6 +44337,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Överhoppad"
+          }
+        }
+      }
+    },
+    "Smallest move": {
+      "comment": "GT gt_44d27a286f01669e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smallest move"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smallest move"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smallest move"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smallest move"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smallest move"
           }
         }
       }
@@ -48901,42 +49957,6 @@
         }
       }
     },
-    "Total ({nativeValue1} VTXOs)": {
-      "comment": "GT gt_1f51a34052ab8346; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Total (%1$@ VTXOs)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Total (%1$@ VTXOs)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "合計（%1$@個のVTXO）"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "합계 (VTXO %1$@개)"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Totalt (%1$@ VTXO:er)"
-          }
-        }
-      }
-    },
     "Total leaving onchain wallet": {
       "comment": "GT gt_857d95d67fba62e3; arguments: none",
       "extractionState": "manual",
@@ -51529,6 +52549,42 @@
         }
       }
     },
+    "VTXO": {
+      "comment": "GT gt_b338094d31cf192f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VTXO"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VTXO"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VTXO"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VTXO"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VTXO"
+          }
+        }
+      }
+    },
     "VTXO Details": {
       "comment": "GT gt_8429e678433b1192; arguments: none",
       "extractionState": "manual",
@@ -53689,6 +54745,42 @@
         }
       }
     },
+    "When your VTXOs expire": {
+      "comment": "GT gt_367140c51afa98ec; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When your VTXOs expire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When your VTXOs expire"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When your VTXOs expire"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When your VTXOs expire"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When your VTXOs expire"
+          }
+        }
+      }
+    },
     "Without them, Noah can’t receive payments or renew your bitcoin before it expires.": {
       "comment": "GT gt_9c91b3b673435dea; arguments: none",
       "extractionState": "manual",
@@ -54045,6 +55137,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Du kan råka betala två gånger"
+          }
+        }
+      }
+    },
+    "You keep": {
+      "comment": "GT gt_0e5467ac43335fc4; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You keep"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You keep"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You keep"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You keep"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You keep"
           }
         }
       }
@@ -55489,6 +56617,42 @@
         }
       }
     },
+    "under an hour": {
+      "comment": "GT gt_4e45ea730a8e0eba; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "under an hour"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "under an hour"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "under an hour"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "under an hour"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "under an hour"
+          }
+        }
+      }
+    },
     "unknown error": {
       "comment": "GT gt_3e4443e52275a9a0; arguments: none",
       "extractionState": "manual",
@@ -56881,6 +58045,102 @@
         }
       }
     },
+    "{n} VTXOs expire within a day": {
+      "comment": "GT gt_f7957bd8d410be30; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXO expires within a day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXOs expire within a day"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXO expires within a day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXOs expire within a day"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXO expires within a day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXOs expire within a day"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXO expires within a day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXOs expire within a day"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXO expires within a day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld VTXOs expire within a day"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "{n} active": {
       "comment": "GT gt_f4d60c7d0545f547; arguments: n",
       "extractionState": "manual",
@@ -56913,6 +58173,306 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ active"
+          }
+        }
+      }
+    },
+    "{n} blocks": {
+      "comment": "GT gt_00f904d64507e53f; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ blocks"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ blocks"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ blocks"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ blocks"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ blocks"
+          }
+        }
+      }
+    },
+    "{n} d": {
+      "comment": "GT gt_3f2e9c59984c0b94; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ d"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ d"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ d"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ d"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ d"
+          }
+        }
+      }
+    },
+    "{n} days": {
+      "comment": "GT gt_901bac8a657292dd; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld days"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld days"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "{n} h": {
+      "comment": "GT gt_068deca46a360c34; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ h"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ h"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ h"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ h"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ h"
+          }
+        }
+      }
+    },
+    "{n} hours": {
+      "comment": "GT gt_e2f49aad27ca4b0f; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hours"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hours"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hours"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hours"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld hours"
+                }
+              }
+            }
           }
         }
       }
@@ -57177,6 +58737,78 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "{n} wk": {
+      "comment": "GT gt_6f18db1fb525f402; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wk"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wk"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wk"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wk"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wk"
+          }
+        }
+      }
+    },
+    "{n} wu": {
+      "comment": "GT gt_aa8514512b5c8c67; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wu"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wu"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wu"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ wu"
           }
         }
       }

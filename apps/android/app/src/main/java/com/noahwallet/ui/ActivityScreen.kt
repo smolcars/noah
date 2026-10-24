@@ -31,7 +31,7 @@ import java.util.Locale
  */
 @Composable
 fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onReceive: () -> Unit = {},
-                   onSettings: (SettingsDestination) -> Unit = {}, barHidden: (Boolean) -> Unit = {}) {
+                   onSettings: (androidx.navigation3.runtime.NavKey) -> Unit = {}, barHidden: (Boolean) -> Unit = {}) {
     val history = app.history
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -75,7 +75,7 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
  */
 @Composable
 internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, onRepeatPayment: (RepeatPayment) -> Unit,
-                           onSettings: (SettingsDestination) -> Unit): Pair<ActivityUi, ActivityActions> {
+                           onSettings: (androidx.navigation3.runtime.NavKey) -> Unit): Pair<ActivityUi, ActivityActions> {
     val history = app.history
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -101,7 +101,7 @@ internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, 
         },
         recurring = { id -> app.recurringSchedule = id; onSettings(SettingsDestination.Recurring) },
         exits = { onSettings(SettingsDestination.Exits) },
-        coin = { id -> app.vtxoDetail = id; onSettings(SettingsDestination.Vtxos) },
+        coin = { id -> onSettings(com.noahwallet.ui.settings.VtxoPage(id)) },
         shown = { record ->
             val request = chainReads.begin(record.id, app.summary?.fingerprint)
             fun current() = chainReads.current(request, state.selected, app.summary?.fingerprint)

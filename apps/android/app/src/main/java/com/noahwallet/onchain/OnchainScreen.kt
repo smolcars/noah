@@ -65,17 +65,20 @@ internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
 internal fun rememberOnchainModel(app: AppModel, detailID: String? = null): OnchainModel =
     remember(app, detailID) { OnchainModel(onchainDependencies(app), detailID) }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The model's lifecycle on a page: quotes drop when Noah pauses or the wallet changes, a prepared board expires, and the
+ * overview reads while the page is started (every minute) and stops while the wallet is suspended.
+ */
 @Composable
-internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composable ColumnScope.() -> Unit) {
+internal fun OnchainEffects(app: AppModel, model: OnchainModel, reloadOnChange: Boolean = false) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val scope = rememberCoroutineScope()
     DisposableEffect(model, lifecycle) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_PAUSE) model.invalidate() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); model.invalidate() }
     }
-    LaunchedEffect(model, app.session) { app.session.walletChanges.collect { model.unavailable() } }
+    // Settings' pages read the wallet again at once rather than showing nothing until the next periodic read.
+    LaunchedEffect(model, app.session) { app.session.walletChanges.collect { model.unavailable(); if (reloadOnChange && !app.isWalletSuspended) model.load() } }
     LaunchedEffect(model.quote) {
         val held = model.quote ?: return@LaunchedEffect
         if (held.preparedBoard != null) {
@@ -90,6 +93,13 @@ internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composa
             while (isActive) { delay(60_000); if (!model.busy && model.quote == null) model.load() }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun OnchainScreen(app: AppModel, model: OnchainModel, content: @Composable ColumnScope.() -> Unit) {
+    val scope = rememberCoroutineScope()
+    OnchainEffects(app, model)
     PullToRefreshBox(model.loading, onRefresh = { model.invalidate(); scope.launch { model.load() } }) {
         Column(Modifier.fillMaxSize().readableWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -127,7 +137,7 @@ internal fun TransactionRow(txid: String) {
 }
 
 @Composable
-private fun OnchainStatus(app: AppModel, model: OnchainModel) {
+internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
     val scope = rememberCoroutineScope()
     var overrideID by remember { mutableStateOf<String?>(null) }
     if (model.loading || model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())

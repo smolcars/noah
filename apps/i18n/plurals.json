@@ -30,5 +30,25 @@
   "Renewed {n} coins": {
     "one": "Renewed {n} coin",
     "other": "Renewed {n} coins"
+  },
+  "Expires in {n} days": {
+    "one": "Expires in {n} day",
+    "other": "Expires in {n} days"
+  },
+  "{n} hours": {
+    "one": "{n} hour",
+    "other": "{n} hours"
+  },
+  "{n} days": {
+    "one": "{n} day",
+    "other": "{n} days"
+  },
+  "In {n} VTXOs": {
+    "one": "In {n} VTXO",
+    "other": "In {n} VTXOs"
+  },
+  "{n} VTXOs expire within a day": {
+    "one": "{n} VTXO expires within a day",
+    "other": "{n} VTXOs expire within a day"
   }
 }

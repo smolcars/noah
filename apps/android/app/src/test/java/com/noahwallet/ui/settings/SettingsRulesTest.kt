@@ -58,6 +58,7 @@ class SettingsRulesTest {
             "Home's backup nudge" to (SettingsDestination.Seed to listOf(settings, SettingsDestination.Seed)),
             "Home's suspended state" to (SettingsDestination.Advanced to listOf(settings, SettingsDestination.Advanced)),
             "Home's and Receive's profile" to (SettingsDestination.Profile to listOf(settings, SettingsDestination.Profile)),
+            "Activity's VTXO" to (VtxoPage("v1") to listOf(settings, SettingsDestination.Vtxos, VtxoPage("v1"))),
             "Activity's exit" to (SettingsDestination.Exits to listOf(settings, SettingsDestination.Exits)),
             "a recurring notification" to (SettingsDestination.Recurring to listOf(settings, SettingsDestination.Recurring)),
             "Home's gear" to (settings to listOf(settings)),

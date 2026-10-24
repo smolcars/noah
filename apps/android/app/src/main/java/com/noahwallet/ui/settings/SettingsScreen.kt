@@ -21,12 +21,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.noahwallet.services.logging.LogFile
-import com.noahwallet.services.storage.*
 import com.noahwallet.ui.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.*
 
 @Composable
 fun SettingsColumn(content: @Composable ColumnScope.() -> Unit) {
@@ -78,20 +76,10 @@ internal fun TodaysNotifications(model: AppModel, nav: SettingsNav) {
 /** Today's info, debug and danger-zone rows from the old list, until Advanced is rebuilt. */
 @Composable
 internal fun TodaysAdvanced(model: AppModel, nav: SettingsNav, live: SettingsLive) {
-    var autoBoard by remember { mutableStateOf(SettingsPreferences.transaction(model.settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false) }
     var resetting by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    var threshold by remember { mutableStateOf<ULong?>(null) }
-    LaunchedEffect(model.isWalletSuspended) { if (com.noahwallet.onchain.onchainReady(model)) threshold = runCatching { model.session.boardingMinimum()?.toULong() }.getOrNull() }
     SettingsColumn {
         SettingRow("Ark Info", "Ark server, wallet, and explorer configuration") { nav.open(SettingsDestination.Ark) }
-        SettingToggle("Auto-Board to Ark", threshold?.let { "Ask to board when onchain funds cover ${maxOf(it, 20_000u)} sats, fees, and a 5,000 sats reserve." } ?: "Auto-board threshold unavailable",
-            autoBoard, !model.busy) { value ->
-            model.action("Couldn't save auto-board preference.") {
-                model.settings.set(SettingsPreferences.autoBoard(model.settings.string("transaction-storage"), value), "transaction-storage")
-                autoBoard = value
-            }
-        }
         SettingRow("Show Logs", "Application logs") { nav.open(SettingsDestination.Logs) }
         SettingRow("Reset Server Registration", "Register this wallet and push notifications again", !model.busy && !model.isWalletSuspended) { resetting = true }
         if (live.debug) SettingRow("Debug Screen", "Advanced developer actions") { nav.open(SettingsDestination.Debug) }

@@ -15,6 +15,9 @@ enum class SettingsDestination : NavKey {
     Battery,
 }
 
+/** One VTXO (Activity's VTXO links open it). */
+@Serializable data class VtxoPage(val id: String) : NavKey
+
 internal object SettingsRoutes {
     private val parents = listOf(SettingsDestination.Lightning, SettingsDestination.Email).associateWith { SettingsDestination.Profile } +
         listOf(SettingsDestination.UnifiedPush, SettingsDestination.Battery).associateWith { SettingsDestination.Notifications } +
@@ -24,6 +27,7 @@ internal object SettingsRoutes {
     fun parent(page: NavKey): NavKey? = when (page) {
         SettingsDestination.Settings -> null
         is SettingsDestination -> parents[page] ?: SettingsDestination.Settings
+        is VtxoPage -> SettingsDestination.Vtxos
         else -> null
     }
 
