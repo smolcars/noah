@@ -138,6 +138,33 @@ class OnchainOperationsTest {
         wallet.startError = BarkError("untrusted diagnostic", BarkErrorCode.OTHER)
         assertEquals(OnchainFailure.uncertain, (runCatching { ops.execute(unknown.copy(id = "second", unknownFeeConsent = "second")) }.exceptionOrNull() as OnchainException).reason)
     } }
+    @Test fun aStartBarkRefusedPartWayIsRetriedAfterAReloadWithoutADuplicateExit() = runBlocking { fixture { wallet, _, journal, _ ->
+        wallet.items = listOf(Wallet.vtxo("a"), Wallet.vtxo("b")); wallet.unexitable = setOf("b")
+        val ops = OnchainOperations(wallet, journal, refused = mutableMapOf())
+        // Reviewed without an estimate (it was unavailable): bark registers A, then refuses B.
+        wallet.estimateError = java.net.SocketTimeoutException()
+        val unknown = (runCatching { ops.quote(OnchainAction.startExit, listOf("a", "b")) }.exceptionOrNull() as ExitEstimateUnavailable).review
+        assertTrue(runCatching { ops.execute(unknown.copy(unknownFeeConsent = unknown.id)) }.exceptionOrNull() is ExitNotPossible)
+        assertEquals(listOf("a"), wallet.registered)
+        // Relaunched: a new journal over the same file, the app's refusals forgotten.
+        wallet.estimateError = null
+        val reloaded = OnchainOperationJournal(OnchainFile(wallet.attemptFile) {})
+        val refused = mutableMapOf<String, String>()
+        val relaunched = OnchainOperations(wallet, reloaded, refused = refused)
+        assertTrue(reloaded.loadAll().isEmpty())
+        // Choose VTXOs classifies again; bark refuses B by code once more, so All holds only A.
+        val tip = wallet.tip()
+        val vtxos = wallet.vtxos().map { vtxoModel(it, tip, emptySet()) }
+        val all = ExitCosts.all(vtxos, relaunched.exitCosts(vtxos.map { it.id }), refused)
+        assertEquals(mapOf("b" to "This VTXO can't be exited."), refused)
+        assertEquals(listOf("a"), all.map { it.id })
+        relaunched.execute(relaunched.quote(OnchainAction.startExit, all.map { it.id }))
+        // Asking for B anyway is refused before anything starts.
+        assertTrue(runCatching { relaunched.quote(OnchainAction.startExit, listOf("a", "b")) }.exceptionOrNull() is ExitNotPossible)
+        assertEquals("bark skipped A, already under way, and never started B", listOf("a"), wallet.registered)
+        assertEquals(setOf("a"), wallet.states.keys)
+        assertEquals(2, wallet.calls.count { it == "start" })
+    } }
     @Test fun progressReadsEachStatusErrorByItsCode() = runBlocking { fixture { wallet, ops, journal, _ ->
         wallet.active = listOf("a", "b", "c").map { ExitVtxo(it, 30_000u, ExitState.Start(100u), false) }
         val short = BarkError("untrusted diagnostic", BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS, neededSats = 5_000u, availableSats = 1_200u)
@@ -319,6 +346,7 @@ class OnchainOperationsTest {
         var excludedVtxos = emptyList<ExcludedExitVtxo>()
         override suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate {
             estimates++; estimatedIds += ids; estimateError?.let { throw it }
+            ids.firstOrNull { it in unexitable }?.let { throw BarkError("untrusted diagnostic", BarkErrorCode.EXIT_NON_STANDARD_VTXO, vtxoId = it) }
             return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u, if (ids.isEmpty()) excludedVtxos else emptyList())
         }
         override suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = bound.remove(quote.preparedBoard?.id) == quote
@@ -351,7 +379,19 @@ class OnchainOperationsTest {
         /** Runs inside start and cancel, so a test can hold them while their caller is canceled. */
         var duringMutation: suspend () -> Unit = {}
         var startError: Exception? = null
-        override suspend fun start(ids: List<String>) { duringMutation(); calls.add("start"); startError?.let { throw it }; ids.forEach { states[it] = ExitState.Start(100u) } }
+        /** VTXOs bark refuses to exit, by code, in estimates and starts. */
+        var unexitable = emptySet<String>()
+        /** Exits bark registered, in order. */
+        val registered = mutableListOf<String>()
+        override suspend fun start(ids: List<String>) {
+            duringMutation(); calls.add("start"); startError?.let { throw it }
+            // As bark: in order, skipping exits already under way; a refusal comes after registering the ones before it.
+            for (id in ids) {
+                if (id in states) continue
+                if (id in unexitable) throw BarkError("untrusted diagnostic", BarkErrorCode.EXIT_NON_STANDARD_VTXO, vtxoId = id)
+                states[id] = ExitState.Start(100u); registered += id
+            }
+        }
         var progressStatuses = emptyList<ExitProgressStatus>()
         override suspend fun progress(feeRate: Long?): List<ExitProgressStatus> { calls.add("progress"); return progressStatuses }
         override suspend fun cancel(id: String): Boolean { duringMutation(); calls.add("cancel"); return cancelResult }
