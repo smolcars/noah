@@ -132,6 +132,17 @@ class SettingsRulesTest {
         assertEquals(0L, PhraseClip.remaining(phrase.clipDeadline!!, now = 200_000))
     }
 
+    @Test fun copyingAgainKeepsTheNewDeadline() {
+        val phrase = RevealedPhrase()
+        phrase.clipDeadline = 120_000
+        // Copied again just before the first deadline: the first timer, resuming late, leaves the new clip alone.
+        phrase.clipDeadline = 239_000
+        assertFalse(phrase.expireClip(120_000))
+        assertEquals(239_000L, phrase.clipDeadline)
+        assertTrue(phrase.expireClip(239_000))
+        assertNull(phrase.clipDeadline)
+    }
+
     @Test fun revealedWordsLiveInMemoryAndClear() {
         val phrase = RevealedPhrase()
         assertTrue(phrase.words.isEmpty())

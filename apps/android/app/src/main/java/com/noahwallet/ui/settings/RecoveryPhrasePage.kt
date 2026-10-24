@@ -52,6 +52,8 @@ internal class RevealedPhrase : ViewModel() {
     var shownAt = 0L; private set
     /** When our copied clip clears (elapsedRealtime); kept here so a fold or rotation reschedules it rather than dropping it. */
     var clipDeadline by mutableStateOf<Long?>(null)
+    /** Whether the timer for [deadline] may clear the clip: not once a later copy set a new one (the label is the same). */
+    fun expireClip(deadline: Long): Boolean = (clipDeadline == deadline).also { if (it) clipDeadline = null }
     fun show(words: List<String>, generation: Int) { this.words = words; this.generation = generation; shownAt = SystemClock.elapsedRealtime() }
     fun clear() { words = emptyList(); generation = -1 }
     override fun onCleared() { clear() }
@@ -102,7 +104,7 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     LaunchedEffect(holder.clipDeadline) {
         val deadline = holder.clipDeadline ?: return@LaunchedEffect
         delay(PhraseClip.remaining(deadline, SystemClock.elapsedRealtime()))
-        clear.run(); holder.clipDeadline = null
+        if (holder.expireClip(deadline)) clear.run()
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
