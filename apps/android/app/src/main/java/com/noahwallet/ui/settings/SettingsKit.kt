@@ -557,7 +557,7 @@ internal fun <T> Segmented(options: List<Pair<T, String>>, selected: T, modifier
 
 /** A value with − and + (prototype `.step`). */
 @Composable
-internal fun Stepper(text: String, value: Int, range: IntRange, modifier: Modifier = Modifier, enabled: Boolean = true, onValue: (Int) -> Unit) {
+internal fun Stepper(text: String, value: Long, range: LongRange, modifier: Modifier = Modifier, enabled: Boolean = true, onValue: (Long) -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     Row(modifier.padding(top = 10.dp).fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {

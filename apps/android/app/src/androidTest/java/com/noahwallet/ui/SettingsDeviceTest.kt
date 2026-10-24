@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -151,6 +152,29 @@ class SettingsDeviceTest {
         field.assert(hasText("1.5"))
         field.performTextReplacement("-1000")
         field.assert(hasText("-1000"))
+    }
+
+    @Test fun aMigratedPaymentLimitShowsAndEditsItsLongCount() {
+        val now = System.currentTimeMillis()
+        // Never saved: the editor only shows it.
+        val migrated = com.noahwallet.recurring.RecurringPayment("migrated", "Rent", "a@b.c", "lnurl", 1_000,
+            interval = com.noahwallet.recurring.RecurringInterval("month", 1), startAt = now + 86_400_000, maxOccurrences = 3_000_000_000,
+            createdAt = now, updatedAt = now)
+        val executor = com.noahwallet.recurring.RecurringRuntime.shared(compose.activity).executor
+        compose.activityRule.scenario.onActivity { activity -> activity.setContent { NoahTheme { com.noahwallet.ui.onboarding.OnboardingFrame(null) {
+            androidx.compose.foundation.layout.Column {
+                // The schedule page's Ends row.
+                androidx.compose.material3.Text(com.noahwallet.localization.trPlural("After {n} payments", migrated.maxOccurrences!!), Modifier.testTag("ends"))
+                com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, migrated) {}
+            }
+        } } } }
+        compose.onNodeWithTag("ends").assert(hasText("After 3,000,000,000 payments"))
+        compose.onNode(hasText("After 3,000,000,000 payments") and !hasTestTag("ends")).assertExists()
+        // The second stepper is the payment count: More adds one, with no 9,999 cap.
+        val more = compose.onAllNodesWithContentDescription("More")
+        assertEquals("the interval's stepper and the count's", 2, more.fetchSemanticsNodes().size)
+        more[1].performScrollTo().performClick()
+        compose.onNode(hasText("After 3,000,000,001 payments") and !hasTestTag("ends")).assertExists()
     }
 
     @Test fun suspendWalletAsksFirst() {

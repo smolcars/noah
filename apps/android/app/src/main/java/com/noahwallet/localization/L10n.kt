@@ -40,9 +40,14 @@ fun tr(source: String, vararg arguments: Any): String {
 }
 
 @Composable
-fun trPlural(source: String, count: Int, vararg arguments: Any): String {
+fun trPlural(source: String, count: Int, vararg arguments: Any): String = trPlural(source, count.toLong(), *arguments)
+
+/** A count past Int (a migrated schedule's billions) takes Int.MAX_VALUE's form: "other" in every language Noah ships. */
+@Composable
+fun trPlural(source: String, count: Long, vararg arguments: Any): String {
     val resources = LocalResources.current
     val locale = LocalConfiguration.current.locales[0]
     val id = resources.getIdentifier(L10n.resourceName(source), "plurals", com.noahwallet.BuildConfig.APPLICATION_ID)
-    return String.format(locale, resources.getQuantityString(id, count), java.text.NumberFormat.getIntegerInstance(locale).format(count), *arguments)
+    val quantity = count.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
+    return String.format(locale, resources.getQuantityString(id, quantity), java.text.NumberFormat.getIntegerInstance(locale).format(count), *arguments)
 }

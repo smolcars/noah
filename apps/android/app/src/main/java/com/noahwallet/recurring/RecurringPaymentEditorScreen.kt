@@ -128,15 +128,16 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
             "week" -> if (n == 1) tr("Every week") else tr("Every {n} weeks", n.toString())
             "month" -> if (n == 1) tr("Every month") else tr("Every {n} months", n.toString())
             else -> if (n == 1) tr("Every day") else tr("Every {n} days", n.toString())
-        }, n, 1..(if (unit == "day") 365 else 12), enabled = !saving) { every = it.toString() }
+        }, n.toLong(), 1L..(if (unit == "day") 365L else 12L), enabled = !saving) { every = it.toString() }
         FieldLabel(tr("First payment"))
         RecurringDatePicker(start, true, !saving) { start = it }
         FieldLabel(tr("Ends"))
         Segmented(listOf("never" to tr("Never"), "date" to tr("On a date"), "count" to tr("After")), endMode, enabled = !saving) { endMode = it }
         if (endMode == "date") RecurringDatePicker(end, false, !saving) { end = it }
         if (endMode == "count") {
-            val payments = count.toIntOrNull() ?: 1
-            Stepper(trPlural("After {n} payments", payments), payments, 1..9_999, enabled = !saving) { count = it.toString() }
+            // A Long: a migrated schedule may allow billions of payments, which saving keeps.
+            val payments = count.toLongOrNull() ?: 1
+            Stepper(trPlural("After {n} payments", payments), payments, 1L..Long.MAX_VALUE, enabled = !saving) { count = it.toString() }
         }
         if (interval.valid) {
             FieldLabel(tr("Next"))

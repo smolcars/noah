@@ -215,7 +215,7 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String) {
                 glyph = if (s.destinationType == "ark") SettingsIcons.ark else SettingsIcons.lightning, toasts = toasts)
             if (!s.unsupportedStorage) DetailRow(tr("Repeats"), intervalText(s.interval), toasts = toasts)
             if (s.status == "active") s.nextRunAt?.let { DetailRow(tr("Next"), recurringDate(it), toasts = toasts) }
-            DetailRow(tr("Ends"), s.endAt?.let { recurringDay(it) } ?: s.maxOccurrences?.let { trPlural("After {n} payments", it.toInt()) } ?: tr("Never"), toasts = toasts)
+            DetailRow(tr("Ends"), s.endAt?.let { recurringDay(it) } ?: s.maxOccurrences?.let { trPlural("After {n} payments", it) } ?: tr("Never"), toasts = toasts)
             DetailRow(tr("Paid"), trPlural("{n} payments", s.occurrencesPaid), toasts = toasts, last = s.runs.isEmpty())
             s.runs.firstOrNull()?.let { run ->
                 DetailRow(tr("Last"), recurringDate(run.attemptedAt) + " · " + when (run.status) { "success" -> tr("Sent"); "skipped" -> tr("Skipped"); else -> tr("Failed") },
