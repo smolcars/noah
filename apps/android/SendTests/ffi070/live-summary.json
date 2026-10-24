@@ -1,0 +1,150 @@
+{
+  "emulator": {
+    "avd": "noah-ffi-phone",
+    "serial": "emulator-5594",
+    "image": "android-35 google_apis arm64-v8a"
+  },
+  "stack": {
+    "name": "noah-bark08",
+    "arkServer": "http://10.0.2.2:13535",
+    "bitcoind": "http://10.0.2.2:28443",
+    "server": "http://10.0.2.2:13000",
+    "blocksMined": [
+      1282,
+      1283,
+      1284,
+      1285
+    ]
+  },
+  "builds": {
+    "from": {
+      "commit": "01c25f42 (bark-bolt-ffi 0.6.0)",
+      "apkSha256": "c2a70ab5f19dcea2c65c66aa4d5e64ea5c2c1a351f5ea8640882461fc8845aca",
+      "arm64LibSha256": "9aff8630a0fb102e20f2cf97ea221045ad8c1be8a54033265299ac4edc8d2815"
+    },
+    "to": {
+      "version": "bark-bolt-ffi 0.7.0",
+      "apkSha256": "504c662f56b498bd65edc3cdc5c69323ff5299d05d83bf4437946264b8a1f835",
+      "arm64LibSha256": "34ed0f7b9232accdd8bc889a9354806b13cd88b392eb6d2097d586c3ba9574a2"
+    },
+    "signerSha256": "fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c",
+    "gradle": "-PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443 -PnoahRegtestServerURL=http://10.0.2.2:13000"
+  },
+  "upgrade": {
+    "harness": "Ffi060UpgradeLiveTest create/fund/send on the 0.6.0 build, verify after adb install -r of the 0.7.0 build",
+    "baseline": {
+      "fingerprint": "8e4c145c",
+      "spendable": 4797,
+      "movements": [
+        {
+          "id": 1,
+          "status": "successful",
+          "subsystem": "bark.lightning_receive",
+          "kind": "receive",
+          "intended": 10000,
+          "effective": 9880,
+          "fee": 120
+        },
+        {
+          "id": 2,
+          "status": "successful",
+          "subsystem": "bark.arkoor",
+          "kind": "send",
+          "intended": -3000,
+          "effective": -3000,
+          "fee": 0
+        },
+        {
+          "id": 3,
+          "status": "successful",
+          "subsystem": "bark.lightning_send",
+          "kind": "send",
+          "intended": -2000,
+          "effective": -2083,
+          "fee": 83
+        }
+      ],
+      "schemaSha256": "ce93766121dd517f6e706cc83de027ff19b2a7a3ae5d24dd2718b68a240ee887",
+      "migration": 42
+    },
+    "verify": {
+      "fingerprint": "8e4c145c",
+      "movements": 3,
+      "spendable": 4797,
+      "schemaSha256": "ce93766121dd517f6e706cc83de027ff19b2a7a3ae5d24dd2718b68a240ee887",
+      "migration": 42
+    }
+  },
+  "autoBoard": {
+    "core": {
+      "claimedCoin": "8052815cfc4cfce003689ae6bdc6d6feea531577cb6732e98e335d959a4b5fc9:0 (30,000)",
+      "deposit": "46a4443f0b19cd6bcb99a486fdabb109e82a7438f462bf22af99c256e3c2110a:1 (60,000)",
+      "fundedAt": 1282,
+      "boardTx": {
+        "txid": "336504f5780e54ae344a2a94ff9155343f1863205685e52d5162ee6324b853cd",
+        "inputs": [
+          "46a4443f…:1"
+        ],
+        "outputs": [
+          54845,
+          5000
+        ],
+        "vsize": 154,
+        "feeSats": 155,
+        "confirmedAt": 1283
+      },
+      "claimedCoinAfter": "unspent, 30,000, 4 confirmations at 1285"
+    },
+    "stage": {
+      "walletID": "8e4c145c",
+      "claimed": "8052815cfc4cfce003689ae6bdc6d6feea531577cb6732e98e335d959a4b5fc9:0",
+      "confirmedCoins": [
+        "46a4443f0b19cd6bcb99a486fdabb109e82a7438f462bf22af99c256e3c2110a:1",
+        "8052815cfc4cfce003689ae6bdc6d6feea531577cb6732e98e335d959a4b5fc9:0"
+      ],
+      "confirmed": 90000,
+      "amount": 54845,
+      "net": 54515,
+      "arkFee": 330,
+      "chainFee": 155,
+      "feeRate": 1,
+      "reserveLeft": 35000,
+      "inputs": [
+        "46a4443f0b19cd6bcb99a486fdabb109e82a7438f462bf22af99c256e3c2110a:1"
+      ],
+      "boardTxid": "336504f5780e54ae344a2a94ff9155343f1863205685e52d5162ee6324b853cd",
+      "receipt": "Boarding submitted. Funds become spendable after the board completes. Actual onchain fee: 155 sats."
+    },
+    "confirmed": {
+      "arkSpendable": 59312,
+      "onchainConfirmed": 35000,
+      "boards": [
+        "4:successful:54515"
+      ]
+    }
+  },
+  "exitAll": {
+    "vtxos": [
+      "ed478acc4adf37251187ec5b2ffc07a9aa05a08802512550fef14616c8c9a030:0:3335:Spendable",
+      "bf14756295d6fb5b641a68b5dabda39f7156368509ba8ed4c566c0aa715c56d2:0:1252:Spendable",
+      "fc3410919a0138ac1d213686c866bec7b2e12c9c3543298e2f558c24a5d069d1:0:210:Spendable",
+      "f67b662220f4b2607b5a7a757bad60bcf284076ccfa60d89fe1cbdd99180bbc2:0:54515:Spendable"
+    ],
+    "excluded": [
+      "fc3410919a0138ac1d213686c866bec7b2e12c9c3543298e2f558c24a5d069d1:0"
+    ],
+    "refused": {},
+    "all": [
+      "f67b662220f4b2607b5a7a757bad60bcf284076ccfa60d89fe1cbdd99180bbc2:0"
+    ],
+    "amount": 54515,
+    "networkFees": 3316,
+    "claimFee": 1295,
+    "feeRate": 10,
+    "transactions": 1
+  },
+  "ui": {
+    "chooseAll": "Choose VTXOs, All: 54,515 included; 3,335 and 1,252 'Fees more than it's worth'; 210 'Too small to exit · under ₿330' (also in excludedVtxos); 1 · 1 transaction, network ~3,316, claim ~1,295, you get ~53,220 (choose-all.png)",
+    "renewFirst": "ExitGalleryTest choose-renew on the same emulator, fixtures: excluded 24,500 'Renew first' + detail line, refused 21,000 'Already spent', both not selectable and out of the total (choose-renew.png)"
+  }
+}

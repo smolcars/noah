@@ -1,5 +1,66 @@
 # Android native Send (M3) verification
 
+## bark-bolt-ffi 0.7.0 adoption (2026-10-24)
+
+Base `01c25f42`. Android pins **`io.github.niteshbalusu11:bark-bolt-ffi-android:0.7.0`**
+(Bark 0.8.0, `lib-0.8.0` `959a489f`, tag `b0f3a0fb`, native source `6961e825`, CI run
+40132677901). The AAR (`5f2df6b8…`) and POM (`0d70484d…`) match the release `SHA256SUMS`,
+and Gradle's verification metadata pins both. Every LOAD segment of the arm64-v8a,
+armeabi-v7a and x86_64 `libbark_bolt_ffi.so` is `0x4000`
+([artifact verification](ffi070/artifact-verification.txt)). The built APK carries the
+AAR's arm64 library byte for byte (`34ed0f7b…`).
+
+- **Typed exit errors.** Read by code (`ExitErrors`), never by message. Never-exitable
+  codes offer no "Continue without estimate"; the reason shows ("Already spent",
+  "Swept", else "This VTXO can't be exited.") and the VTXO bark names (or the one
+  estimated) leaves every selection on Choose VTXOs for the app's run. A refused start
+  keeps no uncertain attempt. Chain-unavailable codes and `INVALID_FEE_RATE` keep the
+  estimate-unavailable fallback. Check the chain counts status errors by code: short of
+  confirmed funds is direct "Needs on-chain funds" evidence with bark's `neededSats`,
+  not a failure, and the inference stays because bark 0.8.0 never reports it (its CPFP
+  path logs `InsufficientConfirmedFunds` and skips; `ExitError::InsufficientConfirmedFunds`
+  is never constructed in `lib-0.8.0`).
+- **"All" exclusions.** Choose VTXOs asks bark's whole-wallet estimate (no ids) for
+  `excludedVtxos` and shows each as "Renew first" with "Renew this VTXO in Settings →
+  VTXOs before exiting it.", not selectable and outside All and the total; locked and
+  dust labels come first.
+- **Auto-board.** The claimed-to-this-phone set goes to `prepareBoard` as
+  `excludedOutpoints` for the drain probe and the one reviewed preparation; the
+  retry-lower loop is gone, the input check and the submit re-check stay, and manual
+  Move to Ark excludes nothing.
+- **Uncertain board.** Kept recorded, uncertain and locked; never resubmitted; Check
+  status reconciles it from transactions, pending boards and board history.
+  `NotAttempted` still removes the attempt.
+- **Re-checks at submit.** A reorged confirmed-only parent (`PREPARED_INPUTS_UNAVAILABLE`)
+  keeps the unavailable-inputs copy; an unreachable chain source (`OTHER`) now reads as
+  not submitted for boards and the first prepared-send broadcast, since 0.7.0 throws
+  only before anything is recorded.
+
+**Tests.** Full run once, no exclusions:
+
+```sh
+cd apps/android && nix develop -c ./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest
+```
+
+See [JUnit totals](ffi070/junit-summary.json).
+
+**Live checks on `noah-bark08`** (owned AVD `noah-ffi-phone`, API 35 arm64, emulator-5594;
+the host acted only through `docker exec` and mined blocks 1282–1285;
+[live summary](ffi070/live-summary.json)):
+
+| Check | Result |
+| --- | --- |
+| In-place upgrade | `Ffi060UpgradeLiveTest` on the 0.6.0 build (`01c25f42`, arm64 `9aff8630…`) created wallet `8e4c145c`, received 10,000 over Lightning, sent 3,000 Ark and 2,000 Lightning. After `adb install -r` of the 0.7.0 build (same signer), `verify` matched the fingerprint, all 3 movements before and after a sync, 4,797 spendable, migration 42 and schema hash `ce937661…` |
+| Auto-board with a claimed coin | Core paid 30,000 (written to the claimed set, as a claim to this phone does) and 60,000, confirmed in 1282. `Ffi070LiveTest auto-board` ran the production `AutoBoardReview` and `executeOnchain`: one review of 54,845 whose only input is the deposit, 35,000 left on-chain (30,000 claimed + 5,000 reserve). Board `336504f5…` (154 vB, fee 155) confirmed in 1283 and completed after 1285; Ark spendable 4,797 → 59,312; the claimed coin is still unspent |
+| "All" estimate | The whole-wallet estimate returned and excluded the 210-sat dust VTXO. Noah's All was the 54,515 board VTXO (the 3,335 and 1,252 ones cost more than they're worth): ~3,316 network, ~1,295 claim at 10 sat/vB, 1 transaction. The app's Choose VTXOs page showed the same ([screenshot](ffi070/choose-all.png)) |
+
+"Renew first" needs a non-standard VTXO above dust, which this stack doesn't make
+cheaply; `ExitGalleryTest`'s `choose-renew` scene shows it on the same emulator from
+fixtures ([screenshot](ffi070/choose-renew.png)). Uncertain boards and the submit
+re-checks were not reproduced live (no reorg or failed checkpoint on the shared stack);
+JVM tests cover them. Home again showed "Backup failed"; not investigated here (the 0.6.0
+run traced the same message to the stack's server).
+
 ## bark-bolt-ffi 0.6.0 adoption (2026-10-22)
 
 Base `f42f175d`. Android pins **`io.github.niteshbalusu11:bark-bolt-ffi-android:0.6.0`**
