@@ -138,6 +138,8 @@ struct ExitVtxoDetailView: View {
             }
             .buttonStyle(SettingsActionStyle())
             .accessibilityIdentifier("exit-claim")
+            // If the daemon stops, this is how bark notices the claim confirming or being evicted.
+            checkAndCancel(progress, primary: false)
         case .needsFunds:
             Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(text.need) }
                 .buttonStyle(SettingsActionStyle())
@@ -147,8 +149,6 @@ struct ExitVtxoDetailView: View {
             Button(L10n.text("Done", locale: language)) { settings.back() }
                 .buttonStyle(SettingsActionStyle())
                 .accessibilityIdentifier("exit-done")
-        case .claiming:
-            EmptyView()
         default:
             checkAndCancel(progress, primary: progress.stale)
         }
