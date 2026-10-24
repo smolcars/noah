@@ -14,6 +14,7 @@ struct ExitVtxoDetailView: View {
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.exitPaneHeight) private var paneHeight
 
     init(id: String, model: OnchainModel? = nil) {
         self.id = id
@@ -34,10 +35,14 @@ struct ExitVtxoDetailView: View {
                 let text = ExitText(progress: progress, exit: exit, tip: tip, overview: model.overview, attempts: model.attempts,
                                     money: money, language: language)
                 ExitPanes {
-                    ExitHeadline(amount: money(text.amount))
-                    ExitStatusLine(text: text.status, kind: text.statusKind)
+                    if !settings.wide {
+                        ExitHeadline(amount: money(text.amount))
+                        ExitStatusLine(text: text.status, kind: text.statusKind)
+                    }
                     if progress.picture != .none {
-                        ExitStageView(scene: text.scene).frame(height: 300).padding(.top, 8).padding(.horizontal, -NoahTokens.Space.screen)
+                        ExitStageView(scene: text.scene)
+                            .frame(height: settings.wide ? max(280, paneHeight - 110) : 300).padding(.top, 8)
+                            .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
                     }
                     Text(verbatim: text.phase).noahText(NoahTokens.Typography.control).monospacedDigit()
                         .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .live ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
@@ -50,6 +55,10 @@ struct ExitVtxoDetailView: View {
                             .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 4)
                     }
                 } trailing: {
+                    if settings.wide {
+                        ExitHeadline(amount: money(text.amount))
+                        ExitStatusLine(text: text.status, kind: text.statusKind)
+                    }
                     if progress.phase == .needsFunds, let need = text.need {
                         ExitWarning(text: L10n.text("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need), locale: language))
                     }
@@ -86,27 +95,37 @@ struct ExitVtxoDetailView: View {
         .settingsChrome(nil)
         .onboardingHaptics(haptics)
         .modifier(OnchainScreen(model: model, presentsReview: false))
-        .onChange(of: model.quote?.id) { _, _ in if model.quote?.action == .progress { sheet = .check } }
+        .onChange(of: model.quote?.id) { _, _ in
+            if model.quote?.action == .progress { sheet = .check }
+            if model.quote?.action == .cancel { sheet = .cancel }
+        }
         .settingsSheet(item: Binding(get: { sheet }, set: { value in
-            if value == nil, model.quote?.action == .progress { model.invalidate() }
+            if value == nil, [.progress, .cancel].contains(model.quote?.action) { model.invalidate() }
             sheet = value
         }), locked: model.busy) { item in
             switch item {
             case .deposit(let need): ExitDepositSheet(need: need) { sheet = nil }
             case .check: checkSheet(money)
+            case .cancel: cancelSheet
             }
         }
-        .alert(L10n.text("Cancel exit?", locale: language), isPresented: Binding(get: { model.quote?.action == .cancel },
-                                                                                  set: { if !$0 { model.invalidate() } })) {
-            Button(L10n.text("Keep exiting", locale: language), role: .cancel) { model.invalidate() }
-            Button(L10n.text("Cancel exit", locale: language), role: .destructive) {
+    }
+
+    /// Today's cancel, behind a confirmation that stays in the trailing pane on wide windows.
+    private var cancelSheet: some View {
+        SettingsSheetBody(title: L10n.text("Cancel exit?", locale: language),
+                          line: L10n.text("Transactions already on-chain stay there. Your VTXO stays in your wallet and can exit again.", locale: language)) {
+            EmptyView()
+        } actions: {
+            SettingsSheetButtons(cancel: L10n.text("Keep exiting", locale: language), action: L10n.text("Cancel exit", locale: language),
+                                 destructive: true, enabled: model.quote?.action == .cancel, busy: model.busy, actionID: "exit-cancel-confirm",
+                                 onCancel: { sheet = nil; model.invalidate() }) {
                 Task {
                     await model.confirm()
+                    sheet = nil
                     haptics.play(model.error == nil ? .success : .error)
                 }
             }
-        } message: {
-            Text(verbatim: L10n.text("Transactions already on-chain stay there. Your VTXO stays in your wallet and can exit again.", locale: language))
         }
     }
 

@@ -3,19 +3,44 @@ import SwiftUI
 /// Pieces the emergency exit's pages share (docs/native-rewrite/design/exit.md).
 
 /// An exit page: the explanation and picture, then the details, over a fixed action area the
-/// content scrolls above, so the actions never cover it.
+/// content scrolls above, so the actions never cover it. Wide windows (the Duo open, iPad,
+/// landscape) put the explanation and picture in the leading pane and the details and actions
+/// in the trailing one; nothing crosses the fold. The page keeps its state across a pose change.
 struct ExitPanes<Leading: View, Trailing: View, Footer: View>: View {
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var footer: Footer
+    @Environment(\.settings) private var settings
 
     var body: some View {
-        SettingsScroll {
-            leading
-            trailing
+        if settings.wide {
+            HStack(spacing: 0) {
+                GeometryReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) { leading }
+                            .padding(.leading, 32).padding(.trailing, 24).padding(.top, 6).padding(.bottom, 24)
+                            .frame(maxWidth: .infinity, minHeight: proxy.size.height, alignment: .topLeading)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .environment(\.exitPaneHeight, proxy.size.height)
+                }
+                .frame(width: settings.leadingWidth)
+                SettingsScroll { trailing }
+                    .modifier(ExitFooter(buttons: footer))
+            }
+        } else {
+            SettingsScroll {
+                leading
+                trailing
+            }
+            .modifier(ExitFooter(buttons: footer))
         }
-        .modifier(ExitFooter(buttons: footer))
     }
+}
+
+extension EnvironmentValues {
+    /// The wide leading pane's height, for the picture that fills it.
+    @Entry var exitPaneHeight: CGFloat = 0
 }
 
 /// The fixed action area: opaque behind its buttons and lines, with a short fade above, so
@@ -282,11 +307,12 @@ struct ExitDepositSheet: View {
 
 /// A sheet's identity for `settingsSheet`.
 enum ExitSheet: Identifiable, Equatable {
-    case deposit(UInt64?), check
+    case deposit(UInt64?), check, cancel
     var id: String {
         switch self {
         case .deposit: "deposit"
         case .check: "check"
+        case .cancel: "cancel"
         }
     }
 }

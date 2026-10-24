@@ -439,6 +439,7 @@ private struct SettingsSheetModifier<Item: Identifiable & Equatable, Sheet: View
     /// "dismissed" must not close the pane sheet that replaces it.
     @State private var layout = Layout()
     @Environment(\.settings) private var settings
+    @Environment(\.settingsSheetLeading) private var leading
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private final class Layout { var wide = false }
@@ -460,7 +461,7 @@ private struct SettingsSheetModifier<Item: Identifiable & Equatable, Sheet: View
                 GeometryReader { proxy in
                     ZStack {
                         if settings.wide, let value = item {
-                            HomePaneSheet(width: proxy.size.width, onDismiss: { if !locked { item = nil } }) {
+                            HomePaneSheet(width: proxy.size.width - leading, onDismiss: { if !locked { item = nil } }) {
                                 ScrollView { sheet(value) }.scrollBounceBehavior(.basedOnSize).frame(maxHeight: proxy.size.height - 60)
                                     .fixedSize(horizontal: false, vertical: true)
                             }

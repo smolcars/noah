@@ -35,6 +35,13 @@ struct ExitStageScene: Equatable {
 
     init(picture: ExitProgress.Picture) { self.picture = picture }
 
+    /// The path an exit takes, before one starts (the warning and Review).
+    init(path tip: UInt32?, server: Bool = true) {
+        picture = .path
+        self.tip = tip ?? 0
+        showsServer = server
+    }
+
     init(_ progress: ExitProgress, tip: UInt32, wallet: String?, delta: UInt32?, txids: [String]) {
         picture = progress.picture
         // Before bark lists the path (Start), draw a round's usual four.
@@ -281,7 +288,7 @@ struct ExitStagePainter {
                 row.text(round, RX, yRowT + s + 14, size: 10.5, weight: .medium, color: colors.muted, display: false)
             }
             let base = UInt32(max(0, rowTip.rounded(.up)))
-            for height in (base > 3 ? base - 3 : 0)...max(base, 1) where Double(height) <= b.rowTip {
+            for height in (base > 3 ? base - 3 : 0)...max(base, 1) where Double(height) <= b.rowTip && b.rowTip > 0 {
                 let x = blockX(height, rowTip)
                 guard x < NX - 1, x > RX + s / 2 + 8 else { continue }
                 let fade = min(1, (x - RX - s / 2 - 8) / st)

@@ -15,6 +15,7 @@ struct ExitClaimView: View {
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
     @Environment(\.settingsFixture) private var fixture
+    @Environment(\.exitPaneHeight) private var paneHeight
 
     init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
 
@@ -40,6 +41,11 @@ struct ExitClaimView: View {
                          line: ready.compactMap(\.details.claimable_since?.height).max().map {
                              L10n.text("Unlocked at block {height}", $0.formatted(.number.locale(locale)), locale: language)
                          })
+            if settings.wide, let unlock = ready.compactMap(\.details.claimable_since?.height).max() {
+                ExitStageView(scene: { var scene = ExitStageScene(picture: .unlocked); scene.leaf = unlock - min(unlock, model.overview?.exitDelta ?? 144)
+                                       scene.unlock = unlock; scene.tip = model.overview?.tip ?? unlock; return scene }())
+                    .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
+            }
         } trailing: {
             SettingsSection(title: "To")
             option(L10n.text("Another wallet", locale: language), selected: !toPhone, id: "exit-claim-other") { choose(phone: false) }

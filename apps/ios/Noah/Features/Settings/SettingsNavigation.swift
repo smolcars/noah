@@ -26,6 +26,10 @@ enum SettingsPage: Hashable {
 
     /// A page opened from another page (not from the list) gets Back in the wide trailing pane.
     var isSubpage: Bool { root != self }
+
+    /// Emergency exit's pages take both panes on wide windows (the picture leading, the details
+    /// trailing), so the list steps aside and they always show Back.
+    var ownsPanes: Bool { root == .exit }
 }
 
 /// Home's stack around Settings: what's under it, where a row or a deep link leads.
@@ -106,6 +110,8 @@ extension EnvironmentValues {
     @Entry var settingsSubpage = false
     /// The page this view is in.
     @Entry var settingsPage: SettingsPage?
+    /// Wide windows: how much of the page is the leading pane, which pane sheets keep clear of.
+    @Entry var settingsSheetLeading: CGFloat = 0
     /// A payment request scanned outside Home (the QR hub opened from Receive's Profile) goes to Send.
     @Entry var scanPayment: (String) -> Void = { _ in }
 }
@@ -137,7 +143,7 @@ struct SettingsHost: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            if settings.wide {
+            if settings.wide && page?.ownsPanes != true {
                 SettingsList(selected: (page ?? .profile).root, sheet: $sheet, offset: $listOffset, leading: true)
                     .frame(width: settings.leadingWidth)
                     .safeAreaPadding(.bottom, 90)
@@ -162,7 +168,8 @@ struct SettingsHost: View {
 
     @ViewBuilder private var content: some View {
         if let page {
-            SettingsPageView(page: page).environment(\.settingsSubpage, page.isSubpage).environment(\.settingsPage, page)
+            SettingsPageView(page: page).environment(\.settingsSubpage, page.isSubpage || page.ownsPanes).environment(\.settingsPage, page)
+                .environment(\.settingsSheetLeading, page.ownsPanes && settings.wide ? settings.leadingWidth : 0)
         } else if settings.wide {
             SettingsPageView(page: .profile)
         } else {

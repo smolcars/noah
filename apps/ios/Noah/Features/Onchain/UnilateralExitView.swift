@@ -10,6 +10,7 @@ struct UnilateralExitView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
+    @Environment(\.exitPaneHeight) private var paneHeight
 
     init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
 
@@ -37,6 +38,10 @@ struct UnilateralExitView: View {
                             hairline: false, id: "exit-entry") { settings.open(.exitList) }
                     .padding(.top, 14)
             }
+            // Where an exit goes: your path down to the round's block.
+            ExitStageView(scene: ExitStageScene(path: model.overview?.tip))
+                .frame(height: settings.wide ? max(240, paneHeight - 200) : 236).padding(.top, 14)
+                .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
         } trailing: {
             VStack(spacing: 0) {
                 fact("clock", "Takes a day or more", model.overview?.exitDelta.map {
@@ -106,48 +111,18 @@ struct ExitChooseView: View {
     var body: some View {
         let money = ExitMoney(app: app, locale: locale)
         ExitPanes {
-            ExitSegment(all: $all)
-            if !all {
-                VStack(spacing: 0) {
-                    ForEach(Array(vtxos.enumerated()), id: \.element.id) { index, vtxo in
-                        ExitVtxoRow(vtxo: vtxo, uneconomic: uneconomic.contains(vtxo.id), selected: selected.contains(vtxo.id),
-                                    hairline: index < vtxos.count - 1) { toggle(vtxo) }
-                    }
-                }
-                .padding(.top, 6)
+            if settings.wide {
+                ExitHeadline(amount: money(value), line: estimate.map {
+                    L10n.plural("{n} VTXOs · {count} transactions", count: selection.count, $0.txsToBroadcast.formatted(), locale: language)
+                })
+                summary(money)
+            } else {
+                picker
             }
         } trailing: {
-            VStack(spacing: 0) {
-                SettingsDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
-                    L10n.text("{n} · {count} transactions", selection.count.formatted(), $0.txsToBroadcast.formatted(), locale: language)
-                } ?? selection.count.formatted(), numeric: true)
-                SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
-                SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
-                SettingsDetailRow(label: L10n.text("You get", locale: language),
-                                  value: estimate.map { money.about(ExitRules.received(amount: value, claimFee: $0.claimFeeSats)) } ?? money(value),
-                                  numeric: true, hairline: false)
-            }
-            .padding(.top, 22)
-            .opacity(estimating ? 0.5 : 1)
-            if short > 0 {
-                ExitWarning(text: L10n.text("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short), locale: language))
-                Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(short) }
-                    .buttonStyle(.plain).noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.failure).underline()
-                    .padding(.top, 4)
-                    .accessibilityIdentifier("exit-add-funds")
-            } else if let estimate, let confirmed = model.overview?.confirmed {
-                SettingsFine(text: L10n.text("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
-                                             money(confirmed), estimate.feeRateSatPerVb.formatted(), locale: language))
-            } else if !selection.isEmpty && !estimating {
-                SettingsFine(text: L10n.text("Fee estimate unavailable", locale: language))
-            }
-            if let estimate, value > 0, estimate.totalFeeSats >= value {
-                ExitWarning(text: L10n.text("Fees are more than these VTXOs are worth.", locale: language))
-            }
-            if all { leftOut(money) }
-            OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
+            if settings.wide { picker } else { summary(money) }
         } footer: {
-            if !all {
+            if !all && !settings.wide {
                 Text(verbatim: selection.isEmpty ? L10n.text("Choose the VTXOs to exit", locale: language)
                      : L10n.text("{amount} · fees {fee}", money(value), estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", locale: language))
                     .noahText(HomeText.amount).monospacedDigit()
@@ -183,6 +158,53 @@ struct ExitChooseView: View {
         }
     }
 
+    /// All / Choose and the VTXOs: in Choose they're checkboxes; wide windows list them in All too.
+    @ViewBuilder private var picker: some View {
+        ExitSegment(all: $all)
+        if !all || settings.wide {
+            VStack(spacing: 0) {
+                ForEach(Array(vtxos.enumerated()), id: \.element.id) { index, vtxo in
+                    ExitVtxoRow(vtxo: vtxo, uneconomic: uneconomic.contains(vtxo.id), selected: all ? nil : selected.contains(vtxo.id),
+                                hairline: index < vtxos.count - 1) { toggle(vtxo) }
+                }
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    /// The total, the fee estimate and what it means for your on-chain funds.
+    @ViewBuilder private func summary(_ money: ExitMoney) -> some View {
+            VStack(spacing: 0) {
+                SettingsDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
+                    L10n.text("{n} · {count} transactions", selection.count.formatted(), $0.txsToBroadcast.formatted(), locale: language)
+                } ?? selection.count.formatted(), numeric: true)
+                SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
+                SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
+                SettingsDetailRow(label: L10n.text("You get", locale: language),
+                                  value: estimate.map { money.about(ExitRules.received(amount: value, claimFee: $0.claimFeeSats)) } ?? money(value),
+                                  numeric: true, hairline: false)
+            }
+            .padding(.top, 22)
+            .opacity(estimating ? 0.5 : 1)
+            if short > 0 {
+                ExitWarning(text: L10n.text("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short), locale: language))
+                Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(short) }
+                    .buttonStyle(.plain).noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.failure).underline()
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("exit-add-funds")
+            } else if let estimate, let confirmed = model.overview?.confirmed {
+                SettingsFine(text: L10n.text("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
+                                             money(confirmed), estimate.feeRateSatPerVb.formatted(), locale: language))
+            } else if !selection.isEmpty && !estimating {
+                SettingsFine(text: L10n.text("Fee estimate unavailable", locale: language))
+            }
+            if let estimate, value > 0, estimate.totalFeeSats >= value {
+                ExitWarning(text: L10n.text("Fees are more than these VTXOs are worth.", locale: language))
+            }
+            if all { leftOut(money) }
+            OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
+    }
+
     /// All leaves out what can't or shouldn't exit, and says so.
     @ViewBuilder private func leftOut(_ money: ExitMoney) -> some View {
         let dust = vtxos.filter { $0.state == "Spendable" && $0.amount < ExitRules.dust }.reduce(0) { $0 + $1.amount }
@@ -213,6 +235,7 @@ struct ExitReviewView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
+    @Environment(\.exitPaneHeight) private var paneHeight
 
     init(ids: [String], model: OnchainModel = OnchainModel()) {
         self.ids = ids
@@ -228,6 +251,10 @@ struct ExitReviewView: View {
         ExitPanes {
             ExitHeadline(amount: L10n.text("Exit {amount}", money(amount), locale: language),
                          line: estimate.map { L10n.plural("{n} VTXOs · {count} transactions", count: ids.count, $0.txsToBroadcast.formatted(), locale: language) })
+            if settings.wide {
+                ExitStageView(scene: ExitStageScene(path: model.overview?.tip, server: false))
+                    .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
+            }
         } trailing: {
             if let quote {
                 VStack(spacing: 0) {
