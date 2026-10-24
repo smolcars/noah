@@ -144,6 +144,15 @@ class SettingsDeviceTest {
         assertNull(revealed.clipDeadline)
     }
 
+    @Test fun aRecurringAmountStaysAsTyped() {
+        host(EditorPage(null))
+        val field = compose.onNodeWithTag("recurring-amount-input")
+        field.performTextInput("1.5")
+        field.assert(hasText("1.5"))
+        field.performTextReplacement("-1000")
+        field.assert(hasText("-1000"))
+    }
+
     @Test fun suspendWalletAsksFirst() {
         assumeNotSuspended()
         host(SettingsDestination.Advanced)

@@ -38,6 +38,9 @@ import java.util.UUID
 
 internal fun limitedRecurringText(value: String, limit: Int) = value.take(limit).dropLastWhile { it.isHighSurrogate() }
 
+/** The amount field's sats, kept as typed: only a whole, positive number counts ("1.5" or "-1000" is 0, which saving rejects). */
+internal fun recurringAmount(text: String): Long = text.trim().takeIf { it.matches(Regex("[0-9]+")) }?.toLongOrNull() ?: 0
+
 internal fun recurringDefaultEvery(unit: String) = if (unit == "day") "14" else "1"
 
 internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault()): Long = Calendar.getInstance(zone).apply {
@@ -83,7 +86,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         val now = System.currentTimeMillis()
         val through = recurringEndDate(end)
         return RecurringPayment(original?.id ?: UUID.randomUUID().toString(), label.trim().ifEmpty { (destination?.first ?: "").take(32) },
-            destination?.first ?: "", destination?.second ?: "ark", amount.trim().takeIf { it.matches(Regex("[0-9]+")) }?.toLongOrNull() ?: 0,
+            destination?.first ?: "", destination?.second ?: "ark", recurringAmount(amount),
             comment = if (destination?.second == "lnurl") comment.take(140).trim() else "", interval = interval, startAt = start,
             endAt = if (endMode == "date") through else null, maxOccurrences = if (endMode == "count") count.toLongOrNull() ?: 0 else null,
             runs = original?.runs.orEmpty(), createdAt = original?.createdAt ?: now, updatedAt = now)
@@ -106,7 +109,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         FlowRow(Modifier.padding(top = 14.dp), itemVerticalAlignment = Alignment.Bottom) {
             val style = SettingsType.total.copy(fontSize = 44.sp, lineHeight = 50.sp)
             if (bip177) Text("₿", style = style, color = if (amount.isEmpty()) palette.muted else palette.foreground)
-            BasicTextField(amount, { amount = it.filter(Char::isDigit).take(16) }, Modifier.width(IntrinsicSize.Min).semantics { contentDescription = amountLabel }
+            BasicTextField(amount, { amount = it }, Modifier.width(IntrinsicSize.Min).semantics { contentDescription = amountLabel }
                 .testTag("recurring-amount-input"), enabled = !saving, textStyle = style.copy(color = palette.foreground), singleLine = true,
                 cursorBrush = SolidColor(palette.orange), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 decorationBox = { inner -> Box { if (amount.isEmpty()) Text("0", style = style, color = palette.muted); inner() } })
