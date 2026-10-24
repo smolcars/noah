@@ -264,6 +264,20 @@ class ExitStagesTest {
         assertEquals("without a refusal it's chosen as before", listOf(open, spent), ExitCosts.all(listOf(open, spent), mapOf("open" to cost, "spent" to cost)))
     }
 
+    @Test fun vtxosTheAllEstimateLeavesOutNeedRenewingAndCountNowhere() {
+        val open = vtxo("open", 31_000); val nonStandard = vtxo("non-standard", 20_000); val dust = vtxo("dust", 290); val locked = vtxo("locked", 9_000, "Locked")
+        val excluded = setOf("non-standard", "dust", "locked")
+        assertEquals(ExitCosts.Barred.renew, ExitCosts.barred(nonStandard, excluded = excluded))
+        assertEquals("today's dust label stays", ExitCosts.Barred.dust, ExitCosts.barred(dust, excluded = excluded))
+        assertEquals(ExitCosts.Barred.locked, ExitCosts.barred(locked, excluded = excluded))
+        assertEquals("renewing first is the advice, whatever else bark said", ExitCosts.Barred.renew,
+            ExitCosts.barred(nonStandard, mapOf("non-standard" to "This VTXO can't be exited."), excluded))
+        val cost = ExitCosts.Cost(5_533, 262, 4)
+        val all = ExitCosts.all(listOf(open, nonStandard, dust, locked), mapOf("open" to cost, "non-standard" to cost), excluded = excluded)
+        assertEquals("neither in All nor in its total", listOf(open), all); assertEquals(31_000L, all.sumOf { it.amount })
+        assertEquals("dust is still counted as today", 290L, ExitCosts.leftOut(listOf(open, nonStandard, dust), emptyMap()).dust)
+    }
+
     @Test fun uneconomicVtxosAreLabelledAndLeftOutOfAll() {
         val big = vtxo("big", 31_000); val small = vtxo("small", 5_000); val dust = vtxo("dust", 290); val locked = vtxo("locked", 710, "Locked"); val unknown = vtxo("unknown", 4_000)
         val costs = mapOf("big" to ExitCosts.Cost(5_533, 262, 4), "small" to ExitCosts.Cost(4_800, 262, 4), "unknown" to null)

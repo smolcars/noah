@@ -999,7 +999,9 @@
   <string name="gt_4e9ea48ffbfb99b0">"Remove payment"</string>
   <string name="gt_ed14fa72453957ca">"Remove screenshot"</string>
   <string name="gt_90c1689b0b74f032">"Renew"</string>
+  <string name="gt_02b452f0133be2e5">"Renew first"</string>
   <string name="gt_e32344915fd29a53">"Renew this VTXO"</string>
+  <string name="gt_98b1d38879903344">"Renew this VTXO in Settings → VTXOs before exiting it."</string>
   <string name="gt_b44a676f499031ee">"Renew this VTXO to keep it available."</string>
   <string name="gt_46e6876f99389ec8">"Renew %1$s"</string>
   <string name="gt_b72aebe90513cba1">"Renew %1$s"</string>

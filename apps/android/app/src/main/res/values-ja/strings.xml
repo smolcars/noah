@@ -999,7 +999,9 @@
   <string name="gt_4e9ea48ffbfb99b0">"支払いを削除"</string>
   <string name="gt_ed14fa72453957ca">"スクリーンショットを削除"</string>
   <string name="gt_90c1689b0b74f032">"更新"</string>
+  <string name="gt_02b452f0133be2e5">"先に更新してください"</string>
   <string name="gt_e32344915fd29a53">"このVTXOを更新"</string>
+  <string name="gt_98b1d38879903344">"出金する前に「設定」→「VTXO」でこのVTXOを更新してください。"</string>
   <string name="gt_b44a676f499031ee">"引き続き使えるよう、このVTXOを更新してください。"</string>
   <string name="gt_46e6876f99389ec8">"%1$s を更新"</string>
   <string name="gt_b72aebe90513cba1">"%1$s個を更新"</string>

@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1478,
-  "sourceKeys": 1507,
+  "catalogEntries": 1480,
+  "sourceKeys": 1509,
   "coverage": {
     "ios": {
       "used": [
@@ -2207,7 +2207,9 @@
         "Remove payment",
         "Remove screenshot",
         "Renew",
+        "Renew first",
         "Renew this VTXO",
+        "Renew this VTXO in Settings → VTXOs before exiting it.",
         "Renew this VTXO to keep it available.",
         "Renew {amount}",
         "Renew {n}",

@@ -999,7 +999,9 @@
   <string name="gt_4e9ea48ffbfb99b0">"Ta bort betalning"</string>
   <string name="gt_ed14fa72453957ca">"Ta bort skärmbild"</string>
   <string name="gt_90c1689b0b74f032">"Förnya"</string>
+  <string name="gt_02b452f0133be2e5">"Förnya först"</string>
   <string name="gt_e32344915fd29a53">"Förnya den här VTXO:n"</string>
+  <string name="gt_98b1d38879903344">"Förnya den här VTXO:n under Inställningar → VTXO:er innan du tar ut den."</string>
   <string name="gt_b44a676f499031ee">"Förnya den här VTXO:n så att den förblir tillgänglig."</string>
   <string name="gt_46e6876f99389ec8">"Förnya %1$s"</string>
   <string name="gt_b72aebe90513cba1">"Förnya %1$s"</string>

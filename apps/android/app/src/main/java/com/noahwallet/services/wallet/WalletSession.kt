@@ -428,6 +428,7 @@ class WalletSession internal constructor(
             recordClaim = recordClaim, newRun = newRun, shortOfFunds = shortOfFunds) }
     }
     internal suspend fun exitCosts(ids: List<String>): Map<String, com.noahwallet.onchain.ExitCosts.Cost?> = withM6 { onchainOperations(it).exitCosts(ids) }
+    internal suspend fun exitExcluded(): Set<String> = withM6 { onchainOperations(it).exitExcluded() }
     suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->
         onchainMutation.withLock { onchainOperations(handles).abandonUnsubmittedAutoBoard(quote) }
     }

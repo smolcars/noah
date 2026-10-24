@@ -50,6 +50,11 @@ internal class OnchainOperations(
             catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { refusal(failure, listOf(id)); null }
         }
     }
+    /** What bark's "All" estimate leaves out (SDK 0.7.0): non-standard and dust VTXOs, which need renewing before they can exit. */
+    suspend fun exitExcluded(): Set<String> {
+        if (!ready()) fail(OnchainFailure.unavailable)
+        return wallet.exitFee(emptyList(), null).excludedVtxos.map { it.vtxoId }.toSet()
+    }
     private suspend fun renewable(ids: List<String>, threshold: UInt): Boolean {
         val tip = wallet.tip()
         val expiring = wallet.expiring(threshold)

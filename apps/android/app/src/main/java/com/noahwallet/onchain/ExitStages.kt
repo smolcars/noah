@@ -288,19 +288,20 @@ internal object ExitCosts {
     fun uneconomic(vtxo: VtxoModel, cost: Cost?) = vtxo.eligible && cost != null && cost.total >= vtxo.amount
 
     /** Why Choose VTXOs can't select a VTXO, or null: today's rules (in use, too small, not spendable) come first. */
-    enum class Barred { locked, dust, state, refused }
-    /** [refused]: VTXOs bark refused to exit, with their reason. */
-    fun barred(vtxo: VtxoModel, refused: Map<String, String> = emptyMap()): Barred? = when {
+    enum class Barred { locked, dust, state, renew, refused }
+    /** [refused]: VTXOs bark refused to exit, with their reason; [excluded]: ones bark's "All" estimate leaves out. */
+    fun barred(vtxo: VtxoModel, refused: Map<String, String> = emptyMap(), excluded: Set<String> = emptySet()): Barred? = when {
         vtxo.state == "Locked" -> Barred.locked
         vtxo.amount < ExitRules.dust -> Barred.dust
         !vtxo.eligible -> Barred.state
+        vtxo.id in excluded -> Barred.renew
         vtxo.id in refused -> Barred.refused
         else -> null
     }
 
     /** "All": every VTXO that can exit and is worth exiting. An unknown cost isn't evidence against it. */
-    fun all(vtxos: List<VtxoModel>, costs: Map<String, Cost?>, refused: Map<String, String> = emptyMap()) =
-        vtxos.filter { barred(it, refused) == null && !uneconomic(it, costs[it.id]) }
+    fun all(vtxos: List<VtxoModel>, costs: Map<String, Cost?>, refused: Map<String, String> = emptyMap(), excluded: Set<String> = emptySet()) =
+        vtxos.filter { barred(it, refused, excluded) == null && !uneconomic(it, costs[it.id]) }
 
     /** What "All" leaves out: too small to exit (today's dust rule), locked, and costing more than they're worth. */
     data class LeftOut(val dust: Long, val locked: Long, val uneconomic: Long)

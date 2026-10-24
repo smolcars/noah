@@ -35449,6 +35449,42 @@
         }
       }
     },
+    "Renew first": {
+      "comment": "GT gt_02b452f0133be2e5; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew first"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renuévalo primero"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先に更新してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 갱신하세요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förnya först"
+          }
+        }
+      }
+    },
     "Renew this VTXO": {
       "comment": "GT gt_e32344915fd29a53; arguments: none",
       "extractionState": "manual",
@@ -35481,6 +35517,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Förnya den här VTXO:n"
+          }
+        }
+      }
+    },
+    "Renew this VTXO in Settings → VTXOs before exiting it.": {
+      "comment": "GT gt_98b1d38879903344; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renew this VTXO in Settings → VTXOs before exiting it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renueva este VTXO en Ajustes → VTXOs antes de sacarlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出金する前に「設定」→「VTXO」でこのVTXOを更新してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출금하기 전에 설정 → VTXO에서 이 VTXO를 갱신하세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förnya den här VTXO:n under Inställningar → VTXO:er innan du tar ut den."
           }
         }
       }

@@ -102,6 +102,13 @@ class OnchainOperationsTest {
             assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
         }
     }
+    @Test fun theAllEstimateNamesTheVtxosItLeavesOut() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.excludedVtxos = listOf(ExcludedExitVtxo("dusty", 200u, BarkErrorCode.EXIT_NON_STANDARD_VTXO, "untrusted diagnostic"),
+            ExcludedExitVtxo("unloadable", 9_000u, BarkErrorCode.OTHER, "untrusted diagnostic"))
+        assertEquals(setOf("dusty", "unloadable"), ops.exitExcluded())
+        assertEquals("one whole-wallet estimate, no ids", 1 to emptyList<String>(), wallet.estimates to wallet.estimatedIds)
+        assertTrue(wallet.calls.isEmpty())
+    } }
     @Test fun anUnavailableChainKeepsTodaysEstimateFallbackAndNothingIsRefused() = runBlocking {
         for (code in ExitErrors.chain + BarkErrorCode.INVALID_FEE_RATE) fixture { wallet, _, journal, _ ->
             val refused = mutableMapOf<String, String>()
@@ -306,9 +313,11 @@ class OnchainOperationsTest {
         var estimateError: Exception? = null
         var estimates = 0
         val estimatedIds = mutableListOf<String>()
+        /** What bark's "All" estimate (no ids) leaves out. */
+        var excludedVtxos = emptyList<ExcludedExitVtxo>()
         override suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate {
             estimates++; estimatedIds += ids; estimateError?.let { throw it }
-            return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u, emptyList())
+            return EmergencyExitFeeEstimate(7630u, 1295u, 8925u, 10u, 2u, if (ids.isEmpty()) excludedVtxos else emptyList())
         }
         override suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = bound.remove(quote.preparedBoard?.id) == quote
         override suspend fun vtxos() = items

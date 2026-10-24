@@ -999,7 +999,9 @@
   <string name="gt_4e9ea48ffbfb99b0">"결제 삭제"</string>
   <string name="gt_ed14fa72453957ca">"화면 캡처 삭제"</string>
   <string name="gt_90c1689b0b74f032">"갱신"</string>
+  <string name="gt_02b452f0133be2e5">"먼저 갱신하세요"</string>
   <string name="gt_e32344915fd29a53">"이 VTXO 갱신"</string>
+  <string name="gt_98b1d38879903344">"출금하기 전에 설정 → VTXO에서 이 VTXO를 갱신하세요."</string>
   <string name="gt_b44a676f499031ee">"계속 사용할 수 있도록 이 VTXO를 갱신하세요."</string>
   <string name="gt_46e6876f99389ec8">"%1$s 갱신"</string>
   <string name="gt_b72aebe90513cba1">"%1$s개 갱신"</string>

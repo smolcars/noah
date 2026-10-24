@@ -255,12 +255,17 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { missing.associateWith { null } }
     }
     val costs = classified?.takeIf { it.first == eligible }?.second
+    // bark's "All" estimate names the VTXOs it would leave out; the last answer stands while a new one fails.
+    val excluded by produceState(emptySet<String>(), eligible, retries) {
+        value = try { withContext(Dispatchers.IO) { app.session.exitExcluded() } }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { value }
+    }
     ExitChooseContent(vtxos, costs, model.overview?.confirmed, loading = model.overview == null && model.loading, ready = model.overview != null,
         suspended = app.isWalletSuspended, busy = model.busy, money = { money(app, it) }, back = nav.back,
         // bark's estimate for exactly the selection (shared transactions once); read-only.
         estimate = { ids -> try { withContext(Dispatchers.IO) { app.session.quoteOnchain(OnchainAction.startExit, ids) } }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } },
-        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }, refused = ExitErrors.refused) { OnchainStatus(app, model) }
+        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }, refused = ExitErrors.refused, excluded = excluded) { OnchainStatus(app, model) }
     deposit?.let { need -> if (!app.isWalletSuspended) ExitDepositSheet(app, need) { deposit = null } }
 }
 
@@ -269,7 +274,7 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
                                suspended: Boolean, busy: Boolean, money: (Long) -> String, back: (() -> Unit)?,
                                estimate: suspend (List<String>) -> OnchainQuote?, review: (List<String>) -> Unit, deposit: (Long) -> Unit,
                                initial: List<String>? = null, retry: () -> Unit = {}, refused: Map<String, String> = emptyMap(),
-                               status: @Composable () -> Unit = {}) {
+                               excluded: Set<String> = emptySet(), status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current
@@ -277,10 +282,11 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     var picked by rememberSaveable { mutableStateOf(initial.orEmpty()) }
     val vtxos = all.sortedByDescending { it.amount }
     // "All" is fixed only once every VTXO is classified: until then it might hold one that costs more than it's worth.
-    val unknown = if (costs == null) 0 else vtxos.count { ExitCosts.barred(it, refused) == null && costs[it.id] == null }
+    val unknown = if (costs == null) 0 else vtxos.count { ExitCosts.barred(it, refused, excluded) == null && costs[it.id] == null }
     val classified = costs != null && unknown == 0
     // No selection or total holds a VTXO that can't be selected, whatever was picked before.
-    val chosen = if (everything) ExitCosts.all(vtxos, costs.orEmpty(), refused) else vtxos.filter { it.id in picked && ExitCosts.barred(it, refused) == null }
+    val chosen = if (everything) ExitCosts.all(vtxos, costs.orEmpty(), refused, excluded)
+        else vtxos.filter { it.id in picked && ExitCosts.barred(it, refused, excluded) == null }
     val ids = chosen.map { it.id }
     // Only when the selection changes: never on the page's periodic read.
     val quote by produceState<OnchainQuote?>(null, ids, classified) {
@@ -309,7 +315,7 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
             else -> Column(Modifier.padding(top = 6.dp)) {
                 vtxos.forEachIndexed { index, vtxo ->
                     ChooseRow(vtxo, costs?.get(vtxo.id), if (everything) null else vtxo.id in picked, money, divider = index < vtxos.lastIndex,
-                        refused = refused) {
+                        refused = refused, excluded = excluded) {
                         haptics.selection(); picked = if (vtxo.id in picked) picked - vtxo.id else picked + vtxo.id
                     }
                 }
@@ -359,19 +365,20 @@ internal fun TotalRow(label: String, value: String) {
 
 /**
  * A VTXO to choose (prototype `vtxoRow`): a checkbox in Choose, the coin in All; ones that can't exit are dimmed.
- * [refused]: VTXOs bark refused to exit, with their reason.
+ * [refused]: VTXOs bark refused to exit, with their reason; [excluded]: ones bark's "All" estimate leaves out.
  */
 @Composable
 private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?, money: (Long) -> String, divider: Boolean,
-                      refused: Map<String, String>, toggle: () -> Unit) {
+                      refused: Map<String, String>, excluded: Set<String>, toggle: () -> Unit) {
     val palette = LocalPalette.current
     val uneconomic = ExitCosts.uneconomic(vtxo, cost)
-    val barred = ExitCosts.barred(vtxo, refused)
+    val barred = ExitCosts.barred(vtxo, refused, excluded)
     val exitable = barred == null
     val sub = when (barred) {
         ExitCosts.Barred.locked -> tr("In use right now")
         ExitCosts.Barred.dust -> tr("Too small to exit · under {amount}", money(ExitRules.dust))
         ExitCosts.Barred.state -> vtxo.status
+        ExitCosts.Barred.renew -> tr("Renew first")
         ExitCosts.Barred.refused -> tr(refused.getValue(vtxo.id))
         null -> if (uneconomic) tr("Fees more than it’s worth") else expiresText(vtxo)
     }
@@ -395,6 +402,7 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
         Column(Modifier.weight(1f)) {
             Text(money(vtxo.amount), style = HomeType.amount, color = palette.foreground, maxLines = 1)
             Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.small, color = palette.muted)
         }
     }
 }
