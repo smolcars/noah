@@ -128,6 +128,94 @@ struct ExitTypedErrorTests {
         #expect(await model.exitExclusions().isEmpty)
     }
 
+    static let fee = EmergencyExitFeeEstimate(exitBroadcastFeeSats: 900, claimFeeSats: 300, totalFeeSats: 1_200, feeRateSatPerVb: 2,
+                                              txsToBroadcast: 2, excludedVtxos: [])
+
+    /// bark refused the start itself: nothing was broadcast, so no attempt is kept, and the reason shows.
+    /// Any other failure of the start stays uncertain.
+    @Test func aRefusedStartDropsItsAttemptButOtherFailuresStayUncertain() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        let refusal = Self.error(.exitVtxoAlreadyExited, vtxo: "b")
+        var access = Self.access { _ in Self.fee }
+        access.start = { _ in throw refusal }
+        let quote = try await WalletSession.startQuote(ids: ["a", "b"], access: access)
+        await #expect(throws: refusal) { try await WalletSession.executeStart(quote, journal: journal, access: access) }
+        #expect(try await journal.loadAll().isEmpty && ExitRefusal.message(refusal) == "This VTXO can't be exited.")
+        access.start = { _ in throw Self.error(.other) }
+        let again = try await WalletSession.startQuote(ids: ["a", "b"], access: access)
+        await #expect(throws: OnchainFailure.uncertain) { try await WalletSession.executeStart(again, journal: journal, access: access) }
+        #expect(try await journal.loadAll().map(\.id) == [again.id])
+    }
+
+    /// bark marks the VTXOs it can, in order, and refuses B: A is exiting, B is never exitable.
+    actor PartlyRefused {
+        var spendable: [String: UInt64] = ["p3-a": 20_000, "p3-b": 30_000, "p3-c": 25_000]
+        var exits: [String] = []
+        func start(_ ids: [String]) throws {
+            for id in ids {
+                if id == "p3-b" { throw ExitTypedErrorTests.error(.exitNonStandardVtxo, vtxo: id) }
+                guard spendable.removeValue(forKey: id) != nil else { continue } // bark skips an active exit
+                exits.append(id)
+            }
+        }
+    }
+
+    @MainActor @Test func aPartlyRefusedStartRetriesWithoutDuplicatesAfterAReload() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let wallet = PartlyRefused()
+        var access = Self.access { _ in Self.fee }
+        access.spendable = { await wallet.spendable }
+        access.start = { try await wallet.start($0) }
+        let calls = OnchainModelTests.Calls()
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.quote = { [access] _, ids, _, _ in try await WalletSession.startQuote(ids: ids, access: access) }
+        dependencies.execute = { [access] in try await WalletSession.executeStart($0, journal: OnchainOperationJournal(file: file), access: access) }
+        let model = OnchainModel(dependencies: dependencies)
+        await model.review(.startExit, ids: ["p3-a", "p3-b"])
+        #expect(await !model.confirm())
+        #expect(model.error == "This VTXO can't be exited.")
+        #expect(await wallet.exits == ["p3-a"])
+        // After a reload: no attempt is kept, B stays refused for the run, and A is no longer spendable.
+        let reloaded = OnchainOperationJournal(file: file)
+        #expect(try await reloaded.loadAll().isEmpty)
+        #expect(OnchainModel.refused["p3-b"]?.renewFirst == true)
+        await #expect(throws: OnchainFailure.changed) { try await WalletSession.startQuote(ids: ["p3-a", "p3-b"], access: access) }
+        // What Choose offers now: neither A (not spendable) nor B (refused).
+        let vtxos = await wallet.spendable.map { ExitProgressTests.vtxo($0.key, $0.value) }
+        let costs = Dictionary(vtxos.map { ($0.id, OnchainModel.refused[$0.id].map(ExitEconomics.Cost.refused) ?? .worthIt) },
+                               uniquingKeysWith: { a, _ in a })
+        let retry = ExitEconomics.all(vtxos, costs: costs).map(\.id)
+        #expect(retry == ["p3-c"])
+        let quote = try await WalletSession.startQuote(ids: retry, access: access)
+        _ = try await WalletSession.executeStart(quote, journal: reloaded, access: access)
+        #expect(await wallet.exits == ["p3-a", "p3-c"])
+    }
+
+    @MainActor @Test func refusalsStayForTheRestOfTheAppRun() async {
+        let calls = OnchainModelTests.Calls()
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.estimate = { _ in throw Self.error(.exitVtxoSwept, vtxo: "run-swept") }
+        _ = await OnchainModel(dependencies: dependencies).exitEstimate(["run-swept"])
+        // Another screen's model, and a later estimate that works, don't forget it.
+        dependencies.estimate = { _ in Self.fee }
+        _ = await OnchainModel(dependencies: dependencies).exitEstimate(["run-swept"])
+        #expect(OnchainModel.refused["run-swept"] == .init(code: .exitVtxoSwept, vtxoID: "run-swept"))
+        // A one-VTXO price refused without a name is that VTXO's; a review's named refusal is kept too.
+        dependencies.estimate = { _ in throw Self.error(.exitCyclicTransactions) }
+        _ = await OnchainModel(dependencies: dependencies).exitCosts([ExitProgressTests.vtxo("run-cyclic", 30_000)])
+        #expect(OnchainModel.refused["run-cyclic"]?.code == .exitCyclicTransactions)
+        dependencies.quote = { _, _, _, _ in throw Self.error(.exitDustLimit, vtxo: "run-dust") }
+        await OnchainModel(dependencies: dependencies).review(.startExit, ids: ["run-dust"])
+        #expect(OnchainModel.refused["run-dust"]?.renewFirst == true)
+        // A chain source that's down refuses nothing.
+        dependencies.estimate = { _ in throw Self.error(.exitTipRetrievalFailure) }
+        _ = await OnchainModel(dependencies: dependencies).exitCosts([ExitProgressTests.vtxo("run-chain", 30_000)])
+        #expect(OnchainModel.refused["run-chain"] == nil)
+    }
+
     @Test func progressReadsEachExitsErrorByItsCode() {
         func status(_ id: String, _ error: BarkError?) -> ExitProgressStatus {
             .init(vtxoId: id, state: .processing(tipHeight: 101, transactions: []), error: error)

@@ -158,8 +158,10 @@ struct ExitChooseView: View {
         .task(id: vtxos.filter(\.eligible).map(\.id) + [String(retry)]) {
             let eligible = vtxos.filter(\.eligible)
             costs = costs.filter { id, cost in cost != .failed && eligible.contains { $0.id == id } }
-            // What bark's whole-wallet exit leaves out needs renewing first: never in All or the total.
-            for (id, refusal) in await model.exitExclusions() where eligible.contains(where: { $0.id == id }) {
+            // What bark's whole-wallet exit leaves out needs renewing first, and what it refused this app run
+            // stays refused: never in All or the total.
+            await model.exitExclusions()
+            for (id, refusal) in OnchainModel.refused where eligible.contains(where: { $0.id == id }) {
                 costs[id] = .refused(refusal)
             }
             guard !Task.isCancelled else { return }

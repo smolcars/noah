@@ -196,6 +196,7 @@ final class OnchainModel {
                 estimateFallback = failure.review
             }
         } catch {
+            Self.remember(ExitRefusal(error))
             self.error =
                 (error as? OnchainFailure)?.errorDescription ?? ExitRefusal.message(error)
                 ?? "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
@@ -234,7 +235,8 @@ final class OnchainModel {
                 catch { self.error = OnchainFailure.changed.errorDescription }
             }
         } catch {
-            // A typed exit error here came from the re-quote, before anything was submitted.
+            // A typed exit error here came from the re-quote or bark's refused start: nothing was broadcast.
+            Self.remember(ExitRefusal(error))
             self.error =
                 (error as? OnchainFailure)?.errorDescription ?? ExitRefusal.message(error) ?? OnchainFailure.uncertain.errorDescription
         }
@@ -269,6 +271,12 @@ final class OnchainModel {
     /// Why bark refused the last exit estimate, when it can never exit what was asked.
     private(set) var exitRefusal: ExitRefusal?
 
+    /// The VTXOs bark named as never exitable, for the rest of the app run: Choose VTXOs never offers them.
+    private(set) static var refused: [String: ExitRefusal] = [:]
+    private static func remember(_ refusal: ExitRefusal?) {
+        if let refusal, let id = refusal.vtxoID { refused[id] = refusal }
+    }
+
     /// The exit estimate for a selection, or nil when it can't be read (the review still offers
     /// "Continue without estimate", unless bark refused: `exitRefusal`). Read-only.
     func exitEstimate(_ ids: [String]) async -> EmergencyExitFeeEstimate? {
@@ -279,24 +287,31 @@ final class OnchainModel {
             return estimate
         } catch {
             exitRefusal = ExitRefusal(error)
+            Self.remember(exitRefusal)
             return nil
         }
     }
 
     /// The VTXOs bark's whole-wallet exit leaves out, to renew first; none when that can't be read
     /// (each VTXO's own estimate still refuses them).
+    @discardableResult
     func exitExclusions() async -> [String: ExitRefusal] {
         guard await dependencies.ready(), let excluded = try? await dependencies.exclusions() else { return [:] }
         // Non-standard, or (code Other) not loadable: either way renewing it is the way out.
-        return Dictionary(excluded.map { ($0.vtxoId, ExitRefusal(code: .exitNonStandardVtxo, vtxoID: $0.vtxoId)) },
-                          uniquingKeysWith: { a, _ in a })
+        let refusals = Dictionary(excluded.map { ($0.vtxoId, ExitRefusal(code: .exitNonStandardVtxo, vtxoID: $0.vtxoId)) },
+                                  uniquingKeysWith: { a, _ in a })
+        refusals.values.forEach(Self.remember)
+        return refusals
     }
 
     /// Decision 4: each VTXO's classification, `.failed` where bark couldn't estimate it.
     func exitCosts(_ vtxos: [VtxoModel]) async -> [String: ExitEconomics.Cost] {
         guard await dependencies.ready() else { return Dictionary(uniqueKeysWithValues: vtxos.map { ($0.id, .failed) }) }
         let estimate = dependencies.estimate
-        return await ExitEconomics.classify(vtxos) { try await estimate($0).totalFeeSats }
+        let costs = await ExitEconomics.classify(vtxos) { try await estimate($0).totalFeeSats }
+        // A one-VTXO estimate's refusal is that VTXO's, whether or not bark names it.
+        for (id, cost) in costs { if let refusal = cost.refusal { Self.refused[id] = refusal } }
+        return costs
     }
 
     func acknowledge(_ id: UUID) async {

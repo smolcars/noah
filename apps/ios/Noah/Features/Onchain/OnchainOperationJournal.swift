@@ -184,6 +184,12 @@ actor OnchainOperationJournal {
                 try save(try loadAll().filter { $0.id != quote.id })
                 throw failure
             }
+            // bark refused the start (FFI 0.7.0, never exitable): nothing is broadcast, so the attempt goes and
+            // its reason shows. Any VTXOs it marked before refusing, a new start skips.
+            if quote.action == .startExit, ExitRefusal(error) != nil {
+                try save(try loadAll().filter { $0.id != quote.id })
+                throw error
+            }
             throw OnchainFailure.uncertain
         }
     }

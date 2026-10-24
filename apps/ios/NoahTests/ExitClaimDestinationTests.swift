@@ -294,8 +294,10 @@ struct ExitClaimExecutionTests {
                 }
                 Issue.record("Estimator must fail")
             } catch {
-                #expect((error is ExitEstimateUnavailable) == (code == .other))
-                if code != .other { #expect((error as? BarkError)?.code == code) }
+                // FFI 0.7.0: transport (Other), fee-rate overflow and chain-source failures fall back.
+                let fallback = ([.other, .invalidFeeRate] + ExitTypedErrorTests.chain).contains(code)
+                #expect((error is ExitEstimateUnavailable) == fallback)
+                if !fallback { #expect((error as? BarkError)?.code == code) }
             }
         }
         #expect(await wallet.ownershipChecks == [Self.externalAddress])
