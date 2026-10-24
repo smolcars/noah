@@ -25741,42 +25741,6 @@
         }
       }
     },
-    "Last checked": {
-      "comment": "GT gt_0c0c351a971353b5; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last checked"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Última revisión"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最終確認"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마지막 확인"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senast kontrollerad"
-          }
-        }
-      }
-    },
     "Last good backup {date}": {
       "comment": "GT gt_ec3b8bf1e0261664; arguments: date",
       "extractionState": "manual",
@@ -38361,6 +38325,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Registrerad"
+          }
+        }
+      }
+    },
+    "Recorded at": {
+      "comment": "GT gt_e4cea0827a11aed0; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recorded at"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrado en"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録時"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 시점"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrerad vid"
           }
         }
       }

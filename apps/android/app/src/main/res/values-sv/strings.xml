@@ -724,7 +724,6 @@
   <string name="gt_fb6ee42c1c065f89">"Senaste säkerhetskopia %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"Senaste säkerhetskopian %1$s"</string>
   <string name="gt_1a196f3801a01458">"Senaste säkerhetskopiering %1$s"</string>
-  <string name="gt_0c0c351a971353b5">"Senast kontrollerad"</string>
   <string name="gt_ec3b8bf1e0261664">"Senaste lyckade säkerhetskopia %1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"Senast genomsökt"</string>
   <string name="gt_4d7b2bf37878962a">"Senaste blockhöjd"</string>
@@ -1076,6 +1075,7 @@
   <string name="gt_3fed24d17905877f">"Mottagare verifierad"</string>
   <string name="gt_c8233e7b49d45fa5">"Betalningen har stämts av. Metadata för upprepning kunde inte sparas"</string>
   <string name="gt_c7175fa7a0db0d3c">"Registrerad"</string>
+  <string name="gt_e4cea0827a11aed0">"Registrerad vid"</string>
   <string name="gt_3b208c8df3744b19">"Återför dina Ark-medel till blockkedjan om Ark-servern inte är tillgänglig. Nöduttag kräver bekräftade medel på blockkedjan för sändningsavgifter, och ett tidslås måste löpa ut innan medlen kan lösas in."</string>
   <string name="gt_41edd3f47328da5a">"Återställningsfras"</string>
   <string name="gt_512d764f27c017d9">"Återställningsfras hittad"</string>

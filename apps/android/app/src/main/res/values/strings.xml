@@ -724,7 +724,6 @@
   <string name="gt_fb6ee42c1c065f89">"Last backup %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"Last backup %1$s"</string>
   <string name="gt_1a196f3801a01458">"Last backup %1$s"</string>
-  <string name="gt_0c0c351a971353b5">"Last checked"</string>
   <string name="gt_ec3b8bf1e0261664">"Last good backup %1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"Last scanned"</string>
   <string name="gt_4d7b2bf37878962a">"Latest height"</string>
@@ -1076,6 +1075,7 @@
   <string name="gt_3fed24d17905877f">"Recipient verified"</string>
   <string name="gt_c8233e7b49d45fa5">"Reconciled payment; repeat metadata could not be saved"</string>
   <string name="gt_c7175fa7a0db0d3c">"Recorded"</string>
+  <string name="gt_e4cea0827a11aed0">"Recorded at"</string>
   <string name="gt_3b208c8df3744b19">"Recover your Ark funds onchain if the Ark server is unavailable. Exits require confirmed onchain funds for broadcast fees and a timelock before claiming."</string>
   <string name="gt_41edd3f47328da5a">"Recovery phrase"</string>
   <string name="gt_512d764f27c017d9">"Recovery phrase found"</string>

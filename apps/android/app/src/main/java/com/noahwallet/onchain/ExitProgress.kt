@@ -343,7 +343,8 @@ private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitConte
     context.delta?.let { DetailRow(tr("Timelock"), tr("{n} blocks", number(it)), small = true, toasts = toasts) }
     stage.claimTxid?.let { DetailRow(tr("Claim"), short(it), ValueKind.mono, copy = it, explorer = OnchainDisplay.explorerURL(it, BuildConfig.APP_VARIANT),
         small = true, toasts = toasts, onExplorer = explore) }
-    DetailRow(tr("Last checked"), exit.details.tip_height?.let { tr("Block {height}", number(it)) } ?: tr("Unknown"), small = true, toasts = toasts, last = true)
+    // bark's height for this state: it keeps it while nothing changes, so it says when the state was recorded, not when last checked.
+    DetailRow(tr("Recorded at"), exit.details.tip_height?.let { tr("Block {height}", number(it)) } ?: tr("Unknown"), small = true, toasts = toasts, last = true)
     SectionLabel(tr("Timeline"))
     val items = exit.timeline
     items.forEachIndexed { i, item ->

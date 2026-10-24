@@ -724,7 +724,6 @@
   <string name="gt_fb6ee42c1c065f89">"最終バックアップ %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"前回のバックアップ %1$s"</string>
   <string name="gt_1a196f3801a01458">"前回のバックアップ：%1$s"</string>
-  <string name="gt_0c0c351a971353b5">"最終確認"</string>
   <string name="gt_ec3b8bf1e0261664">"前回成功したバックアップ %1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"最終スキャン"</string>
   <string name="gt_4d7b2bf37878962a">"最新のブロック高"</string>
@@ -1076,6 +1075,7 @@
   <string name="gt_3fed24d17905877f">"受取人を確認済み"</string>
   <string name="gt_c8233e7b49d45fa5">"支払いの照合は完了しましたが、繰り返し設定のメタデータを保存できませんでした"</string>
   <string name="gt_c7175fa7a0db0d3c">"記録済み"</string>
+  <string name="gt_e4cea0827a11aed0">"記録時"</string>
   <string name="gt_3b208c8df3744b19">"Arkサーバーが利用できない場合に、Arkの資金をオンチェーンで回収します。退出にはブロードキャスト手数料を支払うための確認済みオンチェーン資金が必要です。また、受け取りにはタイムロック期間が過ぎるまで待つ必要があります。"</string>
   <string name="gt_41edd3f47328da5a">"復元フレーズ"</string>
   <string name="gt_512d764f27c017d9">"復元フレーズが見つかりました"</string>

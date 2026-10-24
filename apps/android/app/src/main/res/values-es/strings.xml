@@ -724,7 +724,6 @@
   <string name="gt_fb6ee42c1c065f89">"Última copia de seguridad: %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"Última copia de seguridad %1$s"</string>
   <string name="gt_1a196f3801a01458">"Última copia de seguridad: %1$s"</string>
-  <string name="gt_0c0c351a971353b5">"Última revisión"</string>
   <string name="gt_ec3b8bf1e0261664">"Última copia correcta: %1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"Última revisión"</string>
   <string name="gt_4d7b2bf37878962a">"Última altura"</string>
@@ -1076,6 +1075,7 @@
   <string name="gt_3fed24d17905877f">"Destinatario verificado"</string>
   <string name="gt_c8233e7b49d45fa5">"Pago conciliado; no se pudieron guardar los metadatos de repetición"</string>
   <string name="gt_c7175fa7a0db0d3c">"Registrado"</string>
+  <string name="gt_e4cea0827a11aed0">"Registrado en"</string>
   <string name="gt_3b208c8df3744b19">"Recupera tus fondos de Ark en cadena si el servidor Ark no está disponible. Las salidas requieren fondos confirmados en cadena para cubrir las comisiones de difusión y un plazo de bloqueo antes de poder reclamar los fondos."</string>
   <string name="gt_41edd3f47328da5a">"Frase de recuperación"</string>
   <string name="gt_512d764f27c017d9">"Frase de recuperación encontrada"</string>

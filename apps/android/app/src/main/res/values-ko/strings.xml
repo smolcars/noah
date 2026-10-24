@@ -724,7 +724,6 @@
   <string name="gt_fb6ee42c1c065f89">"최근 백업 %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"마지막 백업 %1$s"</string>
   <string name="gt_1a196f3801a01458">"마지막 백업 %1$s"</string>
-  <string name="gt_0c0c351a971353b5">"마지막 확인"</string>
   <string name="gt_ec3b8bf1e0261664">"마지막 정상 백업 %1$s"</string>
   <string name="gt_5d4d9e0843a458e5">"마지막 스캔"</string>
   <string name="gt_4d7b2bf37878962a">"최신 블록 높이"</string>
@@ -1076,6 +1075,7 @@
   <string name="gt_3fed24d17905877f">"받는 사람 확인됨"</string>
   <string name="gt_c8233e7b49d45fa5">"결제 상태를 대조해 반영했습니다. 반복 결제 메타데이터를 저장하지 못했습니다"</string>
   <string name="gt_c7175fa7a0db0d3c">"기록됨"</string>
+  <string name="gt_e4cea0827a11aed0">"기록 시점"</string>
   <string name="gt_3b208c8df3744b19">"Ark 서버를 사용할 수 없을 때 Ark 자금을 온체인으로 복구하세요. 출금하려면 전파 수수료를 지불할 확정된 온체인 자금이 필요하며, 시간 잠금 기간이 지나야 청구할 수 있습니다."</string>
   <string name="gt_41edd3f47328da5a">"복구 문구"</string>
   <string name="gt_512d764f27c017d9">"복구 문구를 찾았습니다"</string>
