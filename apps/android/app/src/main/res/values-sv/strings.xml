@@ -163,9 +163,9 @@
   <string name="gt_0ce74d1d6042dd44">"Block %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Sätt in"</string>
   <string name="gt_a3659865c762c69f">"Sätt in på Ark"</string>
-  <string name="gt_aca0fb7b6af91d5e">"Insättningen har skickats men är inte bekräftad. Noah fortsätter att försöka sända den. Sätt inte in dessa medel igen."</string>
+  <string name="gt_aca0fb7b6af91d5e">"Insättningen är inskickad men inte bekräftad. Noah fortsätter att försöka sända den. Sätt inte in dessa medel igen."</string>
   <string name="gt_21bea5494ecbdd9d">"Insättning inskickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning."</string>
-  <string name="gt_01c437c9f900b81f">"Insättning skickad. Medlen kan användas när insättningen är klar."</string>
+  <string name="gt_01c437c9f900b81f">"Insättning inskickad. Medlen kan användas när insättningen är klar."</string>
   <string name="gt_8fed00ef8e09c48a">"Insättningen skickades inte. Granska igen när plånboken är redo."</string>
   <string name="gt_479ad21ac9096236">"Längst ned"</string>
   <string name="gt_4f8d20d681709634">"Det är okänt om medlen räcker till sändningsavgifterna; bekräftade medel på kedjan krävs."</string>
@@ -226,7 +226,7 @@
   <string name="gt_05f4e6f4ede4a216">"Begär Utträdesmedel"</string>
   <string name="gt_b7d762b9330eb38c">"Inlösenavgift"</string>
   <string name="gt_0c6a6352089917f2">"Hämta betalningar i bakgrunden"</string>
-  <string name="gt_aa87e940cf06cc86">"Inlösen skickad. Uppdatera för att se om den har bekräftats."</string>
+  <string name="gt_aa87e940cf06cc86">"Inlösen inskickad. Uppdatera för att se om den har bekräftats."</string>
   <string name="gt_32a9a43b06393d19">"Inlösentransaktion"</string>
   <string name="gt_309a38bf4d51448b">"Lös in %1$s"</string>
   <string name="gt_c52ed3f9cce24384">"Möjliga att lösa in"</string>
@@ -983,7 +983,7 @@
   <string name="gt_3cf8d66227384dc2">"Uppdatera listan"</string>
   <string name="gt_ffc1364cefebd7a2">"Uppdatera nätverksstatus"</string>
   <string name="gt_5dbbba5210b8e6c2">"Uppdatera betalningsstatus"</string>
-  <string name="gt_dea03b1eaff62e66">"Förnyelse skickad till delegerad omgång %1$s."</string>
+  <string name="gt_dea03b1eaff62e66">"Förnyelse inskickad till delegerad omgång %1$s."</string>
   <string name="gt_3de658e662e84920">"Återbetald · tillbaka i din plånbok"</string>
   <string name="gt_bb7234ec12451361">"Registrera"</string>
   <string name="gt_dfedc705d4521581">"Registrera igen"</string>
@@ -1160,8 +1160,8 @@
   <string name="gt_68971283841aecdf">"Ämne"</string>
   <string name="gt_1af1dbb07ecbb25a">"Sändningen stoppades innan en transaktion kunde registreras. Granska beloppet och avgiften innan du försöker igen."</string>
   <string name="gt_64900440a8c9a5ed">"Inskickad"</string>
-  <string name="gt_b50137cc6d52c59c">"Skickad, väntar på sändning. Noah fortsätter att försöka sända den. Skicka inte den här betalningen igen."</string>
-  <string name="gt_8b60ea61b803ead4">"Skickad. Uppdatera för att kontrollera status i nätverket. Skicka inte den här betalningen igen."</string>
+  <string name="gt_b50137cc6d52c59c">"Inskickad, väntar på sändning. Noah fortsätter att försöka sända den. Skicka inte den här betalningen igen."</string>
+  <string name="gt_8b60ea61b803ead4">"Inskickad. Uppdatera för att kontrollera status i nätverket. Skicka inte den här betalningen igen."</string>
   <string name="gt_63734ae10b7e46e9">"Delsystem"</string>
   <string name="gt_f3686bb328c6d408">"Lyckad"</string>
   <string name="gt_479b9ae48026aec9">"Supportkod: SEED_INVALID. Den sparade återställningsfrasen kunde inte valideras. Låt appen vara installerad och kontakta Noahs support på github.com/smolcars/noah. Skicka aldrig din återställningsfras, dina privata nycklar eller en plånboksdatabas till någon."</string>
@@ -1218,7 +1218,7 @@
   <string name="gt_03401b1fd160f1c8">"Fakturan sätter beloppet till %1$s"</string>
   <string name="gt_c7954684c87d96cd">"Låset är öppet. Lös in det till en annan plånbok eller till den här telefonens plånbok på blockkedjan."</string>
   <string name="gt_708398a18d2f5dfe">"Kartpositionen kunde inte sparas."</string>
-  <string name="gt_bc71b743861782dc">"Åtgärden kan ha skickats. Kontrollera dess status innan du upprepar den. Andra återställningsåtgärder är fortfarande tillgängliga."</string>
+  <string name="gt_bc71b743861782dc">"Åtgärden kan ha skickats in. Kontrollera dess status innan du upprepar den. Andra återställningsåtgärder är fortfarande tillgängliga."</string>
   <string name="gt_b0186376f1dac3ea">"Mottagaren accepterar inte längre detta belopp. Uppdatera eller avbryt den återkommande betalningen."</string>
   <string name="gt_0d09cc372ee7f6aa">"Den registrerade transaktionen hittades. Granska dess nätverksstatus."</string>
   <string name="gt_a8e2a0913b846c88">"Det valda saldot räcker inte till betalningen och avgiften."</string>

@@ -5798,13 +5798,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Depósito enviado, pero sin confirmar. Noah seguirá intentando difundirlo. No vuelvas a depositar estos fondos."
+            "value": "Depósito iniciado, pero sin confirmar. Noah seguirá intentando difundirlo. No vuelvas a depositar estos fondos."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arkへの入金を送信しましたが、まだ確認されていません。Noahはブロードキャストを引き続き試みます。この資金を再びArkに入金しないでください。"
+            "value": "Arkへの入金を受け付けましたが、まだ確認されていません。Noahはブロードキャストを引き続き試みます。この資金を再びArkに入金しないでください。"
           }
         },
         "ko": {
@@ -5816,7 +5816,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Insättningen har skickats men är inte bekräftad. Noah fortsätter att försöka sända den. Sätt inte in dessa medel igen."
+            "value": "Insättningen är inskickad men inte bekräftad. Noah fortsätter att försöka sända den. Sätt inte in dessa medel igen."
           }
         }
       }
@@ -5870,13 +5870,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Depósito enviado. Los fondos podrán gastarse cuando se complete el depósito."
+            "value": "Depósito iniciado. Los fondos podrán gastarse cuando se complete el depósito."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arkへの入金リクエストを送信しました。入金が完了すると資金を使用できます。"
+            "value": "Arkへの入金を受け付けました。入金が完了すると資金を使用できます。"
           }
         },
         "ko": {
@@ -5888,7 +5888,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Insättning skickad. Medlen kan användas när insättningen är klar."
+            "value": "Insättning inskickad. Medlen kan användas när insättningen är klar."
           }
         }
       }
@@ -8066,13 +8066,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reclamación enviada. Actualiza para comprobar si se ha confirmado."
+            "value": "Reclamación iniciada. Actualiza para comprobar si se ha confirmado."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "受け取り申請を送信しました。更新して確認状況を確認してください。"
+            "value": "受け取り申請を受け付けました。更新して確認状況を確認してください。"
           }
         },
         "ko": {
@@ -8084,7 +8084,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inlösen skickad. Uppdatera för att se om den har bekräftats."
+            "value": "Inlösen inskickad. Uppdatera för att se om den har bekräftats."
           }
         }
       }
@@ -34886,13 +34886,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renovación enviada a la ronda delegada %1$@."
+            "value": "Renovación iniciada en la ronda delegada %1$@."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "委任ラウンド %1$@ に更新を送信しました。"
+            "value": "委任ラウンド %1$@ への更新を受け付けました。"
           }
         },
         "ko": {
@@ -34904,7 +34904,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Förnyelse skickad till delegerad omgång %1$@."
+            "value": "Förnyelse inskickad till delegerad omgång %1$@."
           }
         }
       }
@@ -41126,13 +41126,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enviado"
+            "value": "Iniciado"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "送信済み"
+            "value": "受付済み"
           }
         },
         "ko": {
@@ -41162,13 +41162,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enviado, pendiente de difusión. Noah seguirá intentando difundirlo. No vuelvas a enviar este pago."
+            "value": "Iniciado, pendiente de difusión. Noah seguirá intentando difundirlo. No vuelvas a enviar este pago."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "送信済みで、ブロードキャスト待ちです。Noahはブロードキャストを引き続き試みます。この支払いを再送信しないでください。"
+            "value": "受付済みで、ブロードキャスト待ちです。Noahはブロードキャストを引き続き試みます。この支払いを再送信しないでください。"
           }
         },
         "ko": {
@@ -41180,7 +41180,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skickad, väntar på sändning. Noah fortsätter att försöka sända den. Skicka inte den här betalningen igen."
+            "value": "Inskickad, väntar på sändning. Noah fortsätter att försöka sända den. Skicka inte den här betalningen igen."
           }
         }
       }
@@ -41198,13 +41198,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enviado. Actualiza para comprobar el estado en la red. No vuelvas a enviar este pago."
+            "value": "Iniciado. Actualiza para comprobar el estado en la red. No vuelvas a enviar este pago."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "送信済みです。更新してネットワークの状態を確認してください。この支払いを再送しないでください。"
+            "value": "受け付けました。更新してネットワークの状態を確認してください。この支払いを再送しないでください。"
           }
         },
         "ko": {
@@ -41216,7 +41216,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skickad. Uppdatera för att kontrollera status i nätverket. Skicka inte den här betalningen igen."
+            "value": "Inskickad. Uppdatera för att kontrollera status i nätverket. Skicka inte den här betalningen igen."
           }
         }
       }
@@ -43250,13 +43250,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Es posible que la operación se haya enviado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."
+            "value": "Es posible que la operación se haya iniciado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "操作は送信済みの可能性があります。再実行する前に状況を確認してください。ほかの復旧操作は引き続き利用できます。"
+            "value": "操作は受け付けられた可能性があります。再実行する前に状況を確認してください。ほかの復旧操作は引き続き利用できます。"
           }
         },
         "ko": {
@@ -43268,7 +43268,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Åtgärden kan ha skickats. Kontrollera dess status innan du upprepar den. Andra återställningsåtgärder är fortfarande tillgängliga."
+            "value": "Åtgärden kan ha skickats in. Kontrollera dess status innan du upprepar den. Andra återställningsåtgärder är fortfarande tillgängliga."
           }
         }
       }

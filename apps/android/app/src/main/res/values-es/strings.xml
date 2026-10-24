@@ -163,9 +163,9 @@
   <string name="gt_0ce74d1d6042dd44">"Bloques %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Transferir"</string>
   <string name="gt_a3659865c762c69f">"Transferir a Ark"</string>
-  <string name="gt_aca0fb7b6af91d5e">"Depósito enviado, pero sin confirmar. Noah seguirá intentando difundirlo. No vuelvas a depositar estos fondos."</string>
+  <string name="gt_aca0fb7b6af91d5e">"Depósito iniciado, pero sin confirmar. Noah seguirá intentando difundirlo. No vuelvas a depositar estos fondos."</string>
   <string name="gt_21bea5494ecbdd9d">"Depósito iniciado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar."</string>
-  <string name="gt_01c437c9f900b81f">"Depósito enviado. Los fondos podrán gastarse cuando se complete el depósito."</string>
+  <string name="gt_01c437c9f900b81f">"Depósito iniciado. Los fondos podrán gastarse cuando se complete el depósito."</string>
   <string name="gt_8fed00ef8e09c48a">"No se envió el depósito. Revísalo de nuevo cuando la billetera esté lista."</string>
   <string name="gt_479ad21ac9096236">"Abajo"</string>
   <string name="gt_4f8d20d681709634">"Se desconoce si hay fondos suficientes para la difusión; se necesitan fondos confirmados en la cadena."</string>
@@ -226,7 +226,7 @@
   <string name="gt_05f4e6f4ede4a216">"Reclamar salidas"</string>
   <string name="gt_b7d762b9330eb38c">"Comisión de reclamación"</string>
   <string name="gt_0c6a6352089917f2">"Reclamar pagos en segundo plano"</string>
-  <string name="gt_aa87e940cf06cc86">"Reclamación enviada. Actualiza para comprobar si se ha confirmado."</string>
+  <string name="gt_aa87e940cf06cc86">"Reclamación iniciada. Actualiza para comprobar si se ha confirmado."</string>
   <string name="gt_32a9a43b06393d19">"Transacción de reclamación"</string>
   <string name="gt_309a38bf4d51448b">"Reclamar %1$s"</string>
   <string name="gt_c52ed3f9cce24384">"Reclamable"</string>
@@ -983,7 +983,7 @@
   <string name="gt_3cf8d66227384dc2">"Actualizar lista"</string>
   <string name="gt_ffc1364cefebd7a2">"Actualizar el estado de la red"</string>
   <string name="gt_5dbbba5210b8e6c2">"Actualizar estado del pago"</string>
-  <string name="gt_dea03b1eaff62e66">"Renovación enviada a la ronda delegada %1$s."</string>
+  <string name="gt_dea03b1eaff62e66">"Renovación iniciada en la ronda delegada %1$s."</string>
   <string name="gt_3de658e662e84920">"Reembolsado · de vuelta en tu billetera"</string>
   <string name="gt_bb7234ec12451361">"Registrarse"</string>
   <string name="gt_dfedc705d4521581">"Registrar de nuevo"</string>
@@ -1159,9 +1159,9 @@
   <string name="gt_f8276fb5b67f85bb">"Mapa de calles no disponible · los lugares y la búsqueda de ciudades siguen disponibles"</string>
   <string name="gt_68971283841aecdf">"Asunto"</string>
   <string name="gt_1af1dbb07ecbb25a">"El envío se detuvo antes de que se pudiera registrar una transacción. Revisa el importe y la comisión antes de intentarlo de nuevo."</string>
-  <string name="gt_64900440a8c9a5ed">"Enviado"</string>
-  <string name="gt_b50137cc6d52c59c">"Enviado, pendiente de difusión. Noah seguirá intentando difundirlo. No vuelvas a enviar este pago."</string>
-  <string name="gt_8b60ea61b803ead4">"Enviado. Actualiza para comprobar el estado en la red. No vuelvas a enviar este pago."</string>
+  <string name="gt_64900440a8c9a5ed">"Iniciado"</string>
+  <string name="gt_b50137cc6d52c59c">"Iniciado, pendiente de difusión. Noah seguirá intentando difundirlo. No vuelvas a enviar este pago."</string>
+  <string name="gt_8b60ea61b803ead4">"Iniciado. Actualiza para comprobar el estado en la red. No vuelvas a enviar este pago."</string>
   <string name="gt_63734ae10b7e46e9">"Subsistema"</string>
   <string name="gt_f3686bb328c6d408">"Exitoso"</string>
   <string name="gt_479b9ae48026aec9">"Código de soporte: SEED_INVALID. No se pudo validar la frase de recuperación guardada. Mantén esta aplicación instalada y contacta con el soporte de Noah en github.com/smolcars/noah. Nunca envíes a nadie tu frase de recuperación, claves privadas ni una base de datos de billetera."</string>
@@ -1218,7 +1218,7 @@
   <string name="gt_03401b1fd160f1c8">"La factura fija el importe en %1$s"</string>
   <string name="gt_c7954684c87d96cd">"El bloqueo está abierto. Reclámalo a otra billetera o a la billetera en cadena de este teléfono."</string>
   <string name="gt_708398a18d2f5dfe">"No se pudo guardar la posición del mapa."</string>
-  <string name="gt_bc71b743861782dc">"Es posible que la operación se haya enviado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."</string>
+  <string name="gt_bc71b743861782dc">"Es posible que la operación se haya iniciado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."</string>
   <string name="gt_b0186376f1dac3ea">"El destinatario ya no acepta este importe. Actualiza o cancela el pago recurrente."</string>
   <string name="gt_0d09cc372ee7f6aa">"Se encontró la transacción registrada. Revisa su estado en la red."</string>
   <string name="gt_a8e2a0913b846c88">"El saldo seleccionado no alcanza para cubrir este pago y su comisión."</string>

@@ -163,9 +163,9 @@
   <string name="gt_0ce74d1d6042dd44">"ブロック %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Arkに入金する"</string>
   <string name="gt_a3659865c762c69f">"Arkに入金する"</string>
-  <string name="gt_aca0fb7b6af91d5e">"Arkへの入金を送信しましたが、まだ確認されていません。Noahはブロードキャストを引き続き試みます。この資金を再びArkに入金しないでください。"</string>
+  <string name="gt_aca0fb7b6af91d5e">"Arkへの入金を受け付けましたが、まだ確認されていません。Noahはブロードキャストを引き続き試みます。この資金を再びArkに入金しないでください。"</string>
   <string name="gt_21bea5494ecbdd9d">"Arkへの入金を受け付けましたが、到達は確認できていません。Noahはブロードキャストを再試行し続けます。再度Arkに入金しないでください。"</string>
-  <string name="gt_01c437c9f900b81f">"Arkへの入金リクエストを送信しました。入金が完了すると資金を使用できます。"</string>
+  <string name="gt_01c437c9f900b81f">"Arkへの入金を受け付けました。入金が完了すると資金を使用できます。"</string>
   <string name="gt_8fed00ef8e09c48a">"Arkへの入金は送信されませんでした。ウォレットの準備ができたら再度確認してください。"</string>
   <string name="gt_479ad21ac9096236">"下部"</string>
   <string name="gt_4f8d20d681709634">"ブロードキャスト用資金の状況は不明です。承認済みのオンチェーン資金が必要です。"</string>
@@ -226,7 +226,7 @@
   <string name="gt_05f4e6f4ede4a216">"出金資金を受け取る"</string>
   <string name="gt_b7d762b9330eb38c">"受け取り手数料"</string>
   <string name="gt_0c6a6352089917f2">"バックグラウンドで支払いを受け取る"</string>
-  <string name="gt_aa87e940cf06cc86">"受け取り申請を送信しました。更新して確認状況を確認してください。"</string>
+  <string name="gt_aa87e940cf06cc86">"受け取り申請を受け付けました。更新して確認状況を確認してください。"</string>
   <string name="gt_32a9a43b06393d19">"受け取りトランザクション"</string>
   <string name="gt_309a38bf4d51448b">"%1$sを受け取る"</string>
   <string name="gt_c52ed3f9cce24384">"受け取り可能"</string>
@@ -983,7 +983,7 @@
   <string name="gt_3cf8d66227384dc2">"一覧を更新"</string>
   <string name="gt_ffc1364cefebd7a2">"ネットワーク状況を更新"</string>
   <string name="gt_5dbbba5210b8e6c2">"支払い状況を更新"</string>
-  <string name="gt_dea03b1eaff62e66">"委任ラウンド %1$s に更新を送信しました。"</string>
+  <string name="gt_dea03b1eaff62e66">"委任ラウンド %1$s への更新を受け付けました。"</string>
   <string name="gt_3de658e662e84920">"返金済み · ウォレットに戻りました"</string>
   <string name="gt_bb7234ec12451361">"登録"</string>
   <string name="gt_dfedc705d4521581">"再登録"</string>
@@ -1159,9 +1159,9 @@
   <string name="gt_f8276fb5b67f85bb">"道路地図は利用できません · 場所や都市の検索は引き続き利用できます"</string>
   <string name="gt_68971283841aecdf">"件名"</string>
   <string name="gt_1af1dbb07ecbb25a">"取引が記録される前に送信が停止しました。再試行する前に金額と手数料を確認してください。"</string>
-  <string name="gt_64900440a8c9a5ed">"送信済み"</string>
-  <string name="gt_b50137cc6d52c59c">"送信済みで、ブロードキャスト待ちです。Noahはブロードキャストを引き続き試みます。この支払いを再送信しないでください。"</string>
-  <string name="gt_8b60ea61b803ead4">"送信済みです。更新してネットワークの状態を確認してください。この支払いを再送しないでください。"</string>
+  <string name="gt_64900440a8c9a5ed">"受付済み"</string>
+  <string name="gt_b50137cc6d52c59c">"受付済みで、ブロードキャスト待ちです。Noahはブロードキャストを引き続き試みます。この支払いを再送信しないでください。"</string>
+  <string name="gt_8b60ea61b803ead4">"受け付けました。更新してネットワークの状態を確認してください。この支払いを再送しないでください。"</string>
   <string name="gt_63734ae10b7e46e9">"サブシステム"</string>
   <string name="gt_f3686bb328c6d408">"成功"</string>
   <string name="gt_479b9ae48026aec9">"サポートコード：SEED_INVALID。保存された復元フレーズを検証できませんでした。このアプリを削除せず、github.com/smolcars/noah からNoahサポートにお問い合わせください。復元フレーズ、秘密鍵、ウォレットのデータベースは絶対に誰にも送らないでください。"</string>
@@ -1218,7 +1218,7 @@
   <string name="gt_03401b1fd160f1c8">"請求書により金額は %1$s になります"</string>
   <string name="gt_c7954684c87d96cd">"ロックが解除されました。別のウォレットか、この端末のオンチェーンウォレットに受け取れます。"</string>
   <string name="gt_708398a18d2f5dfe">"地図の表示位置を保存できませんでした。"</string>
-  <string name="gt_bc71b743861782dc">"操作は送信済みの可能性があります。再実行する前に状況を確認してください。ほかの復旧操作は引き続き利用できます。"</string>
+  <string name="gt_bc71b743861782dc">"操作は受け付けられた可能性があります。再実行する前に状況を確認してください。ほかの復旧操作は引き続き利用できます。"</string>
   <string name="gt_b0186376f1dac3ea">"受取人は現在、この金額を受け付けていません。定期支払いを変更するか取り消してください。"</string>
   <string name="gt_0d09cc372ee7f6aa">"記録された取引が見つかりました。ネットワーク上の状況を確認してください。"</string>
   <string name="gt_a8e2a0913b846c88">"選択した残高では、支払い額と手数料を賄えません。"</string>

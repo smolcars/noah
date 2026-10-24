@@ -239,9 +239,18 @@ test('every prompt to type "delete" keeps the literal word, which both apps chec
   }
 });
 
-test('a submitted payment never reads as sent in any locale', async () => {
+test('a submitted key never reads as sent in any locale', async () => {
+  const read = async locale => JSON.parse(await readFile(resolve(root, `apps/i18n/${locale}/native.json`), 'utf8'));
+  const english = await read('en');
+  const keyOf = Object.fromEntries(Object.entries(english).map(([key, text]) => [text, key]));
+  // "Nothing was submitted" may say "nothing was sent": that claims less, not more.
+  const submitted = Object.entries(english).filter(([, text]) => /submitted/i.test(text) && !/(not|nothing was|no payment was) submitted/i.test(text));
+  const pairs = submitted.map(([key, text]) => [key, text, keyOf[text.replace('Submitted', 'Sent').replace('submitted', 'sent')]]).filter(([, , sent]) => sent);
+  expect(pairs.map(([, text]) => text)).toEqual(expect.arrayContaining(['Payment submitted', 'Submitted']));
+  const vocabulary = { es: /iniciad/i, ja: /受け?付/, ko: /제출/, sv: /inskickad|skickats in/i };
   for (const locale of locales.slice(1)) {
-    const catalog = JSON.parse(await readFile(resolve(root, `apps/i18n/${locale}/native.json`), 'utf8'));
-    expect(`${locale}: ${catalog[resourceName('Payment submitted')]}`).not.toBe(`${locale}: ${catalog[resourceName('Payment sent')]}`);
+    const catalog = await read(locale);
+    for (const [key, text, sent] of pairs) expect(`${locale} ${text}: ${catalog[key]}`).not.toBe(`${locale} ${text}: ${catalog[sent]}`);
+    for (const [key, text] of submitted) expect(`${locale} ${text}: ${catalog[key]}`).toMatch(vocabulary[locale]);
   }
 });
