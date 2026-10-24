@@ -62,7 +62,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     val needsFunds = remember(model.revision) {
         overview?.let { o -> ExitFunding.shared.needsFunds(o.exits.map { exit -> model.exit?.takeIf { it.id == exit.id } ?: exit }, o.confirmed) }.orEmpty()
     }
-    val stage = exit?.let { ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds) }
+    val stage = exit?.let { ExitClaims.apply(ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds), ExitClaims.submitted(model.attempts)[id]) }
     // The claim's own attempt says what it cost and where it went (the claim fee is checked exactly before broadcast).
     val claim = model.attempts.firstOrNull { it.quote.action == OnchainAction.claim && id in it.quote.ids && (stage?.claimTxid == null || it.receipt?.txid == stage.claimTxid) }
     val claimEstimate by produceState<Long?>(null, stage?.phase == ExitStage.Phase.claimable) {
@@ -72,7 +72,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     var deposit by remember { mutableStateOf<Long?>(null) }
     val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claim?.quote?.fee, claim?.quote?.ids?.size == 1,
         claim?.quote?.destination?.takeIf { claim.quote.destinationIsMine == false }, claimEstimate, exit?.cancelable == true)
-    ExitProgressContent(exit, stage, context, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back,
+    ExitProgressContent(exit, stage, context, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back, loaded = model.revision > 0,
         check = { scope.launch { model.review(OnchainAction.progress, overview?.exits.orEmpty().filter { it.state !in ExitTimeline.terminal }.map { it.id }) } },
         cancel = { scope.launch { model.review(OnchainAction.cancel, listOf(id)) } },
         claim = { nav.open(ExitClaimPage) }, addFunds = { deposit = it }, done = { nav.back?.invoke() }) { OnchainStatus(app, model) }
@@ -97,14 +97,14 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
 @Composable
 internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: ExitContext, busy: Boolean, suspended: Boolean, money: (Long) -> String,
                                  back: (() -> Unit)?, check: () -> Unit, cancel: () -> Unit, claim: () -> Unit, addFunds: (Long) -> Unit, done: () -> Unit,
-                                 status: @Composable () -> Unit = {}) {
+                                 loaded: Boolean = true, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scroll = rememberScrollState()
     var details by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val wide = LocalPose.current !is OnboardingPose.Compact
     if (exit == null || stage == null) {
-        ExitFrame(tr("Exit"), back, hero = true, leading = {}) { FinePrint(tr("Exit status is unavailable. Pull to refresh.")); status() }
+        ExitFrame(tr("Exit"), back, hero = true, leading = {}) { FinePrint(if (loaded) tr("Exit status is unavailable. Pull to refresh.") else tr("Loading…")); status() }
         return
     }
     val pose = ExitPose.of(exit, stage, context.tip)

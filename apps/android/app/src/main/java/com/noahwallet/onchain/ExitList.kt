@@ -56,6 +56,7 @@ internal fun ExitListPage(app: AppModel, nav: SettingsNav) {
     val overview = model.overview
     val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed) }.orEmpty() }
     ExitListContent(overview?.exits.orEmpty(), overview?.tip ?: 0, needsFunds, ready = overview != null, loading = model.loading,
+        claims = ExitClaims.submitted(model.attempts),
         suspended = app.isWalletSuspended, money = { money(app, it) }, back = nav.back, open = { nav.open(ExitPage(it)) },
         claim = { nav.open(ExitClaimPage) }, more = { nav.open(ExitChoosePage) }) { OnchainStatus(app, model) }
 }
@@ -63,13 +64,13 @@ internal fun ExitListPage(app: AppModel, nav: SettingsNav) {
 @Composable
 internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<String>, ready: Boolean, loading: Boolean, suspended: Boolean,
                              money: (Long) -> String, back: (() -> Unit)?, open: (String) -> Unit, claim: () -> Unit, more: () -> Unit,
-                             status: @Composable () -> Unit = {}) {
+                             claims: Map<String, String> = emptyMap(), status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
-    val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
+    val stages = exits.associate { it.id to ExitClaims.apply(ExitStages.of(it, tip, it.id in needsFunds), claims[it.id]) }
     val live = exits.filter { stages.getValue(it.id).live }
-    val claimable = exits.filter { it.claimable }
+    val claimable = exits.filter { stages.getValue(it.id).phase == ExitStage.Phase.claimable }
     val shared = ExitList.shared(exits)
     ExitFrame(tr("Exits"), back, chip = filter?.let { key -> { com.noahwallet.ui.settings.FilterChip(tr(ExitTimeline.labels[key] ?: key)) { filter = null } } }, actions = {
         StateMenu(filter, exits.map { it.state }.distinct()) { if (it != filter) haptics.selection(); filter = it }
@@ -98,8 +99,9 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
             SettingsIcons.clock)
         val visible = exits.filter { filter == null || it.state == filter }
         if (exits.isNotEmpty() && visible.isEmpty()) FinePrint(tr("No exits in this view."))
-        val groups = listOf(tr("Ready to claim") to visible.filter { it.claimable || it.state == "ClaimInProgress" },
-            tr("Exiting") to visible.filter { stages.getValue(it.id).live && !it.claimable && it.state != "ClaimInProgress" },
+        val ready = setOf(ExitStage.Phase.claimable, ExitStage.Phase.claiming)
+        val groups = listOf(tr("Ready to claim") to visible.filter { stages.getValue(it.id).phase in ready },
+            tr("Exiting") to visible.filter { stages.getValue(it.id).live && stages.getValue(it.id).phase !in ready },
             tr("Finished") to visible.filter { !stages.getValue(it.id).live })
         for ((name, list) in groups) if (list.isNotEmpty()) {
             Text(name, Modifier.padding(top = 18.dp, bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)

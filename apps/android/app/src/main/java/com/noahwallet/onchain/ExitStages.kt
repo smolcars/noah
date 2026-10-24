@@ -113,6 +113,18 @@ internal object ExitStages {
     }
 }
 
+/**
+ * bark marks a claim only at its next progress, up to a minute after Noah broadcasts it. Until then the journal's submitted
+ * claim (unless the chain source has lost it) shows the exit as claiming, so the page never offers Claim again meanwhile.
+ */
+internal object ExitClaims {
+    fun submitted(attempts: List<OnchainOperationJournal.Attempt>): Map<String, String> = attempts
+        .filter { it.quote.action == OnchainAction.claim && it.receipt?.chainStatus?.kind != com.noahwallet.services.wallet.ChainStatus.Kind.notFound }
+        .mapNotNull { attempt -> (attempt.receipt?.txid ?: attempt.txid)?.let { txid -> attempt.quote.ids.map { it to txid } } }.flatten().toMap()
+    fun apply(stage: ExitStage, txid: String?) =
+        if (stage.phase == ExitStage.Phase.claimable && txid != null) stage.copy(phase = ExitStage.Phase.claiming, claimTxid = txid) else stage
+}
+
 /** The exit page's bottom actions for a stage (prototype `pFoot`); Cancel exit only while bark allows it. */
 internal object ExitActions {
     enum class Action { done, claim, addFunds, cancel, check }

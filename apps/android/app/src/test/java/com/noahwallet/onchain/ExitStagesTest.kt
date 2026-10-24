@@ -199,6 +199,21 @@ class ExitStagesTest {
         for (bad in listOf("", "bcrt1q", "ark1qq", "lnbcrt1", "bitcoin:?lightning=lnbc1", "user@example.com")) assertNull(bad, ExitClaim.address(bad, "regtest"))
     }
 
+    @Test fun aSubmittedClaimShowsAsClaimingUntilBarkCatchesUp() {
+        fun attempt(txid: String?, kind: com.noahwallet.services.wallet.ChainStatus.Kind?, action: OnchainAction = OnchainAction.claim) =
+            OnchainOperationJournal.Attempt(OnchainQuote(action, "wallet", listOf("a", "b"), "address"),
+                OnchainReceipt("Claim submitted.", txid, chainStatus = kind?.let { com.noahwallet.services.wallet.ChainStatus(it) }))
+        assertEquals(mapOf("a" to "claim", "b" to "claim"), ExitClaims.submitted(listOf(attempt("claim", com.noahwallet.services.wallet.ChainStatus.Kind.inMempool))))
+        assertEquals("not checked yet", mapOf("a" to "claim", "b" to "claim"), ExitClaims.submitted(listOf(attempt("claim", null))))
+        assertTrue("the chain source lost it: claimable again", ExitClaims.submitted(listOf(attempt("claim", com.noahwallet.services.wallet.ChainStatus.Kind.notFound))).isEmpty())
+        assertTrue(ExitClaims.submitted(listOf(attempt(null, null), attempt("x", null, OnchainAction.startExit))).isEmpty())
+        val claimable = ExitStage(ExitStage.Phase.claimable)
+        assertEquals(ExitStage(ExitStage.Phase.claiming, claimTxid = "claim"), ExitClaims.apply(claimable, "claim"))
+        assertEquals(emptyList<ExitActions.Action>(), ExitActions.of(ExitClaims.apply(claimable, "claim"), cancelable = false))
+        assertEquals(claimable, ExitClaims.apply(claimable, null))
+        assertEquals("bark's own later states win", ExitStage(ExitStage.Phase.claimed), ExitClaims.apply(ExitStage(ExitStage.Phase.claimed), "claim"))
+    }
+
     @Test fun claimStaysOffUntilItsDestinationIsValidAndReviewed() {
         val regtest = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg"
         val mainnet = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"
