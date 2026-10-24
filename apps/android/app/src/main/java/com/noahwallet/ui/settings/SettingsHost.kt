@@ -204,7 +204,9 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosPage(model, nav)
         is VtxoPage -> com.noahwallet.onchain.VtxoDetailPage(model, nav, key.id)
         SettingsDestination.Board -> com.noahwallet.onchain.OnchainPage(model, nav)
-        SettingsDestination.Recurring -> Today(tr("Recurring payments")) { com.noahwallet.recurring.RecurringPaymentsScreen(model) }
+        SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringListPage(model, nav)
+        is SchedulePage -> com.noahwallet.recurring.ScheduleScreen(model, nav, key.id)
+        is EditorPage -> com.noahwallet.recurring.RecurringEditorPage(model, nav, key.id)
         // Out of scope (settings.md): today's exit screens, unchanged, under Settings' bar.
         SettingsDestination.Exits -> Today(tr("Emergency exit")) { com.noahwallet.onchain.UnilateralExitScreen(model) }
         SettingsDestination.Notifications -> Today(tr("Notifications")) { TodaysNotifications(model, nav) }

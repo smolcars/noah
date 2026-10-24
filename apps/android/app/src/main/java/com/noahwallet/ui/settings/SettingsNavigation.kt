@@ -18,6 +18,12 @@ enum class SettingsDestination : NavKey {
 /** One VTXO (Activity's VTXO links open it). */
 @Serializable data class VtxoPage(val id: String) : NavKey
 
+/** One recurring payment: what Activity's "Repeats ›" opens. */
+@Serializable data class SchedulePage(val id: String) : NavKey
+
+/** The recurring payment editor; [id] null is a new payment. */
+@Serializable data class EditorPage(val id: String? = null) : NavKey
+
 internal object SettingsRoutes {
     private val parents = listOf(SettingsDestination.Lightning, SettingsDestination.Email).associateWith { SettingsDestination.Profile } +
         listOf(SettingsDestination.UnifiedPush, SettingsDestination.Battery).associateWith { SettingsDestination.Notifications } +
@@ -28,6 +34,7 @@ internal object SettingsRoutes {
         SettingsDestination.Settings -> null
         is SettingsDestination -> parents[page] ?: SettingsDestination.Settings
         is VtxoPage -> SettingsDestination.Vtxos
+        is SchedulePage, is EditorPage -> SettingsDestination.Recurring
         else -> null
     }
 

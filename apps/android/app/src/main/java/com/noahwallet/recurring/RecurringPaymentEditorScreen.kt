@@ -14,12 +14,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.noahwallet.ui.NoahButton
 import com.noahwallet.ui.LocalFoldingFeatures
 import com.noahwallet.ui.WindowRegion
 import com.noahwallet.ui.usableRegion
 import androidx.core.view.doOnLayout
-import com.noahwallet.ui.settings.SettingsColumn
+import com.noahwallet.ui.settings.*
+import com.noahwallet.ui.home.HomeType
+import com.noahwallet.ui.onboarding.LocalPalette
+import com.noahwallet.ui.onboarding.Underline
+import com.noahwallet.ui.onboarding.rememberHaptics
+import com.noahwallet.localization.trPlural
+import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.TimeZone
@@ -34,8 +45,25 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
 }.timeInMillis
 
-@Composable fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, amountUnit: com.noahwallet.formatting.BitcoinAmountUnit = com.noahwallet.formatting.BitcoinAmountUnit.bip177, done: () -> Unit) {
+/**
+ * The recurring payment editor (prototype `SCR.recedit`), one screen: a big amount, the recipient (its kind as a tag),
+ * the name, a note for Lightning addresses, Repeats with a stepper, the first payment, Ends, and the next three dates.
+ * Today's fields, rules, limits and errors.
+ */
+@Composable internal fun RecurringEditorPage(app: com.noahwallet.ui.AppModel, nav: SettingsNav, id: String?) {
+    val context = LocalContext.current
+    val executor = remember { RecurringRuntime.shared(context) }.executor
+    val original = id?.let { findSchedule(executor.schedules, it) }
+    RecurringPaymentEditorScreen(executor, original, app.amountUnit, nav) { nav.pop() }
+}
+
+@Composable internal fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, amountUnit: com.noahwallet.formatting.BitcoinAmountUnit = com.noahwallet.formatting.BitcoinAmountUnit.bip177,
+                                             nav: SettingsNav? = null, done: () -> Unit) {
+    val palette = LocalPalette.current
+    val toasts = LocalSettingsToasts.current
+    val haptics = rememberHaptics()
     val scope = rememberCoroutineScope(); val focus = LocalFocusManager.current
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     var label by rememberSaveable(original?.id) { mutableStateOf(original?.label ?: "") }
     var recipient by rememberSaveable(original?.id) { mutableStateOf(original?.destination ?: "") }
     var amount by rememberSaveable(original?.id) { mutableStateOf(original?.amountSat?.toString() ?: "") }
@@ -60,47 +88,70 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
             endAt = if (endMode == "date") through else null, maxOccurrences = if (endMode == "count") count.toLongOrNull() ?: 0 else null,
             runs = original?.runs.orEmpty(), createdAt = original?.createdAt ?: now, updatedAt = now)
     }
-    SettingsColumn {
-        Text(tr(if (original == null) "New recurring payment" else "Edit recurring payment"), style = MaterialTheme.typography.headlineMedium)
-        Text(tr("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."))
-        if (original != null) Text(tr("Saving starts a new schedule at the first payment date. Previous attempts remain visible."))
-        OutlinedTextField(label, { label = limitedRecurringText(it, 64) }, label = { Text(tr("Name")) }, placeholder = { Text(tr("e.g. Rent, Donation, VPN")) }, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("recurring-label-input"))
-        OutlinedTextField(recipient, { recipient = it }, label = { Text(tr("Recipient")) }, placeholder = { Text(tr("name@domain.com, ark1… or lno1…")) }, enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("recurring-recipient-input"), keyboardOptions = KeyboardOptions(autoCorrectEnabled = false))
-        Text(tr(destination?.second?.let { when (it) { "ark" -> "Ark address"; "lnurl" -> "Lightning address"; else -> "BOLT12 offer" } } ?: "Ark address, Lightning address or BOLT12 offer"), style = MaterialTheme.typography.bodySmall)
-        OutlinedTextField(amount, { amount = it }, label = { Text(tr("Amount (sats)")) }, enabled = !saving, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().testTag("recurring-amount-input"))
-        Text(tr("{_gt_value_2} per payment, plus network fees", com.noahwallet.formatting.BitcoinAmount.format(amount.toLongOrNull() ?: 0, amountUnit, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])), style = MaterialTheme.typography.bodySmall)
-        if (destination?.second == "lnurl") OutlinedTextField(comment, { comment = limitedRecurringText(it, 140) }, label = { Text(tr("Note (optional)")) }, supportingText = { Text(tr("Shared with the recipient")) }, enabled = !saving, modifier = Modifier.fillMaxWidth())
-        Text(tr("Repeat"), style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("week" to "Weekly", "month" to "Monthly", "day" to "Custom").forEach { (value, title) -> FilterChip(unit == value, { unit = value; every = recurringDefaultEvery(value) }, label = { Text(tr(title)) }, enabled = !saving) }
+    val scheduled = tr("Scheduled"); val saved = tr("Saved")
+    fun save() {
+        focus.clearFocus(); error = null; saving = true
+        scope.launch {
+            try { RecurringRecipient.resolve(recipient); executor.save(draft(), original != null); haptics.success(); toasts.show(if (original == null) scheduled else saved); done() }
+            catch (e: Exception) { error = e.message ?: "Couldn't save this payment. Try again." }
+            finally { saving = false }
         }
-        OutlinedTextField(every, { every = it }, label = { Text(tr("Every … ${unit}s")) }, enabled = !saving, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
-        RecurringDatePicker("First payment", start, true, !saving) { start = it }
-        Text(tr("Ends"), style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("never" to "Never", "date" to "On date", "count" to "After count").forEach { (value, title) -> FilterChip(endMode == value, { endMode = value }, label = { Text(tr(title)) }, enabled = !saving) }
+    }
+    SettingsFrame(if (original == null) tr("New payment") else tr("Edit payment"), nav?.back ?: done, foot = {
+        FootPill(if (original == null) tr("Schedule payment") else tr("Save"), Modifier.testTag("recurring-save-button"), enabled = !saving, loading = saving) { save() }
+    }) {
+        // The amount, whole sats: ₿ before it (BIP-177) or "sats" after it.
+        val bip177 = amountUnit == com.noahwallet.formatting.BitcoinAmountUnit.bip177
+        val amountLabel = tr("Amount")
+        FlowRow(Modifier.padding(top = 14.dp), itemVerticalAlignment = Alignment.Bottom) {
+            val style = SettingsType.total.copy(fontSize = 44.sp, lineHeight = 50.sp)
+            if (bip177) Text("₿", style = style, color = if (amount.isEmpty()) palette.muted else palette.foreground)
+            BasicTextField(amount, { amount = it.filter(Char::isDigit).take(16) }, Modifier.width(IntrinsicSize.Min).semantics { contentDescription = amountLabel }
+                .testTag("recurring-amount-input"), enabled = !saving, textStyle = style.copy(color = palette.foreground), singleLine = true,
+                cursorBrush = SolidColor(palette.orange), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                decorationBox = { inner -> Box { if (amount.isEmpty()) Text("0", style = style, color = palette.muted); inner() } })
+            Text(if (bip177) " " + tr("each time") else " " + tr("sats each time"), Modifier.padding(bottom = 8.dp, start = 3.dp), style = HomeType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.muted)
         }
-        if (endMode == "date") RecurringDatePicker("End date", end, false, !saving) { end = it }
-        if (endMode == "count") OutlinedTextField(count, { count = it }, label = { Text(tr("Number of payments")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), enabled = !saving, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Underline(false, modifier = Modifier.padding(top = 10.dp))
+        SettingsField(recipient, { recipient = it }, tr("Name, address or offer"), Modifier.testTag("recurring-recipient-input"), label = tr("To"), enabled = !saving,
+            tag = destination?.second?.let { when (it) { "ark" -> tr("Ark address"); "lnurl" -> tr("Lightning address"); else -> tr("BOLT12 offer") } },
+            keyboard = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri))
+        SettingsField(label, { label = limitedRecurringText(it, 64) }, tr("e.g. Rent"), Modifier.testTag("recurring-label-input"), label = tr("Name"), enabled = !saving)
+        if (destination?.second == "lnurl") SettingsField(comment, { comment = limitedRecurringText(it, 140) }, tr("Shared with the recipient"), label = tr("Note (optional)"), enabled = !saving)
+        FieldLabel(tr("Repeats"))
+        Segmented(listOf("week" to tr("Weekly"), "month" to tr("Monthly"), "day" to tr("Custom")), unit, enabled = !saving) { unit = it; every = recurringDefaultEvery(it) }
+        val n = every.toIntOrNull() ?: 1
+        Stepper(when (unit) {
+            "week" -> if (n == 1) tr("Every week") else tr("Every {n} weeks", n.toString())
+            "month" -> if (n == 1) tr("Every month") else tr("Every {n} months", n.toString())
+            else -> if (n == 1) tr("Every day") else tr("Every {n} days", n.toString())
+        }, n, 1..(if (unit == "day") 365 else 12), enabled = !saving) { every = it.toString() }
+        FieldLabel(tr("First payment"))
+        RecurringDatePicker(start, true, !saving) { start = it }
+        FieldLabel(tr("Ends"))
+        Segmented(listOf("never" to tr("Never"), "date" to tr("On a date"), "count" to tr("After")), endMode, enabled = !saving) { endMode = it }
+        if (endMode == "date") RecurringDatePicker(end, false, !saving) { end = it }
+        if (endMode == "count") {
+            val payments = count.toIntOrNull() ?: 1
+            Stepper(trPlural("After {n} payments", payments), payments, 1..9_999, enabled = !saving) { count = it.toString() }
+        }
         if (interval.valid) {
-            Text(tr("Preview · ${interval.description}"), style = MaterialTheme.typography.titleMedium)
+            FieldLabel(tr("Next"))
             val preview = draft()
-            (0..2).mapNotNull { preview.next(it, TimeZone.getDefault()) }.forEach { Text(tr(recurringDate(it))) }
-            Text(tr("You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice."), style = MaterialTheme.typography.bodySmall)
-        }
-        error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-        NoahButton(if (saving) "Saving…" else if (original == null) "Schedule payment" else "Save payment", !saving, modifier = Modifier.testTag("recurring-save-button")) {
-            focus.clearFocus(); error = null; saving = true
-            scope.launch {
-                try { RecurringRecipient.resolve(recipient); executor.save(draft(), original != null); done() }
-                catch (e: Exception) { error = e.message ?: "Couldn't save this payment. Try again." }
-                finally { saving = false }
+            FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                (0..2).mapNotNull { preview.next(it, TimeZone.getDefault()) }.forEach { at ->
+                    Box(Modifier.height(36.dp).border(1.dp, palette.hairline, androidx.compose.foundation.shape.CircleShape).padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center) { Text(recurringShortDay(at, locale), style = HomeType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground) }
+                }
             }
         }
-        TextButton(done, enabled = !saving) { Text(tr("Back to payments")) }
+        error?.let { FinePrint(tr(it), failed = true) }
+        FinePrint(tr("A reminder comes the day before. A missed payment is skipped, never paid twice."))
+        if (original != null) FinePrint(tr("Saving starts a new schedule at the first payment date. Previous attempts remain visible."))
     }
 }
-@Composable private fun RecurringDatePicker(label: String, value: Long, time: Boolean, enabled: Boolean, change: (Long) -> Unit) {
+/** The first payment or end date, as a row that opens today's date (and time) pickers, kept clear of a fold. */
+@Composable private fun RecurringDatePicker(value: Long, time: Boolean, enabled: Boolean, change: (Long) -> Unit) {
     val context = LocalContext.current
     val privacy by rememberUpdatedState(com.noahwallet.ui.LocalWalletPrivacy.current)
     val covered = privacy.covered
@@ -178,7 +229,5 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         }
         onDispose { disposing = true; picker?.dismiss(); picker = null }
     }
-    OutlinedButton({ candidate = value; step = "date" }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-        Text(tr("$label: ${if (time) recurringDate(value) else recurringDay(value)}"))
-    }
+    PickerRow(if (time) recurringDate(value) else recurringDay(value), icon = SettingsIcons.calendar, enabled = enabled) { candidate = value; step = "date" }
 }

@@ -99,7 +99,7 @@ internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, 
             try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))); true }
             catch (_: android.content.ActivityNotFoundException) { false }
         },
-        recurring = { id -> app.recurringSchedule = id; onSettings(SettingsDestination.Recurring) },
+        recurring = { id -> onSettings(com.noahwallet.ui.settings.SchedulePage(id)) },
         exits = { onSettings(SettingsDestination.Exits) },
         coin = { id -> onSettings(com.noahwallet.ui.settings.VtxoPage(id)) },
         shown = { record ->

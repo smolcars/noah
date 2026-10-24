@@ -50,5 +50,13 @@
   "{n} VTXOs expire within a day": {
     "one": "{n} VTXO expires within a day",
     "other": "{n} VTXOs expire within a day"
+  },
+  "After {n} payments": {
+    "one": "After {n} payment",
+    "other": "After {n} payments"
+  },
+  "{n} payments": {
+    "one": "{n} payment",
+    "other": "{n} payments"
   }
 }

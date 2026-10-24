@@ -10,8 +10,10 @@ class RecurringFocusTest {
 
     @Test fun repeatsShowsItsScheduleOrTheListIfItIsGone() {
         val all = listOf(schedule("rent"), schedule("savings"))
-        assertEquals(listOf("savings"), focusedSchedules(all, "savings").map { it.id })
-        assertEquals("a cancelled schedule falls back to the list", listOf("rent", "savings"), focusedSchedules(all, "gone").map { it.id })
-        assertEquals(listOf("rent", "savings"), focusedSchedules(all, null).map { it.id })
+        assertEquals("savings", findSchedule(all, "savings")?.id)
+        // The schedule page pops back to the list when its schedule is gone (canceled).
+        assertEquals("a cancelled schedule falls back to the list", null, findSchedule(all, "gone"))
+        assertEquals(listOf(com.noahwallet.ui.settings.SettingsDestination.Settings, com.noahwallet.ui.settings.SettingsDestination.Recurring,
+            com.noahwallet.ui.settings.SchedulePage("savings")), com.noahwallet.ui.settings.SettingsRoutes.chain(com.noahwallet.ui.settings.SchedulePage("savings")))
     }
 }

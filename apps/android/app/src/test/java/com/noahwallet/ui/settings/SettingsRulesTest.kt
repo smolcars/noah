@@ -59,6 +59,7 @@ class SettingsRulesTest {
             "Home's suspended state" to (SettingsDestination.Advanced to listOf(settings, SettingsDestination.Advanced)),
             "Home's and Receive's profile" to (SettingsDestination.Profile to listOf(settings, SettingsDestination.Profile)),
             "Activity's VTXO" to (VtxoPage("v1") to listOf(settings, SettingsDestination.Vtxos, VtxoPage("v1"))),
+            "Activity's schedule" to (SchedulePage("s1") to listOf(settings, SettingsDestination.Recurring, SchedulePage("s1"))),
             "Activity's exit" to (SettingsDestination.Exits to listOf(settings, SettingsDestination.Exits)),
             "a recurring notification" to (SettingsDestination.Recurring to listOf(settings, SettingsDestination.Recurring)),
             "Home's gear" to (settings to listOf(settings)),
@@ -74,6 +75,7 @@ class SettingsRulesTest {
         assertEquals(listOf(settings, SettingsDestination.Profile, SettingsDestination.Lightning), SettingsRoutes.chain(SettingsDestination.Lightning))
         assertEquals(listOf(settings, SettingsDestination.Notifications, SettingsDestination.UnifiedPush), SettingsRoutes.chain(SettingsDestination.UnifiedPush))
         assertEquals(listOf(settings, SettingsDestination.Advanced, SettingsDestination.Debug), SettingsRoutes.chain(SettingsDestination.Debug))
+        assertEquals(listOf(settings, SettingsDestination.Recurring, EditorPage(null)), SettingsRoutes.chain(EditorPage(null)))
     }
 
     @Test fun phraseCopyIsMarkedSensitiveAndClearsAfterTwoMinutes() {
