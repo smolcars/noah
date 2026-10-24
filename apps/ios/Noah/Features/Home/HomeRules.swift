@@ -192,7 +192,8 @@ struct HomeActivityRow: Equatable {
     let kind: Kind?
     let avatar: Avatar
     let status: Status
-    let sats: Int64
+    /// Nil when the record can't prove it (`HistoryTransaction.shownAmount`).
+    let sats: Int64?
     /// "+", "−", or nothing for internal transfers.
     let sign: String
 
@@ -251,7 +252,7 @@ struct HomeActivityRow: Equatable {
             status = transaction.source == "onchain-wallet" && transaction.hasConfirmation != true
                 ? (outgoing ? .sending : .confirming) : .done
         }
-        sats = transaction.amount
+        sats = transaction.shownAmount
         sign = transaction.isInternalTransfer ? "" : outgoing ? "−" : "+"
     }
 
@@ -261,7 +262,8 @@ struct HomeActivityRow: Equatable {
     /// they carry must be zero. Anything unknown means we can't say.
     /// The signed amount, or dots while amounts are hidden (Home's persisted flag).
     func amount(unit: BitcoinAmountUnit, hidden: Bool, locale: Locale) -> String {
-        hidden ? "••••" : sign + BitcoinAmount.format(sats: sats, unit: unit, locale: locale)
+        guard let sats else { return "" }
+        return hidden ? "••••" : sign + BitcoinAmount.format(sats: sats, unit: unit, locale: locale)
     }
 
     /// A failed movement that produced and exited no coins charged nothing: bark 0.8 zeroes

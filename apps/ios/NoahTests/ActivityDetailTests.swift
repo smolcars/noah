@@ -157,6 +157,30 @@ struct ActivityDetailTests {
         #expect(ActivityDetail(zero, ownDomain: Self.own).fee == .free)
     }
 
+    @Test func anAmountlessRetryShowsAndSharesOnlyItsProvenDebit() {
+        // Attempt 1 failed at 1,000; the retry paid 2,000 (+80). Bark kept attempt 1's destination amount.
+        var paid = Self.lightningSend(to: ActivityMappingTests.amountlessInvoice, fee: 80)
+        paid.type = "Bolt11"
+        paid.sentTo = [.init(destination: ActivityMappingTests.amountlessInvoice, amount_sat: 1_000, paymentMethod: "invoice")]
+        paid.amount = 1_000
+        paid.effectiveBalanceSat = -2_080
+        #expect(paid.paidAmountlessInvoice && paid.shownAmount == 2_080)
+        let english = Locale(identifier: "en")
+        let row = HomeActivityRow(paid, ownDomain: Self.own)
+        #expect(row.amount(unit: .sats, hidden: false, locale: english) == "−2,080 sats")
+        var receipt = ActivityDetail.receipt(paid, ownDomain: Self.own, unit: .sats, locale: english, date: "Today")
+        #expect(receipt.hasPrefix("Sent −2,080 sats") && !receipt.contains("1,000"))
+        #expect(ActivityDetail(paid, ownDomain: Self.own).fee == nil && ActivityDetail(paid, ownDomain: Self.own).total == nil)
+        // No proven debit: "Sent" with no amount, never attempt 1's.
+        paid.effectiveBalanceSat = nil
+        #expect(paid.shownAmount == nil)
+        #expect(HomeActivityRow(paid, ownDomain: Self.own).amount(unit: .sats, hidden: false, locale: english).isEmpty)
+        receipt = ActivityDetail.receipt(paid, ownDomain: Self.own, unit: .sats, locale: english, date: "Today")
+        #expect(receipt.hasPrefix("Sent\nToday") && !receipt.contains("1,000"))
+        // A fixed-amount invoice keeps its own amount.
+        #expect(Self.lightningSend().shownAmount == 4_842)
+    }
+
     @Test func receivesShowARecordedFeeButNeverFree() {
         var receive = Self.lightningReceive()
         receive.offchainFeeSat = 104

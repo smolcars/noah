@@ -103,15 +103,18 @@ struct TransactionDetailView: View {
                 .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: transaction.id)
                 .padding(.top, 6)
-            Text(verbatim: row.amount(unit: app.amountUnit, hidden: hidden, locale: locale))
-                .noahText(ActivityDetailText.amount)
-                .monospacedDigit()
-                .strikethrough(detail.unsuccessful, pattern: .solid)
-                .foregroundStyle(detail.unsuccessful ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
-                .lineLimit(1).minimumScaleFactor(0.5)
-                .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(transaction.amount)))
-                .padding(.top, 18)
-                .accessibilityIdentifier("transaction-detail-amount")
+            // A paid amountless invoice with no proven debit has no amount to show.
+            if row.sats != nil {
+                Text(verbatim: row.amount(unit: app.amountUnit, hidden: hidden, locale: locale))
+                    .noahText(ActivityDetailText.amount)
+                    .monospacedDigit()
+                    .strikethrough(detail.unsuccessful, pattern: .solid)
+                    .foregroundStyle(detail.unsuccessful ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                    .lineLimit(1).minimumScaleFactor(0.5)
+                    .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(transaction.shownAmount ?? 0)))
+                    .padding(.top, 18)
+                    .accessibilityIdentifier("transaction-detail-amount")
+            }
             HStack(spacing: 8) {
                 if detail.tone == .pending { ActivityOrangePulse() }
                 Text(verbatim: statusText).noahText(NoahTokens.Typography.label)

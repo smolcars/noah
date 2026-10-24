@@ -120,8 +120,7 @@ struct ActivityDetail: Equatable {
     /// been paid by a retry for another amount, so its numbers prove nothing, as Send's already-paid receipts.
     static func lightningSendFee(_ transaction: HistoryTransaction) -> Int64? {
         let sent = transaction.sentTo ?? []
-        if let invoice = sent.first(where: { PaymentEncoding.invoice($0.destination) != nil })?.destination,
-           !SendReconciliation.fixesAmount(invoice) { return nil }
+        if transaction.paidAmountlessInvoice { return nil }
         let actual = sent.reduce(Int64(0)) { $0 + $1.amount_sat }
         guard let effective = transaction.effectiveBalanceSat, effective <= 0, -effective >= actual, actual > 0 else { return nil }
         return -effective - actual
@@ -143,7 +142,9 @@ struct ActivityDetail: Equatable {
         let row = HomeActivityRow(transaction, ownDomain: ownDomain)
         let status = detail.renewedCoins.map { L10n.plural("Renewed {n} coins", count: $0, locale: language) }
             .flatMap { detail.status == "Renewed {n} coins" ? $0 : nil } ?? L10n.text(detail.status, locale: language)
-        var lines = [status + " " + row.sign + BitcoinAmount.format(sats: transaction.amount, unit: unit, locale: locale), date]
+        // A paid amountless invoice shares its proven debit, or no amount (`shownAmount`).
+        let amount = transaction.shownAmount.map { " " + row.sign + BitcoinAmount.format(sats: $0, unit: unit, locale: locale) } ?? ""
+        var lines = [status + amount, date]
         if let to = detail.to { lines.append(L10n.text("To", locale: language) + ": " + to) }
         lines.append(L10n.text("Via", locale: language) + ": " + L10n.text(detail.rail.title, locale: language))
         if let proof = detail.proof { lines.append(L10n.text("Proof of payment", locale: language) + ": " + proof) }

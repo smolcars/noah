@@ -67,6 +67,19 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var isPending: Bool { movementStatus == "pending" || (source == "onchain-wallet" && hasConfirmation != true) }
     /// Bark records an Ark-funded on-chain send's txid once its transaction is broadcast.
     var broadcastTxid: String? { HistoryMetadata.parse(metadataJson ?? "").offboardTxid }
+    /// A settled Lightning send to an invoice without its own amount. Retrying one, bark 0.8 reuses its movement
+    /// and keeps the first attempt's destination amount and fee field, so those numbers prove nothing.
+    var paidAmountlessInvoice: Bool {
+        guard direction == "outgoing", movementStatus == "successful", subsystemName == "bark.lightning_send",
+              let invoice = sentTo?.first(where: { PaymentEncoding.invoice($0.destination) != nil })?.destination else { return false }
+        return !SendReconciliation.fixesAmount(invoice)
+    }
+    /// The amount shown and shared: for a paid amountless invoice, the debit its balance change proves (amount
+    /// and fee together), or nothing; never its first attempt's number.
+    var shownAmount: Int64? {
+        guard paidAmountlessInvoice else { return amount }
+        return effectiveBalanceSat.flatMap { $0 < 0 ? -$0 : nil }
+    }
     /// The on-chain transaction the record itself names: the wallet's own, an offboard's broadcast or a board's
     /// anchor. Never derived from a coin ID: `txid` falls back to one (as today's CSV does), whose parent
     /// transaction isn't this payment's.
