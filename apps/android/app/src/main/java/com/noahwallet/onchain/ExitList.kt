@@ -72,6 +72,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
     val live = exits.filter { stages.getValue(it.id).live }
     val claimable = exits.filter { stages.getValue(it.id).phase == ExitStage.Phase.claimable }
     val shared = ExitList.shared(exits)
+    val sharing = shared.flatMap { group -> group.exits.map { it.id } }.toSet()
     ExitFrame(tr("Exits"), back, chip = filter?.let { key -> { com.noahwallet.ui.settings.FilterChip(tr(ExitTimeline.labels[key] ?: key)) { filter = null } } }, actions = {
         StateMenu(filter, exits.map { it.state }.distinct()) { if (it != filter) haptics.selection(); filter = it }
     }, foot = {
@@ -82,7 +83,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
         Text(listOfNotNull(tr("{n} in progress", (live.size - readyCount).toString()).takeIf { live.size > readyCount },
             tr("{n} ready to claim", readyCount.toString()).takeIf { readyCount > 0 }).joinToString(" · ").ifEmpty { tr("No exits in progress") },
             Modifier.padding(top = 8.dp), style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
-        shared?.let { group ->
+        for (group in shared) {
             SharedPaths(group, money, Modifier.padding(top = 14.dp).fillMaxWidth().height(250.dp).testTag("exit-shared"))
             Text(tr("{n} exits from one round: {count} transactions, not {total}. Shared ones are sent and paid once.", group.exits.size.toString(),
                 group.transactions.toString(), group.separately.toString()), Modifier.fillMaxWidth().padding(top = 6.dp), style = HomeType.small,
@@ -106,7 +107,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
         for ((name, list) in groups) if (list.isNotEmpty()) {
             Text(name, Modifier.padding(top = 18.dp, bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
             list.forEachIndexed { i, exit ->
-                ExitListRow(exit, stages.getValue(exit.id), tip, exit.id in (shared?.exits?.map { it.id } ?: emptyList()), money, divider = i < list.lastIndex) { open(exit.id) }
+                ExitListRow(exit, stages.getValue(exit.id), tip, exit.id in sharing, money, divider = i < list.lastIndex) { open(exit.id) }
             }
         }
         status()

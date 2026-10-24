@@ -202,14 +202,19 @@ internal object ExitList {
     /** Decision 5: Settings says "In progress" only while an exit runs, from its start until it's claimed or canceled. */
     fun live(exits: List<ExitModel>?) = exits.orEmpty().any { it.state !in ExitTimeline.terminal }
 
-    /** Decision 6: live exits sharing a transaction, which the list draws once; empty unless two or more share one. */
+    /** Decision 6: live exits sharing transactions, which the list draws once; one group per set of exits that are connected. */
     data class Shared(val exits: List<ExitModel>, val transactions: Int, val separately: Int)
-    fun shared(exits: List<ExitModel>): Shared? {
+    fun shared(exits: List<ExitModel>): List<Shared> {
         val live = exits.filter { it.state !in ExitTimeline.terminal && it.packages.isNotEmpty() }
-        val counts = live.flatMap { exit -> exit.packages.map { it.txid }.distinct() }.groupingBy { it }.eachCount()
-        val sharing = live.filter { exit -> exit.packages.any { (counts[it.txid] ?: 0) > 1 } }
-        if (sharing.size < 2) return null
-        return Shared(sharing, sharing.flatMap { exit -> exit.packages.map { it.txid } }.distinct().size, sharing.sumOf { it.packages.size })
+        // Each exit joins every earlier group it shares a transaction with, so exits linked only through a third one meet too.
+        val groups = mutableListOf<List<Int>>()
+        live.forEachIndexed { i, exit ->
+            val txids = exit.packages.map { it.txid }.toSet()
+            val touching = groups.filter { group -> group.any { j -> live[j].packages.any { it.txid in txids } } }
+            groups.removeAll(touching); groups += (touching.flatten() + i).sorted()
+        }
+        return groups.filter { it.size > 1 }.sortedBy { it.first() }.map { group -> group.map(live::get) }
+            .map { group -> Shared(group, group.flatMap { exit -> exit.packages.map { it.txid } }.distinct().size, group.sumOf { it.packages.size }) }
     }
 
     /** The list's five-step rail (prototype `.mini`): started, sending, waiting, ready, claimed. */

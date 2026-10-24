@@ -163,9 +163,19 @@ class ExitStagesTest {
     @Test fun theListDrawsSharedPathsOnlyWhenExitsShareATransaction() {
         fun paths(id: String, vararg txs: String, state: String = "Processing") = exit(state, ExitDetails(), packages = txs.map { ExitPackage(it) }, id = id)
         val a = paths("a", "root", "l2a", "l1a", "leafA"); val b = paths("b", "root", "l2a", "l1b", "leafB"); val c = paths("c", "root2", "x", "y", "z")
-        assertNull(ExitList.shared(listOf(a, c)))
-        assertEquals(ExitList.Shared(listOf(a, b), 6, 8), ExitList.shared(listOf(a, b, c)))
-        assertNull("a finished exit isn't drawn", ExitList.shared(listOf(a, paths("b", "root", "l2a", "l1b", "leafB", state = "Claimed"))))
+        assertEquals(emptyList<ExitList.Shared>(), ExitList.shared(listOf(a, c)))
+        assertEquals(listOf(ExitList.Shared(listOf(a, b), 6, 8)), ExitList.shared(listOf(a, b, c)))
+        assertEquals("a finished exit isn't drawn", emptyList<ExitList.Shared>(),
+            ExitList.shared(listOf(a, paths("b", "root", "l2a", "l1b", "leafB", state = "Claimed"))))
+    }
+
+    @Test fun exitsFromTwoRoundsAreDrawnAsTwoGroups() {
+        fun paths(id: String, vararg txs: String) = exit("Processing", ExitDetails(), packages = txs.map { ExitPackage(it) }, id = id)
+        val a = paths("a", "r1", "a1"); val b = paths("b", "r1", "b1"); val c = paths("c", "r2", "c1"); val d = paths("d", "r2", "d1")
+        assertEquals(listOf(ExitList.Shared(listOf(a, b), 3, 4), ExitList.Shared(listOf(c, d), 3, 4)), ExitList.shared(listOf(a, c, b, d)))
+        // Two groups that a later exit joins become one, in the list's order.
+        val e = paths("e", "r1", "c1")
+        assertEquals(listOf(ExitList.Shared(listOf(a, c, b, d, e), 6, 10)), ExitList.shared(listOf(a, c, b, d, e)))
     }
 
     @Test fun theListsRailAndSharedTreeFollowEachExit() {
@@ -177,7 +187,7 @@ class ExitStagesTest {
         assertEquals(List(5) { s.done }, ExitList.rail(ExitStage(ExitStage.Phase.claimed)))
         assertEquals(listOf(s.done, s.todo, s.todo, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.canceled)))
         fun paths(id: String, vararg txs: String) = exit("Processing", processing(100, tx(txs[0], "confirmed", block = 99)), packages = txs.map { ExitPackage(it) }, id = id)
-        val group = ExitList.shared(listOf(paths("a", "root", "x", "leafA"), paths("b", "root", "x", "leafB")))!!
+        val group = ExitList.shared(listOf(paths("a", "root", "x", "leafA"), paths("b", "root", "x", "leafB"))).single()
         val placed = ExitList.layout(group).associateBy { it.txid }
         assertEquals(setOf("root", "x", "leafA", "leafB"), placed.keys)
         assertEquals(null, placed.getValue("root").parent); assertEquals("x", placed.getValue("leafB").parent)
