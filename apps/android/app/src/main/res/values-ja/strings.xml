@@ -391,7 +391,6 @@
   <string name="gt_5655e4c5f2e921a8">"VTXOを削除"</string>
   <string name="gt_d003d9b4e9041e93">"定期支払いのプロパティが重複しています"</string>
   <string name="gt_a9f51566bd6705f7">"E"</string>
-  <string name="gt_d98ee0e5f9399db9">"ERROR"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
   <string name="gt_464c4ffd019e1e96">"編集"</string>
   <string name="gt_84c74f3a02721306">"メールアドレスを編集"</string>
@@ -433,6 +432,7 @@
   <string name="gt_a553c3e6a86cf907">"支払い回数を入力してください。"</string>
   <string name="gt_d22d6bb98979c568">"%1$s に送信したコードを入力してください"</string>
   <string name="gt_e586fc593f600161">"%1$s に送信したコードを入力してください。"</string>
+  <string name="gt_6e4b58ace4018a20">"sats単位の整数で入力してください。"</string>
   <string name="gt_06e4151b65a65de5">"復元フレーズを入力してください。"</string>
   <string name="gt_2c41befe9ea4cd5c">"入力形式"</string>
   <string name="gt_54a0e8c17ebb21a1">"エラー"</string>
@@ -1443,6 +1443,7 @@
   <string name="gt_2571c46e541d8f87">"ブロック %1$s を待機中"</string>
   <string name="gt_14c805ec3e8cb07b">"安全な保存領域が利用可能になるのを待っています"</string>
   <string name="gt_d99bd370a6d72213">"安全な保存領域へのアクセスを待っています。端末のロックを解除して、もう一度お試しください。"</string>
+  <string name="gt_09ff3abe56e1c1df">"バックアップを待っています"</string>
   <string name="gt_a9fecbd4968622c1">"起動スケジュールはまだ同期されていません。Noahを開くと再試行します。"</string>
   <string name="gt_d1c9a01d57e90086">"ウォレット"</string>
   <string name="gt_b7998d3f39a7633a">"ウォレットの利用が停止されています"</string>
@@ -1501,7 +1502,6 @@
   <string name="gt_23a3ca761b70abf7">"ウォレットの準備ができていません。もう一度お試しください。"</string>
   <string name="gt_f195f8e226312c3a">"準備が整いました"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
-  <string name="gt_f683740cded6680d">"bell"</string>
   <string name="gt_ab51004e9d71a485">"日ごと"</string>
   <string name="gt_0b8e9e995d8d77f1">"デバッグ"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
@@ -1509,15 +1509,11 @@
   <string name="gt_7d7894104be6c089">"例：家賃、寄付、VPN"</string>
   <string name="gt_5092d17899730925">"毎回"</string>
   <string name="gt_ac13979d20e7673e">"%1$sから"</string>
-  <string name="gt_2c70e12b7a0646f9">"key"</string>
-  <string name="gt_0b2319dc1ccf7803">"ladybug"</string>
-  <string name="gt_b1b1bdb480c61d07">"link"</string>
   <string name="gt_82a3537ff0dbce7e">"名前"</string>
   <string name="gt_7749eed65c4e3535">"name@domain.com、ark1… または lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"次"</string>
   <string name="gt_6b2251347446a4b2">"次回 %1$s"</string>
   <string name="gt_df384ae97c77ad30">"回"</string>
-  <string name="gt_72bec4bd8f6d91a8">"sailboat"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"satsずつ"</string>
   <string name="gt_688897c430ce4d33">"%1$s へ"</string>

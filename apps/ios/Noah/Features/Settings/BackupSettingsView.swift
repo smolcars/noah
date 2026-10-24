@@ -95,6 +95,7 @@ struct BackupSettingsView: View {
         case .done: .done
         case .running: .running
         case .failed: .failed
+        case .pending: .idle("clock")
         case .off, .never: .idle("icloud")
         }
     }
@@ -105,6 +106,7 @@ struct BackupSettingsView: View {
         case .done: return last ?? ""
         case .running: return L10n.text("Encrypting and uploading", locale: language)
         case .failed: return last.map { L10n.text("Last good backup {date}", $0, locale: language) } ?? L10n.text("Try again", locale: language)
+        case .pending: return L10n.text("Waiting to back up", locale: language)
         case .off: return last.map { L10n.text("Last backup {date}", $0, locale: language) } ?? ""
         case .never: return L10n.text(enabled ? "Backs up when your wallet changes" : "Turn it on or back up now", locale: language)
         }

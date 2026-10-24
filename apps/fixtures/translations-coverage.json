@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1550,
-  "sourceKeys": 1568,
+  "catalogEntries": 1546,
+  "sourceKeys": 1564,
   "coverage": {
     "ios": {
       "used": [
@@ -119,6 +119,7 @@
         "Backup completed",
         "Backup deleted",
         "Backup failed",
+        "Backup pending",
         "Backups",
         "Balance",
         "Balance change",
@@ -309,7 +310,6 @@
         "Display",
         "Done",
         "Drop VTXO",
-        "ERROR",
         "EUR",
         "Edit",
         "Edit email address",
@@ -342,6 +342,7 @@
         "Enter how many payments should be made.",
         "Enter the code we sent to {email}",
         "Enter the code we sent to {email}.",
+        "Enter whole sats.",
         "Enter your recovery phrase.",
         "Entered as",
         "Error",
@@ -1132,6 +1133,7 @@
         "Waiting",
         "Waiting for block {height}",
         "Waiting for secure storage",
+        "Waiting to back up",
         "Wake-up schedule hasn't synced yet. Noah will retry when opened.",
         "Wallet",
         "Wallet Suspended",
@@ -1176,19 +1178,14 @@
         "Your wallet isn't ready. Please try again.",
         "You’re all set",
         "Z",
-        "bell",
         "days",
         "debug",
         "e.g. Rent, Donation, VPN",
-        "key",
-        "ladybug",
-        "link",
         "name",
         "name@domain.com, ark1… or lno1…",
         "next",
         "next {date}",
         "payments",
-        "sailboat",
         "sats each time",
         "to {recipient}",
         "under an hour",
@@ -1231,38 +1228,10 @@
         "· nothing left your wallet"
       ],
       "untranslated": {
-        "es": [
-          "gt_0b2319dc1ccf7803",
-          "gt_2c70e12b7a0646f9",
-          "gt_72bec4bd8f6d91a8",
-          "gt_b1b1bdb480c61d07",
-          "gt_d98ee0e5f9399db9",
-          "gt_f683740cded6680d"
-        ],
-        "ja": [
-          "gt_0b2319dc1ccf7803",
-          "gt_2c70e12b7a0646f9",
-          "gt_72bec4bd8f6d91a8",
-          "gt_b1b1bdb480c61d07",
-          "gt_d98ee0e5f9399db9",
-          "gt_f683740cded6680d"
-        ],
-        "ko": [
-          "gt_0b2319dc1ccf7803",
-          "gt_2c70e12b7a0646f9",
-          "gt_72bec4bd8f6d91a8",
-          "gt_b1b1bdb480c61d07",
-          "gt_d98ee0e5f9399db9",
-          "gt_f683740cded6680d"
-        ],
-        "sv": [
-          "gt_0b2319dc1ccf7803",
-          "gt_2c70e12b7a0646f9",
-          "gt_72bec4bd8f6d91a8",
-          "gt_b1b1bdb480c61d07",
-          "gt_d98ee0e5f9399db9",
-          "gt_f683740cded6680d"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     },
     "android": {

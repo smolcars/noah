@@ -79,6 +79,7 @@
   "gt_09bf25ef30833633": "Dirección de correo electrónico",
   "gt_09ce4246d5463e45": "Falló la operación de recepción ({{nativeValue1}}): {{nativeValue2}}",
   "gt_09fc43a650792fef": "Se registró el seguimiento de salida de este VTXO.",
+  "gt_09ff3abe56e1c1df": "Esperando para hacer la copia de seguridad",
   "gt_0a12b92ce7899469": "Aún no hay actividad",
   "gt_0a2eaa4df5760913": "Esta acción modifica tu billetera y puede causar la pérdida de fondos. Escribe delete para confirmar.",
   "gt_0a32a9c29b63eb4e": "VTXO desbloqueado",

@@ -13993,42 +13993,6 @@
         }
       }
     },
-    "ERROR": {
-      "comment": "GT gt_d98ee0e5f9399db9; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERROR"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERROR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERROR"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERROR"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERROR"
-          }
-        }
-      }
-    },
     "EUR": {
       "comment": "GT gt_57d4846cecee3fdd; arguments: none",
       "extractionState": "manual",
@@ -15501,6 +15465,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ange koden vi skickade till %1$@."
+          }
+        }
+      }
+    },
+    "Enter whole sats.": {
+      "comment": "GT gt_6e4b58ace4018a20; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter whole sats."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introduce sats sin decimales."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sats単位の整数で入力してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sats 단위로 소수점 없이 입력하세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ange hela sats."
           }
         }
       }
@@ -51529,6 +51529,42 @@
         }
       }
     },
+    "Waiting to back up": {
+      "comment": "GT gt_09ff3abe56e1c1df; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting to back up"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esperando para hacer la copia de seguridad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップを待っています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업을 기다리는 중"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Väntar på att säkerhetskopiera"
+          }
+        }
+      }
+    },
     "Wake-up schedule hasn't synced yet. Noah will retry when opened.": {
       "comment": "GT gt_a9fecbd4968622c1; arguments: none",
       "extractionState": "manual",
@@ -53617,42 +53653,6 @@
         }
       }
     },
-    "bell": {
-      "comment": "GT gt_f683740cded6680d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bell"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bell"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bell"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bell"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bell"
-          }
-        }
-      }
-    },
     "days": {
       "comment": "GT gt_ab51004e9d71a485; arguments: none",
       "extractionState": "manual",
@@ -53905,114 +53905,6 @@
         }
       }
     },
-    "key": {
-      "comment": "GT gt_2c70e12b7a0646f9; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "key"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "key"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "key"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "key"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "key"
-          }
-        }
-      }
-    },
-    "ladybug": {
-      "comment": "GT gt_0b2319dc1ccf7803; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ladybug"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ladybug"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ladybug"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ladybug"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ladybug"
-          }
-        }
-      }
-    },
-    "link": {
-      "comment": "GT gt_b1b1bdb480c61d07; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "link"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "link"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "link"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "link"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "link"
-          }
-        }
-      }
-    },
     "name": {
       "comment": "GT gt_82a3537ff0dbce7e; arguments: none",
       "extractionState": "manual",
@@ -54189,42 +54081,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "betalningar"
-          }
-        }
-      }
-    },
-    "sailboat": {
-      "comment": "GT gt_72bec4bd8f6d91a8; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sailboat"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sailboat"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sailboat"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sailboat"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sailboat"
           }
         }
       }

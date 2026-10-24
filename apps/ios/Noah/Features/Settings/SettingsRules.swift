@@ -34,7 +34,7 @@ enum DebugMode {
 
 /// Backup's status mark and its two lines, from today's backup state.
 struct BackupStatus: Equatable {
-    enum Mark: Equatable { case done, running, failed, off, never }
+    enum Mark: Equatable { case done, running, failed, pending, off, never }
     let mark: Mark
     let title: String
     /// A date to show (the last good backup), or nil.
@@ -46,7 +46,9 @@ struct BackupStatus: Equatable {
         case .inProgress: mark = .running; title = "Backing up…"
         case .failed: mark = .failed; title = "Backup failed"
         case .idle, .success:
-            if lastBackup == nil { mark = .never; title = "Not backed up yet" }
+            // Changes (or a deleted backup) wait for an upload: never "Backed up" until one succeeds.
+            if state.backupPending { mark = .pending; title = "Backup pending" }
+            else if lastBackup == nil { mark = .never; title = "Not backed up yet" }
             else if enabled { mark = .done; title = "Backed up" }
             else { mark = .off; title = "Automatic backups off" }
         }

@@ -79,6 +79,7 @@
   "gt_09bf25ef30833633": "E-postadress",
   "gt_09ce4246d5463e45": "Mottagningen misslyckades ({{nativeValue1}}): {{nativeValue2}}",
   "gt_09fc43a650792fef": "Spårning av nöduttag registrerades för denna VTXO.",
+  "gt_09ff3abe56e1c1df": "Väntar på att säkerhetskopiera",
   "gt_0a12b92ce7899469": "Ingen aktivitet ännu",
   "gt_0a2eaa4df5760913": "Den här åtgärden ändrar din plånbok och kan leda till att du förlorar medel. Skriv delete för att bekräfta.",
   "gt_0a32a9c29b63eb4e": "VTXO upplåst",
