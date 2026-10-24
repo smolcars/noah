@@ -10,13 +10,13 @@ From `apps/fixtures/translations-coverage.json` (`coverage.{ios,android}.used`):
 
 | | Before (`ac43b695`) | After |
 | --- | ---: | ---: |
-| Shared | 1,038 | 1,173 |
-| iOS only | 280 | 121 |
-| Android only | 371 | 184 |
-| Allowlisted (all of the single-platform strings) | — | 305 (121 iOS, 184 Android) |
-| … of which parity gaps | — | 225 (100 iOS, 125 Android) |
-| Diagnostics and non-copy literals taken out of the catalogs | — | 85 |
-| Catalog entries | 1,689 | 1,478 |
+| Shared | 1,038 | 1,174 |
+| iOS only | 280 | 119 |
+| Android only | 371 | 183 |
+| Allowlisted (all of the single-platform strings) | — | 302 (119 iOS, 183 Android) |
+| … of which parity gaps | — | 223 (98 iOS, 125 Android) |
+| Diagnostics and non-copy literals taken out of the catalogs | — | 86 |
+| Catalog entries | 1,689 | 1,476 |
 
 "Shared" grew because a unified pair leaves one string used by both, and a few strings iOS showed without extracting (the restore word counts, the verification code label) are now extracted.
 
@@ -60,11 +60,11 @@ In order: the approved specs and prototypes in `design/`, the copy rules in [`on
 | Receive | Add an amount first | (blank) | Add an amount first | Features/Receive/ReceiveCopySheet.swift | ui/receive/ReceiveContent.kt | prototype; invoice row's value before an amount |
 | Receive | Copy {label} | Copy {name} | Copy {label} | Features/Receive/ReceiveCopySheet.swift | ui/receive/ReceiveContent.kt | copy button accessibility label |
 | Receive | Description | Add a note | Add a note | Features/Receive/ReceiveAmountSheet.swift | ui/receive/ReceiveContent.kt | note field placeholder (spec) |
-| Receive | The Lightning payment could not be received. Generate a new payment request and try again. | Lightning receive {nativeValue1}. Generate a new payment request and try again. | The Lightning payment could not be received. Generate a new payment request and try again. | Features/Receive/ReceiveModel.swift | ui/ReceiveScreen.kt | Android interpolated an untranslated "canceled"/"failed" |
+| Receive | The Lightning payment could not be received. Generate a new payment request and try again. | Lightning receive {nativeValue1}. Generate a new payment request and try again. | The Lightning payment could not be received. Generate a new payment request and try again. | Features/Receive/ReceiveModel.swift | ui/ReceiveScreen.kt | Android interpolated an untranslated "canceled"/"failed"; it now shows iOS's "Lightning Receive Canceled" / "Lightning Receive Failed" title above it |
 | Home | Couldn't load your balance. | Couldn't load your balance. Pull down to try again. | Couldn't load your balance. Pull down to try again. | App/AppModel.swift | ui/AppModel.kt | both Homes pull to refresh |
 | Home | Couldn't open your wallet. | Couldn't open your wallet. Please try again. | Couldn't open your wallet. Please try again. | App/AppModel.swift | ui/AppModel.kt |  |
 | Home | Your wallet is currently suspended. All wallet operations are disabled. / Resume your wallet in Settings → Advanced. | All wallet operations are disabled. Resume your wallet in Settings. | All wallet operations are disabled. Resume your wallet in Settings. | Features/Home/HomeChrome.swift | ui/home/HomeContent.kt | iOS's two lines become one (copy rule: one short line); "Open Settings" sits under it |
-| Home | {amount} available in Ark | Boarding completed | Boarding completed | Features/Home/HomeView.swift | ui/HomeScreen.kt | automatic-boarding toast; spec keeps "today's" completion |
+| Home | {amount} available in Ark | Boarding completed | {amount} available in Ark | Features/Home/HomeView.swift | ui/HomeScreen.kt | automatic-boarding toast; Android formats the amount as Home does, so a hidden balance shows •••• |
 | Home | Loading transactions | Loading activity | Loading activity | Features/Home/HomeActivityViews.swift, Features/History/TransactionsView.swift | ui/activity/ActivityContent.kt |  |
 | Home | Refunded · back in your wallet | Refunded + "· back in your wallet" | Refunded · back in your wallet | Features/Home/HomeActivityViews.swift | ui/home/HomeParts.kt | Android joined two strings |
 | Home | Status / Final / Successful / Error / Yes / No (label and value) | Status: {nativeValue1} / Final: {nativeValue1} / Successful: {nativeValue1} / Error: {nativeValue1} | Status, Final, Successful, Error, Yes, No | Features/Home/HomeStatusViews.swift | ui/home/HomeBanners.kt | Pending Rounds sheet; Android now translates the label and value and joins them with ": " |
@@ -72,7 +72,7 @@ In order: the approved specs and prototypes in `design/`, the copy rules in [`on
 | Activity | {amount} at the time | {value} at the time | {amount} at the time | Features/History/ActivityDetailRules.swift | ui/activity/ActivityDetail.kt | placeholder only |
 | Activity | Intended balance change | Intended change | Intended change | Features/History/TransactionDetailView.swift | ui/activity/ActivityDetail.kt | prototype |
 | Activity | Effective balance change | Effective change | Effective change | Features/History/TransactionDetailView.swift | ui/activity/ActivityDetail.kt | prototype |
-| Activity | Exiting | Exiting to the chain | Exiting to the chain | Features/History/ActivityDetailRules.swift | ui/activity/ActivityRules.kt | detail status line; prototype (the spec's list just says "Exiting") |
+| Activity | Exiting | Exiting to the chain | Exiting | Features/History/ActivityDetailRules.swift | ui/activity/ActivityRules.kt | detail status line; the spec wins over the prototype |
 | Settings | Couldn't update this setting. Please try again. | Couldn't update mailbox notifications. | Couldn't update mailbox notifications. | Features/Settings/AdvancedPages.swift | ui/settings/NotificationsPages.kt | iOS's generic error replaced by the specific one |
 | Settings | Couldn't update this setting. Please try again. | Couldn't save authentication preference. | Couldn't save authentication preference. | Features/Settings/SettingsView.swift | ui/settings/SettingsRoot.kt |  |
 | Settings | Couldn't update this setting. Please try again. | Couldn't change wallet suspension. Please try again. | Couldn't change wallet suspension. Please try again. | Features/Settings/AdvancedPages.swift | ui/settings/AdvancedPages.kt | suspend and resume |
@@ -240,6 +240,8 @@ Log lines, preconditions, identifiers and exception messages that never reach th
 | ios | Failed to check app version, allowing app to continue / Successfully registered with server / Failed to save email prompt dismissal | Services/Server/ServerRegistration.swift | no (log) | removed |
 | ios | Email already verified | Services/Server/ServerRegistration.swift | no (compared with the server's message) | removed |
 | android | Noah is Locked / Authenticate to access your wallet | ui/WalletPrivacy.kt | yes (cover over dialogs while locked) | now the lock cover's "Noah is locked" / "Unlock to see your wallet." |
+| android | Boarding completed (toast key) | ui/home/HomeRules.kt | no (the toast says "{amount} available in Ark") | removed |
+| android | delete (launch gate field label) | ui/LaunchGateView.kt | yes (the word to type) | now SettingsRules.deleteWord, never translated |
 
 Shown diagnostics that changed: Android recurring's storage and version errors (they reached the editor and list through `e.message`), Android's Review and pay guard, Android's dialog lock cover, and iOS Debug's generic result. Shown diagnostics kept and allowlisted: Android recurring's "Recurring background work stopped.", "Wallet suspended or replacement pending. Sending is stopped." and "Unable to check this payment. Sending remains stopped."; Android's "Saved settings could not be read…", "Secure storage unavailable", "Native settings write failed" and "Wallet not open", which can reach the recurring screens through `e.message`; and iOS Debug's push results.
 
@@ -247,7 +249,7 @@ Shown diagnostics that changed: Android recurring's storage and version errors (
 
 Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **platform** (a genuine platform difference), **spec** (a difference the exit spec chose), **shared** (both apps show it, but one app's copy sits where the extractor can't see it), **dead code**, **flagged** (left for a decision), **diagnostic** (shown, see above) and **parity-gap** (one app has it; "layout" when the other shows the same information differently, "accessibility" when only one labels it, "not localized" when one app builds it in English).
 
-### iOS (121)
+### iOS (119)
 
 - **platform: Settings naming and wording for the location permission**
   - "You can still browse the full map. Enable location in Settings to see nearby places."
@@ -306,6 +308,8 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Number of payments"
   - "days"
   - "payments"
+- **parity-gap (layout): iOS titles its other Receive errors; Android titles only a failed Lightning receive**
+  - "Couldn’t create a request"
 - **parity-gap (layout): iOS writes the count line as one template; Android joins its parts**
   - "{n} in progress · {count} ready to claim"
 - **parity-gap (layout): iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera**
@@ -313,10 +317,6 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "QR mode"
   - "Scan a Bitcoin, Lightning, or Ark QR code and send from Noah."
   - "Scan to pay"
-- **parity-gap (layout): iOS's Receive error has a title above the message; Android's error card has only the message**
-  - "Couldn’t create a request"
-  - "Lightning Receive Canceled"
-  - "Lightning Receive Failed"
 - **parity-gap (layout): iOS's start review shows when the exit can be claimed; Android's summary says "about a day"**
   - "In {time}"
 - **parity-gap (layout): iOS's status word for the sending phases; Android shows "Sending {n} of {total}" there**
@@ -446,7 +446,7 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Claim transaction"
   - "Last checked"
 
-### Android (184)
+### Android (183)
 
 - **platform: Android battery optimisation**
   - "Battery"
@@ -718,8 +718,6 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Noah is still finishing a backup. Try again in a moment."
   - "Restored wallet settings can't be saved yet. Try Resume again when storage is available. Recurring payments remain stopped."
   - "Waiting for secure storage. Unlock your device and try again."
-- **shared: the word to type; iOS's DeleteChecklist compares the same literal, which the extractor can't see**
-  - "delete"
 - **spec (exit.md, Platform choices): Android labels bark's height "Recorded at"**
   - "Recorded at"
 
@@ -743,9 +741,9 @@ Features or details only one app has (the `parity-gap` entries above). Nothing w
 - iOS relabels Debug's Run button while it runs; Android shows a spinner (layout, 1 string)
 - iOS states the existing payment's fee as a sentence; Android shows an Existing fee row (layout, 1 string)
 - iOS takes a custom interval and a payment count in text fields; Android uses steppers (layout, 4 strings)
+- iOS titles its other Receive errors; Android titles only a failed Lightning receive (layout, 1 string)
 - iOS writes the count line as one template; Android joins its parts (layout, 1 string)
 - iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera (layout, 4 strings)
-- iOS's Receive error has a title above the message; Android's error card has only the message (layout, 3 strings)
 - iOS's start review shows when the exit can be claimed; Android's summary says "about a day" (layout, 1 string)
 - iOS's status word for the sending phases; Android shows "Sending {n} of {total}" there (layout, 1 string)
 - iOS's ⋯ menu groups the filters under a Filter heading; Android uses a chip (layout, 1 string)
@@ -874,26 +872,34 @@ Features or details only one app has (the `parity-gap` entries above). Nothing w
 - only Android's scanner reports a camera that fails to start, and shows an aiming hint (2 strings)
 
 
-## Wording to review
+## Wording decisions
 
-These were judgement calls; each is easy to flip by changing one side's source string.
+Reviewed on 2026-10-24. Accepted as chosen:
 
-1. **Send, failed title:** iOS's "Payment did not complete" became Android's "Payment not sent". It covers a Lightning payment that failed or was canceled, and an on-chain one stopped before submission.
-2. **Send, override:** iOS's button "I've checked my history, start a new payment" became Android's "Start a new payment after checking history", and its alert's cancel "Keep waiting" became "Keep checking". iOS still goes straight to the could-pay-twice alert (whose confirm is "Start a new payment anyway"); Android asks "Have you checked?" first.
-3. **Send, not-sent result:** iOS's "Start a new payment" button became the shared "Done".
-4. **Send, rail lines:** Android drops "estimated" ("Seconds · {fee} fee"), as the spec words them. The review still labels an estimate "Estimated fee".
-5. **Send, wallet reservation failure:** iOS now says "Unable to reserve the wallet. Check payment status before sending again." also when no attempt exists (Android's wording; it's never false, but there's nothing to check then).
-6. **Home, automatic boarding:** iOS's toast "{amount} available in Ark" became Android's "Boarding completed". That loses the amount; keeping iOS's wording instead needs Android to format the amount for the toast.
-7. **Home, suspended wallet:** iOS's two lines became Android's one: "All wallet operations are disabled. Resume your wallet in Settings." It no longer says "→ Advanced"; Open Settings sits under it.
-8. **Backup export toast:** "Exported" (iOS) over "Export Complete" (Android), for sentence case.
-9. **Activity, exit status:** "Exiting to the chain" (prototype, Android) over "Exiting" (iOS); the spec's status list just says "Exiting".
-10. **Recurring, resume after checking:** Android's recurring sheet takes iOS's "Check Activity for this payment's last attempt and ask the recipient whether it arrived." and "I checked". Android's Send keeps its own "Check your history…" and "I checked history".
-11. **Receive, Lightning failure:** Android now shows iOS's "The Lightning payment could not be received. …", dropping its (untranslatable) "canceled"/"failed" word. iOS keeps the distinction in its error title.
-12. **VTXOs, renew sheet line:** iOS's "This refreshes the selected VTXOs in a delegated Ark round." became Android's "Joins the next Ark round, so it stays spendable." / "…so they stay spendable."
-13. **Debug confirm:** iOS's "Dangerously remove this VTXO?" / "Offboard all funds?" became the prototype's "{action}?" ("Drop VTXO?"), with "This changes your wallet and can lose funds."
-14. **Delete wallet fallback:** Android's "…Restart Noah if a restore is pending, then try again." became "Couldn't delete wallet. Restart Noah and try again."
-15. **Shorter errors:** "Couldn't save your name." and "Couldn't save your preference." drop iOS's "Please try again."
-16. **The launch gate is not unified (flagged).** Android's copy is hand-written English in `values/native.xml`, outside the catalogs, and one Android message covers three states iOS tells apart (secure storage, invalid seed, seed conflict, with support codes). It's safety copy, so it needs your call on wording before either side changes. iOS's strings are allowlisted as `flagged`.
+1. **Send, failed title:** "Payment not sent" (was iOS's "Payment did not complete").
+2. **Send, override:** "Start a new payment after checking history" and "Keep checking". iOS still goes straight to the could-pay-twice alert; Android asks "Have you checked?" first.
+3. **Send, not-sent result:** "Done" (was iOS's "Start a new payment").
+4. **Send, rail lines:** "Seconds · {fee} fee" without "estimated", as the spec words them; the review still labels an estimate "Estimated fee".
+5. **Send, wallet reservation failure:** "Unable to reserve the wallet. Check payment status before sending again." on both.
+7. **Home, suspended wallet:** one line, "All wallet operations are disabled. Resume your wallet in Settings."
+8. **Backup export toast:** "Exported".
+10. **Recurring, resume after checking:** iOS's "Check Activity for this payment's last attempt and ask the recipient whether it arrived." and "I checked"; Android's Send keeps its own "Check your history…" and "I checked history".
+12. **VTXOs, renew sheet line:** "Joins the next Ark round, so it stays spendable." / "…so they stay spendable."
+13. **Debug confirm:** the prototype's "{action}?" with "This changes your wallet and can lose funds."
+14. **Delete wallet fallback:** "Couldn't delete wallet. Restart Noah and try again."
+15. **Shorter errors:** "Couldn't save your name." and "Couldn't save your preference."
+
+Changed after review:
+
+6. **Home, automatic boarding:** both platforms toast iOS's "{amount} available in Ark". Android formats the amount as Home does, so a hidden balance reads "••••"; its "Boarding completed" title stays only as the toast's key.
+9. **Activity, exit status:** "Exiting" on both. The spec's status list says "Exiting", and where the spec and the prototype differ, the spec wins.
+11. **Receive, Lightning failure:** Android now shows iOS's "Lightning Receive Canceled" or "Lightning Receive Failed" title above the shared message, so both say which it was in shared, translated strings.
+
+Left for later:
+
+16. **The launch gate** stays as it is, flagged and allowlisted. Unifying its safety copy, and moving Android's English-only `values/native.xml` launch-gate copy into the catalogs, are separate TODO items.
+
+**Typed "delete" confirmations.** Every typed-delete check (the Android launch gate, Settings → Delete wallet and Debug on both platforms) now accepts one word, `SettingsRules.deleteWord` (Android) / `DeleteChecklist.word` (iOS): "delete", trimmed, any case. Android's launch gate shows that word as its field label instead of a translatable string, and Android's Debug check now trims like the others. Every translation of "Type delete to confirm" and of the launch gate's prompt keeps the literal `delete`, as the Settings spec says; `TranslationsTest` (Android), `TranslationsTests` (iOS) and the catalog tool's tests fail if a locale ever asks for another word.
 
 ## Other findings, not changed
 
@@ -901,7 +907,6 @@ These were judgement calls; each is easy to flip by changing one side's source s
 - **Android's recurring screens show raw `e.message`.** Any exception's text can reach the editor, the list or Run due payments now. The storage and version errors were reworded above; the rest are allowlisted as `diagnostic`.
 - **Android's legacy screens.** The recurring manual review still uses the pre-redesign Send review and result (`ui/SendScreen.kt`), and Home's email nudge opens the pre-redesign email form (`ui/Onboarding.kt`).
 - **Dead code:** `onchain/VtxoSelectionRow.kt` (Android) and `PendingFeatureView` in `Features/Onboarding/OnboardingFlow.swift` (iOS) have no callers. Their strings are allowlisted as `dead code`.
-- **Typed confirmation word:** Android translates the launch gate's "delete" field label, but the check still wants the English "delete".
 - **Rounding:** iOS truncates "Expires in {n} hours" (`blocks / 6`); Android rounds. Both use the same strings, so a VTXO near a boundary can read one hour apart.
 - **No singular for blocks:** "{n} blocks" isn't a plural on either platform, so both can say "1 blocks". Making it a plural means converting about 15 call sites to `trPlural` / `L10n.plural` and adding one-forms in four languages.
 - **Extractor blind spot:** iOS's `WalletLifecycle.Failure.errorDescription` strings are shown (localized through Android's catalog entries) but the extractor doesn't scan that switch, so they look Android-only; they're allowlisted as `shared`.
@@ -910,10 +915,10 @@ These were judgement calls; each is easy to flip by changing one side's source s
 
 ## Verification
 
-- **iOS:** `NoahTests` (scheme `Noah-Regtest`, `-only-testing:NoahTests`, `-parallel-testing-enabled NO`) on an iPhone SE (3rd generation) simulator, iOS 27.0: 1,177 tests in 233 suites passed.
-- **Android:** `./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest`: 4,219 JVM tests in 197 suites, 0 failures; the instrumented test APK builds. The instrumented suites themselves weren't run, apart from the screenshot galleries below.
-- **Tool:** `bun test apps/tools/translations.test.mjs` passes (17 tests, including the new gate test), and `bun apps/tools/translations.mjs --check` is clean with the gate on: 0 untranslated in es, ja, ko and sv.
-- **Tests that asserted old text** were updated: `SendOfferTests`, `ActivityDetailTests`, `ProfileNameDraftTests`, `SettingsSafetyTests`, the Home and Onboarding shot fixtures (iOS) and `ExitDeviceTest` (Android). No test tag or accessibility identifier changed.
+- **iOS:** `NoahTests` (scheme `Noah-Regtest`, `-only-testing:NoahTests`, `-parallel-testing-enabled NO`) on an iPhone SE (3rd generation) simulator, iOS 27.0: 1,178 tests in 233 suites passed (after the review changes).
+- **Android:** `./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest`: 4,220 JVM tests in 197 suites, 0 failures; the instrumented test APK builds. The instrumented suites themselves weren't run, apart from the screenshot galleries below.
+- **Tool:** `bun test apps/tools/translations.test.mjs` passes (18 tests, including the gate and typed-delete tests), and `bun apps/tools/translations.mjs --check` is clean with the gate on: 0 untranslated in es, ja, ko and sv.
+- **Tests that asserted old text** were updated: `SendOfferTests`, `ProfileNameDraftTests`, `SettingsSafetyTests`, the Home and Onboarding shot fixtures (iOS) and `ExitDeviceTest` (Android). No test tag or accessibility identifier changed.
 
 ### Length on the smallest phones
 
