@@ -56,10 +56,11 @@ struct ActivityDetail: Equatable {
             else { status = "Sending" }
         case .done:
             tone = .plain
-            if transaction.isRenewal { status = (renewedCoins ?? 0) > 0 ? "Renewed {n} coins" : "Renewed" }
+            // An unknown status stays "Recorded": only a completed renewal reads "Renewed {n} coins".
+            if transaction.receiptStatus == "Recorded" { status = "Recorded" }
+            else if transaction.isRenewal { status = (renewedCoins ?? 0) > 0 ? "Renewed {n} coins" : "Renewed" }
             else if transaction.isInternalTransfer { status = "Moved to Ark" }
             else if transaction.movementKind == "exit" { status = "Exited" }
-            else if transaction.receiptStatus == "Recorded" { status = "Recorded" }
             else { status = outgoing ? "Sent" : "Received" }
         }
 

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 import UIKit
 @testable import Noah
@@ -433,5 +434,47 @@ struct ActivityCoinReadTests {
         gate.continuation.yield(.inMempool)
         await task.value
         #expect(read.state == .loading)
+    }
+}
+
+/// Renewals in every status (Sol's second Android round).
+@MainActor
+struct ActivityRenewalAndBoardTests {
+    static func renewal(_ status: String?, coins: Int = 3) -> HistoryTransaction {
+        var row = HomeRulesTests.row("movement-r", type: "Arkoor", amount: 45, direction: "outgoing", status: status,
+                                     kind: "refresh", effective: -45, offchainFee: 45)
+        row.subsystemName = "bark.round"
+        row.subsystemKind = "refresh"
+        row.inputVtxos = (0..<coins).map { "in\($0):0" }
+        row.outputVtxos = []
+        row.exitedVtxos = []
+        return row
+    }
+
+    /// Only a completed renewal reads "Renewed {n} coins"; opening any renewal never formats a plural it doesn't have.
+    @Test func everyRenewalStateOpens() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "renewal-detail-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let app = AppModel(settings: try SettingsStorage(rootPath: root.path))
+        let english = Locale(identifier: "en")
+        let cases: [(HistoryTransaction, String)] = [
+            (Self.renewal("successful"), "Renewed 3 coins"), (Self.renewal("successful", coins: 1), "Renewed 1 coin"),
+            (Self.renewal("successful", coins: 0), "Renewed"), (Self.renewal("pending"), "Sending"),
+            (Self.renewal("failed"), "Failed"), (Self.renewal("canceled"), "Canceled"), (Self.renewal(nil), "Recorded"),
+        ]
+        for (renewal, expected) in cases {
+            let history = HistoryModel(dependencies: .init(load: { [renewal] }, sync: {}, changes: { AsyncThrowingStream { $0.finish() } },
+                                                           blockTime: { _ in nil }, price: { _, _ in nil }))
+            let host = UIHostingController(rootView: NavigationStack {
+                TransactionDetailView(transaction: renewal, detailsOpen: .constant(true), onRepeatPayment: { _ in }, onClose: {})
+            }.environment(app).environment(history).environment(\.locale, english))
+            host.view.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
+            host.view.layoutIfNeeded()
+            let receipt = ActivityDetail.receipt(renewal, ownDomain: "noahwallet.io", unit: .sats, locale: english, date: "Today")
+            #expect(receipt.hasPrefix(expected), "\(renewal.movementStatus ?? "nil"): \(receipt)")
+            #expect(!receipt.contains("{n}") && !receipt.contains("%"))
+            let detail = ActivityDetail(renewal, ownDomain: "noahwallet.io")
+            #expect((detail.status == "Renewed {n} coins") == (renewal.movementStatus == "successful" && renewal.inputVtxos?.isEmpty == false))
+        }
     }
 }
