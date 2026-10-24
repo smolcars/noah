@@ -63,6 +63,16 @@ internal suspend fun backUpAndRefresh(backup: suspend () -> Unit, refresh: suspe
     catch (_: Exception) { false }
 }
 
+/** Backup's list, and whether its last read failed: only a read sets that, and a failed read keeps what was listed. */
+internal class BackupList {
+    var items by mutableStateOf<List<BackupObjectInfo>?>(null); private set
+    var failed by mutableStateOf(false); private set
+    suspend fun load(read: suspend () -> List<BackupObjectInfo>) {
+        try { items = read(); failed = false }
+        catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { failed = true }
+    }
+}
+
 /** A produced file and how to remove its temporary staging folder. */
 internal class SharedFile(val file: File, val discard: () -> Unit)
 
@@ -120,15 +130,11 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
     val reduceMotion = LocalReduceMotion.current
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     var enabled by remember { mutableStateOf(model.server.state.isBackupEnabled == true) }
-    var backups by remember { mutableStateOf<List<BackupObjectInfo>?>(null) }
-    var listError by remember { mutableStateOf(false) }
+    val backups = remember { BackupList() }
     var open by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<BackupObjectInfo?>(null) }
     var exporting by rememberSaveable { mutableStateOf(initialSheet == "export") }
-    suspend fun list() {
-        try { backups = V0BackupV2ListClient(model.services.client).listBackupObjects().value(); listError = false }
-        catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { listError = true }
-    }
+    suspend fun list() = backups.load { V0BackupV2ListClient(model.services.client).listBackupObjects().value() }
     LaunchedEffect(Unit) { list() }
     val state = live.backup
     val kind = SettingsRules.backup(enabled, state.lastBackupStatus)
@@ -160,10 +166,9 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
                 end = RowEnd.None, enabled = kind != SettingsRules.Backup.running && !model.busy && !model.isWalletSuspended, divider = d,
                 modifier = Modifier.testTag("backup-now")) {
                 model.action("Couldn't back up your wallet. Please try again.") {
-                    val refreshed = backUpAndRefresh(backup = {
+                    backUpAndRefresh(backup = {
                         model.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false)
                     }, refresh = { list() })
-                    listError = !refreshed
                     haptics.success(); toasts.show(backedUp)
                 }
             } },
@@ -174,21 +179,21 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
                     }
                 }) },
             { d -> Column {
-                SettingsRow(tr("Backups"), SettingsIcons.doc, value = backups?.size?.toString(), end = RowEnd.Expand(open), divider = d || open,
+                SettingsRow(tr("Backups"), SettingsIcons.doc, value = backups.items?.size?.toString(), end = RowEnd.Expand(open), divider = d || open,
                     modifier = Modifier.testTag("backup-list")) { open = !open; haptics.selection() }
                 AnimatedVisibility(open, enter = if (reduceMotion) fadeIn(tween(180)) else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
                     exit = if (reduceMotion) fadeOut(tween(180)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f, 157.9137f))) {
                     Column(Modifier.padding(start = 48.dp)) {
-                        val records = backups
+                        val records = backups.items
                         when {
-                            listError && records == null -> Text(tr("Couldn't list backups."), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.failure)
+                            backups.failed && records == null -> Text(tr("Couldn't list backups."), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.failure)
                             records == null -> Text(tr("Loading…"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
                             records.isEmpty() -> Text(tr("No backups found"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
                             else -> records.forEachIndexed { index, backup ->
                                 BackupLine(backupDate(backup.createdAt, locale), "${backup.encryptedSize / 1024} KB", divider = true, enabled = !model.busy) { deleting = backup }
                             }
                         }
-                        if (listError && records != null) Text(tr("Couldn't list backups."), Modifier.padding(vertical = 10.dp), style = HomeType.small, color = palette.failure)
+                        if (backups.failed && records != null) Text(tr("Couldn't list backups."), Modifier.padding(vertical = 10.dp), style = HomeType.small, color = palette.failure)
                     }
                 }
             } },

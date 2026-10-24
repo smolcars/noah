@@ -18,6 +18,21 @@ class SettingsFeaturesTest {
         assertTrue(backUpAndRefresh(backup = {}, refresh = {}))
     }
 
+    @Test fun aListThatFailsAfterABackupSaysSoInsteadOfLoading() = kotlinx.coroutines.runBlocking {
+        val backups = BackupList()
+        // Back up now's refresh: the list read fails on its own, and that failure is what the page shows.
+        backUpAndRefresh(backup = {}, refresh = { backups.load { error("list unavailable") } })
+        assertTrue(backups.failed)
+        assertNull("never listed: \"Couldn't list backups.\", not \"Loading…\"", backups.items)
+        backups.load { emptyList() }
+        assertFalse(backups.failed)
+        assertEquals(emptyList<Any>(), backups.items)
+        // A later failure keeps what was listed and says the refresh failed.
+        backups.load { error("list unavailable") }
+        assertTrue(backups.failed)
+        assertEquals(emptyList<Any>(), backups.items)
+    }
+
     @Test fun launchBackgroundAndStaleAuthentication() {
         val policy = BiometricLockPolicy(true)
         assertTrue(policy.locked)
