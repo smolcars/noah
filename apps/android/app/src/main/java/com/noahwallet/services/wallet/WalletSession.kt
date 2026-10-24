@@ -420,9 +420,11 @@ class WalletSession internal constructor(
     /** [renewal]: Home's Renew, whose VTXOs must all still be due when it's submitted, checked under these locks. */
     /** [keepOnchain]: where a claim to this wallet records its outputs, so auto-board leaves them on-chain. */
     suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false,
-                               keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() }): String = withM6 { handles ->
+                               keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
+                               recordClaim: (com.noahwallet.onchain.ExitClaimRecords.Record) -> Unit = {}): String = withM6 { handles ->
         val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
-        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept) }
+        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
+            recordClaim = recordClaim) }
     }
     internal suspend fun exitCosts(ids: List<String>): Map<String, com.noahwallet.onchain.ExitCosts.Cost?> = withM6 { onchainOperations(it).exitCosts(ids) }
     suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->

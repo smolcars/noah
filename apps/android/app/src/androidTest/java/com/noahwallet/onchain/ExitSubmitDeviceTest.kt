@@ -112,6 +112,9 @@ class ExitSubmitDeviceTest {
     private val models: MutableList<OnchainModel> = java.util.Collections.synchronizedList(mutableListOf())
     private val nav = SettingsNav(back = {}, open = {}, pop = {}, myCode = {}, home = {})
 
+    /** Noah's claim records, on "disk": they outlive the process like the journal. */
+    @Volatile private var claimed: String? = null
+    private val claims = ExitClaimRecords({ claimed }, { claimed = it })
     private var shown by mutableStateOf(true)
     private var registry: SaveableStateRegistry? = null
     private var saved: Map<String, List<Any?>>? = null
@@ -126,7 +129,8 @@ class ExitSubmitDeviceTest {
             if (shown) {
                 val restored = remember { SaveableStateRegistry(saved) { true }.also { registry = it } }
                 CompositionLocalProvider(LocalSaveableStateRegistry provides restored) {
-                    val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {})) { true }).also { models += it } }
+                    val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {}), claims) { true })
+                        .also { models += it } }
                     LaunchedEffect(model) { model.load() }
                     page(model)
                 }
@@ -232,5 +236,6 @@ class ExitSubmitDeviceTest {
         hold("exit-hold-claim"); settle("the hold to end") { !models.last().busy }
         assertEquals(listOf("drain", "broadcast"), bark.calls)
         assertEquals(1, journal().count { it.quote.action == OnchainAction.claim })
+        assertEquals("the claim's record, for its exit's page", ExitClaimRecords.Record("claim-tx", 262, listOf(id), false, regtest), claims.of(id, "claim-tx"))
     }
 }

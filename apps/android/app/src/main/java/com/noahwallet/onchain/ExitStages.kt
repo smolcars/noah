@@ -165,6 +165,26 @@ internal class ExitSeen(private val read: () -> String?, private val write: (Str
 }
 
 /**
+ * Each claim Noah broadcast, apart from the journal (acknowledging clears that) so a finished exit still shows what it
+ * received: the fee the drain actually paid, the exits it claimed and where it went. Display only: it blocks nothing.
+ */
+class ExitClaimRecords(private val read: () -> String?, private val write: (String) -> Unit) {
+    /** [destination] is the other wallet's address; null for this phone's own wallet. */
+    @kotlinx.serialization.Serializable data class Record(val txid: String, val fee: Long, val ids: List<String>, val toPhone: Boolean, val destination: String? = null)
+
+    fun all(): List<Record> = read()?.let { runCatching { Json.decodeFromString<List<Record>>(it) }.getOrNull() }.orEmpty()
+    @Synchronized fun add(record: Record) = write(Json.encodeToString(all().filter { it.txid != record.txid } + record))
+    /** The claim that took exit [id]: the one bark names ([txid]) once it does, else the latest. */
+    fun of(id: String, txid: String?) = all().lastOrNull { id in it.ids && (txid == null || it.txid == txid) }
+
+    companion object {
+        private const val storageKey = "native-exit-claims-v1"
+        fun stored(settings: com.noahwallet.services.storage.SettingsStorage) =
+            ExitClaimRecords({ settings.string(storageKey) }, { settings.set(it, storageKey); settings.sync() })
+    }
+}
+
+/**
  * "Needs on-chain funds" is inferred (exit.md, Decision 3): bark 0.8 leaves a transaction it can't pay for in
  * AwaitingCpfpBroadcast and only logs a warning. It shows while the confirmed on-chain balance is below that package's
  * fee, once bark has had a chance to pay, and clears as soon as the balance covers it. Never from error text.

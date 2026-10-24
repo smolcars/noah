@@ -49,6 +49,13 @@ internal data class ExitContext(val tip: Long, val confirmed: Long?, val delta: 
                                 val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false) {
     /** This exit's part of [claimFee]; see [ExitClaim.share]. */
     fun claimShare(id: String) = claimFee?.let { ExitClaim.share(it, claimIds, id) }
+
+    /** The claim to show: Noah's record of it, kept past acknowledgement, else its journal attempt (a claim from before records). */
+    fun claimed(record: ExitClaimRecords.Record?, attempt: OnchainOperationJournal.Attempt?) = when {
+        record != null -> copy(claimFee = record.fee, claimIds = record.ids, claimedTo = record.destination)
+        attempt != null -> copy(claimFee = attempt.quote.fee, claimIds = attempt.quote.ids, claimedTo = attempt.quote.destination?.takeIf { attempt.quote.destinationIsMine == false })
+        else -> this
+    }
 }
 
 /**
@@ -72,15 +79,17 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     val stalled = ExitFunding.shared.checkFailed || app.session.openWithoutDaemon
     val stage = exit?.let { ExitClaims.apply(ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds, seen, stalled),
         ExitClaims.submitted(model.attempts)[id]) }
-    // The claim's own attempt says what it cost and where it went (the claim fee is checked exactly before broadcast).
+    // What the claim cost and where it went: Noah's record of it, or its attempt while the journal still has it.
+    val claimRecords = remember(app.settings) { ExitClaimRecords.stored(app.settings) }
+    val record = remember(model.revision, stage?.claimTxid) { claimRecords.of(id, stage?.claimTxid) }
     val claim = model.attempts.firstOrNull { it.quote.action == OnchainAction.claim && id in it.quote.ids && (stage?.claimTxid == null || it.receipt?.txid == stage.claimTxid) }
     val claimEstimate by produceState<Long?>(null, stage?.phase == ExitStage.Phase.claimable) {
         if (stage?.phase == ExitStage.Phase.claimable) value = try { withContext(Dispatchers.IO) { app.session.exitCosts(listOf(id))[id]?.claim } }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
     }
     var deposit by remember { mutableStateOf<Long?>(null) }
-    val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claim?.quote?.fee, claim?.quote?.ids.orEmpty(),
-        claim?.quote?.destination?.takeIf { claim.quote.destinationIsMine == false }, claimEstimate, exit?.cancelable == true)
+    val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claimEstimate = claimEstimate,
+        cancelable = exit?.cancelable == true).claimed(record, claim)
     ExitProgressContent(exit, stage, context, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back, loaded = model.revision > 0,
         check = { scope.launch { model.review(OnchainAction.progress, overview?.exits.orEmpty().filter { it.state !in ExitTimeline.terminal }.map { it.id }) } },
         cancel = { scope.launch { model.review(OnchainAction.cancel, listOf(id)) } },

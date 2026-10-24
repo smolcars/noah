@@ -666,6 +666,43 @@ class OnchainOperationsTest {
         }
     }
 
+    @Test fun aClaimsRecordKeepsWhatItActuallyPaidPastAcknowledgement() = runBlocking {
+        for (estimated in listOf(true, false)) fixture { wallet, ops, journal, _ ->
+            var disk: String? = null
+            val records = ExitClaimRecords({ disk }, { disk = it })
+            wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+            wallet.mine = false
+            val destination = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"
+            val reviewed = if (estimated) ops.quote(OnchainAction.claim, listOf("a"), destination = destination) else {
+                wallet.estimateError = java.net.SocketTimeoutException("estimator offline")
+                val unknown = (runCatching { ops.quote(OnchainAction.claim, listOf("a"), destination = destination) }.exceptionOrNull() as ExitEstimateUnavailable).review
+                // Continue without estimate: the review has no fee; the drain's own is the one paid.
+                wallet.claimFee = 1_310
+                unknown.copy(unknownFeeConsent = unknown.id)
+            }
+            ops.execute(reviewed, recordClaim = records::add)
+            val fee = if (estimated) 1_295L else 1_310L
+            journal.acknowledge(journal.loadAll().single().id)
+            assertTrue("acknowledged: the journal no longer has it", journal.loadAll().isEmpty())
+            assertEquals(ExitClaimRecords.Record("claim-tx", fee, listOf("a"), false, destination), records.of("a", "claim-tx"))
+            // Reopening the finished exit: its receipt comes from the record, with or without the journal.
+            val context = ExitContext(0, null, null).claimed(records.of("a", "claim-tx"), null)
+            assertEquals(30_000L - fee, ExitRules.received(30_000, checkNotNull(context.claimShare("a"))))
+            assertEquals(destination, context.claimedTo)
+            assertNull("another exit isn't in it", records.of("b", null))
+        }
+    }
+    @Test fun aClaimToThisPhoneIsRecordedWithoutItsAddressAndARecordFailureChangesNothing() = runBlocking { fixture { wallet, ops, journal, _ ->
+        wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+        var record: ExitClaimRecords.Record? = null
+        ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"), recordClaim = { record = it })
+        assertEquals(ExitClaimRecords.Record("claim-tx", 1_295, listOf("a"), true, null), record)
+        journal.acknowledge(journal.loadAll().single().id)
+        ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"), recordClaim = { error("disk full") })
+        assertEquals("the second claim still went out and was journaled", 2, wallet.calls.count { it == "broadcast" })
+        assertEquals("claim-tx", journal.loadAll().single().receipt!!.txid)
+    } }
+
     @Test fun executionOwnershipChangesAndFailuresPreventClaimConstructionAndSubmission() = runBlocking {
         for (change in listOf("own-external", "external-own", "throws", "invalid", "wrong-network")) fixture { wallet, ops, journal, _ ->
             wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))

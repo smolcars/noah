@@ -189,8 +189,10 @@ internal class OnchainOperations(
      * [keepOnchain]: a claim to this wallet records its outputs in auto-board's handled ledger (exit.md, Decision 8)
      * before it's broadcast, so auto-board never offers them back to Ark.
      */
+    /** [recordClaim]: where a broadcast claim's fee, exits and destination are kept for its exits' pages; a failure there changes nothing. */
     suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
-                        keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() }): String {
+                        keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
+                        recordClaim: (ExitClaimRecords.Record) -> Unit = {}): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding(kept) != funding)) fail(OnchainFailure.changed)
@@ -245,6 +247,8 @@ internal class OnchainOperations(
                     // Every error after entering broadcast remains uncertain, including typed BDK errors.
                     val txid = try { wallet.broadcastClaim(claim.psbtBase64) } catch (_: Exception) { fail(OnchainFailure.uncertain) }
                     recordTransaction(txid)
+                    val mine = reviewed.destinationIsMine == true
+                    runCatching { recordClaim(ExitClaimRecords.Record(txid, claim.feeSats.toLong(), reviewed.ids, mine, reviewed.destination.takeIf { !mine })) }
                     OnchainReceipt("Claim submitted. Refresh to check confirmation.", txid)
                 }
                 OnchainAction.cancel -> {
