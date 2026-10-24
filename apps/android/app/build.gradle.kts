@@ -231,6 +231,8 @@ dependencies {
     implementation(libs.security.crypto)
     testImplementation(libs.work.testing)
     testImplementation(libs.robolectric)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test)
     androidTestImplementation(libs.work.testing)
     testImplementation(libs.junit)
     testImplementation("com.ibm.icu:icu4j:78.3") // JVM bridge for android.icu.text.IDNA.

@@ -160,14 +160,12 @@ private fun EmptyRecurring(enabled: Boolean, create: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String) {
+internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executor: RecurringExecutor = RecurringRuntime.shared(LocalContext.current).executor) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current
     val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
-    val runtime = remember { RecurringRuntime.shared(context) }
-    val executor = runtime.executor
     val scope = rememberCoroutineScope()
     var loaded by remember { mutableStateOf(false) }
     var cancelling by rememberSaveable { mutableStateOf(false) }
@@ -261,7 +259,7 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String) {
                 if (!executor.controller.locked) { review = null; executor.reload() }
             } }
             else SendConfirmation(item.payment, item.quote, executor.controller, confirm = { act {
-                runtime.executeInForeground(manual = true, approval = item)
+                RecurringRuntime.shared(context).executeInForeground(manual = true, approval = item)
                 if (!executor.controller.locked) review = null
             } }, cancel = { review = null })
         }

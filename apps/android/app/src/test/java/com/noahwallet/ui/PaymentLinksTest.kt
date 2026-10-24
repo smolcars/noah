@@ -4,15 +4,9 @@ import android.app.Application
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Looper
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.send.*
 import com.noahwallet.services.launch.LaunchState
@@ -23,7 +17,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /** OS deep links (deep-links.md): the scheme filter, the launch gate, Send's in-progress block and the apply-once rule. */
@@ -45,7 +38,7 @@ class PaymentLinksTest {
     }
     /** NoahApp's delivery: what reached the scan route. */
     private class Delivery { val scanned = mutableListOf<String>() }
-    private fun PaymentLinks.deliver(send: SendController, into: Delivery, reviewing: Boolean = false) = deliver(send, reviewing) { into.scanned += it }
+    private fun PaymentLinks.deliver(send: SendController, into: Delivery) = deliver(send, mutableIntStateOf(0)) { into.scanned += it }
     /** LaunchGateView drops on ignore and hands an open link to NoahApp. */
     private fun PaymentLinks.gate(step: LinkStep, send: SendController, into: Delivery) {
         if (step == LinkStep.ignore) drop()
@@ -127,6 +120,23 @@ class PaymentLinksTest {
         assertEquals(emptyList<String>(), delivery.scanned)
     }
 
+    @Test fun anUnfinishedNotificationsCheckHoldsTheLinkUntilItDecides() {
+        // A physical device re-checks notifications on every resume; until it finishes, NoahApp never gets the link.
+        val ready = send()
+        for (gate in listOf(LaunchRoute.push, LaunchRoute.app)) {
+            val links = PaymentLinks(); val delivery = Delivery()
+            links.receive(view("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22"))
+            for (route in listOf(LaunchRoute.loading, LaunchRoute.app, LaunchRoute.push)) {
+                assertEquals(LinkStep.wait, linkStep(route, false, true, wallet, false, false))
+                links.gate(linkStep(route, false, true, wallet, false, false), ready, delivery)
+            }
+            assertEquals(emptyList<String>(), delivery.scanned)
+            links.gate(linkStep(gate, false, false, wallet, false, false), ready, delivery)
+            assertEquals(if (gate == LaunchRoute.app) 1 else 0, delivery.scanned.size)
+            assertNull(links.pending)
+        }
+    }
+
     @Test fun aPaymentInFlightBlocksTheLink() {
         val link = "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.0001"
         val links = PaymentLinks(); val delivery = Delivery()
@@ -151,52 +161,6 @@ class PaymentLinksTest {
         links.deliver(unreadable, delivery)
         assertTrue(links.blocked)
         assertEquals(emptyList<String>(), delivery.scanned)
-    }
-
-    @Test fun aReviewOrRecurringApprovalRejectsLinksAndStaysAsItIs() {
-        val ready = send()
-        val quote = CompletableDeferred<SendQuote>()
-        val model = SendModel(ready, "regtest", { error("no LNURL here") }, { quote.await() }, {}, scope).apply { arkBalance = 10_000 }
-        var approval by mutableStateOf(false)
-        val open = mutableIntStateOf(0)
-        Robolectric.buildActivity(ComponentActivity::class.java).setup().use { activity ->
-            // As SendScreen and the recurring schedule report themselves.
-            activity.get().setContent { ReviewOpen(open, model.stage == SendStage.review); ReviewOpen(open, approval) }
-            fun frame() { Snapshot.sendApplyNotifications(); shadowOf(Looper.getMainLooper()).idle() }
-            val links = PaymentLinks(); val delivery = Delivery()
-            fun link(value: String) { links.receive(view(value)); frame(); links.deliver(ready, delivery, reviewing = open.intValue > 0) }
-            // A draft before review (Amount, then To) follows scanning.
-            link("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22")
-            model.recipientFirst(); link("lightning:lnurlp://example.com/draft")
-            assertEquals(2, delivery.scanned.size); assertFalse(links.blocked)
-            // Preparing a review: the quote hasn't come back.
-            val invoice = decoderInvoice("10u")
-            scope.launch { model.importRecipient(invoice, stay = true) }
-            assertTrue(model.stage == SendStage.review && model.busy)
-            link("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.00002")
-            assertTrue(links.blocked)
-            // Showing it: two links in a row are both rejected, and the review is the same one.
-            quote.complete(FakeSendWallet.quote)
-            assertTrue(model.showReview)
-            val reviewed = model.quote
-            links.blocked = false
-            link("lightning:lnurlp://example.com/one"); link("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.00003")
-            assertTrue(links.blocked); assertNull(links.pending)
-            assertEquals(2, delivery.scanned.size)
-            assertSame(reviewed, model.quote); assertEquals(invoice, model.destination); assertEquals(SendStage.review, model.stage); assertTrue(model.showReview)
-            // Start over leaves the review: links follow scanning again.
-            model.reset(); frame()
-            assertEquals(0, open.intValue)
-            // A recurring approval, being prepared or open, rejects it too.
-            approval = true; links.blocked = false
-            link("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.00004")
-            assertTrue(links.blocked); assertTrue(approval)
-            assertEquals(2, delivery.scanned.size)
-            approval = false; frame()
-            assertEquals(0, open.intValue)
-            link("lightning:lnurlp://example.com/after")
-            assertEquals("lightning:lnurlp://example.com/after", delivery.scanned.last())
-        }
     }
 
     @Test fun aLinkIsAppliedOnceAcrossRecreationAndRestore() {

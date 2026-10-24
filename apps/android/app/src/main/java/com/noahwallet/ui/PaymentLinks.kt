@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.IntState
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,14 +31,14 @@ class PaymentLinks : ViewModel() {
     fun drop() { pending = null }
 
     /**
-     * Gives the link to [scan] once Send has read its saved payment. A payment in flight, or a Send review or recurring
-     * approval [reviewing], rejects it before anything moves: the screen and the payment stay exactly as they are.
+     * Gives the link to [scan] once Send has read its saved payment. A payment in flight, or any Send review or recurring
+     * approval open in [reviews] ([ReviewOpen]), rejects it before anything moves: the screen and payment stay as they are.
      */
-    fun deliver(send: SendController, reviewing: Boolean, scan: (String) -> Unit) {
+    fun deliver(send: SendController, reviews: IntState, scan: (String) -> Unit) {
         val link = pending ?: return
         if (send.loading) return
         pending = null
-        if (send.locked || reviewing) blocked = true else scan(link)
+        if (send.locked || reviews.intValue > 0) blocked = true else scan(link)
     }
 
     companion object {
