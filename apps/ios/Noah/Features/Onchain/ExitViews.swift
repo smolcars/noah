@@ -236,8 +236,9 @@ struct ExitVtxoRow: View {
             .overlay(alignment: .bottom) { if hairline { HomeHairline().padding(.leading, 48) } }
         }
         .buttonStyle(SettingsRowPressStyle())
-        .disabled(!vtxo.eligible || selected == nil)
-        .opacity(vtxo.eligible ? 1 : 0.42)
+        // Ones that can't exit look disabled; All's list just doesn't take taps.
+        .disabled(!vtxo.eligible)
+        .allowsHitTesting(selected != nil)
         .accessibilityAddTraits(selected == true ? .isSelected : [])
         .accessibilityIdentifier("exit-vtxo-\(vtxo.id)")
     }
