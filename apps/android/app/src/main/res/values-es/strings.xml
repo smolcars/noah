@@ -249,6 +249,7 @@
   <string name="gt_83b12c2216efb4fd">"Borrar"</string>
   <string name="gt_ba59e2d4a5e39a42">"Quitar filtro"</string>
   <string name="gt_3b7ea51793e9d906">"Borrar búsqueda"</string>
+  <string name="gt_cea4d2e010b8fd52">"Borrar selección"</string>
   <string name="gt_7d9eb7acb13e2462">"Cerrar"</string>
   <string name="gt_dfc885030d22671d">"Cerrar detalles del lugar"</string>
   <string name="gt_55656b5e434f4c06">"Cerrar búsqueda"</string>
@@ -1144,6 +1145,8 @@
   <string name="gt_0834cfb81fbae767">"Seleccionar VTXOs"</string>
   <string name="gt_0bdc583e8496eb4a">"Selecciona un pago"</string>
   <string name="gt_ba6afbdcb15d6321">"Seleccionar todos los VTXO aptos"</string>
+  <string name="gt_a81bdedbd0dccc7d">"Seleccionar los próximos a vencer"</string>
+  <string name="gt_70f58736b63e2c9e">"Seleccionar los visibles"</string>
   <string name="gt_3b18955703b2ebc3">"Captura de pantalla seleccionada"</string>
   <string name="gt_f6f4688ff23d50c6">"Enviar"</string>
   <string name="gt_2bd7bfd7b3314b9b">"Enviar código de verificación"</string>

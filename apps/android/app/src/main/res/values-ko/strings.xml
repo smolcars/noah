@@ -249,6 +249,7 @@
   <string name="gt_83b12c2216efb4fd">"지우기"</string>
   <string name="gt_ba59e2d4a5e39a42">"필터 지우기"</string>
   <string name="gt_3b7ea51793e9d906">"검색어 지우기"</string>
+  <string name="gt_cea4d2e010b8fd52">"선택 해제"</string>
   <string name="gt_7d9eb7acb13e2462">"닫기"</string>
   <string name="gt_dfc885030d22671d">"장소 상세 정보 닫기"</string>
   <string name="gt_55656b5e434f4c06">"검색 닫기"</string>
@@ -1144,6 +1145,8 @@
   <string name="gt_0834cfb81fbae767">"VTXO 선택"</string>
   <string name="gt_0bdc583e8496eb4a">"결제 선택"</string>
   <string name="gt_ba6afbdcb15d6321">"조건에 맞는 모든 VTXO 선택"</string>
+  <string name="gt_a81bdedbd0dccc7d">"만료 임박 항목 선택"</string>
+  <string name="gt_70f58736b63e2c9e">"표시된 항목 선택"</string>
   <string name="gt_3b18955703b2ebc3">"선택한 화면 캡처"</string>
   <string name="gt_f6f4688ff23d50c6">"보내기"</string>
   <string name="gt_2bd7bfd7b3314b9b">"인증 코드 보내기"</string>

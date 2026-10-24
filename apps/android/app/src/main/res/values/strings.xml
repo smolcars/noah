@@ -249,6 +249,7 @@
   <string name="gt_83b12c2216efb4fd">"Clear"</string>
   <string name="gt_ba59e2d4a5e39a42">"Clear filter"</string>
   <string name="gt_3b7ea51793e9d906">"Clear search"</string>
+  <string name="gt_cea4d2e010b8fd52">"Clear selection"</string>
   <string name="gt_7d9eb7acb13e2462">"Close"</string>
   <string name="gt_dfc885030d22671d">"Close place details"</string>
   <string name="gt_55656b5e434f4c06">"Close search"</string>
@@ -1144,6 +1145,8 @@
   <string name="gt_0834cfb81fbae767">"Select VTXOs"</string>
   <string name="gt_0bdc583e8496eb4a">"Select a payment"</string>
   <string name="gt_ba6afbdcb15d6321">"Select all eligible VTXOs"</string>
+  <string name="gt_a81bdedbd0dccc7d">"Select expiring"</string>
+  <string name="gt_70f58736b63e2c9e">"Select visible"</string>
   <string name="gt_3b18955703b2ebc3">"Selected screenshot"</string>
   <string name="gt_f6f4688ff23d50c6">"Send"</string>
   <string name="gt_2bd7bfd7b3314b9b">"Send Verification Code"</string>

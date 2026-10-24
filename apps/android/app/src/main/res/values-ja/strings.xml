@@ -249,6 +249,7 @@
   <string name="gt_83b12c2216efb4fd">"クリア"</string>
   <string name="gt_ba59e2d4a5e39a42">"絞り込みを解除"</string>
   <string name="gt_3b7ea51793e9d906">"検索をクリア"</string>
+  <string name="gt_cea4d2e010b8fd52">"選択を解除"</string>
   <string name="gt_7d9eb7acb13e2462">"閉じる"</string>
   <string name="gt_dfc885030d22671d">"施設の詳細を閉じる"</string>
   <string name="gt_55656b5e434f4c06">"検索を閉じる"</string>
@@ -1144,6 +1145,8 @@
   <string name="gt_0834cfb81fbae767">"VTXOを選択"</string>
   <string name="gt_0bdc583e8496eb4a">"支払いを選択"</string>
   <string name="gt_ba6afbdcb15d6321">"対象のVTXOをすべて選択"</string>
+  <string name="gt_a81bdedbd0dccc7d">"まもなく期限切れになるものを選択"</string>
+  <string name="gt_70f58736b63e2c9e">"表示中のものを選択"</string>
   <string name="gt_3b18955703b2ebc3">"選択したスクリーンショット"</string>
   <string name="gt_f6f4688ff23d50c6">"送る"</string>
   <string name="gt_2bd7bfd7b3314b9b">"確認コードを送信"</string>
