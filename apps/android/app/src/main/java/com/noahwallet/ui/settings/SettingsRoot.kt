@@ -313,14 +313,15 @@ internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, onRecovery: 
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     val toasts = LocalSettingsToasts.current
     var typed by rememberSaveable { mutableStateOf("") }
-    var deleting by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    // From the model: a fold or rotation mid-delete keeps the sheet locked and still hears how it ended.
+    val deleting = model.deletingWallet
+    val error = model.deleteWalletError
     val checklist = SettingsRules.deleteChecklist(model.summary?.balance?.totalSats, model.recoveryPhraseBackedUp,
         live.backup.lastBackupAt, live.backup.lastBackupStatus)
     val confirmed = SettingsRules.deleteConfirmed(typed)
     val haptics = rememberHaptics()
     LaunchedEffect(confirmed) { if (confirmed) haptics.selection() }
-    SettingsSheet({ if (!deleting) dismiss() }, tr("Delete wallet"),
+    SettingsSheet({ if (!deleting) { model.deleteWalletError = null; dismiss() } }, tr("Delete wallet"),
         tr("This removes the wallet and its recovery phrase from this phone. It can’t be undone."), locked = deleting,
         modifier = Modifier.testTag("delete-wallet-sheet")) { close ->
         Column(Modifier.padding(top = 12.dp)) {
@@ -335,18 +336,10 @@ internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, onRecovery: 
                 else -> tr("Never")
             }, toasts = toasts, failed = checklist.backupFailed, last = true)
         }
-        SettingsField(typed, { typed = it; error = null }, tr("Type delete to confirm"), Modifier.testTag("delete-wallet-input"), enabled = !deleting,
+        SettingsField(typed, { typed = it; model.deleteWalletError = null }, tr("Type delete to confirm"), Modifier.testTag("delete-wallet-input"), enabled = !deleting,
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
         error?.let { Text(it, Modifier.padding(top = 10.dp), style = HomeType.line, color = palette.failure) }
         SheetActions(tr("Cancel"), if (deleting) tr("Deleting") else tr("Delete"), onCancel = close, enabled = confirmed && (!model.busy || deleting),
-            danger = true, loading = deleting, confirmTag = "delete-wallet-confirm", onConfirm = {
-                deleting = true
-                model.action("Couldn't delete wallet. Restart Noah if a restore is pending, then try again.", inline = { message ->
-                    if (message != null) { error = message; deleting = false }
-                }) {
-                    model.deleteWallet()
-                    deleting = false
-                }
-            })
+            danger = true, loading = deleting, confirmTag = "delete-wallet-confirm", onConfirm = model::startDeletingWallet)
     }
 }

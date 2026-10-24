@@ -171,6 +171,28 @@ class SettingsDeviceTest {
         for (row in listOf("In this wallet", "Recovery phrase", "Last backup")) compose.onNode(hasText(row) and sheet, useUnmergedTree = true).assertExists()
     }
 
+    @Test fun aDeletionInProgressStaysLockedAcrossRecreation() {
+        // The model says a deletion is running (nothing is deleted here); the sheet locks from that alone.
+        val sheet = hasAnyAncestor(hasTestTag("delete-wallet-sheet"))
+        fun assertLocked() {
+            compose.waitUntil(5_000) { compose.onAllNodesWithTag("delete-wallet-sheet").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNode(hasText("Deleting") and sheet).assertExists()
+            compose.onNode(hasText("Cancel") and sheet).assertIsNotEnabled()
+        }
+        try {
+            compose.runOnUiThread { model.deletingWallet = true }
+            host(SettingsDestination.Settings, sheet = "delete")
+            assertLocked()
+            compose.activityRule.scenario.recreate()
+            hosts--; host(SettingsDestination.Settings, sheet = "delete")
+            assertLocked()
+            // How it ended still reaches the recreated sheet: a failure unlocks it and says why.
+            compose.runOnUiThread { model.deletingWallet = false; model.deleteWalletError = "Couldn't delete wallet." }
+            compose.onNode(hasText("Couldn't delete wallet.") and sheet).assertExists()
+            compose.onNode(hasText("Cancel") and sheet).assertIsEnabled()
+        } finally { compose.runOnUiThread { model.deletingWallet = false; model.deleteWalletError = null } }
+    }
+
     @Test fun debugModeTurnsOffAndFiveTapsTurnItOn() {
         val initial = model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         fun debug(on: Boolean) = model.settings.setPersistedState((model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)

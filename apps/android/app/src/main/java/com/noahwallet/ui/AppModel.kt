@@ -176,6 +176,20 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         refresh(); services.startServerServices()
     }
 
+    /** Delete wallet's progress and its error, kept here so a fold or rotation can't unlock the sheet mid-delete. */
+    var deletingWallet by mutableStateOf(false); internal set
+    var deleteWalletError by mutableStateOf<String?>(null); internal set
+
+    /** Delete wallet from its sheet, once at a time; a failure unlocks the sheet with [deleteWalletError]. */
+    fun startDeletingWallet() {
+        if (busy || deletingWallet) return
+        deletingWallet = true
+        action("Couldn't delete wallet. Restart Noah if a restore is pending, then try again.", inline = { message ->
+            deleteWalletError = message
+            if (message != null) deletingWallet = false
+        }) { deleteWallet(); deletingWallet = false }
+    }
+
     suspend fun deleteWallet() {
         try { services.lifecycle.delete() }
         catch (failure: Exception) {
