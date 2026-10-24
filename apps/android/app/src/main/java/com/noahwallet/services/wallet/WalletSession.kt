@@ -27,6 +27,7 @@ class WalletSession internal constructor(
     private val isSuspended: () -> Boolean = { false },
     private val sendWarn: (String) -> Unit = {},
     private val opener: suspend (String, String, Boolean, String, Boolean) -> Handles = sdkOpener(variant, sendWarn),
+    private val onchainWarn: (String) -> Unit = {},
 ) {
     enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended, seedConflict }
     class OpenError(val reason: OpenFailure, val found: String? = null) : Exception(reason.name)
@@ -399,7 +400,8 @@ class WalletSession internal constructor(
     private val onchainMutation = Mutex()
     val onchainJournal = OnchainOperationJournal(File(location.directory, "noah-onchain-attempt.json"))
     private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal,
-        ready = { !isSuspended() && !WalletBackgroundActivity.isRunning })
+        ready = { !isSuspended() && !WalletBackgroundActivity.isRunning }, warn = onchainWarn, stranded = autoBoardStranded)
+    private val autoBoardStranded: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
     suspend fun onchainOverview(): OnchainOverview = withM6 {
         onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
     }
@@ -579,7 +581,7 @@ class WalletSession internal constructor(
                 isSuspended = {
                     com.noahwallet.services.storage.SettingsStorage(context).persistedState<com.noahwallet.services.storage.PersistedWalletState>(
                         com.noahwallet.services.storage.PersistedWalletState.key)?.isWalletSuspended == true
-                })
+                }, onchainWarn = com.noahwallet.services.logging.AppLog(context, "onchain")::w)
                 .also { instance = it }
         }
 

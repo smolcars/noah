@@ -191,7 +191,8 @@ class OnchainOperationsTest {
         var exactFee = 1543L
         var extraFixedFee = 0L
         var inputCount = 1
-        /** The coins bark's selection spends for a prepared board, when a test picks them. */
+        /** The coins bark's selection spends for a prepared board, when a test picks them (by amount, or always the same). */
+        var inputsFor: ((Long) -> List<OutPoint>)? = null
         var boardInputs: List<OutPoint>? = null
         var afterPrepare: suspend (PreparedBoard) -> Unit = {}
         var afterBind: () -> Unit = {}
@@ -209,7 +210,7 @@ class OnchainOperationsTest {
             val gross = if (all) balance - chainFee else amount
             if (gross < fee || gross + chainFee > balance) throw BarkError("insufficient balance", BarkErrorCode.INSUFFICIENT_FUNDS)
             return PreparedBoard("prepared-${preparations.size}", "board-tx", gross.toULong(), (gross - fee).toULong(), fee.toULong(), chainFee.toULong(), 199u,
-                boardInputs ?: List(inputCount) { OutPoint("input-$it", 0u) }).also { preparations.add(it); afterPrepare(it) }
+                inputsFor?.invoke(gross) ?: boardInputs ?: List(inputCount) { OutPoint("input-$it", 0u) }).also { preparations.add(it); afterPrepare(it) }
         }
         override fun bindBoard(quote: OnchainQuote) { bound[quote.preparedBoard!!.id] = quote; afterBind() }
         override fun claimBoard(quote: OnchainQuote) { if (bound[quote.preparedBoard!!.id] != quote) fail(OnchainFailure.changed) }
@@ -397,15 +398,32 @@ class OnchainOperationsTest {
         assertEquals(60_000L, AutoBoardFunding.boardable(60_000, listOf(deposit, OnchainUtxo.Local(OutPoint("claim", 0u), 28_375u, null)), setOf("claim:0")))
         assertEquals(31_625L, AutoBoardFunding.boardable(60_000, listOf(deposit, claimed), setOf("claim:0")))
     } }
-    @Test fun aReviewThatWouldSpendAClaimedCoinIsNeverOffered() = runBlocking { fixture { wallet, ops, _, _ ->
+    @Test fun aReviewThatWouldSpendAClaimedCoinIsNeverOffered() = runBlocking { fixture { wallet, _, journal, _ ->
         val store = ledger()
+        val logs = mutableListOf<String>()
+        val ops = OnchainOperations(wallet, journal, warn = { logs += it })
         wallet.fundingTransactions = listOf(claimTx, depositTx); wallet.fundingUtxos = listOf(claimed, deposit); wallet.balance = 88_375
-        // bark chooses the inputs; when its draw spends the claimed coin, its value would end up in ordinary change.
+        // bark chooses the inputs; when every draw spends the claimed coin, its value would end up in ordinary change.
         wallet.boardInputs = listOf(OutPoint("claim", 0u))
         assertNull(ops.autoBoardQuote(store::kept))
-        assertTrue("its preparation is discarded", wallet.bound.isEmpty())
+        val full = 60_000L - 1_543 - 43 - 5_000
+        assertEquals("the probe, then three tries for a little less each", listOf(86_832L, full, full - 1_000, full - 2_000), wallet.preparations.map { it.grossSats.toLong() })
+        assertTrue("each preparation is discarded", wallet.bound.isEmpty())
+        assertNull(ops.autoBoardQuote(store::kept))
+        assertEquals("logged once, not on every refresh", 1, logs.size)
         wallet.boardInputs = listOf(OutPoint("deposit", 0u))
         assertNotNull(ops.autoBoardQuote(store::kept))
+    } }
+    @Test fun aDeterministicFitOnTheClaimedCoinIsAskedAgainForALittleLess() = runBlocking { fixture { wallet, ops, _, _ ->
+        val store = ledger()
+        wallet.fundingTransactions = listOf(claimTx, depositTx); wallet.fundingUtxos = listOf(claimed, deposit); wallet.balance = 88_375
+        val full = 60_000L - 1_543 - 43 - 5_000
+        // Branch-and-bound finds the same near-exact fit with the claimed coin at the full amount; a little less uses others.
+        wallet.inputsFor = { amount -> if (amount >= full) listOf(OutPoint("claim", 0u)) else listOf(OutPoint("deposit", 0u)) }
+        val quote = checkNotNull(ops.autoBoardQuote(store::kept))
+        assertEquals("1% is under 1,000 sats here, so 1,000 less", full - 1_000, quote.amount)
+        assertEquals(listOf(BoardInput("deposit", 0u)), quote.preparedBoard!!.inputs)
+        assertEquals("the claimed fit was discarded; only the offer stays", setOf(quote.preparedBoard.id), wallet.bound.keys)
     } }
     @Test fun claimedCoinsAreKeptBesideTheHandledLedgerInOneWrite() {
         var disk: String? = null; var writes = 0

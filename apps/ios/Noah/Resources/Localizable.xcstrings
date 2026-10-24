@@ -4201,6 +4201,42 @@
         }
       }
     },
+    "Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered": {
+      "comment": "GT gt_36b0afe54f3fffba; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transferencia automática a Ark: cada preparación gastaba una moneda reclamada a este teléfono, así que no se ofrece ningún depósito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-board: どの準備でもこのスマートフォンに受け取ったコインが使われたため、入金は提案されません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 입금: 모든 준비 과정에서 이 휴대폰으로 청구한 코인이 사용되어 입금을 제안하지 않습니다"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-board: varje förberedelse använde ett mynt som lösts in till den här telefonen, så ingen insättning erbjuds"
+          }
+        }
+      }
+    },
     "Automatic backups": {
       "comment": "GT gt_cb8603c8ce918947; arguments: none",
       "extractionState": "manual",

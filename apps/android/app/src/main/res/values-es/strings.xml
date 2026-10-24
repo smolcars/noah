@@ -119,6 +119,7 @@
   <string name="gt_af35b0eec4460cd2">"Autentícate para ver tu frase semilla"</string>
   <string name="gt_4190475b52357e7a">"Error de autenticación. Inténtalo de nuevo."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Umbral de transferencia automática a Ark no disponible"</string>
+  <string name="gt_36b0afe54f3fffba">"Transferencia automática a Ark: cada preparación gastaba una moneda reclamada a este teléfono, así que no se ofrece ningún depósito"</string>
   <string name="gt_cb8603c8ce918947">"Copias de seguridad automáticas"</string>
   <string name="gt_afbb8dd2c2dc511f">"Copias de seguridad automáticas desactivadas"</string>
   <string name="gt_168ae9aa2da9e959">"Se omitió el pago automático a %1$s. Abre la programación para revisar la comisión y pagar manualmente."</string>

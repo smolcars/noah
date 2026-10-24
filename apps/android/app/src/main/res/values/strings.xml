@@ -119,6 +119,7 @@
   <string name="gt_af35b0eec4460cd2">"Authenticate to view your seed phrase"</string>
   <string name="gt_4190475b52357e7a">"Authentication failed. Please try again."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Auto-board threshold unavailable"</string>
+  <string name="gt_36b0afe54f3fffba">"Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered"</string>
   <string name="gt_cb8603c8ce918947">"Automatic backups"</string>
   <string name="gt_afbb8dd2c2dc511f">"Automatic backups off"</string>
   <string name="gt_168ae9aa2da9e959">"Automatic payment to %1$s was skipped. Open the schedule to review its fee and pay manually."</string>

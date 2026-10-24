@@ -8,6 +8,9 @@ internal class OnchainOperations(
     private val wallet: OnchainWalletAccess, private val journal: OnchainOperationJournal,
     private val ready: () -> Boolean = { true },
     private val now: () -> Long = System::currentTimeMillis,
+    private val warn: (String) -> Unit = {},
+    /** Deposits auto-board couldn't prepare without a claimed coin, already logged (the session keeps it across calls). */
+    private val stranded: MutableSet<String> = mutableSetOf(),
 ) {
     suspend fun overview(threshold: UInt): OnchainOverview {
         val tip = wallet.tip()
@@ -83,7 +86,8 @@ internal class OnchainOperations(
     }
     /**
      * Sizes the review from what auto-board may move: the confirmed balance less coins claimed to this phone, which stay
-     * on-chain as change. bark chooses the inputs, so a review that would spend a claimed coin is never offered.
+     * on-chain as change. bark chooses the inputs, so a review that would spend a claimed coin is never offered; it asks
+     * again for a little less, up to three tries in all.
      */
     suspend fun autoBoardQuote(kept: (String) -> Set<String> = { emptySet() }): OnchainQuote? {
         if (!ready()) fail(OnchainFailure.unavailable)
@@ -99,18 +103,29 @@ internal class OnchainOperations(
         } finally { withContext(NonCancellable) { wallet.discardBoard(checkNotNull(probe.preparedBoard).id) } }
         if (!wallet.boardCleanupComplete(checkNotNull(probe.preparedBoard).id)) fail(OnchainFailure.uncertain)
         currentCoroutineContext().ensureActive()
-        if (candidate < BoardingRules.threshold(minimum) || !ready()) return null
-        val prepared = quote(OnchainAction.board, amount = candidate, automatic = true)
-        var reviewed = false
-        try {
-            currentCoroutineContext().ensureActive()
-            if (prepared.reserveLeft - keptValue < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready() ||
-                checkNotNull(prepared.preparedBoard).inputs.any { "${it.txid}:${it.vout}" in claimed }) return null
-            reviewed = true
-            return prepared
-        } finally {
-            if (!reviewed) withContext(NonCancellable) { wallet.discardBoard(checkNotNull(prepared.preparedBoard).id) }
+        // shortcut: retries by amount so BDK's selection moves off a claimed coin; exclude it once bark-bolt-ffi's prepare_board takes excluded outpoints.
+        var amount = candidate
+        repeat(3) {
+            if (amount < BoardingRules.threshold(minimum) || !ready()) return null
+            val prepared = quote(OnchainAction.board, amount = amount, automatic = true)
+            val board = checkNotNull(prepared.preparedBoard)
+            var reviewed = false
+            try {
+                currentCoroutineContext().ensureActive()
+                if (board.inputs.none { "${it.txid}:${it.vout}" in claimed }) {
+                    if (prepared.reserveLeft - keptValue < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready()) return null
+                    reviewed = true
+                    return prepared
+                }
+            } finally {
+                if (!reviewed) withContext(NonCancellable) { wallet.discardBoard(board.id) }
+            }
+            if (!wallet.boardCleanupComplete(board.id)) fail(OnchainFailure.uncertain)
+            // Branch-and-bound's selection is deterministic: a little less moves it off the fit that used the claimed coin.
+            amount -= maxOf(amount / 100, 1_000)
         }
+        if (stranded.add("${wallet.walletID}:$candidate")) warn("Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered")
+        return null
     }
     suspend fun quote(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,
         destination: String? = null, automatic: Boolean = false, estimate: Boolean = true): OnchainQuote {

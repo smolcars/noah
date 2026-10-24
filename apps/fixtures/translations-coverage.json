@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1690,
-  "sourceKeys": 1714,
+  "catalogEntries": 1691,
+  "sourceKeys": 1715,
   "coverage": {
     "ios": {
       "used": [
@@ -1339,6 +1339,7 @@
         "Authenticate to access your wallet",
         "Authentication failed. Please try again.",
         "Auto-board threshold unavailable",
+        "Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered",
         "Automatic backups",
         "Automatic backups off",
         "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.",
