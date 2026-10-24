@@ -74,32 +74,47 @@ fun RestoreWalletScreen(model: AppModel, useStoredSeed: Boolean = false) {
     if (useStoredSeed) StoredSeedRestoreScreen(model) else PhraseRestoreScreen(model)
 }
 
-/** Launch recovery when the phrase is still stored but wallet data is missing. */
+/**
+ * Reinstall recovery: the phrase is still stored, so there is nothing to type (iOS `StoredSeedRestoreScreen`). Restore
+ * Wallet moves to Restoring, which brings a failed restore back here with its error.
+ */
 @Composable
 private fun StoredSeedRestoreScreen(model: AppModel) {
     val activity = LocalContext.current as Activity
     val clipboard = rememberRestoreClipboard(activity)
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
     val flow = model.restore
     val blocked = model.busy || !flow.canLeave
     BackHandler { }
     RestoreShield(activity, model.walletLock, clipboard) {}
-    NoahForm("Recovery phrase found") {
-        Text(tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."))
-        if (model.busy || flow.running) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(tr(flow.step.restoreMessage()), Modifier.testTag("restore-progress").semantics { liveRegion = LiveRegionMode.Polite })
-        }
-        flow.issue?.let { Text(tr(it.message), color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.testTag("restore-error").semantics { liveRegion = LiveRegionMode.Assertive }) }
-        if (model.isWalletSuspended) {
-            Text(tr("Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device."))
-            NoahButton("Resume Recovery", !blocked) {
-                model.action("Couldn't resume recovery. Restart Noah and try again.") { model.resumeRestoreRecovery() }
+    FormLayout(headline = { large ->
+        Headline(tr("Recovery phrase found"),
+            tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."), large)
+    }, form = {}, actions = {
+        // As on iOS, the error sits just above the button.
+        Column(verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.l)) {
+            flow.issue?.let {
+                Text(tr(it.message), Modifier.testTag("restore-error").semantics { liveRegion = LiveRegionMode.Assertive },
+                    style = NoahTokens.Typography.sub, color = palette.failure)
             }
+            if (model.isWalletSuspended) {
+                Text(tr("Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device."),
+                    style = NoahTokens.Typography.sub, color = palette.muted)
+                PillButton(tr("Resume Recovery"), Modifier.fillMaxWidth(), enabled = !blocked, outlined = true) {
+                    model.action("Couldn't resume recovery. Restart Noah and try again.") { model.resumeRestoreRecovery() }
+                }
+            }
+            if (flow.issue?.requiresRestart != true) PillButton(tr("Restore Wallet"), Modifier.fillMaxWidth(), enabled = model.canRestoreWallet) {
+                haptics.medium()
+                flow.clearIssue() // Restoring would otherwise read the last attempt's error and send us straight back.
+                model.holdRestoreCompletion = true
+                model.step = "restoring"
+                model.restoreWallet(null)
+            }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { DeleteWalletFallback(model, palette.failure) }
         }
-        if (flow.issue?.requiresRestart != true) NoahButton("Restore Wallet", model.canRestoreWallet) { model.restoreWallet(null) }
-        DeleteWalletFallback(model)
-    }
+    })
 }
 
 /**

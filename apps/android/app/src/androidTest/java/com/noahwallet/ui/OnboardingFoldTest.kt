@@ -85,7 +85,7 @@ class OnboardingFoldTest {
     }
 
     @Test fun bookPostureSplitsAtTheHingeWithHeadlineLeadingAndControlsTrailing() {
-        for (step in listOf("name", "email", "done", "notifications")) {
+        for (step in listOf("name", "email", "done", "notifications", "storedSeed")) {
             val fold = show(step) { width, height -> WindowRegion(width / 2 - 12, 0, width / 2 + 12, height) }
             assertClear(step, fold)
         }
@@ -102,10 +102,18 @@ class OnboardingFoldTest {
         val button = compose.onNodeWithText("Continue", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         assertTrue("headline leads: $headline", headline.right <= fold.left)
         assertTrue("controls trail: $button", button.left >= fold.right)
+        // Stored-phrase recovery: the headline leads; Restore Wallet and Delete Wallet trail.
+        val stored = show("storedSeed") { width, height -> WindowRegion(width / 2 - 12, 0, width / 2 + 12, height) }
+        compose.onNodeWithText("Recovery phrase found", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+            assertTrue("stored-phrase headline leads: $it", it.right <= stored.left)
+        }
+        for (title in listOf("Restore Wallet", "Delete Wallet")) compose.onNodeWithText(title, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+            assertTrue("$title trails: $it", it.left >= stored.right)
+        }
     }
 
     @Test fun tabletopPutsTheHeadlineAboveAndControlsBelow() {
-        for (step in listOf("name", "email", "done", "notifications")) {
+        for (step in listOf("name", "email", "done", "notifications", "storedSeed")) {
             val fold = show(step) { width, height -> WindowRegion(0, height / 2 - 12, width, height / 2 + 12) }
             assertClear(step, fold)
         }
@@ -121,6 +129,19 @@ class OnboardingFoldTest {
         val button = compose.onNodeWithText("Continue", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         assertTrue("headline above: $headline", headline.bottom <= fold.top)
         assertTrue("controls below: $button", button.top >= fold.bottom)
+        val stored = show("storedSeed") { width, height -> WindowRegion(0, height / 2 - 12, width, height / 2 + 12) }
+        // Name left the keyboard up, which lifts tabletop controls above the fold; this screen has no field.
+        compose.activityRule.scenario.onActivity {
+            it.getSystemService(android.view.inputmethod.InputMethodManager::class.java).hideSoftInputFromWindow(it.window.decorView.windowToken, 0)
+        }
+        Thread.sleep(1_500)
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.onNodeWithText("Recovery phrase found", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+            assertTrue("stored-phrase headline above: $it", it.bottom <= stored.top)
+        }
+        for (title in listOf("Restore Wallet", "Delete Wallet")) compose.onNodeWithText(title, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+            assertTrue("$title below: $it", it.top >= stored.bottom)
+        }
     }
 
     @Test fun tabletopScrollsOnlyThePaneBelowTheFold() {

@@ -19,9 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.animation.togetherWith
 
 /**
- * The redesigned onboarding: Welcome → Creating → Name → Email → Notifications (→ battery) → Done, or
- * Welcome → Restore → Restoring. One tree canvas sits behind every step; wallet, server and push logic
- * stay in AppModel and the existing services.
+ * The redesigned onboarding: Welcome → Creating → Name → Email → Notifications (→ battery) → Done,
+ * Welcome → Restore → Restoring, or (a stored phrase without wallet data) Recovery phrase found → Restoring.
+ * One tree canvas sits behind every step; wallet, server and push logic stay in AppModel and the existing services.
  */
 @Composable
 fun Onboarding(model: AppModel) {
@@ -53,11 +53,13 @@ fun Onboarding(model: AppModel) {
         SideEffect { presentation.scene.show(scene) }
         val reduceMotion = com.noahwallet.ui.onboarding.LocalReduceMotion.current
         androidx.compose.animation.AnimatedContent(model.step, transitionSpec = {
-            onboardingTransition(targetState, direction.back, reduceMotion)
+            // A failed stored-phrase restore travels back to its screen, as on iOS.
+            onboardingTransition(targetState, direction.back || targetState == "storedSeed", reduceMotion)
         }, label = "onboarding") { step ->
             when (step) {
                 "welcome" -> com.noahwallet.ui.onboarding.WelcomeStep(model, presentation)
                 "restore" -> RestoreWalletScreen(model)
+                "storedSeed" -> RestoreWalletScreen(model, useStoredSeed = true)
                 "creating" -> com.noahwallet.ui.onboarding.CreatingStep(model, presentation)
                 "restoring" -> com.noahwallet.ui.onboarding.RestoringStep(model, presentation)
                 "name" -> com.noahwallet.ui.onboarding.NameStep(model, presentation)

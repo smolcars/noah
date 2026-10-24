@@ -258,8 +258,11 @@ class RestoreUIDeviceTest {
             clickText("Resume Recovery")
             waitFor("Recovery resumed") { seedOnly.second.canRestoreWallet }
             submit()
+            // As on iOS, stored-phrase recovery plays onboarding's Restoring scene, then holds "Ready" before Home.
+            waitFor("Restoring scene shown") { listOf("Restoring your wallet", "Finding your bitcoin", "Ready").any { text(it) != null } }
             waitFor("Saved phrase restore opens wallet") { seedOnly.second.restore.completed || seedOnly.second.restore.issue != null }
             assertTrue(seedOnly.second.restore.completed)
+            waitFor("Home follows Ready") { !seedOnly.second.holdRestoreCompletion }
             val seedOnlySummary = checkNotNull(seedOnly.second.session.summary())
             assertEquals(expected.balance, seedOnlySummary.balance)
             assertEquals(expected.movementCount, seedOnlySummary.movementCount)

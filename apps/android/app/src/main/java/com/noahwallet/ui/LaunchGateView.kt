@@ -132,7 +132,8 @@ fun LaunchGateView(model: AppModel) {
     LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
     val route = when {
         model.customServerUnresponsive -> LaunchRoute.customServer
-        state == LaunchState.seedWithoutWalletData -> LaunchRoute.storedSeed
+        // Stored-phrase recovery is an onboarding step, so Restoring follows it in the same host, as on iOS.
+        state == LaunchState.seedWithoutWalletData -> LaunchRoute.onboarding
         !PlatformGateRules.launchResolved(state) -> LaunchRoute.message
         !gatesReady && !hasResolvedPlatformGate -> LaunchRoute.loading
         // A finished onboarding restore shows "Ready" and its balance before Home.
@@ -166,7 +167,6 @@ fun LaunchGateView(model: AppModel) {
                     if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
                     NoahButton("Use default server", !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
                 }
-                LaunchRoute.storedSeed -> RestoreWalletScreen(model, useStoredSeed = true)
                 LaunchRoute.message -> LaunchMessage(state, model.error != null, model::start, model)
                 LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)
                 LaunchRoute.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission)
@@ -197,7 +197,7 @@ fun LaunchGateView(model: AppModel) {
 
 }
 
-private enum class LaunchRoute { customServer, storedSeed, message, loading, push, battery, app, onboarding }
+private enum class LaunchRoute { customServer, message, loading, push, battery, app, onboarding }
 
 /** Modifier-only shielding preserves remember/NavDisplay state in the covered subtree. */
 internal fun Modifier.walletContentProtection(covered: Boolean): Modifier =
@@ -243,12 +243,14 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
     }
 }
 
+/** [color] tints the button (stored-phrase recovery's destructive red); unspecified keeps the theme's. */
 @Composable
-internal fun DeleteWalletFallback(model: AppModel) {
+internal fun DeleteWalletFallback(model: AppModel, color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified) {
     var showingDelete by rememberSaveable { mutableStateOf(false) }
     var confirmation by rememberSaveable { mutableStateOf("") }
     val enabled = model.canDeleteRecoveryWallet
-    androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled) { Text(tr("Delete Wallet")) }
+    androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled,
+        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = color)) { Text(tr("Delete Wallet")) }
     if (showingDelete) WalletAlertDialog(
         onDismissRequest = { if (enabled) showingDelete = false },
         title = { Text(tr("Delete Wallet")) },

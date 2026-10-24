@@ -245,7 +245,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                         recovering = false
                         isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
                         recoveryPhraseBackedUp = RecoveryPhraseBackup.isBackedUp(settings)
+                        // A stored phrase without wallet data opens onboarding at its own recovery step, set first so Welcome never flashes.
                         launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
+                            .also { if (it == LaunchState.seedWithoutWalletData) step = "storedSeed" }
                         if (launchState == LaunchState.existingWallet) {
                             onboarded = services.isOnboarded()
                             if (isWalletSuspended) return@withWalletMutation

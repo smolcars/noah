@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.localization.tr
 import com.noahwallet.services.backup.WalletRestorer
+import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.design.NoahTokens
 import kotlinx.coroutines.delay
@@ -49,7 +51,8 @@ internal fun CreatingStep(model: AppModel, presentation: OnboardingPresentation)
 
 /**
  * Restoring: the phase comes from the real restore steps and may hold on "Finding your bitcoin".
- * After success the balance counts up, then Home appears; errors keep today's RestoreIssue copy.
+ * After success the balance counts up, then Home appears; errors keep today's RestoreIssue copy, shown
+ * here for a typed phrase and back on "Recovery phrase found" for a stored one, as on iOS.
  */
 @Composable
 internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation) {
@@ -58,7 +61,8 @@ internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val issue = flow.issue
-    BackHandler { if (issue != null && flow.canLeave && !model.busy) { flow.clearIssue(); model.step = "restore" } }
+    val storedSeed = model.launchState == LaunchState.seedWithoutWalletData
+    BackHandler { if (issue != null && !storedSeed && flow.canLeave && !model.busy) { flow.clearIssue(); model.step = "restore" } }
     val finding = flow.step != null && flow.step != WalletRestorer.Step.fetching
     val phase = when {
         flow.completed -> 2
@@ -88,18 +92,18 @@ internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation
     LaunchedEffect(issue) {
         // A failed restore found nothing: the scene greys out and stops claiming leaves.
         clock.frozenAt = if (issue != null) clock.frozenAt ?: clock.time(System.nanoTime()) else null
-        if (issue != null) { model.holdRestoreCompletion = false; haptics.error() }
+        if (issue != null) { model.holdRestoreCompletion = false; haptics.error(); if (storedSeed) model.step = "storedSeed" }
     }
     SceneLayout(clock, SceneMode.restore, welcomeGhost = model.localeIdentifier, below = {
-        PhaseText(listOf(tr("Restoring your wallet"), tr("Finding your bitcoin"), tr("Ready"))[phase])
+        PhaseText(listOf(tr("Restoring your wallet"), tr("Finding your bitcoin"), tr("Ready"))[phase], Modifier.testTag("restore-progress"))
         val total = model.summary?.balance?.totalSats?.toLong()
         if (flow.completed && total != null && !model.hidden) CountUp(total, model, presentation)
-        issue?.let {
+        issue?.takeUnless { storedSeed }?.let {
             Text(tr(it.message), Modifier.fillMaxWidth().padding(top = NoahTokens.Space.m).semantics { liveRegion = LiveRegionMode.Assertive },
                 style = NoahTokens.Typography.sub, color = palette.failure, textAlign = TextAlign.Center)
         }
     }, bottom = {
-        if (issue != null && !issue.requiresRestart) PillButton(tr("Back"), Modifier.fillMaxWidth(), enabled = flow.canLeave && !model.busy) {
+        if (issue != null && !issue.requiresRestart && !storedSeed) PillButton(tr("Back"), Modifier.fillMaxWidth(), enabled = flow.canLeave && !model.busy) {
             flow.clearIssue(); model.step = "restore"
         }
     })
@@ -107,10 +111,10 @@ internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation
 
 /** Phase text crossfades upward (snappy); the first phase only fades in. */
 @Composable
-private fun PhaseText(text: String) {
+private fun PhaseText(text: String, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
-    AnimatedContent(text, Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, transitionSpec = {
+    AnimatedContent(text, modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, transitionSpec = {
         if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
         else (slideInVertically(NoahTokens.Motion.snappy()) { it / 2 } + fadeIn(NoahTokens.Motion.snappy())) togetherWith
             (slideOutVertically(NoahTokens.Motion.snappy()) { -it / 2 } + fadeOut(NoahTokens.Motion.snappy()))
