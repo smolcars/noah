@@ -197,9 +197,10 @@ private fun SharedPaths(group: ExitList.Shared, money: (Long) -> String, modifie
         scale(k, k, Offset.Zero) {
             val w = size.width / k; val h = size.height / k
             val layout = ExitList.layout(group)
-            val s = 26f; val y0 = minOf(h - 44, (h + 190) / 2); val cx = w / 2
+            val rows = ExitList.rows(h, layout.maxOfOrNull { it.depth } ?: 0)
+            val s = 26f; val y0 = rows.y0; val cx = w / 2
             val spread = minOf(74f, w * .2f)
-            fun at(node: ExitList.Placed) = Offset(cx + node.x * spread * 2, y0 - 26 - node.depth * 30)
+            fun at(node: ExitList.Placed) = Offset(cx + node.x * spread * 2, rows.y(node.depth))
             drawRoundRect(palette.foreground, Offset(cx - s / 2, y0), Size(s, s), CornerRadius(6f), alpha = .4f)
             val t = measurer.measure(label, words.copy(color = palette.muted))
             drawText(t, topLeft = Offset(cx - 14 - t.size.width, y0 - 22 - t.size.height * .78f))

@@ -90,6 +90,7 @@ class ExitGalleryTest {
         show("claim-phone") { ExitClaimContent(listOf(f.claimable), f.tip + 148, claimReview.copy(destination = "bcrt1qphonephonephone", destinationIsMine = true), null, ClaimTo.phone, "", null,
             "bcrt1qphonephonephone", false, false, false, f.money, {}, {}, {}, {}, {}, {}) }
         show("list") { ExitListContent(f.list, f.tip + 2, setOf(f.list[5].id), true, false, false, f.money, {}, {}, {}, {}) }
+        show("list-deep") { ExitListContent(f.deep, f.tip + 2, emptySet(), true, false, false, f.money, {}, {}, {}, {}) }
         show("deposit") { ExitDepositContent("bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg", null, 4_533, f.money) {} }
     }
 }

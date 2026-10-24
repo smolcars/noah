@@ -199,6 +199,16 @@ class ExitStagesTest {
             ExitList.shared(listOf(a, paths("b", "root", "l2a", "l1b", "leafB", state = "Claimed"))))
     }
 
+    @Test fun longSharedPathsStayInsideThePicture() {
+        assertEquals("a round's four hops keep today's spacing", 30f, ExitList.rows(250f, 3).step, 0f)
+        // Four tree hops and two checkpoint or arkoor hops: 8 transactions, the deepest at depth 7; and longer still.
+        for (deepest in 1..12) {
+            val rows = ExitList.rows(250f, deepest)
+            assertTrue("depth $deepest: the coin's amount is cut off", rows.y(deepest) - ExitList.labelRoom >= 0f)
+            assertTrue(rows.step <= 30f)
+        }
+    }
+
     @Test fun exitsFromTwoRoundsAreDrawnAsTwoGroups() {
         fun paths(id: String, vararg txs: String) = exit("Processing", ExitDetails(), packages = txs.map { ExitPackage(it) }, id = id)
         val a = paths("a", "r1", "a1"); val b = paths("b", "r1", "b1"); val c = paths("c", "r2", "c1"); val d = paths("d", "r2", "d1")

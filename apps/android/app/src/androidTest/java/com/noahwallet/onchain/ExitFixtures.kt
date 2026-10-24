@@ -90,6 +90,11 @@ internal object ExitFixtures {
     }
 }
 
+/** Two exits from one round whose paths run 8 transactions (four tree hops, then checkpoint and arkoor hops). */
+internal val ExitFixtures.deep: List<ExitModel> get() = listOf(
+    confirm.copy(id = vtxos[0].id, packages = listOf("root", "b1", "b2", "b3", "leaf", "ckpt", "ark1", "ark2").map { ExitPackage(it.padEnd(64, 'd')) }),
+    confirm.copy(id = vtxos[1].id, amount = 24_500, packages = listOf("root", "b1", "c2", "c3", "leaf2", "ckpt2", "ark3", "ark4").map { ExitPackage(it.padEnd(64, 'd')) }))
+
 /** What Settings gives an exit page: the pose, the theme's palette and the toasts. */
 @Composable
 internal fun ExitPreviewHost(content: @Composable () -> Unit) {

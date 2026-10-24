@@ -261,6 +261,17 @@ internal object ExitList {
         return List(5) { i -> when { i < at -> Step.done; i > at -> Step.todo; stage.attention == ExitStage.Attention.needsFunds -> Step.failed; else -> Step.now } }
     }
 
+    /**
+     * The shared picture's rows in a canvas [height] dp tall: the round's block at [y0], each depth [step] above it, close
+     * enough that the deepest coin and its amount ([labelRoom] above its centre) stay inside.
+     */
+    data class Rows(val y0: Float, val step: Float) { fun y(depth: Int) = y0 - 26 - depth * step }
+    const val labelRoom = 34f
+    fun rows(height: Float, deepest: Int): Rows {
+        val y0 = minOf(height - 44, (height + 190) / 2)
+        return Rows(y0, if (deepest <= 0) 30f else minOf(30f, (y0 - 26 - labelRoom) / deepest))
+    }
+
     /** The shared picture's transactions: each drawn once, at its depth from the round, between the exits' coins it leads to. */
     enum class TxState { mined, sent, waiting }
     data class Placed(val txid: String, val parent: String?, val depth: Int, val x: Float, val state: TxState, val coin: Int?)
