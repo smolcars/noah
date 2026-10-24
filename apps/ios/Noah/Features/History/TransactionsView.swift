@@ -579,7 +579,7 @@ private struct ActivitySkeleton: View {
         }
         .padding(.top, 8)
         .accessibilityElement()
-        .accessibilityLabel(Text("Loading transactions"))
+        .accessibilityLabel(Text("Loading activity"))
     }
 
     /// 1.2 s each way between full and 45%, eased (prototype `skp`).

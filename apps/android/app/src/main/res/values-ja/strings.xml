@@ -339,10 +339,8 @@
   <string name="gt_28c0fd81cb2b2864">"入金アドレスを読み込めませんでした。この画面を閉じ、ウォレットの準備ができてから再試行してください。"</string>
   <string name="gt_075bebe38f9136fa">"アクティビティを読み込めませんでした"</string>
   <string name="gt_c2c38bbef6138610">"取引を読み込めませんでした。再試行してください。"</string>
-  <string name="gt_562864a6f342bc5c">"残高を読み込めませんでした。"</string>
   <string name="gt_c71c66c1d0794f97">"残高を読み込めませんでした。画面を下に引いて再試行してください。"</string>
   <string name="gt_31673bb8fa90c00c">"バッテリー設定を開けませんでした"</string>
-  <string name="gt_15376ea8a13ac368">"ウォレットを開けませんでした。"</string>
   <string name="gt_797b4f6a80084ede">"ウォレットを開けませんでした。もう一度お試しください。"</string>
   <string name="gt_f3522523c9bce611">"物語を再生できませんでした。もう一度お試しください。"</string>
   <string name="gt_8db2737c91fcc605">"共有用ファイルを準備できませんでした。もう一度お試しください。"</string>
@@ -471,7 +469,6 @@
   <string name="gt_06e4151b65a65de5">"復元フレーズを入力してください。"</string>
   <string name="gt_2c41befe9ea4cd5c">"入力形式"</string>
   <string name="gt_54a0e8c17ebb21a1">"エラー"</string>
-  <string name="gt_a464fa0760351f31">"エラー：%1$s"</string>
   <string name="gt_7107b114487556ea">"Esplora"</string>
   <string name="gt_311656f3bd25348c">"Esplora API"</string>
   <string name="gt_f81c8539f3f844d2">"ブロードキャストの推定手数料"</string>
@@ -578,7 +575,6 @@
   <string name="gt_638e249f4a15ebb8">"絞り込み"</string>
   <string name="gt_f4ed8fa656b74c5d">"確定済み"</string>
   <string name="gt_b4221133c0166c16">"最終受け取りトランザクションをブロードキャストし、確認を待っています。"</string>
-  <string name="gt_ef55a5e44973729e">"最終：%1$s"</string>
   <string name="gt_d4531989954eac5c">"近くの施設を探す"</string>
   <string name="gt_664fa279a9ee2f99">"ビットコインが使えるお店を探す"</string>
   <string name="gt_6dfc37f56766e503">"位置情報を取得中"</string>
@@ -709,8 +705,6 @@
   <string name="gt_eb970eb0951c6cde">"前回"</string>
   <string name="gt_8462b632f3ab7913">"最終バックアップ"</string>
   <string name="gt_fb6ee42c1c065f89">"最終バックアップ %1$s"</string>
-  <string name="gt_f21e156f77eaeac9">"前回のバックアップ %1$s"</string>
-  <string name="gt_1a196f3801a01458">"前回のバックアップ：%1$s"</string>
   <string name="gt_0c0c351a971353b5">"最終確認"</string>
   <string name="gt_ec3b8bf1e0261664">"前回成功したバックアップ %1$s"</string>
   <string name="gt_e85039a1d8fa0011">"Arkから出金中"</string>
@@ -744,7 +738,6 @@
   <string name="gt_f2b1180c4d846c12">"アドレスを読み込み中…"</string>
   <string name="gt_b1905aae7f24ef9c">"詳細を読み込み中…"</string>
   <string name="gt_077216397a70125f">"配布元を読み込み中…"</string>
-  <string name="gt_c1e8a31d06ddb8c7">"取引を読み込み中"</string>
   <string name="gt_ba3bbbe10d8bef66">"読み込み中…"</string>
   <string name="gt_ac56027a0ba70a7c">"現在地を取得中…"</string>
   <string name="gt_2df39c51ede8a438">"位置情報を取得できません。位置情報が有効になっているか確認するか、都市を検索してください。"</string>
@@ -769,7 +762,6 @@
   <string name="gt_2f59b03b1a5e43b2">"メンテナンス更新"</string>
   <string name="gt_6c2f89a9a33e0770">"メンテナンスが完了しました"</string>
   <string name="gt_5926f9770e915ee6">"メンテナンス更新が完了しました"</string>
-  <string name="gt_a4d57213fde64fd5">"手動バックアップに失敗しました"</string>
   <string name="gt_ac2e1982d49531a4">"地図のキャッシュを保存できませんでした"</string>
   <string name="gt_720dd69ca94e571b">"地図データがリソースの上限を超えています"</string>
   <string name="gt_f51dc83e58497522">"地図のリクエストに失敗しました"</string>
@@ -1013,7 +1005,6 @@
   <string name="gt_21682e0a58f5581b">"オフボード待ち"</string>
   <string name="gt_779dd1993ab4b13c">"保留中のラウンド"</string>
   <string name="gt_5fb55a3f477aee2b">"送金待ち"</string>
-  <string name="gt_0461277d349fcc79">"処理待ちのラウンドの状況を取得できません"</string>
   <string name="gt_dbb6cf817820de0b">"権限が必要です"</string>
   <string name="gt_cbf613fce96573ac">"名前を決める"</string>
   <string name="gt_46d931c1d03b0781">"表示範囲内の場所"</string>
@@ -1094,7 +1085,6 @@
   <string name="gt_ffc1364cefebd7a2">"ネットワーク状況を更新"</string>
   <string name="gt_5dbbba5210b8e6c2">"支払い状況を更新"</string>
   <string name="gt_dea03b1eaff62e66">"委任ラウンド %1$s に更新を送信しました。"</string>
-  <string name="gt_117f6a7cf0372277">"返金済み"</string>
   <string name="gt_3de658e662e84920">"返金済み · ウォレットに戻りました"</string>
   <string name="gt_bb7234ec12451361">"登録"</string>
   <string name="gt_dfedc705d4521581">"再登録"</string>
@@ -1122,7 +1112,6 @@
     <item quantity="one">"%1$s個のVTXOを更新"</item>
     <item quantity="other">"%1$s個のVTXOを更新"</item>
   </plurals>
-  <string name="gt_77ad89ff1752beb2">"更新の状況を取得できません"</string>
   <string name="gt_1c736ed5f00ea1a6">"更新済み"</string>
   <plurals name="gt_c93ae43d7d80967e">
     <item quantity="one">"%1$s枚のコインを更新しました"</item>
@@ -1155,7 +1144,6 @@
   <string name="gt_fc7e92478faea878">"復元を再開"</string>
   <string name="gt_a5c671347dbb4adc">"履歴を確認してから再開"</string>
   <string name="gt_646db00716cc87dc">"それでも再開する"</string>
-  <string name="gt_9d9b7bbc32db7155">"「設定」→「詳細設定」でウォレットを再開してください。"</string>
   <string name="gt_a97d32ddb6baca01">"再開しました"</string>
   <string name="gt_ec12debd44b73ef1">"後処理を再試行するため、準備済みのArkへの入金を保持しています"</string>
   <string name="gt_942087cc2d41e013">"再試行"</string>
@@ -1280,7 +1268,6 @@
   <string name="gt_920e413c7d411b61">"状態"</string>
   <string name="gt_1c23c9a0a6a0b504">"状況はまだ確定していません。ウォレットの同期時にNoahが自動的に再確認します。"</string>
   <string name="gt_08b950ead9bd3efa">"状況が確定しました。処理記録を確認してください。"</string>
-  <string name="gt_430144dec054b1a6">"状況：%1$s"</string>
   <string name="gt_08fd1de4b04df4a2">"宿泊施設"</string>
   <string name="gt_127c180ccbd3ec94">"支払い中です。数分かかることがあります。"</string>
   <string name="gt_52b93ab03323ca98">"%1$s を送金中です"</string>
@@ -1293,7 +1280,6 @@
   <string name="gt_8b60ea61b803ead4">"送信済みです。更新してネットワークの状態を確認してください。この支払いを再送しないでください。"</string>
   <string name="gt_63734ae10b7e46e9">"サブシステム"</string>
   <string name="gt_f3686bb328c6d408">"成功"</string>
-  <string name="gt_4ed227040fbcab82">"成功：%1$s"</string>
   <string name="gt_cc5ca35c0cd158c2">"サーバーへの登録が完了しました"</string>
   <string name="gt_479b9ae48026aec9">"サポートコード：SEED_INVALID。保存された復元フレーズを検証できませんでした。このアプリを削除せず、github.com/smolcars/noah からNoahサポートにお問い合わせください。復元フレーズ、秘密鍵、ウォレットのデータベースは絶対に誰にも送らないでください。"</string>
   <string name="gt_2dd46d7515a9b8c0">"サポートコード：WALLET_CONFLICT。Noahで、安全に照合できないウォレットの記録が見つかりました。このアプリを削除せず、github.com/smolcars/noah からNoahサポートにお問い合わせください。復元フレーズ、秘密鍵、ウォレットのデータベースは絶対に誰にも送らないでください。"</string>
@@ -1481,7 +1467,6 @@
   <string name="gt_c5b5f0e95343c511">"ブロック %1$s でロック解除"</string>
   <string name="gt_fae022f4a65e9a7d">"画像を読み取れません"</string>
   <string name="gt_ea72a231d1b8a76f">"制限なし"</string>
-  <string name="gt_8b5f54fcadeccafe">"未署名のトランザクション %1$s"</string>
   <string name="gt_b38065110f2bd113">"未署名のトランザクション %1$s"</string>
   <string name="gt_54324658e2eba91c">"未対応"</string>
   <string name="gt_cd815000e69f78a3">"対応していない受取人"</string>
@@ -1553,7 +1538,6 @@
   <string name="gt_157e2e4d3fa7c80a">"ウォレットの復旧が必要です"</string>
   <string name="gt_46a366f15c4809e0">"ウォレットを再開しました"</string>
   <string name="gt_172f54e96d258f92">"ウォレットのシードを取得できません"</string>
-  <string name="gt_65f399ccde3d3cdf">"ウォレットの状態を監視できません"</string>
   <string name="gt_7adf4a8d18569397">"ウォレットは一時停止中です"</string>
   <string name="gt_d761927c2b2aeaf0">"ウォレットは一時停止中、または置き換え待ちです。送金は停止しています。"</string>
   <string name="gt_795e0058d0191f98">"ウォレットは一時停止中です。設定でウォレットを再開してください。"</string>
@@ -1608,7 +1592,6 @@
   <string name="gt_886bc67a71fe0f83">"メールアドレスはウォレットに関する緊急の通知にのみ使います。"</string>
   <string name="gt_2c6b2e253c01fb2e">"お名前"</string>
   <string name="gt_d9a846242ed7a22f">"復元フレーズは引き続きこの端末に安全に保存されています。このフレーズを使って、バックアップからウォレットを復元してください。"</string>
-  <string name="gt_50720c8f08138a5e">"ウォレットは現在停止中です。すべてのウォレット操作が無効になっています。"</string>
   <string name="gt_09233d973ee617bd">"ウォレットの準備ができました。"</string>
   <string name="gt_a672c47ec618d7b7">"ウォレットは一時停止中です。取引を表示するには再開してください。"</string>
   <string name="gt_b4a8692900c62adf">"ウォレットは停止中です。復旧を再開してバックアップを復元するか、このウォレットを端末から削除してください。"</string>
@@ -1648,7 +1631,6 @@
   <string name="gt_31ba1bfe057bd412">"%1$s 受け取り中"</string>
   <string name="gt_0632ba4767ab1888">"当時 %1$s"</string>
   <string name="gt_05421802af3d82be">"%1$s 利用可能"</string>
-  <string name="gt_07af0226de4cedc3">"Arkで%1$sを利用可能"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s はウォレットに戻りました。"</string>
   <string name="gt_df9fa0b4daa96032">"%1$s はウォレットに戻りました。ライトニングで %2$s に届きませんでした。"</string>
   <string name="gt_3152898f21ae93dc">"残り%1$s"</string>
@@ -1666,7 +1648,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s。ほかのバックアップは残ります。"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · 次回 %2$s"</string>
-  <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"%1$s件のArk支払いをCSVファイルで書き出します。"</item>
@@ -1742,7 +1723,6 @@
   <string name="gt_fec76a562b406e84">"当時%1$s"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
-  <string name="gt_0754f803d3aeed95">"· ウォレットに戻りました"</string>
   <string name="gt_e3ca394fe5cc723f">"· ウォレットからの出金はありません"</string>
   <string name="home">"ホーム"</string>
   <string name="receive">"受け取る"</string>

@@ -12073,42 +12073,6 @@
         }
       }
     },
-    "Couldn't load your balance.": {
-      "comment": "GT gt_562864a6f342bc5c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't load your balance."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo cargar tu saldo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "残高を読み込めませんでした。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "잔액을 불러오지 못했습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunde inte läsa in ditt saldo."
-          }
-        }
-      }
-    },
     "Couldn't load your balance. Pull down to try again.": {
       "comment": "GT gt_c71c66c1d0794f97; arguments: none",
       "extractionState": "manual",
@@ -12177,42 +12141,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det gick inte att öppna batteriinställningarna"
-          }
-        }
-      }
-    },
-    "Couldn't open your wallet.": {
-      "comment": "GT gt_15376ea8a13ac368; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't open your wallet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo abrir tu billetera."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットを開けませんでした。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑을 열지 못했습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunde inte öppna din plånbok."
           }
         }
       }
@@ -16777,42 +16705,6 @@
         }
       }
     },
-    "Error: {nativeValue1}": {
-      "comment": "GT gt_a464fa0760351f31; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エラー：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오류: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fel: %1$@"
-          }
-        }
-      }
-    },
     "Esplora": {
       "comment": "GT gt_7107b114487556ea; arguments: none",
       "extractionState": "manual",
@@ -20433,42 +20325,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den slutliga inlösentransaktionen har sänts och väntar på bekräftelse."
-          }
-        }
-      }
-    },
-    "Final: {nativeValue1}": {
-      "comment": "GT gt_ef55a5e44973729e; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最終：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최종: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Slutlig: %1$@"
           }
         }
       }
@@ -25105,78 +24961,6 @@
         }
       }
     },
-    "Last backup {nativeValue1}": {
-      "comment": "GT gt_f21e156f77eaeac9; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last backup %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Última copia de seguridad %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "前回のバックアップ %1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마지막 백업 %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senaste säkerhetskopian %1$@"
-          }
-        }
-      }
-    },
-    "Last backup {time}": {
-      "comment": "GT gt_1a196f3801a01458; arguments: time",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last backup %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Última copia de seguridad: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "前回のバックアップ：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마지막 백업 %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senaste säkerhetskopiering %1$@"
-          }
-        }
-      }
-    },
     "Last checked": {
       "comment": "GT gt_0c0c351a971353b5; arguments: none",
       "extractionState": "manual",
@@ -26365,42 +26149,6 @@
         }
       }
     },
-    "Loading transactions": {
-      "comment": "GT gt_c1e8a31d06ddb8c7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading transactions"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cargando transacciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取引を読み込み中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "거래 불러오는 중"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Läser in transaktioner"
-          }
-        }
-      }
-    },
     "Loading…": {
       "comment": "GT gt_ba3bbbe10d8bef66; arguments: none",
       "extractionState": "manual",
@@ -27261,42 +27009,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Underhållsförnyelse slutförd"
-          }
-        }
-      }
-    },
-    "Manual backup failed": {
-      "comment": "GT gt_a4d57213fde64fd5; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Manual backup failed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error en la copia de seguridad manual"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手動バックアップに失敗しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수동 백업 실패"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Manuell säkerhetskopiering misslyckades"
           }
         }
       }
@@ -35953,42 +35665,6 @@
         }
       }
     },
-    "Pending round status unavailable": {
-      "comment": "GT gt_0461277d349fcc79; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pending round status unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se puede consultar el estado de la ronda pendiente"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "処理待ちのラウンドの状況を取得できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대기 중인 라운드 상태를 확인할 수 없음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status för den väntande omgången är inte tillgänglig"
-          }
-        }
-      }
-    },
     "Permission required": {
       "comment": "GT gt_dbb6cf817820de0b; arguments: none",
       "extractionState": "manual",
@@ -38869,42 +38545,6 @@
         }
       }
     },
-    "Refunded": {
-      "comment": "GT gt_117f6a7cf0372277; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Refunded"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reembolsado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "返金済み"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "환불됨"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Återbetald"
-          }
-        }
-      }
-    },
     "Refunded · back in your wallet": {
       "comment": "GT gt_3de658e662e84920; arguments: none",
       "extractionState": "manual",
@@ -39825,42 +39465,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "Renewal status unavailable": {
-      "comment": "GT gt_77ad89ff1752beb2; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Renewal status unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Estado de renovación no disponible"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更新の状況を取得できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "갱신 상태를 확인할 수 없음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Förnyelsestatus är inte tillgänglig"
           }
         }
       }
@@ -40965,42 +40569,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Återuppta ändå"
-          }
-        }
-      }
-    },
-    "Resume your wallet in Settings → Advanced.": {
-      "comment": "GT gt_9d9b7bbc32db7155; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resume your wallet in Settings → Advanced."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reanuda tu billetera en Ajustes → Avanzado."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「設定」→「詳細設定」でウォレットを再開してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "설정 → 고급에서 지갑을 재개하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Återuppta plånboken under Inställningar → Avancerat."
           }
         }
       }
@@ -45469,42 +45037,6 @@
         }
       }
     },
-    "Status: {nativeValue1}": {
-      "comment": "GT gt_430144dec054b1a6; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Estado: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "状況：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "상태: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status: %1$@"
-          }
-        }
-      }
-    },
     "Stay": {
       "comment": "GT gt_08fd1de4b04df4a2; arguments: none",
       "extractionState": "manual",
@@ -45933,42 +45465,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lyckad"
-          }
-        }
-      }
-    },
-    "Successful: {nativeValue1}": {
-      "comment": "GT gt_4ed227040fbcab82; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Successful: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correctos: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "成功：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "성공: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lyckade: %1$@"
           }
         }
       }
@@ -52705,42 +52201,6 @@
         }
       }
     },
-    "Unsigned tx {nativeValue1}": {
-      "comment": "GT gt_8b5f54fcadeccafe; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unsigned tx %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tx sin firmar %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未署名のトランザクション %1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서명되지 않은 거래 %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Osignerad tx %1$@"
-          }
-        }
-      }
-    },
     "Unsigned tx {value1}": {
       "comment": "GT gt_b38065110f2bd113; arguments: value1",
       "extractionState": "manual",
@@ -55249,42 +54709,6 @@
         }
       }
     },
-    "Wallet status observation unavailable": {
-      "comment": "GT gt_65f399ccde3d3cdf; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wallet status observation unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supervisión del estado de la billetera no disponible"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットの状態を監視できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지갑 상태를 모니터링할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Övervakning av plånboksstatus inte tillgänglig"
-          }
-        }
-      }
-    },
     "Wallet suspended": {
       "comment": "GT gt_7adf4a8d18569397; arguments: none",
       "extractionState": "manual",
@@ -57085,42 +56509,6 @@
         }
       }
     },
-    "Your wallet is currently suspended. All wallet operations are disabled.": {
-      "comment": "GT gt_50720c8f08138a5e; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your wallet is currently suspended. All wallet operations are disabled."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu billetera está suspendida. Todas sus operaciones están deshabilitadas."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォレットは現在停止中です。すべてのウォレット操作が無効になっています。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "현재 지갑 사용이 중지되어 있습니다. 모든 지갑 기능을 사용할 수 없습니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Din plånbok är för närvarande avstängd. Alla plånboksfunktioner är inaktiverade."
-          }
-        }
-      }
-    },
     "Your wallet is ready.": {
       "comment": "GT gt_09233d973ee617bd; arguments: none",
       "extractionState": "manual",
@@ -58477,42 +57865,6 @@
         }
       }
     },
-    "{amount} available in Ark": {
-      "comment": "GT gt_07af0226de4cedc3; arguments: amount",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ available in Ark"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ disponible en Ark"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arkで%1$@を利用可能"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ark에서 %1$@ 사용 가능"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ tillgängligt i Ark"
-          }
-        }
-      }
-    },
     "{amount} is back in your wallet.": {
       "comment": "GT gt_2c6ed7402ae1aea6; arguments: amount",
       "extractionState": "manual",
@@ -59121,42 +58473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · nästa %2$@"
-          }
-        }
-      }
-    },
-    "{nativeValue1}: {nativeValue2}": {
-      "comment": "GT gt_cf92873bf4b137b2; arguments: nativeValue1, nativeValue2",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@: %2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@: %2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@: %2$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@: %2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@: %2$@"
           }
         }
       }
@@ -61233,42 +60549,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "© OpenStreetMap"
-          }
-        }
-      }
-    },
-    "· back in your wallet": {
-      "comment": "GT gt_0754f803d3aeed95; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· back in your wallet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· de vuelta en tu billetera"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· ウォレットに戻りました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· 지갑으로 돌아왔어요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· tillbaka i din plånbok"
           }
         }
       }

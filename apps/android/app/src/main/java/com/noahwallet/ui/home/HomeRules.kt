@@ -17,7 +17,7 @@ object HomeRules {
         state.lastBackupStatus == "in_progress" -> Banner("Backing up wallet", "Running in background")
         state.lastBackupStatus == "failed" -> Banner("Backup failed", "An unknown error occurred while backing up.", failed = true, retry = true)
         !state.backupPending && state.lastBackupStatus == "success" && state.lastBackupAt != null && now - state.lastBackupAt!! < successMillis ->
-            Banner("Backup completed", "Last backup ${DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(Date(state.lastBackupAt!!.toLong()))}")
+            Banner("Backup completed", """Last backup ${DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(Date(state.lastBackupAt!!.toLong()))}""") // Never shown: Home toasts only the title.
         else -> null
     }
     fun boarding(amount: Long, createdAt: Long, now: Long, locale: Locale): Banner? =

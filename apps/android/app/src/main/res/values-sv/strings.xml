@@ -339,10 +339,8 @@
   <string name="gt_28c0fd81cb2b2864">"Kunde inte läsa in en insättningsadress. Stäng och försök igen när plånboken är redo."</string>
   <string name="gt_075bebe38f9136fa">"Det gick inte att läsa in aktiviteten"</string>
   <string name="gt_c2c38bbef6138610">"Det gick inte att läsa in transaktionerna. Försök igen."</string>
-  <string name="gt_562864a6f342bc5c">"Kunde inte läsa in ditt saldo."</string>
   <string name="gt_c71c66c1d0794f97">"Det gick inte att läsa in ditt saldo. Dra nedåt för att försöka igen."</string>
   <string name="gt_31673bb8fa90c00c">"Det gick inte att öppna batteriinställningarna"</string>
-  <string name="gt_15376ea8a13ac368">"Kunde inte öppna din plånbok."</string>
   <string name="gt_797b4f6a80084ede">"Kunde inte öppna din plånbok. Försök igen."</string>
   <string name="gt_f3522523c9bce611">"Kunde inte spela upp berättelsen. Försök igen."</string>
   <string name="gt_8db2737c91fcc605">"Kunde inte förbereda filen för delning. Försök igen."</string>
@@ -471,7 +469,6 @@
   <string name="gt_06e4151b65a65de5">"Ange din återställningsfras."</string>
   <string name="gt_2c41befe9ea4cd5c">"Angivet som"</string>
   <string name="gt_54a0e8c17ebb21a1">"Fel"</string>
-  <string name="gt_a464fa0760351f31">"Fel: %1$s"</string>
   <string name="gt_7107b114487556ea">"Esplora"</string>
   <string name="gt_311656f3bd25348c">"Esplora API"</string>
   <string name="gt_f81c8539f3f844d2">"Beräknade avgifter för att sända transaktioner"</string>
@@ -578,7 +575,6 @@
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
   <string name="gt_f4ed8fa656b74c5d">"Slutgiltig"</string>
   <string name="gt_b4221133c0166c16">"Den slutliga inlösentransaktionen har sänts och väntar på bekräftelse."</string>
-  <string name="gt_ef55a5e44973729e">"Slutlig: %1$s"</string>
   <string name="gt_d4531989954eac5c">"Hitta platser nära mig"</string>
   <string name="gt_664fa279a9ee2f99">"Hitta ställen som tar emot bitcoin"</string>
   <string name="gt_6dfc37f56766e503">"Söker efter din plats"</string>
@@ -709,8 +705,6 @@
   <string name="gt_eb970eb0951c6cde">"Senaste"</string>
   <string name="gt_8462b632f3ab7913">"Senaste säkerhetskopian"</string>
   <string name="gt_fb6ee42c1c065f89">"Senaste säkerhetskopia %1$s"</string>
-  <string name="gt_f21e156f77eaeac9">"Senaste säkerhetskopian %1$s"</string>
-  <string name="gt_1a196f3801a01458">"Senaste säkerhetskopiering %1$s"</string>
   <string name="gt_0c0c351a971353b5">"Senast kontrollerad"</string>
   <string name="gt_ec3b8bf1e0261664">"Senaste lyckade säkerhetskopia %1$s"</string>
   <string name="gt_e85039a1d8fa0011">"Lämnar Ark"</string>
@@ -744,7 +738,6 @@
   <string name="gt_f2b1180c4d846c12">"Läser in adress…"</string>
   <string name="gt_b1905aae7f24ef9c">"Läser in information…"</string>
   <string name="gt_077216397a70125f">"Läser in distributörer…"</string>
-  <string name="gt_c1e8a31d06ddb8c7">"Läser in transaktioner"</string>
   <string name="gt_ba3bbbe10d8bef66">"Läser in…"</string>
   <string name="gt_ac56027a0ba70a7c">"Söker efter din plats…"</string>
   <string name="gt_2df39c51ede8a438">"Din plats är inte tillgänglig. Kontrollera att platstjänster är aktiverade eller sök efter en stad."</string>
@@ -769,7 +762,6 @@
   <string name="gt_2f59b03b1a5e43b2">"Underhållsuppdatering"</string>
   <string name="gt_6c2f89a9a33e0770">"Underhåll slutfört"</string>
   <string name="gt_5926f9770e915ee6">"Underhållsförnyelse slutförd"</string>
-  <string name="gt_a4d57213fde64fd5">"Manuell säkerhetskopiering misslyckades"</string>
   <string name="gt_ac2e1982d49531a4">"Kartans cache kunde inte sparas"</string>
   <string name="gt_720dd69ca94e571b">"Kartdata överskrider resursgränserna"</string>
   <string name="gt_f51dc83e58497522">"Kartförfrågan misslyckades"</string>
@@ -1013,7 +1005,6 @@
   <string name="gt_21682e0a58f5581b">"Väntande uttag"</string>
   <string name="gt_779dd1993ab4b13c">"Väntande omgångar"</string>
   <string name="gt_5fb55a3f477aee2b">"Väntande överföring"</string>
-  <string name="gt_0461277d349fcc79">"Status för den väntande omgången är inte tillgänglig"</string>
   <string name="gt_dbb6cf817820de0b">"Behörighet krävs"</string>
   <string name="gt_cbf613fce96573ac">"Välj ett namn"</string>
   <string name="gt_46d931c1d03b0781">"Platser i vyn"</string>
@@ -1094,7 +1085,6 @@
   <string name="gt_ffc1364cefebd7a2">"Uppdatera nätverksstatus"</string>
   <string name="gt_5dbbba5210b8e6c2">"Uppdatera betalningsstatus"</string>
   <string name="gt_dea03b1eaff62e66">"Förnyelse skickad till delegerad omgång %1$s."</string>
-  <string name="gt_117f6a7cf0372277">"Återbetald"</string>
   <string name="gt_3de658e662e84920">"Återbetald · tillbaka i din plånbok"</string>
   <string name="gt_bb7234ec12451361">"Registrera"</string>
   <string name="gt_dfedc705d4521581">"Registrera igen"</string>
@@ -1122,7 +1112,6 @@
     <item quantity="one">"Förnya %1$s VTXO"</item>
     <item quantity="other">"Förnya %1$s VTXO:er"</item>
   </plurals>
-  <string name="gt_77ad89ff1752beb2">"Förnyelsestatus är inte tillgänglig"</string>
   <string name="gt_1c736ed5f00ea1a6">"Förnyat"</string>
   <plurals name="gt_c93ae43d7d80967e">
     <item quantity="one">"Förnyade %1$s mynt"</item>
@@ -1155,7 +1144,6 @@
   <string name="gt_fc7e92478faea878">"Återuppta återställning"</string>
   <string name="gt_a5c671347dbb4adc">"Återuppta efter att ha kollat historiken"</string>
   <string name="gt_646db00716cc87dc">"Återuppta ändå"</string>
-  <string name="gt_9d9b7bbc32db7155">"Återuppta plånboken under Inställningar → Avancerat."</string>
   <string name="gt_a97d32ddb6baca01">"Återupptagen"</string>
   <string name="gt_ec12debd44b73ef1">"Behåller förberedd insättning för ett nytt rensningsförsök"</string>
   <string name="gt_942087cc2d41e013">"Försök igen"</string>
@@ -1280,7 +1268,6 @@
   <string name="gt_920e413c7d411b61">"Status"</string>
   <string name="gt_1c23c9a0a6a0b504">"Status är fortfarande osäker. Noah kontrollerar automatiskt igen när din plånbok synkroniseras."</string>
   <string name="gt_08b950ead9bd3efa">"Status klarlagd. Granska kvittot."</string>
-  <string name="gt_430144dec054b1a6">"Status: %1$s"</string>
   <string name="gt_08fd1de4b04df4a2">"Boende"</string>
   <string name="gt_127c180ccbd3ec94">"Betalar fortfarande. Det kan ta några minuter."</string>
   <string name="gt_52b93ab03323ca98">"Skickar fortfarande %1$s"</string>
@@ -1293,7 +1280,6 @@
   <string name="gt_8b60ea61b803ead4">"Skickad. Uppdatera för att kontrollera status i nätverket. Skicka inte den här betalningen igen."</string>
   <string name="gt_63734ae10b7e46e9">"Delsystem"</string>
   <string name="gt_f3686bb328c6d408">"Lyckad"</string>
-  <string name="gt_4ed227040fbcab82">"Lyckade: %1$s"</string>
   <string name="gt_cc5ca35c0cd158c2">"Registreringen hos servern lyckades"</string>
   <string name="gt_479b9ae48026aec9">"Supportkod: SEED_INVALID. Den sparade återställningsfrasen kunde inte valideras. Låt appen vara installerad och kontakta Noahs support på github.com/smolcars/noah. Skicka aldrig din återställningsfras, dina privata nycklar eller en plånboksdatabas till någon."</string>
   <string name="gt_2dd46d7515a9b8c0">"Supportkod: WALLET_CONFLICT. Noah hittade plånboksposter som inte kan matchas på ett säkert sätt. Låt appen vara installerad och kontakta Noahs support på github.com/smolcars/noah. Skicka aldrig din återställningsfras, dina privata nycklar eller en plånboksdatabas till någon."</string>
@@ -1481,7 +1467,6 @@
   <string name="gt_c5b5f0e95343c511">"Låses upp vid block %1$s"</string>
   <string name="gt_fae022f4a65e9a7d">"Oläsbar bild"</string>
   <string name="gt_ea72a231d1b8a76f">"Obegränsad"</string>
-  <string name="gt_8b5f54fcadeccafe">"Osignerad tx %1$s"</string>
   <string name="gt_b38065110f2bd113">"Osignerad transaktion %1$s"</string>
   <string name="gt_54324658e2eba91c">"Stöds inte"</string>
   <string name="gt_cd815000e69f78a3">"Mottagaren stöds inte"</string>
@@ -1553,7 +1538,6 @@
   <string name="gt_157e2e4d3fa7c80a">"Plånboken behöver återställas"</string>
   <string name="gt_46a366f15c4809e0">"Plånboken har återupptagits"</string>
   <string name="gt_172f54e96d258f92">"Plånbokens återställningsfras är inte tillgänglig"</string>
-  <string name="gt_65f399ccde3d3cdf">"Övervakning av plånboksstatus inte tillgänglig"</string>
   <string name="gt_7adf4a8d18569397">"Plånboken är pausad"</string>
   <string name="gt_d761927c2b2aeaf0">"Plånboken är pausad eller väntar på att ersättas. Det går inte att skicka betalningar."</string>
   <string name="gt_795e0058d0191f98">"Plånboken är pausad. Återuppta den under Inställningar."</string>
@@ -1608,7 +1592,6 @@
   <string name="gt_886bc67a71fe0f83">"Din e-post används bara för brådskande varningar om din plånbok."</string>
   <string name="gt_2c6b2e253c01fb2e">"Ditt namn"</string>
   <string name="gt_d9a846242ed7a22f">"Din återställningsfras är fortfarande säkert lagrad på den här enheten. Använd den för att återställa plånboken från säkerhetskopian."</string>
-  <string name="gt_50720c8f08138a5e">"Din plånbok är för närvarande avstängd. Alla plånboksfunktioner är inaktiverade."</string>
   <string name="gt_09233d973ee617bd">"Din plånbok är klar."</string>
   <string name="gt_a672c47ec618d7b7">"Din plånbok är pausad. Återuppta den för att visa transaktioner."</string>
   <string name="gt_b4a8692900c62adf">"Din plånbok är tillfälligt inaktiverad. Återuppta återställningen för att återställa säkerhetskopian, eller radera den här plånboken från enheten."</string>
@@ -1648,7 +1631,6 @@
   <string name="gt_31ba1bfe057bd412">"%1$s på väg"</string>
   <string name="gt_0632ba4767ab1888">"%1$s vid tillfället"</string>
   <string name="gt_05421802af3d82be">"%1$s tillgängligt"</string>
-  <string name="gt_07af0226de4cedc3">"%1$s tillgängligt i Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s är tillbaka i din plånbok."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s är tillbaka i din plånbok. Lightning kunde inte nå %2$s."</string>
   <string name="gt_3152898f21ae93dc">"%1$s kvar"</string>
@@ -1666,7 +1648,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Dina andra säkerhetskopior finns kvar."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s kl. %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · nästa %2$s"</string>
-  <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"%1$s Ark-betalning som CSV-fil."</item>
@@ -1742,7 +1723,6 @@
   <string name="gt_fec76a562b406e84">"%1$s vid tillfället"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
-  <string name="gt_0754f803d3aeed95">"· tillbaka i din plånbok"</string>
   <string name="gt_e3ca394fe5cc723f">"· inget lämnade din plånbok"</string>
   <string name="home">"Hem"</string>
   <string name="receive">"Ta emot"</string>

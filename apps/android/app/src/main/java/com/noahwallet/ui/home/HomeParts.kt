@@ -320,7 +320,7 @@ internal fun rowSubtitle(row: HomeRow, locale: java.util.Locale, now: java.util.
     val kind = row.kind?.let { tr(it) }
     val state = row.state?.let { tr(it) }
     return when {
-        row.refunded -> (state!! + " " + tr("· back in your wallet")) to true
+        row.refunded -> tr("Refunded · back in your wallet") to true
         row.failed || row.canceled -> (state!! + if (row.unchanged) " " + tr("· nothing left your wallet") else "") to true
         state != null -> listOfNotNull(state, kind).joinToString(" · ") to false
         else -> listOfNotNull(kind, time).joinToString(" · ") to false

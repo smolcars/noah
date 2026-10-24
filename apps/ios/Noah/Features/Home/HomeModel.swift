@@ -39,7 +39,7 @@ struct HomeBanner: Equatable {
             let formatter = DateFormatter()
             formatter.locale = locale
             formatter.setLocalizedDateFormatFromTemplate("jm")
-            return Self(title: "Backup completed", message: L10n.text("Last backup {time}", formatter.string(from: Date(timeIntervalSince1970: time / 1000))))
+            return Self(title: "Backup completed", message: #"Last backup \#(formatter.string(from: Date(timeIntervalSince1970: time / 1000)))"#) // Never shown: Home toasts only the title.
         default: return nil
         }
     }
@@ -150,7 +150,7 @@ final class HomeModel {
             roundsRefreshPending = false
             do {
                 activeRounds = try await dependencies.rounds().filter(\.active)
-            } catch { AppLog("home").w("Pending round status unavailable") }
+            } catch { AppLog("home").w(#"Pending round status unavailable"#) }
             nextRoundCheck = activeRounds.isEmpty ? nil : dependencies.now().addingTimeInterval(30)
         } while roundsRefreshPending && !backgroundRunning && !Task.isCancelled
     }
@@ -162,7 +162,7 @@ final class HomeModel {
             renewal = try await dependencies.renewal()
             return renewal
         } catch {
-            AppLog("home").w("Renewal status unavailable")
+            AppLog("home").w(#"Renewal status unavailable"#)
             return nil
         }
     }
@@ -172,7 +172,7 @@ final class HomeModel {
         loadingRenewal = true
         defer { loadingRenewal = false }
         do { renewal = try await dependencies.renewal() }
-        catch { AppLog("home").w("Renewal status unavailable") }
+        catch { AppLog("home").w(#"Renewal status unavailable"#) }
     }
 
     func backgroundChanged(_ snapshot: WalletBackgroundActivity.Snapshot) async {
@@ -204,7 +204,7 @@ final class HomeModel {
                     if reason == "resyncRequired" { resubscribe = true; break }
                 }
             }
-        } catch { AppLog("home").w("Wallet status observation unavailable") }
+        } catch { AppLog("home").w(#"Wallet status observation unavailable"#) }
     }
 
     func observeBackup() async {
@@ -287,7 +287,7 @@ final class HomeModel {
         isRetryingBackup = true
         defer { isRetryingBackup = false; updateBackup(dependencies.backup()) }
         do { try await dependencies.retryBackup() }
-        catch { AppLog("home").w("Manual backup failed") }
+        catch { AppLog("home").w(#"Manual backup failed"#) }
     }
 
     static func hiddenFiat(currency: String) -> String {

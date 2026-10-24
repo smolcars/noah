@@ -133,7 +133,7 @@ struct HomeShotTests {
             renewal: { renewal }))
         let summary = fresh ? Self.summary(ark: 0) : name == "busy" ? Self.summary(ark: 142_742, onchain: 10_000, pending: 100_000)
             : Self.summary(ark: 142_742, onchain: 10_000)
-        let base = HomeFixture(summary: summary, walletError: name == "error" ? "Couldn't load your balance." : nil,
+        let base = HomeFixture(summary: summary, walletError: name == "error" ? "Couldn't load your balance. Pull down to try again." : nil,
                                needsRecoveryPhraseBackup: fresh)
         let view = FixtureHost(app: app, history: history, home: home, rows: rows, fixture: base,
                                paysAfter: name == "celebrate" ? 2.5 : nil)

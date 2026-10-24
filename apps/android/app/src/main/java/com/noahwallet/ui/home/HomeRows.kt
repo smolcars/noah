@@ -30,7 +30,7 @@ data class HomeRow(
     }
     /** "Sending" / "Confirming" while pending; "Failed" / "Refunded" / "Canceled" when it ended without moving funds. */
     val state get() = when {
-        refunded -> "Refunded"
+        refunded -> """Refunded""" // Home shows the whole "Refunded · back in your wallet" line instead.
         failed -> "Failed"
         canceled -> "Canceled"
         pending -> pendingState ?: if (incoming || sign.isEmpty()) "Confirming" else "Sending"

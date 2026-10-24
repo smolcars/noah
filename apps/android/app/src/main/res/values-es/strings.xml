@@ -339,10 +339,8 @@
   <string name="gt_28c0fd81cb2b2864">"No se pudo cargar una dirección de depósito. Cierra e inténtalo de nuevo cuando la billetera esté lista."</string>
   <string name="gt_075bebe38f9136fa">"No se pudo cargar la actividad"</string>
   <string name="gt_c2c38bbef6138610">"No se pudieron cargar las transacciones. Vuelve a intentarlo."</string>
-  <string name="gt_562864a6f342bc5c">"No se pudo cargar tu saldo."</string>
   <string name="gt_c71c66c1d0794f97">"No se pudo cargar tu saldo. Desliza hacia abajo para volver a intentarlo."</string>
   <string name="gt_31673bb8fa90c00c">"No se pudo abrir la configuración de la batería"</string>
-  <string name="gt_15376ea8a13ac368">"No se pudo abrir tu billetera."</string>
   <string name="gt_797b4f6a80084ede">"No se pudo abrir tu billetera. Inténtalo de nuevo."</string>
   <string name="gt_f3522523c9bce611">"No se pudo reproducir la historia. Inténtalo de nuevo."</string>
   <string name="gt_8db2737c91fcc605">"No se pudo preparar el archivo para compartirlo. Inténtalo de nuevo."</string>
@@ -471,7 +469,6 @@
   <string name="gt_06e4151b65a65de5">"Introduce tu frase de recuperación."</string>
   <string name="gt_2c41befe9ea4cd5c">"Introducido como"</string>
   <string name="gt_54a0e8c17ebb21a1">"Error"</string>
-  <string name="gt_a464fa0760351f31">"Error: %1$s"</string>
   <string name="gt_7107b114487556ea">"Esplora"</string>
   <string name="gt_311656f3bd25348c">"API de Esplora"</string>
   <string name="gt_f81c8539f3f844d2">"Comisiones de difusión estimadas"</string>
@@ -578,7 +575,6 @@
   <string name="gt_638e249f4a15ebb8">"Filtrar"</string>
   <string name="gt_f4ed8fa656b74c5d">"Final"</string>
   <string name="gt_b4221133c0166c16">"La transacción final de reclamación se difundió y está pendiente de confirmación."</string>
-  <string name="gt_ef55a5e44973729e">"Final: %1$s"</string>
   <string name="gt_d4531989954eac5c">"Buscar lugares cerca de mí"</string>
   <string name="gt_664fa279a9ee2f99">"Encuentra lugares que acepten bitcoin"</string>
   <string name="gt_6dfc37f56766e503">"Buscando ubicación"</string>
@@ -709,8 +705,6 @@
   <string name="gt_eb970eb0951c6cde">"Último"</string>
   <string name="gt_8462b632f3ab7913">"Última copia de seguridad"</string>
   <string name="gt_fb6ee42c1c065f89">"Última copia de seguridad: %1$s"</string>
-  <string name="gt_f21e156f77eaeac9">"Última copia de seguridad %1$s"</string>
-  <string name="gt_1a196f3801a01458">"Última copia de seguridad: %1$s"</string>
   <string name="gt_0c0c351a971353b5">"Última consulta"</string>
   <string name="gt_ec3b8bf1e0261664">"Última copia correcta: %1$s"</string>
   <string name="gt_e85039a1d8fa0011">"Saliendo de Ark"</string>
@@ -744,7 +738,6 @@
   <string name="gt_f2b1180c4d846c12">"Cargando dirección…"</string>
   <string name="gt_b1905aae7f24ef9c">"Cargando detalles…"</string>
   <string name="gt_077216397a70125f">"Cargando distribuidores…"</string>
-  <string name="gt_c1e8a31d06ddb8c7">"Cargando transacciones"</string>
   <string name="gt_ba3bbbe10d8bef66">"Cargando…"</string>
   <string name="gt_ac56027a0ba70a7c">"Localizando…"</string>
   <string name="gt_2df39c51ede8a438">"La ubicación no está disponible. Comprueba que esté activada o busca una ciudad."</string>
@@ -769,7 +762,6 @@
   <string name="gt_2f59b03b1a5e43b2">"Renovación de mantenimiento"</string>
   <string name="gt_6c2f89a9a33e0770">"Mantenimiento completado"</string>
   <string name="gt_5926f9770e915ee6">"Renovación de mantenimiento completada"</string>
-  <string name="gt_a4d57213fde64fd5">"Error en la copia de seguridad manual"</string>
   <string name="gt_ac2e1982d49531a4">"No se pudo guardar la caché del mapa"</string>
   <string name="gt_720dd69ca94e571b">"Los datos del mapa superan los límites de recursos"</string>
   <string name="gt_f51dc83e58497522">"Falló la solicitud del mapa"</string>
@@ -1013,7 +1005,6 @@
   <string name="gt_21682e0a58f5581b">"Retiro pendiente"</string>
   <string name="gt_779dd1993ab4b13c">"Rondas pendientes"</string>
   <string name="gt_5fb55a3f477aee2b">"Envío pendiente"</string>
-  <string name="gt_0461277d349fcc79">"No se puede consultar el estado de la ronda pendiente"</string>
   <string name="gt_dbb6cf817820de0b">"Permiso necesario"</string>
   <string name="gt_cbf613fce96573ac">"Elige un nombre"</string>
   <string name="gt_46d931c1d03b0781">"Lugares visibles"</string>
@@ -1094,7 +1085,6 @@
   <string name="gt_ffc1364cefebd7a2">"Actualizar el estado de la red"</string>
   <string name="gt_5dbbba5210b8e6c2">"Actualizar estado del pago"</string>
   <string name="gt_dea03b1eaff62e66">"Renovación enviada a la ronda delegada %1$s."</string>
-  <string name="gt_117f6a7cf0372277">"Reembolsado"</string>
   <string name="gt_3de658e662e84920">"Reembolsado · de vuelta en tu billetera"</string>
   <string name="gt_bb7234ec12451361">"Registrarse"</string>
   <string name="gt_dfedc705d4521581">"Registrar de nuevo"</string>
@@ -1122,7 +1112,6 @@
     <item quantity="one">"Renovar %1$s VTXO"</item>
     <item quantity="other">"Renovar %1$s VTXOs"</item>
   </plurals>
-  <string name="gt_77ad89ff1752beb2">"Estado de renovación no disponible"</string>
   <string name="gt_1c736ed5f00ea1a6">"Renovado"</string>
   <plurals name="gt_c93ae43d7d80967e">
     <item quantity="one">"%1$s moneda renovada"</item>
@@ -1155,7 +1144,6 @@
   <string name="gt_fc7e92478faea878">"Reanudar recuperación"</string>
   <string name="gt_a5c671347dbb4adc">"Reanudar tras revisar el historial"</string>
   <string name="gt_646db00716cc87dc">"Reanudar de todos modos"</string>
-  <string name="gt_9d9b7bbc32db7155">"Reanuda tu billetera en Ajustes → Avanzado."</string>
   <string name="gt_a97d32ddb6baca01">"Reanudado"</string>
   <string name="gt_ec12debd44b73ef1">"Conservando el depósito preparado para reintentar la limpieza"</string>
   <string name="gt_942087cc2d41e013">"Reintentar"</string>
@@ -1280,7 +1268,6 @@
   <string name="gt_920e413c7d411b61">"Estado"</string>
   <string name="gt_1c23c9a0a6a0b504">"El estado sigue siendo incierto. Noah volverá a comprobarlo automáticamente a medida que se sincronice tu billetera."</string>
   <string name="gt_08b950ead9bd3efa">"Estado resuelto. Revisa el comprobante."</string>
-  <string name="gt_430144dec054b1a6">"Estado: %1$s"</string>
   <string name="gt_08fd1de4b04df4a2">"Alojamiento"</string>
   <string name="gt_127c180ccbd3ec94">"Sigue pagando. Puede tardar unos minutos."</string>
   <string name="gt_52b93ab03323ca98">"Aún enviando %1$s"</string>
@@ -1293,7 +1280,6 @@
   <string name="gt_8b60ea61b803ead4">"Enviado. Actualiza para comprobar el estado en la red. No vuelvas a enviar este pago."</string>
   <string name="gt_63734ae10b7e46e9">"Subsistema"</string>
   <string name="gt_f3686bb328c6d408">"Exitoso"</string>
-  <string name="gt_4ed227040fbcab82">"Correctos: %1$s"</string>
   <string name="gt_cc5ca35c0cd158c2">"Registro en el servidor completado correctamente"</string>
   <string name="gt_479b9ae48026aec9">"Código de soporte: SEED_INVALID. No se pudo validar la frase de recuperación guardada. Mantén esta aplicación instalada y contacta con el soporte de Noah en github.com/smolcars/noah. Nunca envíes a nadie tu frase de recuperación, claves privadas ni una base de datos de billetera."</string>
   <string name="gt_2dd46d7515a9b8c0">"Código de soporte: WALLET_CONFLICT. Noah encontró registros de billeteras que no se pueden vincular de forma segura. Mantén esta aplicación instalada y contacta con el soporte de Noah en github.com/smolcars/noah. Nunca envíes a nadie tu frase de recuperación, claves privadas ni una base de datos de billetera."</string>
@@ -1481,7 +1467,6 @@
   <string name="gt_c5b5f0e95343c511">"Se desbloquea en el bloque %1$s"</string>
   <string name="gt_fae022f4a65e9a7d">"Imagen ilegible"</string>
   <string name="gt_ea72a231d1b8a76f">"Sin restricciones"</string>
-  <string name="gt_8b5f54fcadeccafe">"Tx sin firmar %1$s"</string>
   <string name="gt_b38065110f2bd113">"Transacción sin firmar %1$s"</string>
   <string name="gt_54324658e2eba91c">"No compatible"</string>
   <string name="gt_cd815000e69f78a3">"Destinatario no compatible"</string>
@@ -1553,7 +1538,6 @@
   <string name="gt_157e2e4d3fa7c80a">"Es necesario recuperar la billetera"</string>
   <string name="gt_46a366f15c4809e0">"Billetera reanudada"</string>
   <string name="gt_172f54e96d258f92">"Semilla de la billetera no disponible"</string>
-  <string name="gt_65f399ccde3d3cdf">"Supervisión del estado de la billetera no disponible"</string>
   <string name="gt_7adf4a8d18569397">"Billetera suspendida"</string>
   <string name="gt_d761927c2b2aeaf0">"Billetera suspendida o sustitución pendiente. Los envíos están detenidos."</string>
   <string name="gt_795e0058d0191f98">"Billetera suspendida. Reanuda tu billetera en Ajustes."</string>
@@ -1608,7 +1592,6 @@
   <string name="gt_886bc67a71fe0f83">"Tu correo es solo para alertas urgentes sobre tu billetera."</string>
   <string name="gt_2c6b2e253c01fb2e">"Tu nombre"</string>
   <string name="gt_d9a846242ed7a22f">"Tu frase de recuperación sigue guardada de forma segura en este dispositivo. Úsala para restaurar tu billetera desde su copia de seguridad."</string>
-  <string name="gt_50720c8f08138a5e">"Tu billetera está suspendida. Todas sus operaciones están deshabilitadas."</string>
   <string name="gt_09233d973ee617bd">"Tu billetera está lista."</string>
   <string name="gt_a672c47ec618d7b7">"Tu billetera está suspendida. Reanúdala para ver las transacciones."</string>
   <string name="gt_b4a8692900c62adf">"Tu billetera está suspendida. Reanuda la recuperación para restaurar su copia de seguridad o elimina esta billetera de tu dispositivo."</string>
@@ -1648,7 +1631,6 @@
   <string name="gt_31ba1bfe057bd412">"%1$s en camino"</string>
   <string name="gt_0632ba4767ab1888">"%1$s en ese momento"</string>
   <string name="gt_05421802af3d82be">"%1$s disponible"</string>
-  <string name="gt_07af0226de4cedc3">"%1$s disponible en Ark"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s ha vuelto a tu billetera."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s ha vuelto a tu billetera. Lightning no pudo llegar a %2$s."</string>
   <string name="gt_3152898f21ae93dc">"Quedan %1$s"</string>
@@ -1666,7 +1648,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Tus otras copias de seguridad se conservan."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s a las %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · próximo %2$s"</string>
-  <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"%1$s pago de Ark como archivo CSV."</item>
@@ -1742,7 +1723,6 @@
   <string name="gt_fec76a562b406e84">"%1$s en ese momento"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
-  <string name="gt_0754f803d3aeed95">"· de vuelta en tu billetera"</string>
   <string name="gt_e3ca394fe5cc723f">"· no salió nada de tu billetera"</string>
   <string name="home">"Inicio"</string>
   <string name="receive">"Recibir"</string>

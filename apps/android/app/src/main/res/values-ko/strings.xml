@@ -339,10 +339,8 @@
   <string name="gt_28c0fd81cb2b2864">"입금 주소를 불러오지 못했습니다. 이 화면을 닫고 지갑이 준비되면 다시 시도해 주세요."</string>
   <string name="gt_075bebe38f9136fa">"활동을 불러오지 못했습니다"</string>
   <string name="gt_c2c38bbef6138610">"거래를 불러오지 못했습니다. 다시 시도하세요."</string>
-  <string name="gt_562864a6f342bc5c">"잔액을 불러오지 못했습니다."</string>
   <string name="gt_c71c66c1d0794f97">"잔액을 불러오지 못했습니다. 화면을 아래로 당겨 다시 시도하세요."</string>
   <string name="gt_31673bb8fa90c00c">"배터리 설정을 열지 못했습니다"</string>
-  <string name="gt_15376ea8a13ac368">"지갑을 열지 못했습니다."</string>
   <string name="gt_797b4f6a80084ede">"지갑을 열지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_f3522523c9bce611">"스토리를 재생하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_8db2737c91fcc605">"공유할 파일을 준비하지 못했습니다. 다시 시도해 주세요."</string>
@@ -471,7 +469,6 @@
   <string name="gt_06e4151b65a65de5">"복구 문구를 입력하세요."</string>
   <string name="gt_2c41befe9ea4cd5c">"입력 형식"</string>
   <string name="gt_54a0e8c17ebb21a1">"오류"</string>
-  <string name="gt_a464fa0760351f31">"오류: %1$s"</string>
   <string name="gt_7107b114487556ea">"Esplora"</string>
   <string name="gt_311656f3bd25348c">"Esplora API"</string>
   <string name="gt_f81c8539f3f844d2">"예상 전파 수수료"</string>
@@ -578,7 +575,6 @@
   <string name="gt_638e249f4a15ebb8">"필터"</string>
   <string name="gt_f4ed8fa656b74c5d">"최종"</string>
   <string name="gt_b4221133c0166c16">"최종 청구 거래가 전파되어 확정을 기다리고 있습니다."</string>
-  <string name="gt_ef55a5e44973729e">"최종: %1$s"</string>
   <string name="gt_d4531989954eac5c">"주변 장소 찾기"</string>
   <string name="gt_664fa279a9ee2f99">"Bitcoin 결제가 가능한 곳 찾기"</string>
   <string name="gt_6dfc37f56766e503">"위치 찾는 중"</string>
@@ -709,8 +705,6 @@
   <string name="gt_eb970eb0951c6cde">"최근"</string>
   <string name="gt_8462b632f3ab7913">"최근 백업"</string>
   <string name="gt_fb6ee42c1c065f89">"최근 백업 %1$s"</string>
-  <string name="gt_f21e156f77eaeac9">"마지막 백업 %1$s"</string>
-  <string name="gt_1a196f3801a01458">"마지막 백업 %1$s"</string>
   <string name="gt_0c0c351a971353b5">"마지막 확인"</string>
   <string name="gt_ec3b8bf1e0261664">"마지막 정상 백업 %1$s"</string>
   <string name="gt_e85039a1d8fa0011">"Ark에서 나가는 중"</string>
@@ -744,7 +738,6 @@
   <string name="gt_f2b1180c4d846c12">"주소 불러오는 중…"</string>
   <string name="gt_b1905aae7f24ef9c">"상세 정보 불러오는 중…"</string>
   <string name="gt_077216397a70125f">"유통업체 불러오는 중…"</string>
-  <string name="gt_c1e8a31d06ddb8c7">"거래 불러오는 중"</string>
   <string name="gt_ba3bbbe10d8bef66">"불러오는 중…"</string>
   <string name="gt_ac56027a0ba70a7c">"위치 찾는 중…"</string>
   <string name="gt_2df39c51ede8a438">"위치를 확인할 수 없습니다. 위치 기능이 켜져 있는지 확인하거나 도시를 검색하세요."</string>
@@ -769,7 +762,6 @@
   <string name="gt_2f59b03b1a5e43b2">"유지 관리 갱신"</string>
   <string name="gt_6c2f89a9a33e0770">"유지 관리 완료"</string>
   <string name="gt_5926f9770e915ee6">"유지 관리 갱신 완료"</string>
-  <string name="gt_a4d57213fde64fd5">"수동 백업 실패"</string>
   <string name="gt_ac2e1982d49531a4">"지도 캐시를 저장하지 못했습니다"</string>
   <string name="gt_720dd69ca94e571b">"지도 데이터가 리소스 한도를 초과합니다"</string>
   <string name="gt_f51dc83e58497522">"지도 요청 실패"</string>
@@ -1013,7 +1005,6 @@
   <string name="gt_21682e0a58f5581b">"오프보딩 대기 중"</string>
   <string name="gt_779dd1993ab4b13c">"대기 중인 라운드"</string>
   <string name="gt_5fb55a3f477aee2b">"전송 대기 중"</string>
-  <string name="gt_0461277d349fcc79">"대기 중인 라운드 상태를 확인할 수 없음"</string>
   <string name="gt_dbb6cf817820de0b">"권한 필요"</string>
   <string name="gt_cbf613fce96573ac">"이름 정하기"</string>
   <string name="gt_46d931c1d03b0781">"현재 지도에 표시된 장소"</string>
@@ -1094,7 +1085,6 @@
   <string name="gt_ffc1364cefebd7a2">"네트워크 상태 새로 고침"</string>
   <string name="gt_5dbbba5210b8e6c2">"결제 상태 새로고침"</string>
   <string name="gt_dea03b1eaff62e66">"위임된 라운드 %1$s에 갱신 요청을 제출했습니다."</string>
-  <string name="gt_117f6a7cf0372277">"환불됨"</string>
   <string name="gt_3de658e662e84920">"환불됨 · 지갑으로 돌아왔어요"</string>
   <string name="gt_bb7234ec12451361">"등록"</string>
   <string name="gt_dfedc705d4521581">"다시 등록"</string>
@@ -1122,7 +1112,6 @@
     <item quantity="one">"VTXO %1$s개 갱신"</item>
     <item quantity="other">"VTXO %1$s개 갱신"</item>
   </plurals>
-  <string name="gt_77ad89ff1752beb2">"갱신 상태를 확인할 수 없음"</string>
   <string name="gt_1c736ed5f00ea1a6">"갱신됨"</string>
   <plurals name="gt_c93ae43d7d80967e">
     <item quantity="one">"코인 %1$s개 갱신됨"</item>
@@ -1155,7 +1144,6 @@
   <string name="gt_fc7e92478faea878">"복구 재개"</string>
   <string name="gt_a5c671347dbb4adc">"내역 확인 후 재개"</string>
   <string name="gt_646db00716cc87dc">"그래도 재개"</string>
-  <string name="gt_9d9b7bbc32db7155">"설정 → 고급에서 지갑을 재개하세요."</string>
   <string name="gt_a97d32ddb6baca01">"재개됨"</string>
   <string name="gt_ec12debd44b73ef1">"정리 작업을 재시도하기 위해 준비된 입금 작업을 유지하는 중"</string>
   <string name="gt_942087cc2d41e013">"다시 시도"</string>
@@ -1280,7 +1268,6 @@
   <string name="gt_920e413c7d411b61">"상태"</string>
   <string name="gt_1c23c9a0a6a0b504">"아직 상태가 불확실합니다. 지갑이 동기화될 때 Noah가 자동으로 다시 확인합니다."</string>
   <string name="gt_08b950ead9bd3efa">"상태가 확인되었습니다. 영수증을 확인하세요."</string>
-  <string name="gt_430144dec054b1a6">"상태: %1$s"</string>
   <string name="gt_08fd1de4b04df4a2">"숙박"</string>
   <string name="gt_127c180ccbd3ec94">"아직 결제 중이에요. 몇 분 걸릴 수 있어요."</string>
   <string name="gt_52b93ab03323ca98">"%1$s 아직 보내는 중"</string>
@@ -1293,7 +1280,6 @@
   <string name="gt_8b60ea61b803ead4">"제출되었습니다. 새로고침하여 네트워크 상태를 확인하세요. 이 결제를 다시 보내지 마세요."</string>
   <string name="gt_63734ae10b7e46e9">"하위 시스템"</string>
   <string name="gt_f3686bb328c6d408">"성공"</string>
-  <string name="gt_4ed227040fbcab82">"성공: %1$s"</string>
   <string name="gt_cc5ca35c0cd158c2">"서버에 성공적으로 등록되었습니다"</string>
   <string name="gt_479b9ae48026aec9">"지원 코드: SEED_INVALID. 저장된 복구 문구의 유효성을 확인할 수 없습니다. 이 앱을 삭제하지 말고 github.com/smolcars/noah에서 Noah 지원팀에 문의하세요. 복구 문구, 개인 키 또는 지갑 데이터베이스를 누구에게도 보내지 마세요."</string>
   <string name="gt_2dd46d7515a9b8c0">"지원 코드: WALLET_CONFLICT. Noah가 안전하게 대조할 수 없는 지갑 기록을 발견했습니다. 앱을 삭제하지 말고 github.com/smolcars/noah에서 Noah 지원팀에 문의하세요. 복구 문구, 개인 키 또는 지갑 데이터베이스를 누구에게도 보내지 마세요."</string>
@@ -1481,7 +1467,6 @@
   <string name="gt_c5b5f0e95343c511">"블록 %1$s에서 잠금 해제"</string>
   <string name="gt_fae022f4a65e9a7d">"읽을 수 없는 이미지"</string>
   <string name="gt_ea72a231d1b8a76f">"제한 없음"</string>
-  <string name="gt_8b5f54fcadeccafe">"서명되지 않은 거래 %1$s"</string>
   <string name="gt_b38065110f2bd113">"미서명 거래 %1$s"</string>
   <string name="gt_54324658e2eba91c">"지원되지 않음"</string>
   <string name="gt_cd815000e69f78a3">"지원하지 않는 수신자"</string>
@@ -1553,7 +1538,6 @@
   <string name="gt_157e2e4d3fa7c80a">"지갑 복구 필요"</string>
   <string name="gt_46a366f15c4809e0">"지갑이 재개됨"</string>
   <string name="gt_172f54e96d258f92">"지갑 시드를 사용할 수 없음"</string>
-  <string name="gt_65f399ccde3d3cdf">"지갑 상태를 모니터링할 수 없습니다"</string>
   <string name="gt_7adf4a8d18569397">"지갑 일시 중지됨"</string>
   <string name="gt_d761927c2b2aeaf0">"지갑이 일시 중지되었거나 교체 대기 중입니다. 전송이 중지되었습니다."</string>
   <string name="gt_795e0058d0191f98">"지갑이 일시 중지되었습니다. 설정에서 지갑을 다시 활성화하세요."</string>
@@ -1608,7 +1592,6 @@
   <string name="gt_886bc67a71fe0f83">"이메일은 지갑에 관한 긴급 알림에만 사용해요."</string>
   <string name="gt_2c6b2e253c01fb2e">"내 이름"</string>
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
-  <string name="gt_50720c8f08138a5e">"현재 지갑 사용이 중지되어 있습니다. 모든 지갑 기능을 사용할 수 없습니다."</string>
   <string name="gt_09233d973ee617bd">"지갑이 준비되었습니다."</string>
   <string name="gt_a672c47ec618d7b7">"지갑이 일시 중지되었습니다. 거래를 보려면 지갑을 재개하세요."</string>
   <string name="gt_b4a8692900c62adf">"지갑이 일시 중지되었습니다. 복구를 재개하여 백업을 복원하거나 기기에서 이 지갑을 삭제하세요."</string>
@@ -1648,7 +1631,6 @@
   <string name="gt_31ba1bfe057bd412">"%1$s 입금 예정"</string>
   <string name="gt_0632ba4767ab1888">"당시 %1$s"</string>
   <string name="gt_05421802af3d82be">"%1$s 사용 가능"</string>
-  <string name="gt_07af0226de4cedc3">"Ark에서 %1$s 사용 가능"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s이 지갑으로 돌아왔어요."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s이(가) 지갑으로 돌아왔습니다. 라이트닝으로 %2$s에게 전달하지 못했습니다."</string>
   <string name="gt_3152898f21ae93dc">"%1$s 남음"</string>
@@ -1666,7 +1648,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. 다른 백업은 그대로 유지돼요."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · 다음 %2$s"</string>
-  <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"Ark 결제 %1$s건을 CSV 파일로 내보냅니다."</item>
@@ -1742,7 +1723,6 @@
   <string name="gt_fec76a562b406e84">"당시 %1$s"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
-  <string name="gt_0754f803d3aeed95">"· 지갑으로 돌아왔어요"</string>
   <string name="gt_e3ca394fe5cc723f">"· 지갑에서 빠져나간 금액 없음"</string>
   <string name="home">"홈"</string>
   <string name="receive">"받기"</string>

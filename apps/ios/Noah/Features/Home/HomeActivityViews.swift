@@ -187,7 +187,7 @@ struct HomeRecentList: View {
             }
             .padding(.bottom, -10)
             if history.isLoading {
-                ProgressView("Loading transactions").frame(maxWidth: .infinity).padding(.vertical, 24)
+                ProgressView("Loading activity").frame(maxWidth: .infinity).padding(.vertical, 24)
             } else if let error = history.error {
                 VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
                     Text(LocalizedStringKey(error)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
@@ -232,7 +232,7 @@ struct HomeActivityList: View {
                 .accessibilityAddTraits(.isHeader)
                 .padding(.bottom, NoahTokens.Space.s)
             if history.isLoading {
-                ProgressView("Loading transactions").frame(maxWidth: .infinity).padding(.vertical, 24)
+                ProgressView("Loading activity").frame(maxWidth: .infinity).padding(.vertical, 24)
             } else if let error = history.error {
                 Text(LocalizedStringKey(error)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                 Button("Retry", action: onRetry).noahText(HomeText.strong).padding(.top, NoahTokens.Space.s)

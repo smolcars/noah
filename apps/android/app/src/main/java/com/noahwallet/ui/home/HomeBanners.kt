@@ -109,12 +109,12 @@ internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> U
             Text(tr("Pending Rounds"), style = MaterialTheme.typography.headlineMedium)
             rounds.forEach { round ->
                 Text(tr("Round #{_gt_value_2}", round.roundId), style = MaterialTheme.typography.titleLarge)
-                Text(tr("Status: ${round.status.name.lowercase().replaceFirstChar(Char::uppercase)}"))
-                Text(tr("Final: ${if (round.isFinal) "Yes" else "No"}"))
-                Text(tr("Successful: ${if (round.isSuccess) "Yes" else "No"}"))
+                Text(tr("Status") + ": " + tr(round.status.name.lowercase().replaceFirstChar(Char::uppercase)))
+                Text(tr("Final") + ": " + tr(if (round.isFinal) "Yes" else "No"))
+                Text(tr("Successful") + ": " + tr(if (round.isSuccess) "Yes" else "No"))
                 round.fundingTxid?.let { RoundTransaction("Funding tx", it, copyable = true) }
-                round.unsignedFundingTxids.forEachIndexed { index, txid -> RoundTransaction("Unsigned tx ${index + 1}", txid) }
-                round.error?.let { Text(tr("Error: $it")) }
+                round.unsignedFundingTxids.forEachIndexed { index, txid -> RoundTransaction(tr("Unsigned tx {value1}", index + 1), txid) }
+                round.error?.let { Text(tr("Error") + ": " + it) }
             }
         }
     }
@@ -124,7 +124,7 @@ internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> U
 private fun RoundTransaction(label: String, txid: String, copyable: Boolean = false) {
     val context = LocalContext.current
     val uri = LocalUriHandler.current
-    Text(tr("$label: $txid"))
+    Text(tr(label) + ": " + txid)
     if (copyable) TextButton({
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, txid))
     }) { Text(tr("Copy $label")) }

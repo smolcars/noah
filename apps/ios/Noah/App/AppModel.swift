@@ -343,7 +343,7 @@ final class AppModel {
         } catch is CancellationError { return }
         catch {
             log.e("Failed to read wallet summary: \(Self.describe(error))")
-            walletError = L10n.text("Couldn't load your balance.")
+            walletError = L10n.text("Couldn't load your balance. Pull down to try again.")
         }
     }
 
@@ -374,7 +374,7 @@ final class AppModel {
     private func customOpenFinished(_ success: Bool) async {
         customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = nil
         if success { await openExistingWallet(); await walletConfigurationChanged() }
-        else { walletError = L10n.text("Couldn't open your wallet."); phase = .wallet }
+        else { walletError = L10n.text("Couldn't open your wallet. Please try again."); phase = .wallet }
     }
 
     private func openExistingWallet() async {
@@ -407,7 +407,7 @@ final class AppModel {
                 return
             }
             log.e("Failed to open wallet: \(Self.describe(error))")
-            walletError = L10n.text("Couldn't open your wallet.")
+            walletError = L10n.text("Couldn't open your wallet. Please try again.")
             return
         }
         if phase == .wallet { await pushPermission.refresh() }

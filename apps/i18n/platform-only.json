@@ -41,9 +41,11 @@
     "Choose payment method": "parity-gap (layout): Android's method step has a subtitle; iOS shows the recipient there",
     "Confirm payment": "parity-gap: Android's recurring manual review still uses the pre-redesign Send review and result (ui/SendScreen.kt); iOS uses the redesigned Send",
     "Conflicted": "parity-gap: only Android shows a sent receipt's chain status row",
+    "Copy Lightning address": "parity-gap: only Android names the tap action on the Home and QR hub Lightning address QR; iOS reads the card's content",
     "Creating invoice…": "parity-gap (layout): Android labels busy buttons; iOS shows a spinner",
     "Existing fee": "parity-gap (layout): Android shows an Existing fee row; iOS states the existing payment's fee as a sentence",
     "I checked history": "parity-gap: Android asks 'Have you checked?' before the could-pay-twice warning; iOS goes straight to the warning",
+    "Loading…": "parity-gap (layout): Android shows 'Loading…' text on several screens where iOS shows a spinner",
     "Paid via": "parity-gap: Android's recurring manual review still uses the pre-redesign Send review and result (ui/SendScreen.kt); iOS uses the redesigned Send",
     "Payment confirmed": "parity-gap: Android's recurring manual review still uses the pre-redesign Send review and result (ui/SendScreen.kt); iOS uses the redesigned Send",
     "Point your camera at a payment QR code.": "parity-gap: only Android's scanner reports a camera that fails to start, and shows an aiming hint",
@@ -53,6 +55,8 @@
     "The actual fee is not yet available. {nativeValue1}": "parity-gap: Android's recurring manual review still uses the pre-redesign Send review and result (ui/SendScreen.kt); iOS uses the redesigned Send",
     "This review expired. Review the payment again.": "parity-gap: only Android says so when a review expires; iOS just closes it",
     "Transaction size": "parity-gap: Android's recurring manual review still uses the pre-redesign Send review and result (ui/SendScreen.kt); iOS uses the redesigned Send",
-    "Unable to locate": "parity-gap: only Android shows a sent receipt's chain status row"
+    "Unable to locate": "parity-gap: only Android shows a sent receipt's chain status row",
+    "Working": "parity-gap (layout): Android relabels the backup Retry button while it works; iOS disables it",
+    "from {name}": "parity-gap: iOS's first-payment card doesn't show who paid (spec: \"from {name}\")"
   }
 }
