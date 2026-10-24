@@ -121,6 +121,7 @@
   <string name="gt_267c36d78a9c54d8">"Autentícate para desbloquear Noah"</string>
   <string name="gt_af35b0eec4460cd2">"Autentícate para ver tu frase semilla"</string>
   <string name="gt_4190475b52357e7a">"Error de autenticación. Inténtalo de nuevo."</string>
+  <string name="gt_d59c8e3fe94700c0">"La transferencia automática a Ark no ofreció ningún depósito: cada preparación gastaba una reclamación de salida a este teléfono"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Umbral de transferencia automática a Ark no disponible"</string>
   <string name="gt_36b0afe54f3fffba">"Transferencia automática a Ark: cada preparación gastaba una moneda reclamada a este teléfono, así que no se ofrece ningún depósito"</string>
   <string name="gt_cb8603c8ce918947">"Copias de seguridad automáticas"</string>
@@ -372,6 +373,10 @@
   <string name="gt_395881a9f3636129">"No se pudieron actualizar las notificaciones del buzón."</string>
   <string name="gt_7bcc035ddf337589">"No se pudieron actualizar los pagos recurrentes. Inténtalo de nuevo."</string>
   <string name="gt_f9e607b9f67deda1">"No se pudo actualizar este ajuste. Inténtalo de nuevo."</string>
+  <plurals name="gt_942dd82f7e0ad733">
+    <item quantity="one">"No se pudieron comprobar las comisiones de %1$s VTXO, así que Todos espera. Elígelo por separado o inténtalo de nuevo."</item>
+    <item quantity="other">"No se pudieron comprobar las comisiones de %1$s VTXOs, así que Todos espera. Elígelos uno por uno o inténtalo de nuevo."</item>
+  </plurals>
   <string name="gt_3cb296f54acaa925">"No se pudo crear la solicitud"</string>
   <string name="gt_40a49ea198affe13">"Crear billetera"</string>
   <string name="gt_7bef2fbf3b783bfe">"Creando solicitud de pago…"</string>

@@ -121,6 +121,7 @@
   <string name="gt_267c36d78a9c54d8">"Authenticate to unlock Noah"</string>
   <string name="gt_af35b0eec4460cd2">"Authenticate to view your seed phrase"</string>
   <string name="gt_4190475b52357e7a">"Authentication failed. Please try again."</string>
+  <string name="gt_d59c8e3fe94700c0">"Auto-board didn\'t offer a board: each preparation spent an exit claim to this phone"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Auto-board threshold unavailable"</string>
   <string name="gt_36b0afe54f3fffba">"Auto-board: every preparation spent a coin claimed to this phone, so no deposit is offered"</string>
   <string name="gt_cb8603c8ce918947">"Automatic backups"</string>
@@ -372,6 +373,10 @@
   <string name="gt_395881a9f3636129">"Couldn\'t update mailbox notifications."</string>
   <string name="gt_7bcc035ddf337589">"Couldn\'t update recurring payments. Try again."</string>
   <string name="gt_f9e607b9f67deda1">"Couldn\'t update this setting. Please try again."</string>
+  <plurals name="gt_942dd82f7e0ad733">
+    <item quantity="one">"Couldn’t check the fees of %1$s VTXO, so All waits. Choose it on its own, or try again."</item>
+    <item quantity="other">"Couldn’t check the fees of %1$s VTXOs, so All waits. Choose them one by one, or try again."</item>
+  </plurals>
   <string name="gt_3cb296f54acaa925">"Couldn’t create a request"</string>
   <string name="gt_40a49ea198affe13">"Create wallet"</string>
   <string name="gt_7bef2fbf3b783bfe">"Creating invoice…"</string>

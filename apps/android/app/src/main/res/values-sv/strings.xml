@@ -121,6 +121,7 @@
   <string name="gt_267c36d78a9c54d8">"Verifiera din identitet för att låsa upp Noah"</string>
   <string name="gt_af35b0eec4460cd2">"Verifiera din identitet för att visa din återställningsfras"</string>
   <string name="gt_4190475b52357e7a">"Autentiseringen misslyckades. Försök igen."</string>
+  <string name="gt_d59c8e3fe94700c0">"Auto-board erbjöd ingen insättning: varje förberedelse använde ett inlöst uttag till den här telefonen"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Tröskelvärdet för Auto-board är inte tillgängligt"</string>
   <string name="gt_36b0afe54f3fffba">"Auto-board: varje förberedelse använde ett mynt som lösts in till den här telefonen, så ingen insättning erbjuds"</string>
   <string name="gt_cb8603c8ce918947">"Automatisk säkerhetskopiering"</string>
@@ -372,6 +373,10 @@
   <string name="gt_395881a9f3636129">"Kunde inte uppdatera aviseringarna för brevlådan."</string>
   <string name="gt_7bcc035ddf337589">"Kunde inte uppdatera återkommande betalningar. Försök igen."</string>
   <string name="gt_f9e607b9f67deda1">"Det gick inte att uppdatera den här inställningen. Försök igen."</string>
+  <plurals name="gt_942dd82f7e0ad733">
+    <item quantity="one">"Avgifterna för %1$s VTXO kunde inte kontrolleras, så Alla väntar. Välj den separat eller försök igen."</item>
+    <item quantity="other">"Avgifterna för %1$s VTXO:er kunde inte kontrolleras, så Alla väntar. Välj dem en i taget eller försök igen."</item>
+  </plurals>
   <string name="gt_3cb296f54acaa925">"Det gick inte att skapa en begäran"</string>
   <string name="gt_40a49ea198affe13">"Skapa plånbok"</string>
   <string name="gt_7bef2fbf3b783bfe">"Skapar betalningsbegäran…"</string>

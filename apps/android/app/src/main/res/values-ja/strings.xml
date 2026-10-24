@@ -121,6 +121,7 @@
   <string name="gt_267c36d78a9c54d8">"認証してNoahのロックを解除"</string>
   <string name="gt_af35b0eec4460cd2">"認証してシードフレーズを表示"</string>
   <string name="gt_4190475b52357e7a">"認証に失敗しました。もう一度お試しください。"</string>
+  <string name="gt_d59c8e3fe94700c0">"Auto-boardはArkへの入金を提案しませんでした: どの準備も、この端末に受け取った出金を使っていました"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Auto-boardのしきい値を取得できません"</string>
   <string name="gt_36b0afe54f3fffba">"Auto-board: どの準備でもこのスマートフォンに受け取ったコインが使われたため、入金は提案されません"</string>
   <string name="gt_cb8603c8ce918947">"自動バックアップ"</string>
@@ -372,6 +373,10 @@
   <string name="gt_395881a9f3636129">"メールボックスの通知を更新できませんでした。"</string>
   <string name="gt_7bcc035ddf337589">"定期支払いを更新できませんでした。もう一度お試しください。"</string>
   <string name="gt_f9e607b9f67deda1">"この設定を更新できませんでした。もう一度お試しください。"</string>
+  <plurals name="gt_942dd82f7e0ad733">
+    <item quantity="one">"%1$s件のVTXOの手数料を確認できなかったため、「すべて」は待機中です。個別に選ぶか、もう一度お試しください。"</item>
+    <item quantity="other">"%1$s件のVTXOの手数料を確認できなかったため、「すべて」は待機中です。1件ずつ選ぶか、もう一度お試しください。"</item>
+  </plurals>
   <string name="gt_3cb296f54acaa925">"リクエストを作成できませんでした"</string>
   <string name="gt_40a49ea198affe13">"ウォレットを作成"</string>
   <string name="gt_7bef2fbf3b783bfe">"請求書を作成中…"</string>

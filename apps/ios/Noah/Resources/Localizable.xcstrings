@@ -4273,6 +4273,42 @@
         }
       }
     },
+    "Auto-board didn't offer a board: each preparation spent an exit claim to this phone": {
+      "comment": "GT gt_d59c8e3fe94700c0; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-board didn't offer a board: each preparation spent an exit claim to this phone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transferencia automática a Ark no ofreció ningún depósito: cada preparación gastaba una reclamación de salida a este teléfono"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-boardはArkへの入金を提案しませんでした: どの準備も、この端末に受け取った出金を使っていました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 입금이 입금을 제안하지 않았습니다: 모든 준비가 이 휴대폰으로 청구한 출금을 사용했습니다"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-board erbjöd ingen insättning: varje förberedelse använde ett inlöst uttag till den här telefonen"
+          }
+        }
+      }
+    },
     "Auto-board threshold unavailable": {
       "comment": "GT gt_0f0e2d0c4a2ecdcc; arguments: none",
       "extractionState": "manual",
@@ -13257,6 +13293,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det gick inte att uppdatera den här inställningen. Försök igen."
+          }
+        }
+      }
+    },
+    "Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.": {
+      "comment": "GT gt_942dd82f7e0ad733; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Couldn’t check the fees of %1$lld VTXO, so All waits. Choose it on its own, or try again."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Couldn’t check the fees of %1$lld VTXOs, so All waits. Choose them one by one, or try again."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "No se pudieron comprobar las comisiones de %1$lld VTXO, así que Todos espera. Elígelo por separado o inténtalo de nuevo."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "No se pudieron comprobar las comisiones de %1$lld VTXOs, así que Todos espera. Elígelos uno por uno o inténtalo de nuevo."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld件のVTXOの手数料を確認できなかったため、「すべて」は待機中です。個別に選ぶか、もう一度お試しください。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld件のVTXOの手数料を確認できなかったため、「すべて」は待機中です。1件ずつ選ぶか、もう一度お試しください。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "VTXO %1$lld개의 수수료를 확인하지 못해 '전체'는 대기 중이에요. 따로 선택하거나 다시 시도해 주세요."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "VTXO %1$lld개의 수수료를 확인하지 못해 '전체'는 대기 중이에요. 하나씩 선택하거나 다시 시도해 주세요."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Avgifterna för %1$lld VTXO kunde inte kontrolleras, så Alla väntar. Välj den separat eller försök igen."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Avgifterna för %1$lld VTXO:er kunde inte kontrolleras, så Alla väntar. Välj dem en i taget eller försök igen."
+                }
+              }
+            }
           }
         }
       }

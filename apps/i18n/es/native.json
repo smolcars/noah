@@ -2069,5 +2069,9 @@
   "gt_0450659e5fbd54ab": "Noah no está consultando la cadena para esta salida ahora mismo. Usa Consultar la cadena para avanzarla.",
   "gt_09e4665e49aef548_one": "Una reclamación para {{n}} salida: {{amount}} recibidos tras una comisión de {{fee}}.",
   "gt_09e4665e49aef548_other": "Una reclamación para {{n}} salidas: {{amount}} recibidos tras una comisión de {{fee}}.",
-  "gt_dc8cb064d1762d2f": "Esta salida va por detrás de la altura actual de la cadena. Usa Consultar la cadena para revisarla; también puede enviar transacciones de salida."
+  "gt_dc8cb064d1762d2f": "Esta salida va por detrás de la altura actual de la cadena. Usa Consultar la cadena para revisarla; también puede enviar transacciones de salida.",
+  "gt_942dd82f7e0ad733_one": "No se pudieron comprobar las comisiones de {{n}} VTXO, así que Todos espera. Elígelo por separado o inténtalo de nuevo.",
+  "gt_942dd82f7e0ad733_other": "No se pudieron comprobar las comisiones de {{n}} VTXOs, así que Todos espera. Elígelos uno por uno o inténtalo de nuevo.",
+  "gt_d4ea61c79c9b77d6": "Revisar de nuevo",
+  "gt_d59c8e3fe94700c0": "La transferencia automática a Ark no ofreció ningún depósito: cada preparación gastaba una reclamación de salida a este teléfono"
 }

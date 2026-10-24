@@ -2069,5 +2069,9 @@
   "gt_0450659e5fbd54ab": "Noah kontrollerar inte blockkedjan för det här uttaget just nu. Använd Kontrollera blockkedjan för att föra det vidare.",
   "gt_09e4665e49aef548_one": "Ett inlösen för {{n}} uttag: {{amount}} mottaget efter en avgift på {{fee}}.",
   "gt_09e4665e49aef548_other": "Ett inlösen för {{n}} uttag: {{amount}} mottaget efter en avgift på {{fee}}.",
-  "gt_dc8cb064d1762d2f": "Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner."
+  "gt_dc8cb064d1762d2f": "Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner.",
+  "gt_942dd82f7e0ad733_one": "Avgifterna för {{n}} VTXO kunde inte kontrolleras, så Alla väntar. Välj den separat eller försök igen.",
+  "gt_942dd82f7e0ad733_other": "Avgifterna för {{n}} VTXO:er kunde inte kontrolleras, så Alla väntar. Välj dem en i taget eller försök igen.",
+  "gt_d4ea61c79c9b77d6": "Granska igen",
+  "gt_d59c8e3fe94700c0": "Auto-board erbjöd ingen insättning: varje förberedelse använde ett inlöst uttag till den här telefonen"
 }

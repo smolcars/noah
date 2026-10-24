@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1692,
-  "sourceKeys": 1721,
+  "catalogEntries": 1694,
+  "sourceKeys": 1724,
   "coverage": {
     "ios": {
       "used": [
@@ -107,6 +107,7 @@
         "Authenticate to unlock Noah",
         "Authenticate to view your seed phrase",
         "Authentication failed. Please try again.",
+        "Auto-board didn't offer a board: each preparation spent an exit claim to this phone",
         "Auto-board threshold unavailable",
         "Automatic backups",
         "Automatic backups off",
@@ -290,6 +291,7 @@
         "Couldn't save your preference. Please try again.",
         "Couldn't share logs. Please try again.",
         "Couldn't update this setting. Please try again.",
+        "Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.",
         "Couldn’t create a request",
         "Create wallet",
         "Creating your keys",
@@ -910,6 +912,7 @@
         "Retaining prepared board for cleanup retry",
         "Retry",
         "Review",
+        "Review again",
         "Review and pay",
         "Review exit",
         "Reviewed amount",

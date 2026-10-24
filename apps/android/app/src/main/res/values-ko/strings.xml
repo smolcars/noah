@@ -121,6 +121,7 @@
   <string name="gt_267c36d78a9c54d8">"Noah의 잠금을 해제하려면 인증해 주세요"</string>
   <string name="gt_af35b0eec4460cd2">"시드 문구를 보려면 인증하세요"</string>
   <string name="gt_4190475b52357e7a">"인증에 실패했습니다. 다시 시도해 주세요."</string>
+  <string name="gt_d59c8e3fe94700c0">"자동 입금이 입금을 제안하지 않았습니다: 모든 준비가 이 휴대폰으로 청구한 출금을 사용했습니다"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"자동 입금 기준 금액을 확인할 수 없습니다"</string>
   <string name="gt_36b0afe54f3fffba">"자동 입금: 모든 준비 과정에서 이 휴대폰으로 청구한 코인이 사용되어 입금을 제안하지 않습니다"</string>
   <string name="gt_cb8603c8ce918947">"자동 백업"</string>
@@ -372,6 +373,10 @@
   <string name="gt_395881a9f3636129">"우편함 알림을 업데이트하지 못했습니다."</string>
   <string name="gt_7bcc035ddf337589">"정기 결제를 업데이트하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_f9e607b9f67deda1">"이 설정을 변경하지 못했습니다. 다시 시도하세요."</string>
+  <plurals name="gt_942dd82f7e0ad733">
+    <item quantity="one">"VTXO %1$s개의 수수료를 확인하지 못해 \'전체\'는 대기 중이에요. 따로 선택하거나 다시 시도해 주세요."</item>
+    <item quantity="other">"VTXO %1$s개의 수수료를 확인하지 못해 \'전체\'는 대기 중이에요. 하나씩 선택하거나 다시 시도해 주세요."</item>
+  </plurals>
   <string name="gt_3cb296f54acaa925">"요청을 생성하지 못했습니다"</string>
   <string name="gt_40a49ea198affe13">"지갑 만들기"</string>
   <string name="gt_7bef2fbf3b783bfe">"결제 요청서 생성 중…"</string>
