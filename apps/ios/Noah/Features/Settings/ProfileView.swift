@@ -21,6 +21,7 @@ struct ProfileView: View {
     private var server: PersistedServerState { model.server.state }
     private var username: String? { server.lightningAddress?.split(separator: "@").first.map(String.init) }
     private var npub: String { Nostr.npub(from: server.nostrPubkey) }
+    private var copies: ProfileCopies { ProfileCopies(server) }
 
     var body: some View {
         SettingsScroll {
@@ -40,15 +41,17 @@ struct ProfileView: View {
                     sheet = .name
                 }
                 .accessibilityIdentifier("profile-name")
-                SettingsDetailRow(label: L10n.text("Lightning address", locale: language), value: server.lightningAddress ?? L10n.text("Add", locale: language)) {
+                SettingsDetailRow(label: L10n.text("Lightning address", locale: language), value: server.lightningAddress ?? L10n.text("Add", locale: language),
+                                  copy: copies.address) {
                     open(.lightningAddress)
                 }
                 .accessibilityIdentifier("profile-lightning-address")
-                SettingsDetailRow(label: L10n.text("Email", locale: language), value: emailValue, glyph: server.isEmailVerified == true ? "checkmark.circle.fill" : nil,
+                SettingsDetailRow(label: L10n.text("Email", locale: language), value: emailValue, copy: copies.email,
+                                  glyph: server.isEmailVerified == true ? "checkmark.circle.fill" : nil,
                                   glyphColor: NoahTokens.Colors.orange) { open(.email) }
                     .accessibilityIdentifier("profile-email")
                 if !npub.isEmpty {
-                    SettingsDetailRow(label: L10n.text("Nostr key", locale: language), value: npub, mono: true) { open(.lightningAddress) }
+                    SettingsDetailRow(label: L10n.text("Nostr key", locale: language), value: npub, mono: true, copy: copies.npub) { open(.lightningAddress) }
                 }
                 if !key.isEmpty {
                     SettingsDetailRow(label: L10n.text("Wallet key", locale: language), value: key, mono: true, copy: key)
@@ -97,6 +100,20 @@ struct ProfileView: View {
             length += String(character).utf16.count
             return length <= 80
         })
+    }
+}
+
+/// What Profile copies beside editing, as before: your Lightning address, a verified email and your npub.
+struct ProfileCopies: Equatable {
+    let address: String?
+    let email: String?
+    let npub: String?
+
+    init(_ server: PersistedServerState) {
+        address = server.lightningAddress.flatMap { $0.isEmpty ? nil : $0 }
+        email = server.isEmailVerified == true ? server.emailAddress.flatMap { $0.isEmpty ? nil : $0 } : nil
+        let npub = Nostr.npub(from: server.nostrPubkey)
+        self.npub = npub.isEmpty ? nil : npub
     }
 }
 

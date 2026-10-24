@@ -320,7 +320,14 @@ struct SettingsDetailRow: View {
         let line = DetailLine(label: label, value: value, compact: compact, mono: mono, numeric: numeric, glyph: glyph,
                               chevron: chevron || action != nil, copied: copied, onCopy: copy.map { value in { copyValue(value) } },
                               explorer: explorer, hairline: hairline, failure: failure, glyphColor: glyphColor)
-        if let action {
+        if let action, let copy {
+            // Opens on a tap and still copies from its own button, which a wrapping Button would swallow.
+            line.contentShape(Rectangle())
+                .onTapGesture(perform: action)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(.default, action)
+                .accessibilityAction(named: Text(L10n.text("Copy {label}", label))) { copyValue(copy) }
+        } else if let action {
             Button(action: action) { line }.buttonStyle(.plain)
         } else {
             line

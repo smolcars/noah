@@ -39,3 +39,22 @@ import Testing
         #expect(draft.text == "New name" && draft.error == "Couldn't save your name. Please try again." && !draft.busy)
     }
 }
+
+/// Profile keeps today's copy actions beside editing.
+struct ProfileCopiesTests {
+    @Test func addressVerifiedEmailAndNpubCopy() {
+        var server = PersistedServerState()
+        #expect(ProfileCopies(server) == ProfileCopies(PersistedServerState()))
+        #expect(ProfileCopies(server).address == nil && ProfileCopies(server).email == nil && ProfileCopies(server).npub == nil)
+        server.lightningAddress = "maya@noahwallet.io"
+        server.emailAddress = "maya@example.com"
+        server.isEmailVerified = false
+        server.nostrPubkey = String(repeating: "ab", count: 32)
+        let unverified = ProfileCopies(server)
+        #expect(unverified.address == "maya@noahwallet.io")
+        #expect(unverified.email == nil, "an unverified email isn't offered, as before")
+        #expect(unverified.npub?.hasPrefix("npub1") == true)
+        server.isEmailVerified = true
+        #expect(ProfileCopies(server).email == "maya@example.com")
+    }
+}
