@@ -64,22 +64,25 @@ struct BackupStatus: Equatable {
     }
 }
 
-/// The VTXO list (Settings → VTXOs): grouped Expiring, Spendable and Locked, filtered from ⋯.
+/// The VTXO list (Settings → VTXOs): grouped Expiring, Spendable and Locked, with today's filters in ⋯.
 enum VtxoList {
+    /// Today's filters, each one VTXO status (`VtxoModel.statusID`).
     enum Filter: String, CaseIterable, Identifiable {
-        case all, expiring, spendable, locked
+        case all, active, expiring, expired, locked
         var id: Self { self }
+        var title: String { VtxoStatus(rawValue: rawValue)?.label ?? "All" }
+    }
+
+    enum Group: String, CaseIterable {
+        case expiring, spendable, locked
         var title: String {
             switch self {
-            case .all: "All"
             case .expiring: "Expiring"
             case .spendable: "Spendable"
             case .locked: "Locked"
             }
         }
     }
-
-    enum Group: String, CaseIterable { case expiring, spendable, locked }
 
     static func group(_ vtxo: VtxoModel) -> Group {
         if vtxo.state == "Locked" { return .locked }
@@ -90,12 +93,7 @@ enum VtxoList {
     static func isDue(_ vtxo: VtxoModel) -> Bool { vtxo.refreshable && (vtxo.expiring || vtxo.expired) }
 
     static func includes(_ filter: Filter, _ vtxo: VtxoModel) -> Bool {
-        switch filter {
-        case .all: true
-        case .expiring: group(vtxo) == .expiring
-        case .spendable: vtxo.state != "Locked"
-        case .locked: group(vtxo) == .locked
-        }
+        filter == .all || vtxo.statusID?.rawValue == filter.rawValue
     }
 
     struct Section: Identifiable, Equatable {

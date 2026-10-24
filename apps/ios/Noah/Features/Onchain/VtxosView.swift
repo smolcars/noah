@@ -39,7 +39,7 @@ struct VtxosView: View {
                 header
                 ForEach(VtxoList.groups(vtxos, filter: filter)) { section in
                     let rows = section.rows
-                    Text(L10n.text(VtxoList.Filter(rawValue: section.group.rawValue)?.title ?? "", locale: language))
+                    Text(L10n.text(section.group.title, locale: language))
                         .noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
                         .padding(.top, 18).padding(.bottom, 2)
                         .accessibilityAddTraits(.isHeader)
