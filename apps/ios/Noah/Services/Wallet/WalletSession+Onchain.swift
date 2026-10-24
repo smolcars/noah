@@ -290,6 +290,59 @@ extension WalletSession {
             })
     }
 
+    /// Start-only SDK seam, like the claim's; callers still hold the counted open-wallet session.
+    struct OnchainStartAccess: Sendable {
+        var walletID: String
+        var confirmed: @Sendable () async throws -> UInt64
+        /// Spendable VTXOs' amounts, by ID.
+        var spendable: @Sendable () async throws -> [String: UInt64]
+        var estimate: @Sendable ([String]) async throws -> EmergencyExitFeeEstimate
+        var start: @Sendable ([String]) async throws -> Void
+    }
+
+    private static func startAccess(_ handles: Handles) -> OnchainStartAccess {
+        .init(
+            walletID: handles.wallet.fingerprint(),
+            confirmed: { try await handles.onchain.balance().confirmedSats },
+            spendable: {
+                Dictionary(try await handles.wallet.vtxos().filter { $0.state == .spendable }.map { ($0.id, $0.amountSats) },
+                           uniquingKeysWith: { a, _ in a })
+            },
+            estimate: { try await handles.wallet.estimateEmergencyExitFee(vtxoIds: $0, feeRateSatPerVb: nil, destination: nil) },
+            start: { try await handles.wallet.startExitForVtxos(vtxoIds: $0) })
+    }
+
+    static func startQuote(
+        ids: [String], automatic: Bool = false, estimate: Bool = true, access: OnchainStartAccess
+    ) async throws -> OnchainQuote {
+        let balance = try await access.confirmed()
+        guard Set(ids).count == ids.count else { throw OnchainFailure.invalid }
+        let spendable = try await access.spendable()
+        let selected = ids.compactMap { spendable[$0] }
+        guard !ids.isEmpty, selected.count == ids.count else { throw OnchainFailure.changed }
+        guard selected.allSatisfy({ $0 >= ExitRules.dust }) else { throw OnchainFailure.invalid }
+        let quote = OnchainQuote(
+            action: .startExit, walletID: access.walletID, ids: ids.sorted(), amount: selected.reduce(0, +),
+            fee: 0, chainFee: 0, confirmed: balance, automatic: automatic)
+        return try await exitStartEstimate(quote, estimate: estimate) { try await access.estimate(ids) }
+    }
+
+    static func executeStart(
+        _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainStartAccess
+    ) async throws -> String {
+        guard quote.action == .startExit, ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
+        let fresh: OnchainQuote
+        do {
+            fresh = try await startQuote(ids: quote.ids, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent, access: access)
+        } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
+        guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        return try await journal.perform(quote) {
+            try await access.start(quote.ids)
+            return "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
+        }
+    }
+
     static func claimQuote(
         ids: [String], destination: String?, automatic: Bool = false, estimate: Bool = true, access: OnchainClaimAccess
     ) async throws -> OnchainQuote {
@@ -359,6 +412,9 @@ extension WalletSession {
         if action == .claim {
             return try await claimQuote(ids: ids, destination: destination, automatic: automatic, access: claimAccess(handles))
         }
+        if action == .startExit {
+            return try await startQuote(ids: ids, automatic: automatic, estimate: estimate, access: startAccess(handles))
+        }
         let balance = try await handles.onchain.balance().confirmedSats
         var quote = OnchainQuote(
             action: action, walletID: handles.wallet.fingerprint(), ids: ids.sorted(),
@@ -368,23 +424,15 @@ extension WalletSession {
         switch action {
         case .board:
             throw OnchainFailure.changed // Boards must use the retained signed preparation.
-        case .refresh, .startExit:
+        case .refresh:
             let available = try await handles.wallet.vtxos().filter { $0.state == .spendable }
             let selected = available.filter { ids.contains($0.id) }
             guard !ids.isEmpty, selected.count == ids.count else { throw OnchainFailure.changed }
             quote.amount = selected.reduce(0) { $0 + $1.amountSats }
-            if action == .refresh {
-                let fee = try await handles.wallet.estimateRefreshFee(vtxoIds: ids)
-                quote.fee = fee.feeSats
-            } else {
-                guard selected.allSatisfy({ $0.amountSats >= ExitRules.dust }) else {
-                    throw OnchainFailure.invalid
-                }
-                quote = try await exitStartEstimate(quote, estimate: estimate) {
-                    try await handles.wallet.estimateEmergencyExitFee(
-                        vtxoIds: ids, feeRateSatPerVb: nil, destination: nil)
-                }
-            }
+            let fee = try await handles.wallet.estimateRefreshFee(vtxoIds: ids)
+            quote.fee = fee.feeSats
+        case .startExit:
+            throw OnchainFailure.invalid // Handled by the start path above.
         case .progress:
             let all = try await handles.wallet.getExitVtxos()
             let eligible = all.filter { exit in
@@ -456,6 +504,9 @@ extension WalletSession {
             if quote.action == .claim {
                 return try await Self.executeClaim(quote, journal: journal, access: Self.claimAccess(handles))
             }
+            if quote.action == .startExit {
+                return try await Self.executeStart(quote, journal: journal, access: Self.startAccess(handles))
+            }
             guard ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
             guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
             let fresh: OnchainQuote
@@ -477,8 +528,7 @@ extension WalletSession {
                         message: round.map { "Refresh submitted to delegated round \($0.id)." }
                             ?? "No refresh round was needed.")
                 case .startExit:
-                    try await handles.wallet.startExitForVtxos(vtxoIds: quote.ids)
-                    return "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
+                    throw OnchainFailure.invalid // Handled by the start path above.
                 case .progress:
                     let walletID = handles.wallet.fingerprint()
                     let statuses: [ExitProgressStatus]

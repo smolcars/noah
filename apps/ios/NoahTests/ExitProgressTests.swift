@@ -668,17 +668,32 @@ struct ExitClaimAutoBoardTests {
     }
 }
 
-/// Hold to start and hold to claim across a restart: the durable journal is what stops a repeat.
-/// One model is held twice (a size-class change rebuilds the hold), then a fresh model and journal
-/// on the same file (a process restart) reviews and holds again. Exactly one wallet mutation each.
+/// Hold to start and hold to claim through the real start and claim paths (`startQuote`/`executeStart`,
+/// `claimQuote`/`executeClaim`) and the durable journal. The app leaves and comes back before the hold
+/// (the screen drops the review and fetches it again), the hold fires twice (a size-class change
+/// rebuilds it), the app comes back after the hold, then a fresh model and journal on the same file (a
+/// process restart) reviews and holds again. Exactly one wallet mutation each.
 @MainActor
 struct ExitRestartTests {
     nonisolated static let overview = OnchainOverview(walletID: "wallet", vtxos: [], exits: [], confirmed: 100_000, tip: 100, pendingTotal: 0, claimableHeight: nil)
 
+    /// What `OnchainScreen` and the review pages do when the scene becomes inactive, then active again.
+    static func reactivate(_ model: OnchainModel, _ action: OnchainAction, ids: [String], destination: String? = nil) async {
+        model.invalidate()
+        #expect(model.quote == nil)
+        await model.review(action, ids: ids, destination: destination)
+    }
+
+    static func hold(_ model: OnchainModel) async {
+        async let held: Void = model.confirm()
+        async let rebuilt: Void = model.confirm()
+        _ = await (held, rebuilt)
+    }
+
     @Test func aClaimHeldAgainAfterARestartIsSentOnce() async throws {
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: file) }
-        let wallet = ExitClaimExecutionTests.Wallet()
+        let wallet = ExitClaimExecutionTests.Wallet(), to = ExitClaimExecutionTests.ownAddress
         func launch() -> OnchainModel {
             let journal = OnchainOperationJournal(file: file), access = wallet.access()
             return OnchainModel(dependencies: .init(ready: { true }, overview: { Self.overview },
@@ -687,45 +702,54 @@ struct ExitRestartTests {
                 attempt: { try await journal.loadAll() }, acknowledge: { try await journal.acknowledge($0) }))
         }
         let first = launch()
-        await first.review(.claim, ids: ["a"], destination: ExitClaimExecutionTests.ownAddress)
-        async let held: Void = first.confirm()
-        async let rebuilt: Void = first.confirm()
-        _ = await (held, rebuilt)
+        await first.review(.claim, ids: ["a"], destination: to)
+        await Self.reactivate(first, .claim, ids: ["a"], destination: to)
+        #expect(first.quote != nil)
+        await Self.hold(first)
         #expect(await wallet.broadcasts.count == 1)
+        await Self.reactivate(first, .claim, ids: ["a"], destination: to)
+        #expect(first.quote == nil && first.error != nil)
         let restarted = launch()
-        await restarted.review(.claim, ids: ["a"], destination: ExitClaimExecutionTests.ownAddress)
+        await restarted.review(.claim, ids: ["a"], destination: to)
         #expect(restarted.quote == nil && restarted.error != nil)
         await restarted.confirm()
         #expect(await wallet.broadcasts.count == 1)
     }
 
-    actor Starts {
-        var count = 0
-        func start() { count += 1 }
+    actor StartWallet {
+        var starts: [[String]] = []
+        func start(_ ids: [String]) { starts.append(ids) }
+        /// bark still lists the VTXO as spendable: only the journal stops a second start.
+        nonisolated func access() -> WalletSession.OnchainStartAccess {
+            .init(walletID: "wallet", confirmed: { 18_400 }, spendable: { ["v": 31_000] },
+                  estimate: { _ in .init(exitBroadcastFeeSats: 5_533, claimFeeSats: 262, totalFeeSats: 5_795, feeRateSatPerVb: 3, txsToBroadcast: 4) },
+                  start: { await self.start($0) })
+        }
     }
 
     @Test func aStartHeldAgainAfterARestartStartsOnce() async throws {
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: file) }
-        let starts = Starts()
-        // executeOnchain's start: the journal's one operation around bark's start.
+        let wallet = StartWallet()
         func launch() -> OnchainModel {
-            let journal = OnchainOperationJournal(file: file)
+            let journal = OnchainOperationJournal(file: file), access = wallet.access()
             return OnchainModel(dependencies: .init(ready: { true }, overview: { Self.overview },
-                quote: { action, ids, _, _ in .init(action: action, walletID: "wallet", ids: ids, amount: 31_000, fee: 262, chainFee: 5_533, confirmed: 18_400) },
-                execute: { quote in try await journal.perform(quote) { await starts.start(); return "Exit started." } },
+                quote: { _, ids, _, _ in try await WalletSession.startQuote(ids: ids, access: access) },
+                execute: { try await WalletSession.executeStart($0, journal: journal, access: access) },
                 attempt: { try await journal.loadAll() }, acknowledge: { try await journal.acknowledge($0) }))
         }
         let first = launch()
         await first.review(.startExit, ids: ["v"])
-        async let held: Void = first.confirm()
-        async let rebuilt: Void = first.confirm()
-        _ = await (held, rebuilt)
-        #expect(await starts.count == 1)
+        await Self.reactivate(first, .startExit, ids: ["v"])
+        #expect(first.quote?.fee == 262 && first.quote?.chainFee == 5_533)
+        await Self.hold(first)
+        #expect(await wallet.starts == [["v"]])
+        await Self.reactivate(first, .startExit, ids: ["v"])
+        #expect(first.quote == nil && first.error != nil)
         let restarted = launch()
         await restarted.review(.startExit, ids: ["v"])
         #expect(restarted.quote == nil && restarted.error != nil)
         await restarted.confirm()
-        #expect(await starts.count == 1)
+        #expect(await wallet.starts == [["v"]])
     }
 }
