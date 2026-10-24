@@ -2,7 +2,6 @@ package com.noahwallet.ui
 
 import com.noahwallet.localization.tr
 import android.app.Activity
-import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
@@ -40,11 +39,10 @@ import kotlinx.coroutines.delay
 
 /** FLAG_SECURE, clipboard clearing and clearing on background or removal; configuration changes keep the words in memory. */
 @Composable
-private fun RestoreShield(activity: Activity, clipboard: RestoreClipboard, clear: () -> Unit) {
+private fun RestoreShield(activity: Activity, lock: com.noahwallet.ui.settings.WalletLock, clipboard: RestoreClipboard, clear: () -> Unit) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(activity, lifecycle) {
-        val alreadySecure = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
-        activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        val release = lock.showSecret(activity.window)
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) {
             clipboard.clearIfUnchanged()
             if (!activity.isChangingConfigurations) clear()
@@ -54,7 +52,7 @@ private fun RestoreShield(activity: Activity, clipboard: RestoreClipboard, clear
             lifecycle.removeObserver(observer)
             clipboard.clearIfUnchanged()
             if (!activity.isChangingConfigurations) clear()
-            if (!alreadySecure) activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            release()
         }
     }
 }
@@ -84,7 +82,7 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
     val flow = model.restore
     val blocked = model.busy || !flow.canLeave
     BackHandler { }
-    RestoreShield(activity, clipboard) {}
+    RestoreShield(activity, model.walletLock, clipboard) {}
     NoahForm("Recovery phrase found") {
         Text(tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."))
         if (model.busy || flow.running) {
@@ -140,7 +138,7 @@ private fun PhraseRestoreScreen(model: AppModel) {
     }
     fun leave() { clear(); flow.clearIssue(); model.step = "welcome" }
     BackHandler { if (!blocked) leave() }
-    RestoreShield(activity, clipboard, ::clear)
+    RestoreShield(activity, model.walletLock, clipboard, ::clear)
     // Read the revision so changes to the non-saveable, redacted input redraw the fields.
     val words = remember(revision) { input.words }
     val wordList = RecoveryPhraseInput.wordList

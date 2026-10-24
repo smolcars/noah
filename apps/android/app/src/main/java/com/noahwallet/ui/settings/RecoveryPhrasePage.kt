@@ -9,7 +9,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PersistableBundle
 import android.os.SystemClock
-import android.view.WindowManager
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -90,10 +89,9 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
         }
     } }
     if (fixture == null && activity != null) DisposableEffect(activity) {
-        val alreadySecure = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
-        activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        val release = model.walletLock.showSecret(activity.window)
         onDispose {
-            if (!alreadySecure) activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            release()
             handler.removeCallbacks(clear)
             // Leaving the page (not a fold) forgets the words and our clip.
             if (!activity.isChangingConfigurations) { clear.run(); holder.clear() }

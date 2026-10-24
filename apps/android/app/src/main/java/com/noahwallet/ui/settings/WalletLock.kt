@@ -4,6 +4,8 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import android.view.Window
+import android.view.WindowManager
 import androidx.compose.runtime.*
 import com.noahwallet.services.storage.*
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -82,13 +84,35 @@ class WalletLock(private val settings: SettingsStorage) {
 
     suspend fun setEnabled(activity: FragmentActivity, value: Boolean) {
         if (!authenticate(activity, if (value) "Enable wallet authentication" else "Disable wallet authentication")) return
+        saveEnabled(activity.window, value)
+    }
+
+    /** Stores App lock after [setEnabled]'s authentication and applies it to [window] at once. */
+    @androidx.annotation.VisibleForTesting(otherwise = androidx.annotation.VisibleForTesting.PRIVATE)
+    internal fun saveEnabled(window: Window, value: Boolean) {
         val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         settings.setPersistedState(wallet.copy(isBiometricsEnabled = value), PersistedWalletState.key, 0)
         settings.sync()
-        // Apply protection synchronously with the preference, before the next Compose frame/background event.
-        if (value) activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-        else activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         policy.setEnabled(value); enabled = value; locked = false
+        // Apply protection synchronously with the preference, before the next Compose frame/background event.
+        applySecure(window)
+    }
+
+    /** Secrets on screen right now (the recovery phrase, restore's words). */
+    private var secrets by mutableIntStateOf(0)
+
+    /** FLAG_SECURE's one rule: screenshots are blocked while App lock is on or a secret is on screen, and only then. */
+    val secure get() = enabled || secrets > 0
+
+    fun applySecure(window: Window) {
+        if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    }
+
+    /** Keeps [window] secure while a secret is on screen; the returned release (idempotent) ends it. */
+    fun showSecret(window: Window): () -> Unit {
+        secrets++; applySecure(window)
+        var released = false
+        return { if (!released) { released = true; secrets--; applySecure(window) } }
     }
 
     fun reset() { prompt?.cancelAuthentication(); policy.setEnabled(false); enabled = false; locked = false }

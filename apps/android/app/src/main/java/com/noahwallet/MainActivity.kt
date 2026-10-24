@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.view.WindowManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
@@ -107,7 +106,7 @@ class MainActivity : FragmentActivity() {
             if (!invalidatedBeforeReady && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) current.walletLock.resumed()
             else current.walletLock.background()
             if (intent.getBooleanExtra("recurring", false)) current.recurringNotification = true
-            if (current.walletLock.enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            current.walletLock.applySecure(window)
             val recurring = withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity) }
             lifecycle.addObserver(recurring.syncForegroundAdmission)
             lifecycle.addObserver(recurring.foregroundRunner { current.refresh() })

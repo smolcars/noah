@@ -58,9 +58,8 @@ fun LaunchGateView(model: AppModel) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    androidx.compose.runtime.DisposableEffect(activity, model.walletLock.enabled) {
-        if (model.walletLock.enabled) activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-        else activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+    androidx.compose.runtime.DisposableEffect(activity, model.walletLock.secure) {
+        model.walletLock.applySecure(activity.window)
         onDispose { }
     }
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
