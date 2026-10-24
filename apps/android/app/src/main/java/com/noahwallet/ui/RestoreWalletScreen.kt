@@ -106,6 +106,8 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
                 }
             }
             if (flow.issue?.requiresRestart != true) PillButton(tr("Restore Wallet"), Modifier.fillMaxWidth(), enabled = model.canRestoreWallet) {
+                // Restoring has no way back until a restore fails, so never enter it for a request restoreWallet would drop.
+                if (!model.canRestoreWallet) return@PillButton
                 haptics.medium()
                 flow.clearIssue() // Restoring would otherwise read the last attempt's error and send us straight back.
                 model.holdRestoreCompletion = true
