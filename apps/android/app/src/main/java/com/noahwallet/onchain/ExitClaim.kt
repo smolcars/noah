@@ -116,7 +116,8 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
     }) {
         if (exits.isEmpty()) { FinePrint(tr("No exits are ready to claim.")); status(); return@ExitFrame }
         SectionLabel(tr("To"))
-        RadioRow(tr("Another wallet"), selected = to == ClaimTo.other, modifier = Modifier.testTag("exit-to-other")) { haptics.selection(); choose(ClaimTo.other) }
+        // Fixed while a review runs: a review asked meanwhile would be dropped, leaving Claim off.
+        RadioRow(tr("Another wallet"), selected = to == ClaimTo.other, modifier = Modifier.testTag("exit-to-other"), enabled = !busy) { haptics.selection(); choose(ClaimTo.other) }
         if (to == ClaimTo.other) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
@@ -132,7 +133,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
             else FinePrint(tr("Check the address. This can't be undone."))
         }
         RadioRow(tr("This phone's on-chain wallet"), detail = phone?.let { short(it, 8, 4) }, selected = to == ClaimTo.phone, divider = false,
-            modifier = Modifier.testTag("exit-to-phone")) { haptics.selection(); choose(ClaimTo.phone) }
+            modifier = Modifier.testTag("exit-to-phone"), enabled = !busy) { haptics.selection(); choose(ClaimTo.phone) }
         if (to == ClaimTo.phone) FinePrint(if (phoneError) tr("Couldn't load a Noah wallet address. Try again when the wallet is ready.")
             else tr("Noah won't move these back to Ark."), failed = phoneError)
         Column(Modifier.padding(top = 18.dp)) {

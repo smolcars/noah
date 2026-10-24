@@ -91,6 +91,25 @@ class ExitDeviceTest {
         compose.runOnIdle { assertEquals(1, claims) }
     }
 
+    @Test fun whileAClaimIsReviewedItsDestinationStaysPut() {
+        compose.mainClock.autoAdvance = false
+        var busy by mutableStateOf(true)
+        val chosen = mutableListOf<ClaimTo>()
+        compose.setContent { NoahTheme { ExitPreviewHost {
+            ExitClaimContent(listOf(f.claimable), f.tip, null, null, ClaimTo.other, regtest, regtest, "bcrt1qphonephonephone", false, busy, false,
+                f.money, {}, { chosen += it }, {}, {}, {}, {})
+        } } }
+        compose.mainClock.advanceTimeBy(1_000)
+        for (tag in listOf("exit-to-other", "exit-to-phone")) compose.onNodeWithTag(tag).assertIsNotEnabled()
+        compose.onNode(hasSetTextAction() and (hasTestTag("exit-claim-address") or hasAnyAncestor(hasTestTag("exit-claim-address")))).assertIsNotEnabled()
+        compose.onNodeWithTag("exit-to-phone").performClick()
+        compose.runOnIdle { assertTrue("no switch mid-review", chosen.isEmpty()) }
+        compose.runOnUiThread { busy = false }
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithTag("exit-to-phone").assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(listOf(ClaimTo.phone), chosen) }
+    }
+
     @Test fun cancelExitShowsOnlyWhileBarkAllowsIt() {
         compose.mainClock.autoAdvance = false
         var exit by mutableStateOf(f.mempool)

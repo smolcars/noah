@@ -286,13 +286,14 @@ internal fun SettingsSwitch(checked: Boolean, enabled: Boolean, modifier: Modifi
 /** A row of a radio list (prototype `.opt`): Material 3's radio, the name and a small detail. */
 @Composable
 internal fun RadioRow(title: String, detail: String? = null, selected: Boolean, divider: Boolean = true, danger: Boolean = false,
-                      modifier: Modifier = Modifier, onClick: () -> Unit) {
+                      modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().heightIn(min = 54.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
-        .selectable(selected, role = Role.RadioButton, onClick = onClick), verticalAlignment = Alignment.CenterVertically,
+        .selectable(selected, enabled = enabled, role = Role.RadioButton, onClick = onClick), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        RadioButton(selected, null, Modifier.size(20.dp), colors = RadioButtonDefaults.colors(selectedColor = palette.foreground, unselectedColor = palette.muted))
+        RadioButton(selected, null, Modifier.size(20.dp), enabled = enabled,
+            colors = RadioButtonDefaults.colors(selectedColor = palette.foreground, unselectedColor = palette.muted))
         Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
             Text(title, style = NoahTokens.Typography.body, color = if (danger) palette.failure else palette.foreground)
             detail?.let { Text(it, style = HomeType.small, color = palette.muted) }
