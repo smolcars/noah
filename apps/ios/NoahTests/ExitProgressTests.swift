@@ -399,8 +399,8 @@ struct ExitHoldTests {
         await model.review(action, ids: ["v"], destination: action == .claim ? "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202" : nil)
         #expect(model.quote != nil)
         // Two holds (a pose change rebuilt the button, or VoiceOver's action raced a finger).
-        async let first: Void = model.confirm()
-        async let second: Void = model.confirm()
+        async let first = model.confirm()
+        async let second = model.confirm()
         _ = await (first, second)
         #expect(await count.value == 1)
         // The review is spent: holding again submits nothing.
@@ -685,8 +685,8 @@ struct ExitRestartTests {
     }
 
     static func hold(_ model: OnchainModel) async {
-        async let held: Void = model.confirm()
-        async let rebuilt: Void = model.confirm()
+        async let held = model.confirm()
+        async let rebuilt = model.confirm()
         _ = await (held, rebuilt)
     }
 
@@ -718,13 +718,53 @@ struct ExitRestartTests {
 
     actor StartWallet {
         var starts: [[String]] = []
+        var estimatorFails = false
         func start(_ ids: [String]) { starts.append(ids) }
+        func failEstimates() { estimatorFails = true }
+        func estimate() throws -> EmergencyExitFeeEstimate {
+            if estimatorFails { throw OnchainFailure.unavailable }
+            return .init(exitBroadcastFeeSats: 5_533, claimFeeSats: 262, totalFeeSats: 5_795, feeRateSatPerVb: 3, txsToBroadcast: 4)
+        }
         /// bark still lists the VTXO as spendable: only the journal stops a second start.
         nonisolated func access() -> WalletSession.OnchainStartAccess {
             .init(walletID: "wallet", confirmed: { 18_400 }, spendable: { ["v": 31_000] },
-                  estimate: { _ in .init(exitBroadcastFeeSats: 5_533, claimFeeSats: 262, totalFeeSats: 5_795, feeRateSatPerVb: 3, txsToBroadcast: 4) },
-                  start: { await self.start($0) })
+                  estimate: { _ in try await self.estimate() }, start: { await self.start($0) })
         }
+    }
+
+    /// The first estimate worked, the one at submit didn't: nothing was sent, so the hold isn't a success
+    /// (the page stays, offering "Continue without estimate"). With consent it is.
+    @Test func aHoldWhoseSubmitEstimateFailsIsNotASuccess() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let starter = StartWallet(), claimer = ExitClaimExecutionTests.Wallet()
+        let journal = OnchainOperationJournal(file: file), start = starter.access(), claim = claimer.access()
+        let model = OnchainModel(dependencies: .init(ready: { true }, overview: { Self.overview },
+            quote: { action, ids, _, destination in
+                action == .claim ? try await WalletSession.claimQuote(ids: ids, destination: destination, access: claim)
+                    : try await WalletSession.startQuote(ids: ids, access: start)
+            },
+            execute: { $0.action == .claim ? try await WalletSession.executeClaim($0, journal: journal, access: claim)
+                : try await WalletSession.executeStart($0, journal: journal, access: start) },
+            attempt: { try await journal.loadAll() }, acknowledge: { try await journal.acknowledge($0) }))
+
+        await model.review(.startExit, ids: ["v"])
+        await starter.failEstimates()
+        #expect(await model.confirm() == false)
+        #expect(model.error == nil && model.estimateFallback != nil && model.quote == nil)
+        #expect(await starter.starts.isEmpty)
+        await model.continueWithoutEstimate()
+        #expect(await model.confirm() == true)
+        #expect(await starter.starts == [["v"]])
+
+        await model.review(.claim, ids: ["a"], destination: ExitClaimExecutionTests.ownAddress)
+        await claimer.change("estimator")
+        #expect(await model.confirm() == false)
+        #expect(model.error == nil && model.estimateFallback != nil && model.quote == nil)
+        #expect(await claimer.broadcasts.isEmpty)
+        await model.continueWithoutEstimate()
+        #expect(await model.confirm() == true)
+        #expect(await claimer.broadcasts.count == 1)
     }
 
     @Test func aStartHeldAgainAfterARestartStartsOnce() async throws {

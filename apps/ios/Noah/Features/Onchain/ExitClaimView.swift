@@ -195,8 +195,11 @@ struct ExitClaimView: View {
                 return
             }
             expired = false
-            await model.confirm()
-            guard model.error == nil else { haptics.play(.error); return }
+            // Only a submitted claim leaves; a failed one keeps its error or "Continue without estimate".
+            guard await model.confirm() else {
+                if model.error != nil { haptics.play(.error) }
+                return
+            }
             haptics.play(.success)
             settings.back()
         }

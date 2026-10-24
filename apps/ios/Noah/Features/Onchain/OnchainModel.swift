@@ -208,20 +208,24 @@ final class OnchainModel {
         fallback.unknownFeeConsent = fallback.id
         quote = fallback
     }
-    /// Caller must have presented the quote and obtained explicit confirmation.
-    func confirm() async {
-        guard !busy, let quote else { return }
+    /// Caller must have presented the quote and obtained explicit confirmation. True only when it was
+    /// submitted: an estimate that failed at submit leaves "Continue without estimate" instead.
+    @discardableResult
+    func confirm() async -> Bool {
+        guard !busy, let quote else { return false }
         self.quote = nil
         expiry?.cancel()
         let token = generation
         busy = true
         error = nil
         defer { busy = false }
+        var submitted = false
         do {
             guard await dependencies.ready(), generation == token, quote.isCurrent else {
                 throw OnchainFailure.changed
             }
             message = try await dependencies.execute(quote)
+            submitted = true
         } catch let failure as ExitEstimateUnavailable {
             if await dependencies.ready(), generation == token, !Task.isCancelled {
                 do { estimateFallback = try failure.preserving(quote).review }
@@ -235,6 +239,7 @@ final class OnchainModel {
         let submissionError = error
         await load()
         if let submissionError { error = submissionError }
+        return submitted && estimateFallback == nil
     }
     /// When this wallet's exit transactions were first seen in their status.
     private(set) var sightings: (walletID: String, value: ExitSightings) = ("", .init())

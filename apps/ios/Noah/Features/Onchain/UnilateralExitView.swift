@@ -249,6 +249,8 @@ struct ExitReviewView: View {
     @State private var expired = false
     /// For the transaction count and when it becomes claimable; the quote carries the fees.
     @State private var estimate: EmergencyExitFeeEstimate?
+    /// This visit's review finished: a missing quote then offers Review again.
+    @State private var reviewed = false
     @State private var haptics = OnboardingHaptics()
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
@@ -315,22 +317,35 @@ struct ExitReviewView: View {
             if expired { SettingsFine(text: L10n.text("The estimate expired, so Noah fetched a new one. Check it and hold again.", locale: language)) }
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         } footer: {
-            SendHoldButton(amount: money(amount), enabled: quote != nil && !model.busy, title: "Hold to start exit",
-                           action: "Start exit of {amount}", confirm: "Start exit", id: "exit-hold-start") { start() }
-                // One hold per review: a fresh quote gets a fresh button.
-                .id(quote?.id)
+            if quote == nil && model.estimateFallback == nil && !model.busy && !model.loading && reviewed {
+                Button(L10n.text("Review again", locale: language)) { Task { await review() } }
+                    .buttonStyle(SettingsActionStyle())
+                    .accessibilityIdentifier("exit-review-again")
+            } else {
+                SendHoldButton(amount: money(amount), enabled: quote != nil && !model.busy, title: "Hold to start exit",
+                               action: "Start exit of {amount}", confirm: "Start exit", id: "exit-hold-start") { start() }
+                    // One hold per review: a fresh quote gets a fresh button.
+                    .id(quote?.id)
+            }
         }
         .settingsChrome(nil)
         .onboardingHaptics(haptics)
         .modifier(OnchainScreen(model: model, presentsReview: false))
         // On arrival, and again whenever the app comes back: leaving drops the review (OnchainScreen).
         .task(id: scenePhase == .active) {
-            guard scenePhase == .active, model.quote == nil else { return }
-            // After the page's first read: a review invalidates any read still in flight.
-            while model.loading || model.busy { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
-            await model.review(.startExit, ids: ids)
+            reviewed = false
+            guard scenePhase == .active else { return }
+            if model.quote == nil { await review() } else { reviewed = true }
             if estimate == nil { estimate = await model.exitEstimate(ids) }
         }
+    }
+
+    /// Today's start review, after the page's first read and any running review: a review invalidates
+    /// a read still in flight, and the model drops one asked for while it's busy.
+    private func review() async {
+        while model.loading || model.busy { do { try await Task.sleep(for: .milliseconds(50)) } catch { return } }
+        await model.review(.startExit, ids: ids)
+        reviewed = true
     }
 
     private func start() {
@@ -338,12 +353,15 @@ struct ExitReviewView: View {
             guard let quote = model.quote, quote.action == .startExit else { return }
             guard quote.isCurrent else {
                 expired = true
-                await model.review(.startExit, ids: ids)
+                await review()
                 return
             }
             expired = false
-            await model.confirm()
-            guard model.error == nil else { haptics.play(.error); return }
+            // Only a submitted start leaves; a failed one keeps its error or "Continue without estimate".
+            guard await model.confirm() else {
+                if model.error != nil { haptics.play(.error) }
+                return
+            }
             haptics.play(.success)
             settings.swap(.exit, ids.count == 1 ? .exitProgress(ids[0]) : .exitList)
         }

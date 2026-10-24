@@ -11,7 +11,8 @@ import UIKit
 /// the session. Light and dark follow the simulator; a wide window (the Duo open) shows the panes.
 /// States: warn, warn-live, choose, choose-all, choose-unfunded, review, review-unfunded,
 /// progress-<lift|publish|sending|mempool|confirm|onchain|wait|claimable|claiming|claimed>,
-/// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, claim-other, claim-phone, claim-again, list, list-plain.
+/// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, review-again, claim-other, claim-phone, claim-again, list,
+/// list-plain.
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_EXIT_SHOTS"] == "1"))
 struct ExitShotTests {
@@ -219,9 +220,10 @@ struct ExitShotTests {
             page = .exit; onchain = { Self.model(Self.overview(exits: exits)) }
         case "choose", "choose-all", "choose-unfunded":
             page = .exitChoose; onchain = { Self.model(Self.overview(exits: [], confirmed: state == "choose-unfunded" ? 310 : 18_400)) }
-        case "review", "review-unfunded", "review-unknown":
+        case "review", "review-unfunded", "review-unknown", "review-again":
             page = .exitReview([Self.vtxos[0].id])
-            onchain = { Self.model(Self.overview(exits: [], confirmed: state == "review-unfunded" ? 310 : 18_400), quote: state != "review-unknown") }
+            onchain = { Self.model(Self.overview(exits: [], confirmed: state == "review-unfunded" ? 310 : 18_400), quote: state != "review-unknown",
+                                   reviewFails: state == "review-again") }
         case "claim-other", "claim-phone", "claim-invalid", "claim-again":
             page = .exitClaim
             onchain = { Self.model(Self.overview(exits: [Self.followed("claimable")], tip: Self.tip + 148), reviewFails: state == "claim-again") }
