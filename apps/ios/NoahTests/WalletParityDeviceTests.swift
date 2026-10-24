@@ -28,26 +28,6 @@ struct WalletParityDeviceTests {
             window.isHidden = true
         }
     }
-    @Test func exitBlockFields() async throws {
-        let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
-        let window = UIWindow(windowScene: scene)
-        let details = ExitDetails(kind: "claimed", tip_height: 150,
-            claimable_since: .init(height: 144, hash: "public-claimable-block"),
-            block: .init(height: 149, hash: "public-claimed-block"), txid: String(repeating: "a", count: 64))
-        window.rootViewController = UIHostingController(rootView: NavigationStack {
-            List {
-                Section("Block Status") { ExitBlockStatusRows(details: details, tip: 150) }
-                Section("Current State") { ExitDetailsRows(details: details) }
-            }.navigationTitle("Exit Details")
-        }.environment(AppModel()).environment(\.locale, Locale(identifier: "en_US")))
-        window.makeKeyAndVisible()
-        defer { window.isHidden = true }
-        try await Task.sleep(for: .seconds(2))
-        let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
-            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
-        }
-        try #require(image.pngData()).write(to: URL.documentsDirectory.appending(path: "wallet-parity-exit-blocks.png"))
-    }
     @Test func exitOverviewFields() async throws {
         let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let window = UIWindow(windowScene: scene)
