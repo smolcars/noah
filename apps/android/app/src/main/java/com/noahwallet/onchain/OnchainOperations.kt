@@ -38,6 +38,7 @@ internal class OnchainOperations(
         }
     }
     /** Decision 4: each VTXO's own exit estimate (bark's, for it alone), or null where bark can't estimate it now. */
+    // shortcut: the standalone estimate, so siblings carry their shared path each; split it once bark-bolt-ffi's estimate has per-transaction data.
     suspend fun exitCosts(ids: List<String>): Map<String, ExitCosts.Cost?> {
         if (!ready()) fail(OnchainFailure.unavailable)
         return ids.associateWith { id ->
