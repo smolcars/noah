@@ -594,26 +594,27 @@ struct ExitClaimAutoBoardTests {
         let claimed: UInt64
         /// A coin selection that spends the claimed coin anyway.
         let ignoresExclusions: Bool
+        let chainFee: UInt64
         var amounts: [UInt64] = []
         var exclusions: [Set<String>] = []
         var discarded: [UUID] = []
-        init(balance: UInt64, claimed: UInt64 = 0, ignoresExclusions: Bool = false) {
-            self.balance = balance; self.claimed = claimed; self.ignoresExclusions = ignoresExclusions
+        init(balance: UInt64, claimed: UInt64 = 0, ignoresExclusions: Bool = false, chainFee: UInt64 = 150) {
+            self.balance = balance; self.claimed = claimed; self.ignoresExclusions = ignoresExclusions; self.chainFee = chainFee
         }
         func prepare(_ amount: UInt64, excluding: Set<String> = []) throws -> OnchainQuote {
             amounts.append(amount)
             exclusions.append(excluding)
             let spendsClaim = claimed > 0 && (ignoresExclusions || !excluding.contains(ExitClaimAutoBoardTests.claim))
             // bark drains only what isn't excluded; with nothing else it's the usual InsufficientFunds.
-            guard amount > 0 || balance - (spendsClaim ? 0 : claimed) > 150 else {
+            guard amount > 0 || balance - (spendsClaim ? 0 : claimed) > chainFee else {
                 throw BarkError(message: "insufficient", code: .insufficientFunds)
             }
             var quote = BoardPreparedTests.quote
             quote.id = UUID(); quote.automatic = true; quote.confirmed = balance
-            quote.amount = amount == 0 ? balance - (spendsClaim ? 0 : claimed) - 150 : amount
-            quote.chainFee = 150; quote.fee = 330; quote.feeRate = 1
+            quote.amount = amount == 0 ? balance - (spendsClaim ? 0 : claimed) - chainFee : amount
+            quote.chainFee = chainFee; quote.fee = 330; quote.feeRate = 1
             quote.prepared = .init(PreparedBoard(id: quote.id.uuidString, txid: "board", grossSats: quote.amount, netSats: quote.net,
-                arkFeeSats: 330, onchainFeeSats: 150, vsize: 150, inputs: (spendsClaim ? ["deposit:0", ExitClaimAutoBoardTests.claim] : ["deposit:0"]).map {
+                arkFeeSats: 330, onchainFeeSats: chainFee, vsize: chainFee, inputs: (spendsClaim ? ["deposit:0", ExitClaimAutoBoardTests.claim] : ["deposit:0"]).map {
                     .init(txid: String($0.prefix { $0 != ":" }), vout: UInt32($0.split(separator: ":")[1])!) }))
             return quote
         }
@@ -638,6 +639,14 @@ struct ExitClaimAutoBoardTests {
         let unclaimed = Board(balance: 98_705)
         #expect(try await unclaimed.review(held: 0, claimed: [])?.amount == 98_555 - 5_043)
         #expect(await unclaimed.exclusions == [[], []])
+    }
+
+    /// Android parity: the claimed value is excluded by the SDK only, never subtracted again.
+    @Test func theOfferIsTheDepositLessFeesAndTheReserveOnly() async throws {
+        let board = Board(balance: 90_000, claimed: 30_000, chainFee: 1_543)
+        let quote = try #require(try await board.review(held: 30_000))
+        #expect(quote.amount == 60_000 - 1_543 - 43 - 5_000)
+        #expect(await board.amounts == [0, 60_000 - 1_543 - 43 - 5_000])
     }
 
     @Test func withOnlyTheClaimOnChainThereIsNoBoard() async throws {
