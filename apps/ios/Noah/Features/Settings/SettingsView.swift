@@ -535,8 +535,9 @@ struct SettingsPageView: View {
         case .vtxo(let id): VtxoDetailView(id: id)
         case .onchain: BoardArkView()
         case .recurring: RecurringPaymentsView()
-        case .schedule(let id): RecurringPaymentsView(scheduleID: id)
-        case .editor: RecurringPaymentEditorView(executor: .shared)
+        case .schedule(let id): RecurringSchedulePage(id: id)
+        case .editor(let id):
+            RecurringPaymentEditorView(executor: .shared, schedule: id.flatMap { id in RecurringExecutor.shared.schedules.first { $0.id == id } })
         case .exit: UnilateralExitView()
         case .notifications: NotificationsPage()
         case .advanced: AdvancedPage()

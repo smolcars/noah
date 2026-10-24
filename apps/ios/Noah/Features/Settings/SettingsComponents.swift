@@ -516,6 +516,7 @@ struct SettingsField: View {
     var tag: String?
     var multiline = false
     var id = ""
+    var focusChanged: ((Bool) -> Void)?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -560,6 +561,7 @@ struct SettingsField: View {
             .onTapGesture { focused = true }
         }
         .padding(.top, 20)
+        .onChange(of: focused) { _, focused in focusChanged?(focused) }
     }
 }
 

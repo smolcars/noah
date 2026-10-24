@@ -62,5 +62,21 @@
   "Renew {n} VTXOs": {
     "one": "Renew {n} VTXO",
     "other": "Renew {n} VTXOs"
+  },
+  "{n} payments": {
+    "one": "{n} payment",
+    "other": "{n} payments"
+  },
+  "After {n} payments": {
+    "one": "After {n} payment",
+    "other": "After {n} payments"
+  },
+  "Every {n} weeks": {
+    "one": "Every {n} week",
+    "other": "Every {n} weeks"
+  },
+  "Every {n} months": {
+    "one": "Every {n} month",
+    "other": "Every {n} months"
   }
 }

@@ -81,7 +81,6 @@
   <string name="gt_e63e248cde19421e">"Ark情報"</string>
   <string name="gt_959dd1551b57ca6b">"Arkで受け取り"</string>
   <string name="gt_c1af581925115016">"Arkアドレス"</string>
-  <string name="gt_77ddc511c6da69fb">"Arkアドレス、ライトニングアドレス、またはBOLT12オファー"</string>
   <string name="gt_942b36a008a49102">"Ark残高"</string>
   <string name="gt_ba2b359463cd8640">"Ark手数料"</string>
   <string name="gt_03fc60ebe53fdf56">"Arkが預かっています"</string>
@@ -114,7 +113,6 @@
   <string name="gt_cb8603c8ce918947">"自動バックアップ"</string>
   <string name="gt_afbb8dd2c2dc511f">"自動バックアップはオフです"</string>
   <string name="gt_168ae9aa2da9e959">"%1$sへの自動支払いはスキップされました。スケジュールを開いて手数料を確認し、手動で支払ってください。"</string>
-  <string name="gt_40ffd8e019ebd77e">"Ark残高から自動で支払います。ライトニング手数料はArkの公表手数料に基づき、上限は支払額の2%または200 satsのいずれか高い方です。上限を超える支払いには手動での承認が必要です。通知は有効にしておいてください。"</string>
   <string name="gt_e674447337e83c13">"利用可能"</string>
   <string name="gt_83f44152274f9e00">"利用可能額"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12オファー"</string>
@@ -196,7 +194,6 @@
   <string name="gt_19766ed6ccb2f4a3">"キャンセル"</string>
   <string name="gt_804eb334c4bd5e69">"出金をキャンセル"</string>
   <string name="gt_d00194635dcfa015">"支払いをキャンセル"</string>
-  <string name="gt_630b44fc8b2e0942">"定期支払いをキャンセルしますか？"</string>
   <string name="gt_f3fdeb961b8bd3bd">"最終トランザクションがブロードキャストされる前に、この退出を取り消します。VTXOは引き続き使用可能です。ウォレットは、まだ取り消せるかどうかを再確認します。"</string>
   <string name="gt_6ff53a3e325cec8d">"%1$sをキャンセルしますか？"</string>
   <string name="gt_13ca2ee2499310d9">"キャンセル済み"</string>
@@ -219,6 +216,7 @@
   <string name="gt_ff2ec2618b91b367">"メールアドレスを変更"</string>
   <string name="gt_dd16e499335d3a53">"メールアドレスを変更"</string>
   <string name="gt_77a94e1521d6a8e8">"Telegramでチャット"</string>
+  <string name="gt_d0e3a822635c961f">"Check Activity for this payment\'s last attempt and ask the recipient whether it arrived."</string>
   <string name="gt_fb7099ad8e818d42">"もう一度確認"</string>
   <string name="gt_c52a96b66db5c212">"操作状況を確認"</string>
   <string name="gt_ae1b6f51f5f5da9f">"支払い状況を確認"</string>
@@ -405,7 +403,6 @@
   <string name="gt_72f2925371ee93bd">"Esplora APIを編集"</string>
   <string name="gt_84c74f3a02721306">"メールアドレスを編集"</string>
   <string name="gt_86c1a43426ba6fd7">"支払いを編集"</string>
-  <string name="gt_283b7f6696239f99">"定期支払いを編集"</string>
   <string name="gt_02f81f1a5a7297bd">"実質的な残高の変動"</string>
   <string name="gt_5bee7e5f24d7af00">"実質的な変動"</string>
   <string name="gt_969ccbd3cf6300ec">"メールアドレス"</string>
@@ -432,7 +429,6 @@
   <string name="gt_44914ac9a9fded71">"エンドポイントを更新しました"</string>
   <string name="gt_fce7fec2a58c8b49">"エンドポイント"</string>
   <string name="gt_e98982c9f2ba3332">"終了"</string>
-  <string name="gt_727cb2670fd98607">"終了：%1$s"</string>
   <string name="gt_251de8d83bdb7bd0">"ビットコインアドレスを入力"</string>
   <string name="gt_5a56a30e6da9e5d9">"VTXOの16進数データまたはIDを入力"</string>
   <string name="gt_35b68c138007e28b">"ユーザー名を入力"</string>
@@ -468,11 +464,15 @@
   <string name="gt_1b7e18513af4abe9">"毎週"</string>
   <string name="gt_2100659a7aa87d93">"%1$s %2$sごと"</string>
   <string name="gt_2742b75b4dc9ddf2">"%1$s日ごと"</string>
-  <string name="gt_d7e9ac8485286c97">"%1$sか月ごと"</string>
-  <string name="gt_31874561573db28d">"%1$s週間ごと"</string>
+  <plurals name="gt_d7e9ac8485286c97">
+    <item quantity="one">"Every %1$s month"</item>
+    <item quantity="other">"Every %1$s months"</item>
+  </plurals>
+  <plurals name="gt_31874561573db28d">
+    <item quantity="one">"Every %1$s week"</item>
+    <item quantity="other">"Every %1$s weeks"</item>
+  </plurals>
   <string name="gt_a49df89d3846230c">"…日ごと"</string>
-  <string name="gt_af781110c8c68ce4">"…か月ごと"</string>
-  <string name="gt_341acef06837c527">"…週間ごと"</string>
   <string name="gt_e3a67d9540e9a204">"実行"</string>
   <string name="gt_8422e4065fd1b49e">"既存の手数料"</string>
   <string name="gt_b4af3461164879e7">"既存のウォレットデータが不完全です"</string>
@@ -605,6 +605,7 @@
   <string name="gt_f835827028c69977">"支払いを受け取るための名前です。"</string>
   <string name="gt_d6b7a9baccadd4b1">"%1$s の送り方"</string>
   <string name="gt_4c2a3b5df96f8af7">"ウォレットを持っています"</string>
+  <string name="gt_c6f2925c588e5a67">"I checked"</string>
   <string name="gt_ef9a2be3b826ee15">"履歴を確認しました"</string>
   <string name="gt_9e0f9b800b0db2b0">"操作が重複する可能性を理解しています"</string>
   <string name="gt_806f6591e2359170">"復元フレーズを他人と共有しません。"</string>
@@ -677,7 +678,6 @@
   <string name="gt_a4fe65264ef7dbb3">"言語"</string>
   <string name="gt_aef7c5afac4b70b8">"最大VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"前回"</string>
-  <string name="gt_d947f5e87db8d3fd">"最後に支払いを試みた日時：%1$s（%2$s）"</string>
   <string name="gt_8462b632f3ab7913">"最終バックアップ"</string>
   <string name="gt_fb6ee42c1c065f89">"最終バックアップ：%1$s"</string>
   <string name="gt_f21e156f77eaeac9">"前回のバックアップ %1$s"</string>
@@ -699,6 +699,7 @@
   <string name="gt_6d65584b25b63eed">"Lightningの受け取りに失敗しました"</string>
   <string name="gt_2e657776a316f205">"ライトニングアドレス"</string>
   <string name="gt_fd323c8b42efb171">"ライトニングアドレスを利用できません"</string>
+  <string name="gt_f2429099ee4d45fe">"Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval."</string>
   <string name="gt_d38ade727afcbfed">"ライトニング請求書"</string>
   <string name="gt_31312f51a5df40b4">"ライトニング請求書は一度しか支払えません。ライトニングアドレスまたはオファーを使用してください"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightningがまだ経路を探しています。この画面を閉じても、Noahがバックグラウンドで完了させます。"</string>
@@ -784,10 +785,8 @@
   <string name="gt_87d5d56d886e2a24">"新しいコイン"</string>
   <string name="gt_0d25c8b1db6122fe">"New email"</string>
   <string name="gt_b8f18b3a55f56c76">"新しい支払い"</string>
-  <string name="gt_5774c62707b2a954">"新しい定期支払い"</string>
   <string name="gt_1ff57a29d7c9d11b">"次へ"</string>
   <string name="gt_bd26eee14731169d">"次の期限切れまで%1$s · 自動で更新されます"</string>
-  <string name="gt_83a4672409350abd">"次回の支払い：%1$s"</string>
   <string name="gt_1ea442a134b2a184">"いいえ"</string>
   <string name="gt_5d770afa42d9782f">"Arkの支払いはありません"</string>
   <string name="gt_e2dc88570af2145a">"この端末にはGoogle Playがないため、別のアプリが通知を届けます。"</string>
@@ -819,7 +818,6 @@
   <string name="gt_e36d3c06c3e6c1cd">"支払いは送信されませんでした。"</string>
   <string name="gt_1d62830d5f29977c">"表示範囲内に場所がありません"</string>
   <string name="gt_890f3a3b177e8bca">"定期支払いはありません"</string>
-  <string name="gt_6a8f8f4a6309d592">"定期支払いはまだありません。Arkアドレス、ライトニングアドレス、BOLT12オファー宛てに、家賃、定期購読料、お小遣い、寄付などの支払いを予約できます。"</string>
   <string name="gt_459617bcef74ad21">"更新ラウンドは不要でした。"</string>
   <string name="gt_0ce6b8df87b210a5">"画面ロックなし"</string>
   <string name="gt_f57ecc027388ea64">"この復元フレーズで使えるバックアップが見つかりませんでした。単語を確認して、もう一度お試しください。"</string>
@@ -894,7 +892,6 @@
   <string name="gt_bcdc043150cee3c5">"オフライン · 再試行"</string>
   <string name="gt_130011756125313c">"オン"</string>
   <string name="gt_cdd784f04a3d1825">"日付を指定"</string>
-  <string name="gt_93ced7a46f90b0f1">"指定日"</string>
   <string name="gt_8596d4a93b3d33a1">"オンチェーン"</string>
   <string name="gt_af283a1c9bacc979">"オンチェーンアドレス"</string>
   <string name="gt_1e86a7752acde6de">"定期支払いではオンチェーンアドレスはまだ利用できません"</string>
@@ -1007,7 +1004,6 @@
   <string name="gt_49f19beeecf442ef">"受取済み"</string>
   <string name="gt_076d920ee7b4ec38">"受取経路"</string>
   <string name="gt_690dbe9dc0993c42">"最近"</string>
-  <string name="gt_51fac985e95345d9">"受取人"</string>
   <string name="gt_aa815083375c5f6e">"受取人の受取額が未確定"</string>
   <string name="gt_fdbcd05664b4ce23">"受取人の受取額は約%1$s satsです"</string>
   <string name="gt_3fed24d17905877f">"受取人を確認済み"</string>
@@ -1067,6 +1063,7 @@
   <string name="gt_f3e4352a5df650e5">"残り"</string>
   <string name="gt_c3812fc4acb861d5">"削除"</string>
   <string name="gt_86c0f68e1ece91e2">"スクリーンショットを削除"</string>
+  <string name="gt_4e9ea48ffbfb99b0">"Remove payment"</string>
   <string name="gt_ed14fa72453957ca">"スクリーンショットを削除"</string>
   <string name="gt_90c1689b0b74f032">"更新"</string>
   <string name="gt_e32344915fd29a53">"このVTXOを更新"</string>
@@ -1084,7 +1081,6 @@
     <item quantity="other">"%1$s枚のコインを更新しました"</item>
   </plurals>
   <string name="gt_56887030c2bff90f">"家賃やお小遣い、寄付を期日どおりに支払います。"</string>
-  <string name="gt_b6b7a0065808a62e">"繰り返し"</string>
   <string name="gt_2f701cdd590b11d8">"重複送金防止を解除しました"</string>
   <string name="gt_dc11f56227629a10">"重複防止が解除されました。元の試行の記録は引き続き保存されています。再送信する前に、現在のウォレットの状態を確認してください。"</string>
   <string name="gt_0e878c81671aa8dc">"重複防止を解除："</string>
@@ -1112,7 +1108,6 @@
   <string name="gt_d640c7421da06661">"再開"</string>
   <string name="gt_fc7e92478faea878">"復元を再開"</string>
   <string name="gt_a5c671347dbb4adc">"履歴を確認してから再開"</string>
-  <string name="gt_ffc72d576331b018">"履歴を確認してから再開…"</string>
   <string name="gt_646db00716cc87dc">"それでも再開する"</string>
   <string name="gt_9d9b7bbc32db7155">"Resume your wallet in Settings → Advanced."</string>
   <string name="gt_a97d32ddb6baca01">"再開しました"</string>
@@ -1123,7 +1118,6 @@
   <string name="gt_aff0766a5290e117">"確認"</string>
   <string name="gt_0cde499fcb0c92da">"受け取り内容を確認"</string>
   <string name="gt_25aa0f37b47607b3">"確認して支払う"</string>
-  <string name="gt_ebf6d96a47674b7c">"確認して手動で支払う"</string>
   <string name="gt_8b3cd108890cf4d0">"ウォレット内の全資金の退出を確認"</string>
   <string name="gt_7c434cbd5c50154f">"選択した退出を確認"</string>
   <string name="gt_8b3426dcf53c3f35">"確認済みの金額"</string>
@@ -1552,6 +1546,7 @@
   <string name="gt_f195f8e226312c3a">"準備が整いました"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_f683740cded6680d">"bell"</string>
+  <string name="gt_ab51004e9d71a485">"days"</string>
   <string name="gt_0b8e9e995d8d77f1">"デバッグ"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_308e322df797ff25">"例：家賃"</string>
@@ -1564,6 +1559,8 @@
   <string name="gt_82a3537ff0dbce7e">"名前"</string>
   <string name="gt_7749eed65c4e3535">"name@domain.com、ark1… または lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"次"</string>
+  <string name="gt_6b2251347446a4b2">"next %1$s"</string>
+  <string name="gt_df384ae97c77ad30">"payments"</string>
   <string name="gt_72bec4bd8f6d91a8">"sailboat"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats（毎回）"</string>
@@ -1576,7 +1573,6 @@
   <string name="gt_464da15709a11412">"Ark経由 · たった今"</string>
   <string name="gt_dfe9c9f8e8e77181">"Lightning経由 · たった今"</string>
   <string name="gt_53e6cdc30765aade">"you@example.com"</string>
-  <string name="gt_e8fd16d62fe0b616">"1回の支払いにつき%1$s＋ネットワーク手数料"</string>
   <plurals name="gt_0339522c6cfc9440">
     <item quantity="one">"1件の出金が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"</item>
     <item quantity="other">"%1$s 件の退出が現在のチェーンの高さより遅れています。 「出金処理を進める」でブロックチェーンの状態を確認してください。出金トランザクションがブロードキャストされる場合もあります。"</item>
@@ -1602,7 +1598,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s。他のバックアップはそのまま残ります。"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · 次回 %2$s"</string>
-  <string name="gt_3a90596f58baed3b">"%1$s · %2$s 支払い済み"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>

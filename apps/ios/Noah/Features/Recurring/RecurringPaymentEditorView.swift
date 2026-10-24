@@ -5,11 +5,9 @@ struct RecurringPaymentEditorView: View {
     let original: RecurringPayment?
     @Environment(AppModel.self) private var app
     @Environment(\.locale) private var locale
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.settings) private var settings
     private enum Field: Hashable { case label, recipient, amount, comment, days, count }
     @FocusState private var focus: Field?
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
-    private var compactKeyboard: Bool { verticalSizeClass == .compact && focus != nil }
     @State private var label: String
     @State private var recipient: String
     @State private var amount: String
@@ -23,6 +21,7 @@ struct RecurringPaymentEditorView: View {
     @State private var count: String
     @State private var error: String?
     @State private var saving = false
+    @State private var editingRecipient = false
 
     init(executor: RecurringExecutor, schedule: RecurringPayment? = nil) {
         self.executor = executor; original = schedule
@@ -49,78 +48,147 @@ struct RecurringPaymentEditorView: View {
     private var interval: RecurringInterval { .init(unit: frequency, every: frequency == "day" ? (Int(customDays) ?? 0) : periodEvery) }
     private var destination: (destination: String, type: String)? { try? RecurringRecipient.resolve(recipient) }
     var body: some View {
-        ScrollViewReader { scroll in
-            AdaptiveForm {
-                Section {
-                    Text("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.")
-                        .foregroundStyle(NoahColor.mutedForeground)
-                    if original != nil { Text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.").font(NoahFont.footnote) }
-                }
-                Section("Name") { TextField("e.g. Rent, Donation, VPN", text: $label).onChange(of: label) { _, value in label = Self.limitedText(value, limit: 64) }.focused($focus, equals: .label).id(Field.label).accessibilityIdentifier("recurring-label-input") }
-                Section("Recipient") {
-                    TextField("name@domain.com, ark1… or lno1…", text: $recipient)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled().focused($focus, equals: .recipient).id(Field.recipient)
-                        .accessibilityIdentifier("recurring-recipient-input")
-                    Text(LocalizedStringKey(destination.map { $0.type == "ark" ? "Ark address" : $0.type == "lnurl" ? "Lightning address" : "BOLT12 offer" } ?? "Ark address, Lightning address or BOLT12 offer"))
-                        .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                }
-                Section("Amount (sats)") {
-                    TextField("Amount in sats", text: $amount).keyboardType(.numberPad).focused($focus, equals: .amount).id(Field.amount)
-                        .accessibilityIdentifier("recurring-amount-input")
-                    Text(L10n.text("{_gt_value_2} per payment, plus network fees", BitcoinAmount.format(sats: Int64(amount) ?? 0, unit: app.amountUnit, locale: locale), locale: locale.identifier)).font(NoahFont.footnote)
-                }
-                if destination?.type == "lnurl" {
-                    Section("Note (optional)") {
-                        TextField("Shared with the recipient", text: $comment).onChange(of: comment) { _, value in comment = Self.limitedText(value, limit: 140) }.focused($focus, equals: .comment).id(Field.comment)
+        SettingsScroll(line: L10n.text("Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.", locale: language)) {
+            if original != nil {
+                SettingsFine(text: L10n.text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.", locale: language))
+            }
+            amountField.padding(.top, 14)
+            SettingsField(label: L10n.text("To", locale: language), placeholder: L10n.text("name@domain.com, ark1… or lno1…", locale: language),
+                          text: $recipient, failure: recipientError != nil, tag: recipientTag, id: "recurring-recipient-input",
+                          focusChanged: { editingRecipient = $0 })
+            if let recipientError { SettingsFine(text: recipientError, failure: true).padding(.top, -8) }
+            SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("e.g. Rent, Donation, VPN", locale: language), text: $label,
+                          id: "recurring-label-input")
+                .onChange(of: label) { _, value in label = Self.limitedText(value, limit: 64) }
+            if destination?.type == "lnurl" {
+                SettingsField(label: L10n.text("Note (optional)", locale: language), placeholder: L10n.text("Shared with the recipient", locale: language),
+                              text: $comment)
+                    .onChange(of: comment) { _, value in comment = Self.limitedText(value, limit: 140) }
+            }
+            label(L10n.text("Repeats", locale: language))
+            Picker(L10n.text("Repeats", locale: language), selection: $frequency) {
+                Text(L10n.text("Weekly", locale: language)).tag("week")
+                Text(L10n.text("Monthly", locale: language)).tag("month")
+                Text(L10n.text("Custom", locale: language)).tag("day")
+            }
+            .pickerStyle(.segmented)
+            .padding(.top, 8)
+            if frequency == "day" {
+                SettingsField(placeholder: L10n.text("Every … days", locale: language), text: $customDays, keyboard: .numberPad,
+                              tag: L10n.text("days", locale: language))
+                    .padding(.top, -10)
+            } else {
+                stepper(frequency == "week" ? L10n.plural("Every {n} weeks", count: periodEvery, locale: language)
+                            : L10n.plural("Every {n} months", count: periodEvery, locale: language),
+                        value: $periodEvery, range: 1...12)
+            }
+            label(L10n.text("First payment", locale: language))
+            DatePicker(L10n.text("First payment", locale: language), selection: $start)
+                .labelsHidden()
+                .padding(.top, 8)
+            label(L10n.text("Ends", locale: language))
+            Picker(L10n.text("Ends", locale: language), selection: $endMode) {
+                Text(L10n.text("Never", locale: language)).tag("never")
+                Text(L10n.text("On a date", locale: language)).tag("date")
+                Text(L10n.text("After", locale: language)).tag("count")
+            }
+            .pickerStyle(.segmented)
+            .padding(.top, 8)
+            if endMode == "date" {
+                DatePicker(L10n.text("End date", locale: language), selection: $endDate, displayedComponents: .date)
+                    .labelsHidden()
+                    .padding(.top, 10)
+            }
+            if endMode == "count" {
+                SettingsField(placeholder: L10n.text("Number of payments", locale: language), text: $count, keyboard: .numberPad,
+                              tag: L10n.text("payments", locale: language))
+                    .padding(.top, -10)
+            }
+            if interval.valid {
+                label(L10n.text(interval.description, locale: language))
+                WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: NoahTokens.Space.s) {
+                    ForEach(preview, id: \.self) { next in
+                        Text(verbatim: Date(timeIntervalSince1970: next / 1000).formatted(.dateTime.month(.abbreviated).day().hour().minute().locale(locale)))
+                            .noahText(NoahTokens.Typography.control)
+                            .padding(.horizontal, 14).frame(minHeight: NoahTokens.Size.chip)
+                            .overlay { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) }
                     }
                 }
-            } secondary: {
-                Section("Repeat") {
-                    Picker("Repeat", selection: $frequency) { Text("Weekly").tag("week"); Text("Monthly").tag("month"); Text("Custom").tag("day") }.pickerStyle(.segmented)
-                    if frequency == "day" { TextField("Every … days", text: $customDays).keyboardType(.numberPad).focused($focus, equals: .days).id(Field.days) }
-                    else {
-                        Picker(frequency == "week" ? "Every … weeks" : "Every … months", selection: $periodEvery) {
-                            ForEach(1...12, id: \.self) { Text("\($0)").tag($0) }
-                        }
-                    }
-                }
-                Section("First payment") { DatePicker("First payment", selection: $start) }
-                Section("Ends") {
-                    Picker("Ends", selection: $endMode) { Text("Never").tag("never"); Text("On date").tag("date"); Text("After").tag("count") }.pickerStyle(.segmented)
-                    if endMode == "date" { DatePicker("End date", selection: $endDate, displayedComponents: .date) }
-                    if endMode == "count" { TextField("Number of payments", text: $count).keyboardType(.numberPad).focused($focus, equals: .count).id(Field.count) }
-                }
-                if interval.valid {
-                    Section(interval.description) {
-                        ForEach(preview, id: \.self) { Text(Date(timeIntervalSince1970: $0 / 1000).formatted()) }
-                        Text("You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice.")
-                            .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                    }
-                }
-                if let error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
+                .padding(.top, 8)
+                SettingsFine(text: L10n.text("You'll get a reminder the day before and a notification after each payment. If a payment is missed while your phone is off, Noah skips it instead of paying twice.", locale: language))
             }
-            .scrollFocusedField(focus, using: scroll)
+            if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
         }
-        .settingsStyle(original == nil ? "New recurring payment" : "Edit recurring payment", maximumWidth: AdaptiveLayout.pairedWidth)
-        .scrollDismissesKeyboard(.interactively)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                if compactKeyboard {
-                    Button(original == nil ? "Schedule payment" : "Save payment") { focus = nil; save() }
-                        .disabled(saving).accessibilityIdentifier("recurring-save-button")
+        .settingsChrome(original == nil ? "New payment" : "Edit payment")
+        .settingsFooter {
+            Button(action: { focus = nil; save() }) {
+                HStack(spacing: 8) {
+                    if saving { ProgressView().tint(NoahTokens.Colors.background) }
+                    Text(L10n.text(original == nil ? "Schedule payment" : "Save payment", locale: language))
                 }
-                Spacer()
-                Button("Done") { focus = nil }
             }
+            .buttonStyle(SettingsActionStyle())
+            .disabled(saving)
+            .accessibilityIdentifier("recurring-save-button")
         }
-        .safeAreaInset(edge: .bottom) {
-            if !compactKeyboard {
-                NoahButton(title: original == nil ? "Schedule payment" : "Save payment", isLoading: saving) { focus = nil; save() }
-                    .padding(.horizontal).padding(.vertical, 4).readableWidth()
-                    .accessibilityIdentifier("recurring-save-button")
-            }
-        }
+        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = nil } } }
     }
+
+    private var language: String { locale.identifier }
+
+    /// The big amount, in sats each time.
+    private var amountField: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(NoahTokens.Colors.muted)) { Text("Amount in sats") }
+                .noahText(SettingsText.big)
+                .keyboardType(.numberPad)
+                .tint(NoahTokens.Colors.orange)
+                .focused($focus, equals: .amount)
+                .fixedSize()
+                .accessibilityIdentifier("recurring-amount-input")
+            Text(L10n.text("sats each time", locale: language)).noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
+            Spacer(minLength: 0)
+        }
+        .padding(.bottom, 10)
+        .overlay(alignment: .bottom) { OnboardingUnderline(focused: focus == .amount) }
+        .contentShape(Rectangle())
+        .onTapGesture { focus = .amount }
+    }
+
+    private var recipientTag: String? {
+        destination.map { L10n.text($0.type == "ark" ? "Ark address" : $0.type == "lnurl" ? "Lightning address" : "BOLT12 offer", locale: language) }
+    }
+
+    /// Today's resolution errors, inline once you've left the field.
+    private var recipientError: String? {
+        guard !editingRecipient, !recipient.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        do { _ = try RecurringRecipient.resolve(recipient); return nil } catch { return error.localizedDescription }
+    }
+
+    private func label(_ text: String) -> some View {
+        Text(verbatim: text).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 20)
+    }
+
+    private func stepper(_ title: String, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
+        HStack {
+            Text(verbatim: title).noahText(SettingsText.value)
+            Spacer()
+            HStack(spacing: 8) {
+                Button { value.wrappedValue = max(range.lowerBound, value.wrappedValue - 1) } label: { Image(systemName: "minus").frame(width: 40, height: 36) }
+                    .disabled(value.wrappedValue <= range.lowerBound)
+                    .accessibilityLabel(Text("Fewer"))
+                Button { value.wrappedValue = min(range.upperBound, value.wrappedValue + 1) } label: { Image(systemName: "plus").frame(width: 40, height: 36) }
+                    .disabled(value.wrappedValue >= range.upperBound)
+                    .accessibilityLabel(Text("More"))
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 17, weight: .medium))
+            .background(NoahTokens.Colors.soft, in: Capsule())
+        }
+        .frame(height: 48)
+        .padding(.top, 10)
+    }
+
     private var preview: [Double] {
         let schedule = draft(destination: destination?.destination ?? "", type: destination?.type ?? "ark")
         return (0..<3).compactMap { schedule.next($0) }
@@ -144,7 +212,8 @@ struct RecurringPaymentEditorView: View {
                 // Editing grants a new policy from its chosen first payment; retain visible history.
                 if let original { schedule.runs = original.runs }
                 try await executor.save(schedule, editing: original != nil)
-                dismiss()
+                settings.toast(original == nil ? "Scheduled" : "Saved")
+                settings.back()
             } catch { self.error = error.localizedDescription }
         }
     }

@@ -81,7 +81,6 @@
   <string name="gt_e63e248cde19421e">"Ark Info"</string>
   <string name="gt_959dd1551b57ca6b">"Ark Receive"</string>
   <string name="gt_c1af581925115016">"Ark address"</string>
-  <string name="gt_77ddc511c6da69fb">"Ark address, Lightning address or BOLT12 offer"</string>
   <string name="gt_942b36a008a49102">"Ark balance"</string>
   <string name="gt_ba2b359463cd8640">"Ark fee"</string>
   <string name="gt_03fc60ebe53fdf56">"Ark holds it for you"</string>
@@ -114,7 +113,6 @@
   <string name="gt_cb8603c8ce918947">"Automatic backups"</string>
   <string name="gt_afbb8dd2c2dc511f">"Automatic backups off"</string>
   <string name="gt_168ae9aa2da9e959">"Automatic payment to %1$s was skipped. Open the schedule to review its fee and pay manually."</string>
-  <string name="gt_40ffd8e019ebd77e">"Automatic payments from your Ark balance. Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval. Keep notifications enabled."</string>
   <string name="gt_e674447337e83c13">"Available"</string>
   <string name="gt_83f44152274f9e00">"Available Value"</string>
   <string name="gt_7f0f933db2ac9622">"BOLT12 offer"</string>
@@ -196,7 +194,6 @@
   <string name="gt_19766ed6ccb2f4a3">"Cancel"</string>
   <string name="gt_804eb334c4bd5e69">"Cancel Exit"</string>
   <string name="gt_d00194635dcfa015">"Cancel payment"</string>
-  <string name="gt_630b44fc8b2e0942">"Cancel recurring payment?"</string>
   <string name="gt_f3fdeb961b8bd3bd">"Cancel this exit before its final transaction is broadcast. The VTXO remains spendable. The wallet will recheck whether cancellation is still possible."</string>
   <string name="gt_6ff53a3e325cec8d">"Cancel %1$s?"</string>
   <string name="gt_13ca2ee2499310d9">"Canceled"</string>
@@ -219,6 +216,7 @@
   <string name="gt_ff2ec2618b91b367">"Change email"</string>
   <string name="gt_dd16e499335d3a53">"Change email address"</string>
   <string name="gt_77a94e1521d6a8e8">"Chat on Telegram"</string>
+  <string name="gt_d0e3a822635c961f">"Check Activity for this payment\'s last attempt and ask the recipient whether it arrived."</string>
   <string name="gt_fb7099ad8e818d42">"Check again"</string>
   <string name="gt_c52a96b66db5c212">"Check operation status"</string>
   <string name="gt_ae1b6f51f5f5da9f">"Check payment status"</string>
@@ -405,7 +403,6 @@
   <string name="gt_72f2925371ee93bd">"Edit Esplora API"</string>
   <string name="gt_84c74f3a02721306">"Edit email address"</string>
   <string name="gt_86c1a43426ba6fd7">"Edit payment"</string>
-  <string name="gt_283b7f6696239f99">"Edit recurring payment"</string>
   <string name="gt_02f81f1a5a7297bd">"Effective balance change"</string>
   <string name="gt_5bee7e5f24d7af00">"Effective change"</string>
   <string name="gt_969ccbd3cf6300ec">"Email"</string>
@@ -432,7 +429,6 @@
   <string name="gt_44914ac9a9fded71">"Endpoint updated"</string>
   <string name="gt_fce7fec2a58c8b49">"Endpoints"</string>
   <string name="gt_e98982c9f2ba3332">"Ends"</string>
-  <string name="gt_727cb2670fd98607">"Ends: %1$s"</string>
   <string name="gt_251de8d83bdb7bd0">"Enter Bitcoin address"</string>
   <string name="gt_5a56a30e6da9e5d9">"Enter VTXO hex or ID"</string>
   <string name="gt_35b68c138007e28b">"Enter a username"</string>
@@ -468,11 +464,15 @@
   <string name="gt_1b7e18513af4abe9">"Every week"</string>
   <string name="gt_2100659a7aa87d93">"Every %1$s %2$ss"</string>
   <string name="gt_2742b75b4dc9ddf2">"Every %1$s days"</string>
-  <string name="gt_d7e9ac8485286c97">"Every %1$s months"</string>
-  <string name="gt_31874561573db28d">"Every %1$s weeks"</string>
+  <plurals name="gt_d7e9ac8485286c97">
+    <item quantity="one">"Every %1$s month"</item>
+    <item quantity="other">"Every %1$s months"</item>
+  </plurals>
+  <plurals name="gt_31874561573db28d">
+    <item quantity="one">"Every %1$s week"</item>
+    <item quantity="other">"Every %1$s weeks"</item>
+  </plurals>
   <string name="gt_a49df89d3846230c">"Every … days"</string>
-  <string name="gt_af781110c8c68ce4">"Every … months"</string>
-  <string name="gt_341acef06837c527">"Every … weeks"</string>
   <string name="gt_e3a67d9540e9a204">"Execute"</string>
   <string name="gt_8422e4065fd1b49e">"Existing fee"</string>
   <string name="gt_b4af3461164879e7">"Existing wallet data is incomplete"</string>
@@ -605,6 +605,7 @@
   <string name="gt_f835827028c69977">"How people pay you."</string>
   <string name="gt_d6b7a9baccadd4b1">"How to send %1$s"</string>
   <string name="gt_4c2a3b5df96f8af7">"I already have a wallet"</string>
+  <string name="gt_c6f2925c588e5a67">"I checked"</string>
   <string name="gt_ef9a2be3b826ee15">"I checked history"</string>
   <string name="gt_9e0f9b800b0db2b0">"I understand this may repeat the operation"</string>
   <string name="gt_806f6591e2359170">"I will not share my recovery phrase."</string>
@@ -677,7 +678,6 @@
   <string name="gt_a4fe65264ef7dbb3">"Language"</string>
   <string name="gt_aef7c5afac4b70b8">"Largest VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"Last"</string>
-  <string name="gt_d947f5e87db8d3fd">"Last attempt: %1$s (%2$s)"</string>
   <string name="gt_8462b632f3ab7913">"Last backup"</string>
   <string name="gt_fb6ee42c1c065f89">"Last backup %1$s"</string>
   <string name="gt_f21e156f77eaeac9">"Last backup %1$s"</string>
@@ -699,6 +699,7 @@
   <string name="gt_6d65584b25b63eed">"Lightning Receive Failed"</string>
   <string name="gt_2e657776a316f205">"Lightning address"</string>
   <string name="gt_fd323c8b42efb171">"Lightning address unavailable"</string>
+  <string name="gt_f2429099ee4d45fe">"Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval."</string>
   <string name="gt_d38ade727afcbfed">"Lightning invoice"</string>
   <string name="gt_31312f51a5df40b4">"Lightning invoices can only be paid once. Use a Lightning address or offer"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightning is still finding a route. You can leave this screen; Noah finishes it in the background."</string>
@@ -784,10 +785,8 @@
   <string name="gt_87d5d56d886e2a24">"New coins"</string>
   <string name="gt_0d25c8b1db6122fe">"New email"</string>
   <string name="gt_b8f18b3a55f56c76">"New payment"</string>
-  <string name="gt_5774c62707b2a954">"New recurring payment"</string>
   <string name="gt_1ff57a29d7c9d11b">"Next"</string>
   <string name="gt_bd26eee14731169d">"Next expiry in %1$s · renews automatically"</string>
-  <string name="gt_83a4672409350abd">"Next payment: %1$s"</string>
   <string name="gt_1ea442a134b2a184">"No"</string>
   <string name="gt_5d770afa42d9782f">"No Ark payments"</string>
   <string name="gt_e2dc88570af2145a">"No Google Play here, so another app delivers notifications."</string>
@@ -819,7 +818,6 @@
   <string name="gt_e36d3c06c3e6c1cd">"No payment was submitted."</string>
   <string name="gt_1d62830d5f29977c">"No places in view"</string>
   <string name="gt_890f3a3b177e8bca">"No recurring payments"</string>
-  <string name="gt_6a8f8f4a6309d592">"No recurring payments yet. Schedule rent, subscriptions, allowances or donations to an Ark address, Lightning address or BOLT12 offer."</string>
   <string name="gt_459617bcef74ad21">"No refresh round was needed."</string>
   <string name="gt_0ce6b8df87b210a5">"No screen lock"</string>
   <string name="gt_f57ecc027388ea64">"No usable backup was found for this recovery phrase. Check the words and try again."</string>
@@ -894,7 +892,6 @@
   <string name="gt_bcdc043150cee3c5">"Offline · Retry"</string>
   <string name="gt_130011756125313c">"On"</string>
   <string name="gt_cdd784f04a3d1825">"On a date"</string>
-  <string name="gt_93ced7a46f90b0f1">"On date"</string>
   <string name="gt_8596d4a93b3d33a1">"On-chain"</string>
   <string name="gt_af283a1c9bacc979">"On-chain address"</string>
   <string name="gt_1e86a7752acde6de">"On-chain addresses are not supported for recurring payments yet"</string>
@@ -1007,7 +1004,6 @@
   <string name="gt_49f19beeecf442ef">"Received"</string>
   <string name="gt_076d920ee7b4ec38">"Received on"</string>
   <string name="gt_690dbe9dc0993c42">"Recent"</string>
-  <string name="gt_51fac985e95345d9">"Recipient"</string>
   <string name="gt_aa815083375c5f6e">"Recipient amount pending"</string>
   <string name="gt_fdbcd05664b4ce23">"Recipient receives about %1$s sats"</string>
   <string name="gt_3fed24d17905877f">"Recipient verified"</string>
@@ -1067,6 +1063,7 @@
   <string name="gt_f3e4352a5df650e5">"Remaining"</string>
   <string name="gt_c3812fc4acb861d5">"Remove"</string>
   <string name="gt_86c0f68e1ece91e2">"Remove Screenshot"</string>
+  <string name="gt_4e9ea48ffbfb99b0">"Remove payment"</string>
   <string name="gt_ed14fa72453957ca">"Remove screenshot"</string>
   <string name="gt_90c1689b0b74f032">"Renew"</string>
   <string name="gt_e32344915fd29a53">"Renew this VTXO"</string>
@@ -1084,7 +1081,6 @@
     <item quantity="other">"Renewed %1$s coins"</item>
   </plurals>
   <string name="gt_56887030c2bff90f">"Rent, allowances or donations, paid on time."</string>
-  <string name="gt_b6b7a0065808a62e">"Repeat"</string>
   <string name="gt_2f701cdd590b11d8">"Repeat protection overridden"</string>
   <string name="gt_dc11f56227629a10">"Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."</string>
   <string name="gt_0e878c81671aa8dc">"Repeat protection overridden: "</string>
@@ -1112,7 +1108,6 @@
   <string name="gt_d640c7421da06661">"Resume"</string>
   <string name="gt_fc7e92478faea878">"Resume Recovery"</string>
   <string name="gt_a5c671347dbb4adc">"Resume after checking history"</string>
-  <string name="gt_ffc72d576331b018">"Resume after checking history…"</string>
   <string name="gt_646db00716cc87dc">"Resume anyway"</string>
   <string name="gt_9d9b7bbc32db7155">"Resume your wallet in Settings → Advanced."</string>
   <string name="gt_a97d32ddb6baca01">"Resumed"</string>
@@ -1123,7 +1118,6 @@
   <string name="gt_aff0766a5290e117">"Review"</string>
   <string name="gt_0cde499fcb0c92da">"Review Claim"</string>
   <string name="gt_25aa0f37b47607b3">"Review and pay"</string>
-  <string name="gt_ebf6d96a47674b7c">"Review and pay manually"</string>
   <string name="gt_8b3cd108890cf4d0">"Review entire wallet exit"</string>
   <string name="gt_7c434cbd5c50154f">"Review selected exit"</string>
   <string name="gt_8b3426dcf53c3f35">"Reviewed amount"</string>
@@ -1552,6 +1546,7 @@
   <string name="gt_f195f8e226312c3a">"You’re all set"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
   <string name="gt_f683740cded6680d">"bell"</string>
+  <string name="gt_ab51004e9d71a485">"days"</string>
   <string name="gt_0b8e9e995d8d77f1">"debug"</string>
   <string name="gt_6197595503f01ee2">"delete"</string>
   <string name="gt_308e322df797ff25">"e.g. Rent"</string>
@@ -1564,6 +1559,8 @@
   <string name="gt_82a3537ff0dbce7e">"name"</string>
   <string name="gt_7749eed65c4e3535">"name@domain.com, ark1… or lno1…"</string>
   <string name="gt_c6c1c9a9c8543f1e">"next"</string>
+  <string name="gt_6b2251347446a4b2">"next %1$s"</string>
+  <string name="gt_df384ae97c77ad30">"payments"</string>
   <string name="gt_72bec4bd8f6d91a8">"sailboat"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats each time"</string>
@@ -1576,7 +1573,6 @@
   <string name="gt_464da15709a11412">"via Ark · just now"</string>
   <string name="gt_dfe9c9f8e8e77181">"via Lightning · just now"</string>
   <string name="gt_53e6cdc30765aade">"you@example.com"</string>
-  <string name="gt_e8fd16d62fe0b616">"%1$s per payment, plus network fees"</string>
   <plurals name="gt_0339522c6cfc9440">
     <item quantity="one">"One exit is behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions."</item>
     <item quantity="other">"%1$s exits are behind the current chain height. Use Progress to check the chain; this can also broadcast exit transactions."</item>
@@ -1602,7 +1598,6 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Your other backups stay."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s at %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · next %2$s"</string>
-  <string name="gt_3a90596f58baed3b">"%1$s · %2$s paid"</string>
   <string name="gt_649bcbbdfaae651e">"%1$s · %2$s · %3$s…"</string>
   <string name="gt_cf92873bf4b137b2">"%1$s: %2$s"</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>

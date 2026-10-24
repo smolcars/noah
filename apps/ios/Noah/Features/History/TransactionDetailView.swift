@@ -426,9 +426,9 @@ struct TransactionDetailView: View {
 
     @ViewBuilder private func destination(_ link: Link) -> some View {
         switch link {
-        case .coin(let id, _): VtxoDetailView(id: id)
+        case .coin(let id, _): SettingsHost(page: .vtxo(id))
         case .exits: UnilateralExitView()
-        case .recurring(let id): RecurringPaymentsView(scheduleID: id)
+        case .recurring(let id): SettingsHost(page: .schedule(id))
         }
     }
 
