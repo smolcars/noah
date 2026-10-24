@@ -142,6 +142,8 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         }
     }
     val actions = ExitActions.of(stage, context.cancelable)
+    // Beside a primary Claim or "Add on-chain funds", Check the chain is a link at the top of the details, not a pill.
+    val checkLink = ExitActions.Action.check in actions && (ExitActions.Action.claim in actions || ExitActions.Action.addFunds in actions)
     val received = context.claimShare(exit.id)?.takeIf { stage.phase == ExitStage.Phase.claimed }?.let { ExitRules.received(exit.amount, it) } ?: exit.amount
     val need = exit.nextPackageFee?.let { fee -> context.confirmed?.let { fee - it } }?.coerceAtLeast(0) ?: 0
     ExitFrame(tr("Exit"), back, hero = true, scroll = scroll, pictureLeads = true, foot = if (actions.isEmpty()) null else ({
@@ -152,8 +154,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
             ExitActions.Action.addFunds -> FootPill(tr("Add on-chain funds"), Modifier.testTag("exit-add-funds"), enabled = !suspended) { addFunds(need) }
             ExitActions.Action.cancel -> FootPill(tr("Cancel exit"), Modifier.testTag("exit-cancel"), outlined = true, weight = .8f,
                 enabled = !busy && !suspended, onClick = cancel)
-            // Beside "Add on-chain funds" there's no room for a third pill: Check the chain is a link under the warning.
-            ExitActions.Action.check -> if (ExitActions.Action.addFunds !in actions) FootPill(tr("Check the chain"), Modifier.testTag("exit-check"),
+            ExitActions.Action.check -> if (!checkLink) FootPill(tr("Check the chain"), Modifier.testTag("exit-check"),
                 outlined = !stage.stale, enabled = !busy && !suspended, loading = busy, onClick = check)
         }
     }), leading = {
@@ -165,8 +166,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
     }) {
         if (wide) ExitHeader(exit, stage, received, money, exitSubLine(stage, context, money))
         if (failed) Warning(tr("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need)), failed = true)
-        if (ExitActions.Action.check in actions && ExitActions.Action.addFunds in actions)
-            SettingsLink(tr("Check the chain"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
+        if (checkLink) SettingsLink(tr("Check the chain"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
         if (stage.stale && stage.live) Warning(tr("This exit is behind the current chain height: last checked at block {height}, {n} blocks ago. Checking the chain can also send exit transactions.",
             number(exit.details.tip_height ?: 0), number(context.tip - (exit.details.tip_height ?: context.tip))), SettingsIcons.clock)
         ExitRows(exit, stage, context, money)

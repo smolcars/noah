@@ -145,15 +145,16 @@ internal object ExitClaims {
 }
 
 /**
- * The exit page's actions for a stage (prototype `pFoot`); Cancel exit only while bark allows it. Needing funds keeps Cancel
- * and Check the chain beside "Add on-chain funds", the primary one.
+ * The exit page's actions for a stage (prototype `pFoot`); Cancel exit only while bark allows it. Check the chain stays while
+ * the exit is live, also beside a primary Claim or "Add on-chain funds" and while claiming, so a stopped daemon never strands
+ * it: bark notices a claim confirming, or falling out, only when it progresses.
  */
 internal object ExitActions {
     enum class Action { done, claim, addFunds, cancel, check }
     fun of(stage: ExitStage, cancelable: Boolean): List<Action> = when {
         !stage.live -> listOf(Action.done)
-        stage.phase == ExitStage.Phase.claimable -> listOf(Action.claim)
-        stage.phase == ExitStage.Phase.claiming -> emptyList()
+        stage.phase == ExitStage.Phase.claimable -> listOf(Action.claim, Action.check)
+        stage.phase == ExitStage.Phase.claiming -> listOf(Action.check)
         stage.attention == ExitStage.Attention.needsFunds -> listOfNotNull(Action.cancel.takeIf { cancelable }, Action.addFunds, Action.check)
         else -> listOfNotNull(Action.cancel.takeIf { cancelable }, Action.check)
     }

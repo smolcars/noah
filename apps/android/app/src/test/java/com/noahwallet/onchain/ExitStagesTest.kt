@@ -57,8 +57,9 @@ class ExitStagesTest {
         // Needing funds, "Add on-chain funds" leads, but Cancel (while bark allows it) and Check the chain stay.
         assertEquals(listOf(a.cancel, a.addFunds, a.check), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = true))
         assertEquals(listOf(a.addFunds, a.check), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = false))
-        assertEquals(listOf(a.claim), ExitActions.of(ExitStage(ExitStage.Phase.claimable), cancelable = false))
-        assertEquals(emptyList<ExitActions.Action>(), ExitActions.of(ExitStage(ExitStage.Phase.claiming), cancelable = false))
+        // Check the chain stays beside Claim and while claiming: only bark's progress notices a claim confirm or fall out.
+        assertEquals(listOf(a.claim, a.check), ExitActions.of(ExitStage(ExitStage.Phase.claimable), cancelable = false))
+        assertEquals(listOf(a.check), ExitActions.of(ExitStage(ExitStage.Phase.claiming), cancelable = false))
         for (phase in listOf(ExitStage.Phase.claimed, ExitStage.Phase.canceled, ExitStage.Phase.spent, ExitStage.Phase.swept))
             assertEquals(phase.name, listOf(a.done), ExitActions.of(ExitStage(phase), cancelable = true))
         // bark's own rule decides cancelable: Start, or Processing until the last transaction is broadcast.
@@ -285,7 +286,7 @@ class ExitStagesTest {
         val claimable = ExitStage(ExitStage.Phase.claimable)
         val waiting = exit("Claimable", ExitDetails(kind = "claimable"))
         assertEquals(ExitStage(ExitStage.Phase.claiming, claimTxid = "claim"), ExitClaims.apply(waiting, claimable, "claim"))
-        assertEquals(emptyList<ExitActions.Action>(), ExitActions.of(ExitClaims.apply(waiting, claimable, "claim"), cancelable = false))
+        assertEquals(listOf(a.check), ExitActions.of(ExitClaims.apply(waiting, claimable, "claim"), cancelable = false))
         assertEquals(claimable, ExitClaims.apply(waiting, claimable, null))
         assertEquals("bark's own later states win", ExitStage(ExitStage.Phase.claimed), ExitClaims.apply(waiting, ExitStage(ExitStage.Phase.claimed), "claim"))
         // bark saw that claim, then it fell out and the exit is claimable again: show that, not "Claiming" forever.

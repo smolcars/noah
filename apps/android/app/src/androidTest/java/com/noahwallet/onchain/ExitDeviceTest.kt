@@ -112,6 +112,24 @@ class ExitDeviceTest {
         compose.runOnIdle { assertEquals(listOf(ClaimTo.phone), chosen) }
     }
 
+    @Test fun claimableAndClaimingExitsKeepCheckTheChain() {
+        compose.mainClock.autoAdvance = false
+        var exit by mutableStateOf(f.claimable)
+        var checks = 0
+        compose.setContent { NoahTheme { ExitPreviewHost {
+            val tip = exit.details.tip_height ?: f.tip
+            ExitProgressContent(exit, f.stage(exit, tip), ExitContext(tip, 18_400, 144), false, false, f.money, {}, { checks++ }, {}, {}, {}, {})
+        } } }
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.onNodeWithTag("exit-claim").assertIsEnabled()
+        compose.onNodeWithTag("exit-check").performScrollTo().performClick()
+        compose.runOnUiThread { exit = f.claiming }
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.onNodeWithTag("exit-claim").assertDoesNotExist()
+        compose.onNodeWithTag("exit-check").assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(2, checks) }
+    }
+
     @Test fun aClaimWithNoReviewOffersReviewAgainOnceIdle() {
         compose.mainClock.autoAdvance = false
         var reviewing by mutableStateOf(true)
