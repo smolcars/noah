@@ -645,10 +645,9 @@ every VTXO has one (Try again asks for the rest). A fee child's fee
 is what left the wallet (BDK can't price its anchor input).
 Claims default to another wallet; a claim to this phone records its outputs in auto-board's handled ledger and its
 claimed set (one durable write) before it's broadcast. Auto-board then weighs and sizes only the confirmed balance
-less those coins while they're unspent, prepares by amount so their value stays on-chain, and never offers a review
-whose inputs (bark's choice) include one: it asks again up to twice for a little less (1%, at least 1,000 sats) to move
-BDK's deterministic selection off that coin, then logs once and doesn't prompt. A submitted claim shows as claiming
-until bark's next progress marks it. Each broadcast claim's actual fee, exits and destination are kept apart from the
+less those coins while they're unspent, and passes them to `prepareBoard` as excluded outpoints (bark-bolt-ffi 0.7.0),
+so it prepares once, by amount, and their value stays on-chain. A review whose inputs still include one is never
+offered. Manual Move to Ark excludes nothing. A submitted claim shows as claiming until bark's next progress marks it. Each broadcast claim's actual fee, exits and destination are kept apart from the
 journal (`ExitClaimRecords`), so a finished exit still shows what it received after its attempt is acknowledged.
 `ExitDeviceTest` (hold submits once, Claim off until a valid reviewed address, Cancel only while allowed, synthetic
 book and tabletop folds, recreation) and `ExitSubmitDeviceTest` (start and claim reach a fake bark once through the

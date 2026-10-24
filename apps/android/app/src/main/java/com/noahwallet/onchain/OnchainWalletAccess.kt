@@ -24,7 +24,8 @@ internal interface OnchainWalletAccess {
     suspend fun regularSatPerKwu(): Long = error("""Unsupported""")
     suspend fun refreshFee(ids: List<String>): FeeEstimate = error("""Unsupported""")
     suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate = error("""Unsupported""")
-    suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard = error("""Unsupported""")
+    /** [excluded]: outpoints ("txid:vout") bark's coin selection never spends. */
+    suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong, excluded: Set<String> = emptySet()): PreparedBoard = error("""Unsupported""")
     fun boardCleanupComplete(id: String): Boolean = true
     fun bindBoard(quote: OnchainQuote) {}
     fun claimBoard(quote: OnchainQuote) {}
@@ -70,8 +71,9 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun regularSatPerKwu() = onchain.feeRates().regularSatPerKwu.toLong()
     override suspend fun refreshFee(ids: List<String>) = wallet.estimateRefreshFee(ids)
     override suspend fun exitFee(ids: List<String>, destination: String?) = wallet.estimateEmergencyExitFee(ids, feeRateSatPerVb = null, destination = destination)
-    override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {
-        val prepared = wallet.prepareBoard(if (all) OnchainSendAmount.DrainAll else OnchainSendAmount.Amount(amount.toULong()), rate, true)
+    override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong, excluded: Set<String>): PreparedBoard {
+        val outpoints = excluded.mapNotNull { point -> point.substringAfterLast(':').toUIntOrNull()?.let { OutPoint(point.substringBeforeLast(':'), it) } }
+        val prepared = wallet.prepareBoard(if (all) OnchainSendAmount.DrainAll else OnchainSendAmount.Amount(amount.toULong()), rate, true, outpoints)
         preparations.retain(prepared.id)
         return prepared
     }
