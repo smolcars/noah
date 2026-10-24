@@ -231,7 +231,7 @@ struct SettingsList: View {
                 value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
                 dot: approvals > 0 ? .attention : .none, page: .recurring, id: "settings-recurring-payments")
             row("Emergency exit", icon: "rectangle.portrait.and.arrow.right",
-                value: summary.overview?.exits.isEmpty == false ? L10n.text("In progress", locale: language) : nil, page: .exit, last: true,
+                value: ExitRules.settingsValue(summary.overview?.exits ?? []).map { L10n.text($0, locale: language) }, page: .exit, last: true,
                 id: "settings-emergencyExit")
         }
     }
