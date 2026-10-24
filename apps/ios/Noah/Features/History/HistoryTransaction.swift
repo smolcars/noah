@@ -191,7 +191,7 @@ struct HistoryMetadata: Codable, Equatable, Sendable {
 
 enum HistoryRules {
     static func parseDate(_ value: String) -> Date? {
-        let value = value.replacingOccurrences(of: " ", with: "T")
+        let value = value.replacingOccurrences(of: " ", with: #"T"#)
         let formatter = ISO8601DateFormatter()
         for options: ISO8601DateFormatter.Options in [[.withInternetDateTime, .withFractionalSeconds], [.withInternetDateTime]] {
             formatter.formatOptions = options

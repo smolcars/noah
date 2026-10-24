@@ -210,8 +210,6 @@
   <string name="gt_57c46774d231a726">"Canceled · nothing left your wallet"</string>
   <string name="gt_811051f995891b6c">"Canceled · still in Ark"</string>
   <string name="gt_c8fa4348a993453a">"Cannot create wallet directory"</string>
-  <string name="gt_12947b5f3649ac55">"Cannot delete history export"</string>
-  <string name="gt_46d02642c5e2d009">"Cannot inspect history exports"</string>
   <string name="gt_7b26a7a0cc56a9a5">"Cannot inspect scratch files"</string>
   <string name="gt_62147460a3d20c27">"Cannot inspect settings exports"</string>
   <string name="gt_7830e14445428d0a">"Cannot inspect wallet directory"</string>
@@ -426,7 +424,6 @@
   <string name="gt_464c4ffd019e1e96">"Edit"</string>
   <string name="gt_84c74f3a02721306">"Edit email address"</string>
   <string name="gt_86c1a43426ba6fd7">"Edit payment"</string>
-  <string name="gt_02f81f1a5a7297bd">"Effective balance change"</string>
   <string name="gt_5bee7e5f24d7af00">"Effective change"</string>
   <string name="gt_969ccbd3cf6300ec">"Email"</string>
   <string name="gt_6eea8608c452711b">"Email (optional)"</string>
@@ -618,7 +615,6 @@
   <string name="gt_a02180533bdc7fad">"Hide places"</string>
   <string name="gt_920ac8601c18daac">"Hide wallet balance"</string>
   <string name="gt_31f47a7b7c67fe38">"Historical price API"</string>
-  <string name="gt_7f1929550de947a7">"History export failed"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"History read failed"</string>
   <string name="gt_8cafdf0c21852759">"Hold to claim"</string>
   <string name="gt_d15c83e6bfc02929">"Hold to claim %1$s"</string>
@@ -661,7 +657,6 @@
   <string name="gt_121639f0d7604797">"Instant · %1$s fee"</string>
   <string name="gt_136f8bedf0a24121">"Instantly"</string>
   <string name="gt_9464444aff9626f4">"Insufficient funds for this payment method."</string>
-  <string name="gt_a6d18ab67af6c522">"Intended balance change"</string>
   <string name="gt_0c5413a928ae3639">"Intended change"</string>
   <string name="gt_d6e896cee6f715fd">"Interrupted restore not settled yet"</string>
   <string name="gt_50bc71f591bfa3ff">"Invalid BIP-321 URI"</string>
@@ -1296,7 +1291,6 @@
   <string name="gt_f0fe7ec1fdf9ab12">"Sync the wallet once before preparing a board."</string>
   <string name="gt_8a046cc90ab0a981">"Syncing…"</string>
   <string name="gt_28c83220eb3316b6">"System settings"</string>
-  <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"Taken"</string>
   <string name="gt_857736cb0056f6bc">"Takes a day or more"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
@@ -1435,7 +1429,6 @@
   <string name="gt_11f461fc56ac26c4">"Type delete to confirm"</string>
   <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
-  <string name="gt_7e5f76c94a635c21">"UTC"</string>
   <string name="gt_ed8e5311ed8b968a">"Unable to check this payment. Sending remains stopped."</string>
   <string name="gt_107e6e5754590692">"Unable to inspect this payment. It may already be in progress. Check status before sending again."</string>
   <string name="gt_f9ce4ec1f84197b7">"Unable to load saved payment status. Check your history and recipient before forgetting this attempt."</string>
@@ -1720,7 +1713,6 @@
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, raised when rates rise"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · shared"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_fec76a562b406e84">"%1$s at the time"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· nothing left your wallet"</string>

@@ -59,7 +59,7 @@ import java.util.TimeZone
     fun occurrence(index: Int, zone: TimeZone = TimeZone.getDefault()): Long {
         require(index >= 0 && interval.valid)
         val start = GregorianCalendar(zone).apply { timeInMillis = startAt }
-        val wall = GregorianCalendar(TimeZone.getTimeZone("UTC")).apply {
+        val wall = GregorianCalendar(TimeZone.getTimeZone("""UTC""")).apply {
             clear(); set(start.get(Calendar.YEAR), start.get(Calendar.MONTH), start.get(Calendar.DAY_OF_MONTH),
                 start.get(Calendar.HOUR_OF_DAY), start.get(Calendar.MINUTE), start.get(Calendar.SECOND))
             set(Calendar.MILLISECOND, start.get(Calendar.MILLISECOND))

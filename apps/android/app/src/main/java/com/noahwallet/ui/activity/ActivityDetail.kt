@@ -179,7 +179,7 @@ private fun fiatLine(ui: ActivityUi, row: ActivityRules.Row): String? {
     val currency = ui.currency.takeIf { it in FiatCurrency.supported } ?: return null
     val amount = home.amount ?: return null
     return if (!home.pending && date != null && !today) row.record.btcPrice?.takeIf { it.isFinite() && it > 0 }?.let {
-        tr("{value} at the time", FiatCurrency.display(amount, it, currency, ui.locale))
+        tr("{amount} at the time", FiatCurrency.display(amount, it, currency, ui.locale))
     } else ui.price?.takeIf { it.isFinite() && it > 0 }?.let { FiatCurrency.display(amount, it, currency, ui.locale) }
 }
 

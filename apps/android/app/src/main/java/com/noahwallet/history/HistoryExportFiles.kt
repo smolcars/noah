@@ -21,8 +21,8 @@ class HistoryExportFiles(private val root: File, private val revoke: (File) -> U
     }
     fun deleteAll() {
         if (!root.exists()) return
-        val files = root.listFiles() ?: error("Cannot inspect history exports")
-        files.forEach { file -> revoke(file); check(file.delete()) { "Cannot delete history export" } }
+        val files = root.listFiles() ?: error("""Cannot inspect history exports""")
+        files.forEach { file -> revoke(file); check(file.delete()) { """Cannot delete history export""" } }
         syncDirectory(root)
     }
     companion object {

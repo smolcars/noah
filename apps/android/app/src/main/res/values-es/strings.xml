@@ -210,8 +210,6 @@
   <string name="gt_57c46774d231a726">"Cancelado · no salió nada de tu billetera"</string>
   <string name="gt_811051f995891b6c">"Cancelada · sigue en Ark"</string>
   <string name="gt_c8fa4348a993453a">"No se puede crear el directorio de la billetera"</string>
-  <string name="gt_12947b5f3649ac55">"No se puede eliminar el archivo exportado del historial"</string>
-  <string name="gt_46d02642c5e2d009">"No se pueden inspeccionar las exportaciones del historial"</string>
   <string name="gt_7b26a7a0cc56a9a5">"No se pueden inspeccionar los archivos temporales"</string>
   <string name="gt_62147460a3d20c27">"No se pueden inspeccionar las exportaciones de configuración"</string>
   <string name="gt_7830e14445428d0a">"No se puede inspeccionar el directorio de la billetera"</string>
@@ -426,7 +424,6 @@
   <string name="gt_464c4ffd019e1e96">"Editar"</string>
   <string name="gt_84c74f3a02721306">"Editar el correo"</string>
   <string name="gt_86c1a43426ba6fd7">"Editar pago"</string>
-  <string name="gt_02f81f1a5a7297bd">"Cambio efectivo del saldo"</string>
   <string name="gt_5bee7e5f24d7af00">"Cambio efectivo"</string>
   <string name="gt_969ccbd3cf6300ec">"Correo electrónico"</string>
   <string name="gt_6eea8608c452711b">"Correo (opcional)"</string>
@@ -618,7 +615,6 @@
   <string name="gt_a02180533bdc7fad">"Ocultar lugares"</string>
   <string name="gt_920ac8601c18daac">"Ocultar saldo de la billetera"</string>
   <string name="gt_31f47a7b7c67fe38">"API de precios históricos"</string>
-  <string name="gt_7f1929550de947a7">"No se pudo exportar el historial"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"No se pudo leer el historial"</string>
   <string name="gt_8cafdf0c21852759">"Mantén pulsado para reclamar"</string>
   <string name="gt_d15c83e6bfc02929">"Mantén pulsado para reclamar %1$s"</string>
@@ -661,7 +657,6 @@
   <string name="gt_121639f0d7604797">"Instantáneo · %1$s de comisión"</string>
   <string name="gt_136f8bedf0a24121">"Al instante"</string>
   <string name="gt_9464444aff9626f4">"Fondos insuficientes para este método de pago."</string>
-  <string name="gt_a6d18ab67af6c522">"Cambio de saldo previsto"</string>
   <string name="gt_0c5413a928ae3639">"Cambio previsto"</string>
   <string name="gt_d6e896cee6f715fd">"Restauración interrumpida aún sin resolver"</string>
   <string name="gt_50bc71f591bfa3ff">"URI BIP-321 no válido"</string>
@@ -1296,7 +1291,6 @@
   <string name="gt_f0fe7ec1fdf9ab12">"Sincroniza la billetera una vez antes de preparar un depósito."</string>
   <string name="gt_8a046cc90ab0a981">"Sincronizando…"</string>
   <string name="gt_28c83220eb3316b6">"Ajustes del sistema"</string>
-  <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"No disponible"</string>
   <string name="gt_857736cb0056f6bc">"Tarda un día o más"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
@@ -1435,7 +1429,6 @@
   <string name="gt_11f461fc56ac26c4">"Escribe delete para confirmar"</string>
   <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
-  <string name="gt_7e5f76c94a635c21">"UTC"</string>
   <string name="gt_ed8e5311ed8b968a">"No se puede comprobar este pago. Los envíos siguen detenidos."</string>
   <string name="gt_107e6e5754590692">"No se puede comprobar este pago. Es posible que ya esté en curso. Comprueba su estado antes de enviarlo de nuevo."</string>
   <string name="gt_f9ce4ec1f84197b7">"No se pudo cargar el estado guardado del pago. Revisa tu historial y el destinatario antes de descartar este intento."</string>
@@ -1720,7 +1713,6 @@
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, sube cuando suben las tasas"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · compartida"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_fec76a562b406e84">"%1$s en ese momento"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· no salió nada de tu billetera"</string>

@@ -7477,78 +7477,6 @@
         }
       }
     },
-    "Cannot delete history export": {
-      "comment": "GT gt_12947b5f3649ac55; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot delete history export"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se puede eliminar el archivo exportado del historial"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エクスポートした履歴を削除できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내역 내보내기 파일을 삭제할 수 없음"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte radera historikexporten"
-          }
-        }
-      }
-    },
-    "Cannot inspect history exports": {
-      "comment": "GT gt_46d02642c5e2d009; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot inspect history exports"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pueden inspeccionar las exportaciones del historial"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴のエクスポートを確認できません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내보낸 내역 파일을 검사할 수 없습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kan inte granska exporterad historik"
-          }
-        }
-      }
-    },
     "Cannot inspect scratch files": {
       "comment": "GT gt_7b26a7a0cc56a9a5; arguments: none",
       "extractionState": "manual",
@@ -15157,42 +15085,6 @@
         }
       }
     },
-    "Effective balance change": {
-      "comment": "GT gt_02f81f1a5a7297bd; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Effective balance change"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambio efectivo del saldo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実質的な残高の変動"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실제 잔액 변동"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Faktisk saldoförändring"
-          }
-        }
-      }
-    },
     "Effective change": {
       "comment": "GT gt_5bee7e5f24d7af00; arguments: none",
       "extractionState": "manual",
@@ -21877,42 +21769,6 @@
         }
       }
     },
-    "History export failed": {
-      "comment": "GT gt_7f1929550de947a7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "History export failed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo exportar el historial"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴のエクスポートに失敗しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내역 내보내기 실패"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det gick inte att exportera historiken"
-          }
-        }
-      }
-    },
     "History read failed": {
       "comment": "GT gt_fa5a3afbcfb2b0ff; arguments: none",
       "extractionState": "manual",
@@ -23373,42 +23229,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Otillräckliga medel för den här betalningsmetoden."
-          }
-        }
-      }
-    },
-    "Intended balance change": {
-      "comment": "GT gt_a6d18ab67af6c522; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intended balance change"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambio de saldo previsto"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "予定される残高の変動"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예정된 잔액 변동"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avsedd saldoförändring"
           }
         }
       }
@@ -46045,42 +45865,6 @@
         }
       }
     },
-    "T": {
-      "comment": "GT gt_e632b7095b0bf32c; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "T"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "T"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "T"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "T"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "T"
-          }
-        }
-      }
-    },
     "Taken": {
       "comment": "GT gt_c76e6790bc5b4018; arguments: none",
       "extractionState": "manual",
@@ -51045,42 +50829,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "USD"
-          }
-        }
-      }
-    },
-    "UTC": {
-      "comment": "GT gt_7e5f76c94a635c21; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UTC"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UTC"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UTC"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UTC"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UTC"
           }
         }
       }
@@ -60441,42 +60189,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@\nhttps://btcmap.org/merchant/%2$@"
-          }
-        }
-      }
-    },
-    "{value} at the time": {
-      "comment": "GT gt_fec76a562b406e84; arguments: value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ at the time"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ en ese momento"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当時%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "당시 %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ vid tillfället"
           }
         }
       }

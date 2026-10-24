@@ -210,8 +210,6 @@
   <string name="gt_57c46774d231a726">"취소됨 · 지갑에서 빠져나간 금액 없음"</string>
   <string name="gt_811051f995891b6c">"취소됨 · Ark에 그대로 있음"</string>
   <string name="gt_c8fa4348a993453a">"지갑 디렉터리를 생성할 수 없습니다"</string>
-  <string name="gt_12947b5f3649ac55">"내역 내보내기 파일을 삭제할 수 없음"</string>
-  <string name="gt_46d02642c5e2d009">"내보낸 내역 파일을 검사할 수 없습니다"</string>
   <string name="gt_7b26a7a0cc56a9a5">"임시 파일을 검사할 수 없습니다"</string>
   <string name="gt_62147460a3d20c27">"내보낸 설정 파일을 검사할 수 없습니다"</string>
   <string name="gt_7830e14445428d0a">"지갑 디렉터리를 검사할 수 없습니다"</string>
@@ -426,7 +424,6 @@
   <string name="gt_464c4ffd019e1e96">"수정"</string>
   <string name="gt_84c74f3a02721306">"이메일 주소 편집"</string>
   <string name="gt_86c1a43426ba6fd7">"결제 수정"</string>
-  <string name="gt_02f81f1a5a7297bd">"실제 잔액 변동"</string>
   <string name="gt_5bee7e5f24d7af00">"실제 변동"</string>
   <string name="gt_969ccbd3cf6300ec">"이메일"</string>
   <string name="gt_6eea8608c452711b">"이메일(선택 사항)"</string>
@@ -618,7 +615,6 @@
   <string name="gt_a02180533bdc7fad">"장소 숨기기"</string>
   <string name="gt_920ac8601c18daac">"지갑 잔액 숨기기"</string>
   <string name="gt_31f47a7b7c67fe38">"과거 가격 API"</string>
-  <string name="gt_7f1929550de947a7">"내역 내보내기 실패"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"내역 불러오기 실패"</string>
   <string name="gt_8cafdf0c21852759">"길게 눌러 청구하기"</string>
   <string name="gt_d15c83e6bfc02929">"길게 눌러 %1$s 청구하기"</string>
@@ -661,7 +657,6 @@
   <string name="gt_121639f0d7604797">"즉시 · 수수료 %1$s"</string>
   <string name="gt_136f8bedf0a24121">"즉시"</string>
   <string name="gt_9464444aff9626f4">"이 결제 수단으로 결제하기에는 잔액이 부족합니다."</string>
-  <string name="gt_a6d18ab67af6c522">"예정된 잔액 변동"</string>
   <string name="gt_0c5413a928ae3639">"예정된 변동"</string>
   <string name="gt_d6e896cee6f715fd">"중단된 복원이 아직 처리되지 않음"</string>
   <string name="gt_50bc71f591bfa3ff">"유효하지 않은 BIP-321 URI"</string>
@@ -1296,7 +1291,6 @@
   <string name="gt_f0fe7ec1fdf9ab12">"입금을 준비하기 전에 지갑을 한 번 동기화하세요."</string>
   <string name="gt_8a046cc90ab0a981">"동기화 중…"</string>
   <string name="gt_28c83220eb3316b6">"시스템 설정"</string>
-  <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"사용 중"</string>
   <string name="gt_857736cb0056f6bc">"하루 이상 걸려요"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
@@ -1435,7 +1429,6 @@
   <string name="gt_11f461fc56ac26c4">"확인하려면 delete를 입력하세요"</string>
   <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
-  <string name="gt_7e5f76c94a635c21">"UTC"</string>
   <string name="gt_ed8e5311ed8b968a">"이 결제를 확인할 수 없습니다. 전송 중지 상태가 유지됩니다."</string>
   <string name="gt_107e6e5754590692">"이 결제를 확인할 수 없습니다. 이미 진행 중일 수 있습니다. 다시 보내기 전에 상태를 확인하세요."</string>
   <string name="gt_f9ce4ec1f84197b7">"저장된 결제 상태를 불러올 수 없습니다. 이 시도 기록을 삭제하기 전에 내역과 받는 사람을 확인하세요."</string>
@@ -1720,7 +1713,6 @@
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, 수수료율이 오르면 인상"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · 공유"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_fec76a562b406e84">"당시 %1$s"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· 지갑에서 빠져나간 금액 없음"</string>

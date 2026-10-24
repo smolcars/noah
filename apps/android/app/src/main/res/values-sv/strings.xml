@@ -210,8 +210,6 @@
   <string name="gt_57c46774d231a726">"Avbruten · inget lämnade din plånbok"</string>
   <string name="gt_811051f995891b6c">"Avbrutet · finns kvar i Ark"</string>
   <string name="gt_c8fa4348a993453a">"Kan inte skapa plånboksmapp"</string>
-  <string name="gt_12947b5f3649ac55">"Kan inte radera historikexporten"</string>
-  <string name="gt_46d02642c5e2d009">"Kan inte granska exporterad historik"</string>
   <string name="gt_7b26a7a0cc56a9a5">"Kan inte granska tillfälliga filer"</string>
   <string name="gt_62147460a3d20c27">"Kan inte granska exporterade inställningar"</string>
   <string name="gt_7830e14445428d0a">"Kan inte granska plånboksmappen"</string>
@@ -426,7 +424,6 @@
   <string name="gt_464c4ffd019e1e96">"Ändra"</string>
   <string name="gt_84c74f3a02721306">"Ändra e-postadress"</string>
   <string name="gt_86c1a43426ba6fd7">"Redigera betalning"</string>
-  <string name="gt_02f81f1a5a7297bd">"Faktisk saldoförändring"</string>
   <string name="gt_5bee7e5f24d7af00">"Faktisk förändring"</string>
   <string name="gt_969ccbd3cf6300ec">"E-post"</string>
   <string name="gt_6eea8608c452711b">"E-post (valfritt)"</string>
@@ -618,7 +615,6 @@
   <string name="gt_a02180533bdc7fad">"Dölj platser"</string>
   <string name="gt_920ac8601c18daac">"Dölj plånbokens saldo"</string>
   <string name="gt_31f47a7b7c67fe38">"API för historiska priser"</string>
-  <string name="gt_7f1929550de947a7">"Det gick inte att exportera historiken"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"Det gick inte att läsa historiken"</string>
   <string name="gt_8cafdf0c21852759">"Håll in för att lösa in"</string>
   <string name="gt_d15c83e6bfc02929">"Håll in för att lösa in %1$s"</string>
@@ -661,7 +657,6 @@
   <string name="gt_121639f0d7604797">"Direkt · %1$s i avgift"</string>
   <string name="gt_136f8bedf0a24121">"Direkt"</string>
   <string name="gt_9464444aff9626f4">"Otillräckliga medel för den här betalningsmetoden."</string>
-  <string name="gt_a6d18ab67af6c522">"Avsedd saldoförändring"</string>
   <string name="gt_0c5413a928ae3639">"Avsedd förändring"</string>
   <string name="gt_d6e896cee6f715fd">"Den avbrutna återställningen är ännu inte slutförd"</string>
   <string name="gt_50bc71f591bfa3ff">"Ogiltig BIP-321-URI"</string>
@@ -1296,7 +1291,6 @@
   <string name="gt_f0fe7ec1fdf9ab12">"Synkronisera plånboken en gång innan du förbereder en insättning."</string>
   <string name="gt_8a046cc90ab0a981">"Synkroniserar…"</string>
   <string name="gt_28c83220eb3316b6">"Systeminställningar"</string>
-  <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"Upptaget"</string>
   <string name="gt_857736cb0056f6bc">"Tar en dag eller mer"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
@@ -1435,7 +1429,6 @@
   <string name="gt_11f461fc56ac26c4">"Skriv delete för att bekräfta"</string>
   <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
-  <string name="gt_7e5f76c94a635c21">"UTC"</string>
   <string name="gt_ed8e5311ed8b968a">"Kan inte kontrollera den här betalningen. Det går fortfarande inte att skicka betalningar."</string>
   <string name="gt_107e6e5754590692">"Det går inte att kontrollera den här betalningen. Den kan redan pågå. Kontrollera status innan du skickar igen."</string>
   <string name="gt_f9ce4ec1f84197b7">"Det går inte att läsa in sparad betalningsstatus. Kontrollera historiken och mottagaren innan du tar bort det här försöket."</string>
@@ -1720,7 +1713,6 @@
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, höjs när satserna stiger"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · delad"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_fec76a562b406e84">"%1$s vid tillfället"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· inget lämnade din plånbok"</string>

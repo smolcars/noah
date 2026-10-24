@@ -130,4 +130,4 @@ data class BtcMapDetail(val place: BtcMapPlace, val fields: Map<String, String>,
 }
 
 fun btcMapTimestamp(milliseconds: Long): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-    .apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(milliseconds))
+    .apply { timeZone = TimeZone.getTimeZone("""UTC""") }.format(Date(milliseconds))

@@ -109,7 +109,7 @@ object HistoryRules {
         return parsed?.takeIf { position.index == normalized.length }
     }
     fun isoDate(date: Date): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT)
-        .apply { timeZone = TimeZone.getTimeZone("UTC") }.format(date)
+        .apply { timeZone = TimeZone.getTimeZone("""UTC""") }.format(date)
 
     fun merge(movements: List<HistoryTransaction>, onchain: List<HistoryTransaction>): List<HistoryTransaction> {
         val byTxid = onchain.filter { !it.txid.isNullOrEmpty() }.associateBy { it.txid }

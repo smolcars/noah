@@ -48,7 +48,7 @@ struct ActivityDetailTests {
         #expect(status(Self.onchainSend(status: "pending")) == "Sending · waiting for confirmations")
         #expect(status(Self.onchainSend(status: "pending", broadcast: false)) == "Sending · waiting for an Ark round")
         #expect(status(HomeRulesTests.row(type: "Onchain", kind: "onboard")) == "Moved to Ark")
-        #expect(status(HomeRulesTests.row(type: "Onchain", direction: "outgoing", status: "pending", kind: "exit")) == "Exiting")
+        #expect(status(HomeRulesTests.row(type: "Onchain", direction: "outgoing", status: "pending", kind: "exit")) == "Exiting to the chain")
         #expect(status(HomeRulesTests.deposit("onchain-wallet-a", 100_000, confirmed: false)) == "Arriving")
         // Unknown status keeps today's "Recorded".
         #expect(status(HomeRulesTests.row(status: nil)) == "Recorded")

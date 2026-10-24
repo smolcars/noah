@@ -80,7 +80,7 @@ struct ActivityExportSheet: View {
             } catch {
                 working = false
                 // The file can name destinations; keep it out of logs.
-                AppLog("history").w("History export failed")
+                AppLog("history").w(#"History export failed"#)
                 self.error = "Couldn't export transactions. Please try again."
             }
         }

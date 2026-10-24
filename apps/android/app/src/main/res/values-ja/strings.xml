@@ -210,8 +210,6 @@
   <string name="gt_57c46774d231a726">"キャンセル済み · ウォレットからの出金はありません"</string>
   <string name="gt_811051f995891b6c">"キャンセル済み · Arkに残っています"</string>
   <string name="gt_c8fa4348a993453a">"ウォレットのディレクトリを作成できません"</string>
-  <string name="gt_12947b5f3649ac55">"エクスポートした履歴を削除できません"</string>
-  <string name="gt_46d02642c5e2d009">"履歴のエクスポートを確認できません"</string>
   <string name="gt_7b26a7a0cc56a9a5">"作業用一時ファイルを確認できません"</string>
   <string name="gt_62147460a3d20c27">"エクスポートされた設定を確認できません"</string>
   <string name="gt_7830e14445428d0a">"ウォレットのディレクトリを確認できません"</string>
@@ -426,7 +424,6 @@
   <string name="gt_464c4ffd019e1e96">"編集"</string>
   <string name="gt_84c74f3a02721306">"メールアドレスを編集"</string>
   <string name="gt_86c1a43426ba6fd7">"支払いを編集"</string>
-  <string name="gt_02f81f1a5a7297bd">"実質的な残高の変動"</string>
   <string name="gt_5bee7e5f24d7af00">"実質的な変動"</string>
   <string name="gt_969ccbd3cf6300ec">"メールアドレス"</string>
   <string name="gt_6eea8608c452711b">"メールアドレス（任意）"</string>
@@ -618,7 +615,6 @@
   <string name="gt_a02180533bdc7fad">"場所を非表示"</string>
   <string name="gt_920ac8601c18daac">"ウォレット残高を非表示"</string>
   <string name="gt_31f47a7b7c67fe38">"過去の価格API"</string>
-  <string name="gt_7f1929550de947a7">"履歴のエクスポートに失敗しました"</string>
   <string name="gt_fa5a3afbcfb2b0ff">"履歴の読み込みに失敗しました"</string>
   <string name="gt_8cafdf0c21852759">"長押しで受け取る"</string>
   <string name="gt_d15c83e6bfc02929">"長押しで%1$sを受け取る"</string>
@@ -661,7 +657,6 @@
   <string name="gt_121639f0d7604797">"即時 · 手数料 %1$s"</string>
   <string name="gt_136f8bedf0a24121">"すぐに"</string>
   <string name="gt_9464444aff9626f4">"この支払い方法では残高が不足しています。"</string>
-  <string name="gt_a6d18ab67af6c522">"予定される残高の変動"</string>
   <string name="gt_0c5413a928ae3639">"予定される変動"</string>
   <string name="gt_d6e896cee6f715fd">"中断された復元の処理がまだ完了していません"</string>
   <string name="gt_50bc71f591bfa3ff">"BIP-321 URIが無効です"</string>
@@ -1296,7 +1291,6 @@
   <string name="gt_f0fe7ec1fdf9ab12">"Arkへの入金を準備する前に、ウォレットを一度同期してください。"</string>
   <string name="gt_8a046cc90ab0a981">"同期中…"</string>
   <string name="gt_28c83220eb3316b6">"システム設定"</string>
-  <string name="gt_e632b7095b0bf32c">"T"</string>
   <string name="gt_c76e6790bc5b4018">"使用済み"</string>
   <string name="gt_857736cb0056f6bc">"1日以上かかります"</string>
   <string name="gt_acdd1e734125f341">"Telegram"</string>
@@ -1435,7 +1429,6 @@
   <string name="gt_11f461fc56ac26c4">"確認のためdeleteと入力"</string>
   <string name="gt_9b202ecbc6d45c6d">"US"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
-  <string name="gt_7e5f76c94a635c21">"UTC"</string>
   <string name="gt_ed8e5311ed8b968a">"この支払いを確認できません。送金は引き続き停止しています。"</string>
   <string name="gt_107e6e5754590692">"この支払いを確認できません。すでに処理中の可能性があります。再送信する前に状況を確認してください。"</string>
   <string name="gt_f9ce4ec1f84197b7">"保存された支払い状況を読み込めません。この支払いの試行記録を削除する前に、履歴と受取人を確認してください。"</string>
@@ -1720,7 +1713,6 @@
   <string name="gt_379970e6b5d75158">"%1$s sat/vB（手数料率が上がると引き上げ）"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · 共有"</string>
   <string name="gt_2584890305b6f218">"%1$s\nhttps://btcmap.org/merchant/%2$s"</string>
-  <string name="gt_fec76a562b406e84">"当時%1$s"</string>
   <string name="gt_a6ba31bfc3177217">"© OpenMapTiles"</string>
   <string name="gt_130a00dae48562a4">"© OpenStreetMap"</string>
   <string name="gt_e3ca394fe5cc723f">"· ウォレットからの出金はありません"</string>
