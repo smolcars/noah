@@ -9,9 +9,12 @@ struct BoardArkView: View {
     @Environment(AppModel.self) private var app
     @Environment(SettingsSummary.self) private var summary: SettingsSummary?
     @Environment(\.locale) private var locale
-    @State private var model = OnchainModel()
+    @State private var model: OnchainModel
     @State private var minimum: UInt64?
     @State private var transaction = PersistedTransactionState.load(from: .shared)
+    @Environment(\.settingsFixture) private var fixture
+
+    init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
     @State private var moving: MoveSheet?
     @State private var amount = ""
     @State private var error: String?
@@ -87,6 +90,7 @@ struct BoardArkView: View {
         }
         .onChange(of: amount) { _, _ in model.invalidate() }
         .task {
+            if let fixture { minimum = fixture.boardingMinimum; return }
             guard !app.isWalletSuspended else { return }
             minimum = try? await app.session.boardingMinimum()
         }
@@ -123,7 +127,8 @@ private struct MoveToArkSheet: View {
 
     private var language: String { locale.identifier }
     private var max: Bool { amount == "MAX" }
-    private var requested: UInt64? { max ? 0 : UInt64(amount) }
+    /// Whole, positive sats as typed: "1.5" or "-1000" are refused, never rewritten.
+    private var requested: UInt64? { max ? 0 : OnchainAmountInput.sats(amount) }
 
     var body: some View {
         SettingsSheetBody(title: L10n.text("Move to Ark", locale: language), line: L10n.text("From your on-chain balance.", locale: language)) {
@@ -136,10 +141,6 @@ private struct MoveToArkSheet: View {
                         .keyboardType(.numberPad)
                         .tint(NoahTokens.Colors.orange)
                         .focused($focused)
-                        .onChange(of: amount) { _, value in
-                            let digits = String(value.filter(\.isNumber).prefix(16))
-                            if digits != value && value != "MAX" { amount = digits }
-                        }
                         .accessibilityIdentifier("board-amount")
                     Text(verbatim: "sats").noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
                 }
@@ -168,6 +169,8 @@ private struct MoveToArkSheet: View {
                 .padding(.top, 8)
                 SettingsFine(text: L10n.text("Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.", locale: language)
                              + (quote.boardAll == true ? " " + L10n.text("MAX uses confirmed funds only and deducts the onchain fee from that balance.", locale: language) : ""))
+            } else if !amount.isEmpty && requested == nil {
+                SettingsFine(text: L10n.text("Enter whole sats.", locale: language), failure: true)
             } else if let minimum {
                 SettingsFine(text: L10n.text("At least {amount}.", BitcoinAmount.format(sats: Int64(clamping: minimum), unit: app.amountUnit, locale: locale), locale: language))
             }
@@ -175,7 +178,7 @@ private struct MoveToArkSheet: View {
         } actions: {
             if model.quote == nil {
                 SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Review", locale: language),
-                                     enabled: requested.map { $0 > 0 || max } ?? false, busy: model.busy, actionID: "board-review",
+                                     enabled: requested != nil, busy: model.busy, actionID: "board-review",
                                      onCancel: cancel) {
                     focused = false
                     Task { await model.review(.board, amount: requested ?? 0) }
@@ -191,6 +194,14 @@ private struct MoveToArkSheet: View {
     private func row(_ label: String, _ sats: UInt64) -> some View {
         SettingsDetailRow(label: L10n.text(label, locale: language), value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale),
                           numeric: true)
+    }
+}
+
+enum OnchainAmountInput {
+    /// A positive whole number of sats, exactly as typed (ASCII digits only), or nil.
+    static func sats(_ text: String) -> UInt64? {
+        guard !text.isEmpty, text.allSatisfy({ $0.isASCII && $0.isNumber }), let value = UInt64(text), value > 0 else { return nil }
+        return value
     }
 }
 

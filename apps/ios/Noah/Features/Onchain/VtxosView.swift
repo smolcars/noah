@@ -357,7 +357,7 @@ private struct VtxoTimeline: View {
 /// everything else under Details, and Renew. Activity's VTXO links open it too, spent ones read by ID.
 struct VtxoDetailView: View {
     let id: String
-    @State private var model = OnchainModel()
+    @State private var model: OnchainModel
     @State private var read = ActivityCoinRead()
     @State private var details = false
     @State private var price: Double?
@@ -368,6 +368,12 @@ struct VtxoDetailView: View {
     @Environment(SettingsSummary.self) private var summary: SettingsSummary?
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.settingsFixture) private var fixture
+
+    init(id: String, model: OnchainModel = OnchainModel()) {
+        self.id = id
+        _model = State(initialValue: model)
+    }
 
     private var language: String { locale.identifier }
     /// In the wallet's current VTXOs (renewable from here).
@@ -443,6 +449,7 @@ struct VtxoDetailView: View {
         }
         .task {
             if let history { price = await history.currentPrice(currency: app.preferredCurrency) }
+            if let fixture { lifetime = fixture.vtxoLifetime; return }
             lifetime = (try? await WalletSession.shared.withOpenWallet { try await $0.wallet.arkInfo() })??.vtxoLifetime
         }
         .accessibilityIdentifier("vtxo-detail")

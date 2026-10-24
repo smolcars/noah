@@ -91,14 +91,14 @@ struct AdvancedPage: View {
     var body: some View {
         SettingsScroll {
             SettingsGroup(label: "Network", first: true) {
-                row("server.rack", "Ark server", value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer, page: .arkServer,
+                row("Ark server", icon: "server.rack", value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer, page: .arkServer,
                     id: "settings-ark-server")
-                row("link", "Esplora", value: AppVariant.current == .regtest ? "Bitcoin Core"
+                row("Esplora", icon: "link", value: AppVariant.current == .regtest ? "Bitcoin Core"
                         : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language),
                     page: .esplora, last: true, id: "settings-esplora")
             }
             SettingsGroup(label: "Diagnostics") {
-                row("doc.text", "Logs", page: .logs, id: "settings-logs")
+                row("Logs", icon: "doc.text", page: .logs, id: "settings-logs")
                 SettingsRow(icon: "arrow.clockwise", title: L10n.text("Reset registration", locale: language), hairline: summary.debug,
                             id: "settings-reset-registration") {
                     haptics.play(.light)
@@ -106,7 +106,7 @@ struct AdvancedPage: View {
                 }
                 .disabled(busy || app.isWalletSuspended)
                 if summary.debug {
-                    row("ladybug", "Debug", page: .debug, id: "settings-debug")
+                    row("Debug", icon: "ladybug", page: .debug, id: "settings-debug")
                     // Off hides Debug again; five taps on the version bring it back.
                     SettingsToggleRow(icon: "hammer", title: L10n.text("Debug mode", locale: language),
                                       isOn: Binding(get: { summary.debug }, set: setDebug), hairline: false, id: "settings-debug-mode")
@@ -152,7 +152,7 @@ struct AdvancedPage: View {
         }
     }
 
-    private func row(_ icon: String, _ title: String, value: String? = nil, page: SettingsPage, last: Bool = false, id: String) -> some View {
+    private func row(_ title: String, icon: String, value: String? = nil, page: SettingsPage, last: Bool = false, id: String) -> some View {
         SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, hairline: !last, id: id) {
             haptics.play(.light)
             settings.open(page)

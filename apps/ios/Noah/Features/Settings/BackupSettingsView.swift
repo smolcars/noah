@@ -20,6 +20,8 @@ struct BackupSettingsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var state = PersistedBackupState()
     @State private var backups: [Components.Schemas.BackupObjectInfo]?
+    /// The last list read failed; shown instead of a spinner that never ends.
+    @State private var listFailed = false
     @State private var listOpen = false
     @State private var busy = false
     @State private var error: String?
@@ -28,6 +30,7 @@ struct BackupSettingsView: View {
     @State private var sharing = false
     @State private var shared = false
     @State private var haptics = OnboardingHaptics()
+    @Environment(\.settingsFixture) private var fixture
 
     private var language: String { locale.identifier }
     private var enabled: Bool { model.server.state.isBackupEnabled == true }
@@ -48,7 +51,7 @@ struct BackupSettingsView: View {
                             expanded: listOpen, hairline: !listOpen, id: "backup-list") {
                     haptics.play(.selection)
                     withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft)) { listOpen.toggle() }
-                    if listOpen && backups == nil { run { try await list() } }
+                    if listOpen && backups == nil { Task { await refreshList() } }
                 }
                 if listOpen { list.transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top))) }
                 SettingsRow(icon: "square.and.arrow.up", title: L10n.text("Export file", locale: language), hairline: false, id: "backup-export") {
@@ -82,7 +85,7 @@ struct BackupSettingsView: View {
                 do { try await Task.sleep(for: .seconds(1)) } catch { return }
             }
         }
-        .task { try? await list() }
+        .task { await refreshList() }
     }
 
     // MARK: Status
@@ -140,6 +143,19 @@ struct BackupSettingsView: View {
                     }
                     .overlay(alignment: .bottom) { HomeHairline() }
                 }
+                if listFailed {
+                    Text(L10n.text("Couldn't list backups.", locale: language)).noahText(HomeText.footnote)
+                        .foregroundStyle(NoahTokens.Colors.failure).frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+                }
+            } else if listFailed {
+                HStack {
+                    Text(L10n.text("Couldn't list backups.", locale: language)).noahText(NoahTokens.Typography.sub)
+                        .foregroundStyle(NoahTokens.Colors.failure)
+                    Spacer()
+                    Button(L10n.text("Try again", locale: language)) { Task { await refreshList() } }
+                        .noahText(HomeText.strong).foregroundStyle(NoahTokens.Colors.foreground)
+                }
+                .frame(minHeight: 44)
             } else {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 44)
             }
@@ -208,7 +224,7 @@ struct BackupSettingsView: View {
             }, refresh: { try await list() })
             haptics.play(.success)
             settings.toast("Backed up")
-            if !refreshed { error = "Couldn't list backups." }
+            listFailed = !refreshed
         }
     }
 
@@ -237,10 +253,19 @@ struct BackupSettingsView: View {
         }
     }
 
-    private func reloadState() { state = SettingsStorage.shared.persistedState(PersistedBackupState.self, key: PersistedBackupState.key) ?? .init() }
+    private func reloadState() {
+        state = (fixture?.storage ?? .shared).persistedState(PersistedBackupState.self, key: PersistedBackupState.key) ?? .init()
+    }
 
     private func list() async throws {
+        if let fixture { backups = fixture.backups; listFailed = false; return }
         backups = try await AppServices.shared.client.listBackupObjects().ok.body.json
+        listFailed = false
+    }
+
+    private func refreshList() async {
+        listFailed = false
+        do { try await list() } catch { listFailed = backups == nil }
     }
 
     /// The upload is the operation; a stale list cannot turn it into a failed backup.

@@ -6,6 +6,7 @@ struct RecurringPaymentEditorView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.locale) private var locale
     @Environment(\.settings) private var settings
+    @Environment(\.settingsPage) private var currentPage
     private enum Field: Hashable { case label, recipient, amount, comment, days, count }
     @FocusState private var focus: Field?
     @State private var label: String
@@ -212,7 +213,7 @@ struct RecurringPaymentEditorView: View {
                 if let original { schedule.runs = original.runs }
                 try await executor.save(schedule, editing: original != nil)
                 settings.toast(original == nil ? "Scheduled" : "Saved")
-                settings.back()
+                settings.leave(currentPage)
             } catch { self.error = error.localizedDescription }
         }
     }

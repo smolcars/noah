@@ -57,6 +57,9 @@ struct SettingsNavigator {
     var open: (SettingsPage) -> Void = { _ in }
     /// Back from a page.
     var back: () -> Void = {}
+    /// Back from this page after something slow finished, only if it's still the one on top:
+    /// you may have moved on while it saved.
+    var leave: (SettingsPage?) -> Void = { _ in }
     /// Leaves Settings for Home.
     var close: () -> Void = {}
     var myCode: () -> Void = {}
@@ -65,10 +68,27 @@ struct SettingsNavigator {
     var toast: (String) -> Void = { _ in }
 }
 
+/// Screenshot fixtures: fakes for what Settings' pages read from the wallet and the server.
+struct SettingsFixture {
+    var summary: WalletSession.Summary?
+    var storage: SettingsStorage
+    var onchain: @MainActor () -> OnchainModel
+    var phrase: PhraseGate.Dependencies
+    var executor: RecurringExecutor
+    var backups: [Components.Schemas.BackupObjectInfo] = []
+    var vtxoLifetime: UInt32?
+    var boardingMinimum: UInt64?
+    /// A root sheet open on arrival (Delete wallet).
+    var sheet: SettingsRootSheet?
+}
+
 extension EnvironmentValues {
+    @Entry var settingsFixture: SettingsFixture?
     @Entry var settings = SettingsNavigator()
     /// The page was opened from another page: the wide trailing pane shows Back.
     @Entry var settingsSubpage = false
+    /// The page this view is in.
+    @Entry var settingsPage: SettingsPage?
 }
 
 /// One Settings screen in Home's stack. Phones show the list (root) or one page. Wide windows show
@@ -81,44 +101,51 @@ struct SettingsHost: View {
     @Environment(\.dismiss) private var dismiss
     /// Display's pickers and Delete wallet, opened from the list; wide windows show them in the trailing pane.
     @State private var sheet: SettingsRootSheet?
-    @State private var sheetLocked = false
+    /// A delete in progress stays locked through pose changes.
+    @State private var deletion = WalletDeletion()
+    /// The list's scroll position, kept as it moves between the phone's page and the wide leading pane.
+    @State private var listOffset: CGFloat = 0
     /// Outside Home's Settings: the page this one opened.
     @State private var standalonePage: SettingsPage?
+    @Environment(\.settingsFixture) private var fixture
 
     private var settings: SettingsNavigator {
         home.live ? home : SettingsNavigator(select: { standalonePage = $0 }, open: { standalonePage = $0 },
-                                             back: { dismiss() }, close: { dismiss() })
+                                             back: { dismiss() }, leave: { _ in if standalonePage == nil { dismiss() } },
+                                             close: { dismiss() })
     }
 
     var body: some View {
         HStack(spacing: 0) {
             if settings.wide {
-                SettingsList(selected: (page ?? .profile).root, sheet: $sheet, leading: true)
+                SettingsList(selected: (page ?? .profile).root, sheet: $sheet, offset: $listOffset, leading: true)
                     .frame(width: settings.leadingWidth)
                     .safeAreaPadding(.bottom, 90)
+                    .disabled(deletion.deleting)
             }
             content
                 .modifier(SettingsPaneEntrance(wide: settings.wide))
                 .frame(maxWidth: .infinity)
-                .settingsSheet(item: $sheet, locked: sheetLocked) { item in
-                    SettingsRootSheetView(sheet: item, current: $sheet, locked: $sheetLocked)
+                .settingsSheet(item: $sheet, locked: deletion.deleting) { item in
+                    SettingsRootSheetView(sheet: item, current: $sheet, deletion: deletion)
                 }
         }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(settings.wide)
         .environment(\.settings, settings)
         .navigationDestination(item: $standalonePage) { SettingsHost(page: $0) }
+        .task { if page == nil, let open = fixture?.sheet { sheet = open } }
         .foregroundStyle(NoahTokens.Colors.foreground)
         .tint(NoahTokens.Colors.foreground)
     }
 
     @ViewBuilder private var content: some View {
         if let page {
-            SettingsPageView(page: page).environment(\.settingsSubpage, page.isSubpage)
+            SettingsPageView(page: page).environment(\.settingsSubpage, page.isSubpage).environment(\.settingsPage, page)
         } else if settings.wide {
             SettingsPageView(page: .profile)
         } else {
-            SettingsList(selected: nil, sheet: $sheet)
+            SettingsList(selected: nil, sheet: $sheet, offset: $listOffset)
         }
     }
 }

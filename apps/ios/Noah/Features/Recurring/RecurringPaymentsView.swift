@@ -164,7 +164,8 @@ struct RecurringSchedulePage: View {
     private enum Sheet: String, Identifiable { case cancel, checked, twice; var id: Self { self } }
 
     let id: String
-    @State private var executor = RecurringExecutor.shared
+    @State private var executor: RecurringExecutor
+    @Environment(\.settingsPage) private var currentPage
     @State private var review: RecurringExecutor.Review?
     @State private var sheet: Sheet?
     @State private var error: String?
@@ -172,6 +173,11 @@ struct RecurringSchedulePage: View {
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
+
+    init(id: String, executor: RecurringExecutor = .shared) {
+        self.id = id
+        _executor = State(initialValue: executor)
+    }
 
     private var language: String { locale.identifier }
     private var schedule: RecurringPayment? { executor.schedules.first { $0.id == id } }
@@ -287,7 +293,7 @@ struct RecurringSchedulePage: View {
                             try await executor.cancel(schedule.id)
                             haptics.play(.success)
                             settings.toast("Canceled")
-                            settings.back()
+                            settings.leave(currentPage)
                         }
                     }
                 }

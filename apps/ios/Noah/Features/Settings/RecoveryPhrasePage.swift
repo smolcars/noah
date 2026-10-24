@@ -83,6 +83,7 @@ struct RecoveryPhrasePage: View {
     @State private var revealed = false
     @State private var error: String?
     @State private var haptics = OnboardingHaptics()
+    @Environment(\.settingsFixture) private var fixture
 
     private var language: String { locale.identifier }
     private var words: [String] { gate?.words ?? [] }
@@ -125,7 +126,7 @@ struct RecoveryPhrasePage: View {
             }
         }
         .task {
-            if gate == nil { gate = PhraseGate(dependencies: .live(lock: lock, model: model)) }
+            if gate == nil { gate = PhraseGate(dependencies: fixture?.phrase ?? .live(lock: lock, model: model)) }
             try? await Task.sleep(for: .milliseconds(420))
             await authenticate()
         }

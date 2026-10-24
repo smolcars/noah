@@ -630,6 +630,10 @@ struct HomeView: View {
                 guard !path.isEmpty else { return }
                 if window.wide { quietly { _ = path.removeLast() } } else { path.removeLast() }
             },
+            leave: { page in
+                guard let page, path.last == .page(page) else { return }
+                if window.wide { quietly { _ = path.removeLast() } } else { path.removeLast() }
+            },
             close: { path = SettingsPath.base(path) },
             myCode: { path.append(.codes(.myCode)) },
             receive: onReceive,

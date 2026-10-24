@@ -1,35 +1,67 @@
+import Observation
 import SwiftUI
+
+/// A delete in progress, its typed word and its error. Settings keeps it outside the sheet, so a
+/// rotation or a pose change (which rebuilds the sheet) can't unlock Cancel or Delete mid-way.
+@MainActor @Observable
+final class WalletDeletion {
+    var confirmation = ""
+    private(set) var deleting = false
+    private(set) var failure: String?
+
+    var confirmed: Bool { DeleteChecklist.confirms(confirmation) }
+
+    /// One delete at a time, only once the word matches. True when the wallet is gone.
+    @discardableResult
+    func delete(_ action: () async throws -> Void) async -> Bool {
+        guard confirmed, !deleting else { return false }
+        deleting = true
+        failure = nil
+        defer { deleting = false }
+        do {
+            try await action()
+            return true
+        } catch {
+            failure = (error as? WalletLifecycle.Failure)?.errorDescription ?? "The wallet couldn't be deleted. Restart Noah and try again."
+            return false
+        }
+    }
+}
 
 /// Delete wallet: what you'd need to restore, then type "delete" (trimmed, any case). The button
 /// turns red only when it matches; while deleting the sheet locks. Errors and the return to
 /// onboarding are today's. Launch's blocked states open it too, without a wallet to describe.
 struct DeleteWalletSheet: View {
-    var locked: Binding<Bool> = .constant(false)
+    /// Settings passes its own; launch's blocked states use one of their own.
+    var deletion: WalletDeletion?
     /// nil closes with `dismiss` (a plain `.sheet`).
     var close: (() -> Void)?
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
-    @State private var confirmation = ""
-    @State private var deleting = false
-    @State private var failure: String?
+    @State private var own = WalletDeletion()
     @State private var haptics = OnboardingHaptics()
+    @Environment(\.settingsFixture) private var fixture
 
     private var language: String { locale.identifier }
-    private var confirmed: Bool { DeleteChecklist.confirms(confirmation) }
+    private var progress: WalletDeletion { deletion ?? own }
+    private var deleting: Bool { progress.deleting }
+    private var confirmed: Bool { progress.confirmed }
+    private var summary: WalletSession.Summary? { fixture?.summary ?? model.summary }
     private var checklist: DeleteChecklist {
-        DeleteChecklist(summary: model.summary, needsPhraseBackup: model.needsRecoveryPhraseBackup,
-                        backup: SettingsStorage.shared.persistedState(PersistedBackupState.self, key: PersistedBackupState.key) ?? .init())
+        DeleteChecklist(summary: summary, needsPhraseBackup: model.needsRecoveryPhraseBackup,
+                        backup: (fixture?.storage ?? .shared).persistedState(PersistedBackupState.self, key: PersistedBackupState.key) ?? .init())
     }
 
     var body: some View {
         SettingsSheetBody(title: L10n.text("Delete wallet", locale: language),
                           line: L10n.text("This removes the wallet and its recovery phrase from this phone. It can’t be undone.", locale: language)) {
-            if model.summary != nil { rows.padding(.top, 12) }
-            SettingsField(placeholder: L10n.text("Type delete to confirm", locale: language), text: $confirmation, id: "delete-wallet-input")
+            if summary != nil { rows.padding(.top, 12) }
+            SettingsField(placeholder: L10n.text("Type delete to confirm", locale: language),
+                          text: Binding(get: { progress.confirmation }, set: { progress.confirmation = $0 }), id: "delete-wallet-input")
                 .disabled(deleting)
-            if let failure {
+            if let failure = progress.failure {
                 Text(LocalizedStringKey(failure)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.failure)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10)
@@ -85,21 +117,8 @@ struct DeleteWalletSheet: View {
     private func delete() {
         guard confirmed, !deleting else { return }
         haptics.play(.warning)
-        deleting = true
-        locked.wrappedValue = true
-        failure = nil
         Task {
-            do {
-                try await model.deleteWallet()
-                locked.wrappedValue = false
-                deleting = false
-                leave()
-            } catch {
-                failure = (error as? WalletLifecycle.Failure)?.errorDescription
-                    ?? "The wallet couldn't be deleted. Restart Noah and try again."
-                deleting = false
-                locked.wrappedValue = false
-            }
+            if await progress.delete({ try await model.deleteWallet() }) { leave() }
         }
     }
 }

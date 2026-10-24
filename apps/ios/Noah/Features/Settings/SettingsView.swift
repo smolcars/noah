@@ -72,8 +72,10 @@ struct SettingsList: View {
     /// Wide windows highlight the open page's row.
     let selected: SettingsPage?
     @Binding var sheet: SettingsRootSheet?
+    @Binding var offset: CGFloat
     /// In a wide window's leading pane, with its own bar.
     var leading = false
+    @State private var position = ScrollPosition()
 
     @Environment(AppModel.self) private var app
     @Environment(WalletLock.self) private var lock
@@ -86,8 +88,10 @@ struct SettingsList: View {
     @State private var unlock = DebugUnlock()
     @State private var haptics = OnboardingHaptics()
     @State private var error: String?
+    @Environment(\.settingsFixture) private var fixture
 
     private var language: String { locale.identifier }
+    private var walletSummary: WalletSession.Summary? { fixture?.summary ?? app.summary }
 
     var body: some View {
         let list = ScrollView {
@@ -97,14 +101,14 @@ struct SettingsList: View {
                 bitcoin
                 display
                 SettingsGroup(label: "App") {
-                    row("bell", "Notifications", value: notificationsValue, dot: summary.notificationsOn == false ? .failure : .none,
+                    row("Notifications", icon: "bell", value: notificationsValue, dot: summary.notificationsOn == false ? .failure : .none,
                         failure: summary.notificationsOn == false, page: .notifications, id: "settings-notifications")
-                    row("slider.horizontal.3", "Advanced", value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
+                    row("Advanced", icon: "slider.horizontal.3", value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
                         failure: app.isWalletSuspended, page: .advanced, last: true, id: "settings-advanced")
                 }
                 SettingsGroup(label: "Help") {
-                    row("bubble.left", "Feedback", page: .feedback, id: "settings-feedback")
-                    row("sailboat", "About Noah", page: .about, last: true, id: "settings-about")
+                    row("Feedback", icon: "bubble.left", page: .feedback, id: "settings-feedback")
+                    row("About Noah", icon: "sailboat", page: .about, last: true, id: "settings-about")
                 }
                 SettingsGroup {
                     SettingsRow(icon: "trash", title: L10n.text("Delete wallet", locale: language), danger: true, hairline: false,
@@ -122,6 +126,9 @@ struct SettingsList: View {
             .frame(maxWidth: .infinity)
         }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
+        .scrollPosition($position)
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, y in offset = y }
+        .onAppear { if offset > 0 { position.scrollTo(y: offset) } }
         .onboardingHaptics(haptics)
         .task(id: scenePhase == .active) {
             guard scenePhase == .active else { return }
@@ -132,7 +139,10 @@ struct SettingsList: View {
                 summary.reloadLocal()
             }
         }
-        .task { await executor.reload() }
+        .task {
+            if let fixture { executor = fixture.executor }
+            await executor.reload()
+        }
         .accessibilityIdentifier("settings-list")
         if leading {
             list.safeAreaInset(edge: .top, spacing: 0) {
@@ -187,9 +197,9 @@ struct SettingsList: View {
     private var security: some View {
         SettingsGroup(label: "Security") {
             let backup = BackupStatus(summary.backup, enabled: app.server.state.isBackupEnabled == true)
-            row("icloud.and.arrow.up", "Backup", value: L10n.text(backup.rowValue(enabled: app.server.state.isBackupEnabled == true), locale: language),
+            row("Backup", icon: "icloud.and.arrow.up", value: L10n.text(backup.rowValue(enabled: app.server.state.isBackupEnabled == true), locale: language),
                 dot: backup.mark == .failed ? .failure : .none, failure: backup.mark == .failed, page: .backup, id: "settings-backup")
-            row("key", "Recovery phrase", value: app.needsRecoveryPhraseBackup ? L10n.text("Not saved", locale: language) : nil,
+            row("Recovery phrase", icon: "key", value: app.needsRecoveryPhraseBackup ? L10n.text("Not saved", locale: language) : nil,
                 dot: app.needsRecoveryPhraseBackup ? .attention : .none, page: .recovery,
                 last: !(WalletLock.available || lock.policy.enabled), id: "settings-recovery")
             if WalletLock.available || lock.policy.enabled {
@@ -204,15 +214,15 @@ struct SettingsList: View {
         SettingsGroup(label: "Bitcoin") {
             let vtxos = summary.overview?.vtxos ?? []
             let due = !VtxoList.due(vtxos).isEmpty
-            row("cylinder.split.1x2", "VTXOs", value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
+            row("VTXOs", icon: "cylinder.split.1x2", value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
                 dot: due ? .attention : .none, page: .vtxos, id: "settings-vtxos")
-            row("link", "On-chain", value: app.summary.map { money($0.balance.onchain.confirmed) }, numeric: true, page: .onchain, id: "settings-onchain")
+            row("On-chain", icon: "link", value: walletSummary.map { money($0.balance.onchain.confirmed) }, numeric: true, page: .onchain, id: "settings-onchain")
             let approvals = executor.schedules.filter { $0.status == "needs_approval" }.count
             let active = executor.schedules.filter { $0.status == "active" }.count
-            row("arrow.triangle.2.circlepath", "Recurring payments",
+            row("Recurring payments", icon: "arrow.triangle.2.circlepath",
                 value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
                 dot: approvals > 0 ? .attention : .none, page: .recurring, id: "settings-recurring-payments")
-            row("rectangle.portrait.and.arrow.right", "Emergency exit",
+            row("Emergency exit", icon: "rectangle.portrait.and.arrow.right",
                 value: summary.overview?.exits.isEmpty == false ? L10n.text("In progress", locale: language) : nil, page: .exit, last: true,
                 id: "settings-emergencyExit")
         }
@@ -262,7 +272,7 @@ struct SettingsList: View {
 
     // MARK: Actions
 
-    private func row(_ icon: String, _ title: String, value: String? = nil, numeric: Bool = false, dot: SettingsRow.Dot = .none,
+    private func row(_ title: String, icon: String, value: String? = nil, numeric: Bool = false, dot: SettingsRow.Dot = .none,
                      failure: Bool = false, page: SettingsPage, last: Bool = false, id: String) -> some View {
         SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, numeric: numeric, dot: dot, failure: failure,
                     selected: selected == page, hairline: !last, id: id) {
@@ -349,14 +359,14 @@ extension WalletLock {
 struct SettingsRootSheetView: View {
     let sheet: SettingsRootSheet
     @Binding var current: SettingsRootSheet?
-    @Binding var locked: Bool
+    let deletion: WalletDeletion
 
     var body: some View {
         switch sheet {
         case .unit: SettingsUnitSheet(close: close)
         case .currency: SettingsCurrencySheet(close: close)
         case .language: SettingsLanguageSheet(close: close)
-        case .delete: DeleteWalletSheet(locked: $locked, close: close)
+        case .delete: DeleteWalletSheet(deletion: deletion, close: close)
         }
     }
 
@@ -366,6 +376,7 @@ struct SettingsRootSheetView: View {
 /// Two cards with your balance written both ways.
 private struct SettingsUnitSheet: View {
     let close: () -> Void
+    @Environment(\.settingsFixture) private var fixture
     @Environment(AppModel.self) private var app
     @Environment(\.locale) private var locale
     @State private var haptics = OnboardingHaptics()
@@ -377,7 +388,7 @@ private struct SettingsUnitSheet: View {
                     Button { pick(unit) } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(verbatim: BitcoinAmount.format(sats: Int64(clamping: app.summary?.balance.totalSats ?? 152_742), unit: unit, locale: locale))
+                                Text(verbatim: BitcoinAmount.format(sats: Int64(clamping: (fixture?.summary ?? app.summary)?.balance.totalSats ?? 0), unit: unit, locale: locale))
                                     .noahText(NoahTokens.Typography.code).monospacedDigit()
                                 Text(LocalizedStringKey(unit == .bip177 ? "Bitcoin (BIP-177)" : "Satoshis"))
                                     .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
@@ -523,6 +534,10 @@ struct SettingsCheck: View {
 /// Each page by route.
 struct SettingsPageView: View {
     let page: SettingsPage
+    @Environment(\.settingsFixture) private var fixture
+
+    private var onchain: OnchainModel { fixture?.onchain() ?? OnchainModel() }
+    private var executor: RecurringExecutor { fixture?.executor ?? .shared }
 
     var body: some View {
         switch page {
@@ -531,13 +546,13 @@ struct SettingsPageView: View {
         case .email: EmailPage()
         case .backup: BackupSettingsView()
         case .recovery: RecoveryPhrasePage()
-        case .vtxos: VtxosView()
-        case .vtxo(let id): VtxoDetailView(id: id)
-        case .onchain: BoardArkView()
-        case .recurring: RecurringPaymentsView()
-        case .schedule(let id): RecurringSchedulePage(id: id)
+        case .vtxos: VtxosView(model: onchain)
+        case .vtxo(let id): VtxoDetailView(id: id, model: onchain)
+        case .onchain: BoardArkView(model: onchain)
+        case .recurring: RecurringPaymentsView(executor: executor)
+        case .schedule(let id): RecurringSchedulePage(id: id, executor: executor)
         case .editor(let id):
-            RecurringPaymentEditorView(executor: .shared, schedule: id.flatMap { id in RecurringExecutor.shared.schedules.first { $0.id == id } })
+            RecurringPaymentEditorView(executor: executor, schedule: id.flatMap { id in executor.schedules.first { $0.id == id } })
         case .exit: UnilateralExitView()
         case .notifications: NotificationsPage()
         case .advanced: AdvancedPage()

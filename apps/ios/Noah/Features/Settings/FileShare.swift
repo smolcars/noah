@@ -48,7 +48,7 @@ struct LogView: View {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     ForEach(Array(snapshot.lines.enumerated()), id: \.offset) { _, line in
                         Text(verbatim: line).font(.system(size: 11.5, design: .monospaced))
-                            .foregroundStyle(line.contains(" E ") || line.contains("ERROR") ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+                            .foregroundStyle(line.contains(" E [") ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }

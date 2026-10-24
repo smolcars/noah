@@ -12,6 +12,7 @@ struct ProfileView: View {
     @State private var sheet: Sheet?
     @State private var message: String?
     @State private var haptics = OnboardingHaptics()
+    @Environment(\.settingsFixture) private var fixture
 
     private var language: String { locale.identifier }
     private var server: PersistedServerState { model.server.state }
@@ -66,7 +67,8 @@ struct ProfileView: View {
             }
         }
         .task {
-            name = Self.limitedName(SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName ?? "")
+            name = Self.limitedName((fixture?.storage ?? .shared).persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName ?? "")
+            if fixture != nil { key = "03" + String(repeating: "7c", count: 32); return }
             do {
                 // RN displays the server identity's offline derivation, not the wallet's hardened key.
                 key = try ServerClient.loginKey(variant: model.variant, mnemonic: AppServices.shared.readMnemonic())
@@ -144,6 +146,7 @@ private struct ProfileNameSheet: View {
 struct LightningAddressPage: View {
     @Environment(AppModel.self) private var model
     @Environment(\.settings) private var settings
+    @Environment(\.settingsPage) private var currentPage
     @Environment(\.locale) private var locale
     @State private var name = NameAvailability(lookup: NameAvailability.liveLookup(variant: .current))
     @State private var npub = ""
@@ -151,6 +154,7 @@ struct LightningAddressPage: View {
     @State private var error: String?
     @State private var haptics = OnboardingHaptics()
     @FocusState private var focused: Bool
+    @Environment(\.settingsFixture) private var fixture
 
     private var language: String { locale.identifier }
     private var assigned: String { model.server.state.lightningAddress?.components(separatedBy: "@").first ?? "" }
@@ -207,7 +211,7 @@ struct LightningAddressPage: View {
         }
         .task {
             do {
-                try await model.server.ensureRegistered()
+                if fixture == nil { try await model.server.ensureRegistered() }
                 name.assigned = assigned
                 name.text = assigned
                 name.textChanged()
@@ -234,7 +238,7 @@ struct LightningAddressPage: View {
                 try await model.server.saveIdentity(username: name.text, npub: key)
                 haptics.play(.success)
                 settings.toast("Saved")
-                settings.back()
+                settings.leave(currentPage)
             } catch {
                 haptics.play(.error)
                 self.error = ServerFailure.message(for: error, fallback: "Failed to update Lightning address. Please try again.")
@@ -252,6 +256,7 @@ struct EmailPage: View {
     @State private var email: EmailVerification?
     @State private var haptics = OnboardingHaptics()
     @State private var registrationFailed = false
+    @Environment(\.settingsFixture) private var fixture
     @Namespace private var glass
     @FocusState private var focus: Field?
     private enum Field { case email, code }
@@ -270,6 +275,7 @@ struct EmailPage: View {
                 let server = model.server
                 email = EmailVerification(send: { try await server.sendEmail($0) }, verify: { try await server.verifyEmail(code: $0, email: $1) })
             }
+            guard fixture == nil else { return }
             do { try await model.server.ensureRegistered() } catch { registrationFailed = true }
         }
     }
