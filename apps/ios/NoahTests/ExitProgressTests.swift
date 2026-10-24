@@ -668,6 +668,32 @@ struct ExitClaimAutoBoardTests {
     }
 }
 
+/// An open page keeps the daemon clock of its last read; coming back restarts it there too, so needs-funds
+/// waits for a daemon cycle after the app returns instead of showing at once.
+@MainActor
+struct ExitSceneTests {
+    @Test func comingBackRestartsTheDaemonEvidence() async {
+        var txs = ExitProgressTests.path.map { ExitProgressTests.tx($0, "verify-inputs") }
+        txs[0] = ExitProgressTests.tx("root", "awaiting-cpfp-broadcast")
+        let exit = ExitProgressTests.exit("Processing", ExitProgressTests.processing(txs))
+        var read = OnchainOverview(walletID: "wallet", vtxos: [], exits: [exit], confirmed: 100, tip: 100, pendingTotal: 0, claimableHeight: nil)
+        read.packageFees = [exit.id: 1_215]
+        read.daemonSince = .distantPast
+        let overview = read
+        let seen = ["wallet": ExitSightings(seen: [exit.parkedEpisode!: .init(tip: 100, at: .distantPast)])]
+        let model = OnchainModel(dependencies: .init(ready: { true }, overview: { overview },
+            quote: { _, _, _, _ in throw OnchainFailure.unavailable }, execute: { _ in throw OnchainFailure.unavailable },
+            attempt: { [] }, acknowledge: { _ in },
+            sightings: .init(read: { String(decoding: try! JSONEncoder().encode(seen), as: UTF8.self) }, write: { _ in })))
+        await model.load()
+        let now = Date()
+        #expect(model.progress(exit, now: now).phase == .needsFunds)
+        model.sceneChanged(at: now)
+        #expect(model.progress(exit, now: now.addingTimeInterval(74)).phase == .sending)
+        #expect(model.progress(exit, now: now.addingTimeInterval(75)).phase == .needsFunds)
+    }
+}
+
 /// Hold to start and hold to claim through the real start and claim paths (`startQuote`/`executeStart`,
 /// `claimQuote`/`executeClaim`) and the durable journal. The app leaves and comes back before the hold
 /// (the screen drops the review and fetches it again), the hold fires twice (a size-class change

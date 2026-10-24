@@ -230,7 +230,10 @@ struct OnchainScreen: ViewModifier {
                 await model.load()
                 await refresh?()
             }
-            .onChange(of: phase) { _, _ in model.invalidate() }
+            .onChange(of: phase) { _, _ in
+                model.invalidate()
+                model.sceneChanged()
+            }
             .onChange(of: app.isWalletSuspended) { _, suspended in
                 if suspended { model.invalidate() }
             }
