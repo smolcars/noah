@@ -52,6 +52,7 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
     var refreshing by remember { mutableStateOf(false) }
     var tip by remember { mutableStateOf<Long?>(null) }
     val confirmedAt = remember { mutableStateMapOf<String, Long>() }
+    val chainReads = remember { ChainReads() }
     var seen by remember { mutableStateOf(memory.seenRows) }
     val rows = history.transactions
     val ui = ActivityUi(
@@ -82,11 +83,27 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
         coin = { id -> app.vtxoDetail = id; onSettings(SettingsDestination.Vtxos) },
         barHidden = barHidden,
         seen = { id -> memory.seenRows = ActivityRules.seen(memory.seenRows, id); seen = memory.seenRows },
-        shown = { record -> scope.launch { readChain(app, record, { tip = it }) { txid, height -> confirmedAt[txid] = height } } },
+        shown = { record ->
+            val request = chainReads.begin(record.id, app.summary?.fingerprint)
+            fun current() = chainReads.current(request, state.selected, app.summary?.fingerprint)
+            scope.launch { readChain(app, record, { if (current()) tip = it }) { txid, height -> if (current()) confirmedAt[txid] = height } }
+        },
     )
     com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
         ActivityContent(ui, actions, state, toasts)
     }
+}
+
+/**
+ * The open payment's chain reads, which outlive its selection: only the newest request writes, and only while its
+ * payment is still open in the wallet that asked, so a slow read for an earlier payment can't lower the tip.
+ */
+internal class ChainReads {
+    data class Request(val generation: Long, val id: String, val wallet: String?)
+    private var generation = 0L
+    fun begin(id: String, wallet: String?) = Request(++generation, id, wallet)
+    fun current(request: Request, selected: String?, wallet: String?) =
+        request.generation == generation && request.id == selected && request.wallet == wallet
 }
 
 /**
