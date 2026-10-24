@@ -236,12 +236,17 @@ internal class OnchainOperations(
                     recordTransaction(checkNotNull(reviewed.preparedBoard).txid)
                     val result = try { wallet.submitBoard(reviewed) }
                     catch (error: BarkError) {
+                        // SDK 0.7.0 throws only before bark records the board, a reorged parent included; failures after return an outcome.
                         if (error.code in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED))
                             throw BoardNotSubmitted(boardFailure(error))
+                        // An unreachable chain source while re-checking the inputs.
+                        if (error.code == BarkErrorCode.OTHER) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
                         throw error
                     }
                     if (result.txid != reviewed.preparedBoard.txid) fail(OnchainFailure.uncertain)
                     if (result.broadcast is BroadcastOutcome.NotAttempted) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
+                    // bark failed after it may have recorded the board. The SDK refuses a resubmit; Check status reconciles it.
+                    if (result.broadcast is BroadcastOutcome.Uncertain) fail(OnchainFailure.uncertain)
                     val retry = result.broadcast is BroadcastOutcome.Failed
                     OnchainReceipt(if (retry) OnchainReceipt.broadcastFailedMessage
                         else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)

@@ -180,6 +180,9 @@ class OnchainOperationsTest {
             return mine
         }
         var pendingBoard = false
+        /** Funding txids bark's pending boards and board movements name. */
+        var boardTxids = emptySet<String>()
+        override suspend fun boardTransactionIDs() = boardTxids
         var chainStatus: TransactionStatus = TransactionStatus.InMempool
         var fundingTransactions: List<WalletTransaction>? = null
         var fundingUtxos = emptyList<OnchainUtxo>()
@@ -461,7 +464,7 @@ class OnchainOperationsTest {
         assertNotNull(ops.autoBoardFunding())
         assertNotNull(journal.loadAll().single().receipt)
         val next = ops.quote(OnchainAction.board, amount = 30_000)
-        wallet.submitError = BarkError("uncertain", BarkErrorCode.OTHER)
+        wallet.submitOutcome = BroadcastOutcome.Uncertain("checkpoint write failed")
         assertTrue(runCatching { ops.execute(next) }.isFailure)
         wallet.chainStatus = TransactionStatus.NotFound
         wallet.fundingTransactions = emptyList()
@@ -821,6 +824,7 @@ class OnchainOperationsTest {
     } }
     @Test fun outcomesAndTypedSubmissionErrorsKeepOnlyPotentialDeliveriesLocked() = runBlocking {
         val cases = listOf<Any>(BroadcastOutcome.Accepted, BroadcastOutcome.Failed("transport"), BroadcastOutcome.NotAttempted("setup"),
+            BroadcastOutcome.Uncertain("checkpoint write failed"),
             BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED,
             BarkErrorCode.PERSISTENCE, BarkErrorCode.OTHER, BarkErrorCode.INSUFFICIENT_FUNDS)
         for (case in cases) fixture { wallet, ops, journal, _ ->
@@ -828,7 +832,8 @@ class OnchainOperationsTest {
             if (case is BroadcastOutcome) wallet.submitOutcome = case
             else wallet.submitError = BarkError("never classify diagnostics", case as BarkErrorCode)
             runCatching { ops.execute(reviewed) }
-            val noSubmission = case is BroadcastOutcome.NotAttempted || case in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED)
+            val noSubmission = case is BroadcastOutcome.NotAttempted || case in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND,
+                BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED, BarkErrorCode.OTHER)
             assertEquals(case.toString(), noSubmission, journal.loadAll().isEmpty())
             if (case is BroadcastOutcome.Failed) {
                 val attempt = journal.loadAll().single()
@@ -858,6 +863,39 @@ class OnchainOperationsTest {
         ops.execute(second)
         assertNotNull(journal.loadAll().single().receipt)
     } }
+    @Test fun anUncertainBoardStaysLockedAndUncertainAndIsNeverSubmittedAgain() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val reviewed = ops.quote(OnchainAction.board, amount = 30_000)
+        wallet.submitOutcome = BroadcastOutcome.Uncertain("checkpoint write failed")
+        assertEquals(OnchainFailure.uncertain, (runCatching { ops.execute(reviewed) }.exceptionOrNull() as OnchainException).reason)
+        val attempt = journal.loadAll().single()
+        assertEquals("board-tx", attempt.txid); assertNull(attempt.receipt)
+        assertTrue(attempt.blocks(OnchainAction.board, emptyList()))
+        assertEquals("released, not resubmitted", listOf(reviewed.preparedBoard!!.id), wallet.discarded)
+        // Nothing found yet: it stays uncertain, and neither a review nor auto-board can board again.
+        wallet.fundingTransactions = emptyList(); wallet.chainStatus = TransactionStatus.NotFound
+        assertFalse(ops.check(attempt.id))
+        assertNull(ops.autoBoardFunding())
+        wallet.submitOutcome = BroadcastOutcome.Accepted
+        assertEquals(OnchainFailure.busy, (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
+        // bark had recorded it: its pending board names the funding txid, and Check status resolves the attempt.
+        wallet.boardTxids = setOf("board-tx")
+        assertTrue(ops.check(attempt.id))
+        assertNotNull(journal.loadAll().single().receipt)
+        assertEquals(1, wallet.calls.count { it.startsWith("submit:") })
+    } }
+    @Test fun aReorgedOrUnverifiableParentAtSubmitReadsAsBeforeSubmission() = runBlocking {
+        // SDK 0.7.0's confirmed-only re-check: a parent back in the mempool, or a chain source it can't reach.
+        for ((code, reason) in listOf(BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE to OnchainFailure.reserved, BarkErrorCode.OTHER to OnchainFailure.boardNotAttempted)) fixture { wallet, ops, journal, _ ->
+            wallet.submitError = BarkError("prepared board parent is no longer confirmed", code)
+            val failure = runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException
+            assertEquals(code.name, reason, failure.reason)
+            assertTrue(failure.reason.text.contains("not submitted") || failure.reason.text.contains("unavailable"))
+            assertTrue("nothing recorded, nothing locked", journal.loadAll().isEmpty())
+            wallet.submitError = null
+            ops.execute(ops.quote(OnchainAction.board, amount = 30_000))
+            assertNotNull("a new review boards", journal.loadAll().single().receipt)
+        }
+    }
     @Test fun rejectedBoardReleasesJournalForLaterManualAndAutomaticBoards() = runBlocking {
         for (automatic in listOf(false, true)) fixture { wallet, ops, journal, _ ->
             val first = ops.quote(OnchainAction.board, amount = 30_000)

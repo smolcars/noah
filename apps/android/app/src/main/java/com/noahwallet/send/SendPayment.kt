@@ -97,13 +97,17 @@ sealed interface SendResolution {
 }
 object SendOnchainSubmission {
     fun notSubmitted(error: Throwable): SendFailure.Reason? = when ((error as? BarkError)?.code) {
-        // Audited v0.4.0 record_prepared ordering; only for the first broadcast of an app-owned id.
+        // Audited v0.7.0 record_prepared ordering; only for the first broadcast of an app-owned id. A reorged parent is unavailable.
         BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE -> SendFailure.Reason.fundsChanged
+        // An unreachable chain source while re-checking confirmed-only inputs, before anything is recorded.
+        BarkErrorCode.OTHER -> SendFailure.Reason.constructionFailed
         else -> null
     }
     fun receipt(result: BroadcastResult, quote: SendQuote): SendReceipt {
         requireSend(quote.prepared?.txid == result.txid, SendFailure.Reason.unresolved)
         if (result.broadcast is BroadcastOutcome.NotAttempted) throw SendNotSubmitted(SendFailure.Reason.constructionFailed)
+        // Only boards report it today; a send that may have been recorded is never shown as sent.
+        requireSend(result.broadcast !is BroadcastOutcome.Uncertain, SendFailure.Reason.unresolved)
         return SendReceipt(quote.amount, txid = result.txid, fee = quote.fee, proof = SendReceipt.Proof.preparedTxid,
             broadcastRetryPending = result.broadcast is BroadcastOutcome.Failed)
     }

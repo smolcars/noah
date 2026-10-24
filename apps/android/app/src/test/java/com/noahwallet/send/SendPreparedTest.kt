@@ -18,10 +18,20 @@ class SendPreparedTest {
         assertTrue(failed.broadcastRetryPending)
         assertTrue(runCatching { SendOnchainSubmission.receipt(BroadcastResult("exact", BroadcastOutcome.NotAttempted("private")), chainQuote) }.exceptionOrNull() is SendNotSubmitted)
         assertTrue(runCatching { SendOnchainSubmission.receipt(BroadcastResult("wrong", BroadcastOutcome.Accepted), chainQuote) }.exceptionOrNull() is SendFailure)
+        // Only boards report it today; if a send ever did, it would stay unresolved, never shown as sent.
+        val uncertain = runCatching { SendOnchainSubmission.receipt(BroadcastResult("exact", BroadcastOutcome.Uncertain("private")), chainQuote) }.exceptionOrNull()
+        assertEquals(SendFailure.Reason.unresolved, (uncertain as SendFailure).reason)
     }
     @Test fun typedErrorsAreCallSpecificAndUnknownStaysUncertain() {
-        for (code in BarkErrorCode.entries) assertEquals(code.name, code in listOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE), SendOnchainSubmission.notSubmitted(BarkError("sensitive", code)) != null)
+        for (code in BarkErrorCode.entries) assertEquals(code.name, code in listOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.OTHER), SendOnchainSubmission.notSubmitted(BarkError("sensitive", code)) != null)
         assertNull(SendOnchainSubmission.notSubmitted(Exception("insufficient funds")))
+    }
+    @Test fun aReorgedOrUnverifiableParentAtFirstBroadcastReadsAsBeforeSubmission() {
+        // SDK 0.7.0 re-checks confirmed-only inputs before recording: a parent back in the mempool, or no chain source.
+        assertEquals(SendFailure.Reason.fundsChanged, SendOnchainSubmission.notSubmitted(BarkError("prepared input parent is no longer confirmed", BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE)))
+        val unreachable = SendOnchainSubmission.notSubmitted(BarkError("connection refused", BarkErrorCode.OTHER))
+        assertEquals(SendFailure.Reason.constructionFailed, unreachable)
+        assertTrue(unreachable!!.message.contains("No payment was submitted"))
     }
     @Test fun exactCrashTxidOnlyAndMissingHistoryNeverUnlocks() {
         val attempt = SendAttempt(payment = chainPayment, broadcastingTxid = "exact", quote = chainQuote)
