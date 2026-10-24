@@ -164,7 +164,7 @@
   <string name="gt_4816cbfd74aa8297">"Transferir"</string>
   <string name="gt_a3659865c762c69f">"Transferir a Ark"</string>
   <string name="gt_aca0fb7b6af91d5e">"Depósito enviado, pero sin confirmar. Noah seguirá intentando difundirlo. No vuelvas a depositar estos fondos."</string>
-  <string name="gt_21bea5494ecbdd9d">"Depósito enviado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar."</string>
+  <string name="gt_21bea5494ecbdd9d">"Depósito iniciado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar."</string>
   <string name="gt_01c437c9f900b81f">"Depósito enviado. Los fondos podrán gastarse cuando se complete el depósito."</string>
   <string name="gt_8fed00ef8e09c48a">"No se envió el depósito. Revísalo de nuevo cuando la billetera esté lista."</string>
   <string name="gt_479ad21ac9096236">"Abajo"</string>
@@ -897,7 +897,7 @@
   <string name="gt_2bc4ef41a5775e8d">"Pago enviado"</string>
   <string name="gt_f643e0c5a72874d3">"No se pudo guardar el estado del pago. Vuelve a consultarlo después de reiniciar Noah."</string>
   <string name="gt_2b79ccf58c27d73a">"Estado del pago no disponible"</string>
-  <string name="gt_006fbb3905701e15">"Pago enviado"</string>
+  <string name="gt_006fbb3905701e15">"Pago iniciado"</string>
   <string name="gt_f905e55761fc8b3a">"El pago se realizó correctamente; no se pudieron guardar los metadatos para repetirlo"</string>
   <string name="gt_331551b0de4157c9">"Pendiente"</string>
   <string name="gt_beb7d5eb6ac8b5fb">"Envío Arkoor pendiente"</string>

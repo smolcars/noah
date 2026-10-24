@@ -901,6 +901,15 @@ Left for later:
 
 **Typed "delete" confirmations.** Every typed-delete check (the Android launch gate, Settings → Delete wallet and Debug on both platforms) now accepts one word, `SettingsRules.deleteWord` (Android) / `DeleteChecklist.word` (iOS): "delete", trimmed, any case. Android's launch gate shows that word as its field label instead of a translatable string, and Android's Debug check now trims like the others. Every translation of "Type delete to confirm" and of the launch gate's prompt keeps the literal `delete`, as the Settings spec says; `TranslationsTest` (Android), `TranslationsTests` (iOS) and the catalog tool's tests fail if a locale ever asks for another word.
 
+## Translations checked for overclaiming
+
+A string one platform switched onto keeps its existing translations, so each was checked for a translation that claims more than the English (sent vs submitted, paid vs pending, received vs arriving, claimed vs claimable).
+
+- **Payment submitted** (`gt_006fbb3905701e15`): used for a broadcast that's still retrying, a MAX offboard whose amount bark hasn't recorded yet, and Android's legacy result for an unconfirmed txid. All mean "submitted, not confirmed sent", so it stays one string. es "Pago enviado" (word for word the same as "Payment sent") → "Pago iniciado"; ja "支払いを送信しました" ("sent the payment") → "支払いを受け付けました"; sv "Betalning skickad" → "Betalning inskickad"; ko "결제 요청 제출됨" was already right. The catalog tool's tests now fail if a locale translates "Payment submitted" the same as "Payment sent".
+- **Boarding submitted, but delivery is unconfirmed. …** (`gt_21bea5494ecbdd9d`, which iOS moved onto): es "Depósito enviado" → "Depósito iniciado", sv "Insättning skickad" → "Insättning inskickad", ja "入金リクエストを送信しましたが" → "入金を受け付けましたが"; ko already said "submitted".
+- **Checked and unchanged:** "Payment not sent", "This payment may have been sent. …", "Unable to reserve the wallet. Check payment status before sending again.", "Recurring payment stopped before submission. No payment was sent.", "{amount} is back in your wallet. …", "Refunded · back in your wallet", "The Lightning payment could not be received. …", "The recorded transaction was found. Review its network status.", "Backup pending", "{amount} available in Ark", "Joins the next Ark round, so it stays spendable." (and "they"), "Claimable in {n} blocks · {time}", "Waiting · {n} blocks · {time}", "A payment of {amount} sats for this invoice is already in progress. …", "A reminder comes the day before. …", "Check status", "Refresh network status", "Done", "Exported", "Registered again" and "Start a new payment after checking history". Each hedges or matches the English.
+- **Not changed (older shared strings, outside this audit):** several older strings translate "submitted" as es "enviado", ja "送信" and sv "skickad" (e.g. "Submitted", "Claim submitted. …", "Submitted, awaiting broadcast. …"). They predate this work and say "submitted" in context, but read slightly stronger than the English.
+
 ## Other findings, not changed
 
 - **Interpolated copy never localizes.** Swift `Text("… \(x) …")` and Kotlin `tr("… $x …")` (or English built in a model) look up a key that doesn't exist, so they always show English, yet the extractor puts them in the catalogs as `{nativeValueN}`. The remaining ones are allowlisted ("not localized" or iOS's may-have-been-sent lines in `SendOutcomeView`); the rest were converted above.
@@ -917,7 +926,7 @@ Left for later:
 
 - **iOS:** `NoahTests` (scheme `Noah-Regtest`, `-only-testing:NoahTests`, `-parallel-testing-enabled NO`) on an iPhone SE (3rd generation) simulator, iOS 27.0: 1,178 tests in 233 suites passed (after the review changes).
 - **Android:** `./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest`: 4,220 JVM tests in 197 suites, 0 failures; the instrumented test APK builds. The instrumented suites themselves weren't run, apart from the screenshot galleries below.
-- **Tool:** `bun test apps/tools/translations.test.mjs` passes (18 tests, including the gate and typed-delete tests), and `bun apps/tools/translations.mjs --check` is clean with the gate on: 0 untranslated in es, ja, ko and sv.
+- **Tool:** `bun test apps/tools/translations.test.mjs` passes (19 tests, including the gate, typed-delete and submitted-vs-sent tests), and `bun apps/tools/translations.mjs --check` is clean with the gate on: 0 untranslated in es, ja, ko and sv.
 - **Tests that asserted old text** were updated: `SendOfferTests`, `ProfileNameDraftTests`, `SettingsSafetyTests`, the Home and Onboarding shot fixtures (iOS) and `ExitDeviceTest` (Android). No test tag or accessibility identifier changed.
 
 ### Length on the smallest phones

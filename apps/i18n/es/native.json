@@ -1,7 +1,7 @@
 {
   "gt_00152767e041fe7e": "Pendiente en una ronda",
   "gt_0054e707d5a94f9f": "Respaldar",
-  "gt_006fbb3905701e15": "Pago enviado",
+  "gt_006fbb3905701e15": "Pago iniciado",
   "gt_0075dff6ca828fc1": "Reclamando · esperando el bloque {{height}}",
   "gt_0085d19b65acb661": "Último bloque sincronizado de la salida",
   "gt_009d9a53d84c4cef": "Registro completado en el servidor",
@@ -275,7 +275,7 @@
   "gt_218197693424e015": "De",
   "gt_219c4a6c86a716e9": "Resultados",
   "gt_21b111cbfe6e8fca": "Predeterminado",
-  "gt_21bea5494ecbdd9d": "Depósito enviado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar.",
+  "gt_21bea5494ecbdd9d": "Depósito iniciado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar.",
   "gt_21cfd8fdcf01d5a0": "Enviado a {{address}}",
   "gt_21daf39744874523": "¿{{action}}?",
   "gt_21e360b26e1793bf": "Pago en curso",

@@ -5834,13 +5834,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Depósito enviado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar."
+            "value": "Depósito iniciado, pero su recepción no está confirmada. Noah seguirá intentando difundirlo. No vuelvas a depositar."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arkへの入金リクエストを送信しましたが、到達は確認できていません。Noahはブロードキャストを再試行し続けます。再度Arkに入金しないでください。"
+            "value": "Arkへの入金を受け付けましたが、到達は確認できていません。Noahはブロードキャストを再試行し続けます。再度Arkに入金しないでください。"
           }
         },
         "ko": {
@@ -5852,7 +5852,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Insättning skickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning."
+            "value": "Insättning inskickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning."
           }
         }
       }
@@ -31790,13 +31790,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pago enviado"
+            "value": "Pago iniciado"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "支払いを送信しました"
+            "value": "支払いを受け付けました"
           }
         },
         "ko": {
@@ -31808,7 +31808,7 @@
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Betalning skickad"
+            "value": "Betalning inskickad"
           }
         }
       }

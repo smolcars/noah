@@ -164,7 +164,7 @@
   <string name="gt_4816cbfd74aa8297">"Arkに入金する"</string>
   <string name="gt_a3659865c762c69f">"Arkに入金する"</string>
   <string name="gt_aca0fb7b6af91d5e">"Arkへの入金を送信しましたが、まだ確認されていません。Noahはブロードキャストを引き続き試みます。この資金を再びArkに入金しないでください。"</string>
-  <string name="gt_21bea5494ecbdd9d">"Arkへの入金リクエストを送信しましたが、到達は確認できていません。Noahはブロードキャストを再試行し続けます。再度Arkに入金しないでください。"</string>
+  <string name="gt_21bea5494ecbdd9d">"Arkへの入金を受け付けましたが、到達は確認できていません。Noahはブロードキャストを再試行し続けます。再度Arkに入金しないでください。"</string>
   <string name="gt_01c437c9f900b81f">"Arkへの入金リクエストを送信しました。入金が完了すると資金を使用できます。"</string>
   <string name="gt_8fed00ef8e09c48a">"Arkへの入金は送信されませんでした。ウォレットの準備ができたら再度確認してください。"</string>
   <string name="gt_479ad21ac9096236">"下部"</string>
@@ -897,7 +897,7 @@
   <string name="gt_2bc4ef41a5775e8d">"送金しました"</string>
   <string name="gt_f643e0c5a72874d3">"支払い状況を保存できませんでした。Noahを再起動してから、状況を再確認してください。"</string>
   <string name="gt_2b79ccf58c27d73a">"支払い状況を取得できません"</string>
-  <string name="gt_006fbb3905701e15">"支払いを送信しました"</string>
+  <string name="gt_006fbb3905701e15">"支払いを受け付けました"</string>
   <string name="gt_f905e55761fc8b3a">"支払いは成功しましたが、再実行用のメタデータを保存できませんでした"</string>
   <string name="gt_331551b0de4157c9">"保留中"</string>
   <string name="gt_beb7d5eb6ac8b5fb">"Arkoor送信が保留中"</string>

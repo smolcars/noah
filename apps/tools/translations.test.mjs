@@ -238,3 +238,10 @@ test('every prompt to type "delete" keeps the literal word, which both apps chec
     for (const [key, text] of prompts) expect(`${locale}: ${catalog[key]}`).toContain('delete');
   }
 });
+
+test('a submitted payment never reads as sent in any locale', async () => {
+  for (const locale of locales.slice(1)) {
+    const catalog = JSON.parse(await readFile(resolve(root, `apps/i18n/${locale}/native.json`), 'utf8'));
+    expect(`${locale}: ${catalog[resourceName('Payment submitted')]}`).not.toBe(`${locale}: ${catalog[resourceName('Payment sent')]}`);
+  }
+});

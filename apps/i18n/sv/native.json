@@ -1,7 +1,7 @@
 {
   "gt_00152767e041fe7e": "Väntar i en omgång",
   "gt_0054e707d5a94f9f": "Säkerhetskopiera",
-  "gt_006fbb3905701e15": "Betalning skickad",
+  "gt_006fbb3905701e15": "Betalning inskickad",
   "gt_0075dff6ca828fc1": "Löser in · väntar på block {{height}}",
   "gt_0085d19b65acb661": "Synkroniserad kedjetopp för nöduttag",
   "gt_009d9a53d84c4cef": "Registrerad hos servern",
@@ -275,7 +275,7 @@
   "gt_218197693424e015": "Från",
   "gt_219c4a6c86a716e9": "Resultat",
   "gt_21b111cbfe6e8fca": "Standard",
-  "gt_21bea5494ecbdd9d": "Insättning skickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning.",
+  "gt_21bea5494ecbdd9d": "Insättning inskickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning.",
   "gt_21cfd8fdcf01d5a0": "Skickad till {{address}}",
   "gt_21daf39744874523": "{{action}}?",
   "gt_21e360b26e1793bf": "Betalning pågår",

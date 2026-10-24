@@ -164,7 +164,7 @@
   <string name="gt_4816cbfd74aa8297">"Sätt in"</string>
   <string name="gt_a3659865c762c69f">"Sätt in på Ark"</string>
   <string name="gt_aca0fb7b6af91d5e">"Insättningen har skickats men är inte bekräftad. Noah fortsätter att försöka sända den. Sätt inte in dessa medel igen."</string>
-  <string name="gt_21bea5494ecbdd9d">"Insättning skickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning."</string>
+  <string name="gt_21bea5494ecbdd9d">"Insättning inskickad, men det är inte bekräftat att den har nått fram. Noah fortsätter att försöka sända transaktionen. Gör ingen ny insättning."</string>
   <string name="gt_01c437c9f900b81f">"Insättning skickad. Medlen kan användas när insättningen är klar."</string>
   <string name="gt_8fed00ef8e09c48a">"Insättningen skickades inte. Granska igen när plånboken är redo."</string>
   <string name="gt_479ad21ac9096236">"Längst ned"</string>
@@ -897,7 +897,7 @@
   <string name="gt_2bc4ef41a5775e8d">"Betalningen har skickats"</string>
   <string name="gt_f643e0c5a72874d3">"Betalningsstatusen kunde inte sparas. Kontrollera statusen igen när du har startat om Noah."</string>
   <string name="gt_2b79ccf58c27d73a">"Betalningsstatus är inte tillgänglig"</string>
-  <string name="gt_006fbb3905701e15">"Betalning skickad"</string>
+  <string name="gt_006fbb3905701e15">"Betalning inskickad"</string>
   <string name="gt_f905e55761fc8b3a">"Betalningen lyckades; metadata för att upprepa den kunde inte sparas"</string>
   <string name="gt_331551b0de4157c9">"Väntande"</string>
   <string name="gt_beb7d5eb6ac8b5fb">"Väntande Arkoor-överföring"</string>
