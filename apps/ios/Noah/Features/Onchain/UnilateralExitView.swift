@@ -84,6 +84,8 @@ struct ExitChooseView: View {
     @State private var costs: [String: ExitEconomics.Cost] = [:]
     /// Pricing VTXOs again after some failed.
     @State private var retry = 0
+    /// Each arrival, back from Review too, estimates the selection again.
+    @State private var visits = 0
     @State private var estimate: EmergencyExitFeeEstimate?
     @State private var estimating = false
     @State private var sheet: ExitSheet?
@@ -101,7 +103,8 @@ struct ExitChooseView: View {
         (model.overview?.vtxos ?? []).filter { $0.state == "Spendable" || $0.state == "Locked" }.sorted { $0.amount > $1.amount }
     }
     private var selection: [VtxoModel] {
-        all ? ExitEconomics.all(vtxos, costs: costs) : vtxos.filter { $0.eligible && selected.contains($0.id) }
+        all ? ExitEconomics.all(vtxos, costs: costs)
+            : vtxos.filter { $0.eligible && costs[$0.id]?.refusal == nil && selected.contains($0.id) }
     }
     private var value: UInt64 { selection.reduce(0) { $0 + $1.amount } }
     /// What the confirmed on-chain balance is short of the broadcast fees.
@@ -146,6 +149,7 @@ struct ExitChooseView: View {
         }
         .onChange(of: all) { _, _ in haptics.play(.selection); model.invalidate() }
         .onChange(of: selected) { _, _ in model.invalidate() }
+        .onAppear { visits += 1 }
         .task {
             guard let preset = fixture?.exitSelection else { return }
             all = false
@@ -158,12 +162,18 @@ struct ExitChooseView: View {
             guard !Task.isCancelled else { return }
             costs.merge(latest) { $1 }
         }
-        .task(id: selection.map(\.id)) {
+        .task(id: selection.map(\.id) + [String(visits)]) {
             estimating = true
             defer { estimating = false }
             do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
             let latest = await model.exitEstimate(selection.map(\.id))
-            if !Task.isCancelled { estimate = latest }
+            guard !Task.isCancelled else { return }
+            estimate = latest
+            // bark won't ever exit the VTXO it named: it leaves the selection, and its row says why.
+            if let refusal = model.exitRefusal, let id = refusal.vtxoID {
+                costs[id] = .refused(refusal)
+                selected.remove(id)
+            }
         }
     }
 
@@ -173,8 +183,8 @@ struct ExitChooseView: View {
         if !all || settings.wide {
             VStack(spacing: 0) {
                 ForEach(Array(vtxos.enumerated()), id: \.element.id) { index, vtxo in
-                    ExitVtxoRow(vtxo: vtxo, uneconomic: costs[vtxo.id] == .uneconomic, selected: all ? nil : selected.contains(vtxo.id),
-                                hairline: index < vtxos.count - 1) { toggle(vtxo) }
+                    ExitVtxoRow(vtxo: vtxo, uneconomic: costs[vtxo.id] == .uneconomic, refusal: costs[vtxo.id]?.refusal,
+                                selected: all ? nil : selected.contains(vtxo.id), hairline: index < vtxos.count - 1) { toggle(vtxo) }
                 }
             }
             .padding(.top, 6)
@@ -205,7 +215,12 @@ struct ExitChooseView: View {
                 SettingsFine(text: L10n.text("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
                                              money(confirmed), estimate.feeRateSatPerVb.formatted(), locale: language))
             } else if !selection.isEmpty && !estimating {
-                SettingsFine(text: L10n.text("Fee estimate unavailable", locale: language))
+                // A refusal has no "Continue without estimate": the start would fail too.
+                if let reason = model.exitRefusal?.errorDescription {
+                    SettingsFine(text: L10n.text(reason, locale: language), failure: true)
+                } else {
+                    SettingsFine(text: L10n.text("Fee estimate unavailable", locale: language))
+                }
             }
             if let estimate, value > 0, estimate.totalFeeSats >= value {
                 ExitWarning(text: L10n.text("Fees are more than these VTXOs are worth.", locale: language))

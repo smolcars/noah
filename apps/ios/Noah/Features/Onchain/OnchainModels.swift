@@ -216,8 +216,12 @@ struct ExitEstimateUnavailable: Error {
     var review: OnchainQuote
 
     static func allowsFallback(_ error: any Error) -> Bool {
-        // SDK 0.5.0 collapses transport, fee-rate and some exit validation failures into Other (RN parity).
-        if let error = error as? BarkError { return error.code == .other }
+        // FFI 0.7.0 types exit failures: only the chain source's are retryable, and fee-rate overflow is
+        // InvalidFeeRate (it was Other, as transport failures still are). Never-exitable VTXOs never fall back.
+        if let error = error as? BarkError {
+            return [.other, .invalidFeeRate, .exitTransactionRetrievalFailure, .exitTipRetrievalFailure,
+                    .exitBlockRetrievalFailure, .exitAncestorRetrievalFailure].contains(error.code)
+        }
         if let error = error as? OnchainFailure { return error == .unavailable }
         if let error = error as? URLError {
             return [.timedOut, .cannotFindHost, .cannotConnectToHost, .networkConnectionLost,
@@ -236,5 +240,38 @@ struct ExitEstimateUnavailable: Error {
         fallback.id = original.id; fallback.createdAt = original.createdAt
         fallback.unknownFeeConsent = nil
         return .init(review: fallback)
+    }
+}
+
+/// bark refused to exit a VTXO, and retrying can't change that (FFI 0.7.0's never-exitable codes). bark
+/// names the VTXO when it can.
+struct ExitRefusal: LocalizedError, Equatable, Sendable {
+    var code: BarkErrorCode
+    var vtxoID: String?
+
+    static let codes: Set<BarkErrorCode> = [.exitNonStandardVtxo, .exitDustLimit, .exitVtxoAlreadySpent, .exitVtxoAlreadyExited,
+                                            .exitVtxoSwept, .exitUnknownVtxo, .exitCyclicTransactions, .exitMissingAnchorOutput]
+
+    init(code: BarkErrorCode, vtxoID: String?) { self.code = code; self.vtxoID = vtxoID }
+    init?(_ error: any Error) {
+        guard let error = error as? BarkError, Self.codes.contains(error.code) else { return nil }
+        self.init(code: error.code, vtxoID: error.vtxoId)
+    }
+
+    /// Non-standard, dust included: bark exits it once it's renewed into a standard VTXO.
+    var renewFirst: Bool { code == .exitNonStandardVtxo || code == .exitDustLimit }
+
+    var errorDescription: String? {
+        switch code {
+        case .exitVtxoAlreadySpent: "Already spent"
+        case .exitVtxoSwept: "Swept"
+        default: "This VTXO can't be exited."
+        }
+    }
+
+    /// The exit screens' words for FFI 0.7.0's typed exit errors; nil for any other error.
+    static func message(_ error: any Error) -> String? {
+        if let refusal = Self(error) { return refusal.errorDescription }
+        return (error as? BarkError)?.code == .exitInsufficientConfirmedFunds ? "Needs on-chain funds" : nil
     }
 }

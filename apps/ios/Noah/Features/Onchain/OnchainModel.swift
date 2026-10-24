@@ -195,7 +195,7 @@ final class OnchainModel {
             }
         } catch {
             self.error =
-                (error as? OnchainFailure)?.errorDescription
+                (error as? OnchainFailure)?.errorDescription ?? ExitRefusal.message(error)
                 ?? "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
         }
     }
@@ -232,8 +232,9 @@ final class OnchainModel {
                 catch { self.error = OnchainFailure.changed.errorDescription }
             }
         } catch {
+            // A typed exit error here came from the re-quote, before anything was submitted.
             self.error =
-                (error as? OnchainFailure)?.errorDescription ?? OnchainFailure.uncertain.errorDescription
+                (error as? OnchainFailure)?.errorDescription ?? ExitRefusal.message(error) ?? OnchainFailure.uncertain.errorDescription
         }
         await dependencies.discardReview(quote)
         let submissionError = error
@@ -263,11 +264,21 @@ final class OnchainModel {
                             progressing: overview.map { $0.daemonSince != nil && !$0.checkFailed } ?? true, seen: sightings.value.tips)
     }
 
+    /// Why bark refused the last exit estimate, when it can never exit what was asked.
+    private(set) var exitRefusal: ExitRefusal?
+
     /// The exit estimate for a selection, or nil when it can't be read (the review still offers
-    /// "Continue without estimate"). Read-only.
+    /// "Continue without estimate", unless bark refused: `exitRefusal`). Read-only.
     func exitEstimate(_ ids: [String]) async -> EmergencyExitFeeEstimate? {
         guard !ids.isEmpty, await dependencies.ready() else { return nil }
-        return try? await dependencies.estimate(ids)
+        do {
+            let estimate = try await dependencies.estimate(ids)
+            exitRefusal = nil
+            return estimate
+        } catch {
+            exitRefusal = ExitRefusal(error)
+            return nil
+        }
     }
 
     /// Decision 4: each VTXO's classification, `.failed` where bark couldn't estimate it.

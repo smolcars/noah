@@ -999,7 +999,7 @@
   <string name="gt_4e9ea48ffbfb99b0">"Eliminar pago"</string>
   <string name="gt_ed14fa72453957ca">"Quitar captura"</string>
   <string name="gt_90c1689b0b74f032">"Renovar"</string>
-  <string name="gt_02b452f0133be2e5">"Renuévalo primero"</string>
+  <string name="gt_02b452f0133be2e5">"Renovar primero"</string>
   <string name="gt_e32344915fd29a53">"Renovar este VTXO"</string>
   <string name="gt_98b1d38879903344">"Renueva este VTXO en Ajustes → VTXOs antes de sacarlo."</string>
   <string name="gt_b44a676f499031ee">"Renueva este VTXO para que siga disponible."</string>
@@ -1244,7 +1244,7 @@
   <string name="gt_2f1c3676c41f927f">"Estas palabras no forman una frase válida."</string>
   <string name="gt_23333df084dfad80">"Esta factura Lightning ha caducado. Pide una nueva solicitud de pago."</string>
   <string name="gt_74bb47afc8d3b8c4">"Este código QR contiene solo tu dirección Lightning."</string>
-  <string name="gt_064ce079abb02910">"Este VTXO no se puede sacar."</string>
+  <string name="gt_064ce079abb02910">"No se puede sacar este VTXO."</string>
   <string name="gt_1d4b5ac7d8751913">"Este VTXO ya no figura entre los VTXOs actuales de la billetera. Actualiza para comprobar su estado."</string>
   <string name="gt_4cbed14dc727aedc">"Este VTXO ya se gastó, así que no puede salir."</string>
   <string name="gt_69d8d757288ce17b">"Esta dirección no pertenece a tu billetera Noah. Los fondos reclamados se enviarán allí."</string>

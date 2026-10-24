@@ -198,6 +198,8 @@ struct ExitCoin: View {
 struct ExitVtxoRow: View {
     let vtxo: VtxoModel
     let uneconomic: Bool
+    /// bark won't exit it: shown like one that can't exit, with bark's reason.
+    var refusal: ExitRefusal? = nil
     /// nil: the All list, no checkbox.
     let selected: Bool?
     var hairline = true
@@ -206,13 +208,14 @@ struct ExitVtxoRow: View {
     @Environment(\.locale) private var locale
 
     private var language: String { locale.identifier }
+    private var selectable: Bool { vtxo.eligible && refusal == nil }
 
     var body: some View {
         let money = ExitMoney(app: app, locale: locale)
         Button(action: toggle) {
             HStack(spacing: 14) {
                 if let selected {
-                    if vtxo.eligible {
+                    if selectable {
                         Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 24))
                             .foregroundStyle(selected ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
@@ -226,7 +229,11 @@ struct ExitVtxoRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: money(vtxo.amount)).noahText(HomeText.amount).monospacedDigit()
                     Text(verbatim: line(money)).noahText(HomeText.footnote)
-                        .foregroundStyle(vtxo.eligible && uneconomic ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
+                        .foregroundStyle(selectable && uneconomic ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
+                    if vtxo.eligible, refusal?.renewFirst == true {
+                        Text(verbatim: L10n.text("Renew this VTXO in Settings → VTXOs before exiting it.", locale: language))
+                            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).lineLimit(2)
+                    }
                 }
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,7 +244,7 @@ struct ExitVtxoRow: View {
         }
         .buttonStyle(SettingsRowPressStyle())
         // Ones that can't exit look disabled; All's list just doesn't take taps.
-        .disabled(!vtxo.eligible)
+        .disabled(!selectable)
         .allowsHitTesting(selected != nil)
         .accessibilityAddTraits(selected == true ? .isSelected : [])
         .accessibilityIdentifier("exit-vtxo-\(vtxo.id)")
@@ -246,6 +253,7 @@ struct ExitVtxoRow: View {
     private func line(_ money: ExitMoney) -> String {
         if vtxo.state == "Locked" { return L10n.text("In use right now", locale: language) }
         if vtxo.amount < ExitRules.dust { return L10n.text("Too small to exit · under {amount}", money(ExitRules.dust), locale: language) }
+        if let refusal { return L10n.text(refusal.renewFirst ? "Renew first" : refusal.errorDescription!, locale: language) }
         if uneconomic { return L10n.text("Fees more than it’s worth", locale: language) }
         return VtxoList.expiresIn(Int64(vtxo.expiry) - Int64(vtxo.tip), locale: language)
     }

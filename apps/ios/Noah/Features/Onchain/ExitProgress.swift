@@ -256,7 +256,8 @@ struct ExitWalletStore<Value: Codable & Sendable>: Sendable {
 /// Decision 3. bark 0.8 never reports missing funds: it leaves the transaction in
 /// `AwaitingCpfpBroadcast` and logs a warning. The proof is a confirmed balance below that
 /// package's fee after a progress tried to fund this parking episode; it clears when funds arrive or
-/// the status changes. No error strings are matched.
+/// the status changes. No error strings are matched. Should Check the chain get FFI 0.7.0's typed
+/// `exitInsufficientConfirmedFunds`, bark's `neededSats` is that package's fee, and that progress the proof.
 enum ExitFunds {
     /// bark's `daemon_sync_interval_secs` default (Noah doesn't set it), plus a margin for a cycle in flight.
     static let cycle: TimeInterval = 60 + 15
@@ -286,14 +287,19 @@ enum ExitFunds {
 /// each carry their shared path, so it never adds an uneconomic VTXO to All.
 enum ExitEconomics {
     /// One VTXO's classification; a VTXO not yet in the map is still being priced.
-    enum Cost: Equatable, Sendable { case worthIt, uneconomic, failed }
+    enum Cost: Equatable, Sendable {
+        case worthIt, uneconomic, failed
+        /// bark won't exit it: never selectable, never in All.
+        case refused(ExitRefusal)
+        var refusal: ExitRefusal? { if case .refused(let refusal) = self { refusal } else { nil } }
+    }
 
     // shortcut: standalone estimates, as bark-bolt-ffi's estimate gives only set totals; deduplicate shared transactions once it exposes per-transaction estimate data.
     static func classify(_ vtxos: [VtxoModel], estimate: @Sendable ([String]) async throws -> UInt64) async -> [String: Cost] {
         var costs: [String: Cost] = [:]
         for vtxo in vtxos {
             do { costs[vtxo.id] = try await estimate([vtxo.id]) >= vtxo.amount ? .uneconomic : .worthIt }
-            catch { costs[vtxo.id] = .failed }
+            catch { costs[vtxo.id] = ExitRefusal(error).map(Cost.refused) ?? .failed }
         }
         return costs
     }
@@ -305,7 +311,7 @@ enum ExitEconomics {
 
     /// All can be reviewed only once every eligible VTXO is classified.
     static func classified(_ vtxos: [VtxoModel], costs: [String: Cost]) -> Bool {
-        vtxos.filter(\.eligible).allSatisfy { costs[$0.id] == .worthIt || costs[$0.id] == .uneconomic }
+        vtxos.filter(\.eligible).allSatisfy { costs[$0.id].map { $0 != .failed } ?? false }
     }
 }
 

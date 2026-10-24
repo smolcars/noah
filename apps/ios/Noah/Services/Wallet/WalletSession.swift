@@ -55,10 +55,11 @@ actor WalletSession {
     func appBecameActive() { daemonSince = daemonSince.map { _ in Date() } }
     /// The app's own last exit progress (Check the chain), per wallet: the tip, the parking episode
     /// (`ExitModel.parkedEpisode`) still waiting for a fee child after a completed call tried to fund
-    /// it, by exit, or that it failed.
+    /// it, by exit, what bark said it needed when it reported too few confirmed funds, or that it failed.
     struct ExitCheck: Sendable {
         var tip: UInt32?
         var parked: [String: String] = [:]
+        var needed: [String: UInt64] = [:]
         var failed = false
     }
     private(set) var exitChecks: [String: ExitCheck] = [:]

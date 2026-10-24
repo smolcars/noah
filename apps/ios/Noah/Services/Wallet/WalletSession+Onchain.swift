@@ -26,7 +26,8 @@ extension WalletSession {
             overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
             overview.claimRecords = ExitClaimRecord.Store(key: ExitClaimRecord.key).load(walletID: overview.walletID) ?? [:]
             overview.daemonSince = await self.daemonSince
-            if let check = await self.exitChecks[overview.walletID] {
+            let check = await self.exitChecks[overview.walletID]
+            if let check {
                 overview.checkedTip = check.tip
                 overview.provenParked = check.parked
                 overview.checkFailed = check.failed
@@ -47,8 +48,13 @@ extension WalletSession {
             // The parked package's own fee: its parent's weight and bark's canonical child at the rate bark's
             // exits pay (its estimate's). Unpriced, needs-funds stays unknown.
             for exit in models {
-                guard let txid = exit.parkedTxid,
-                      let status = try? await handles.wallet.getExitStatus(vtxoId: exit.id, includeHistory: false, includeTransactions: true),
+                guard let txid = exit.parkedTxid else { continue }
+                // bark's own figure, when Check the chain reported this parking episode short of confirmed funds.
+                if let needed = check?.needed[exit.id], overview.provenParked[exit.id] == exit.parkedEpisode {
+                    overview.packageFees[exit.id] = needed
+                    continue
+                }
+                guard let status = try? await handles.wallet.getExitStatus(vtxoId: exit.id, includeHistory: false, includeTransactions: true),
                       let hex = status.transactions.first(where: { $0.parentTxid == txid })?.parentTxHex,
                       let weight = BitcoinTransaction.weight(hex: hex),
                       let rate = try? await handles.wallet.estimateEmergencyExitFee(
@@ -551,15 +557,17 @@ extension WalletSession {
                         await self.recordFailedExitCheck(walletID: walletID)
                         throw error
                     }
-                    let failures = statuses.filter { $0.error != nil }.count
+                    let (tried, needed, failures) = Self.progressOutcome(statuses)
                     // A completed call tried to fund every parked transaction; those still parked had too
                     // few confirmed funds (Decision 3), in this parking episode only, so the history is
-                    // read again. Errors mark the check failed: exits may be stale.
-                    let tried = Set(statuses.filter { $0.error == nil }.map(\.vtxoId)), runs = Self.exitRuns(handles)
+                    // read again. Other errors mark the check failed: exits may be stale.
+                    let runs = Self.exitRuns(handles)
                     let exits = (try? await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)) ?? []
                     let parked = exits.map { Self.exitModel($0, runs: runs) }.filter { tried.contains($0.id) }
                         .compactMap { exit in exit.parkedEpisode.map { (exit.id, $0) } }
-                    await self.recordExitCheck(.init(tip: try? await handles.onchain.tipHeight(), parked: Dictionary(parked, uniquingKeysWith: { a, _ in a }),
+                    let proven = Dictionary(parked, uniquingKeysWith: { a, _ in a })
+                    await self.recordExitCheck(.init(tip: try? await handles.onchain.tipHeight(), parked: proven,
+                                                     needed: needed.filter { proven[$0.key] != nil },
                                                      failed: failures > 0), walletID: walletID)
                     return OnchainReceipt(
                         message: failures == 0
@@ -575,6 +583,17 @@ extension WalletSession {
                 }
             }
         }
+    }
+
+    /// One Check the chain, read through FFI 0.7.0's typed errors: the exits it tried to fund, bark's
+    /// figure for those it reported short of confirmed funds (direct evidence for "Needs on-chain funds";
+    /// bark 0.8.0 itself doesn't report it yet), and how many failed otherwise. Messages are never read.
+    static func progressOutcome(_ statuses: [ExitProgressStatus]) -> (tried: Set<String>, needed: [String: UInt64], failures: Int) {
+        let short = statuses.filter { $0.error?.code == .exitInsufficientConfirmedFunds }
+        let needed = Dictionary(short.compactMap { status in status.error?.neededSats.map { (status.vtxoId, $0) } },
+                                uniquingKeysWith: { a, _ in a })
+        return (Set((statuses.filter { $0.error == nil } + short).map(\.vtxoId)), needed,
+                statuses.filter { $0.error != nil }.count - short.count)
     }
 
     /// Home's Renew. The review is the existing refresh review; submission takes this path
