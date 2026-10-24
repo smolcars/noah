@@ -213,21 +213,33 @@ extension WalletSession {
             // Allow for the extra change output (at most 43 vB) absent from the drain probe.
             let retained = BoardingRules.reserve + 43 * feeRate + claims.held
             guard probe.amount > retained else { return nil }
-            let gross = probe.amount - retained
-            guard gross >= BoardingRules.threshold(minimum) else { return nil }
-            let quote = try await prepare(gross)
-            do {
-                try Task.checkCancellation()
-                guard quote.amount + quote.chainFee! + BoardingRules.reserve + claims.held <= quote.confirmed, !quote.spends(claims.outpoints),
-                      quote.net >= BoardingRules.threshold(minimum) else {
-                    try await discard(quote)
-                    return nil
+            var gross = probe.amount - retained
+            // shortcut: bark-bolt-ffi 0.6.0's prepare_board takes no excluded outpoints, and its deterministic coin
+            // selection may keep picking a claimed coin, so ask again for a little less; pass them once it can.
+            for attempt in 1...3 {
+                guard gross >= BoardingRules.threshold(minimum) else { return nil }
+                let quote = try await prepare(gross)
+                do {
+                    try Task.checkCancellation()
+                    if quote.spends(claims.outpoints) {
+                        try await discard(quote)
+                        let step = max(gross / 100, 1_000)
+                        gross = gross > step ? gross - step : 0
+                        continue
+                    }
+                    guard quote.amount + quote.chainFee! + BoardingRules.reserve + claims.held <= quote.confirmed,
+                          quote.net >= BoardingRules.threshold(minimum) else {
+                        try await discard(quote)
+                        return nil
+                    }
+                    return quote
+                } catch {
+                    try? await discard(quote)
+                    throw error
                 }
-                return quote
-            } catch {
-                try? await discard(quote)
-                throw error
             }
+            AppLog("onchain").w("Auto-board didn't offer a board: each preparation spent an exit claim to this phone")
+            return nil
         } catch {
             throw OnchainSubmission.boardFailure(error) ?? error
         }

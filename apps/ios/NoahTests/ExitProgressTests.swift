@@ -395,11 +395,16 @@ struct ExitClaimAutoBoardTests {
         let balance: UInt64
         /// The coins bark's coin selection picks for the sized board.
         let inputs: [String]
+        /// Above this amount, coin selection picks the claimed coin too.
+        let claimedAbove: UInt64?
         var amounts: [UInt64] = []
         var discarded: [UUID] = []
-        init(balance: UInt64, inputs: [String] = ["deposit:0"]) { self.balance = balance; self.inputs = inputs }
+        init(balance: UInt64, inputs: [String] = ["deposit:0"], claimedAbove: UInt64? = nil) {
+            self.balance = balance; self.inputs = inputs; self.claimedAbove = claimedAbove
+        }
         func prepare(_ amount: UInt64) -> OnchainQuote {
             amounts.append(amount)
+            let inputs = amount > 0 && claimedAbove.map { amount > $0 } == true ? self.inputs + [ExitClaimAutoBoardTests.claim] : self.inputs
             var quote = BoardPreparedTests.quote
             quote.id = UUID(); quote.automatic = true; quote.confirmed = balance
             quote.amount = amount == 0 ? balance - 150 : amount
@@ -435,10 +440,22 @@ struct ExitClaimAutoBoardTests {
         #expect(try await Board(balance: 73_705).review(held: 58_705) == nil)
     }
 
-    @Test func aPreparationThatSpendsTheClaimedCoinIsDiscarded() async throws {
+    @Test func aPreparationThatAlwaysSpendsTheClaimedCoinIsDiscarded() async throws {
         let board = Board(balance: 98_705, inputs: ["deposit:0", ExitClaimAutoBoardTests.claim])
         #expect(try await board.review(held: 58_705) == nil)
-        // The probe and the sized board are both discarded; nothing is left held for a prompt.
+        // The probe and three sized boards, each a little smaller, are all discarded: no prompt.
+        let first = UInt64(98_555 - 5_043 - 58_705)
+        #expect(await board.amounts == [0, first, first - 1_000, first - 2_000])
+        #expect(await board.discarded.count == 4)
+    }
+
+    @Test func aSmallerBoardThatAvoidsTheClaimedCoinIsOffered() async throws {
+        // Coin selection picks the claimed coin for the full amount and the deposit for a little less.
+        let first = UInt64(98_555 - 5_043 - 58_705)
+        let board = Board(balance: 98_705, inputs: ["deposit:0"], claimedAbove: first - 1)
+        let quote = try #require(try await board.review(held: 58_705))
+        #expect(await board.amounts == [0, first, first - 1_000])
+        #expect(quote.amount == first - 1_000 && !quote.spends([ExitClaimAutoBoardTests.claim]))
         #expect(await board.discarded.count == 2)
     }
 
