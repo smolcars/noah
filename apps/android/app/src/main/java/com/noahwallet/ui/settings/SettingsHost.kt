@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -32,15 +33,16 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.noahwallet.onchain.OnchainOverview
-import com.noahwallet.localization.tr
 import com.noahwallet.services.storage.PersistedBackupState
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.home.HomeToasts
 import com.noahwallet.ui.launch.PlatformAccess
 import com.noahwallet.ui.launch.PlatformGateRules
+import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.LocalReduceMotion
 import com.noahwallet.ui.onboarding.OnboardingFrame
+import com.noahwallet.ui.onboarding.OnboardingPose
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -111,23 +113,26 @@ internal fun Modifier.meAvatar(): Modifier {
     }
 }
 
-/** The page's transitions: Material's shared axis (X); a fade under Reduce Motion. */
-private fun pageTransition(forward: Boolean, reduceMotion: Boolean, density: Density): ContentTransform {
+/** The page's transitions: Material's shared axis (X) on phones, a rise in the split page; a fade under Reduce Motion. */
+private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boolean, density: Density): ContentTransform {
     if (reduceMotion) return fadeIn(tween(180)) togetherWith fadeOut(tween(180))
     val spring = spring<androidx.compose.ui.unit.IntOffset>(.85f, 438.6491f / 1.21f)
     val fade = spring<Float>(.85f, 438.6491f / 1.21f)
     val shift = with(density) { 30.dp.roundToPx() }
+    if (split) return (fadeIn(tween(220, delayMillis = 60)) + slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
     return (fadeIn(fade) + slideInHorizontally(spring) { if (forward) shift else -shift }) togetherWith
         (fadeOut(fade) + slideOutHorizontally(spring) { if (forward) -shift else shift })
 }
 
 /**
- * Settings (docs/native-rewrite/design/settings.md): one stack of pages over the list. Must sit in Home's stack,
- * which supplies the zoom out of Home's gear.
+ * Settings (docs/native-rewrite/design/settings.md): one stack of pages over the list on phones; on wide windows and
+ * the fold the list leads and the page trails, split at the hinge (tabletop: list above, page below). Must sit in
+ * Home's stack, which supplies the zoom out of Home's gear.
  */
 @Composable
 internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: () -> Unit, myCode: () -> Unit,
                           preview: SettingsPreview? = null) {
+    val initialSheet = preview?.sheet
     val appColors = MaterialTheme.colorScheme
     val appTypography = MaterialTheme.typography
     val appShapes = MaterialTheme.shapes
@@ -146,26 +151,58 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
         clip = true
         shape = GearReveal(entry?.gear?.translate(-origin), p, 20.dp.toPx())
     }) {
-        OnboardingFrame(null) {
+        OnboardingFrame(null, splitAtWindowCentre = true) {
+            val pose = LocalPose.current
             val holder = rememberSaveableStateHolder()
             val toasts = remember { HomeToasts() }
             val live = rememberSettingsLive(model)
+            val wide = pose !is OnboardingPose.Compact
+            val pages: List<NavKey> = if (wide) stack.drop(1).ifEmpty { listOf(SettingsDestination.Profile) } else stack.toList()
             fun pop() { if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
+            fun open(page: NavKey, fromList: Boolean) {
+                // In a split window the list replaces the page beside it; inside a page, pages stack.
+                if (fromList && wide) while (stack.size > 1) stack.removeAt(stack.lastIndex)
+                if (stack.lastOrNull() != page) stack.add(page)
+            }
             val density = androidx.compose.ui.platform.LocalDensity.current
             CompositionLocalProvider(LocalSettingsToasts provides toasts) {
-                NavDisplay(stack.toList(), onBack = { pop() },
-                    entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
-                    transitionSpec = { pageTransition(true, reduceMotion, density) },
-                    popTransitionSpec = { pageTransition(false, reduceMotion, density) },
-                    predictivePopTransitionSpec = { pageTransition(false, reduceMotion, density) },
-                    entryProvider = { key ->
-                        NavEntry(key) {
-                            val nav = SettingsNav({ pop() }, { if (stack.lastOrNull() != it) stack.add(it) }, { pop() }, myCode, close)
-                            SettingsPageContent(model, key, nav, live, preview) { content ->
-                                MaterialTheme(appColors, appShapes, appTypography, content)
+                Box(Modifier.fillMaxSize()) {
+                    if (wide) Box(when (pose) {
+                        is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
+                        is OnboardingPose.Tabletop -> Modifier.height(pose.top).fillMaxWidth()
+                        else -> Modifier
+                    }.testTag("settings-list-pane")) {
+                        CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading) {
+                            holder.SaveableStateProvider(SettingsDestination.Settings.toString()) {
+                                SettingsRoot(model, live, SettingsNav(close, { open(it, true) }, close, myCode, close),
+                                    selected = pages.firstOrNull(), initialSheet = initialSheet)
                             }
                         }
-                    })
+                    }
+                    Box(when (pose) {
+                        is OnboardingPose.Wide -> Modifier.padding(start = pose.end).fillMaxSize()
+                        is OnboardingPose.Tabletop -> Modifier.padding(top = pose.bottom).fillMaxSize()
+                        else -> Modifier.fillMaxSize()
+                    }.testTag("settings-page-pane")) {
+                        CompositionLocalProvider(LocalSettingsPane provides if (wide) SettingsPane.trailing else SettingsPane.compact) {
+                            NavDisplay(pages, onBack = { pop() },
+                                entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
+                                transitionSpec = { pageTransition(true, reduceMotion, wide, density) },
+                                popTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
+                                predictivePopTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
+                                entryProvider = { key ->
+                                    NavEntry(key) {
+                                        val index = pages.indexOf(key)
+                                        val back = if (wide && index <= 0) null else ({ pop() })
+                                        val nav = SettingsNav(back, { open(it, false) }, { pop() }, myCode, close)
+                                        SettingsPageContent(model, key, nav, live, preview) { content ->
+                                            MaterialTheme(appColors, appShapes, appTypography, content)
+                                        }
+                                    }
+                                })
+                        }
+                    }
+                }
             }
         }
     }
@@ -192,8 +229,6 @@ internal data class SettingsPreview(val sheet: String? = null, val phrase: List<
 internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav, live: SettingsLive, preview: SettingsPreview?,
                                  legacy: @Composable (@Composable () -> Unit) -> Unit) {
     val initialSheet = preview?.sheet
-    // Pages not rebuilt yet show today's screens under Settings' bar.
-    @Composable fun Today(title: String, content: @Composable () -> Unit) = SettingsFrame(title, nav.back, bare = true) { legacy(content) }
     when (key) {
         SettingsDestination.Settings -> SettingsRoot(model, live, nav, selected = null, initialSheet = initialSheet)
         SettingsDestination.Profile -> ProfilePage(model, nav)
@@ -208,7 +243,9 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         is SchedulePage -> com.noahwallet.recurring.ScheduleScreen(model, nav, key.id)
         is EditorPage -> com.noahwallet.recurring.RecurringEditorPage(model, nav, key.id)
         // Out of scope (settings.md): today's exit screens, unchanged, under Settings' bar.
-        SettingsDestination.Exits -> Today(tr("Emergency exit")) { com.noahwallet.onchain.UnilateralExitScreen(model) }
+        SettingsDestination.Exits -> SettingsFrame(com.noahwallet.localization.tr("Emergency exit"), nav.back, bare = true) {
+            legacy { com.noahwallet.onchain.UnilateralExitScreen(model) }
+        }
         SettingsDestination.Notifications -> NotificationsPage(model, nav, live, preview?.unifiedPush ?: PlatformAccess.unifiedPush(LocalContext.current))
         SettingsDestination.UnifiedPush -> UnifiedPushPage(nav)
         SettingsDestination.Advanced -> AdvancedPage(model, nav, live, initialSheet)
