@@ -46,10 +46,9 @@ internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletS
     quote = { action, ids, amount, destination -> session.quoteOnchain(action, ids, amount, destination) },
     execute = { quote -> lifecycle.withWalletMutation {
         if (!ready()) fail(OnchainFailure.unavailable)
-        session.executeOnchain(quote, keepOnchain = { funding.keep(quote.walletID, it) }, recordClaim = claims::add).also {
-            // A started or canceled exit begins a new run: its old proof and tips must not carry over.
-            if (quote.action in setOf(OnchainAction.startExit, OnchainAction.cancel)) { ExitFunding.shared.forget(quote.ids); seen.forget(quote.ids) }
-        }
+        // A started or canceled exit begins a new run: its old proof and tips must not carry over, even if this caller is gone.
+        session.executeOnchain(quote, keepOnchain = { funding.keep(quote.walletID, it) }, recordClaim = claims::add,
+            newRun = { ExitFunding.shared.forget(it); seen.forget(it) })
     } },
     attempts = { withContext(Dispatchers.IO) { session.onchainJournal.loadAll() } },
     acknowledge = { id -> lifecycle.withWalletMutation {

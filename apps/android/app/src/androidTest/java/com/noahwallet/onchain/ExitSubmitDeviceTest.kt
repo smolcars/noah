@@ -191,6 +191,8 @@ class ExitSubmitDeviceTest {
     @Test fun startingAsksBarkOnceThroughAPostureChangeAndProcessDeath() {
         val bark = Bark(id)
         process = launch(bark)
+        // A Check the chain proof from an earlier run of this exit: starting must forget it, even though the page goes mid-start.
+        ExitFunding.shared.checked(listOf(f.nofunds), completed = true)
         host { model -> ExitStartScreen(model, nav, listOf(id), false, 144, f.money) {} }
         settle("the review") { enabled("exit-hold-start") }
         bark.gate = CompletableDeferred()
@@ -215,6 +217,8 @@ class ExitSubmitDeviceTest {
         assertFalse("the journal blocks a second start", exists("exit-hold-start"))
         assertEquals(listOf("start"), bark.calls)
         assertEquals(1, journal().count { it.quote.action == OnchainAction.startExit })
+        assertTrue("the earlier run's proof is gone", ExitFunding.shared.needsFunds(listOf(f.nofunds), 0, null).isEmpty())
+        ExitFunding.shared.forget(listOf(id))
     }
 
     @Test fun aClaimReviewDroppedByPausingIsAskedForAgain() {

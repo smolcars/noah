@@ -204,10 +204,14 @@ internal class OnchainOperations(
      * [keepOnchain]: a claim to this wallet records its outputs in auto-board's handled ledger (exit.md, Decision 8)
      * before it's broadcast, so auto-board never offers them back to Ark.
      */
-    /** [recordClaim]: where a claim's fee, exits and destination are kept for its exits' pages, before it's broadcast; a failure there changes nothing. */
+    /**
+     * [recordClaim]: where a claim's fee, exits and destination are kept for its exits' pages, before it's broadcast.
+     * [newRun]: told which exits a start or cancel just changed, inside the native call (which outlives its caller), so their
+     * evidence from the last run is forgotten. A failure in either changes nothing.
+     */
     suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
                         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
-                        recordClaim: (ExitClaimRecords.Record) -> Unit = {}): String {
+                        recordClaim: (ExitClaimRecords.Record) -> Unit = {}, newRun: (List<String>) -> Unit = {}): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding(kept) != funding)) fail(OnchainFailure.changed)
@@ -245,6 +249,7 @@ internal class OnchainOperations(
                 OnchainAction.refresh -> OnchainReceipt(wallet.refresh(reviewed.ids)?.let { "Refresh submitted to delegated round ${it.id}." } ?: "No refresh round was needed.")
                 OnchainAction.startExit -> {
                     wallet.start(reviewed.ids)
+                    runCatching { newRun(reviewed.ids) }
                     OnchainReceipt("Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance.")
                 }
                 OnchainAction.progress -> {
@@ -274,6 +279,7 @@ internal class OnchainOperations(
                 }
                 OnchainAction.cancel -> {
                     if (!wallet.cancel(reviewed.ids.single())) fail(OnchainFailure.cancellationRefused)
+                    runCatching { newRun(reviewed.ids) }
                     OnchainReceipt("Exit canceled. The VTXO remains spendable.")
                 }
             }

@@ -264,8 +264,10 @@ class OnchainOperationsTest {
             fundingTransactions?.let { return it }
             return listOf(WalletTransaction("board-tx", "", 1543u, -30_000, null, false))
         }
-        override suspend fun start(ids: List<String>) { calls.add("start"); ids.forEach { states[it] = ExitState.Start(100u) } }
-        override suspend fun cancel(id: String): Boolean { calls.add("cancel"); return cancelResult }
+        /** Runs inside start and cancel, so a test can hold them while their caller is canceled. */
+        var duringMutation: suspend () -> Unit = {}
+        override suspend fun start(ids: List<String>) { duringMutation(); calls.add("start"); ids.forEach { states[it] = ExitState.Start(100u) } }
+        override suspend fun cancel(id: String): Boolean { duringMutation(); calls.add("cancel"); return cancelResult }
         override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { drainDestinations.add(destination); calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }
         /** A signed one-output transaction (txid 75ebf755…), standing in for the drain's claim. */
@@ -623,6 +625,31 @@ class OnchainOperationsTest {
         wallet.active = listOf("a", "b").map { ExitVtxo(it, 30_000u, ExitState.Start(100u), false) }
         assertTrue(runCatching { ops.quote(OnchainAction.progress, listOf("a")) }.isFailure)
     } }
+    @Test fun aStartOrCancelForgetsItsExitsEvidenceEvenIfItsCallerIsCanceled() = runBlocking {
+        for ((action, accepted) in listOf(OnchainAction.startExit to true, OnchainAction.cancel to true, OnchainAction.cancel to false)) fixture { wallet, ops, journal, _ ->
+            wallet.cancelResult = accepted
+            if (action == OnchainAction.cancel) {
+                wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Start(100u), false)); wallet.states["a"] = ExitState.Start(100u)
+            }
+            val quote = ops.quote(action, listOf("a"))
+            val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+            wallet.duringMutation = { entered.complete(Unit); release.await() }
+            val forgotten = java.util.Collections.synchronizedList(mutableListOf<List<String>>())
+            var after = false
+            // As WalletSession.withOpen runs it: the native call on IO under NonCancellable, its caller on its own thread (the
+            // page's) and free to go. Coming back to a canceled caller throws, so nothing after the call runs.
+            val page = java.util.concurrent.Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+            val caller = launch(page) {
+                withContext(NonCancellable + Dispatchers.IO) { runCatching { ops.execute(quote, newRun = { forgotten += it }) } }
+                after = true
+            }
+            entered.await(); caller.cancel(); release.complete(Unit); caller.join(); page.close()
+            assertFalse("the caller is gone before anything after the call runs", after)
+            assertEquals("$action accepted=$accepted", if (accepted) listOf(listOf("a")) else emptyList(), forgotten.toList())
+            assertEquals(accepted, journal.loadAll().any { it.receipt != null })
+        }
+    }
+
     @Test fun claimFeeIsCheckedBeforeBroadcastAndBroadcastErrorsStayUncertain() = runBlocking { fixture { wallet, ops, journal, _ ->
         wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
         val quote = ops.quote(OnchainAction.claim, listOf("a"), destination = "address")
