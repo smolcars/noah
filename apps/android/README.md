@@ -619,11 +619,29 @@ backup and suspended nudges, Activity's VTXO, schedule and exit links, recurring
 `SettingsRoutes.open`, which puts the page on top of its parents. The list leads and the page trails on wide windows
 and at a book fold (tabletop: list above, page below). The recovery phrase is shown only after authentication (or the
 "No screen lock" sheet), lives in memory (`RevealedPhrase`) and clears when Noah leaves the screen. The emergency
-exit screens are today's, unchanged.
+exit has its own redesign (see Emergency exit below).
 `SettingsDeviceTest` (gates, Back and predictive back on every page, synthetic folds, recreation) runs unconditionally.
 Opt-in gallery on an owned, disposable regtest AVD with its throwaway wallet open:
 `-e class com.noahwallet.ui.SettingsGalleryTest -e noahSettingsShots <label>` (optionally `-e noahSettingsOnly root,delete`),
 then pull `files/settings-shots/<label>` with `run-as`. Its recovery phrase is the public sample, never the wallet's.
+
+## Emergency exit
+
+The exit follows [its redesign](../../docs/native-rewrite/design/exit.md) on today's exit calls, journal and rules. Its
+pages (`ExitKey`: warning, Choose VTXOs, start, one exit, claim, the list) sit above Settings → Emergency exit and
+fill a wide window or fold themselves (explanation and picture lead, details and actions trail; tabletop: picture
+above). `ExitStages` maps each bark `ExitState` and transaction status to the page's phase, and reads fees rising and
+a transaction stuck in the mempool from bark's history. "Needs on-chain funds" is inferred (`ExitFunding`): a
+transaction in `AwaitingCpfpBroadcast` past one progress cycle while the confirmed balance is below its package's fee
+at the rate bark's own estimate reports. A fee child's fee is what left the wallet (BDK can't price its anchor input).
+Claims default to another wallet; a claim to this phone records its outputs in auto-board's handled ledger before
+it's broadcast. A submitted claim shows as claiming until bark's next progress marks it.
+`ExitDeviceTest` (hold submits once, Claim off until a valid reviewed address, Cancel only while allowed, synthetic
+book and tabletop folds, recreation) runs unconditionally. Opt-in fixture gallery (no wallet):
+`-e class com.noahwallet.onchain.ExitGalleryTest -e noahExitShots <label>` (optionally `-e noahExitScenes warn,list`),
+then pull `files/exit-shots/<label>` with `run-as`. `ExitLiveTest` adds owned-wallet stages for the live check:
+`board-all` (no confirmed on-chain funds left), `inspect` (each exit's packages, fee children and waiting package fee)
+and `ledger` (auto-board's handled ledger and what it would offer).
 
 `lintRegtestDebug` remains blocked by the pre-existing camera permission lacking
 an optional `android.hardware.camera` feature declaration

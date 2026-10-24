@@ -73,6 +73,39 @@ class ExitLiveTest {
                     save("gross" to JsonPrimitive(quote.amount), "arkFee" to JsonPrimitive(quote.fee), "estimatedChainFee" to JsonPrimitive(quote.chainFee),
                         "txid" to JsonPrimitive(receipt.txid), "actualChainFee" to JsonPrimitive(receipt.onchainFee))
                 }
+                // Boards every confirmed coin (MAX), leaving no confirmed on-chain funds: an exit then needs them.
+                "board-all" -> {
+                    session.sync(); done()
+                    val quote = reviewExecute(OnchainAction.board)
+                    val receipt = session.onchainJournal.loadAll().last().receipt!!
+                    save("gross" to JsonPrimitive(quote.amount), "boardAll" to JsonPrimitive(quote.boardAll), "txid" to JsonPrimitive(receipt.txid),
+                        "confirmedAfter" to JsonPrimitive(session.onchainOverview().confirmed))
+                }
+                // What the exit pages read: every exit's state, its transactions' weights and fee children, and the waiting package's fee.
+                "inspect" -> {
+                    session.sync()
+                    val overview = session.onchainOverview()
+                    val wallet = session.withOpen { it.transactions() }.map { tx -> JsonObject(mapOf("txid" to JsonPrimitive(tx.txid),
+                        "fee" to (tx.onchainFeeSats?.let { JsonPrimitive(it.toLong()) } ?: JsonNull), "change" to JsonPrimitive(tx.balanceChangeSats))) }
+                    save("tip" to JsonPrimitive(overview.tip), "confirmed" to JsonPrimitive(overview.confirmed), "wallet" to JsonArray(wallet), "exits" to JsonArray(overview.exits.map { exit ->
+                        val detail = session.exitDetail(exit.id)
+                        JsonObject(mapOf("id" to JsonPrimitive(exit.id), "state" to JsonPrimitive(exit.state), "amount" to JsonPrimitive(exit.amount),
+                            "nextPackageFee" to (exit.nextPackageFee?.let(::JsonPrimitive) ?: JsonNull),
+                            "detailNextPackageFee" to (detail?.nextPackageFee?.let(::JsonPrimitive) ?: JsonNull),
+                            "childFees" to JsonObject(exit.childFees.mapValues { JsonPrimitive(it.value) }),
+                            "packages" to JsonArray(exit.packages.map { Json.encodeToJsonElement(mapOf("txid" to it.txid, "weight" to it.weight?.toString(),
+                                "outputs" to it.outputs.toString(), "spends" to it.spends?.toString(), "child" to it.childTxid, "origin" to it.childOrigin)) }),
+                            "details" to Json.encodeToJsonElement(exit.details), "history" to JsonArray(exit.historyDetails.map { Json.encodeToJsonElement(it) })))
+                    }))
+                }
+                // Auto-board's handled ledger and what it would offer now: a claim to this phone must be handled, never offered.
+                "ledger" -> {
+                    session.sync()
+                    val funding = session.autoBoardFunding()
+                    save("ledger" to JsonPrimitive(settings.string(AutoBoardFunding.key) ?: ""),
+                        "confirmedIncoming" to JsonArray(funding?.outpoints.orEmpty().map(::JsonPrimitive)),
+                        "unhandled" to JsonPrimitive(funding?.let(AutoBoardFunding.stored(settings)::hasUnhandled) ?: false))
+                }
                 "refresh" -> {
                     session.sync(); done()
                     val item = session.onchainOverview().vtxos.first { it.refreshable }

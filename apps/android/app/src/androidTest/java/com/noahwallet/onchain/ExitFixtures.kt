@@ -1,0 +1,92 @@
+package com.noahwallet.onchain
+
+import androidx.compose.runtime.*
+import com.noahwallet.formatting.BitcoinAmount
+import com.noahwallet.formatting.BitcoinAmountUnit
+import com.noahwallet.ui.home.HomeToasts
+import com.noahwallet.ui.onboarding.OnboardingFrame
+import com.noahwallet.ui.settings.LocalSettingsToasts
+import java.util.Locale
+
+/**
+ * Public, synthetic exits for the gallery and device tests (exit-v1-notes.md, The numbers): tip 921,345, the ₿31,000
+ * VTXO from the round in block 921,201 and its 4 transactions, and Settings v1's VTXOs. No wallet is involved.
+ */
+internal object ExitFixtures {
+    const val tip = 921_345L
+    val money: (Long) -> String = { BitcoinAmount.format(it, BitcoinAmountUnit.bip177, Locale.US) }
+    // A real regtest key-spend, so packages parse as they do live.
+    private const val hex = "020000000001013e16e76ee2b6a9dc798b81be3a4903286e4e454dc019c48062d5396b4e21fdca0000000000fdffffff01d09b0000000000002251208751b9234a38be714a8011a02bad9f346f7b80e4a76b13fcacda7b0e2890c5e601408982addc732de240dd1dfb0bd4a66e0ab807073c73d92b26256827a2643735827b1eb0cb92812c4969544c107489479dc54ec9bc27409a15bef8486972bf03297f030000"
+    private fun txid(n: String) = n.padEnd(64, 'a').take(64)
+    val ids = listOf("root", "branch2", "branch1", "leaf").map(::txid)
+    val packages = ids.mapIndexed { i, id -> ExitPackage(id, if (i == 3) 1_288 else 1_620 - 608, if (i == 3) 2 else 5, listOf(2L, 2, 1, 0)[i], null, 608, null) }
+
+    fun vtxo(id: String, amount: Long, state: String = "Spendable", expiry: Long = tip + 4_176) =
+        VtxoModel(id.padEnd(64, '0') + ":0", amount, expiry, state, "round", 4, 1_620, true, "server", 144, "anchor:0", "point:0", false, tip)
+    val vtxos = listOf(vtxo("c01", 31_000), vtxo("c02", 24_500), vtxo("c03", 21_000), vtxo("c04", 15_000), vtxo("c05", 12_000),
+        vtxo("c06", 9_800), vtxo("c07", 8_400), vtxo("c08", 7_500), vtxo("c09", 5_000), vtxo("c10", 4_200), vtxo("c11", 3_342),
+        vtxo("c12", 710, "Locked"), vtxo("c13", 290))
+    val costs = vtxos.filter { it.eligible }.associate { it.id to ExitCosts.Cost(5_533, 262, 4).let { c -> if (it.amount <= 7_500) c.copy(broadcast = it.amount) else c } }
+
+    private fun tx(i: Int, kind: String, child: String? = null, block: Long? = null, origin: String? = "wallet") =
+        ExitDetails.Transaction(ids[i], ExitDetails.Status(kind, child, block?.let { ExitDetails.Block(it) }, origin.takeIf { child != null }))
+    private fun processing(at: Long, vararg txs: ExitDetails.Transaction) = ExitDetails(kind = "processing", tip_height = at, transactions = txs.toList())
+    private fun exit(state: String, details: ExitDetails, history: List<ExitDetails> = emptyList(), fees: Map<String, Long> = emptyMap(),
+                     next: Long? = null, id: String = vtxos[0].id, amount: Long = 31_000, children: Map<Int, Pair<String, String>> = emptyMap()) =
+        ExitModel(id, amount, state, details, history.map { it.kind.orEmpty() }, history,
+            packages.mapIndexed { i, p -> children[i]?.let { (child, origin) -> p.copy(childTxid = child, childOrigin = origin) } ?: p }, fees, next)
+
+    val start = exit("Start", ExitDetails(kind = "start", tip_height = tip))
+    val publish = exit("Processing", processing(tip, tx(0, "verify-inputs"), tx(1, "awaiting-input-confirmation"), tx(2, "awaiting-input-confirmation"), tx(3, "awaiting-input-confirmation")))
+    val mempool = exit("Processing", processing(tip, tx(0, "awaiting-cpfp-broadcast"), tx(1, "verify-inputs"), tx(2, "verify-inputs"), tx(3, "verify-inputs")))
+    val bump = exit("Processing", processing(tip, tx(0, "awaiting-confirmation", "fee1"), tx(1, "verify-inputs"), tx(2, "verify-inputs"), tx(3, "verify-inputs")),
+        fees = mapOf("fee1" to 1_215), children = mapOf(0 to ("fee1" to "wallet")))
+    val confirm = exit("Processing", processing(tip + 2, tx(0, "confirmed", "fee1", tip + 1), tx(1, "confirmed", "fee2", tip + 2), tx(2, "awaiting-input-confirmation"), tx(3, "verify-inputs")),
+        fees = mapOf("fee1" to 1_215, "fee2" to 1_215), children = mapOf(0 to ("fee1" to "wallet"), 1 to ("fee2" to "wallet")))
+    val onchain = exit("Processing", processing(tip + 4, *(0..3).map { tx(it, "confirmed", "fee$it", tip + 1 + it) }.toTypedArray()),
+        fees = (0..3).associate { "fee$it" to 1_150L }, children = (0..3).associate { it to ("fee$it" to "wallet") })
+    val wait = exit("AwaitingDelta", ExitDetails(kind = "awaiting-delta", tip_height = tip + 49, confirmed_block = ExitDetails.Block(tip + 4), claimable_height = tip + 148),
+        history = listOf(onchain.details), fees = onchain.childFees, children = onchain.packages.mapIndexedNotNull { i, p -> p.childTxid?.let { i to (it to "wallet") } }.toMap())
+    val claimable = wait.copy(state = "Claimable", details = ExitDetails(kind = "claimable", tip_height = tip + 148, claimable_since = ExitDetails.Block(tip + 148)))
+    val claiming = wait.copy(state = "ClaimInProgress", details = ExitDetails(kind = "claim-in-progress", tip_height = tip + 148, claimable_since = ExitDetails.Block(tip + 148), claim_txid = txid("claim")))
+    val claimed = wait.copy(state = "Claimed", details = ExitDetails(kind = "claimed", tip_height = tip + 149, block = ExitDetails.Block(tip + 149), txid = txid("claim")),
+        history = listOf("Start", "Processing", "AwaitingDelta"), historyDetails = listOf(start.details, onchain.details, wait.details))
+    val nofunds = exit("Processing", processing(tip + 1, tx(0, "confirmed", "fee1", tip + 1), tx(1, "awaiting-cpfp-broadcast"), tx(2, "verify-inputs"), tx(3, "verify-inputs")),
+        history = listOf(processing(tip, tx(0, "awaiting-confirmation", "fee1"), tx(1, "verify-inputs"), tx(2, "verify-inputs"), tx(3, "verify-inputs"))),
+        fees = mapOf("fee1" to 1_215), next = 1_216, children = mapOf(0 to ("fee1" to "wallet")))
+    val feesrose = exit("Processing", processing(tip + 2, tx(0, "confirmed", "fee1", tip + 1), tx(1, "awaiting-confirmation", "fee2b"), tx(2, "verify-inputs"), tx(3, "verify-inputs")),
+        history = listOf(processing(tip + 1, tx(0, "confirmed", "fee1", tip + 1), tx(1, "awaiting-confirmation", "fee2a"), tx(2, "verify-inputs"), tx(3, "verify-inputs"))),
+        fees = mapOf("fee1" to 1_215, "fee2b" to 3_645), children = mapOf(0 to ("fee1" to "wallet"), 1 to ("fee2b" to "wallet")))
+    val stuck = exit("Processing", processing(tip + 5, tx(0, "confirmed", "fee1", tip + 1), tx(1, "confirmed", "fee2", tip + 2), tx(2, "awaiting-confirmation", "fee3"), tx(3, "verify-inputs")),
+        history = listOf(processing(tip + 2, tx(0, "confirmed", "fee1", tip + 1), tx(1, "confirmed", "fee2", tip + 2), tx(2, "awaiting-confirmation", "fee3"), tx(3, "verify-inputs"))),
+        fees = mapOf("fee1" to 1_215, "fee2" to 1_215, "fee3" to 1_215), children = (0..2).associate { it to ("fee${it + 1}" to "wallet") })
+    val shared = exit("Processing", processing(tip, tx(0, "awaiting-confirmation", "theirs", origin = "mempool"), tx(1, "verify-inputs"), tx(2, "verify-inputs"), tx(3, "verify-inputs")),
+        children = mapOf(0 to ("theirs" to "mempool")))
+    val stale = exit("Processing", processing(tip - 52, tx(0, "confirmed", "fee1", tip - 54), tx(1, "confirmed", "fee2", tip - 53), tx(2, "awaiting-confirmation", "fee3"), tx(3, "verify-inputs")),
+        history = listOf(processing(tip - 52, tx(0, "confirmed", "fee1", tip - 54), tx(1, "confirmed", "fee2", tip - 53), tx(2, "awaiting-confirmation", "fee3"), tx(3, "verify-inputs"))),
+        fees = mapOf("fee1" to 1_215, "fee2" to 1_215, "fee3" to 1_215), children = (0..2).associate { it to ("fee${it + 1}" to "wallet") })
+    val canceled = exit("Canceled", ExitDetails(kind = "canceled", tip_height = tip + 1),
+        history = listOf(processing(tip + 1, tx(0, "confirmed", "fee1", tip + 1), tx(1, "awaiting-cpfp-broadcast"), tx(2, "verify-inputs"), tx(3, "verify-inputs"))))
+
+    /** The list: exits in every group, three of them from one round sharing its root. */
+    val list: List<ExitModel> = run {
+        fun from(id: String, amount: Long, base: ExitModel, path: List<String>) = base.copy(id = vtxos.first { it.id.startsWith(id) }.id, amount = amount,
+            packages = path.map { ExitPackage(txid(it)) })
+        listOf(from("c04", 15_000, claimable, listOf("r2", "a", "b", "c04")),
+            from("c07", 8_400, wait, listOf("board")),
+            from("c01", 31_000, confirm, listOf("root", "branch2", "branch1", "leaf")),
+            from("c02", 24_500, confirm, listOf("root", "branch2", "branch1", "leaf43")),
+            from("c03", 21_000, mempool, listOf("root", "branch2x", "branch1x", "leaf58", "ckpt", "arkoor")),
+            from("c05", 12_000, nofunds, listOf("r3", "d", "e", "c05")),
+            from("c06", 9_800, claimed, listOf("r4", "f", "g", "c06")),
+            from("c11", 3_342, canceled, listOf("r8", "h", "i", "c11")))
+    }
+}
+
+/** What Settings gives an exit page: the pose, the theme's palette and the toasts. */
+@Composable
+internal fun ExitPreviewHost(content: @Composable () -> Unit) {
+    OnboardingFrame(null, splitAtWindowCentre = true) {
+        CompositionLocalProvider(LocalSettingsToasts provides remember { HomeToasts() }) { content() }
+    }
+}
