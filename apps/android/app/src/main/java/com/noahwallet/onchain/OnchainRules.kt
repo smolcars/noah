@@ -46,7 +46,7 @@ data class ExitDetails(
     val last_scanned_block: Block? = null, val claim_txid: String? = null, val block: Block? = null, val txid: String? = null,
 ) {
     @Serializable data class Block(val height: Long, val hash: String = "")
-    @Serializable data class Status(val kind: String, val child_txid: String? = null, val block: Block? = null)
+    @Serializable data class Status(val kind: String, val child_txid: String? = null, val block: Block? = null, val origin: String? = null)
     @Serializable data class Transaction(val txid: String, val status: Status)
     val height get() = claimable_height ?: claimable_since?.height ?: block?.height ?: tip_height
 }

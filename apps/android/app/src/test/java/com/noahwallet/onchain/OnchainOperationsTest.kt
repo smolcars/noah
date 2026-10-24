@@ -264,10 +264,63 @@ class OnchainOperationsTest {
         override suspend fun cancel(id: String): Boolean { calls.add("cancel"); return cancelResult }
         override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { drainDestinations.add(destination); calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }
+        /** A signed one-output transaction (txid 75ebf755…), standing in for the drain's claim. */
+        override suspend fun claimTransaction(psbt: String) = "020000000001013e16e76ee2b6a9dc798b81be3a4903286e4e454dc019c48062d5396b4e21fdca0000000000fdffffff01d09b0000000000002251208751b9234a38be714a8011a02bad9f346f7b80e4a76b13fcacda7b0e2890c5e601408982addc732de240dd1dfb0bd4a66e0ab807073c73d92b26256827a2643735827b1eb0cb92812c4969544c107489479dc54ec9bc27409a15bef8486972bf03297f030000"
+        var fastRate = 750L
+        override suspend fun fastSatPerKwu() = fastRate
         companion object {
             fun vtxo(id: String, amount: ULong = 30_000u) = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, 500u, "pubkey", VtxoState.Spendable, 1u, 500u, true)
         }
     }
+    @Test fun aClaimToThisPhoneKeepsItsOutputsOnchainBeforeItsBroadcast() = runBlocking {
+        for (mine in listOf(true, false)) fixture { wallet, ops, journal, _ ->
+            wallet.mine = mine
+            wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+            val kept = mutableListOf<Set<String>>()
+            ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "address"), keepOnchain = { kept += it; wallet.calls.add("keep") })
+            if (mine) {
+                assertEquals(listOf(setOf("75ebf7553b394d32e07c7e4297c86f2e861101cf5cae510a1c4f28f490cf20c6:0")), kept)
+                assertEquals(listOf("drain", "keep", "broadcast"), wallet.calls)
+            } else { assertTrue("another wallet's coins aren't ours to keep", kept.isEmpty()); assertEquals(listOf("drain", "broadcast"), wallet.calls) }
+            assertEquals("claim-tx", journal.loadAll().single().receipt!!.txid)
+        }
+    }
+    @Test fun aClaimWhoseOutputsCantBeKeptIsNeverSent() = runBlocking { fixture { wallet, ops, journal, _ ->
+        wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
+        val failure = runCatching { ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "address"), keepOnchain = { error("disk full") }) }.exceptionOrNull()
+        assertEquals(OnchainFailure.keepFailed, (failure as OnchainException).reason)
+        assertTrue(wallet.calls.none { it == "broadcast" })
+        assertTrue("nothing was sent, so nothing blocks trying again", journal.loadAll().isEmpty())
+    } }
+    @Test fun autoBoardNeverOffersCoinsClaimedToThisPhone() = runBlocking {
+        var disk: String? = null
+        val store = AutoBoardFunding({ disk }, { disk = it })
+        store.keep("wallet", setOf("claim:0"))
+        assertFalse(store.hasUnhandled(AutoBoardFunding.Snapshot("wallet", setOf("claim:0"))))
+        var quoted = 0
+        assertNull(AutoBoardReview(store).prepare({ true }, { AutoBoardFunding.Snapshot("wallet", setOf("claim:0")) }, { quoted++; null }, {}))
+        assertEquals(0, quoted)
+        // A real deposit later is still offered, as today; the kept coin stays handled.
+        assertTrue(store.hasUnhandled(AutoBoardFunding.Snapshot("wallet", setOf("claim:0", "deposit:0"))))
+        assertTrue(store.hasUnhandled(AutoBoardFunding.Snapshot("other", setOf("claim:0"))))
+    }
+    @Test fun exitsCarryTheirFeesAndTheWaitingPackagesFee() = runBlocking { fixture { wallet, _, journal, _ ->
+        val node = ExitTransactions.parse(wallet.claimTransaction(""))!!
+        wallet.fundingTransactions = listOf(WalletTransaction("child-1", "", 1_215u, -1_215, null, false), WalletTransaction("unrelated", "", 99u, -99, null, false))
+        val waiting = ExitState.Processing(101u, listOf(ExitTx("root", ExitTxStatus.Confirmed("child-1", BlockRef(101u, "h"), ExitTxOrigin.Wallet(BlockRef(101u, "h")))),
+            ExitTx("leaf", ExitTxStatus.AwaitingCpfpBroadcast)))
+        wallet.states["a"] = waiting
+        val hex = wallet.claimTransaction("")
+        val packages = listOf(ExitTransactionPackage("root", hex, "child-1", hex, ExitTxOrigin.Wallet(BlockRef(101u, "h")), waiting.transactions[0].status),
+            ExitTransactionPackage("leaf", hex, null, null, null, ExitTxStatus.AwaitingCpfpBroadcast))
+        val status = ExitTransactionStatus("a", 30_000u, waiting, listOf(ExitState.Start(100u)), 2u, packages)
+        val exit = OnchainOperations(object : OnchainWalletAccess by wallet { override suspend fun status(id: String) = status }, journal).detail("a")!!
+        assertEquals(mapOf("child-1" to 1_215L), exit.childFees)
+        assertEquals(ExitTransactions.packageFee(node.weight, 750), exit.nextPackageFee)
+        assertEquals(listOf("root", "leaf"), exit.packages.map { it.txid })
+        assertEquals("wallet", exit.packages[0].childOrigin); assertEquals(node.weight, exit.packages[1].weight); assertEquals(1, exit.packages[1].outputs)
+        assertEquals(1_215L, ExitStages.of(exit, 101).feesPaid)
+    } }
     @Test fun aSpentCoinLoadsByIdThoughTheOverviewListsOnlyCurrentOnes() = runBlocking { fixture { wallet, ops, _, _ ->
         wallet.records["spent"] = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), "spent", 2_500u, 90u, "pubkey",
             VtxoState.Spent, 1u, 500u, true)

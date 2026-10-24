@@ -18,6 +18,8 @@ data class OnchainQuote(
     val createdAt: Long = System.currentTimeMillis(), val automatic: Boolean = false,
     val destinationIsMine: Boolean? = null, val unknownFeeConsent: String? = null,
     val boardAll: Boolean = false, val preparedBoard: BoardPrepared? = null, val id: String = UUID.randomUUID().toString(),
+    /** An exit's transactions still to broadcast, shared ones once (bark's estimate). */
+    val transactions: Long? = null,
 ) {
     fun current(now: Long = System.currentTimeMillis()) = now >= createdAt && now - createdAt <
         (if (preparedBoard != null) BoardPrepared.lifetimeMillis else 30_000L)
@@ -55,6 +57,7 @@ enum class OnchainFailure(val text: String) {
     reserved("These coins are unavailable or reserved by another payment in review. Close that review, then try again."),
     notSynced("Sync the wallet once before preparing a board."),
     constructionFailed("The transaction could not be constructed. Nothing was broadcast. Review again."),
+    keepFailed("Couldn't record that these coins stay on-chain, so nothing was sent. Try again."),
 }
 class OnchainException(val reason: OnchainFailure) : Exception(reason.text)
 internal fun fail(reason: OnchainFailure): Nothing = throw OnchainException(reason)
@@ -87,8 +90,13 @@ data class VtxoModel(
     /** Due for Home's Renew: in the wallet's expiring set, spendable (so not locked) and not expired yet. */
     val renewable get() = expiring && refreshable && !expired
 }
+/**
+ * [packages]: bark's transactions for the exit, root first; [childFees]: what this wallet paid each fee child (by child
+ * txid); [nextPackageFee]: the fee the transaction waiting for its child needs at today's fast rate, when one waits.
+ */
 data class ExitModel(val id: String, val amount: Long, val state: String, val details: ExitDetails,
-    val history: List<String>, val historyDetails: List<ExitDetails>) {
+    val history: List<String>, val historyDetails: List<ExitDetails>, val packages: List<ExitPackage> = emptyList(),
+    val childFees: Map<String, Long> = emptyMap(), val nextPackageFee: Long? = null) {
     val claimable get() = state == "Claimable"
     val cancelable get() = ExitRules.cancelable(state, details.transactions?.lastOrNull()?.status?.kind)
     val timeline get() = ExitTimeline.build(history, historyDetails, state, details)
@@ -109,7 +117,7 @@ class ExitEstimateUnavailable(val review: OnchainQuote) : Exception() {
         }
     }
     fun preserving(original: OnchainQuote, now: Long = System.currentTimeMillis()): ExitEstimateUnavailable {
-        val scope = original.copy(fee = null, chainFee = null, feeRate = null)
+        val scope = original.copy(fee = null, chainFee = null, feeRate = null, transactions = null)
         if (!original.current(now) || !review.feesUnknown || !scope.matches(review)) fail(OnchainFailure.changed)
         return ExitEstimateUnavailable(review.copy(id = original.id, createdAt = original.createdAt, unknownFeeConsent = null))
     }

@@ -14,8 +14,33 @@ internal class OnchainOperations(
         val expiring = wallet.expiring(threshold)
         val vtxos = wallet.vtxos().map { vtxoModel(it, tip, expiring) }
         // SDK persisted rows cover live and terminal exits, including wallets imported without Noah's index.
-        val exits = wallet.allExits().map(::exitModel)
+        val exits = enrich(wallet.allExits().map(::exitModel))
         return OnchainOverview(wallet.walletID, vtxos, exits, wallet.confirmed(), tip, wallet.pendingTotal(), wallet.claimableHeight())
+    }
+    /**
+     * What this wallet paid each exit's fee children (by txid, from its own transactions) and, for a transaction waiting
+     * for its child, that package's fee at bark's fast rate. Both are local reads; the rate is read only while one waits.
+     */
+    private suspend fun enrich(exits: List<ExitModel>): List<ExitModel> {
+        val children = exits.flatMap { exit -> exit.packages.filter { it.childOrigin == "wallet" }.mapNotNull { it.childTxid } }.toSet()
+        val fees = if (children.isEmpty()) emptyMap() else wallet.transactions().filter { it.txid in children }
+            .mapNotNull { tx -> tx.onchainFeeSats?.let { tx.txid to it.toLong() } }.toMap()
+        var rate: Long? = null
+        return exits.map { exit ->
+            val waiting = exit.details.transactions?.firstOrNull { it.status.kind != "confirmed" }?.takeIf {
+                exit.state == "Processing" && it.status.kind == "awaiting-cpfp-broadcast" }
+            val weight = waiting?.let { tx -> exit.packages.find { it.txid == tx.txid }?.weight }
+            val next = weight?.let { ExitTransactions.packageFee(it, rate ?: wallet.fastSatPerKwu().also { fast -> rate = fast }) }
+            exit.copy(childFees = exit.packages.mapNotNull { p -> p.childTxid?.let { id -> fees[id]?.let { id to it } } }.toMap(), nextPackageFee = next)
+        }
+    }
+    /** Decision 4: each VTXO's own exit estimate (bark's, for it alone), or null where bark can't estimate it now. */
+    suspend fun exitCosts(ids: List<String>): Map<String, ExitCosts.Cost?> {
+        if (!ready()) fail(OnchainFailure.unavailable)
+        return ids.associateWith { id ->
+            try { wallet.exitFee(listOf(id), null).let { ExitCosts.Cost(it.exitBroadcastFeeSats.toLong(), it.claimFeeSats.toLong(), it.txsToBroadcast.toLong()) } }
+            catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+        }
     }
     private suspend fun renewable(ids: List<String>, threshold: UInt): Boolean {
         val tip = wallet.tip()
@@ -27,12 +52,17 @@ internal class OnchainOperations(
     suspend fun vtxo(id: String, threshold: UInt): VtxoModel = vtxoModel(wallet.vtxo(id), wallet.tip(), wallet.expiring(threshold))
     suspend fun detail(id: String): ExitModel? {
         val status = wallet.status(id) ?: return null
-        return exitModel(status)
+        return enrich(listOf(exitModel(status))).single()
     }
     private fun exitModel(status: ExitTransactionStatus): ExitModel {
         val current = exitState(status.state)
         val past = status.history.orEmpty().map(::exitState)
-        return ExitModel(status.vtxoId, status.amountSats.toLong(), current.first, current.second, past.map { it.first }, past.map { it.second })
+        val packages = status.transactions.map { tx ->
+            val parent = ExitTransactions.parse(tx.parentTxHex)
+            ExitPackage(tx.parentTxid, parent?.weight, parent?.outputs ?: 0, parent?.inputs?.firstOrNull()?.second, tx.childTxid,
+                tx.childTxHex?.let { ExitTransactions.parse(it)?.weight }, tx.childOrigin?.let(::exitOrigin))
+        }
+        return ExitModel(status.vtxoId, status.amountSats.toLong(), current.first, current.second, past.map { it.first }, past.map { it.second }, packages)
     }
     suspend fun autoBoardFunding(): AutoBoardFunding.Snapshot? {
         if (!ready()) fail(OnchainFailure.unavailable)
@@ -121,7 +151,7 @@ internal class OnchainOperations(
         return quote
     }
     private suspend fun exitEstimate(validated: OnchainQuote, estimate: Boolean): OnchainQuote {
-        val unknown = validated.copy(fee = null, chainFee = null, feeRate = null)
+        val unknown = validated.copy(fee = null, chainFee = null, feeRate = null, transactions = null)
         val fallbackAllowed = validated.action in setOf(OnchainAction.startExit, OnchainAction.claim)
         if (!estimate && fallbackAllowed) return unknown
         val fee = try { wallet.exitFee(validated.ids, validated.destination) }
@@ -131,13 +161,19 @@ internal class OnchainOperations(
         }
         return validated.copy(fee = fee.claimFeeSats.toLong(),
             chainFee = if (validated.action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),
-            feeRate = if (validated.action == OnchainAction.claim) null else fee.feeRateSatPerVb.toLong())
+            feeRate = if (validated.action == OnchainAction.claim) null else fee.feeRateSatPerVb.toLong(),
+            transactions = if (validated.action == OnchainAction.startExit) fee.txsToBroadcast.toLong() else null)
     }
     /**
      * [renewalThreshold]: the review was Home's Renew, so every VTXO must still be due (in the expiring set at this
      * threshold, spendable, not expired), checked last, under the caller's locks, just before submitting.
      */
-    suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null): String {
+    /**
+     * [keepOnchain]: a claim to this wallet records its outputs in auto-board's handled ledger (exit.md, Decision 8)
+     * before it's broadcast, so auto-board never offers them back to Ark.
+     */
+    suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
+                        keepOnchain: (Set<String>) -> Unit = {}): String {
         if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding() != funding)) fail(OnchainFailure.changed)
@@ -185,6 +221,10 @@ internal class OnchainOperations(
                 OnchainAction.claim -> {
                     val claim = wallet.drain(reviewed.ids, checkNotNull(reviewed.destination))
                     if (!reviewed.hasUnknownFeeConsent && claim.feeSats.toLong() != reviewed.fee) fail(OnchainFailure.claimFeeChanged)
+                    if (reviewed.destinationIsMine == true) try {
+                        val tx = checkNotNull(ExitTransactions.parse(wallet.claimTransaction(claim.psbtBase64)))
+                        keepOnchain((0 until tx.outputs).map { "${tx.txid}:$it" }.toSet())
+                    } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { fail(OnchainFailure.keepFailed) }
                     // Every error after entering broadcast remains uncertain, including typed BDK errors.
                     val txid = try { wallet.broadcastClaim(claim.psbtBase64) } catch (_: Exception) { fail(OnchainFailure.uncertain) }
                     recordTransaction(txid)

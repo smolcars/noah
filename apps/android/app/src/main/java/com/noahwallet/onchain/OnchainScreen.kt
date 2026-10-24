@@ -40,7 +40,7 @@ internal fun onchainDependencies(app: AppModel) = OnchainModel.Dependencies(
     quote = { action, ids, amount, destination -> app.session.quoteOnchain(action, ids, amount, destination) },
     execute = { quote -> app.services.lifecycle.withWalletMutation {
         if (!onchainReady(app)) fail(OnchainFailure.unavailable)
-        app.session.executeOnchain(quote)
+        app.session.executeOnchain(quote, keepOnchain = { AutoBoardFunding.stored(app.settings).keep(quote.walletID, it) })
     } },
     attempts = { withContext(Dispatchers.IO) { app.session.onchainJournal.loadAll() } },
     acknowledge = { id -> app.services.lifecycle.withWalletMutation {

@@ -22,6 +22,8 @@ internal interface OnchainWalletAccess {
     suspend fun destinationIsMine(address: String): Boolean = error("Unsupported")
     suspend fun minimum(): Long? = error("Unsupported")
     suspend fun regularSatPerKwu(): Long = error("Unsupported")
+    /** bark's exit rate: the chain source's fast (one-block) estimate. */
+    suspend fun fastSatPerKwu(): Long = error("Unsupported")
     suspend fun refreshFee(ids: List<String>): FeeEstimate = error("Unsupported")
     suspend fun exitFee(ids: List<String>, destination: String?): EmergencyExitFeeEstimate = error("Unsupported")
     suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard = error("Unsupported")
@@ -37,6 +39,8 @@ internal interface OnchainWalletAccess {
     suspend fun start(ids: List<String>): Unit = error("Unsupported")
     suspend fun progress(feeRate: Long?): List<ExitProgressStatus> = error("Unsupported")
     suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction = error("Unsupported")
+    /** The signed claim transaction a drain's PSBT holds, as hex, before it's broadcast. */
+    suspend fun claimTransaction(psbt: String): String = error("Unsupported")
     suspend fun broadcastClaim(psbt: String): String = error("Unsupported")
     suspend fun cancel(id: String): Boolean = error("Unsupported")
 }
@@ -55,7 +59,7 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun expiring(threshold: UInt) = wallet.getExpiringVtxos(threshold).map { it.id }.toSet()
     override suspend fun vtxo(id: String) = wallet.getVtxoById(id)
     override suspend fun exits() = wallet.getExitVtxos()
-    override suspend fun status(id: String) = wallet.getExitStatus(id, includeHistory = true, includeTransactions = false)
+    override suspend fun status(id: String) = wallet.getExitStatus(id, includeHistory = true, includeTransactions = true)
     override suspend fun pendingTotal() = wallet.pendingExitsTotalSats().toLong()
     override suspend fun claimableHeight() = wallet.allExitsClaimableAtHeight()?.toLong()
     override suspend fun transactions() = onchain.transactions()
@@ -66,6 +70,7 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     }
     override suspend fun minimum() = wallet.arkInfo()?.minBoardAmountSats?.toLong()
     override suspend fun regularSatPerKwu() = onchain.feeRates().regularSatPerKwu.toLong()
+    override suspend fun fastSatPerKwu() = onchain.feeRates().fastSatPerKwu.toLong()
     override suspend fun refreshFee(ids: List<String>) = wallet.estimateRefreshFee(ids)
     override suspend fun exitFee(ids: List<String>, destination: String?) = wallet.estimateEmergencyExitFee(ids, feeRateSatPerVb = null, destination = destination)
     override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong): PreparedBoard {
@@ -81,7 +86,8 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
         return wallet.submitPreparedBoard(checkNotNull(quote.preparedBoard).id)
     }
     override suspend fun discardBoard(id: String, includingClaimed: Boolean) = preparations.discard(id, includingClaimed)
-    override suspend fun allExits() = wallet.listAllExits(includeHistory = true, includeTransactions = false)
+    // Transactions come from bark's own store (no chain query): the picture, Details and fees read them.
+    override suspend fun allExits() = wallet.listAllExits(includeHistory = true, includeTransactions = true)
     override suspend fun transactionStatus(txid: String) = wallet.transactionStatus(txid)
     override suspend fun boardTransactionIDs(): Set<String> = wallet.pendingBoards().map { it.txid }.toSet() +
         wallet.history().filter { it.subsystemName == "bark.board" }.flatMap { movement ->
@@ -92,6 +98,7 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun start(ids: List<String>) = wallet.startExitForVtxos(ids)
     override suspend fun progress(feeRate: Long?) = wallet.progressExits(feeRate?.toULong())
     override suspend fun drain(ids: List<String>, destination: String) = wallet.drainExits(vtxoIds = ids, address = destination, feeRateSatPerVb = null)
+    override suspend fun claimTransaction(psbt: String) = extractTxFromPsbt(psbt)
     override suspend fun broadcastClaim(psbt: String) = wallet.broadcastTx(extractTxFromPsbt(psbt))
     override suspend fun cancel(id: String) = wallet.cancelExit(id).canceled
 }
@@ -113,8 +120,8 @@ internal fun exitState(value: ExitState): Pair<String, ExitDetails> {
                 ExitTxStatus.VerifyInputs -> ExitDetails.Status("verify-inputs")
                 is ExitTxStatus.AwaitingInputConfirmation -> ExitDetails.Status("awaiting-input-confirmation")
                 ExitTxStatus.AwaitingCpfpBroadcast -> ExitDetails.Status("awaiting-cpfp-broadcast")
-                is ExitTxStatus.AwaitingConfirmation -> ExitDetails.Status("awaiting-confirmation", s.childTxid)
-                is ExitTxStatus.Confirmed -> ExitDetails.Status("confirmed", s.childTxid, block(s.block))
+                is ExitTxStatus.AwaitingConfirmation -> ExitDetails.Status("awaiting-confirmation", s.childTxid, origin = exitOrigin(s.origin))
+                is ExitTxStatus.Confirmed -> ExitDetails.Status("confirmed", s.childTxid, block(s.block), exitOrigin(s.origin))
             }
             ExitDetails.Transaction(tx.txid, status)
         })
@@ -126,6 +133,11 @@ internal fun exitState(value: ExitState): Pair<String, ExitDetails> {
         is ExitState.VtxoSwept -> "VtxoSwept" to ExitDetails(kind = "vtxo-swept", tip_height = value.tipHeight.toLong())
         is ExitState.Canceled -> "Canceled" to ExitDetails(kind = "canceled", tip_height = value.tipHeight.toLong())
     }
+}
+
+/** Who paid a transaction's fee child: this wallet, or another wallet's child seen in the mempool or a block. */
+internal fun exitOrigin(origin: ExitTxOrigin) = when (origin) {
+    is ExitTxOrigin.Wallet -> "wallet"; ExitTxOrigin.Mempool -> "mempool"; is ExitTxOrigin.Block -> "block"
 }
 
 internal fun validateClaimDestination(address: String, network: String) {

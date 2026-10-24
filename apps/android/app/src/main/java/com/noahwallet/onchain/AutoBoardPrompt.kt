@@ -36,9 +36,7 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
     }
     fun prefs() = SettingsPreferences.transaction(app.settings.string("transaction-storage"))
     fun enabled() = prefs()["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false
-    val fundingStore = remember(app.settings) { AutoBoardFunding(
-        { app.settings.string(AutoBoardFunding.key) },
-        { app.settings.set(it, AutoBoardFunding.key); app.settings.sync() }) }
+    val fundingStore = remember(app.settings) { AutoBoardFunding.stored(app.settings) }
     val review = remember(fundingStore) { AutoBoardReview(fundingStore) }
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->

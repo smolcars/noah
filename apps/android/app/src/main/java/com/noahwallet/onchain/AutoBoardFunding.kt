@@ -9,6 +9,10 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
     companion object {
         const val key = "native-auto-board-funding-v1"
         const val RETRY_BACKOFF_MS = 30_000L
+        /** Auto-board's prompt and a claim both update the ledger; one at a time, so neither drops the other's write. */
+        private val lock = Any()
+        fun stored(settings: com.noahwallet.services.storage.SettingsStorage) =
+            AutoBoardFunding({ settings.string(key) }, { settings.set(it, key); settings.sync() })
         fun confirmed(walletID: String, utxos: List<OnchainUtxo>, transactions: List<WalletTransaction>): Snapshot {
             // A board/send's change is not a new deposit. Unknown transactions are not eligible.
             val incoming = transactions.filter { it.balanceChangeSats > 0 }.map { it.txid }.toSet()
@@ -26,17 +30,17 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
         }, root["retryAfter"]?.jsonObject?.mapValues { it.value.jsonPrimitive.long }.orEmpty())
     }
     /** A deadline beyond one backoff window means the clock moved back since saving; cap it durably once. */
-    fun retryDeadline(walletID: String, now: Long = System.currentTimeMillis()): Long {
+    fun retryDeadline(walletID: String, now: Long = System.currentTimeMillis()): Long = synchronized(lock) {
         val saved = load()
         val stored = saved.retryAfter[walletID] ?: return 0
         val latest = now + RETRY_BACKOFF_MS
         if (stored <= latest) return stored
         save(saved.copy(retryAfter = saved.retryAfter + (walletID to latest)))
-        return latest
+        latest
     }
     fun hasUnhandled(funding: Snapshot): Boolean = (funding.outpoints - load().handled[funding.walletID].orEmpty()).isNotEmpty()
     fun markHandled(funding: Snapshot): Boolean = claim(funding) != null
-    fun release(funding: Snapshot, retryAfter: Long) {
+    fun release(funding: Snapshot, retryAfter: Long) = synchronized(lock) {
         val saved = load()
         save(State(saved.handled + (funding.walletID to (saved.handled[funding.walletID].orEmpty() - funding.outpoints)),
             saved.retryAfter + (funding.walletID to retryAfter))) // Release and deadline share one durable write.
@@ -47,14 +51,16 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
             put("retryAfter", JsonObject(saved.retryAfter.mapValues { JsonPrimitive(it.value) }))
         }.toString())
     }
-    fun claim(funding: Snapshot): Snapshot? {
+    fun claim(funding: Snapshot): Snapshot? = synchronized(lock) {
         val saved = load()
         val previous = saved.handled[funding.walletID].orEmpty()
         val newly = funding.outpoints - previous
         if (newly.isEmpty()) return null
         save(saved.copy(handled = saved.handled + (funding.walletID to (previous + funding.outpoints))))
-        return Snapshot(funding.walletID, newly)
+        Snapshot(funding.walletID, newly)
     }
+    /** Coins claimed to this phone stay on-chain (exit.md, Decision 8): handled before they exist, so no review offers them. */
+    fun keep(walletID: String, outpoints: Set<String>) { claim(Snapshot(walletID, outpoints)) }
 }
 
 /** Async reads may finish after pause/navigation; only a still-active caller may evaluate or claim funding. */
