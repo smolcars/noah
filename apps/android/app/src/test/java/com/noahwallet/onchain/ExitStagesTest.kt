@@ -54,8 +54,9 @@ class ExitStagesTest {
         val sending = ExitStages.of(exit("Processing", processing(100, *path("awaiting-cpfp-broadcast", "verify-inputs"))), 100)
         assertEquals(listOf(a.cancel, a.check), ExitActions.of(sending, cancelable = true))
         assertEquals("the last transaction is out", listOf(a.check), ExitActions.of(sending, cancelable = false))
-        assertEquals(listOf(a.cancel, a.addFunds), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = true))
-        assertEquals(listOf(a.addFunds), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = false))
+        // Needing funds, "Add on-chain funds" leads, but Cancel (while bark allows it) and Check the chain stay.
+        assertEquals(listOf(a.cancel, a.addFunds, a.check), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = true))
+        assertEquals(listOf(a.addFunds, a.check), ExitActions.of(sending.copy(attention = ExitStage.Attention.needsFunds), cancelable = false))
         assertEquals(listOf(a.claim), ExitActions.of(ExitStage(ExitStage.Phase.claimable), cancelable = false))
         assertEquals(emptyList<ExitActions.Action>(), ExitActions.of(ExitStage(ExitStage.Phase.claiming), cancelable = false))
         for (phase in listOf(ExitStage.Phase.claimed, ExitStage.Phase.canceled, ExitStage.Phase.spent, ExitStage.Phase.swept))
@@ -99,7 +100,7 @@ class ExitStagesTest {
 
     @Test fun aReplacedChildMeansFeesRoseAndBlocksWithoutItMeanStuck() {
         val sent = processing(100, tx("root", "awaiting-confirmation", "c1", origin = "wallet"), tx("leaf", "verify-inputs"))
-        val firstSeen = mapOf("root/awaiting-confirmation" to 100L)
+        val firstSeen = mapOf("root/awaiting-confirmation/0" to 100L)
         // bark keeps the state, tip and all, while nothing changes: two blocks on the wallet's tip, it's stuck.
         val stuck = ExitStages.of(exit("Processing", sent), 102, seen = firstSeen)
         assertEquals(ExitStage.Attention.stuck, stuck.attention); assertEquals(2L, stuck.waited)
@@ -113,15 +114,19 @@ class ExitStagesTest {
         var stored: String? = null
         val seen = ExitSeen({ stored }, { stored = it })
         val sent = exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c1"), tx("leaf", "verify-inputs")))
-        assertEquals(mapOf("root/awaiting-confirmation" to 100L, "leaf/verify-inputs" to 100L), seen.note(listOf(sent), 100))
+        assertEquals(mapOf("root/awaiting-confirmation/0" to 100L, "leaf/verify-inputs/0" to 100L), seen.note(listOf(sent), 100))
         // A later read of the same state keeps the first tip, also after a restart (a new store over the same text).
-        assertEquals(100L, ExitSeen({ stored }, { stored = it }).note(listOf(sent), 103)["root/awaiting-confirmation"])
+        assertEquals(100L, ExitSeen({ stored }, { stored = it }).note(listOf(sent), 103)["root/awaiting-confirmation/0"])
         assertEquals(3L, ExitStages.of(sent, 103, seen = seen.note(listOf(sent), 103)).waited)
         // A new status starts over; anything no longer waiting is forgotten.
         val mined = exit("Processing", processing(104, tx("root", "confirmed", "c1", 104), tx("leaf", "awaiting-confirmation", "c2")))
-        assertEquals(mapOf("leaf/awaiting-confirmation" to 104L), seen.note(listOf(mined), 104))
+        assertEquals(mapOf("leaf/awaiting-confirmation/0" to 104L), seen.note(listOf(mined), 104))
         assertEquals(emptyMap<String, Long>(), seen.note(emptyList(), 105))
-        assertEquals("unreadable text starts afresh", mapOf("leaf/awaiting-confirmation" to 106L), ExitSeen({ "{" }, {}).note(listOf(mined), 106))
+        assertEquals("unreadable text starts afresh", mapOf("leaf/awaiting-confirmation/0" to 106L), ExitSeen({ "{" }, {}).note(listOf(mined), 106))
+        // Evicted and sent again while Noah wasn't looking: bark's history shows a new episode, counted afresh.
+        val evicted = exit("Processing", processing(110, tx("root", "confirmed", "c1", 104), tx("leaf", "awaiting-confirmation", "c3")),
+            history = listOf(mined.details, processing(108, tx("root", "confirmed", "c1", 104), tx("leaf", "awaiting-cpfp-broadcast"))))
+        assertEquals(mapOf("leaf/awaiting-confirmation/2" to 110L), seen.note(listOf(evicted), 110))
     }
 
     @Test fun anExitIsStaleOnlyWithEvidenceThatNothingProgressesIt() {
@@ -166,6 +171,15 @@ class ExitStagesTest {
         val sent = parked.copy(details = processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-confirmation", "c2"), tx("leaf", "verify-inputs")))
         assertTrue(checking.needsFunds(listOf(sent), 0, null).isEmpty())
         assertTrue(checking.needsFunds(listOf(parked), 0, null).isEmpty())
+        // The same, unseen by Noah: evicted and parked again between two reads. bark's history starts a new episode, so
+        // neither the old check nor the old waiting time counts.
+        val episodes = ExitFunding(75_000) { now }
+        now = 0; episodes.checked(listOf(parked), completed = true)
+        assertEquals(setOf("v1"), episodes.needsFunds(listOf(parked), 0, 1))
+        val again = parked.copy(details = parked.details.copy(tip_height = 103),
+            historyDetails = parked.historyDetails + parked.details + sent.details)
+        assertTrue("a new episode needs its own proof", episodes.needsFunds(listOf(again), 0, 1).isEmpty())
+        now = 75_000; assertEquals(setOf("v1"), episodes.needsFunds(listOf(again), 0, 1))
         assertEquals("only the parked transaction shows it", null, ExitStages.of(exit("Processing", processing(100, *path("verify-inputs"))), 100, needsFunds = true).attention)
     }
 
@@ -269,10 +283,15 @@ class ExitStagesTest {
         assertTrue("the chain source lost it: claimable again", ExitClaims.submitted(listOf(attempt("claim", com.noahwallet.services.wallet.ChainStatus.Kind.notFound))).isEmpty())
         assertTrue(ExitClaims.submitted(listOf(attempt(null, null), attempt("x", null, OnchainAction.startExit))).isEmpty())
         val claimable = ExitStage(ExitStage.Phase.claimable)
-        assertEquals(ExitStage(ExitStage.Phase.claiming, claimTxid = "claim"), ExitClaims.apply(claimable, "claim"))
-        assertEquals(emptyList<ExitActions.Action>(), ExitActions.of(ExitClaims.apply(claimable, "claim"), cancelable = false))
-        assertEquals(claimable, ExitClaims.apply(claimable, null))
-        assertEquals("bark's own later states win", ExitStage(ExitStage.Phase.claimed), ExitClaims.apply(ExitStage(ExitStage.Phase.claimed), "claim"))
+        val waiting = exit("Claimable", ExitDetails(kind = "claimable"))
+        assertEquals(ExitStage(ExitStage.Phase.claiming, claimTxid = "claim"), ExitClaims.apply(waiting, claimable, "claim"))
+        assertEquals(emptyList<ExitActions.Action>(), ExitActions.of(ExitClaims.apply(waiting, claimable, "claim"), cancelable = false))
+        assertEquals(claimable, ExitClaims.apply(waiting, claimable, null))
+        assertEquals("bark's own later states win", ExitStage(ExitStage.Phase.claimed), ExitClaims.apply(waiting, ExitStage(ExitStage.Phase.claimed), "claim"))
+        // bark saw that claim, then it fell out and the exit is claimable again: show that, not "Claiming" forever.
+        val evicted = exit("Claimable", ExitDetails(kind = "claimable"), history = listOf(ExitDetails(kind = "claim-in-progress", claim_txid = "claim")))
+        assertEquals(claimable, ExitClaims.apply(evicted, claimable, "claim"))
+        assertEquals("a new claim, not yet seen by bark, still shows", ExitStage.Phase.claiming, ExitClaims.apply(evicted, claimable, "claim2").phase)
     }
 
     @Test fun claimStaysOffUntilItsDestinationIsValidAndReviewed() {

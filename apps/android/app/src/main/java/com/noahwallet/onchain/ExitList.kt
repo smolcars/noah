@@ -72,7 +72,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
-    val stages = exits.associate { it.id to ExitClaims.apply(ExitStages.of(it, tip, it.id in needsFunds, seen, stalled), claims[it.id]) }
+    val stages = exits.associate { it.id to ExitClaims.apply(it, ExitStages.of(it, tip, it.id in needsFunds, seen, stalled), claims[it.id]) }
     val live = exits.filter { stages.getValue(it.id).live }
     val claimable = exits.filter { stages.getValue(it.id).phase == ExitStage.Phase.claimable }
     val shared = ExitList.shared(exits)

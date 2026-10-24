@@ -68,7 +68,7 @@ internal object ExitFixtures {
         history = listOf(processing(tip - 52, tx(0, "confirmed", "fee1", tip - 54), tx(1, "confirmed", "fee2", tip - 53), tx(2, "awaiting-confirmation", "fee3"), tx(3, "verify-inputs"))),
         fees = mapOf("fee1" to 1_215, "fee2" to 1_215, "fee3" to 1_215), children = (0..2).associate { it to ("fee${it + 1}" to "wallet") })
     /** What Noah noted for the stuck fixture: its transaction first seen in the mempool three blocks before its tip. */
-    val seen = mapOf("${ids[2]}/awaiting-confirmation" to tip + 2)
+    val seen = mapOf("${ids[2]}/awaiting-confirmation/0" to tip + 2)
     /** A fixture's stage as its page computes it; [stale] with Noah's evidence that nothing progresses exits. */
     fun stage(exit: ExitModel, tip: Long = exit.details.tip_height ?: ExitFixtures.tip, needsFunds: Boolean = exit == nofunds) =
         ExitStages.of(exit, tip, needsFunds, seen, stalled = exit == stale)

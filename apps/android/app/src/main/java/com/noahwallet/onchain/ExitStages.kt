@@ -43,6 +43,18 @@ data class ExitStage(
 }
 
 internal object ExitStages {
+    /**
+     * Where [txid]'s current status began in bark's history (append-only: each change pushes the state before it). A
+     * transaction that leaves a status and comes back starts a new episode, so evidence from the last one doesn't count.
+     */
+    fun episode(exit: ExitModel, txid: String): Int {
+        val states = exit.historyDetails + exit.details
+        val kind = exit.details.transactions?.find { it.txid == txid }?.status?.kind
+        var start = states.lastIndex
+        while (start > 0 && states[start - 1].transactions?.find { it.txid == txid }?.status?.kind == kind) start--
+        return start
+    }
+
     /** Statuses of a transaction that's not yet in a block, as ExitDetails names them. */
     private val waitingKinds = setOf("verify-inputs", "awaiting-input-confirmation")
 
@@ -101,7 +113,7 @@ internal object ExitStages {
                     state.transactions?.find { it.txid == tx.txid }?.takeIf { it.status.kind == "awaiting-confirmation" }?.status?.child_txid
                 }.distinct()
                 // bark's own tip stays put while nothing changes: count from the tip Noah first saw it in the mempool at.
-                val waited = seen[ExitSeen.key(tx)]?.let { (tip - it).coerceAtLeast(0) } ?: 0
+                val waited = seen[ExitSeen.key(exit, tx)]?.let { (tip - it).coerceAtLeast(0) } ?: 0
                 val fee = tx.status.child_txid?.let { exit.childFees[it] }
                 val pkg = exit.packages.find { it.txid == tx.txid }
                 val weight = pkg?.let { p -> p.weight?.let { w -> p.childWeight?.let { w + it } } }
@@ -121,23 +133,28 @@ internal object ExitStages {
 /**
  * bark marks a claim only at its next progress, up to a minute after Noah broadcasts it. Until then the journal's submitted
  * claim (unless the chain source has lost it) shows the exit as claiming, so the page never offers Claim again meanwhile.
+ * Once bark has seen that claim, bark's state wins: claimable again if it fell out, recovered through the journal's controls.
  */
 internal object ExitClaims {
     fun submitted(attempts: List<OnchainOperationJournal.Attempt>): Map<String, String> = attempts
         .filter { it.quote.action == OnchainAction.claim && it.receipt?.chainStatus?.kind != com.noahwallet.services.wallet.ChainStatus.Kind.notFound }
         .mapNotNull { attempt -> (attempt.receipt?.txid ?: attempt.txid)?.let { txid -> attempt.quote.ids.map { it to txid } } }.flatten().toMap()
-    fun apply(stage: ExitStage, txid: String?) =
-        if (stage.phase == ExitStage.Phase.claimable && txid != null) stage.copy(phase = ExitStage.Phase.claiming, claimTxid = txid) else stage
+    fun apply(exit: ExitModel, stage: ExitStage, txid: String?) =
+        if (stage.phase == ExitStage.Phase.claimable && txid != null && exit.historyDetails.none { it.claim_txid == txid })
+            stage.copy(phase = ExitStage.Phase.claiming, claimTxid = txid) else stage
 }
 
-/** The exit page's bottom actions for a stage (prototype `pFoot`); Cancel exit only while bark allows it. */
+/**
+ * The exit page's actions for a stage (prototype `pFoot`); Cancel exit only while bark allows it. Needing funds keeps Cancel
+ * and Check the chain beside "Add on-chain funds", the primary one.
+ */
 internal object ExitActions {
     enum class Action { done, claim, addFunds, cancel, check }
     fun of(stage: ExitStage, cancelable: Boolean): List<Action> = when {
         !stage.live -> listOf(Action.done)
         stage.phase == ExitStage.Phase.claimable -> listOf(Action.claim)
         stage.phase == ExitStage.Phase.claiming -> emptyList()
-        stage.attention == ExitStage.Attention.needsFunds -> listOfNotNull(Action.cancel.takeIf { cancelable }, Action.addFunds)
+        stage.attention == ExitStage.Attention.needsFunds -> listOfNotNull(Action.cancel.takeIf { cancelable }, Action.addFunds, Action.check)
         else -> listOfNotNull(Action.cancel.takeIf { cancelable }, Action.check)
     }
 }
@@ -151,15 +168,16 @@ internal class ExitSeen(private val read: () -> String?, private val write: (Str
     @Synchronized
     fun note(exits: List<ExitModel>, tip: Long): Map<String, Long> {
         val saved = read()?.let { runCatching { Json.decodeFromString<Map<String, Long>>(it) }.getOrNull() }.orEmpty()
-        val seen = exits.filter { it.state == "Processing" }.flatMap { it.details.transactions.orEmpty() }
-            .filter { it.status.kind != "confirmed" }.associate { key(it) to (saved[key(it)] ?: tip) }
+        val seen = exits.filter { it.state == "Processing" }.flatMap { exit ->
+            exit.details.transactions.orEmpty().filter { it.status.kind != "confirmed" }.map { key(exit, it) } }.associateWith { saved[it] ?: tip }
         if (seen != saved) write(Json.encodeToString(seen))
         return seen
     }
 
     companion object {
         private const val storageKey = "native-exit-seen-v1"
-        fun key(tx: ExitDetails.Transaction) = "${tx.txid}/${tx.status.kind}"
+        /** A transaction's status in its current episode ([ExitStages.episode]). */
+        fun key(exit: ExitModel, tx: ExitDetails.Transaction) = "${tx.txid}/${tx.status.kind}/${ExitStages.episode(exit, tx.txid)}"
         fun stored(settings: com.noahwallet.services.storage.SettingsStorage) = ExitSeen({ settings.string(storageKey) }, { settings.set(it, storageKey) })
     }
 }
@@ -218,7 +236,7 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
 
     private fun parkedIn(exits: List<ExitModel>) = exits.mapNotNull { exit ->
         exit.details.transactions?.firstOrNull { it.status.kind != "confirmed" }
-            ?.takeIf { exit.state == "Processing" && it.status.kind == "awaiting-cpfp-broadcast" }?.let { "${exit.id}/${it.txid}" to exit }
+            ?.takeIf { exit.state == "Processing" && it.status.kind == "awaiting-cpfp-broadcast" }?.let { "${exit.id}/${it.txid}/${ExitStages.episode(exit, it.txid)}" to exit }
     }.toMap()
 
     companion object {

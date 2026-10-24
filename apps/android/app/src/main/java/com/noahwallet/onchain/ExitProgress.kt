@@ -77,7 +77,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
         overview?.let { o -> ExitFunding.shared.needsFunds(exits, o.confirmed, app.session.daemonRun) to seenStore.note(exits, o.tip) } ?: (emptySet<String>() to emptyMap())
     }
     val stalled = ExitFunding.shared.checkFailed || app.session.openWithoutDaemon
-    val stage = exit?.let { ExitClaims.apply(ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds, seen, stalled),
+    val stage = exit?.let { ExitClaims.apply(it, ExitStages.of(it, overview?.tip ?: it.details.tip_height ?: 0, id in needsFunds, seen, stalled),
         ExitClaims.submitted(model.attempts)[id]) }
     // What the claim cost and where it went: Noah's record of it, or its attempt while the journal still has it.
     val claimRecords = remember(app.settings) { ExitClaimRecords.stored(app.settings) }
@@ -152,8 +152,9 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
             ExitActions.Action.addFunds -> FootPill(tr("Add on-chain funds"), Modifier.testTag("exit-add-funds"), enabled = !suspended) { addFunds(need) }
             ExitActions.Action.cancel -> FootPill(tr("Cancel exit"), Modifier.testTag("exit-cancel"), outlined = true, weight = .8f,
                 enabled = !busy && !suspended, onClick = cancel)
-            ExitActions.Action.check -> FootPill(tr("Check the chain"), Modifier.testTag("exit-check"), outlined = !stage.stale,
-                enabled = !busy && !suspended, loading = busy, onClick = check)
+            // Beside "Add on-chain funds" there's no room for a third pill: Check the chain is a link under the warning.
+            ExitActions.Action.check -> if (ExitActions.Action.addFunds !in actions) FootPill(tr("Check the chain"), Modifier.testTag("exit-check"),
+                outlined = !stage.stale, enabled = !busy && !suspended, loading = busy, onClick = check)
         }
     }), leading = {
         if (!wide) ExitHeader(exit, stage, received, money, null)
@@ -164,6 +165,8 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
     }) {
         if (wide) ExitHeader(exit, stage, received, money, exitSubLine(stage, context, money))
         if (failed) Warning(tr("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need)), failed = true)
+        if (ExitActions.Action.check in actions && ExitActions.Action.addFunds in actions)
+            SettingsLink(tr("Check the chain"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
         if (stage.stale && stage.live) Warning(tr("This exit is behind the current chain height: last checked at block {height}, {n} blocks ago. Checking the chain can also send exit transactions.",
             number(exit.details.tip_height ?: 0), number(context.tip - (exit.details.tip_height ?: context.tip))), SettingsIcons.clock)
         ExitRows(exit, stage, context, money)

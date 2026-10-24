@@ -254,6 +254,21 @@ class ExitDeviceTest {
         compose.onNodeWithTag("exit-costs-retry").assertDoesNotExist()
     }
 
+    @Test fun needingFundsKeepsCancelAndCheckTheChainBesideAddFunds() {
+        compose.mainClock.autoAdvance = false
+        var checks = 0
+        compose.setContent { NoahTheme { ExitPreviewHost {
+            val tip = f.nofunds.details.tip_height ?: f.tip
+            ExitProgressContent(f.nofunds, f.stage(f.nofunds, tip), ExitContext(tip, 310, 144, cancelable = true), false, false, f.money,
+                {}, { checks++ }, {}, {}, {}, {})
+        } } }
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.onNodeWithTag("exit-add-funds").assertIsEnabled()
+        compose.onNodeWithTag("exit-cancel").assertIsEnabled()
+        compose.onNodeWithTag("exit-check").performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(1, checks) }
+    }
+
     @Test fun recreatingTheWindowKeepsTheChosenVtxos() {
         val restoration = StateRestorationTester(compose)
         val reviewed = mutableListOf<List<String>>()
