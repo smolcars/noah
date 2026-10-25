@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import Synchronization
 import Testing
@@ -10,6 +11,53 @@ struct OnchainChangesTests {
     final class Reads: Sendable { let count = Mutex(0) }
     @MainActor final class Gate { var allowed = true; var asked = 0 }
     nonisolated static let overview = OnchainOverview(walletID: "w", vtxos: [], exits: [], confirmed: 0, tip: 100, pendingTotal: 0)
+
+    /// A commit after the page's first read began but before bark's subscription existed has no event of its own:
+    /// the subscription's `initial` stands for it, and brings exactly one load after that first read.
+    @Test func aChangeBeforeTheSubscriptionStartedReloadsOnceAfterTheFirstRead() async throws {
+        let reads = Reads(), gate = Gate()
+        let (release, open) = AsyncStream<Void>.makeStream()
+        var dependencies = OnchainModelTests().dependencies(.init())
+        dependencies.overview = {
+            if reads.count.withLock({ $0 += 1; return $0 }) == 1 { for await _ in release { break } }
+            return Self.overview
+        }
+        dependencies.changes = {
+            OnchainModel.Dependencies.changes(subscribe: { AsyncThrowingStream { $0.yield(.init(sequence: 0, reason: "initial")) } },
+                                              journal: AsyncStream { _ in })
+        }
+        let model = OnchainModel(dependencies: dependencies)
+        let first = Task { await model.load() }
+        try await SendPaymentTests.waitUntil { reads.count.withLock { $0 } == 1 }
+        let observer = Task { await model.observeChanges { gate.asked += 1; return true } }
+        defer { observer.cancel() }
+        try await SendPaymentTests.waitUntil { gate.asked == 1 }
+        open.yield()
+        await first.value
+        #expect(reads.count.withLock { $0 } == 2)
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(reads.count.withLock { $0 } == 2 && gate.asked == 1)
+    }
+
+    /// bark ends a subscription after `resyncRequired`; the new one's `initial` covers the same gap.
+    @Test func aResubscriptionsInitialEventReloads() async throws {
+        let reads = Reads(), subscriptions = Reads()
+        let (second, secondEvents) = AsyncThrowingStream<StateChangeEvent, Error>.makeStream()
+        var dependencies = OnchainModelTests().dependencies(.init())
+        dependencies.overview = { reads.count.withLock { $0 += 1 }; return Self.overview }
+        dependencies.changes = {
+            OnchainModel.Dependencies.changes(subscribe: {
+                guard subscriptions.count.withLock({ $0 += 1; return $0 }) == 1 else { return second }
+                return AsyncThrowingStream { $0.yield(.init(sequence: 1, reason: "resyncRequired")); $0.finish() }
+            }, journal: AsyncStream { _ in })
+        }
+        let model = OnchainModel(dependencies: dependencies)
+        let observer = Task { await model.observeChanges { true } }
+        defer { observer.cancel() }
+        try await SendPaymentTests.waitUntil { reads.count.withLock { $0 } == 1 && subscriptions.count.withLock { $0 } == 2 }
+        secondEvents.yield(.init(sequence: 0, reason: "initial"))
+        try await SendPaymentTests.waitUntil { reads.count.withLock { $0 } == 2 }
+    }
 
     @Test func aChangeReloadsAtOnceUnlessThePageHoldsAReview() async throws {
         let reads = Reads(), gate = Gate()

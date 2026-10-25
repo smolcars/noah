@@ -51,24 +51,32 @@ final class OnchainModel {
                 exclusions: { try await session.exitExclusions() },
                 sightings: .init(key: ExitSightings.key),
                 changes: {
-                    let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
-                    let wallet = Task {
-                        // bark's subscription ends after `resyncRequired`; subscribe again then, as History does.
-                        var resubscribe = true
-                        while resubscribe, !Task.isCancelled, let events = try? await session.stateChanges() {
-                            resubscribe = false
-                            do {
-                                for try await event in events where event.reason != "initial" {
-                                    continuation.yield()
-                                    if event.reason == "resyncRequired" { resubscribe = true }
-                                }
-                            } catch { return }
-                        }
-                    }
-                    let journal = Task { for await _ in OnchainOperationJournal.shared.changes.stream() { continuation.yield() } }
-                    continuation.onTermination = { _ in wallet.cancel(); journal.cancel() }
-                    return stream
+                    Self.changes(subscribe: { try await session.stateChanges() }, journal: OnchainOperationJournal.shared.changes.stream())
                 })
+        }
+
+        /// The wallet's commits and the journal's changes, coalesced. The journal is subscribed before this returns.
+        /// bark's subscription starts later, so its `initial` event counts as a change too: a commit after the page's
+        /// first read began but before the subscription existed has no other event (as History's observer).
+        static func changes(subscribe: @escaping @Sendable () async throws -> AsyncThrowingStream<StateChangeEvent, Error>,
+                            journal: AsyncStream<Void>) -> AsyncStream<Void> {
+            let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            let wallet = Task {
+                // bark's subscription ends after `resyncRequired`; subscribe again then, as History does.
+                var resubscribe = true
+                while resubscribe, !Task.isCancelled, let events = try? await subscribe() {
+                    resubscribe = false
+                    do {
+                        for try await event in events {
+                            continuation.yield()
+                            if event.reason == "resyncRequired" { resubscribe = true }
+                        }
+                    } catch { return }
+                }
+            }
+            let journal = Task { for await _ in journal { continuation.yield() } }
+            continuation.onTermination = { _ in wallet.cancel(); journal.cancel() }
+            return stream
         }
 
         /// Home's Renew: the same review, submitted through the renewal path that rechecks
