@@ -63,19 +63,26 @@ class AdaptiveStateRestorationTest {
         val restoration = StateRestorationTester(compose)
         val executor = RecurringRuntime.shared(InstrumentationRegistry.getInstrumentation().targetContext).executor
         restoration.setContent { NoahTheme { RecurringPaymentEditorScreen(executor, null) {} } }
-        compose.onNodeWithText("Name").performTextInput("Rotation schedule")
-        compose.onNodeWithText("Recipient").performScrollTo().performTextInput("layout@localhost.com")
-        compose.onNodeWithText("Amount (sats)").performScrollTo().performTextInput("12345")
-        compose.onNodeWithText("Custom").performScrollTo().performClick()
-        compose.onNodeWithText("Every … days").performScrollTo().performTextReplacement("17")
-        compose.onNodeWithText("After count").performScrollTo().performClick()
-        compose.onNodeWithText("Number of payments").performScrollTo().performTextReplacement("8")
+        fun field(label: String) = compose.onNode(hasContentDescription(label) and hasSetTextAction())
+        field("Name").performScrollTo().performTextInput("Rotation schedule")
+        field("To").performScrollTo().performTextInput("layout@localhost.com")
+        field("Amount").performScrollTo().performTextInput("12345")
+        // Schedule payment floats over the scrolled body, so a touch at the viewport's edge could land on it instead.
+        fun tap(node: SemanticsNodeInteraction) = node.performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        tap(compose.onNodeWithText("Custom"))
+        // Custom starts at every 14 days and After at 12 payments; the first stepper is the interval's, the second the count's.
+        repeat(3) { tap(compose.onAllNodesWithContentDescription("More")[0]) }
+        tap(compose.onNodeWithText("After"))
+        repeat(4) { tap(compose.onAllNodesWithContentDescription("Fewer")[1]) }
+        compose.onNodeWithText("Every 17 days").assertExists()
+        compose.onNodeWithText("After 8 payments").assertExists()
         restoration.emulateSavedInstanceStateRestore()
-        for ((label, value) in listOf("Name" to "Rotation schedule", "Recipient" to "layout@localhost.com",
-            "Amount (sats)" to "12345", "Every … days" to "17", "Number of payments" to "8")) {
-            compose.onNodeWithText(label).performScrollTo().assertTextContains(value)
+        for ((label, value) in listOf("Name" to "Rotation schedule", "To" to "layout@localhost.com", "Amount" to "12345")) {
+            field(label).performScrollTo().assertTextEquals(value)
         }
-        compose.onNodeWithText("Schedule payment").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Every 17 days").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("After 8 payments").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Schedule payment").assertIsDisplayed()
     }
 
     @Test fun switchingRailAndBarKeepsTheMountedDraft() {
@@ -105,7 +112,9 @@ class AdaptiveStateRestorationTest {
             SideEffect { reportedHinges = hinges }
             RecurringPaymentEditorScreen(executor, null) {}
         } }
-        compose.onNode(hasText("First payment:", substring = true)).performScrollTo().performClick()
+        // The first payment row shows its date: tomorrow by default.
+        val first = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_MONTH, 1) }
+        compose.onNode(hasText(recurringDay(first.timeInMillis), substring = true) and hasClickAction()).performScrollTo().performClick()
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         automation.serviceInfo = automation.serviceInfo.apply { flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS }
         fun button(): android.view.accessibility.AccessibilityNodeInfo? {
@@ -116,7 +125,8 @@ class AdaptiveStateRestorationTest {
         fun day(value: String): android.view.accessibility.AccessibilityNodeInfo? {
             fun find(node: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
                 if (node == null) return null
-                if (node.text?.toString() == value && node.isClickable) return node
+                // The calendar keeps neighbouring months laid out off screen; pick from the one shown.
+                if (node.text?.toString() == value && node.isClickable && node.isVisibleToUser) return node
                 return (0 until node.childCount).firstNotNullOfOrNull { find(node.getChild(it)) }
             }
             return find(automation.rootInActiveWindow)
@@ -151,6 +161,9 @@ class AdaptiveStateRestorationTest {
         confirmVisiblePicker()
         compose.waitUntil(5_000) { button() != null }
         confirmVisiblePicker()
+        // The restored pick, not the default, becomes the first payment.
+        first.set(java.util.Calendar.DAY_OF_MONTH, 23)
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText(recurringDay(first.timeInMillis), substring = true) and hasClickAction()).fetchSemanticsNodes().size == 1 }
     }
 
     @Test fun recoverySurfaceIsSecureBeforeAndAfterActivityRecreation() {
