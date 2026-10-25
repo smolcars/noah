@@ -5,7 +5,7 @@ import UIKit
     enum Kind: String, CaseIterable, Sendable {
         case refresh, maintenance
         var identifier: String { Bundle.main.bundleIdentifier! + "." + rawValue }
-        var interval: TimeInterval { self == .refresh ? 15 * 60 : 6 * 60 * 60 }
+        var interval: TimeInterval { self == .refresh ? 30 * 60 : 6 * 60 * 60 }
     }
 
     @MainActor struct Dependencies {

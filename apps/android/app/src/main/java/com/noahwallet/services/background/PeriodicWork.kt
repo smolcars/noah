@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 /** WorkManager persists these requests and restores them after reboot/package replacement. */
 object PeriodicWork {
     enum class Kind(val workName: String, val intervalMinutes: Long) {
-        refresh("noah-wallet-refresh", 15), maintenance("noah-wallet-maintenance", 6 * 60)
+        refresh("noah-wallet-refresh", 30), maintenance("noah-wallet-maintenance", 6 * 60)
     }
     internal const val KIND = "kind"
 

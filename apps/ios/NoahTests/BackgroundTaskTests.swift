@@ -28,7 +28,7 @@ import Testing
         let maintenance = try #require(h.requests.first { $0 is BGProcessingTaskRequest } as? BGProcessingTaskRequest)
         #expect(refresh.identifier == Bundle.main.bundleIdentifier! + ".refresh")
         #expect(maintenance.identifier == Bundle.main.bundleIdentifier! + ".maintenance")
-        #expect(refresh.earliestBeginDate == h.now.addingTimeInterval(900))
+        #expect(refresh.earliestBeginDate == h.now.addingTimeInterval(1_800))
         #expect(maintenance.earliestBeginDate == h.now.addingTimeInterval(21_600))
         #expect(maintenance.requiresNetworkConnectivity)
         #expect(!maintenance.requiresExternalPower)
