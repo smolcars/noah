@@ -98,19 +98,23 @@ jobs:
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
 
       # PRs build only regtest; the flavors differ only in their manifest and google-services.json.
-      # Only the x86_64 emulator runs this APK, so it leaves out arm64-v8a. Maestro installs it; nothing
-      # rebuilds it. CI runs no instrumentation, so the device tests are only compiled.
+      # Maestro runs the R8-minified release build (debug-signed), so a missing keep rule fails here, not at
+      # launch on phones as signet run 40231709078 did. R8 overlaps the unit tests; lint vital stays in the
+      # signet/mainnet builds. Only the x86_64 emulator runs this APK, so it leaves out arm64-v8a. Maestro
+      # installs it; nothing rebuilds it. CI runs no instrumentation, so the device tests are only compiled.
       # --build-cache reuses master's task outputs. The configuration cache stays off: it needs a secret
       # to persist across runs, and the release builds' Sentry upload task doesn't support it.
-      - name: Assemble regtest APK, compile device tests and run unit tests
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest'
+      - name: Assemble minified regtest APK, compile device tests and run unit tests
+        env:
+          CI_DEBUG_SIGNING: "true"
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestRelease -x lintVitalRegtestRelease :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest'
 
-      # Default compression: the APK stores its native libraries uncompressed, and zipping takes 86 MB to 52 MB.
+      # Default compression: the APK stores its native libraries uncompressed, and zipping takes 65 MB to 31 MB.
       - name: Upload regtest APK
         uses: actions/upload-artifact@v7
         with:
           name: native-regtest-apks
-          path: apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+          path: apps/android/app/build/outputs/apk/regtest/release/app-regtest-release.apk
           if-no-files-found: error
           retention-days: 7
 
@@ -219,7 +223,7 @@ jobs:
           # The runner executes each line separately; the first waits for the regtest setup and prints its log.
           script: |
             timeout 300 sh -c 'until [ -s regtest-setup.status ]; do sleep 1; done'; cat regtest-setup.log; [ "$(cat regtest-setup.status)" = 0 ]
-            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
+            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/app-regtest-release.apk emulator-5554 ${{ matrix.suite }}
 
       - name: Collect regtest logs
         if: failure()

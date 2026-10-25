@@ -4,7 +4,7 @@ These flows target **only** `com.noahwallet.regtest`, installed from `apps/andro
 
 ## Flows
 
-Every PR runs both groups, as two parallel CI jobs, each with its own emulator and regtest stack. The tag decides the job. Each job creates **one wallet** and reuses it, so its flows run in order and can't be split across shards.
+Every PR runs both groups, as two parallel CI jobs, each with its own emulator and regtest stack. The tag decides the job. CI installs the R8-minified regtest release, debug-signed (`CI_DEBUG_SIGNING=true ./gradlew :app:assembleRegtestRelease`), so a missing keep rule fails the PR instead of crashing release builds. Each job creates **one wallet** and reuses it, so its flows run in order and can't be split across shards.
 
 | Flow | Tag | Covers | Time |
 | --- | --- | --- | --- |

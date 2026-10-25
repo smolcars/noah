@@ -885,6 +885,10 @@ uses a UUID derived from the **actual mapping bytes**, so incremental builds can
 associate a changed mapping with stale metadata. Both assembly and bundles depend
 on the upload task for mainnet/signet release; regtest never uploads.
 
+Two keep rules restore the no-arg constructors WorkManager 2.9 and its Room 2.5 call
+reflectively (`WorkDatabase_Impl`, the input mergers). R8 full mode strips them, which
+crashed the signet release at launch. CI's Maestro jobs run the minified regtest release.
+
 Local builds generate metadata without invoking the upload CLI. CI (`CI=true` or
 `CI=1`) requires `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` and `sentry-cli`
 on PATH (or `SENTRY_CLI_EXECUTABLE`). Eligible CI releases fail before upload when
