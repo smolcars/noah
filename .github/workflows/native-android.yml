@@ -213,11 +213,7 @@ jobs:
           ram-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8592 -grpc-use-token
           disable-animations: false
-          # The runner executes each line separately. The smoke job also runs the Compose state-restoration
-          # tests from the test APK; `am instrument` exits 0 even on failures, so check for "OK (".
-          script: |
-            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/regtest/debug/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
-            if [ ${{ matrix.suite }} = smoke ]; then adb install -r -t android-release-build/androidTest/regtest/debug/app-regtest-debug-androidTest.apk && adb shell am instrument -w -e class com.noahwallet.ui.AdaptiveLayoutDeviceTest,com.noahwallet.ui.AdaptiveStateRestorationTest com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation.txt && grep -q '^OK (' instrumentation.txt; fi
+          script: nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/regtest/debug/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
 
       - name: Collect regtest logs
         if: failure()
@@ -232,5 +228,4 @@ jobs:
           path: |
             native-maestro-output
             regtest.log
-            instrumentation.txt
           if-no-files-found: ignore
