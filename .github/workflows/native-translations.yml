@@ -117,6 +117,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open \
+            --json number,isCrossRepository --jq 'map(select(.isCrossRepository | not)) | .[0].number // empty')
           git add -- 'apps/i18n/*/native.json' apps/i18n/gt-lock.json \
             apps/ios/Noah/Resources/Localizable.xcstrings \
             'apps/android/app/src/main/res/values*/strings.xml' \
@@ -127,6 +129,10 @@ jobs:
           fi
           if git diff --cached --quiet; then
             echo "Nothing to translate." | tee -a "$GITHUB_STEP_SUMMARY"
+            # Master already has or no longer needs everything an open bot PR adds; that PR would only conflict.
+            if [[ -n "$pr" ]]; then
+              gh pr close "$pr" --delete-branch --comment "Superseded: nothing is missing on \`master\` at ${GITHUB_SHA::9} ([run]($RUN_URL))."
+            fi
             exit 0
           fi
 
@@ -153,8 +159,6 @@ jobs:
 
           CI on this PR must be started manually: Actions → Native Android CI, Native iOS CI and Native API drift → Run workflow → branch \`$BOT_BRANCH\`.
           EOF
-          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open \
-            --json number,isCrossRepository --jq 'map(select(.isCrossRepository | not)) | .[0].number // empty')
           if [[ -n "$pr" ]]; then
             gh pr edit "$pr" --title "$title" --body-file "$RUNNER_TEMP/body.md"
           else
