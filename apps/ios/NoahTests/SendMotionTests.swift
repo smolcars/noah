@@ -527,6 +527,35 @@ struct SendMotionTests {
         #expect(SendOutcomeView.onchainLine(confirmed: false) == "It confirms in about 20 minutes. Activity shows when.")
         #expect(SendOutcomeView.onchainLine(confirmed: true) == nil)
     }
+
+    /// Next on an empty amount goes to To, recipient-first; on 0 it asks for an amount, and a valid
+    /// amount clears that at once (send-receive.md, Amount).
+    @Test func amountErrorShowsOnlyForZeroAndClearsWhenTheAmountIsValid() async {
+        let empty = pasteModel()
+        await empty.nextFromAmount()
+        #expect(empty.stage == .recipient && empty.progress.entry == .recipientFirst && empty.error == nil)
+
+        let model = pasteModel()
+        model.amount = "0"
+        await model.nextFromAmount()
+        #expect(model.stage == .amount && model.error == SendModel.zeroAmountError)
+        model.amount = "00"
+        #expect(model.error == SendModel.zeroAmountError)
+        model.amount = "5"
+        #expect(model.error == nil)
+        model.amount = ""
+        #expect(model.error == nil) // Back to empty doesn't ask again until Next.
+    }
+
+    /// An invalid paste's error isn't about the amount, so typing one keeps it.
+    @Test func typingAnAmountKeepsAnInvalidPasteError() async {
+        let model = pasteModel()
+        await model.importRecipient("not a destination")
+        let error = model.error
+        #expect(error != nil && error != SendModel.zeroAmountError)
+        model.amount = "1200"
+        #expect(model.error == error)
+    }
 }
 
 /// Receive shows exactly the chosen format, and its arrivals follow real events.

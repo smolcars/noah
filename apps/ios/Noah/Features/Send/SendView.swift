@@ -319,12 +319,12 @@ struct SendView: View {
                     Button {
                         haptics.play(.light)
                         captureTypedAmount()
-                        Task { await model.continueStage() }
+                        Task { await model.nextFromAmount() }
                     } label: {
                         Text("Next").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
-                    .disabled(model.sats == 0 || overBalance || model.busy)
+                    .disabled(overBalance || model.busy)
                     .accessibilityIdentifier("send-continue")
                     .padding(.top, 12)
                     if wide { Spacer(minLength: 0) }

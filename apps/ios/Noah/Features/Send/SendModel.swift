@@ -2,7 +2,12 @@ import Foundation
 import Observation
 
 @MainActor @Observable final class SendModel {
-    var amount = ""
+    static let amountRange: ClosedRange<UInt64> = 1...2_100_000_000_000_000
+    static let zeroAmountError = "Enter an amount greater than zero."
+    var amount = "" {
+        // Only Next asks for an amount; a valid one answers it. Other errors (an invalid paste) stay.
+        didSet { if errorSource == Self.zeroAmountError, Self.amountRange.contains(sats) { errorSource = nil } }
+    }
     var destination = "" {
         didSet {
             guard destination != oldValue else { return }
@@ -158,6 +163,10 @@ import Observation
         progress.entry = .recipientFirst
         stage = .recipient
     }
+    /// Amount's Next: an empty amount with no recipient yet goes on to To, recipient-first (send-receive.md).
+    func nextFromAmount() async {
+        if amount.isEmpty && !progress.recipientConfirmed { recipientFirst() } else { await continueStage() }
+    }
     /// A scanned or pasted recipient. From Amount it's checked there: a request with its own
     /// amount fills both and goes on to Method or Review, one without keeps the keypad's turn
     /// (with any amount typed) and shows the recipient, and one that isn't a destination keeps
@@ -267,8 +276,8 @@ import Observation
         guard !busy, !controller.locked else { return }
         switch stage {
         case .amount:
-            guard sats > 0, sats <= 2_100_000_000_000_000 else {
-                error = "Enter an amount greater than zero."
+            guard Self.amountRange.contains(sats) else {
+                error = Self.zeroAmountError
                 return
             }
             progress.amountConfirmed = true
