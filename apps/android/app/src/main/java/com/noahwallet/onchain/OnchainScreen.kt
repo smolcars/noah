@@ -98,19 +98,22 @@ internal fun OnchainEffects(app: AppModel, model: OnchainModel, reloadOnChange: 
     }
     LaunchedEffect(model, app.isWalletSuspended) {
         if (app.isWalletSuspended) { model.unavailable(); return@LaunchedEffect }
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            model.load()
-            // A finished renew or refresh, a sync, new funds or Check the chain: bark's change events reload history,
-            // and the balance refresh after them bumps its revision.
-            launch { model.reloadOnChanges { app.history.revision to app.summaryRevision } }
-            while (isActive) { delay(60_000); if (!model.busy && model.quote == null) model.load() }
-        }
+        // A finished renew or refresh, a sync, new funds or Check the chain: bark's change events reload history,
+        // and the balance refresh after them bumps its revision.
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { model.keepLoaded { app.history.revision to app.summaryRevision } }
     }
 }
 
 /** Reads the overview again each time [changes] moves (not for its first value), unless busy or a review is open. */
 internal suspend fun OnchainModel.reloadOnChanges(changes: () -> Any) =
     snapshotFlow(changes).drop(1).collect { if (!busy && quote == null) load() }
+
+/** Reads now, on every move of [changes] (watched from before that read, so one during it isn't missed) and each minute. */
+internal suspend fun OnchainModel.keepLoaded(changes: () -> Any): Unit = coroutineScope {
+    launch(start = CoroutineStart.UNDISPATCHED) { reloadOnChanges(changes) }
+    load()
+    while (isActive) { delay(60_000); if (!busy && quote == null) load() }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -169,11 +169,13 @@ class OnchainModelTest {
         var failPreparation = false
         var failStatusRead = false
         var detailCalls = 0
+        var overviewReads = 0
+        var overviewGate: CompletableDeferred<Unit>? = null
         val discarded = mutableListOf<OnchainQuote>()
         var coin: suspend (String) -> VtxoModel = { error("unused") }
         val overview = OnchainOverview("wallet", emptyList(), emptyList(), 100_000, 100, 0, null)
         fun dependencies() = OnchainModel.Dependencies(
-            { ready }, { overview }, { action, ids, amount, destination ->
+            { ready }, { overviewReads++; overviewGate?.await(); overview }, { action, ids, amount, destination ->
                 entered?.complete(Unit); gate?.await(); if (failPreparation) fail(OnchainFailure.notSynced); OnchainQuote(action, "wallet", ids, destination, amount)
             }, { calls++; "submitted" }, { attempts }, { id -> attempts = attempts.filter { it.id != id } },
             { checks++; if (failStatusRead) error("transport"); false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) }, coin = { coin(it) })
@@ -203,6 +205,32 @@ class OnchainModelTest {
         m.review(OnchainAction.board, amount = 30_000); assertNotNull(m.quote)
         bump(); assertEquals(2, m.revision); assertNotNull(m.quote)
         watching.cancel()
+    }
+    private suspend fun until(condition: () -> Boolean) { repeat(100) { if (condition()) return; yield() }; fail("never happened") }
+    @Test fun aChangeDuringThePagesFirstReadReadsAgain() = runBlocking {
+        val f = Fake().apply { overviewGate = CompletableDeferred() }
+        val m = OnchainModel(f.dependencies())
+        val change = androidx.compose.runtime.mutableLongStateOf(0L)
+        val page = launch { m.keepLoaded { change.longValue } }
+        until { f.overviewReads == 1 }
+        change.longValue++; androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+        repeat(5) { yield() }
+        f.overviewGate!!.complete(Unit)
+        until { m.revision == 2 }
+        assertEquals(2, f.overviewReads)
+        page.cancel()
+    }
+    @Test fun readsAskedForDuringAReadBecomeOneMoreRead() = runBlocking {
+        val f = Fake().apply { overviewGate = CompletableDeferred() }
+        val m = OnchainModel(f.dependencies())
+        val periodic = launch { m.load() }
+        until { f.overviewReads == 1 }
+        // A pull to refresh and a wallet change arrive mid-read: neither waits, and neither is lost.
+        m.load(); m.load()
+        f.overviewGate!!.complete(Unit); periodic.join()
+        assertEquals(2, f.overviewReads); assertEquals(2, m.revision)
+        m.load()
+        assertEquals(3, f.overviewReads)
     }
     @Test fun lateReviewCannotInstallAfterInputsOrReadinessChange() = runBlocking {
         val f = Fake().apply { gate = CompletableDeferred(); entered = CompletableDeferred() }

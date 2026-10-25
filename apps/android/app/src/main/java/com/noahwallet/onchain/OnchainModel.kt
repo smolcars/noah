@@ -74,9 +74,15 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
     }
     fun unavailable() { invalidate(); overview = null; exit = null }
     private fun visible(saved: List<OnchainOperationJournal.Attempt>) = saved.filter { it.overrideAudit?.acknowledgedAt == null }
+    private var readAgain = false
+    /** One read at a time; asking during a read gets one more read after it, however many times it was asked. */
     suspend fun load() {
-        if (loading) return
+        if (loading) { readAgain = true; return }
         loading = true
+        try { do { readAgain = false; read() } while (readAgain) }
+        finally { loading = false }
+    }
+    private suspend fun read() {
         try {
             val saved = dependencies.attempts()
             attempts = visible(saved)
@@ -94,7 +100,6 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             else if (!dependencies.ready()) unavailable()
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }
-        finally { loading = false }
     }
     suspend fun review(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0, destination: String? = null,
                        renewal: Boolean = false) {
