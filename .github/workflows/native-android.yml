@@ -87,11 +87,23 @@ jobs:
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
 
       # PRs build only regtest; the flavors differ only in their manifest and google-services.json.
-      - name: Assemble and run unit tests
-        env:
-          OTHER_FLAVORS: ${{ github.event_name == 'push' && ':app:assembleMainnetDebug :app:assembleSignetDebug' || '' }}
-        run: |
-          nix develop .#android-ci --command bash -c "cd apps/android && ./gradlew --max-workers=2 --dependency-verification=strict $OTHER_FLAVORS :app:assembleRegtestDebug :app:testRegtestDebugUnitTest"
+      # The emulator runs these APKs, so they keep x86_64. Maestro installs them; nothing rebuilds them.
+      - name: Assemble regtest app and test APKs
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --dependency-verification=strict :app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest'
+
+      - name: Upload regtest APKs
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-regtest-apks
+          path: |
+            apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+            apps/android/app/build/outputs/apk/androidTest/regtest/debug/app-regtest-debug-androidTest.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Run unit tests
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --dependency-verification=strict :app:testRegtestDebugUnitTest'
 
       - name: Upload JUnit results
         if: always()
@@ -102,16 +114,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload native regtest APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: native-regtest-apk
-          path: apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
-          if-no-files-found: error
-          retention-days: 7
+      # Only phones run these flavors, so arm64 is enough.
+      - name: Assemble mainnet and signet
+        if: github.event_name == 'push'
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleMainnetDebug :app:assembleSignetDebug'
 
   maestro:
     needs: build-and-test
     uses: ./.github/workflows/native-maestro-android.yml
     with:
-      apk_artifact_name: native-regtest-apk
+      apk_artifact_name: native-regtest-apks

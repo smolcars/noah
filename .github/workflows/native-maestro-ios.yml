@@ -170,13 +170,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
       - name: Install Android build SDK
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
-      - name: Build native regtest APK
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --max-workers=2 :app:assembleRegtestDebug'
+      - name: Build native regtest app and test APKs
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew :app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest'
       - uses: actions/upload-artifact@v7
         with:
-          name: native-adaptive-regtest-apk
-          path: apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+          name: native-adaptive-regtest-apks
+          path: |
+            apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+            apps/android/app/build/outputs/apk/androidTest/regtest/debug/app-regtest-debug-androidTest.apk
           if-no-files-found: error
+          compression-level: 0
 
   android-adaptive:
     needs: adaptive-apk
@@ -186,6 +189,6 @@ jobs:
         profile: [pixel_tablet, pixel_fold]
     uses: ./.github/workflows/native-maestro-android.yml
     with:
-      apk_artifact_name: native-adaptive-regtest-apk
+      apk_artifact_name: native-adaptive-regtest-apks
       profile: ${{ matrix.profile }}
       adaptive: true

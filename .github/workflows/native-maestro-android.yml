@@ -88,12 +88,6 @@ jobs:
           key: android-emulator-image-${{ runner.os }}-${{ runner.arch }}-36-google-apis
           path: ${{ steps.sdk.outputs.root }}/system-images/android-36/google_apis/x86_64
 
-      - name: Cache Gradle
-        uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
-
-      - name: Install Android build SDK
-        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
-
       - name: Download existing CI APK
         uses: actions/download-artifact@v8
         with:
@@ -111,9 +105,12 @@ jobs:
           ram-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8592 -grpc-use-token
           disable-animations: false
+          # The runner executes each line separately. `am instrument` exits 0 even on failures, so check for "OK (".
           script: |
-            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/app-regtest-debug.apk emulator-5554 "${{ inputs.adaptive && 'adaptive' || 'all' }}"
-            nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --max-workers=2 :app:connectedRegtestDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.noahwallet.ui.AdaptiveLayoutDeviceTest,com.noahwallet.ui.AdaptiveStateRestorationTest'
+            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/regtest/debug/app-regtest-debug.apk emulator-5554 "${{ inputs.adaptive && 'adaptive' || 'all' }}"
+            adb install -r -t android-release-build/androidTest/regtest/debug/app-regtest-debug-androidTest.apk
+            adb shell am instrument -w -e class com.noahwallet.ui.AdaptiveLayoutDeviceTest,com.noahwallet.ui.AdaptiveStateRestorationTest com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation.txt
+            grep -q '^OK (' instrumentation.txt
 
       - name: Collect regtest logs
         if: failure()
@@ -132,5 +129,5 @@ jobs:
           path: |
             native-maestro-output
             regtest.log
-            apps/android/app/build/outputs/androidTest-results
+            instrumentation.txt
           if-no-files-found: ignore
