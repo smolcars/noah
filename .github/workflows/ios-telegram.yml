@@ -6,10 +6,11 @@ on:
       - master
     paths:
       - "client/**"
-      - "scripts/**"
+      - "scripts/download_ark_binaries.js"
       - "package.json"
       - "bun.lock"
-      - ".github/workflows/**"
+      - ".github/workflows/ios-telegram.yml"
+      - ".github/workflows/ios-device-build.yml"
       - "!**/*.md"
 
 jobs:

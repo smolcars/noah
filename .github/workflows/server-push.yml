@@ -12,11 +12,10 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "Dockerfile"
-      - ".github/workflows/**"
+      - ".github/workflows/server-push.yml"
       - "!fly/barkd.Dockerfile"
       - "!fly/barkd-entrypoint.sh"
       - "!fly/*.barkd.fly.toml"
-      - "!.github/workflows/barkd-*.yml"
       - "!**/*.md"
 
 jobs:

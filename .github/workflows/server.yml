@@ -7,10 +7,11 @@ on:
       - master
     paths:
       - "server/**"
-      - "scripts/**"
       - "Cargo.toml"
       - "Cargo.lock"
-      - ".github/workflows/**"
+      - "rust-toolchain.toml"
+      - "Dockerfile"
+      - ".github/workflows/server.yml"
       - "!**/*.md"
 
 jobs:
@@ -29,11 +30,11 @@ jobs:
           filters: |
             server:
               - 'server/**'
-              - 'scripts/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
-              - '.github/workflows/**'
+              - 'Dockerfile'
+              - '.github/workflows/server.yml'
 
       - name: 🧭 Set server change output
         id: set_changed

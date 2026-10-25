@@ -48,14 +48,26 @@ jobs:
           filters: |
             client:
               - 'client/**'
-              - 'scripts/**'
               - 'package.json'
               - 'bun.lock'
               - 'patches/**'
               - 'flake.nix'
               - 'flake.lock'
+              - 'justfile'
               - 'Dockerfile'
-              - '.github/workflows/**'
+              - 'scripts/ark-dev.sh'
+              - 'scripts/captaind.toml'
+              - 'scripts/check-react-compiler.js'
+              - 'scripts/create_local_properties.sh'
+              - 'scripts/create_sentry_properties.sh'
+              - 'scripts/docker-compose.yml'
+              - 'scripts/download_ark_binaries.js'
+              - 'scripts/postgres-initdb/**'
+              - 'scripts/test-maestro-android.sh'
+              - 'scripts/test-send-regtest.sh'
+              - '.github/workflows/client.yml'
+              - '.github/workflows/noah-build-release-ios.yml'
+              - '.github/workflows/noah-maestro-test-android.yml'
 
       - name: 🧭 Set client change output
         id: set_changed

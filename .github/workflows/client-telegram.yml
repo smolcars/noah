@@ -6,10 +6,14 @@ on:
       - master
     paths:
       - "client/**"
-      - "scripts/**"
+      - "scripts/check-react-compiler.js"
+      - "scripts/create_local_properties.sh"
+      - "scripts/create_sentry_properties.sh"
+      - "scripts/download_ark_binaries.js"
       - "package.json"
       - "bun.lock"
-      - ".github/workflows/**"
+      - ".github/workflows/client-telegram.yml"
+      - ".github/workflows/client.yml"
       - "!**/*.md"
 
 jobs:
