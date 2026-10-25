@@ -93,9 +93,35 @@ class ExitStagesTest {
         pose(canceled, 101).let { assertEquals(listOf(101L, null), it.mined); assertEquals(1f, PictureMotion.rest(it).cancel) }
     }
 
+    /**
+     * A signet exit (VTXO 4bd98032…) that shares ancestors with two others: each path transaction is paid by its CPFP child,
+     * and steps 1–7 were sent once for all of them. Its page shows the whole path, and how much of it is shared.
+     */
+    @Test fun feesCoverTheWholePathAndSayWhatIsShared() {
+        val fees = listOf(32L, 407, 364, 28, 37, 28, 37, 28)
+        // This wallet's own fee children, as the overview prices them; each exit carries those on its path (OnchainOperations.enrich).
+        val wallet = (1..8).associate { "c$it" to fees[it - 1] } + mapOf("cb8" to 31L, "co6" to 29L)
+        fun step(n: Int) = ExitPackage("t$n", childTxid = "c$n", childOrigin = if (n == 8) "wallet" else "block")
+        fun known(packages: List<ExitPackage>) = packages.mapNotNull { p -> p.childTxid?.let { c -> wallet[c]?.let { c to it } } }.toMap()
+        val mine = (1..8).map(::step)
+        val twinPath = (1..7).map(::step) + ExitPackage("b8", childTxid = "cb8", childOrigin = "wallet")
+        val otherPath = (1..5).map(::step) + ExitPackage("o6", childTxid = "co6", childOrigin = "wallet")
+        val details = processing(108, tx("t8", "confirmed", "c8", 108, "wallet"))
+        val self = exit("Processing", details, packages = mine, fees = known(mine), id = "4bd98032")
+        val twin = exit("Processing", details, packages = twinPath, fees = known(twinPath), id = "twin")
+        val other = exit("Processing", details, packages = otherPath, fees = known(otherPath), id = "other")
+        assertEquals(961L to 933L, ExitFees.paid(self, listOf(self, twin, other)))
+        assertEquals(961L, ExitStages.of(self, 108).feesPaid)
+        // Alone, nothing is shared; a child that isn't this wallet's (no known fee) costs nothing.
+        assertEquals(961L to 0L, ExitFees.paid(self, listOf(self)))
+        assertEquals(929L to 901L, ExitFees.paid(self.copy(childFees = self.childFees - "c1"), listOf(self, twin, other)))
+        // The list counts each child once, as Activity's "Exit fee" rows: 961 + 31 + 29, not each exit's path again.
+        assertEquals(1_021L, ExitFees.total(listOf(self, twin, other)))
+    }
     @Test fun anotherWalletsChildIsSharedAndCostsNothing() {
+        // Its child isn't one of this wallet's transactions, so the overview has no fee for it.
         val stage = ExitStages.of(exit("Processing", processing(100, tx("root", "awaiting-confirmation", "theirs", origin = "mempool"), tx("leaf", "verify-inputs")),
-            packages = listOf(ExitPackage("root", childTxid = "theirs", childOrigin = "mempool")), fees = mapOf("theirs" to 999)), 100)
+            packages = listOf(ExitPackage("root", childTxid = "theirs", childOrigin = "mempool"))), 100)
         assertEquals(ExitStage.Attention.shared, stage.attention); assertNull(stage.fee); assertEquals(0L, stage.feesPaid)
     }
 

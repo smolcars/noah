@@ -26,7 +26,8 @@ internal class OnchainOperations(
      * for its child, that package's fee at the rate bark's exits pay (its estimate's rate, read only while one waits).
      */
     private suspend fun enrich(exits: List<ExitModel>): List<ExitModel> {
-        val children = exits.flatMap { exit -> exit.packages.filter { it.childOrigin == "wallet" }.mapNotNull { it.childTxid } }.toSet()
+        // Every origin: a step another of this wallet's exits sent is still this wallet's child; another wallet's isn't in its transactions.
+        val children = exits.flatMap { exit -> exit.packages.mapNotNull { it.childTxid } }.toSet()
         // BDK can't price a fee child (its zero-value anchor input isn't a wallet coin), but what left the wallet is its fee.
         val fees = if (children.isEmpty()) emptyMap() else wallet.transactions().filter { it.txid in children }
             .mapNotNull { tx -> (tx.onchainFeeSats?.toLong() ?: (-tx.balanceChangeSats).takeIf { it > 0 })?.let { tx.txid to it } }.toMap()

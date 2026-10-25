@@ -25,6 +25,30 @@ struct ExitProgressTests {
 
     static let path = ["root", "l2", "l1", "leaf"]
 
+    /// A signet exit (VTXO 4bd98032…) that shares ancestors with two others: each path transaction is paid by its CPFP
+    /// child, and steps 1–7 were sent once for all of them. Its page shows the whole path, and how much of it is shared.
+    @Test func feesCoverTheWholePathAndSayWhatIsShared() {
+        let fees: [UInt64] = [32, 407, 364, 28, 37, 28, 37, 28]
+        let steps = (1...8).map { Self.tx("t\($0)", "confirmed", height: 100 + UInt32($0), child: "c\($0)", origin: $0 == 8 ? "wallet" : "block") }
+        let this = Self.exit("Processing", Self.processing(steps), amount: 7_125, id: "4bd98032")
+        let twin = Self.exit("Processing", Self.processing(Array(steps.prefix(7)) + [Self.tx("b8", "confirmed", height: 108, child: "cb8", origin: "wallet")]),
+                             amount: 7_125, id: "twin")
+        let other = Self.exit("Processing", Self.processing(Array(steps.prefix(5)) + [Self.tx("o6", "confirmed", height: 106, child: "co6", origin: "wallet")]),
+                              id: "other")
+        var childFees = Dictionary(uniqueKeysWithValues: fees.enumerated().map { ("c\($0.offset + 1)", $0.element) })
+        childFees["cb8"] = 31
+        childFees["co6"] = 29
+        let paid = ExitFees.paid(this, among: [this, twin, other], childFees: childFees)
+        #expect(paid.total == 961 && paid.shared == 933)
+        // Alone, nothing is shared; a child that isn't this wallet's (no known fee) costs nothing.
+        #expect(ExitFees.paid(this, among: [this], childFees: childFees) == (961, 0))
+        childFees["c1"] = nil
+        #expect(ExitFees.paid(this, among: [this, twin, other], childFees: childFees) == (929, 901))
+        childFees["c1"] = 32
+        // The list counts each child once, as Activity's "Exit fee" rows: 961 + 31 + 29, not each exit's path again.
+        #expect(ExitFees.total([this, twin, other], childFees: childFees) == 1_021)
+    }
+
     @Test func everyBarkStateMapsToItsPhaseAndPicture() {
         let start = ExitProgress(Self.exit("Start", .init(kind: "start", tip_height: 100)), tip: 100)
         #expect(start.phase == .starting && start.picture == .lift && start.cancelable && start.live)

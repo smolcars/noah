@@ -87,6 +87,9 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
         Text(listOfNotNull(tr("{n} in progress", (live.size - readyCount).toString()).takeIf { live.size > readyCount },
             tr("{n} ready to claim", readyCount.toString()).takeIf { readyCount > 0 }).joinToString(" · ").ifEmpty { tr("No exits in progress") },
             Modifier.padding(top = 8.dp), style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
+        // Every exit's fee children, each once, as Activity's "Exit fee" rows.
+        val fees = ExitFees.total(exits)
+        if (fees > 0) Text(tr("{amount} in network fees", money(fees)), style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         for (group in shared) {
             SharedPaths(group, money, Modifier.padding(top = 14.dp).fillMaxWidth().height(250.dp).testTag("exit-shared"))
             Text(tr("{n} exits from one round: {count} transactions, not {total}. Shared ones are sent and paid once.", group.exits.size.toString(),

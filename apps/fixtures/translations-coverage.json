@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1480,
-  "sourceKeys": 1511,
+  "catalogEntries": 1481,
+  "sourceKeys": 1512,
   "coverage": {
     "ios": {
       "used": [
@@ -441,7 +441,6 @@
         "Feedback",
         "Fees are more than these VTXOs are worth.",
         "Fees more than it’s worth",
-        "Fees paid",
         "Fees rose. Paying more · waiting for block {height}",
         "Fewer",
         "Filter",
@@ -1270,6 +1269,7 @@
         "{amount} at the time",
         "{amount} available",
         "{amount} available in Ark",
+        "{amount} in network fees",
         "{amount} is back in your wallet.",
         "{amount} is back in your wallet. Lightning couldn’t reach {recipient}.",
         "{amount} sent to {recipient}.",
@@ -1278,6 +1278,7 @@
         "{amount} · fees ~{fee}",
         "{amount} · in Ark",
         "{amount} · {left} left",
+        "{amount} · {shared} shared with your other exits",
         "{currency} rate unavailable",
         "{date} · {size}. Your other backups stay.",
         "{interval} · next {date}",
@@ -1766,7 +1767,6 @@
         "Feedback",
         "Fees are more than these VTXOs are worth.",
         "Fees more than it’s worth",
-        "Fees paid",
         "Fees rose, so Noah paid more",
         "Fees rose. Paying more",
         "Fewer",
@@ -2638,6 +2638,7 @@
         "{amount} at the time",
         "{amount} available",
         "{amount} available in Ark",
+        "{amount} in network fees",
         "{amount} is back in your wallet.",
         "{amount} is back in your wallet. Lightning couldn’t reach {recipient}.",
         "{amount} sent to {recipient}.",
@@ -2647,6 +2648,7 @@
         "{amount} · in Ark",
         "{amount} · share of {total} for {n} exits",
         "{amount} · {left} left",
+        "{amount} · {shared} shared with your other exits",
         "{date} · {size}. Your other backups stay.",
         "{day} at {time}",
         "{interval} · next {date}",

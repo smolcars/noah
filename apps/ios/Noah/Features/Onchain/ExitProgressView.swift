@@ -338,10 +338,12 @@ struct ExitStatusLine: View {
                            money(batchAmount - min(batchAmount, fee)), money(fee), locale: language)
     }
 
-    /// Fees this wallet's children paid for this exit's transactions.
-    var feesPaid: UInt64 {
-        let children = Set(exit.path.filter { $0.status.origin == nil || $0.status.origin == "wallet" }.compactMap(\.status.child_txid))
-        return children.reduce(0) { $0 + (overview?.childFees[$1] ?? 0) }
+    /// What this exit's whole path cost in this wallet's fee children, and the part shared with its other exits.
+    var fees: (total: UInt64, shared: UInt64) { ExitFees.paid(exit, among: overview?.exits ?? [], childFees: overview?.childFees ?? [:]) }
+    /// "₿961 · ₿933 shared with your other exits", or the total alone.
+    private var feesLine: String {
+        let fees = fees
+        return fees.shared > 0 ? tr("{amount} · {shared} shared with your other exits", money(fees.total), money(fees.shared)) : money(fees.total)
     }
     /// What's missing for the parked package.
     var need: UInt64? {
@@ -438,7 +440,7 @@ struct ExitStatusLine: View {
         switch progress.phase {
         case .claimed:
             var rows = [Row(label: tr("Claimed in"), value: tr("Block {height}", block(progress.claimedHeight ?? tip)))]
-            rows.append(.init(label: tr("Network fees"), value: money(feesPaid), numeric: true))
+            rows.append(.init(label: tr("Network fees"), value: feesLine, numeric: true))
             if let fee = claimFee { rows.append(.init(label: tr("Claim fee"), value: money(fee), numeric: true)) }
             if let took {
                 rows.append(.init(label: tr("Took"), value: L10n.plural("{n} blocks · {time}", count: Int(took), ExitText.about(took, language), locale: language)))
@@ -452,10 +454,9 @@ struct ExitStatusLine: View {
         default:
             var rows: [Row] = []
             if total > 0 { rows.append(.init(label: tr("Transactions"), value: tr("{n} of {total} in blocks", progress.confirmed, total))) }
-            let paid = money(feesPaid)
             rows.append(progress.phase == .needsFunds
-                        ? .init(label: tr("Fees paid"), value: tr("{amount} · {left} left", paid, money(overview?.confirmed ?? 0)), numeric: true, failure: true)
-                        : .init(label: tr("Fees paid"), value: paid, numeric: true))
+                        ? .init(label: tr("Network fees"), value: tr("{amount} · {left} left", money(fees.total), money(overview?.confirmed ?? 0)), numeric: true, failure: true)
+                        : .init(label: tr("Network fees"), value: feesLine, numeric: true))
             if let height = progress.claimableHeight {
                 rows.append(.init(label: tr("Claimable"), value: tr("Block {height}", block(height))))
             } else if let delta = overview?.exitDelta {

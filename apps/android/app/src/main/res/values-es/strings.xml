@@ -502,7 +502,6 @@
   <string name="gt_aac77df347205252">"Comentarios"</string>
   <string name="gt_779ff4584d72f733">"Las comisiones superan lo que valen estos VTXOs."</string>
   <string name="gt_e45e304fea7e1b7b">"Comisiones mayores que su valor"</string>
-  <string name="gt_35c1c9ca10618cf1">"Comisiones pagadas"</string>
   <string name="gt_c8e5709f89baf900">"Subieron las comisiones, así que Noah pagó más"</string>
   <string name="gt_ea3a58f8b849ff21">"Subieron las comisiones. Pagando más"</string>
   <string name="gt_e410ef7cc3869d69">"Las comisiones subieron. Pagando más · esperando el bloque %1$s"</string>
@@ -1486,6 +1485,7 @@
   <string name="gt_0632ba4767ab1888">"%1$s en ese momento"</string>
   <string name="gt_05421802af3d82be">"%1$s disponible"</string>
   <string name="gt_07af0226de4cedc3">"%1$s disponible en Ark"</string>
+  <string name="gt_8d05431a5eeb6edb">"%1$s en comisiones de red"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s ha vuelto a tu billetera."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s ha vuelto a tu billetera. Lightning no pudo llegar a %2$s."</string>
   <string name="gt_1cfd3ae82c2e9be1">"Se ha enviado %1$s a %2$s."</string>
@@ -1495,6 +1495,7 @@
   <string name="gt_ac5913769f9a4809">"%1$s · en Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · parte de %2$s para %3$s salidas"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · quedan %2$s"</string>
+  <string name="gt_2a17da5ea4c34a20">"%1$s · %2$s compartidos con tus otras salidas"</string>
   <string name="gt_d8c81b717fe6d90e">"Tipo de cambio de %1$s no disponible"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Tus otras copias de seguridad se conservan."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s a las %2$s"</string>

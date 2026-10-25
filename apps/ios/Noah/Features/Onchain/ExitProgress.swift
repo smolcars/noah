@@ -131,6 +131,27 @@ struct ExitProgress: Equatable, Sendable {
     }
 }
 
+/// What exits cost in fee children this wallet paid (`OnchainOverview.childFees`: its own transactions, whichever exit
+/// bark filed them under), each child once. A step several exits share is paid once, by whichever sent it first.
+enum ExitFees {
+    /// `exit`'s whole path, and the part of it for steps another of `exits` also has.
+    static func paid(_ exit: ExitModel, among exits: [ExitModel], childFees: [String: UInt64]) -> (total: UInt64, shared: UInt64) {
+        let others = Set(exits.filter { $0.id != exit.id }.flatMap { $0.path.map(\.txid) })
+        var seen = Set<String>(), total: UInt64 = 0, shared: UInt64 = 0
+        for tx in exit.path {
+            guard let child = tx.status.child_txid, seen.insert(child).inserted, let fee = childFees[child] else { continue }
+            total += fee
+            if others.contains(tx.txid) { shared += fee }
+        }
+        return (total, shared)
+    }
+
+    /// Every exit's children, each once: what Activity's "Exit fee" rows add up to.
+    static func total(_ exits: [ExitModel], childFees: [String: UInt64]) -> UInt64 {
+        Set(exits.flatMap { $0.path.compactMap(\.status.child_txid) }).reduce(0) { $0 + (childFees[$1] ?? 0) }
+    }
+}
+
 extension ExitModel {
     /// Every state bark recorded, oldest first, then the current one.
     var records: [ExitDetails] { historyDetails + [details] }

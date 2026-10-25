@@ -26,6 +26,12 @@ struct ExitListView: View {
             Text(verbatim: L10n.text("{n} in progress · {count} ready to claim", exits.filter { ExitRules.live($0.state) && !$0.claimable }.count.formatted(),
                                      ready.count.formatted(), locale: language))
                 .noahText(SettingsText.line).foregroundStyle(NoahTokens.Colors.muted)
+            // Every exit's fee children, each once, as Activity's "Exit fee" rows.
+            let fees = ExitFees.total(exits, childFees: model.overview?.childFees ?? [:])
+            if fees > 0 {
+                Text(verbatim: L10n.text("{amount} in network fees", money(fees), locale: language))
+                    .noahText(SettingsText.line).foregroundStyle(NoahTokens.Colors.muted)
+            }
             ForEach(shared, id: \.first?.id) { group in
                 ExitSharedPicture(exits: group, amounts: Dictionary(group.map { ($0.id, money($0.amount)) }, uniquingKeysWith: { a, _ in a })).frame(height: 250).padding(.top, 14)
                 let paths = group.reduce(0) { $0 + $1.path.count }, unique = Set(group.flatMap { $0.path.map(\.txid) }).count

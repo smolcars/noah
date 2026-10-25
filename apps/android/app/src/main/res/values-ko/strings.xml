@@ -502,7 +502,6 @@
   <string name="gt_aac77df347205252">"의견 보내기"</string>
   <string name="gt_779ff4584d72f733">"수수료가 이 VTXO들의 가치보다 커요."</string>
   <string name="gt_e45e304fea7e1b7b">"수수료가 가치보다 커요"</string>
-  <string name="gt_35c1c9ca10618cf1">"낸 수수료"</string>
   <string name="gt_c8e5709f89baf900">"수수료가 올라 Noah가 더 지불했습니다"</string>
   <string name="gt_ea3a58f8b849ff21">"수수료가 올랐습니다. 더 지불하는 중"</string>
   <string name="gt_e410ef7cc3869d69">"수수료가 올랐어요. 더 지불하는 중 · 블록 %1$s 대기 중"</string>
@@ -1486,6 +1485,7 @@
   <string name="gt_0632ba4767ab1888">"당시 %1$s"</string>
   <string name="gt_05421802af3d82be">"%1$s 사용 가능"</string>
   <string name="gt_07af0226de4cedc3">"Ark에서 %1$s 사용 가능"</string>
+  <string name="gt_8d05431a5eeb6edb">"네트워크 수수료 %1$s"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s이 지갑으로 돌아왔어요."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s이(가) 지갑으로 돌아왔습니다. 라이트닝으로 %2$s에게 전달하지 못했습니다."</string>
   <string name="gt_1cfd3ae82c2e9be1">"%2$s에게 %1$s 전송 완료."</string>
@@ -1495,6 +1495,7 @@
   <string name="gt_ac5913769f9a4809">"%1$s · Ark에 있음"</string>
   <string name="gt_59d264482aee8976">"%1$s · 출금 %3$s건의 %2$s 중 분담분"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · %2$s 남음"</string>
+  <string name="gt_2a17da5ea4c34a20">"%1$s · 다른 출금과 공유한 %2$s"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s 환율을 확인할 수 없음"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. 다른 백업은 그대로 유지돼요."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>

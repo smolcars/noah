@@ -46,7 +46,9 @@ import kotlinx.coroutines.withContext
  * claim transaction's whole fee and every exit it claimed.
  */
 internal data class ExitContext(val tip: Long, val confirmed: Long?, val delta: Long?, val claimFee: Long? = null, val claimIds: List<String> = emptyList(),
-                                val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false) {
+                                val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false,
+                                /** The part of the exit's network fees ([ExitStage.feesPaid]) for steps its other exits share ([ExitFees.paid]). */
+                                val sharedFees: Long = 0) {
     /** This exit's part of [claimFee]; see [ExitClaim.share]. */
     fun claimShare(id: String) = claimFee?.let { ExitClaim.share(it, claimIds, id) }
 
@@ -92,7 +94,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     }
     var deposit by remember { mutableStateOf<Long?>(null) }
     val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claimEstimate = claimEstimate,
-        cancelable = exit?.cancelable == true).claimed(record, claim)
+        cancelable = exit?.cancelable == true, sharedFees = exit?.let { ExitFees.paid(it, exits).second } ?: 0).claimed(record, claim)
     ExitProgressContent(exit, stage, context, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back, loaded = model.revision > 0,
         check = { scope.launch { model.review(OnchainAction.progress, overview?.exits.orEmpty().filter { it.state !in ExitTimeline.terminal }.map { it.id }) } },
         cancel = { scope.launch { model.review(OnchainAction.cancel, listOf(id)) } },
@@ -312,7 +314,7 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
         when (stage.phase) {
             ExitStage.Phase.claimed -> {
                 DetailRow(tr("Claimed in"), tr("Block {height}", number(stage.claimedBlock ?: 0)), toasts = toasts)
-                DetailRow(tr("Network fees"), money(stage.feesPaid), ValueKind.number, toasts = toasts)
+                DetailRow(tr("Network fees"), feesLine(stage, context, money), ValueKind.number, toasts = toasts)
                 // A batched claim's fee is paid once: this exit shows its share, and the whole fee and how many it covered.
                 context.claimShare(exit.id)?.let { share -> DetailRow(tr("Claim fee"), if (context.claimIds.size > 1) tr("{amount} · share of {total} for {n} exits",
                     money(share), money(checkNotNull(context.claimFee)), context.claimIds.size.toString()) else money(share), ValueKind.number, toasts = toasts) }
@@ -327,7 +329,7 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
             else -> {
                 DetailRow(tr("Transactions"), tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString()), toasts = toasts)
                 val left = context.confirmed?.takeIf { stage.attention == ExitStage.Attention.needsFunds }
-                DetailRow(tr("Fees paid"), left?.let { tr("{amount} · {left} left", money(stage.feesPaid), money(it)) } ?: money(stage.feesPaid), ValueKind.number,
+                DetailRow(tr("Network fees"), left?.let { tr("{amount} · {left} left", money(stage.feesPaid), money(it)) } ?: feesLine(stage, context, money), ValueKind.number,
                     toasts = toasts, failed = left != null)
                 val claimable = stage.claimableHeight?.let { tr("Block {height}", number(it)) }
                     ?: context.delta?.let { tr("About block {height}", number(context.tip + (stage.total - stage.inBlocks) + it)) }
@@ -338,6 +340,11 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
         }
     }
 }
+
+/** "₿961 · ₿933 shared with your other exits", or the total alone. */
+@Composable
+private fun feesLine(stage: ExitStage, context: ExitContext, money: (Long) -> String) = if (context.sharedFees > 0)
+    tr("{amount} · {shared} shared with your other exits", money(stage.feesPaid), money(context.sharedFees)) else money(stage.feesPaid)
 
 /** bark's transactions for the exit, root first: the current state's, or the last list it recorded (later states don't carry them). */
 internal val ExitModel.path get() = details.transactions ?: historyDetails.lastOrNull { !it.transactions.isNullOrEmpty() }?.transactions.orEmpty()

@@ -30,7 +30,7 @@ data class ExitStage(
     val fee: Long? = null, val rate: Long? = null,
     val lockedFrom: Long? = null, val claimableHeight: Long? = null, val unlockedAt: Long? = null,
     val claimTxid: String? = null, val claimedBlock: Long? = null,
-    /** Fees this wallet paid for the exit's transactions (adopted ones cost nothing). */
+    /** Fees this wallet paid for the exit's whole path ([ExitFees.paid]); another wallet's children cost nothing. */
     val feesPaid: Long = 0,
     /** Noah has evidence nothing progresses exits, and bark last recorded this one, while sending it, below the chain's tip. */
     val stale: Boolean = false,
@@ -73,7 +73,7 @@ internal object ExitStages {
         // Later states don't list transactions: the last state that did, or bark's packages, say how many there are.
         val known = (exit.historyDetails + details).lastOrNull { !it.transactions.isNullOrEmpty() }?.transactions.orEmpty()
         val total = listOf(txs.size, exit.packages.size, known.size).firstOrNull { it > 0 } ?: 0
-        val feesPaid = exit.packages.filter { it.childOrigin == "wallet" }.sumOf { exit.childFees[it.childTxid] ?: 0 }
+        val feesPaid = ExitFees.paid(exit, emptyList()).first
         // bark keeps a state's tip while nothing changes, so its height can't say whether progress runs; while the daemon
         // runs it keeps exits current. Only with Noah's evidence that it doesn't is an exit bark last recorded below the tip behind.
         val synced = details.tip_height
@@ -415,4 +415,21 @@ internal object ExitClaim {
             com.noahwallet.send.SendDestination.parse(trimmed, network).bip321?.get("onchainAddress") ?: return null else trimmed
         return address.takeIf { runCatching { validateClaimDestination(it, network) }.isSuccess }
     }
+}
+
+/**
+ * What exits cost in fee children this wallet paid ([ExitModel.childFees]: its own transactions, whichever exit bark filed
+ * them under), each child once. A step several exits share is paid once, by whichever sent it first.
+ */
+internal object ExitFees {
+    /** [exit]'s whole path, and the part of it for steps another of [exits] also has. */
+    fun paid(exit: ExitModel, exits: List<ExitModel>): Pair<Long, Long> {
+        val others = exits.filter { it.id != exit.id }.flatMap { other -> other.packages.map { it.txid } }.toSet()
+        val children = exit.packages.filter { it.childTxid != null }.distinctBy { it.childTxid }
+        val fee = { p: ExitPackage -> exit.childFees[p.childTxid] ?: 0L }
+        return children.sumOf(fee) to children.filter { it.txid in others }.sumOf(fee)
+    }
+
+    /** Every exit's children, each once: what Activity's "Exit fee" rows add up to. */
+    fun total(exits: List<ExitModel>): Long = exits.flatMap { it.childFees.entries }.associate { it.key to it.value }.values.sum()
 }

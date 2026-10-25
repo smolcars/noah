@@ -502,7 +502,6 @@
   <string name="gt_aac77df347205252">"フィードバック"</string>
   <string name="gt_779ff4584d72f733">"手数料がこれらのVTXOの価値を上回ります。"</string>
   <string name="gt_e45e304fea7e1b7b">"手数料が価値を上回ります"</string>
-  <string name="gt_35c1c9ca10618cf1">"支払った手数料"</string>
   <string name="gt_c8e5709f89baf900">"手数料が上がったため、Noahが多めに支払いました"</string>
   <string name="gt_ea3a58f8b849ff21">"手数料が上がりました。多めに支払っています"</string>
   <string name="gt_e410ef7cc3869d69">"手数料が上がりました。追加で支払い中 · ブロック %1$s を待機中"</string>
@@ -1486,6 +1485,7 @@
   <string name="gt_0632ba4767ab1888">"当時 %1$s"</string>
   <string name="gt_05421802af3d82be">"%1$s 利用可能"</string>
   <string name="gt_07af0226de4cedc3">"Arkで%1$sを利用可能"</string>
+  <string name="gt_8d05431a5eeb6edb">"ネットワーク手数料 %1$s"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s はウォレットに戻りました。"</string>
   <string name="gt_df9fa0b4daa96032">"%1$s はウォレットに戻りました。ライトニングで %2$s に届きませんでした。"</string>
   <string name="gt_1cfd3ae82c2e9be1">"%2$sに%1$sを送信しました。"</string>
@@ -1495,6 +1495,7 @@
   <string name="gt_ac5913769f9a4809">"%1$s · Ark内"</string>
   <string name="gt_59d264482aee8976">"%1$s · %3$s件の出金で%2$sを分担"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · 残り%2$s"</string>
+  <string name="gt_2a17da5ea4c34a20">"%1$s · うち%2$sは他の出金と共有"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s。ほかのバックアップは残ります。"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>

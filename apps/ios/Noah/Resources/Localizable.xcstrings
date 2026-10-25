@@ -17701,42 +17701,6 @@
         }
       }
     },
-    "Fees paid": {
-      "comment": "GT gt_35c1c9ca10618cf1; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fees paid"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comisiones pagadas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払った手数料"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "낸 수수료"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Betalda avgifter"
-          }
-        }
-      }
-    },
     "Fees rose, so Noah paid more": {
       "comment": "GT gt_c8e5709f89baf900; arguments: none",
       "extractionState": "manual",
@@ -52645,6 +52609,42 @@
         }
       }
     },
+    "{amount} in network fees": {
+      "comment": "GT gt_8d05431a5eeb6edb; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ in network fees"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ en comisiones de red"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワーク手数料 %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "네트워크 수수료 %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ i nätverksavgifter"
+          }
+        }
+      }
+    },
     "{amount} is back in your wallet.": {
       "comment": "GT gt_2c6ed7402ae1aea6; arguments: amount",
       "extractionState": "manual",
@@ -52965,6 +52965,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@ kvar"
+          }
+        }
+      }
+    },
+    "{amount} · {shared} shared with your other exits": {
+      "comment": "GT gt_2a17da5ea4c34a20; arguments: amount, shared",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ shared with your other exits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ compartidos con tus otras salidas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · うち%2$@は他の出金と共有"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 다른 출금과 공유한 %2$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ delas med dina andra uttag"
           }
         }
       }

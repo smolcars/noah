@@ -502,7 +502,6 @@
   <string name="gt_aac77df347205252">"Feedback"</string>
   <string name="gt_779ff4584d72f733">"Fees are more than these VTXOs are worth."</string>
   <string name="gt_e45e304fea7e1b7b">"Fees more than it’s worth"</string>
-  <string name="gt_35c1c9ca10618cf1">"Fees paid"</string>
   <string name="gt_c8e5709f89baf900">"Fees rose, so Noah paid more"</string>
   <string name="gt_ea3a58f8b849ff21">"Fees rose. Paying more"</string>
   <string name="gt_e410ef7cc3869d69">"Fees rose. Paying more · waiting for block %1$s"</string>
@@ -1486,6 +1485,7 @@
   <string name="gt_0632ba4767ab1888">"%1$s at the time"</string>
   <string name="gt_05421802af3d82be">"%1$s available"</string>
   <string name="gt_07af0226de4cedc3">"%1$s available in Ark"</string>
+  <string name="gt_8d05431a5eeb6edb">"%1$s in network fees"</string>
   <string name="gt_2c6ed7402ae1aea6">"%1$s is back in your wallet."</string>
   <string name="gt_df9fa0b4daa96032">"%1$s is back in your wallet. Lightning couldn’t reach %2$s."</string>
   <string name="gt_1cfd3ae82c2e9be1">"%1$s sent to %2$s."</string>
@@ -1495,6 +1495,7 @@
   <string name="gt_ac5913769f9a4809">"%1$s · in Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · share of %2$s for %3$s exits"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · %2$s left"</string>
+  <string name="gt_2a17da5ea4c34a20">"%1$s · %2$s shared with your other exits"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s rate unavailable"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Your other backups stay."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s at %2$s"</string>
