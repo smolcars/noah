@@ -1,6 +1,6 @@
 # Fast, cheap CI: research and plan (2026-10-25)
 
-This is research and planning only. No workflow or code has changed, and no CI run was triggered. Implementation waits for the user's approval.
+This started as research and planning only. **Update (2026-10-25):** a simplified version is implemented on `t3/native-ci-speed`; section 7 has the decisions, the baseline, what changed and what is still open. Where sections 3 to 6 disagree with section 7, section 7 wins.
 
 **The goal, in the user's words:** "My goal is to have an incredibly fast CI … Ideally entire CI should be done in like 5 mins … Running slow CI makes it impossible for me to scale and also I'd be wasting a lot of money."
 
@@ -328,6 +328,8 @@ Run the unfunded ones nightly on the Android emulator. On iOS, the render fixtur
 
 ## 6. Target design
 
+> **Superseded in part (2026-10-25).** The user chose a simpler design: no nightly or scheduled runs, no smoke/funded/nightly tiers (every Maestro flow runs on every PR), Android Maestro only, no iOS test shards, and signet plus mainnet sent to Telegram on merge. Section 7 describes what was built.
+
 ### PR, aiming for about 5 min wall time
 
 Jobs run in parallel. Each is path-filtered and has `concurrency` cancellation.
@@ -388,24 +390,70 @@ These are estimates, not measurements. Assumptions:
 
 Subtract the $12 free tier, and add RN CI ($0.9 per client PR push) until cutover. Today's actual spend is about $50 a month, with RN CI only.
 
-## 7. Phased rollout
+## 7. Rollout status (2026-10-25)
 
-Each phase is one small PR, with a before/after metric read from `gh run view --json jobs` (see the appendix).
+### Decisions (user, 2026-10-25)
 
-| Phase | PR | Metric (before → target) |
+- "5 minutes" is a goal, not a hard limit. Maestro can take longer; builds should be as fast as caching allows.
+- Keep CI simple: build and test on PRs; no cron or nightly jobs.
+- Android Maestro only: one phone profile; no iOS Maestro, tablet, fold or adaptive runs. Two parallel jobs select flows with `--include-tags smoke` and `--include-tags funded`; each onboards one wallet and reuses it. The Maestro flow rewrite happens separately.
+- Merges to `master` send signet and mainnet builds to Telegram. Android builds on Blacksmith; iOS stays on the self-hosted signing Mac until Apple signing secrets exist.
+- Server CI stays paused (`workflow_dispatch` only) for now.
+
+### Baseline (before), run at `34381878` on PR #374
+
+| Workflow (run) | Job | Result | Time | Where the time went |
+|---|---|---|---|---|
+| Native iOS CI (`40191514718`) | build-and-test | failed | 2.1 min | Swift 6.3.3 (default Xcode 26.6) crashed in IRGen after 117 s of building; SPM resolved cold in 25 s. Not a real build time. |
+| Native Android CI (`40191514468`) | build-and-test | failed | 6.0 min | Nix store miss, fetched in 77 s; Gradle download 10 s; daemon and configuration 33 s; 3 flavors 145 s; unit tests 76 s (4,264 tests, 1 failed, running as root). `--max-workers=2`. |
+| | maestro | skipped | — | |
+| Native API drift (`40191514489`) | server-contract | passed | 1.9 min | cold `cargo test` export 89 s |
+| | native-clients | failed | 1.2 min | log-checker false positive; Nix install 28 s, `bun install` 33 s |
+| Server CI (`40191514607`) | server_build_and_test | passed | 5.7 min | tests 106 s, release `noah-cli` build 162 s, service containers 43 s |
+
+### Local measurements (this Mac: M4, 10 cores, Xcode 27.1)
+
+- iOS `build-for-testing` of Noah-Regtest: **114 s** cold. With the Xcode compilation cache restored and DerivedData deleted: **14 s** with no source change (426 hits, 0 misses), **46 s** after a one-line change (11 misses). The cache is about 650 MB.
+- SPM checkout: 3.9 GB, of which 2.9 GB is Sentry's binary artifacts. Restoring that takes longer than the 25 s cold resolve on the runner, so only the git clones are cached.
+- NoahTests: 1,233 tests, 307 s of summed test time. Split across 3 simulators, the shards took 110 s, 166 s and 172 s, but one `xcodebuild` sat idle for about 10 minutes after its tests passed. Shards were dropped: they add a script and a failure mode, and Android Maestro is the longer path anyway.
+- Gradle configuration cache: reused cleanly for the debug builds (83 tasks up to date in 1 s), but it fails on the release builds' `upload<Variant>SentryMapping` task (its `onlyIf` captures the Project). CI passes `--build-cache` only.
+
+### What changed (`t3/native-ci-speed`, on top of `fb2d057b`)
+
+| Commit | Change |
+|---|---|
+| `f8c4244e` | `concurrency` (new PR pushes cancel old runs), path filters per platform, `!**/*.md`, 15–25 min timeouts |
+| `78473614` | The two API drift checks run in parallel |
+| `c9b1ad12` | iOS on `blacksmith-6vcpu-macos-27` with the newest installed Xcode 27 |
+| `1224069b` | Android builds the regtest app and test APKs once; Maestro installs them and runs `am instrument` instead of a second Gradle build; no `--max-workers=2` |
+| `7b9077da` | iOS: one `xcodebuild test` on one simulator, arm64 only, no `-jobs 2`, no mainnet/signet builds |
+| `9ed26315` | Caches saved by merges and restored by PRs: Xcode compilation cache, SPM git clones, Gradle (read-only on PRs, plus `--build-cache`), Robolectric jars, `sdkmanager` skipped on a hit. Temporary: PR #374 saves too. |
+| `ad27622e` | Removed `native-maestro-ios.yml` (nightly cron, iOS Maestro, tablet and fold) |
+| `3a7d27dd` | Android Maestro folded into `native-android.yml` as two parallel jobs, `smoke` and `funded`; no regtest teardown |
+| `abf22ae6` | `native-telegram-android.yml`: signed signet and mainnet APKs from Blacksmith, both to Telegram |
+| `359185c8` | `native-telegram-ios.yml`: signet and mainnet archives on the signing Mac, both to Diawi and Telegram |
+| `3ce5da02` | Lint config and comment tidy-up |
+
+### Expected after (estimates, not measured)
+
+| Job | Cold (first run) | Warm (master cache) |
 |---|---|---|
-| 0 | **Baseline:** open the native PR, or a throwaway PR from `feat/native-rewrite`, once so the native workflows run once. This is the first paid run and the user's call. | record native-ios / native-android / Maestro / drift job durations |
-| 1 | `concurrency` on all PR workflows; narrow the path filters (items 2 and 3); timeouts to 20–25 min (item 12); `lint` off self-hosted and not gating `android_build` | RN CI not triggered by native-only PRs; cancelled-run minutes; RN critical path −0.6 min |
-| 2 | **Cache warmer + restore-only PR caches + bounded keys** (item 1) | `Gradle User Home cache` restored on the first PR push; RN `android_build` 9.3 → ≤5.5 min; RN `ios_build` 7.3 → ≤4.5; no "CDN: trunk" failures |
-| 3 | **Native trims:** regtest-only PR builds; drop `-jobs 2` / `--max-workers=2`; build and test APKs once; Maestro job without Gradle (items 4, 5 and 7) | native-ios job: Phase 0 → ≤10 min; native-android build ≤5 min; Maestro job −2–4 min |
-| 4 | **Maestro flows rewrite:** Android onboarding tags, ID unification, S1–S3 / F1–F3 / nightly set, README update; then run both platforms locally | all smoke flows pass on the Android emulator and iPhone 17 simulator locally; smoke ≤3 min after boot |
-| 5 | **Maestro pipeline:** snapshot boot, no teardown, `cores: 4`, smoke on PR, funded post-merge, single build+emulator job on bs-16 (items 8–10) | Android PR e2e job ≤6 min |
-| 6 | **iOS test shards** on bs-mac-12 with a suite-coverage check (item 6) | NoahTests step 5.5 → ≤2.5 min; iOS job ≤7 min; 0 shards with 0 tests |
-| 7 | Gradle build and configuration cache; Robolectric jar cache (item 11) | Android warm build −0.5–1 min |
-| 8 | iOS slow-suite work (item 13); `native-clients` on Linux (item 14); server PR release build (item 15) | NoahTests summed time −30–60 s; drift job $ −0.25 |
-| 9 | Post-cutover: retire RN CI; consider a merge queue | RN minutes → 0 |
+| iOS build and NoahTests | 9–10 min | 7–8 min (about 1 min setup, 1–1.5 min build, 5–6 min tests) |
+| Android build and unit tests | ~5 min | 3–3.5 min |
+| Android Maestro, each job | setup 3–4 min, then the flows | setup 2.5–3 min, then the flows; the funded chain is the long pole |
+| API drift | ~2 min | ~2 min |
+| Telegram Android (merge only) | ~8 min | 6–7 min (two R8 runs) |
 
-Phases 1 and 2 are independent and give most of the RN improvement. Phases 3–6 need Phase 0's baseline to prove the gains.
+Per PR push: about $0.4 for Android only, $0.8 for iOS only and $1.2 for both, mostly the Mac.
+
+### Still open
+
+- **Measure:** push the branch to PR #374, then re-run it once so the second run uses the caches the first one saved.
+- **Remove after the merge:** the `github.head_ref == 'feat/native-rewrite'` cache-save exception in `native-android.yml` and `native-ios.yml`.
+- **Maestro flows:** the flow rewrite must tag every flow `smoke` or `funded`, adapt the `funded` block of `scripts/test-maestro-native.sh` (its host steps), and update the CI section of `apps/maestro/README.md`.
+- **iOS Telegram on Blacksmith:** needs an App Store Connect API key, or a distribution certificate and ad hoc profiles, as secrets.
+- **Server CI, when re-enabled:** dropping the PR release `noah-cli` build saves about 2.7 of its 5.7 min.
+- **Not done, to keep it simple:** iOS test shards, emulator snapshots, starting the regtest stack in the background, the Gradle configuration cache, and seeding the drift job's Rust cache from `master`.
 
 ## Appendix: method and sources
 
