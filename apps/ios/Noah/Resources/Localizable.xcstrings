@@ -15817,38 +15817,38 @@
         }
       }
     },
-    "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance.": {
-      "comment": "GT gt_1bc751fa07b37246; arguments: none",
+    "Exit started. Noah progresses it while the app is open, paying broadcast and fee-bump fees from your onchain balance.": {
+      "comment": "GT gt_d59f24d5314480bf; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
+            "value": "Exit started. Noah progresses it while the app is open, paying broadcast and fee-bump fees from your onchain balance."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Salida iniciada. Noah la hace avanzar automáticamente en segundo plano y usa tu saldo en cadena para cubrir las comisiones de difusión y los aumentos de comisión."
+            "value": "Salida iniciada. Noah la hace avanzar mientras la app está abierta y usa tu saldo en cadena para cubrir las comisiones de difusión y los aumentos de comisión."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出を開始しました。Noahはバックグラウンドで自動的に処理を進め、ブロードキャストと手数料引き上げにかかる費用をオンチェーン残高から支払います。"
+            "value": "退出を開始しました。アプリが開いている間、Noahが処理を進め、ブロードキャストと手数料引き上げにかかる費用をオンチェーン残高から支払います。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "출금이 시작되었습니다. Noah가 백그라운드에서 자동으로 진행하며, 거래 전파 및 수수료 인상에 드는 비용은 온체인 잔액에서 지불합니다."
+            "value": "출금이 시작되었습니다. 앱이 열려 있는 동안 Noah가 진행하며, 거래 전파 및 수수료 인상에 드는 비용은 온체인 잔액에서 지불합니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nöduttag startat. Noah hanterar det automatiskt i bakgrunden och betalar avgifter för sändning och avgiftshöjning från ditt saldo på blockkedjan."
+            "value": "Nöduttag startat. Noah hanterar det medan appen är öppen och betalar avgifter för sändning och avgiftshöjning från ditt saldo på blockkedjan."
           }
         }
       }
@@ -28021,38 +28021,38 @@
         }
       }
     },
-    "Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.": {
-      "comment": "GT gt_f3727b33f0798006; arguments: none",
+    "Noah then sends and fee-bumps the exit’s transactions while the app is open, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.": {
+      "comment": "GT gt_980773ba88acbc7c; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."
+            "value": "Noah then sends and fee-bumps the exit’s transactions while the app is open, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Después, Noah envía las transacciones de la salida y sube sus comisiones por su cuenta, pagando con tus bitcoins en cadena. Las comisiones son estimaciones. Solo la comisión de reclamación sale del importe. Puedes cancelar hasta que se envíe la última transacción."
+            "value": "Después, mientras la app está abierta, Noah envía las transacciones de la salida y sube sus comisiones, pagando con tus bitcoins en cadena. Las comisiones son estimaciones. Solo la comisión de reclamación sale del importe. Puedes cancelar hasta que se envíe la última transacción."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "その後はNoahが出金トランザクションの送信と手数料の引き上げを自動で行い、オンチェーンのビットコインから支払います。手数料は見積もりです。金額から差し引かれるのは受け取り手数料だけです。最後のトランザクションが送信されるまでキャンセルできます。"
+            "value": "その後はアプリが開いている間、Noahが出金トランザクションの送信と手数料の引き上げを行い、オンチェーンのビットコインから支払います。手数料は見積もりです。金額から差し引かれるのは受け取り手数料だけです。最後のトランザクションが送信されるまでキャンセルできます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이후 Noah가 출금 트랜잭션을 알아서 보내고 수수료를 올리며, 온체인 비트코인에서 지불해요. 수수료는 예상치예요. 금액에서는 청구 수수료만 빠져요. 마지막 트랜잭션이 보내지기 전까지 취소할 수 있어요."
+            "value": "이후 앱이 열려 있는 동안 Noah가 출금 트랜잭션을 보내고 수수료를 올리며, 온체인 비트코인에서 지불해요. 수수료는 예상치예요. 금액에서는 청구 수수료만 빠져요. 마지막 트랜잭션이 보내지기 전까지 취소할 수 있어요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sedan skickar Noah uttagets transaktioner och höjer avgifterna själv, med betalning från dina bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."
+            "value": "Sedan skickar Noah uttagets transaktioner och höjer avgifterna medan appen är öppen, med betalning från dina bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."
           }
         }
       }
@@ -29701,74 +29701,74 @@
         }
       }
     },
-    "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.": {
-      "comment": "GT gt_0cc23d9ecbb9986c; arguments: none",
+    "Once started, Noah progresses the exit while the app is open, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.": {
+      "comment": "GT gt_1b236df2b54f2e79; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
+            "value": "Once started, Noah progresses the exit while the app is open, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."
+            "value": "Una vez iniciada la salida, Noah la procesa mientras la app está abierta: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "開始すると、Noahはバックグラウンドで退出処理を自動的に進めます。退出取引のブロードキャストや手数料の引き上げを行い、オンチェーン残高から手数料を支払います。回収額から差し引かれるのは受け取り手数料のみです。キャンセルできるのは、最後の退出取引がブロードキャストされるまでです。"
+            "value": "開始すると、アプリが開いている間、Noahが退出処理を進めます。退出取引のブロードキャストや手数料の引き上げを行い、オンチェーン残高から手数料を支払います。回収額から差し引かれるのは受け取り手数料のみです。キャンセルできるのは、最後の退出取引がブロードキャストされるまでです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시작하면 Noah가 백그라운드에서 자동으로 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."
+            "value": "시작하면 앱이 열려 있는 동안 Noah가 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "När nöduttaget har startats fortsätter Noah automatiskt i bakgrunden med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."
+            "value": "När nöduttaget har startats fortsätter Noah, medan appen är öppen, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."
           }
         }
       }
     },
-    "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.": {
-      "comment": "GT gt_acc38e1a7250680d; arguments: none",
+    "Once started, Noah progresses the exit while the app is open, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast.": {
+      "comment": "GT gt_dc21edf6ed9fc0ed; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once started, Noah progresses the exit automatically in the background, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
+            "value": "Once started, Noah progresses the exit while the app is open, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Las comisiones mostradas son estimaciones y pueden cambiar. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."
+            "value": "Una vez iniciada la salida, Noah la procesa mientras la app está abierta: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Las comisiones mostradas son estimaciones y pueden cambiar. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "開始すると、Noahはバックグラウンドで退出処理を自動的に進めます。退出取引のブロードキャストや手数料の引き上げを行い、オンチェーン残高から手数料を支払います。表示される手数料は見積もりであり、変わる場合があります。回収額から差し引かれるのは受け取り手数料のみです。キャンセルできるのは、最後の退出取引がブロードキャストされるまでです。"
+            "value": "開始すると、アプリが開いている間、Noahが退出処理を進めます。退出取引のブロードキャストや手数料の引き上げを行い、オンチェーン残高から手数料を支払います。表示される手数料は見積もりであり、変わる場合があります。回収額から差し引かれるのは受け取り手数料のみです。キャンセルできるのは、最後の退出取引がブロードキャストされるまでです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시작하면 Noah가 백그라운드에서 자동으로 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 표시된 수수료는 예상치이며 변경될 수 있습니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."
+            "value": "시작하면 앱이 열려 있는 동안 Noah가 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 표시된 수수료는 예상치이며 변경될 수 있습니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "När nöduttaget har startats fortsätter Noah automatiskt i bakgrunden med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. De avgifter som visas är uppskattningar och kan ändras. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."
+            "value": "När nöduttaget har startats fortsätter Noah, medan appen är öppen, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. De avgifter som visas är uppskattningar och kan ändras. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."
           }
         }
       }
@@ -39241,38 +39241,38 @@
         }
       }
     },
-    "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own.": {
-      "comment": "GT gt_3e631aab2f131c60; arguments: none",
+    "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this while the app is open.": {
+      "comment": "GT gt_2e5931bc58a13ec1; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own."
+            "value": "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this while the app is open."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta."
+            "value": "Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace mientras la app está abierta."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "出金の次のステップを送信するか、止まっているステップの手数料を引き上げます。手数料はオンチェーンのビットコインから支払われます。Noahはこれを自動でも行います。"
+            "value": "出金の次のステップを送信するか、止まっているステップの手数料を引き上げます。手数料はオンチェーンのビットコインから支払われます。アプリが開いている間は、Noahもこれを自動で行います。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "출금의 다음 단계를 보내거나, 멈춰 있는 단계의 수수료를 올려요. 수수료는 온체인 비트코인에서 나가요. Noah도 알아서 이 작업을 해요."
+            "value": "출금의 다음 단계를 보내거나, 멈춰 있는 단계의 수수료를 올려요. 수수료는 온체인 비트코인에서 나가요. 앱이 열려 있는 동안에는 Noah도 알아서 이 작업을 해요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta själv."
+            "value": "Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta medan appen är öppen."
           }
         }
       }

@@ -361,7 +361,7 @@ extension WalletSession {
             // The new run is recorded before bark starts, or bark isn't asked (nothing sent yet).
             do { try await access.began(quote.ids) } catch { throw OnchainFailure.constructionFailed }
             try await access.start(quote.ids)
-            return "Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."
+            return "Exit started. Noah progresses it while the app is open, paying broadcast and fee-bump fees from your onchain balance."
         }
     }
 

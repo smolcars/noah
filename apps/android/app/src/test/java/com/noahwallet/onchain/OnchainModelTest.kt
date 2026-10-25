@@ -405,7 +405,7 @@ class OnchainModelTest {
     }
     @Test fun startAndManualProgressReviewsCarryRNConsentAndEstimatedFees() {
         val start = reviewExplanation(OnchainQuote(OnchainAction.startExit, "wallet"))
-        assertTrue(start.contains("automatically in the background")); assertTrue(start.contains("paying fees from your onchain balance"))
+        assertTrue(start.contains("while the app is open")); assertTrue(start.contains("paying fees from your onchain balance"))
         assertFalse(reviewExplanation(OnchainQuote(OnchainAction.startExit, "wallet", fee = null, chainFee = null)).contains("estimates"))
         assertTrue(start.contains("estimates")); assertTrue(start.contains("final exit transaction is broadcast"))
         assertTrue(reviewExplanation(OnchainQuote(OnchainAction.progress, "wallet")).startsWith("This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process."))

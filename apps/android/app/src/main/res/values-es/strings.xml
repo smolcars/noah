@@ -447,7 +447,7 @@
   <string name="gt_c3ac6596a27b89b8">"La salida ha avanzado"</string>
   <string name="gt_ba61a6796c9bda55">"El proceso de salida se canceló antes de completarse."</string>
   <string name="gt_0cb3378726d1acba">"Se produjeron %1$s errores al avanzar la salida. Es posible que se hayan difundido transacciones o aumentado sus comisiones. Actualiza los detalles de la salida antes de continuar."</string>
-  <string name="gt_1bc751fa07b37246">"Salida iniciada. Noah la hace avanzar automáticamente en segundo plano y usa tu saldo en cadena para cubrir las comisiones de difusión y los aumentos de comisión."</string>
+  <string name="gt_d59f24d5314480bf">"Salida iniciada. Noah la hace avanzar mientras la app está abierta y usa tu saldo en cadena para cubrir las comisiones de difusión y los aumentos de comisión."</string>
   <string name="gt_899bbd05c2743f78">"El estado de la salida no está disponible. Desliza hacia abajo para actualizar."</string>
   <string name="gt_e49e631bec2e7e40">"El seguimiento de salida detectó que este VTXO ya se había gastado."</string>
   <string name="gt_09fc43a650792fef">"Se registró el seguimiento de salida de este VTXO."</string>
@@ -790,7 +790,7 @@
   <string name="gt_338e68cc4323f294">"Notificaciones de Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah vuelve a registrar esta billetera en el servidor. Tu billetera se conserva."</string>
   <string name="gt_286c0deecb39be99">"Noah realiza este pago automáticamente con tu saldo de Ark. Solo se autorizan pagos a este destinatario por este importe, y puedes pausarlos o cancelarlos en cualquier momento."</string>
-  <string name="gt_f3727b33f0798006">"Después, Noah envía las transacciones de la salida y sube sus comisiones por su cuenta, pagando con tus bitcoins en cadena. Las comisiones son estimaciones. Solo la comisión de reclamación sale del importe. Puedes cancelar hasta que se envíe la última transacción."</string>
+  <string name="gt_980773ba88acbc7c">"Después, mientras la app está abierta, Noah envía las transacciones de la salida y sube sus comisiones, pagando con tus bitcoins en cadena. Las comisiones son estimaciones. Solo la comisión de reclamación sale del importe. Puedes cancelar hasta que se envíe la última transacción."</string>
   <string name="gt_ddecc0272120b4ba">"Usuario de Noah"</string>
   <string name="gt_f802f9f1257fc080">"Noah se interrumpió durante el envío de este pago. Revisa tu historial de transacciones antes de reanudarlo."</string>
   <string name="gt_deca5f2b35700ac7">"Noah no los devolverá a Ark."</string>
@@ -838,8 +838,8 @@
   <string name="gt_f5795926f351bd4a">"En cadena · esperando un bloque"</string>
   <string name="gt_25d0eb395cc24f4e">"En cadena · %1$s"</string>
   <string name="gt_0c2cf5c7019fb7dd">"Cuando se envía su última transacción."</string>
-  <string name="gt_0cc23d9ecbb9986c">"Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."</string>
-  <string name="gt_acc38e1a7250680d">"Una vez iniciada la salida, Noah la procesa automáticamente en segundo plano: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Las comisiones mostradas son estimaciones y pueden cambiar. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."</string>
+  <string name="gt_1b236df2b54f2e79">"Una vez iniciada la salida, Noah la procesa mientras la app está abierta: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."</string>
+  <string name="gt_dc21edf6ed9fc0ed">"Una vez iniciada la salida, Noah la procesa mientras la app está abierta: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Las comisiones mostradas son estimaciones y pueden cambiar. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida."</string>
   <string name="gt_90822ee1d520d059">"En la cadena"</string>
   <string name="gt_9ef5c3ab9edb50eb">"Envío en cadena"</string>
   <string name="gt_89cc4ee3c69a3b7e">"Comisión en cadena"</string>
@@ -1107,7 +1107,7 @@
   <string name="gt_c5fb1b5d6362edc0">"Enviando · esperando una ronda de Ark"</string>
   <string name="gt_a38ba37fd4f8a52a">"Enviando · esperando confirmaciones"</string>
   <string name="gt_b8ed5279e897be5d">"Enviando…"</string>
-  <string name="gt_3e631aab2f131c60">"Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta."</string>
+  <string name="gt_2e5931bc58a13ec1">"Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace mientras la app está abierta."</string>
   <string name="gt_c16bc82bf1f04ede">"Enviado"</string>
   <string name="gt_168d6498bc4dd449">"Enviada por otra salida"</string>
   <string name="gt_4e7201c7b8985a98">"Enviado a"</string>

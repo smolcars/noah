@@ -195,7 +195,7 @@ struct ExitVtxoDetailView: View {
 
     private func checkSheet(_ money: ExitMoney) -> some View {
         SettingsSheetBody(title: L10n.text("Move your exit forward?", locale: language),
-                          line: L10n.text("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own.", locale: language)) {
+                          line: L10n.text("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this while the app is open.", locale: language)) {
             if let quote = model.quote, quote.action == .progress, let chainFee = quote.chainFee {
                 SettingsDetailRow(label: L10n.text("Estimated fees", locale: language), value: money.about(chainFee), numeric: true, hairline: false)
                     .padding(.top, 8)

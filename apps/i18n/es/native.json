@@ -2085,7 +2085,6 @@
   "gt_f889e0bd2f6e4ea8": "Comisión de salida",
   "gt_013a643a423137ed": "Avanzar la salida",
   "gt_e5aa7874e42cca96": "¿Avanzar tu salida?",
-  "gt_3e631aab2f131c60": "Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta.",
   "gt_485d888652133aa1": "Comisiones estimadas",
   "gt_03244d3bb2b077f2": "Avanzar",
   "gt_c3ac6596a27b89b8": "La salida ha avanzado",
@@ -2096,5 +2095,10 @@
   "gt_a8a0b1813d01e36a": "Noah no ha revisado esta salida desde hace un rato. Avanzarla también puede enviar su siguiente paso o subir una comisión.",
   "gt_8ee565450a0e320e": "Los bloques están llenos ahora. Noah sube la comisión cuando suben las tasas. Avanza tu salida para reintentarlo ya.",
   "gt_cea13885ad32653d_one": "Una salida está por detrás de la altura actual de la cadena. Avánzala para ponerla al día; esto también puede enviar transacciones de salida.",
-  "gt_cea13885ad32653d_other": "{{n}} salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida."
+  "gt_cea13885ad32653d_other": "{{n}} salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida.",
+  "gt_2e5931bc58a13ec1": "Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace mientras la app está abierta.",
+  "gt_980773ba88acbc7c": "Después, mientras la app está abierta, Noah envía las transacciones de la salida y sube sus comisiones, pagando con tus bitcoins en cadena. Las comisiones son estimaciones. Solo la comisión de reclamación sale del importe. Puedes cancelar hasta que se envíe la última transacción.",
+  "gt_1b236df2b54f2e79": "Una vez iniciada la salida, Noah la procesa mientras la app está abierta: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida.",
+  "gt_dc21edf6ed9fc0ed": "Una vez iniciada la salida, Noah la procesa mientras la app está abierta: difunde las transacciones de salida, aumenta sus comisiones y las paga con tu saldo en cadena. Las comisiones mostradas son estimaciones y pueden cambiar. Solo la comisión de reclamación se descuenta del importe recuperado. La salida solo se puede cancelar antes de que se difunda la última transacción de salida.",
+  "gt_d59f24d5314480bf": "Salida iniciada. Noah la hace avanzar mientras la app está abierta y usa tu saldo en cadena para cubrir las comisiones de difusión y los aumentos de comisión."
 }

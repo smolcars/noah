@@ -2085,7 +2085,6 @@
   "gt_f889e0bd2f6e4ea8": "Uttagsavgift",
   "gt_013a643a423137ed": "Flytta fram uttaget",
   "gt_e5aa7874e42cca96": "Flytta fram ditt uttag?",
-  "gt_3e631aab2f131c60": "Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta själv.",
   "gt_485d888652133aa1": "Beräknade avgifter",
   "gt_03244d3bb2b077f2": "Flytta fram",
   "gt_c3ac6596a27b89b8": "Uttaget har flyttats fram",
@@ -2096,5 +2095,10 @@
   "gt_a8a0b1813d01e36a": "Noah har inte kontrollerat det här nöduttaget på ett tag. Att flytta fram det kan också skicka nästa steg eller höja en avgift.",
   "gt_8ee565450a0e320e": "Blocken är fulla just nu. Noah höjer avgiften när nivåerna stiger. Flytta fram ditt uttag för att försöka igen nu.",
   "gt_cea13885ad32653d_one": "Ett nöduttag ligger efter den aktuella blockhöjden. Flytta fram det för att komma ikapp. Det kan även innebära att nöduttagstransaktioner skickas.",
-  "gt_cea13885ad32653d_other": "{{n}} nöduttag ligger efter den aktuella blockhöjden. Flytta fram något av dem för att komma ikapp. Det kan även innebära att nöduttagstransaktioner skickas."
+  "gt_cea13885ad32653d_other": "{{n}} nöduttag ligger efter den aktuella blockhöjden. Flytta fram något av dem för att komma ikapp. Det kan även innebära att nöduttagstransaktioner skickas.",
+  "gt_2e5931bc58a13ec1": "Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta medan appen är öppen.",
+  "gt_980773ba88acbc7c": "Sedan skickar Noah uttagets transaktioner och höjer avgifterna medan appen är öppen, med betalning från dina bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats.",
+  "gt_1b236df2b54f2e79": "När nöduttaget har startats fortsätter Noah, medan appen är öppen, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts.",
+  "gt_dc21edf6ed9fc0ed": "När nöduttaget har startats fortsätter Noah, medan appen är öppen, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. De avgifter som visas är uppskattningar och kan ändras. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts.",
+  "gt_d59f24d5314480bf": "Nöduttag startat. Noah hanterar det medan appen är öppen och betalar avgifter för sändning och avgiftshöjning från ditt saldo på blockkedjan."
 }

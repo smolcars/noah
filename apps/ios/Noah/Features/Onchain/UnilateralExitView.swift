@@ -334,7 +334,7 @@ struct ExitReviewView: View {
                    let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: quote.totalFee, claimOnly: false) {
                     ExitWarning(text: L10n.text(warning, locale: language))
                 }
-                SettingsFine(text: L10n.text("Noah then sends and fee-bumps the exit’s transactions by itself, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.", locale: language))
+                SettingsFine(text: L10n.text("Noah then sends and fee-bumps the exit’s transactions while the app is open, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.", locale: language))
             } else if model.busy {
                 ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
             }

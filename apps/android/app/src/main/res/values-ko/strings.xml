@@ -447,7 +447,7 @@
   <string name="gt_c3ac6596a27b89b8">"출금을 진행했어요"</string>
   <string name="gt_ba61a6796c9bda55">"출금 처리가 완료되기 전에 취소되었습니다."</string>
   <string name="gt_0cb3378726d1acba">"출금 진행 중 오류가 %1$s개 발생했습니다. 거래가 전파되었거나 수수료가 인상되었을 수 있습니다. 계속하기 전에 출금 세부 정보를 새로고침하세요."</string>
-  <string name="gt_1bc751fa07b37246">"출금이 시작되었습니다. Noah가 백그라운드에서 자동으로 진행하며, 거래 전파 및 수수료 인상에 드는 비용은 온체인 잔액에서 지불합니다."</string>
+  <string name="gt_d59f24d5314480bf">"출금이 시작되었습니다. 앱이 열려 있는 동안 Noah가 진행하며, 거래 전파 및 수수료 인상에 드는 비용은 온체인 잔액에서 지불합니다."</string>
   <string name="gt_899bbd05c2743f78">"출금 상태를 확인할 수 없습니다. 아래로 당겨 새로고침하세요."</string>
   <string name="gt_e49e631bec2e7e40">"출금 추적 중 이 VTXO가 이미 사용된 것으로 확인되었습니다."</string>
   <string name="gt_09fc43a650792fef">"이 VTXO의 출금 추적이 등록되었습니다."</string>
@@ -790,7 +790,7 @@
   <string name="gt_338e68cc4323f294">"Noah 알림"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah가 이 지갑을 서버에 다시 등록해요. 지갑은 그대로 유지돼요."</string>
   <string name="gt_286c0deecb39be99">"Noah가 Ark 잔액에서 자동으로 결제합니다. 지정된 받는 사람에게 정해진 금액만 결제되며, 언제든지 일시 중지하거나 취소할 수 있습니다."</string>
-  <string name="gt_f3727b33f0798006">"이후 Noah가 출금 트랜잭션을 알아서 보내고 수수료를 올리며, 온체인 비트코인에서 지불해요. 수수료는 예상치예요. 금액에서는 청구 수수료만 빠져요. 마지막 트랜잭션이 보내지기 전까지 취소할 수 있어요."</string>
+  <string name="gt_980773ba88acbc7c">"이후 앱이 열려 있는 동안 Noah가 출금 트랜잭션을 보내고 수수료를 올리며, 온체인 비트코인에서 지불해요. 수수료는 예상치예요. 금액에서는 청구 수수료만 빠져요. 마지막 트랜잭션이 보내지기 전까지 취소할 수 있어요."</string>
   <string name="gt_ddecc0272120b4ba">"Noah 사용자"</string>
   <string name="gt_f802f9f1257fc080">"이 결제를 전송하는 중 Noah가 중단되었습니다. 계속하기 전에 거래 내역을 확인해 주세요."</string>
   <string name="gt_deca5f2b35700ac7">"Noah가 이 비트코인을 Ark로 다시 옮기지 않아요."</string>
@@ -838,8 +838,8 @@
   <string name="gt_f5795926f351bd4a">"온체인 · 블록 대기 중"</string>
   <string name="gt_25d0eb395cc24f4e">"온체인 · %1$s"</string>
   <string name="gt_0c2cf5c7019fb7dd">"마지막 트랜잭션이 보내진 뒤에는요."</string>
-  <string name="gt_0cc23d9ecbb9986c">"시작하면 Noah가 백그라운드에서 자동으로 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
-  <string name="gt_acc38e1a7250680d">"시작하면 Noah가 백그라운드에서 자동으로 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 표시된 수수료는 예상치이며 변경될 수 있습니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
+  <string name="gt_1b236df2b54f2e79">"시작하면 앱이 열려 있는 동안 Noah가 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
+  <string name="gt_dc21edf6ed9fc0ed">"시작하면 앱이 열려 있는 동안 Noah가 출금을 진행하며, 출금 거래를 전파하고 수수료를 인상합니다. 수수료는 온체인 잔액에서 지불됩니다. 표시된 수수료는 예상치이며 변경될 수 있습니다. 회수 금액에서는 청구 수수료만 차감됩니다. 마지막 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
   <string name="gt_90822ee1d520d059">"온체인"</string>
   <string name="gt_9ef5c3ab9edb50eb">"온체인 송금"</string>
   <string name="gt_89cc4ee3c69a3b7e">"온체인 수수료"</string>
@@ -1107,7 +1107,7 @@
   <string name="gt_c5fb1b5d6362edc0">"전송 중 · Ark 라운드 대기 중"</string>
   <string name="gt_a38ba37fd4f8a52a">"전송 중 · 확인 대기 중"</string>
   <string name="gt_b8ed5279e897be5d">"전송 중…"</string>
-  <string name="gt_3e631aab2f131c60">"출금의 다음 단계를 보내거나, 멈춰 있는 단계의 수수료를 올려요. 수수료는 온체인 비트코인에서 나가요. Noah도 알아서 이 작업을 해요."</string>
+  <string name="gt_2e5931bc58a13ec1">"출금의 다음 단계를 보내거나, 멈춰 있는 단계의 수수료를 올려요. 수수료는 온체인 비트코인에서 나가요. 앱이 열려 있는 동안에는 Noah도 알아서 이 작업을 해요."</string>
   <string name="gt_c16bc82bf1f04ede">"보냄"</string>
   <string name="gt_168d6498bc4dd449">"다른 출금이 보냄"</string>
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>

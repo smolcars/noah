@@ -256,7 +256,7 @@ internal class OnchainOperations(
                     val refusedStart = try { wallet.start(reviewed.ids); null } catch (error: BarkError) { refusal(error, reviewed.ids) ?: throw error }
                     runCatching { newRun(reviewed.ids) }
                     refusedStart?.let { throw it }
-                    OnchainReceipt("Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance.")
+                    OnchainReceipt("Exit started. Noah progresses it while the app is open, paying broadcast and fee-bump fees from your onchain balance.")
                 }
                 OnchainAction.progress -> {
                     val statuses = wallet.progress(reviewed.feeRate)
