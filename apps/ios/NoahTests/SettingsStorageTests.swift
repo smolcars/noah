@@ -84,6 +84,37 @@ struct SettingsStorageTests {
         #expect(try storage.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
     }
 
+    /// Another writer racing a save: writing into our pending file before its rename (it shares the path), or
+    /// replacing the committed file after it. Reads and the next write follow the disk; our values are never
+    /// cached under the other writer's stamp.
+    @Test(arguments: ["write", "rename", "directorySync"])
+    func aConcurrentReplacementDuringASaveIsNeverCachedAsOurs(window: String) throws {
+        final class Race { var armed = false }
+        let directory = FileManager.default.temporaryDirectory.appending(path: "settings-race-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let root = directory.appending(path: "mmkv")
+        let file = URL(fileURLWithPath: root.path + ".native-settings.json")
+        let theirs = NativeSettingsFile.State(values: ["k": "theirs"])
+        let race = Race()
+        let storage = try SettingsStorage(rootPath: root.path, step: { step in
+            guard race.armed, step == window else { return }
+            race.armed = false
+            if step == "write" {
+                let scratch = NativeSettingsFile(file: directory.appending(path: "scratch.json"))
+                try scratch.save(theirs)
+                try Data(contentsOf: scratch.file).write(to: file.appendingPathExtension("pending"))
+            } else {
+                try NativeSettingsFile(file: file).save(theirs)
+            }
+        })
+        race.armed = true
+        try storage.setDurably("ours", forKey: "k")
+        #expect(try NativeSettingsFile(file: file).load() == theirs)
+        #expect(storage.string(forKey: "k") == "theirs")
+        try storage.setDurably("1", forKey: "next")
+        #expect(try NativeSettingsFile(file: file).load().values == ["k": "theirs", "next": "1"])
+    }
+
     @Test func aFailedWriteKeepsTheCommittedValue() throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: "settings-cache-\(UUID())")
         defer { chmod(directory.path, 0o700); try? FileManager.default.removeItem(at: directory) }

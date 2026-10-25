@@ -23,10 +23,11 @@ final class SettingsStorage: @unchecked Sendable {
 
     @MainActor static func bootstrap() {} // MMKV is initialized only if a snapshot needs importing.
 
-    init(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws {
+    /// `step`: the file's fault injection (`NativeSettingsFile.step`), for tests.
+    init(rootPath: String, instanceID: String = SettingsStorage.instanceID, step: @escaping (String) throws -> Void = { _ in }) throws {
         Self.access.lock(); defer { Self.access.unlock() }
         root = URL(fileURLWithPath: rootPath); storeID = instanceID
-        nativeFile = NativeSettingsFile(file: URL(fileURLWithPath: rootPath + ".native-settings.json"))
+        nativeFile = NativeSettingsFile(file: URL(fileURLWithPath: rootPath + ".native-settings.json"), step: step)
         do {
             try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
             if nativeFile.exists || fallback != nil {
@@ -102,7 +103,8 @@ final class SettingsStorage: @unchecked Sendable {
 
     private func load() -> NativeSettingsFile.State {
         if let fallback { return fallback }
-        // Stamped before reading: a write in between leaves a stale stamp, so the next read loads again.
+        // Every write starts here under the lock, so it merges into what's on disk: a changed stamp reloads and
+        // verifies first. Stamped before reading: a write in between leaves a stale stamp, so the next read loads again.
         let stamp = nativeFile.stamp
         if let stamp, let cached = Self.committed[nativeFile.file.path], cached.stamp == stamp { return cached.state }
         do {
@@ -118,10 +120,10 @@ final class SettingsStorage: @unchecked Sendable {
     }
     private func persist(_ state: NativeSettingsFile.State) throws {
         try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try nativeFile.save(state)
+        let stamp = try nativeFile.save(state)
         fallback = nil
-        // Write-through only once the generation is committed (renamed in and synced).
-        if let stamp = nativeFile.stamp { Self.committed[nativeFile.file.path] = (stamp, state) }
+        // Write-through only once committed, under that generation's own stamp; without one the next load verifies.
+        Self.committed[nativeFile.file.path] = stamp.map { ($0, state) }
     }
     func requireHealthy() throws {
         Self.access.lock(); defer { Self.access.unlock() }
