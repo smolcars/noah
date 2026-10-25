@@ -11,10 +11,9 @@ on:
       - "client/ios/SharedAppIntents/NoahAppIntents.swift" # AppIntentTests compares against it
       - ".github/workflows/native-ios.yml"
       - "!**/*.md"
-  # Mainnet and signet build on merges and tags (path filters don't apply to tags).
+  # Merges run the same checks; native-telegram-ios.yml builds signet and mainnet.
   push:
     branches: [master]
-    tags: ["v*"]
     paths:
       - "apps/ios/**"
       - "apps/fixtures/**"
@@ -38,6 +37,8 @@ jobs:
   build-and-test:
     runs-on: blacksmith-6vcpu-macos-27
     timeout-minutes: 25
+    env:
+      NATIVE_IOS_TEMP: /private/tmp/noah-native-ci
     steps:
       - uses: actions/checkout@v6
 
@@ -61,9 +62,6 @@ jobs:
       - name: Install XcodeGen
         run: command -v xcodegen || brew install xcodegen
 
-      - name: Prepare temporary build directory
-        run: echo "NATIVE_IOS_TEMP=$(mktemp -d /private/tmp/noah-native-ci.XXXXXX)" >> "$GITHUB_ENV"
-
       - name: Cache Swift packages
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
@@ -76,21 +74,10 @@ jobs:
         working-directory: apps/ios
         run: xcodegen generate
 
-      # PRs build only Noah-Regtest, in the test step below; the schemes differ only in their xcconfig.
-      - name: Build mainnet and signet schemes without signing
-        if: github.event_name == 'push'
-        working-directory: apps/ios
+      # It boots while the app builds; xcodebuild waits for it.
+      - name: Create test simulator
         run: |
-          for scheme in Noah Noah-Signet; do
-            xcodebuild -project Noah.xcodeproj -scheme "$scheme" \
-              -destination 'generic/platform=iOS Simulator' \
-              -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/apps/ios/build/SourcePackages" \
-              -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" -jobs 2 \
-              ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO build
-          done
-
-      - name: Create dedicated test simulator
-        run: |
+          mkdir -p "$NATIVE_IOS_TEMP"
           runtime=$(xcrun simctl list runtimes -j | python3 -c '
           import json, sys
           runtimes = [r for r in json.load(sys.stdin)["runtimes"] if r["isAvailable"] and
@@ -98,14 +85,11 @@ jobs:
                           for d in r.get("supportedDeviceTypes", []))]
           print(max(runtimes, key=lambda r: tuple(map(int, r["version"].split("."))))["identifier"])
           ')
-          name="Noah CI $(basename "$NATIVE_IOS_TEMP")"
-          echo "$name" > "$NATIVE_IOS_TEMP/simulator-name"
-          xcrun simctl create "$name" com.apple.CoreSimulator.SimDeviceType.iPhone-17 "$runtime" > "$NATIVE_IOS_TEMP/simulator-id"
-          simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
-          xcrun simctl boot "$simulator_id"
-          xcrun simctl bootstatus "$simulator_id" -b
+          xcrun simctl create "Noah CI" com.apple.CoreSimulator.SimDeviceType.iPhone-17 "$runtime" > "$NATIVE_IOS_TEMP/simulator-id"
+          xcrun simctl boot "$(cat "$NATIVE_IOS_TEMP/simulator-id")"
 
-      - name: Run NoahTests
+      # PRs build only Noah-Regtest; a concrete simulator destination builds arm64 only.
+      - name: Build and run NoahTests
         working-directory: apps/ios
         run: |
           simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
@@ -113,20 +97,20 @@ jobs:
           xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
             -destination "platform=iOS Simulator,id=$simulator_id" \
             -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/apps/ios/build/SourcePackages" \
-            -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" -jobs 2 \
+            -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" \
             -parallel-testing-enabled NO -only-testing:NoahTests \
             -resultBundlePath "$NATIVE_IOS_TEMP/NoahTests.xcresult" \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES test
 
       - name: Summarize test results
-        if: always() && env.NATIVE_IOS_TEMP != ''
+        if: always()
         run: |
           if [[ -d "$NATIVE_IOS_TEMP/NoahTests.xcresult" ]]; then
             xcrun xcresulttool get test-results summary --path "$NATIVE_IOS_TEMP/NoahTests.xcresult" > "$NATIVE_IOS_TEMP/NoahTests-summary.json"
           fi
 
       - name: Upload XCTest results
-        if: always() && env.NATIVE_IOS_TEMP != ''
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: native-ios-xcresult
@@ -135,31 +119,3 @@ jobs:
             ${{ env.NATIVE_IOS_TEMP }}/NoahTests-summary.json
           if-no-files-found: error
           retention-days: 7
-
-      - name: Delete dedicated simulator and build directory
-        if: always() && env.NATIVE_IOS_TEMP != ''
-        run: |
-          if [[ -s "$NATIVE_IOS_TEMP/simulator-id" ]]; then
-            simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
-            xcrun simctl list devices -j > "$NATIVE_IOS_TEMP/devices.json"
-            python3 -c '
-          import json, pathlib, sys
-          root = pathlib.Path(sys.argv[1])
-          devices = json.loads((root / "devices.json").read_text())["devices"]
-          device = next(d for group in devices.values() for d in group
-                        if d["udid"] == (root / "simulator-id").read_text().strip())
-          assert device["name"] == (root / "simulator-name").read_text().strip(), device
-          ' "$NATIVE_IOS_TEMP"
-            xcrun simctl shutdown "$simulator_id" || true
-            xcrun simctl list devices -j > "$NATIVE_IOS_TEMP/devices.json"
-            python3 -c '
-          import json, pathlib, sys
-          root = pathlib.Path(sys.argv[1])
-          devices = json.loads((root / "devices.json").read_text())["devices"]
-          device = next(d for group in devices.values() for d in group
-                        if d["udid"] == (root / "simulator-id").read_text().strip())
-          assert device["state"] == "Shutdown", device
-          ' "$NATIVE_IOS_TEMP"
-            xcrun simctl delete "$simulator_id"
-          fi
-          rm -rf "$NATIVE_IOS_TEMP"
