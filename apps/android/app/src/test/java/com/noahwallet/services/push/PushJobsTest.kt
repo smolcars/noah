@@ -97,11 +97,12 @@ class PushJobsTest {
     }
     @Test fun backupReportIsBoundedByItsAllowance() = runBlocking {
         reportAllowance = 100
-        reportBackupWait = { delay(60_000) }
-        val started = System.nanoTime()
+        reportBackupWait = {
+            try { delay(60_000) }
+            catch (cancelled: CancellationException) { events += "report-cancelled"; throw cancelled }
+        }
         jobs.handle(NotificationDataBackupTrigger("k1"))
-        assertTrue((System.nanoTime() - started) / 1_000_000 < 5_000)
-        assertEquals(listOf("open", "backup", "backup-report:k1:true", "log"), events)
+        assertEquals(listOf("open", "backup", "backup-report:k1:true", "report-cancelled", "log"), events)
     }
     @Test fun cancelledBackgroundEntryCannotStartWalletOpen() = runBlocking {
         val work = launch(start = CoroutineStart.UNDISPATCHED) {
