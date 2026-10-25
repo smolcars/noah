@@ -105,7 +105,11 @@ android {
         versionCode = 100
         versionName = "0.2.0"
         // Same ABIs as the RN app; MMKV and bark-bolt-ffi ship no x86 libraries.
-        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        // -PnoahAbis=arm64-v8a narrows a phone-only build (the Telegram signet APK); emulators need x86_64.
+        val abis = providers.gradleProperty("noahAbis").orNull?.split(',')?.map(String::trim)?.filter(String::isNotEmpty)
+            ?: listOf("arm64-v8a", "x86_64")
+        require(abis.isNotEmpty() && abis.all { it in setOf("arm64-v8a", "x86_64") }) { "noahAbis must be arm64-v8a and/or x86_64" }
+        ndk { abiFilters += abis }
     }
 
     flavorDimensions += "version"
