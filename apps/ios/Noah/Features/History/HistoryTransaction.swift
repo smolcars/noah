@@ -43,6 +43,8 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var paymentDescription: String?
     /// The schedule this send paid, joined from the recurring journal.
     var recurring: Recurring?
+    /// The exit (its VTXO ID) this on-chain transaction paid fees for: a fee child bark recorded for it.
+    var exitFeeFor: String?
 
     struct Destination: Codable, Equatable, Sendable {
         var destination: String
@@ -94,7 +96,8 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     }
     /// The label without the canceled prefix.
     var baseLabel: String {
-        switch movementKind {
+        if exitFeeFor != nil { return "Exit fee" }
+        return switch movementKind {
         case "onboard": "Board"
         case "offboard": "Offboard"
         case "exit": "Ark Exit"

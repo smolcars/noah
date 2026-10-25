@@ -497,7 +497,11 @@ actor WalletSession {
     func transactionHistory() async throws -> [HistoryTransaction] {
         try await withOpenWallet { handles in
             let movements = try await handles.wallet.history().filter(HistoryMapping.include).map { HistoryMapping.transaction($0) }
-            let chain = try await handles.onchain.transactions().filter { $0.balanceChangeSats != 0 }.map { HistoryMapping.transaction($0) }
+            // Optional: without bark's exit records a fee child still shows, as a plain on-chain send.
+            let exits = (try? await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)) ?? []
+            let exitFees = HistoryMapping.exitFees(exits.map { Self.exitModel($0) })
+            let chain = try await handles.onchain.transactions().filter { $0.balanceChangeSats != 0 }
+                .map { HistoryMapping.transaction($0, exitFeeFor: exitFees[$0.txid]) }
             return movements + chain
         }
     }

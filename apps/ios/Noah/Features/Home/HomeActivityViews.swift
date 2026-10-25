@@ -99,6 +99,7 @@ struct HomeAvatar: View {
             case .renewal: icon("clock.arrow.circlepath", 16)
             case .incoming: icon("arrow.down", 16)
             case .outgoing: icon("arrow.up", 16)
+            case .exit: icon("rectangle.portrait.and.arrow.right", 16)
             }
         }
         .foregroundStyle(NoahTokens.Colors.foreground)

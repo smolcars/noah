@@ -126,7 +126,17 @@ enum HistoryMapping {
         .init(destination: value.paymentMethod.value, amount_sat: Int64(value.amountSats), paymentMethod: value.paymentMethod.methodType)
     }
 
-    static func transaction(_ chain: WalletTransaction, blockTime: Date? = nil) -> HistoryTransaction {
+    /// Each fee child bark recorded for an exit, in any of its states, by txid: the exit's VTXO ID. Exact, never by amount;
+    /// BDK lists a child only when it moved this wallet's coins.
+    static func exitFees(_ exits: [ExitModel]) -> [String: String] {
+        var fees: [String: String] = [:]
+        for exit in exits {
+            for child in exit.records.flatMap({ $0.transactions ?? [] }).compactMap(\.status.child_txid) { fees[child] = exit.id }
+        }
+        return fees
+    }
+
+    static func transaction(_ chain: WalletTransaction, blockTime: Date? = nil, exitFeeFor: String? = nil) -> HistoryTransaction {
         HistoryTransaction(
             id: "onchain-wallet-\(chain.txid)", type: "Onchain", amount: abs(chain.balanceChangeSats),
             date: HistoryRules.isoDate(blockTime ?? Date(timeIntervalSince1970: 0)),
@@ -136,6 +146,6 @@ enum HistoryMapping {
             source: "onchain-wallet", txid: chain.txid, txHex: chain.txHex,
             onchainFeeSat: chain.onchainFeeSats.map(Int64.init), balanceChangeSat: chain.balanceChangeSats,
             hasOnchainFee: chain.onchainFeeSats != nil, hasConfirmation: chain.confirmation != nil,
-            confirmationHeight: chain.confirmation?.height, confirmationHash: chain.confirmation?.hash)
+            confirmationHeight: chain.confirmation?.height, confirmationHash: chain.confirmation?.hash, exitFeeFor: exitFeeFor)
     }
 }

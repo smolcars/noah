@@ -181,6 +181,7 @@ struct TransactionDetailView: View {
             link(.schedule(recurring.scheduleID), "Repeats", recurring.interval.text(locale: language))
         }
         if transaction.movementKind == "exit" { link(.exit, "Progress", L10n.text("Exit details", locale: language)) }
+        else if let exit = transaction.exitFeeFor { link(.exitProgress(exit), "Progress", L10n.text("Exit details", locale: language)) }
         if let proof = detail.proof {
             line("Proof of payment", proof, mono: true, copy: proof, id: "transaction-detail-preimage")
         }

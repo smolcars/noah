@@ -154,6 +154,8 @@ struct HomeActivityRow: Equatable {
         /// People and addresses: the lowercase initial.
         case initial(String)
         case lightning, chain, recurring, renewal, incoming, outgoing
+        /// An exit's fee: the emergency exit's glyph.
+        case exit
     }
 
     /// How it moved; localized by the row view.
@@ -234,9 +236,9 @@ struct HomeActivityRow: Equatable {
         } else {
             title = transaction.baseLabel
             titleIsVerbatim = false
-            // Board, Offboard and Ark Exit name the operation, so the subtitle says how it moved.
-            kind = ["onboard", "offboard", "exit"].contains(transaction.movementKind) ? kindLabel : nil
-            avatar = lightning ? .lightning : onchain ? .chain : outgoing ? .outgoing : .incoming
+            // Board, Offboard, Ark Exit and Exit fee name the operation, so the subtitle says how it moved.
+            kind = ["onboard", "offboard", "exit"].contains(transaction.movementKind) || transaction.exitFeeFor != nil ? kindLabel : nil
+            avatar = transaction.exitFeeFor != nil ? .exit : lightning ? .lightning : onchain ? .chain : outgoing ? .outgoing : .incoming
         }
 
         let nothingLeft = Self.leftNothing(transaction)

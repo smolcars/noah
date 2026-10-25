@@ -148,6 +148,32 @@ struct ActivityMappingTests {
         #expect(!json.contains("paymentHash") && !json.contains("paymentDescription") && !json.contains("recurring"))
         #expect(HomeActivityRow(row, ownDomain: "x").title == "Ark")
     }
+
+    /// An exit's fee children are named by the txids bark recorded in its states, history included,
+    /// never by amount; a send for the same amount stays a plain on-chain row.
+    @Test func exitFeeChildrenShowAsExitFees() {
+        typealias E = ExitProgressTests
+        let earlier = E.processing([E.tx("root", "awaiting-confirmation", child: "child-1")])
+        let current = E.processing([E.tx("root", "confirmed", height: 101, child: "child-2"), E.tx("leaf", "awaiting-cpfp-broadcast")])
+        let fees = HistoryMapping.exitFees([E.exit("Processing", current, history: [earlier], id: "vtxo-a"),
+                                            E.exit("Start", .init(kind: "start", tip_height: 100), id: "vtxo-b")])
+        #expect(fees == ["child-1": "vtxo-a", "child-2": "vtxo-a"])
+
+        func chain(_ txid: String) -> HistoryTransaction {
+            HistoryMapping.transaction(WalletTransaction(txid: txid, txHex: "", onchainFeeSats: nil, balanceChangeSats: -1_234,
+                                                         confirmation: .init(height: 101, hash: "h101"), isCpfp: true),
+                                       exitFeeFor: fees[txid])
+        }
+        let fee = chain("child-2"), plain = chain("other")
+        let row = HomeActivityRow(fee, ownDomain: "")
+        #expect(fee.exitFeeFor == "vtxo-a" && fee.displayLabel == "Exit fee")
+        #expect(row.title == "Exit fee" && !row.titleIsVerbatim && row.avatar == .exit && row.kind == .onchain)
+        #expect(row.sign == "−" && row.sats == 1_234 && row.status == .done)
+        let detail = ActivityDetail(fee, ownDomain: "")
+        #expect(detail.status == "Sent" && detail.rail == .onchain && detail.fee == nil && detail.chainTxid == "child-2")
+        let other = HomeActivityRow(plain, ownDomain: "")
+        #expect(plain.exitFeeFor == nil && other.title == "Onchain" && other.avatar == .chain)
+    }
 }
 
 /// The recurring journal side of the join (`RecurringExecutor.historyLinks`).
