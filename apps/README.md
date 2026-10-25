@@ -19,10 +19,12 @@ workflow land on `master`, GitHub Actions distributes:
   labelled **Native** with the flavor and commit SHA. Download and install an
   APK over the matching RN app. The workflow run also has a
   `noah-native-android-<sha>` artifact with both APKs.
-- [Native Signet iOS](../.github/workflows/native-signet-ios.yml): an ad-hoc IPA
-  uploaded to Diawi, with its download link posted to the same Telegram topic,
-  labelled **Native** with the commit SHA. Open the link on a registered test
-  device. The run also has a `noah-native-signet-ios-<sha>` IPA artifact.
+- [Native iOS Telegram](../.github/workflows/native-telegram-ios.yml): signet
+  and mainnet ad-hoc IPAs uploaded to Diawi, with their download links posted
+  to the same Telegram topic, labelled **Native** with the flavor and commit
+  SHA. Open a link on a registered test device. The run also has
+  `noah-native-signet-ios-<sha>` and `noah-native-mainnet-ios-<sha>` IPA
+  artifacts.
 
 Maintainers can also use **Run workflow** (`workflow_dispatch`) on either
 workflow. Feature-branch pushes do not distribute builds. RN workflows remain
@@ -51,12 +53,14 @@ has **no certificate/profile/keychain secrets or import steps**: it relies on
 the runner's installed signing identity, unlocked keychain and Xcode account
 for team `AT26Z24V2Q`. The native workflow preserves that arrangement, so the
 runner must also have an Apple Distribution identity and permission to obtain
-ad-hoc profiles for `com.noahwallet.signet` and
-`com.noahwallet.signet.NoahWidgetSignet`, including testers' device UDIDs.
-It runs XcodeGen, archives `Noah-Signet` with **`Release-Signet`**, then exports
-with `method=release-testing` (Xcode's current name for ad-hoc distribution).
+ad-hoc profiles for `com.noahwallet.signet`,
+`com.noahwallet.signet.NoahWidgetSignet`, `com.noahwallet.mainnet` and
+`com.noahwallet.mainnet.NoahWidgetMainnet`, including testers' device UDIDs.
+For each flavor it runs XcodeGen, archives `Noah-Signet` with
+**`Release-Signet`** or `Noah` with **`Release-Mainnet`**, then exports with
+`method=release-testing` (Xcode's current name for ad-hoc distribution).
 Plain `Release` is not a native configuration and breaks package resolution.
-Temporary archives and DerivedData live under `/private/tmp/noah-signet-ci-*`
+Temporary archives and DerivedData live under `/private/tmp/noah-<flavor>-ci-*`
 and are deleted after upload, including on failure.
 
 ## Roll back to React Native

@@ -1,4 +1,4 @@
-name: Native Signet iOS Distribution
+name: Native iOS Telegram (signet and mainnet)
 
 on:
   push:
@@ -6,7 +6,8 @@ on:
     paths:
       - "apps/ios/**"
       - "apps/fixtures/**"
-      - ".github/workflows/native-signet-ios.yml"
+      - ".github/workflows/native-telegram-ios.yml"
+      - "!**/*.md"
   workflow_dispatch:
   # workflow_dispatch only works once this file is on master; until then, label a PR "send-to-telegram".
   pull_request:
@@ -29,6 +30,12 @@ jobs:
     # unlocked keychain and Xcode account/profiles for team AT26Z24V2Q.
     runs-on: macOS
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { flavor: signet, label: Signet, scheme: Noah-Signet, configuration: Release-Signet }
+          - { flavor: mainnet, label: Mainnet, scheme: Noah, configuration: Release-Mainnet }
     steps:
       - uses: actions/checkout@v6
 
@@ -36,13 +43,13 @@ jobs:
         run: command -v xcodegen || brew install xcodegen
 
       - name: Prepare temporary archive directory
-        run: echo "SIGNET_IOS_TEMP=$(mktemp -d /private/tmp/noah-signet-ci-XXXXXX)" >> "$GITHUB_ENV"
+        run: echo "IOS_TEMP=$(mktemp -d /private/tmp/noah-${{ matrix.flavor }}-ci-XXXXXX)" >> "$GITHUB_ENV"
 
       - name: Generate Xcode project
         working-directory: apps/ios
         run: xcodegen generate
 
-      - name: Archive Noah-Signet
+      - name: Archive ${{ matrix.scheme }}
         working-directory: apps/ios
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -50,14 +57,14 @@ jobs:
           SENTRY_PROJECT: react-native
         run: |
           nix shell --inputs-from ../.. nixpkgs#sentry-cli --command xcodebuild \
-            -project Noah.xcodeproj -scheme Noah-Signet -configuration Release-Signet \
+            -project Noah.xcodeproj -scheme "${{ matrix.scheme }}" -configuration "${{ matrix.configuration }}" \
             -destination 'generic/platform=iOS' -jobs 2 -allowProvisioningUpdates \
-            -derivedDataPath "$SIGNET_IOS_TEMP/DerivedData" \
-            -archivePath "$SIGNET_IOS_TEMP/Noah-Signet.xcarchive" archive
+            -derivedDataPath "$IOS_TEMP/DerivedData" \
+            -archivePath "$IOS_TEMP/Noah.xcarchive" archive
 
       - name: Export ad-hoc IPA
         run: |
-          cat > "$SIGNET_IOS_TEMP/ExportOptions.plist" <<'PLIST'
+          cat > "$IOS_TEMP/ExportOptions.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
@@ -68,29 +75,35 @@ jobs:
           </dict></plist>
           PLIST
           xcodebuild -exportArchive -allowProvisioningUpdates \
-            -archivePath "$SIGNET_IOS_TEMP/Noah-Signet.xcarchive" \
-            -exportOptionsPlist "$SIGNET_IOS_TEMP/ExportOptions.plist" \
-            -exportPath "$SIGNET_IOS_TEMP/export"
-          cp "$SIGNET_IOS_TEMP/export/Noah.ipa" "$SIGNET_IOS_TEMP/noah-native-signet.ipa"
+            -archivePath "$IOS_TEMP/Noah.xcarchive" \
+            -exportOptionsPlist "$IOS_TEMP/ExportOptions.plist" \
+            -exportPath "$IOS_TEMP/export"
+          cp "$IOS_TEMP/export/Noah.ipa" "$IOS_TEMP/noah-native-${{ matrix.flavor }}.ipa"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: noah-native-signet-ios-${{ github.sha }}
-          path: ${{ env.SIGNET_IOS_TEMP }}/noah-native-signet.ipa
+          name: noah-native-${{ matrix.flavor }}-ios-${{ github.sha }}
+          path: ${{ env.IOS_TEMP }}/noah-native-${{ matrix.flavor }}.ipa
           if-no-files-found: error
 
       - name: Remove archive and DerivedData
-        if: always() && env.SIGNET_IOS_TEMP != ''
-        run: rm -rf "$SIGNET_IOS_TEMP"
+        if: always() && env.IOS_TEMP != ''
+        run: rm -rf "$IOS_TEMP"
 
   notify:
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { flavor: signet, label: Signet, scheme: Noah-Signet, configuration: Release-Signet }
+          - { flavor: mainnet, label: Mainnet, scheme: Noah, configuration: Release-Mainnet }
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: noah-native-signet-ios-${{ github.sha }}
+          name: noah-native-${{ matrix.flavor }}-ios-${{ github.sha }}
 
       - name: Upload IPA to Diawi and wait for download link
         id: diawi
@@ -99,7 +112,7 @@ jobs:
         run: |
           set -euo pipefail
           response=$(curl -fsS -X POST https://upload.diawi.com/ \
-            -F "token=$DIAWI_TOKEN" -F 'file=@noah-native-signet.ipa')
+            -F "token=$DIAWI_TOKEN" -F 'file=@noah-native-${{ matrix.flavor }}.ipa')
           job=$(jq -er '.job | select(type == "string" and length > 0)' <<< "$response")
           echo "::add-mask::$job"
           for attempt in {1..30}; do
@@ -127,7 +140,7 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           DIAWI_LINK: ${{ steps.diawi.outputs.link }}
         run: |
-          printf 'Native Noah Signet iOS build\nDownload: %s\nCommit: %s\n' \
+          printf 'Native Noah ${{ matrix.label }} iOS build\nDownload: %s\nCommit: %s\n' \
             "$DIAWI_LINK" "$COMMIT_SHA" > message.txt
           curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
