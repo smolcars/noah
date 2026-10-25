@@ -1240,9 +1240,9 @@ production-lifecycle cleanup passed **1 test, zero failures/skips**, 5.226 secon
 Together with storage, **four distinct instrumentation tests passed**. The separate
 pre-schedule setup failure below remains documented and is not counted as passing.
 
-Live receipts: [sender and Ark peer](evidence/live.json),
-[independent CLN receipt](evidence/cln-receipt.json),
-[full JUnit summary](evidence/junit-summary.json).
+Live receipts: sender and Ark peer,
+independent CLN receipt,
+full JUnit summary.
 Exactly **one 1,000-sat Ark send**, sender movement **2**, zero fee, arrived as
 peer movement **1**, +1,000 sats. Exactly **one automatic 1,000-sat BOLT12 send**,
 sender movement **3**, paid **79 sats** in fees: quote 79, captured worst-case
@@ -1258,8 +1258,8 @@ Gboard, native notification intent routing, saving an edited future policy and
 cancelling it back to the empty list. The finish reviewer marked the scoped UI
 **Ship** after the end-date display correction; the documentation check confirmed
 an extension of existing controls/tokens with no new design artifacts. Captures:
-[list](evidence/list.png), [editor](evidence/editor.png),
-[preview/end date](evidence/preview.png), [numeric keyboard](evidence/numeric-keyboard.png).
+list, editor,
+preview/end date, numeric keyboard.
 TalkBack/large-font/dark/tablet/landscape checks were not run. Shared amber-text
 contrast and status-bar clipping are inherited theme/shell drift, not changed here.
 
@@ -1320,7 +1320,7 @@ Disabled only the owned CLN test offer. Immediately before shutdown,
 `adb -s emulator-5590 emu avd name` confirmed **NoahRecurringM7Sol6506**. Closed it
 through the Device panel, verified the serial was absent and its QEMU process had
 exited, then deleted only that AVD; both its `.avd` directory and `.ini` are absent.
-[Cleanup evidence](evidence/device-cleanup.json) records these checks. No build
+Cleanup evidence records these checks. No build
 output was created outside the worktree; logs/public summaries remain under the
 `/tmp/noah-android-recurring-*` prefix. Temporary runtime offer/mining-address files
 were removed. Protected devices and existing Docker service configuration/lifecycle were not changed.

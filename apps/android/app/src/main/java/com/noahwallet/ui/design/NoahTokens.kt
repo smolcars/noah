@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.noahwallet.R
 
-/** Redesign tokens. Prototype: docs/native-rewrite/design/onboarding-v4.html. */
+/** Redesign tokens. */
 object NoahTokens {
     class Palette(
         val background: Color,

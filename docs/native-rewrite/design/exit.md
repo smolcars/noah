@@ -1,6 +1,6 @@
 # Emergency exit redesign: build spec
 
-The user approved this on 2026-10-24, with the decisions below. The interactive prototype is [`exit-v1.html`](exit-v1.html); open it in a browser and play `#demo=1`. Its script holds every size, timing, spring and haptic; read it, don't guess. [`exit-v1-notes.md`](exit-v1-notes.md) covers how bark 0.8.0 exits work (with file:line references), the mapping from bark states to the screen, today's features per platform and the presets. Where this spec, the notes and the prototype differ, this spec wins, then the notes.
+The user approved this on 2026-10-24, with the decisions below. The interactive prototype, `exit-v1.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/exit-v1.html` finds it. [`exit-v1-notes.md`](exit-v1-notes.md) covers how bark 0.8.0 exits work (with file:line references), the mapping from bark states to the screen, today's features per platform and the presets. Where this spec, the notes and the prototype differ, this spec wins, then the notes.
 
 **Useful presets:**
 - screens and phases: `#scr=warn|choose|confirm|progress|claim|list|done&phase=lift|publish|mempool|bump|confirm|wait|claimable|claiming|claimed`;

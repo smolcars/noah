@@ -1,6 +1,6 @@
 # Noah native rewrite — plan (v1, 2026-10-19)
 
-Research behind this plan: [research/](research/README.md). Working checklist: [TODO.md](TODO.md) (the milestone list below is the summary; TODO.md is authoritative).
+RN behaviour inventory: [research/inventory.md](research/inventory.md). Working checklist: [TODO.md](TODO.md) (the milestone list below is the summary; TODO.md is authoritative).
 
 ## Non-negotiables (upgrade safety)
 

@@ -7,7 +7,7 @@ Base `01c25f42`. Android pins **`io.github.niteshbalusu11:bark-bolt-ffi-android:
 40132677901). The AAR (`5f2df6b8…`) and POM (`0d70484d…`) match the release `SHA256SUMS`,
 and Gradle's verification metadata pins both. Every LOAD segment of the arm64-v8a,
 armeabi-v7a and x86_64 `libbark_bolt_ffi.so` is `0x4000`
-([artifact verification](ffi070/artifact-verification.txt)). The built APK carries the
+(artifact verification). The built APK carries the
 AAR's arm64 library byte for byte (`34ed0f7b…`).
 
 - **Typed exit errors.** Read by code (`ExitErrors`), never by message. Never-exitable
@@ -50,21 +50,21 @@ AAR's arm64 library byte for byte (`34ed0f7b…`).
 cd apps/android && nix develop -c ./gradlew testRegtestDebugUnitTest assembleRegtestDebugAndroidTest
 ```
 
-See [JUnit totals](ffi070/junit-summary.json).
+See JUnit totals.
 
 **Live checks on `noah-bark08`** (owned AVD `noah-ffi-phone`, API 35 arm64, emulator-5594;
 the host acted only through `docker exec` and mined blocks 1282–1285;
-[live summary](ffi070/live-summary.json)):
+live summary):
 
 | Check | Result |
 | --- | --- |
 | In-place upgrade | `Ffi060UpgradeLiveTest` on the 0.6.0 build (`01c25f42`, arm64 `9aff8630…`) created wallet `8e4c145c`, received 10,000 over Lightning, sent 3,000 Ark and 2,000 Lightning. After `adb install -r` of the 0.7.0 build (same signer), `verify` matched the fingerprint, all 3 movements before and after a sync, 4,797 spendable, migration 42 and schema hash `ce937661…` |
 | Auto-board with a claimed coin | Core paid 30,000 (written to the claimed set, as a claim to this phone does) and 60,000, confirmed in 1282. `Ffi070LiveTest auto-board` ran the production `AutoBoardReview` and `executeOnchain`: one review of 54,845 whose only input is the deposit, 35,000 left on-chain (30,000 claimed + 5,000 reserve). Board `336504f5…` (154 vB, fee 155) confirmed in 1283 and completed after 1285; Ark spendable 4,797 → 59,312; the claimed coin is still unspent |
-| "All" estimate | The whole-wallet estimate returned and excluded the 210-sat dust VTXO. Noah's All was the 54,515 board VTXO (the 3,335 and 1,252 ones cost more than they're worth): ~3,316 network, ~1,295 claim at 10 sat/vB, 1 transaction. The app's Choose VTXOs page showed the same ([screenshot](ffi070/choose-all.png)) |
+| "All" estimate | The whole-wallet estimate returned and excluded the 210-sat dust VTXO. Noah's All was the 54,515 board VTXO (the 3,335 and 1,252 ones cost more than they're worth): ~3,316 network, ~1,295 claim at 10 sat/vB, 1 transaction. The app's Choose VTXOs page showed the same (screenshot) |
 
 "Renew first" needs a non-standard VTXO above dust, which this stack doesn't make
 cheaply; `ExitGalleryTest`'s `choose-renew` scene shows it on the same emulator from
-fixtures ([screenshot](ffi070/choose-renew.png)). Uncertain boards and the submit
+fixtures (screenshot). Uncertain boards and the submit
 re-checks were not reproduced live (no reorg or failed checkpoint on the shared stack);
 JVM tests cover them. Home again showed "Backup failed"; not investigated here (the 0.6.0
 run traced the same message to the stack's server).
@@ -75,7 +75,7 @@ Base `f42f175d`. Android pins **`io.github.niteshbalusu11:bark-bolt-ffi-android:
 (Bark 0.8.0, `lib-0.8.0` `959a489f`, tag `b5aed0bb`). The AAR (`4e6582c8…`) and POM
 (`80920813…`) match the release `SHA256SUMS`, and Gradle's verification metadata
 pins both. Every LOAD segment of the arm64-v8a, armeabi-v7a and x86_64
-`libbark_bolt_ffi.so` is `0x4000` ([artifact verification](ffi060/artifact-verification.txt)).
+`libbark_bolt_ffi.so` is `0x4000` (artifact verification).
 The built APK carries the AAR's arm64 library byte for byte.
 
 - **Lightning options.** Invoice and offer sends pass
@@ -115,7 +115,7 @@ The built APK carries the AAR's arm64 library byte for byte.
   `scripts/check-regtest-endpoints.sh`), and only
   the regtest branch of `WalletConfiguration.base` / `ArkInfoEndpoints` reads them.
   With both flags passed, mainnet and signet debug/release BuildConfig stay empty
-  ([evidence](ffi060/regtest-overrides.txt)). For `noah-bark08`:
+  (evidence). For `noah-bark08`:
   `-PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443
   -PnoahRegtestServerURL=http://10.0.2.2:13000`.
 
@@ -131,7 +131,7 @@ nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:t
 ```
 
 **3,818 tests / 179 suites, zero failures, errors or skips**; instrumentation APK
-assembled (2m 21s) ([JUnit totals](ffi060/junit-summary.json)). New:
+assembled (2m 21s) (JUnit totals). New:
 `SendMovementIdentityTest` (returned id survives restart for Ark / offboard /
 `sendOnchain` without reconciliation; metadata only on the exact new id; offboard id
 and txid must agree; pre-0.6.0 journals keep txid and candidate matching; a recurring
@@ -157,7 +157,7 @@ The app UI then opened on Home (207,180 sats; the 8,000-sat row labelled from it
 repeat metadata). The Debug screen listed "Get Debug Info" after "Get Ark Info" and
 its Result showed the three fields; no screenshot of it was kept, and the app log
 files and logcat (95,748 lines) had no xpub or mailbox id.
-[Live summary](ffi060/live-summary.json).
+Live summary.
 
 **In-place upgrade.** A scratch copy of `f42f175d` (0.5.0, arm64 library from the
 verified 0.5.0 AAR) plus only the regtest-override commit and
@@ -198,7 +198,7 @@ the attempt's snapshot already held that movement id, so
 Successful −1,000 row dated at the first attempt, with "Ark fee ₿0" (the reused
 movement's fee field stays 0 while its effective change is −1,079). A retry that
 failed again showed "Payment failed" correctly, and the third try again read
-"Invoice already paid". No double payment. [Evidence](ffi060/invoice-retry.json).
+"Invoice already paid". No double payment. Evidence.
 
 The LND–CLN link was held down only during the three failing attempts, with
 repeated `lncli disconnect` calls (CLN redials within ~2 s); no channel was closed
@@ -464,7 +464,7 @@ Funded once with **20,000 Ark sats** and two onchain outputs of **60,000 + 40,00
 sats**. Exactly **two blocks** were mined to confirm funding; no outgoing-payment
 confirmations were mined. Signed sends used production Compose, WalletSession,
 SDK, controller and durable journal. Public evidence is in
-[`evidence.json`](evidence.json); no seed, invoice, preimage or database is included.
+`evidence.json`; no seed, invoice, preimage or database is included.
 
 - **Ark:** amount-first keypad → recipient → fee review → Confirm. Sent
   **1,000 sats**, zero fee. The journal persisted `submitReturnedArkSuccess`;
@@ -605,7 +605,7 @@ verification logs and screenshots remain under the documented `/tmp` prefix.
 Android now pins verified release `68b88c73` / **0.5.0**. The supplied AAR and POM
 SHA-256 values match downloaded bytes; all four LOAD segments in each of
 arm64-v8a, armeabi-v7a and x86_64 are `0x4000`.
-[Artifact verification](ffi050/artifact-verification.txt).
+Artifact verification.
 
 Ark→onchain `sendOnchain` / offboard receipts now query `Wallet.transactionStatus`
 by the exact returned txid. They show **Not yet seen by the network**, **In mempool**,
@@ -630,10 +630,10 @@ shown in the receipt is **2,580 sats**; Core's funding transaction fee is **1,85
 sats**, vsize **185**. These are different fee scopes; offboards retain the existing
 movement-fee receipt convention.
 
-[Mempool receipt](ffi050/offboard-mempool.json), [visible sheet](ffi050/offboard-mempool.png),
-[Core mempool entry](ffi050/offboard-getmempoolentry.json),
-[confirmed receipt](ffi050/offboard-confirmed.json), [visible confirmation](ffi050/offboard-confirmed.png),
-[Core confirmation](ffi050/offboard-confirmed-core.json). Core evidence contains
+Mempool receipt, visible sheet,
+Core mempool entry,
+confirmed receipt, visible confirmation,
+Core confirmation. Core evidence contains
 amounts, txids, outpoints and statuses, without signed transaction bytes.
 
 Prepared amount/MAX boarding, exact Core comparisons, Auto-Board reserve,
@@ -647,7 +647,7 @@ nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:t
 ```
 
 **1,376 tests in 63 suites passed; zero failures, errors or skips**, with APK
-assembly successful (**59 seconds**). [JUnit totals](ffi050/junit-summary.json).
+assembly successful (**59 seconds**). JUnit totals.
 Earlier targeted Send/M6/session verification passed **820 tests**, and the final
 M6 model/operation checks and instrumentation-source compilation passed. A final
 receipt-only display addition (showing the prepared Ark fee/net/total alongside
@@ -668,9 +668,9 @@ phone, iOS, server, RN or recurring-payment code was changed.
 
 The fingerprint-scoped live harness passed **6 stage executions**, zero failures/skips: create, auto-review, cancel-cycle, cancel-reopen, offboard and offboard-status. The last stage reopened the final APK and retained the same txid / Confirmed at block 629 receipt. The two board submissions and Auto-Board decline also ran through the real Compose UI.
 
-Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. [Cleanup evidence](../ExitTests/ffi050/device-cleanup.txt).
+Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. Cleanup evidence.
 
-Final chain-status guard verification: **3 targeted SendChainStatusTest cases passed**, including absent/mempool evidence preserving unresolved locks; APK rebuilt successfully in 6 seconds. The full suite was not repeated. [Build log](ffi050/gradle-chain-guard.log).
+Final chain-status guard verification: **3 targeted SendChainStatusTest cases passed**, including absent/mempool evidence preserving unresolved locks; APK rebuilt successfully in 6 seconds. The full suite was not repeated. Build log.
 
 ## 0.5.0 review fixes, round 1 — durable receipt before status
 

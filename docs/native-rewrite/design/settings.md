@@ -1,6 +1,6 @@
 # Settings redesign: build spec
 
-Approved by the user on 2026-10-23, with the decisions below. The interactive prototype is [`settings-v1.html`](settings-v1.html); open it in a browser. Its script holds every size, timing, spring and haptic; read it, don't guess. The feature inventory, presets and design choices are in [`settings-v1-notes.md`](settings-v1-notes.md). Where this spec, the notes and the prototype differ, this spec wins, then the notes.
+Approved by the user on 2026-10-23, with the decisions below. The interactive prototype, `settings-v1.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/settings-v1.html` finds it. The feature inventory, presets and design choices are in [`settings-v1-notes.md`](settings-v1-notes.md). Where this spec, the notes and the prototype differ, this spec wins, then the notes.
 
 Useful URL presets: `#scr=<screen>&dev=iphone|duo|android|fold&theme=light|dark&state=<state>&still=1`. The full list of screens and states is in the notes. Examples:
 - `scr=settings&state=attention`;

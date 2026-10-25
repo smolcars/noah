@@ -24,7 +24,7 @@ import java.util.Locale
 
 /**
  * Debug-only Activity fixtures: public sample data for galleries and device tests, after the prototype's sets
- * (docs/native-rewrite/design/activity-v1.html). Never a real wallet. States: everyday, busy, empty, loading, error.
+ * (activity-v1, now only in git history). Never a real wallet. States: everyday, busy, empty, loading, error.
  */
 object ActivityFixtures {
     private const val minute = 60_000L

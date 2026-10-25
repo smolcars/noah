@@ -1,8 +1,0 @@
-
-> Task :app:packageRegtestDebug
-> Task :app:createRegtestDebugApkListingFileRedirect
-> Task :app:assembleRegtestDebug
-
-BUILD SUCCESSFUL in 3m 59s
-46 actionable tasks: 22 executed, 24 up-to-date
-Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html

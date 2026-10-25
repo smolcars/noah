@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The onboarding tree scene, ported from `drawWelcome`, `drawCreate`,
 /// `drawRestore` and `drawConveyor` in
-/// docs/native-rewrite/design/onboarding-v4.html. Positions and timings are
+/// the onboarding-v4 prototype (now only in git history). Positions and timings are
 /// the prototype's (design points on a 393-pt-wide phone, seconds).
 /// Decorative only: it never draws text and is hidden from VoiceOver.
 enum TreeScene {

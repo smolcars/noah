@@ -1,6 +1,6 @@
 # Send and Receive redesign: build spec
 
-Approved by the user on 2026-10-22. The interactive prototype is [`send-receive-v3.html`](send-receive-v3.html); open it in a browser. Its script holds every size, timing, spring and haptic; read it, don't guess. Where this spec and the prototype differ, the spec wins.
+Approved by the user on 2026-10-22. The interactive prototype, `send-receive-v3.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/send-receive-v3.html` finds it. Where this spec and the prototype differ, the spec wins.
 
 Useful URL presets:
 - Send: `#v=amount|to|method|review|sending&to=maya|lucas|bob|inv|chain|req&out=ok|slow|fail`

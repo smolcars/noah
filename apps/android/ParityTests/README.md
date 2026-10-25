@@ -50,7 +50,7 @@ handoff wiring.
   exporting a phrase, and a live Receive-request → QR paste → Send route without
   submitting a payment.
 
-The requested full command is recorded in `evidence/gradle-final.log`:
+The requested full command:
 
 ```sh
 nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
@@ -60,7 +60,7 @@ Final results: **2,860 JUnit tests / 79 suites**, zero failures/errors/skips;
 regtest debug APK built. The final parity instrumentation run has eight passes
 and one opt-in setup skip; setup passes separately, and the two connector checks
 pass in their fresh process: **11 distinct executed device checks, zero failures**.
-Sixteen PNG screenshots are indexed in `evidence/results.json`. The owned AVD's
+Sixteen PNG screenshots were captured. The owned AVD's
 identity was confirmed before shutdown; absence/closed console port was confirmed
 before deletion, and both AVD files were confirmed removed afterwards.
 
@@ -92,8 +92,7 @@ Update-required, completed boarding, and pending-round UI use explicit public
 fixtures; no funded boarding/round or real physical push-delivery claim is made.
 Visual design remains the existing native styling.
 
-See `evidence/results.json` for final counts and `evidence/device-cleanup.txt` for
-AVD identity, shutdown and deletion. PNG evidence includes live Home/privacy,
+PNG evidence included live Home/privacy,
 battery launch/system dialog, QR code/missing/scan/Send routing, notification
 requirement, status banners, pending-round details, and UnifiedPush selection/retry.
 
@@ -201,8 +200,8 @@ no policy exemptions or suppression were added. Baseline PID **5341**, changed
 APK PID **6098**. Counts vary with StrictMode's stack deduplication and workload;
 the earlier 37-violation sample above is historical, not this funded baseline.
 
-[Per-flow logs and numeric results](evidence/main-thread-io/results.json),
-[complete IO call-site inventory with file and line](evidence/main-thread-io/call-sites.json).
+Per-flow logs and numeric results,
+complete IO call-site inventory with file and line.
 Empty after-log files contain one newline; the results retain their live PID and
 sampling window. The installed APK SHA-256 matched the assembled APK:
 `f247dce337d81c315b0174308546fa8bf69c7ef6cb80135b6a69b97ea0ae2f7e`.
@@ -244,15 +243,15 @@ nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:t
 ```
 
 **2,891 tests / 84 suites passed**, zero failures/errors/skips; APK assembly passed
-in the same **56-second** Gradle run. [Full log](evidence/main-thread-io/gradle-final.log),
-[JUnit totals](evidence/main-thread-io/junit-summary.json). Targeted iteration:
+in the same **56-second** Gradle run. Full log,
+JUnit totals. Targeted iteration:
 596 Send/session cases; 2,050 payment cases; 2,053 payment/widget-value cases;
 then all 15 pending-load/write/foreground cases, each with zero failures/errors/skips.
 All Gradle invocations used `--max-workers=2`; Android-test APK assembly also passed.
 
 Device checks: private seed-free setup **1 pass**, funded/boarded wallet verification
 **1 pass**, and held widget IO + provider-key compatibility **2 passes / zero
-failures/skips** ([widget log](evidence/main-thread-io/widget-device.log)). The first
+failures/skips** (widget log). The first
 funding harness timed out waiting for confirmation before any boarding marker or
 outgoing payment existed. Funding was inspected, confirmed once, and setup resumed
 on the same wallet; no funding transaction or board was repeated.
@@ -265,7 +264,7 @@ checked on device. Nothing remains open in the requested main-thread-IO scope.
 Cleanup: immediately before shutdown, `adb -s emulator-5590 emu avd name` returned
 **NoahMainThreadIO5590**. The Device panel shut down that AVD; its serial was absent
 and both ports **5590/5591** were closed before `avdmanager delete avd`. Its `.avd`
-directory and `.ini` were then confirmed absent. [Cleanup checks](evidence/main-thread-io/device-cleanup.json).
+directory and `.ini` were then confirmed absent. Cleanup checks.
 
 ## Launch-threading review regressions (base `1d9aff5d`)
 
@@ -299,7 +298,7 @@ after its fix: `RecurringSettlementTest` (paid A versus failed B),
 `WidgetSnapshotTest` cases failed with the old six-getter reader and pass with
 concurrent commit/clear using the snapshot reader. The permanent suites also cover
 settlement policy/wallet/latch changes, clear/override delayed at reservation and
-identity boundaries, and stale preparation. [Red logs and verification summary](evidence/threading-regressions/verification.json).
+identity boundaries, and stale preparation. Red logs and verification summary.
 
 The final targeted run passed **2,106 tests / 38 suites**, zero failures/errors/
 skips, and assembled both APKs. All Gradle invocations used `--max-workers=2`.
@@ -325,7 +324,7 @@ StrictMode disk reads / disk writes / network were **0 / 0 / 0 in every sample**
 Each sample clears only the owned device's logcat, performs the action, verifies
 the app remains alive, and counts `StrictMode policy violation` headers only where
 PID and TID both equal the live app PID. Debug disk-read/write/network detection
-and `penaltyLog()` remain enabled with no exemptions. [Per-flow counts and windows](evidence/threading-regressions/strictmode.json).
+and `penaltyLog()` remain enabled with no exemptions. Per-flow counts and windows.
 Zero-violation logs contain one newline. The first agent-device open hit a stale
 session for a previously deleted AVD on 5598; after verifying the current AVD's
 identity, only that stale automation session was released and measurement resumed.
@@ -333,7 +332,7 @@ identity, only that stale automation session was released and measurement resume
 Cleanup verified **NoahThreadingRegression5598** immediately before Device-panel
 shutdown, then confirmed the serial absent, QEMU process exited and ports
 **5598/5599 closed before deletion**. Both its `.avd` directory and `.ini` were
-confirmed absent afterwards. [Cleanup receipt](evidence/threading-regressions/device-cleanup.json).
+confirmed absent afterwards. Cleanup receipt.
 No other device/emulator/simulator or Docker was operated. No iOS, server, client,
 or MMKV opening/recovery code changed. No funded payment, induced process crash,
 power loss or launcher-hosted widget rendering is claimed; money-path races and
@@ -347,8 +346,8 @@ nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:t
 ```
 
 **2,899 tests / 88 suites passed**, zero failures/errors/skips; regtest APK assembly
-passed in the same **1m 8s** run. [Full log](evidence/threading-regressions/gradle-final.log),
-[per-suite counts](evidence/threading-regressions/junit-summary.json).
+passed in the same **1m 8s** run. Full log,
+per-suite counts.
 All four reported findings are fixed. Funded settlement and crash safety are
 covered deterministically here; this run does not repeat the historical funded
 StrictMode scenario or induce real power loss.

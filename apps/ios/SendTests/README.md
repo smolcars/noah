@@ -7,7 +7,7 @@ Base `01c25f42`. iOS pins **exactVersion 0.7.0** (Bark still 0.8.0, `lib-0.8.0`
 CI run 40132677901, all jobs green). The SPM checkout's `Package.swift` hashes
 `dda94992…` and the resolved XCFramework archive `fe1b17f7…`; both match the
 release `SHA256SUMS`, GitHub's asset digests and SPM's artifact-source record
-([artifact evidence](evidence/ffi070-artifact.json)). SwiftPM was warmed with
+(artifact evidence). SwiftPM was warmed with
 `swift package --disable-keychain resolve` in a scratch package, as for 0.6.0.
 
 - **Typed exit errors.** Never-exitable codes offer no "Continue without
@@ -55,7 +55,7 @@ Base `fe4296dd`. iOS pins **exactVersion 0.6.0** (Bark 0.8.0, `lib-0.8.0`
 `959a489f`) at `b5aed0bb88a794483e3e0932a5f0dacf3de7c9e7`. The SPM checkout's
 `Package.swift` hashes `5816d1c4…` and the resolved XCFramework archive
 `72c95272…`; both match the release `SHA256SUMS` and SPM's artifact-source record
-([artifact evidence](evidence/ffi060-artifact.json)). SwiftPM was warmed with
+(artifact evidence). SwiftPM was warmed with
 `swift package --disable-keychain resolve` in a scratch package, because Xcode's
 own download waits on a keychain prompt.
 
@@ -264,7 +264,7 @@ the app's SPM `Package.resolved` is now tracked. The SPM checkout's manifest has
 cached XCFramework archive hashes
 `d9b3b1e74d31d92412f1dac06a38c338c834a962846f560f745922678f155e27`.
 Both match the release `SHA256SUMS` and SPM's artifact-source record.
-[Artifact evidence](evidence/ffi050-artifact.json).
+Artifact evidence.
 The migration guide and Plan 23 were fetched into a fresh `mktemp` directory and
 read as untrusted data. Contract sources:
 [migration](https://github.com/smolcars/bark-bolt-ffi/blob/v0.5.0/docs/migration.md#prepared-boarding-and-stored-exits-v050),
@@ -287,7 +287,7 @@ expiry, post-acceptance persistence cleanup and failed-cleanup ownership, reserv
 re-preparation, stale/foreign/edited reviews, late review/readiness invalidation,
 chain-status recovery/error/reorg/lock checks, terminal exit mapping, existing
 claim/journal/override, prepared Send, Send round-7 and discard regressions.
-[Final targeted summary](evidence/ffi050-targeted-final-summary.json).
+Final targeted summary.
 An earlier focused run passed **48 tests / 53 executions in 11 suites**; the first
 build caught actor-isolated assertions, corrected before any test execution.
 
@@ -296,13 +296,13 @@ Full `NoahTests` ran **once** after the final source/test changes: **452 total,
 433 passed, 19 explicitly gated skips, zero failures, 98 suites**; expanded device
 execution is **577 passed / 19 skipped**. XcodeGen ran immediately before the
 signed arm64 run, with `ONLY_ACTIVE_ARCH=YES`, two jobs and disabled parallel
-execution. [Full summary](evidence/ffi050-full-summary.json).
+execution. Full summary.
 
 Cleanup: verified the owned simulator's exact name, UDID and iPhone 17 type,
 shut it down through T3, rechecked **Shutdown**, deleted only that simulator and
 verified absence. Removed its `/private/tmp/noah-ffi-v050-dd` and **all 14 owned
 `.xcresult` bundles**, retaining public summaries/evidence in the repo.
-[Cleanup evidence](../ExitTests/evidence/ffi050-cleanup.json). No protected
+Cleanup evidence. No protected
 simulator, Android emulator, physical device or Docker lifecycle was changed.
 
 Live verification used only **Noah FFI 050 Sol c8d6719b**, iPhone 17 / iOS 27.0,
@@ -315,7 +315,7 @@ advanced independently. The opt-in `FFI050LiveTests.acceptance()` harness showed
 the production review, and host clicks approved the actual amount/MAX/Auto-Board
 and Ark→onchain Send confirmations. All **nine final live stages passed** (one test
 each); a supplemental stage first ran against a stale binary, failed before any
-mutation, then passed after rebuilding. [Live summaries](evidence/ffi050-live-summary.json).
+mutation, then passed after rebuilding. Live summaries.
 
 Exact app review versus independent Core `getmempoolentry` / funding outputs:
 
@@ -323,21 +323,21 @@ Exact app review versus independent Core `getmempoolentry` / funding outputs:
   **155**, total leaving **30,155 sats**, **154 vB / 1 input**. Core: output
   **30,000 sats**, fee **155 sats**, **154 vB**, same funding outpoint and txid
   `ab6867afa617a02d25a0b000c85002f1b742d3cb54517b975301adce610f0c23`.
-  [Review](evidence/ffi050-amount-review.json), [receipt](evidence/ffi050-amount-receipt.json),
-  [Core](evidence/ffi050-amount-core.json), [mempool](evidence/ffi050-amount-mempool.json).
+  Review, receipt,
+  Core, mempool.
 - **MAX:** confirmed **269,845**, gross **269,733**, net **269,363**, Ark fee
   **370**, onchain fee **112**, total leaving **269,845 sats**, **111 vB / 1 input**.
   Core: its sole output is **269,733 sats**, fee **112 sats**, **111 vB**, same
   reviewed input and txid `ee416cb3ae37549bda13555587e09260e13cb0920ca94f6926ef372931299940`.
-  [Review](evidence/ffi050-max-review.json), [receipt](evidence/ffi050-max-receipt.json),
-  [Core](evidence/ffi050-max-core.json), [mempool](evidence/ffi050-max-mempool.json).
+  Review, receipt,
+  Core, mempool.
 - **Auto-Board:** confirmed **60,000**, gross **54,792**, net **54,462**, Ark fee
   **330**, onchain fee **155**, total leaving **54,947**, exact reserve **5,053 sats**,
   **154 vB / 1 input**. Core: funding **54,792**, change **5,053**, fee **155 sats**,
   **154 vB**, same reviewed outpoint and txid
   `a7eece0e3012fb3a5a989d66ba976366a3b4549d67693ccddf43a2ec9751abf8`.
-  [Review](evidence/ffi050-auto-review.json), [receipt](evidence/ffi050-auto-receipt.json),
-  [Core](evidence/ffi050-auto-core.json), [mempool](evidence/ffi050-auto-mempool.json).
+  Review, receipt,
+  Core, mempool.
 
 The amount/MAX txids were absent from Core's mempool before approval. An
 assert-based host check matched all three reviewed txids, fees, sizes, input
@@ -352,13 +352,13 @@ The saved receipt moved **inMempool → confirmed(625)** after exactly one mined
 block, preserving its identity/amount/fee. Core independently reports that txid
 with one confirmation and the **5,000-sat recipient output**; its onchain network
 fee is **1,853 sats** (**185 vB**), distinct from Bark's total receipt fee.
-[Mempool receipt](evidence/ffi050-offboard-mempool.json),
-[confirmed receipt](evidence/ffi050-offboard-confirmed.json),
-[Core mempool](evidence/ffi050-offboard-mempool-core.json),
-[confirmed Core](evidence/ffi050-offboard-confirmed-core.json).
+Mempool receipt,
+confirmed receipt,
+Core mempool,
+confirmed Core.
 A read-only board receipt check also returned **confirmed(621)** with the original
 **155-sat onchain / 330-sat Ark fees**, without sync or resubmission.
-[Board status](evidence/ffi050-board-status.json).
+Board status.
 
 Repeat with `TEST_RUNNER_NOAH_FFI050_STAGE` set to `create`, `amount`, `max`, `auto`,
 `offboard`, `confirmed`, `cancel`, `reopen` or `board-status`; offboard also needs a

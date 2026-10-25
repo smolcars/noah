@@ -1039,5 +1039,5 @@ Rerun from the repository root: `nix develop --command python3 apps/BackupTests/
 The runner owns and removes both devices (Android port 5618), DerivedData and
 results, uses Gradle `--max-workers=2 --no-daemon`, and never operates container
 lifecycle. See the [runbook](../BackupTests/README.md) and
-[movement IDs, transactions, results and limits](../BackupTests/RESULTS.md).
+movement IDs, transactions, results and limits.
 No backup/restore defect was found; production code is unchanged.

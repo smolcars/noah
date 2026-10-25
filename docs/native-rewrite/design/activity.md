@@ -1,6 +1,6 @@
 # Activity redesign: build spec
 
-Approved by the user on 2026-10-23 ("liked the whole thing"), with every open question answered as recommended (see [Decisions](#decisions)). The interactive prototype is [`activity-v1.html`](activity-v1.html); open it in a browser. Its script holds every size, timing, spring and haptic; read it, don't guess. Where this spec and the prototype differ, the spec wins.
+Approved by the user on 2026-10-23 ("liked the whole thing"), with every open question answered as recommended (see [Decisions](#decisions)). The interactive prototype, `activity-v1.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/activity-v1.html` finds it. Where this spec and the prototype differ, the spec wins.
 
 Useful URL presets:
 - States: `#st=everyday|busy|fresh|empty|loading|error`

@@ -72,7 +72,7 @@ nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:t
 contain **216 tests**: 187 fixtures + 13 journal + 8 operation + 8 model tests;
 there is also an M6 suspension regression in `WalletSessionTest`. APK assembly and
 Android instrumentation-source compilation both passed. Full build: **56 seconds**.
-[JUnit totals](evidence/junit-summary.json), [Gradle result](evidence/gradle-result.txt).
+JUnit totals, Gradle result.
 Afterward, one status-message-only copy correction was compiled/assembled separately,
 and an additional cached active-list assertion passed in the opt-in reopen test.
 No additional full-suite run was made.
@@ -115,19 +115,19 @@ the throwaway wallet created by this task. No seed was printed/exported.
   **208 sats estimated chain fee**, **29,670 sats net**. Submitted txid
   `ac7e596924eaa579766be3bc81240a917a5119e1fb3f2bf51dc876bc7b01a5b4`;
   receipt actual fee **1,543 sats**. Mined exactly three board-confirmation blocks,
-  reaching **460**. [Review](evidence/board-review.png),
-  [receipt](evidence/board-receipt.json), [receipt UI](evidence/board-receipt.png).
+  reaching **460**. Review,
+  receipt, receipt UI.
 - VTXO detail showed Active, **29,670 sats**, expiry **937**, exit delta **144**,
   depth **1**, weight **496 WU**, and matching anchor. VTXO
   `985e933547fdd2883d8f96125ed6946dec4559ea1352354af60c138959502272:0`.
   Reviewed refresh charged **269 sats** and submitted delegated round **1**.
-  Mined one block to **461**. [Detail](evidence/vtxo-detail.png),
-  [refresh receipt](evidence/refresh-receipt.json).
+  Mined one block to **461**. Detail,
+  refresh receipt.
 - Read-only estimate covered refreshed VTXO
   `6f5bc20cd42758d9595bcbf222eb9d2b08974568843c490a7e7539ffab59dd93:0`,
   **29,401 sats**; broadcast estimate **7,630 sats**, claim **1,295 sats**, proceeds
   **28,106 sats**. Exit entries and cached transaction IDs were unchanged.
-  [Estimate](evidence/estimate.json), [deposit sheet](evidence/deposit.png).
+  Estimate, deposit sheet.
 - Native start review explicitly showed estimates and automatic progression consent.
   Without manual progress, the daemon broadcast parent
   `f273402a19de72335595d407d338a40fdb65cb0e801602cb787a1f5bc7d15c4a`
@@ -135,41 +135,41 @@ the throwaway wallet created by this task. No seed was printed/exported.
   Mined one block to **462**. It then broadcast final exit tx
   `6f5bc20cd42758d9595bcbf222eb9d2b08974568843c490a7e7539ffab59dd93`
   with child `22c7ba7c1dd1bc1fe6b9a8a59e28a19af8ccabccddc857dd569b3f90e2b61645`.
-  Mined one more block to **463**. [Start review](evidence/start-review.png),
-  [receipt](evidence/start-receipt.json), [automatic progression](evidence/status-processing.json).
+  Mined one more block to **463**. Start review,
+  receipt, automatic progression.
 - Waiting status persisted claimable height **607**. Mined exactly **144** blocks,
   then ran reviewed manual Progress Exits. State became Claimable at **607**.
-  [Waiting](evidence/status-waiting.json), [claimable](evidence/status-claimable.json).
+  Waiting, claimable.
 - Claimed to a newly-generated address in the same wallet, with built/reviewed fee
   **1,295 sats**, txid
   `3c4528a69d512f3544ee215615aff72becc8dc01227071304b60ee1e749c09d6`.
   Mined one block to **608**. Reopened direct status was Claimed with retained
   Started → Processing → Waiting → Claimable → Claimed timeline.
-  [Claim](evidence/claim.json), [terminal status](evidence/claimed.json).
+  Claim, terminal status.
 - A second reviewed board used **30,000 gross / 29,670 net** sats; txid
   `306f0ffd487108a16bde8817b990b095a4616a81a28730c843f391a339efbffd`.
   Actual chain fee **2,120 sats**, again versus the **208-sat** estimate.
   Mined three blocks to **611**. Started then canceled VTXO
   `964a66817e359bc11407f1ea088814fdcba94ca6a43965e742b2a78085d98cdf:0`
   with the test daemon disabled. Separate-process reopen retained Canceled and
-  Started → Canceled at **611**. [Board](evidence/cancel-board.json),
-  [reopen](evidence/cancel-reopen.json).
+  Started → Canceled at **611**. Board,
+  reopen.
 
 The relaunched native Emergency Exit overview displayed both Claimed and Canceled;
 the canceled detail visibly retained **Started → Canceled · Current**, with no
-Cancel action. [Canceled detail](evidence/canceled-detail.png). An additional cached
+Cancel action. Canceled detail. An additional cached
 reopen assertion confirmed the canceled ID was absent from Bark's active list.
 
 Enabled Auto-Board in Settings, returned Home, and observed its confirmation sheet.
 Chose **No, turn off**. The journal's bytes/hash and attempt count were unchanged;
 a newly-composed Settings page showed Auto-Board unchecked. No board was submitted.
-[Prompt](evidence/auto-board-prompt.png), [unchanged journal](evidence/auto-board-decline.json),
-[off state](evidence/auto-board-off.png).
+Prompt, unchanged journal,
+off state.
 
 Cleanup: immediately before shutdown, mapped `emulator-5588` with
 `adb -s emulator-5588 emu avd name` and verified **NoahM6Android2f7e**. Closed its
 Device panel with shutdown enabled, deleted only that AVD, and verified both its
-`.avd` directory and `.ini` were absent. [Cleanup](evidence/device-cleanup.txt).
+`.avd` directory and `.ini` were absent. Cleanup.
 Task-owned temporary SDK/build scratch files outside the worktree were removed;
 public evidence is retained here. Existing Core/server state and unrelated devices
 were left running; the funding deviation above remains recorded.
@@ -229,9 +229,9 @@ failures/errors/skips, and APK assembly passed again. No second full-suite run
 was made. The semantics test inspects role, action, checked/disabled state and
 merged spoken label for both checked states and both enabled states.
 
-Evidence: [full JUnit totals](evidence/m6-fix-junit-summary.json),
-[full Gradle result](evidence/m6-fix-gradle-result.txt),
-[final targeted totals](evidence/m6-fix-final-targeted-summary.json).
+Evidence: full JUnit totals,
+full Gradle result,
+final targeted totals.
 No emulator or physical device was used; no Docker command or funded live
 broadcast was run. Task-owned temporary logs/build scratch outside the worktree
 were deleted. TalkBack/device UI and external destinations were not exercised
@@ -244,7 +244,7 @@ with live funds; ownership/execution use production seams with fake-wallet tests
 This section supersedes the estimated-boarding and app-discovery limitations above.
 Based on native-rewrite `211ecdf2`; Android pins release tag `68b88c73`.
 Published AAR/POM hashes match the supplied SHA256SUMS; every LOAD segment in all
-three ABIs is `0x4000`. [Artifact verification](../SendTests/ffi050/artifact-verification.txt).
+three ABIs is `0x4000`. Artifact verification.
 
 Manual amount boarding now prepares `Amount(gross)`; MAX prepares confirmed-only
 `DrainAll`. Review and submission use the same signed transaction. The review
@@ -298,31 +298,31 @@ Amount txid `fd9bba351987a5b6ce3c8de8f8f4a158535baae8515b1c7e797a8286f5da6f5e`;
 outputs 30,000 funding + 69,845 change. MAX txid
 `cc91a96b393faec7db1edf63b60cedc3181c1543edd0181638b8a4d05b61ff86`;
 one 69,733-sat funding output, no change. Both receipts said In mempool and retained
-the prepared txid/fee. Public evidence: [amount review](ffi050/amount-review.png),
-[journal](ffi050/amount-board.json), [Core mempool](ffi050/amount-getmempoolentry.json),
-[outputs](ffi050/amount-getrawtransaction.json); [MAX review](ffi050/max-review.png),
-[journal](ffi050/max-board.json), [Core mempool](ffi050/max-getmempoolentry.json),
-[outputs](ffi050/max-getrawtransaction.json). Core evidence omits signed bytes.
+the prepared txid/fee. Public evidence: amount review,
+journal, Core mempool,
+outputs; MAX review,
+journal, Core mempool,
+outputs. Core evidence omits signed bytes.
 
 Auto-Board's real Home prompt showed **64,637 gross / 64,307 net**, **330 Ark fee**,
 **155 chain fee**, **154 vB / 1 input**, **64,792 total**, **5,053 reserve** from
 69,845 confirmed. Chose **No, turn off**; Settings was unchecked and the operation
 journal stayed empty. A separate opt-in production preparation verified that same
-reserve and discarded without submission. [Review](ffi050/auto-review.png),
-[prepared values](ffi050/auto-review.json), [unchanged journal](ffi050/auto-declined-journal.json).
+reserve and discarded without submission. Review,
+prepared values, unchanged journal.
 
 The opt-in `Ffi050LiveTest` canceled both boarded VTXOs without a daemon (to win
 before broadcast), asserted their removal from the active list, then reopened in
 a separate instrumentation invocation. It removed Noah's discovery index before
 reading the production overview. Both persisted SDK rows remained: **29,670** and
 **69,403 sats**, **Canceled**, each with **Started → Canceled**. No exit blocks were
-needed. [Cancel cycle](ffi050/cancel-cycle.json), [reopen listing](ffi050/cancel-reopen.json).
+needed. Cancel cycle, reopen listing.
 Claimed terminal rows, exact amounts without a VTXO lookup, and claim-receipt chain
 statuses are tested in JUnit; a fresh live 144-block claim cycle was not repeated.
 
 
 Verification: **1,376 JVM tests / 63 suites, zero failures/errors/skips**, required
-full test + APK build once in **59 seconds**; [full totals](../SendTests/ffi050/junit-summary.json).
+full test + APK build once in **59 seconds**; full totals.
 Targeted Send/M6/session tests previously passed 820 cases. Android instrumentation
 sources compiled. Real preparation/board/receipt/exit evidence above uses an
 explicitly opted-in, fingerprint-checked disposable wallet; fault/crash outcomes
@@ -330,9 +330,9 @@ are deterministic tests rather than induced shared-stack failures.
 
 The fingerprint-scoped live harness passed **6 stage executions**, zero failures/skips: create, auto-review, cancel-cycle, cancel-reopen, offboard and offboard-status. The last stage reopened the final APK and retained the same txid / Confirmed at block 629 receipt. The two board submissions and Auto-Board decline also ran through the real Compose UI.
 
-Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. [Cleanup evidence](ffi050/device-cleanup.txt).
+Cleanup completed: verified `adb -s emulator-5592 emu avd name` was **NoahFfi050Android4978**, shut down that Device-panel device, confirmed its serial absent and ports closed, then deleted its AVD. Both AVD directory and ini are absent. Removed the task-owned SDK download/extraction and scratch files outside this worktree; shared Gradle/Android caches and all other devices/containers remain intact. Cleanup evidence.
 
-Final chain-status guard verification: **3 targeted SendChainStatusTest cases passed**, including absent/mempool evidence preserving unresolved locks; APK rebuilt successfully in 6 seconds. The full suite was not repeated. [Build log](../SendTests/ffi050/gradle-chain-guard.log).
+Final chain-status guard verification: **3 targeted SendChainStatusTest cases passed**, including absent/mempool evidence preserving unresolved locks; APK rebuilt successfully in 6 seconds. The full suite was not repeated. Build log.
 
 ## 0.5.0 review fixes, round 1 — fundable Auto-Board sizing
 

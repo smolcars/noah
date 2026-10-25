@@ -124,8 +124,8 @@ wallet data in verification artifacts.
   height is capped in landscape. Viewport survived force-stop and APK reinstall.
   A finish review caught a phone-sheet marker occlusion; measuring the sheet's
   actual overlap and applying camera padding/target together resolved it. The
-  reviewer cleared the final capture. Evidence: [phone](evidence/phone.png) and
-  [wide](evidence/wide.png).
+  reviewer cleared the final capture. Evidence: phone and
+  wide.
 - Location: initial coarse/fine grants were both false; opening did not prompt.
   My location displayed Android's precise/approximate permission chooser. Denial
   preserved browsing. Approximate-only permission was accepted and requested only
@@ -139,7 +139,7 @@ wallet data in verification artifacts.
   and GeoNames Atlanta search still worked, with a live-update-unavailable message.
   A style-load retry stall found during this check led to the bounded local-style
   fallback; the final APK rendered merchant dots and the nearby list offline.
-  Evidence: [cold offline](evidence/offline.png).
+  Evidence: cold offline.
   Street tiles and uncached merchant details require connectivity.
 
 ### APK size

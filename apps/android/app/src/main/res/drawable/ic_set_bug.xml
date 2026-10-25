@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- docs/native-rewrite/design/settings-v1.html icon; tinted by Icon. -->
+<!-- Settings design icon; tinted by Icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#00000000" android:strokeColor="#FF000000" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M12,8h0a5,5 0 0 1 5,5v2a5,5 0 0 1 -5,5h0a5,5 0 0 1 -5,-5v-2a5,5 0 0 1 5,-5z" />
     <path android:fillColor="#00000000" android:strokeColor="#FF000000" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M12 12v8M7 13H4M20 13h-3M7 17H4.5M19.5 17H17M9 8a3 3 0 0 1 6 0M8 4.5l2 2M16 4.5l-2 2" />

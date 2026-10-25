@@ -61,7 +61,7 @@ import com.noahwallet.ui.onboarding.rememberHaptics
 import com.noahwallet.ui.send.SendPill
 import kotlinx.coroutines.launch
 
-/** Settings' icons (docs/native-rewrite/design/settings-v1.html), with Home's and Activity's where they're the same. */
+/** Settings' icons (from the settings-v1 prototype), with Home's and Activity's where they're the same. */
 internal object SettingsIcons {
     val cloud = R.drawable.ic_set_cloud; val key = R.drawable.ic_set_key; val finger = R.drawable.ic_set_finger
     val coins = R.drawable.ic_set_coins; val chain = HomeIcons.chain; val repeat = HomeIcons.repeat; val exit = R.drawable.ic_set_exit

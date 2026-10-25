@@ -5,7 +5,7 @@
 Approved follow-up adds explicit, separately confirmed unknown-fee start/claim reviews
 and releases only a failed Auto-Board confirmation's newly claimed deposits after
 proof of no submission/journal attempt. Dismissal/expiry alone remain handled.
-[Decisions, implementation and final verification](../../../docs/native-rewrite/parity-audit-wallet-2026-10-21.md#approved-decisions-and-resolved-gaps).
+Decisions, implementation and final verification.
 The historical runs below predate this follow-up.
 
 ## bark-bolt-ffi 0.5.0 review round 2 fixes (2026-10-20)
@@ -102,8 +102,8 @@ Live regtest on owned **Noah FFI 050 Sol c8d6719b**, iPhone 17 / iOS 27.0,
 **Canceled**, exact **11,055 sats**, and **Start** history. A separate test process
 reopened the wallet and verified the same persisted row, direct timeline and
 production overview. No app-side ID journal was written and no blocks were mined
-for this cancel/reopen check. [Cancel evidence](evidence/ffi050-cancel.json),
-[reopen evidence](evidence/ffi050-reopen.json).
+for this cancel/reopen check. Cancel evidence,
+reopen evidence.
 
 Live boarded values, independently matched against Core:
 
@@ -127,19 +127,19 @@ Final targeted run: **66 tests / 89 executions across 15 suites**, zero failures
 skips, including preparation/outcomes/reserve/cleanup, stale readiness,
 chain-status retention/locks, claim destinations, journals/overrides and terminal
 exit mapping. Nine final live stages passed (one gated test each).
-[Targeted summary](../SendTests/evidence/ffi050-targeted-final-summary.json),
-[live summaries](../SendTests/evidence/ffi050-live-summary.json).
+Targeted summary,
+live summaries.
 
 Full `NoahTests` ran **once** after final source/test changes: **452 total,
 433 passed, 19 opt-in skips, zero failures across 98 suites** (**577 passed device
 executions / 19 skipped**). Signed arm64, `ONLY_ACTIVE_ARCH=YES`, XcodeGen before
 run, two jobs, disabled parallel testing and `/private/tmp/noah-ffi-v050-dd`.
-[Full summary](../SendTests/evidence/ffi050-full-summary.json).
+Full summary.
 
 Cleanup completed: exact owned name/UDID/type checked, T3 shutdown, **Shutdown**
 rechecked, only that simulator deleted and absence verified. Removed its
 DerivedData and all **14 task-owned `.xcresult` bundles** after exporting summaries.
-[Cleanup evidence](evidence/ffi050-cleanup.json). Other simulators, emulators,
+Cleanup evidence. Other simulators, emulators,
 physical hardware and Docker lifecycle were untouched.
 
 Earlier sections below retain historical test evidence.
@@ -662,15 +662,15 @@ DerivedData `/private/tmp/noah-m6-fix-8771-dd`.
 **410 tests total: 393 passed, 17 explicitly gated skips, zero failures**, across
 **91 suites**. Parameterized device execution: **520 passed, 17 skipped**.
 `xcresulttool get test-results summary` confirms the counts. Evidence:
-[targeted summary](evidence/m6-fix-targeted-summary.json),
-[full summary](evidence/m6-fix-full-summary.json).
+targeted summary,
+full summary.
 
 Owned simulator **Noah M6 Fix Sol 8771**, iPhone 17 Pro, iOS 27.0,
 UDID `4A201247-BD68-457C-974E-51C243FABEB5`. T3's Device service rejected this
 newly-created UDID twice as unknown, so Xcode targeted it directly after simctl
 confirmed its identity. After testing, its exact name/type/UDID were checked,
 it was shut down, **Shutdown** was rechecked, and only that UDID was deleted;
-absence was verified. [Cleanup evidence](evidence/m6-fix-device-cleanup.json).
+absence was verified. Cleanup evidence.
 Task-owned DerivedData, result bundles and build/log scratch outside the worktree
 were deleted after retaining these summaries. No other device or Docker command
 was used.

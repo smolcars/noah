@@ -1,9 +1,7 @@
 # Home redesign: build spec
 
-Approved by the user on 2026-10-22. The interactive prototype is
-[`home-v2.html`](home-v2.html); open it in a browser. Its script holds every
-timing, size and haptic: read it, don't guess. URL presets such as
-`#st=busy&dev=duo&theme=dark` open a given state. The principles, tokens,
+Approved by the user on 2026-10-22. The interactive prototype, `home-v2.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/home-v2.html` finds it.
+The principles, tokens,
 springs, haptics and copy rules are the ones in
 [`onboarding.md`](onboarding.md#principles). Where this spec and the
 prototype differ (copy, data rules), the spec wins.

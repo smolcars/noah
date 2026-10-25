@@ -1,7 +1,0 @@
-Before shutdown/deletion: adb -s emulator-5588 emu avd name
-NoahM6Android2f7e
-OK
-
-T3 device_close(shutdown=true) completed for emulator-5588.
-Deleted only NoahM6Android2f7e using avdmanager.
-Verified: owned .avd directory and .ini are absent.

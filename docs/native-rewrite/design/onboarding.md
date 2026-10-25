@@ -1,8 +1,6 @@
 # Onboarding redesign: build spec
 
-Approved by the user on 2026-10-21. The interactive prototype is
-[`onboarding-v4.html`](onboarding-v4.html); open it in a browser. Its
-script holds every timing and position: read it, don't guess.
+Approved by the user on 2026-10-21. The interactive prototype, `onboarding-v4.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/onboarding-v4.html` finds it.
 Tokens live in [`apps/design/tokens.json`](../../../apps/design/tokens.json),
 generated into `NoahTokens.swift` / `NoahTokens.kt` by
 `bun apps/tools/design-tokens.mjs`. Exact line boxes need iOS 26. On iOS
@@ -87,7 +85,7 @@ Design for the iPhone Duo first, then make Android foldables match. The Duo's cl
   - **Tabletop posture (horizontal fold), Android only:** the tree or headline sits on the top half; controls, input and the keyboard on the bottom half.
   - **iOS:** lay out from the window size and system safe area alone.
     - `UIHinge` (iOS 27.1) reports only status and angle, not the fold's orientation or position.
-    - The Duo's fold is vertical down the middle in every recorded pose (`docs/native-rewrite/adaptive-layouts-ios.md`). So a wide window always gets the two-pane split at its centre, whether it's open or half-open, and a narrow one gets the single column.
+    - The Duo's fold is vertical down the middle in every recorded pose. So a wide window always gets the two-pane split at its centre, whether it's open or half-open, and a narrow one gets the single column.
     - There's no iOS tabletop layout and no hinge gutter. Don't add `UIHingeInteraction` unless it drives something visible.
   - **Android:** use the fold bounds from `LocalFoldingFeatures` in `ui/AdaptiveLayout.kt`, which only reports separating folds.
     - `LaunchGateView` wraps onboarding in `avoidHinge()`, which keeps only the larger side of a fold. Onboarding must not sit inside it. Give onboarding the full window and let it split at the reported fold bounds, keeping each pane clear of the hinge.

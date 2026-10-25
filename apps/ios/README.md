@@ -215,5 +215,5 @@ only backup listing/download transport was a local fixture.
 Rerun from the repository root: `nix develop --command python3 apps/BackupTests/run.py`.
 The runner owns and removes both devices (Android port 5618), DerivedData and
 results, and never operates container lifecycle. See the [runbook](../BackupTests/README.md)
-and [movement IDs, transactions, results and limits](../BackupTests/RESULTS.md).
+and movement IDs, transactions, results and limits.
 No backup/restore defect was found; production code is unchanged.

@@ -36,7 +36,7 @@ function swift() {
   p("import SwiftUI");
   p("import UIKit");
   p("");
-  p("/// Redesign tokens. Prototype: docs/native-rewrite/design/onboarding-v4.html.");
+  p("/// Redesign tokens.");
   p("enum NoahTokens {");
   p("    enum Colors {");
   for (const [name, v] of Object.entries(c)) {
@@ -148,7 +148,7 @@ function kotlin() {
   p("import androidx.compose.ui.unit.sp");
   p("import com.noahwallet.R");
   p("");
-  p("/** Redesign tokens. Prototype: docs/native-rewrite/design/onboarding-v4.html. */");
+  p("/** Redesign tokens. */");
   p("object NoahTokens {");
   p("    class Palette(");
   for (const name of Object.keys(c)) p(`        val ${camel(name)}: Color,`);

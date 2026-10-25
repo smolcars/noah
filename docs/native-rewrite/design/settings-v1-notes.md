@@ -1,6 +1,6 @@
 # Settings v1: notes
 
-The prototype is `settings-v1.html`, a self-contained build with the fonts inlined. The source is `settings-v1.src.html`; rebuild it with `python3 settings-tools/build.py /tmp/noah-dev/design`. Screenshots are in `shots/settings-v1-*.png`; `settings-tools/shots.sh [filter]` re-renders them (as `activity-tools/shot.sh` does).
+The prototype, `settings-v1.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/settings-v1.html` finds it.
 
 It is built on Activity v1's frame, tokens, glass, springs, rows, detail rows, sheets, ⋯ menu and wide panes. It also reuses onboarding's name field, availability dot, code boxes and segmented control, and Send's hold to confirm and block row.
 

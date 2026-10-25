@@ -2,7 +2,7 @@
 import SwiftUI
 import UIKit
 
-/// Redesign tokens. Prototype: docs/native-rewrite/design/onboarding-v4.html.
+/// Redesign tokens.
 enum NoahTokens {
     enum Colors {
         static let background = dynamic(light: 0xFFFFFFFF, dark: 0x000000FF)

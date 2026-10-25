@@ -1,8 +1,6 @@
 # Emergency exit v1: notes
 
-The prototype is `exit-v1.html`: a single file with its fonts inlined. Its source is `exit-v1.src.html`. To rebuild it, run `python3 exit-tools/build.py /tmp/noah-dev/design`. To redo the screenshots, run `exit-tools/shots.sh`.
-
-The script holds every size, timing, spring, haptic and number. Read it rather than guessing.
+The prototype, `exit-v1.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/exit-v1.html` finds it.
 
 ## Presets
 
