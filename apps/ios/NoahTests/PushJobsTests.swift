@@ -37,6 +37,26 @@ struct PushJobsTests {
         try JSONDecoder().decode(PushPayload.NotificationData.self, from: Data(json.utf8))
     }
 
+    private func backupTrigger() throws -> PushPayload.NotificationData {
+        try decode(#"{"notification_type":"backup_trigger","notification_k1":"k2"}"#)
+    }
+
+    /// A backup push under a deadline the test reaches itself with `deadlinePassed()`.
+    @MainActor private func execute(_ dispatcher: PushJobs, allowance: Duration, then: @escaping @Sendable () -> Void = {},
+                                    completion: @escaping (Bool) -> Void) throws -> BackgroundExecution {
+        let notification = try backupTrigger()
+        return BackgroundExecution(timeout: .seconds(60), reportAllowance: allowance, completion: completion) {
+            try await dispatcher.handle(notification)
+            then()
+        }
+    }
+
+    @MainActor private func waitUntil(_ condition: @MainActor () async -> Bool) async throws {
+        let limit = ContinuousClock.now + .seconds(5)
+        while !(await condition()), ContinuousClock.now < limit { await Task.yield() }
+        try #require(await condition())
+    }
+
     @MainActor @Test func expiryDuringShieldedMaintenanceStopsReportingAndWidget() async throws {
         let recorder = Recorder()
         let gate = RecurringReservationTests.Gate()
@@ -136,6 +156,125 @@ struct PushJobsTests {
             try await jobs(recorder).handle(decode(#"{"notification_type":"backup_trigger","notification_k1":"k2"}"#))
         }
         #expect(recorder.all == ["open", "backup", "report backup failure k2"])
+    }
+
+    @Test(arguments: [false, true])
+    func backupSettlingAfterTheBudgetIsStillReported(fails: Bool) async throws {
+        let recorder = Recorder()
+        let budget = RecurringSubmissionBudget()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.backup = { recorder.add("backup"); budget.revoke(); if fails { throw Boom() } }
+        var thrown: Error?
+        do {
+            try await RecurringSubmissionBudget.$current.withValue(budget) { try await PushJobs(dependencies: dependencies).handle(backupTrigger()) }
+        } catch { thrown = error }
+        #expect(fails ? thrown is Boom : thrown == nil)
+        #expect(recorder.all == ["open", "backup", "report backup \(fails ? "failure" : "success") k2"])
+    }
+
+    /// Only a settled backup may report after the budget: not one that never started or stopped waiting.
+    @Test(arguments: ["open", "open fails", "backup cancelled"])
+    func backupThatDidNotSettleIsNotReportedAfterTheBudget(stage: String) async throws {
+        let recorder = Recorder()
+        let budget = RecurringSubmissionBudget()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.ensureWalletOpen = {
+            recorder.add("open")
+            if stage.hasPrefix("open") { budget.revoke() }
+            if stage == "open fails" { throw Boom() }
+        }
+        dependencies.backup = { recorder.add("backup"); budget.revoke(); throw CancellationError() }
+        await #expect(throws: (any Error).self) {
+            try await RecurringSubmissionBudget.$current.withValue(budget) { try await PushJobs(dependencies: dependencies).handle(backupTrigger()) }
+        }
+        #expect(recorder.all == (stage == "backup cancelled" ? ["open", "backup"] : ["open"]))
+    }
+
+    @MainActor @Test func reportUnderWayAtTheDeadlineHoldsCompletionUntilItEnds() async throws {
+        let recorder = Recorder()
+        let gate = RecurringReservationTests.Gate()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.reportJob = { _, _, _ in recorder.add("report"); await gate.wait(); recorder.add("reported") }
+        var completed: [Bool] = []
+        let execution = try execute(PushJobs(dependencies: dependencies), allowance: .seconds(60)) {
+            recorder.add("completed"); completed.append($0)
+        }
+        try await waitUntil { await gate.entered }
+        execution.deadlinePassed()
+        #expect(completed.isEmpty)
+        await gate.release()
+        try await waitUntil { !completed.isEmpty }
+        #expect(recorder.all == ["open", "backup", "report", "reported", "completed"])
+        #expect(completed == [false])
+    }
+
+    @MainActor @Test func hungReportStillCompletesAtItsTimeout() async throws {
+        let recorder = Recorder()
+        let gate = RecurringReservationTests.Gate()
+        var dependencies = jobs(recorder).dependencies
+        // Never answers and ignores cancellation.
+        dependencies.reportJob = { _, _, _ in recorder.add("report"); await gate.wait() }
+        var completed: [Bool] = []
+        let execution = try execute(PushJobs(dependencies: dependencies), allowance: .milliseconds(100)) { completed.append($0) }
+        try await waitUntil { await gate.entered }
+        execution.deadlinePassed()
+        try await waitUntil { !completed.isEmpty }
+        #expect(completed == [false])
+        #expect(recorder.all == ["open", "backup", "report"])
+        await gate.release()
+    }
+
+    @MainActor @Test func reportCannotStartOnceThePushHasCompleted() async throws {
+        let recorder = Recorder()
+        let gate = RecurringReservationTests.Gate()
+        var dependencies = jobs(recorder).dependencies
+        // Its success arrives only after the deadline has completed the push.
+        dependencies.backup = { recorder.add("backup"); await gate.wait() }
+        var completed: [Bool] = []
+        let execution = try execute(PushJobs(dependencies: dependencies), allowance: .seconds(60), then: { recorder.add("handled") }) {
+            recorder.add("completed"); completed.append($0)
+        }
+        try await waitUntil { await gate.entered }
+        execution.deadlinePassed()
+        #expect(completed == [false])
+        await gate.release()
+        try await waitUntil { recorder.all.contains("handled") }
+        #expect(recorder.all == ["open", "backup", "completed", "handled"])
+    }
+
+    @MainActor @Test func systemExpiryCancelsAReportUnderWay() async throws {
+        let recorder = Recorder()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.reportJob = { _, _, _ in
+            recorder.add("report")
+            do { try await Task.sleep(for: .seconds(60)); recorder.add("reported") }
+            catch { recorder.add("report cancelled") }
+        }
+        var completed: [Bool] = []
+        let execution = try execute(PushJobs(dependencies: dependencies), allowance: .seconds(60)) { completed.append($0) }
+        try await waitUntil { recorder.all.contains("report") }
+        execution.systemExpired()
+        try await waitUntil { recorder.all.contains("report cancelled") }
+        #expect(completed == [false])
+        #expect(!recorder.all.contains("reported"))
+    }
+
+    @MainActor @Test func reportThatEndsInTimeLeavesTheRestOfThePushAlone() async throws {
+        let recorder = Recorder()
+        let settling = RecurringReservationTests.Gate()
+        var dependencies = jobs(recorder).dependencies
+        // The wallet access wrapper keeps settling after the job, as the live session does.
+        dependencies.withWalletAccess = { operation in try await operation(); await settling.wait(); recorder.add("settled") }
+        var completed: [Bool] = []
+        _ = try execute(PushJobs(dependencies: dependencies), allowance: .seconds(1)) { completed.append($0) }
+        try await waitUntil { await settling.entered }
+        // Past the report's own timeout, which must have been cancelled when it ended.
+        try await Task.sleep(for: .milliseconds(1500))
+        #expect(completed.isEmpty)
+        await settling.release()
+        try await waitUntil { !completed.isEmpty }
+        #expect(completed == [true])
+        #expect(recorder.all == ["open", "backup", "report backup success k2", "settled"])
     }
 
     @Test func heartbeatFailureDoesNotFailTheJob() async throws {

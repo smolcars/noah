@@ -72,9 +72,17 @@ struct PushJobs: Sendable {
             await d.refreshWidget()
 
         case .backupTrigger(let payload):
-            let result = await outcome { try await d.ensureWalletOpen(); try BackgroundExecution.checkActive(); try await d.backup() }
-            try BackgroundExecution.checkActive()
-            await d.reportJob(.backup, result, payload.notificationK1)
+            var attempted = false
+            let result = await outcome {
+                try await d.ensureWalletOpen()
+                try BackgroundExecution.checkActive()
+                attempted = true
+                try await d.backup()
+            }
+            // A backup that settled is reported unless the push has already completed.
+            let settled = attempted && !(result.map(BackupCoordinator.isCancellation) ?? false)
+            if !settled { try BackgroundExecution.checkActive() }
+            await BackgroundExecution.report { await d.reportJob(.backup, result, payload.notificationK1) }
             if let result { throw result }
 
         case .heartbeat(let payload):
