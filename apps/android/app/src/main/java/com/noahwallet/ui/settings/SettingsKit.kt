@@ -71,7 +71,8 @@ internal object SettingsIcons {
     val server = R.drawable.ic_set_server; val doc = R.drawable.ic_activity_doc; val bug = R.drawable.ic_set_bug
     val refresh = R.drawable.ic_activity_refresh; val plus = R.drawable.ic_set_plus; val qr = R.drawable.ic_set_qr
     val play = R.drawable.ic_set_play; val pause = R.drawable.ic_set_pause; val stop = R.drawable.ic_set_stop
-    val send = R.drawable.ic_set_send; val github = R.drawable.ic_set_github; val battery = R.drawable.ic_set_battery
+    val send = R.drawable.ic_set_send; val github = R.drawable.ic_set_github; val telegram = R.drawable.ic_set_telegram
+    val battery = R.drawable.ic_set_battery
     val push = R.drawable.ic_set_push; val clock = R.drawable.ic_set_clock; val fee = R.drawable.ic_set_fee
     val noUndo = R.drawable.ic_set_noundo; val shield = R.drawable.ic_set_shield; val eye = R.drawable.ic_set_eye
     val calendar = R.drawable.ic_set_cal; val image = R.drawable.ic_set_image; val bolt = R.drawable.ic_set_bolt
@@ -269,17 +270,15 @@ internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null
     }
 }
 
-/** Material 3's switch, monochrome: the foreground track and a check in the thumb when on, a muted outline when off. */
+/** Material 3's switch: an orange track and a white thumb when on (iOS's tint), a muted outline when off. */
 @Composable
 internal fun SettingsSwitch(checked: Boolean, enabled: Boolean, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
-    Switch(checked, null, modifier.clearAndSetSemantics { }, enabled = enabled, thumbContent = if (checked) ({
-        Icon(painterResource(SettingsIcons.check), null, Modifier.size(SwitchDefaults.IconSize), tint = palette.foreground)
-    }) else null, colors = SwitchDefaults.colors(
-        checkedThumbColor = palette.background, checkedTrackColor = palette.foreground, checkedBorderColor = palette.foreground,
-        checkedIconColor = palette.foreground, uncheckedThumbColor = palette.muted, uncheckedTrackColor = Color.Transparent,
-        uncheckedBorderColor = palette.muted, disabledCheckedThumbColor = palette.background, disabledCheckedTrackColor = palette.foreground,
-        disabledCheckedIconColor = palette.foreground, disabledUncheckedThumbColor = palette.muted, disabledUncheckedTrackColor = Color.Transparent,
+    Switch(checked, null, modifier.clearAndSetSemantics { }, enabled = enabled, colors = SwitchDefaults.colors(
+        checkedThumbColor = Color.White, checkedTrackColor = palette.orange, checkedBorderColor = palette.orange,
+        uncheckedThumbColor = palette.muted, uncheckedTrackColor = Color.Transparent,
+        uncheckedBorderColor = palette.muted, disabledCheckedThumbColor = Color.White, disabledCheckedTrackColor = palette.orange.copy(alpha = 0.4f),
+        disabledUncheckedThumbColor = palette.muted, disabledUncheckedTrackColor = Color.Transparent,
         disabledUncheckedBorderColor = palette.muted))
 }
 

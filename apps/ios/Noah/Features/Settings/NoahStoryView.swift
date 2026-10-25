@@ -50,7 +50,7 @@ struct NoahStoryView: View {
             SettingsFine(text: L10n.text("The story that gave Noah its name.", locale: language))
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
             SettingsGroup {
-                link("paperplane", "Telegram", Self.telegram)
+                link("TelegramMark", "Telegram", Self.telegram)
                 link("GitHubMark", "Source code", Self.github)
                 link("hand.raised", "Privacy policy", Self.privacy, last: true)
             }

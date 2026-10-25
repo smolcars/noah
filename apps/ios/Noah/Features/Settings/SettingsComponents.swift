@@ -155,8 +155,8 @@ struct SettingsIcon: View {
         Group {
             if symbol == "₿" {
                 Text(verbatim: "₿").noahText(HomeText.initial)
-            } else if symbol == "GitHubMark" {
-                // The asset is a template, so it takes the row's tint like the symbols.
+            } else if symbol == "GitHubMark" || symbol == "TelegramMark" {
+                // The assets are templates, so they take the row's tint like the symbols.
                 Image(symbol).resizable().frame(width: 17, height: 17)
             } else {
                 Image(systemName: symbol).font(.system(size: 16, weight: .medium))
