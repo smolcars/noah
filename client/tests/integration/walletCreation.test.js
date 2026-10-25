@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-const ARK_PATH = "/documents/wallet";
+const DOCUMENT_PATH = process.env.NOAH_TEST_DOCUMENT_PATH ?? "/documents";
+const PLATFORM = process.env.NOAH_TEST_PLATFORM ?? "ios";
+const ARK_PATH = `${DOCUMENT_PATH}/wallet`;
 let mnemonic;
-let files;
+let files = new Set();
 let loaded;
 let createError;
 let loadError;
@@ -13,7 +15,13 @@ let creationGate;
 let mnemonicCount;
 let deriveError;
 let suspended;
+let documentEntries;
 const calls = [];
+const unlinked = [];
+const clearAll = mock(() => {});
+const createMMKV = mock(() => ({ clearAll }));
+mock.module("react-native", () => ({ Platform: { OS: PLATFORM } }));
+mock.module("react-native-mmkv", () => ({ createMMKV }));
 
 const source = readFileSync(new URL("../../src/lib/walletApi.ts", import.meta.url), "utf8");
 const nativeNames = source
@@ -81,20 +89,23 @@ mock.module("react-native-keychain", () => ({
 }));
 mock.module("react-native-fs-turbo", () => ({
   default: {
+    DocumentDirectoryPath: DOCUMENT_PATH,
     exists: (path) => {
       if (filesystemError) throw filesystemError;
-      return files.has(path) || path === "/documents";
+      return files.has(path) || path === DOCUMENT_PATH;
     },
-    readdir: (path) => (path === "/documents" ? ["wallet"] : ["config.toml"]),
+    mkdir() {},
+    readdir: (path) => (path === DOCUMENT_PATH ? documentEntries : ["config.toml"]),
     unlink: (path) => {
       calls.push("delete-data");
+      unlinked.push(path);
       files.delete(path);
     },
   },
 }));
 mock.module("../../src/constants", () => ({
   ARK_DATA_PATH: ARK_PATH,
-  DOCUMENT_DIRECTORY_PATH: "/documents",
+  DOCUMENT_DIRECTORY_PATH: DOCUMENT_PATH,
   CACHES_DIRECTORY_PATH: "/cache",
   AUTH_TOKEN_KEYCHAIN_SERVICE: "auth",
   KEYCHAIN_USERNAME: "test",
@@ -130,7 +141,8 @@ mock.module("../../src/lib/walletConfig", () => ({
   getEffectiveWalletConfig: () => ({}),
   getWalletRefreshExpiryThreshold: () => 24,
 }));
-const { createWallet } = await import("../../src/lib/walletApi");
+const { createWallet, deleteWallet } = await import("../../src/lib/walletApi");
+await import("../../src/lib/mmkv");
 
 beforeEach(() => {
   mnemonic = null;
@@ -144,7 +156,31 @@ beforeEach(() => {
   mnemonicCount = 0;
   deriveError = null;
   suspended = false;
+  documentEntries = ["wallet"];
   calls.length = 0;
+  unlinked.length = 0;
+  clearAll.mockClear();
+});
+
+test("deletion keeps the open MMKV directory and clears its contents through MMKV", async () => {
+  documentEntries = ["wallet", "mmkv", "backup.json"];
+  files.add("/cache");
+  const expectedMMKVPath =
+    PLATFORM === "ios" ? `${DOCUMENT_PATH.replace(/\/files$/, "")}/mmkv` : `${DOCUMENT_PATH}/mmkv`;
+
+  expect(createMMKV).toHaveBeenCalledWith({
+    id: "noah-wallet-storage",
+    path: expectedMMKVPath,
+  });
+  expect((await deleteWallet()).isOk()).toBe(true);
+  expect(unlinked).not.toContain(expectedMMKVPath);
+  expect(clearAll).toHaveBeenCalledTimes(1);
+  expect(unlinked).toEqual([
+    `${DOCUMENT_PATH}/wallet`,
+    ...(expectedMMKVPath === `${DOCUMENT_PATH}/mmkv` ? [] : [`${DOCUMENT_PATH}/mmkv`]),
+    `${DOCUMENT_PATH}/backup.json`,
+    "/cache/config.toml",
+  ]);
 });
 
 describe("onboarding wallet creation", () => {

@@ -86,6 +86,7 @@ const stateTone = (state: ExitProgressState) => {
         bgClassName: "bg-green-500/10 border-green-500/30",
       };
     case "VtxoAlreadySpent":
+    case "VtxoSwept":
       return {
         icon: "alert-circle-outline" as IconName,
         color: "#8e8e93",
@@ -209,6 +210,7 @@ const ExitPhaseRail = ({
     ClaimInProgress: gt("Claim"),
     Claimed: gt("Done"),
     VtxoAlreadySpent: gt("Spent"),
+    VtxoSwept: gt("Swept"),
     Canceled: gt("Canceled"),
   };
   const items = buildExitTimelineItems(
@@ -1031,6 +1033,7 @@ const UnilateralExitScreen = () => {
       ClaimInProgress: 0,
       Claimed: 0,
       VtxoAlreadySpent: 0,
+      VtxoSwept: 0,
       Canceled: 0,
     },
   );

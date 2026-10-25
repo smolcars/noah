@@ -9,6 +9,8 @@ export function isExitEligible(vtxo: BarkVtxo): boolean {
   return vtxo.state === "Spendable" && vtxo.amount >= EXIT_DUST_LIMIT_SAT;
 }
 
+export type NoahExitFeeEstimate = ExitFeeEstimate & { fundable: boolean };
+
 export type ExitEstimateInputs = {
   walletId: string | null;
   vtxoIds: string[];
@@ -21,7 +23,7 @@ export type ExitEstimateInputs = {
 export type ExitFeeReview = {
   inputs: ExitEstimateInputs;
   contextKey: string;
-  estimate?: ExitFeeEstimate;
+  estimate?: NoahExitFeeEstimate;
   reviewedAt: number;
 };
 

@@ -2,10 +2,10 @@
 
 FROM debian:bookworm-slim AS downloader
 
-ARG BARK_VERSION=0.7.1
+ARG BARK_VERSION=0.8.0
 ARG TARGETARCH
-ARG BARKD_SHA256_AMD64=8067b9aab31e250e5580620e3fd0be61f5b778860346d2433b11eae9992db85a
-ARG BARKD_SHA256_ARM64=b9604e1dc4ec409d49ac842aa39dd77e0177f7b3c409a63f255f5b36d2941dd7
+ARG BARKD_SHA256_AMD64=e78bb35dbfb4c9b639a505e12e8cf3c3ab0a730c0fa4d42032b053a7b9db2a14
+ARG BARKD_SHA256_ARM64=3575f6edf0c4091befd12eeff9d5fbb5958c3131e88c62611d6cfd8f9f5b0ebc
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates curl \
@@ -35,7 +35,8 @@ COPY fly/barkd-entrypoint.sh /usr/local/bin/barkd-entrypoint
 
 ENV BARKD_DATADIR=/data/barkd \
     BARKD_BIND_HOST=:: \
-    BARKD_BIND_PORT=3000
+    BARKD_BIND_PORT=3000 \
+    BARKD_NO_UI=true
 
 EXPOSE 3000
 

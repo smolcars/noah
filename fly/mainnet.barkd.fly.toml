@@ -6,7 +6,7 @@ kill_signal = "SIGTERM"
 kill_timeout = "30s"
 
 [build]
-  image = "niteshbalusu/noah-barkd:0.7.1"
+  image = "niteshbalusu/noah-barkd:0.8.0"
 
 [deploy]
   strategy = "rolling"
@@ -19,6 +19,7 @@ kill_timeout = "30s"
   BARKD_DATADIR = "/data/barkd"
   BARKD_BIND_HOST = "::"
   BARKD_BIND_PORT = "3000"
+  BARKD_NO_UI = "true"
 
 [[mounts]]
   source = "bark_data"

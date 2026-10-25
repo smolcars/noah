@@ -379,6 +379,9 @@ export const useSendScreen = () => {
   const isOnchainSend = finalDestinationType === "onchain";
   const onchainWalletBalance = balance?.onchain.confirmed ?? 0;
   const offchainWalletBalance = balance?.offchain.spendable ?? 0;
+  const needsRefreshBalance = balance?.offchain.needs_refresh ?? 0;
+  // MAX offboards every Ark coin, including ones that need a refresh before an Ark payment.
+  const offboardableWalletBalance = offchainWalletBalance + needsRefreshBalance;
 
   const paymentRailOptions = useMemo<SendRail[]>(() => {
     if (destinationType === "bip321" && bip321Data) {
@@ -439,7 +442,9 @@ export const useSendScreen = () => {
 
     const options: OnchainSendSource[] = [];
     if (
-      isMaxSend ? offchainWalletBalance > 0 : amountSat > 0 && offchainWalletBalance >= amountSat
+      isMaxSend
+        ? offboardableWalletBalance > 0
+        : amountSat > 0 && offchainWalletBalance >= amountSat
     ) {
       options.push("offchain");
     }
@@ -447,7 +452,15 @@ export const useSendScreen = () => {
       options.push("onchain");
     }
     return options;
-  }, [amountSat, balance, isMaxSend, isOnchainSend, offchainWalletBalance, onchainWalletBalance]);
+  }, [
+    amountSat,
+    balance,
+    isMaxSend,
+    isOnchainSend,
+    offboardableWalletBalance,
+    offchainWalletBalance,
+    onchainWalletBalance,
+  ]);
 
   useEffect(() => {
     if ((!isOnchainSend && !isMaxSend) || (!isMaxSend && amountSat <= 0)) {
@@ -506,7 +519,7 @@ export const useSendScreen = () => {
                 destination: bip321Data.onchainAddress,
                 amountSat:
                   isMaxSend && resolvedOnchainSource === "offchain"
-                    ? offchainWalletBalance
+                    ? offboardableWalletBalance
                     : amountSat,
                 isMaxAmount: isMaxSend,
               }
@@ -545,7 +558,7 @@ export const useSendScreen = () => {
               destination: cleanedDestination,
               amountSat:
                 isMaxSend && resolvedOnchainSource === "offchain"
-                  ? offchainWalletBalance
+                  ? offboardableWalletBalance
                   : amountSat,
               isMaxAmount: isMaxSend,
             }
@@ -562,7 +575,7 @@ export const useSendScreen = () => {
     finalDestinationType,
     isMaxSend,
     lightningAddressPaymentRouteQuery.data,
-    offchainWalletBalance,
+    offboardableWalletBalance,
     resolvedOnchainSource,
     selectedPaymentMethod,
     selectedLightningAddressPaymentRoute,
@@ -646,7 +659,7 @@ export const useSendScreen = () => {
 
   const confirmationAmountSat = isMaxSend
     ? resolvedOnchainSource === "offchain"
-      ? (feeEstimateQuery.data?.net_amount_sat ?? offchainWalletBalance)
+      ? (feeEstimateQuery.data?.net_amount_sat ?? offboardableWalletBalance)
       : resolvedOnchainSource === "onchain"
         ? onchainWalletBalance
         : 0
@@ -654,7 +667,7 @@ export const useSendScreen = () => {
   const maxSendBalanceSat = getMaxSendBalanceSat(
     resolvedOnchainSource,
     onchainWalletBalance,
-    offchainWalletBalance,
+    offboardableWalletBalance,
   );
 
   const setEnteredAmount = (nextAmount: string) => {
@@ -1283,7 +1296,7 @@ export const useSendScreen = () => {
     isMaxSend,
     canSendMax:
       isAmountEditable &&
-      (offchainWalletBalance > 0 || onchainWalletBalance > 0) &&
+      (offboardableWalletBalance > 0 || onchainWalletBalance > 0) &&
       (!destination.trim() ||
         (recipientConfirmed && isMaxCompatibleDestination(destinationType, bip321Data))),
     canClear:
@@ -1335,6 +1348,7 @@ export const useSendScreen = () => {
       !lightningAddressPaymentRouteQuery.error,
     onchainWalletBalance,
     offchainWalletBalance,
+    needsRefreshBalance,
     showConfirmation,
     destinationType,
     showSuccess,

@@ -74,7 +74,7 @@ services:
 
   # Local regtest intentionally runs without a watchman.
   captaind:
-    image: niteshbalusu/captaind:nightly-2026-10-19@sha256:42b7bb01c7e7e9872f730a31c3132f5b0678dacca11b483d7309c64c86c5f649
+    image: niteshbalusu/captaind:nightly-2026-10-22@sha256:1edd39d4518f30c6a3e5bb005bfe2f374cf7a208ad69a0500b44d31a80dcd2e6
     volumes:
       - captaind:/data/captaind
       - ./captaind.toml:/data/captaind/captaind.toml
@@ -93,7 +93,7 @@ services:
         condition: service_healthy
 
   bark:
-    image: niteshbalusu/bark:nightly-2026-10-19@sha256:6ddad8bd07a21096d8487b8caa1825185f43b9d8ea1a2f2644bd82206a7122ba
+    image: niteshbalusu/bark:nightly-2026-10-22@sha256:47f1b83beb8cd6d78a8d63e4147ee47c0b66438c39a04f877ccf0a145aa65ecc
     volumes:
       - bark:/root
     depends_on:
@@ -166,7 +166,7 @@ services:
         condition: service_started
 
   barkd:
-    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.7.1}
+    image: ${BARKD_IMAGE:-niteshbalusu/noah-barkd:0.8.0}
     command: ["barkd", "--dangerously-allow-remote-no-auth"]
     restart: on-failure
     network_mode: "service:noah-server"

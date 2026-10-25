@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import RNFSTurbo from "react-native-fs-turbo";
 
 const documentDirectory = RNFSTurbo.DocumentDirectoryPath;
-const mmkvPath =
+export const mmkvPath =
   Platform.OS === "ios"
     ? `${documentDirectory.replace(/\/files$/, "")}/mmkv`
     : `${documentDirectory}/mmkv`;

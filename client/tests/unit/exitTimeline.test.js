@@ -83,6 +83,7 @@ describe("exit cancellation eligibility", () => {
       "ClaimInProgress",
       "Claimed",
       "VtxoAlreadySpent",
+      "VtxoSwept",
       "Canceled",
     ]) {
       expect(isCancelableExit(state, { kind: "awaiting-delta", tip_height: 100 })).toBe(false);

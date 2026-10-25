@@ -41,6 +41,7 @@ const stateTone = (state: ExitProgressState) => {
         bgClassName: "bg-green-500/10 border-green-500/30",
       };
     case "VtxoAlreadySpent":
+    case "VtxoSwept":
       return {
         icon: "alert-circle-outline" as IconName,
         color: "#8e8e93",

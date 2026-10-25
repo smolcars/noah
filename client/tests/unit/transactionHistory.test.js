@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   getBoardingMovementAmount,
+  getMovementPreimage,
   getMovementTransactionId,
   getTransactionAccountingValues,
   getTransactionDisplayLabel,
@@ -13,7 +14,6 @@ import {
 import {
   buildRepeatPaymentMetadataPatch,
   canRepeatPayment,
-  findNewArkoorMovementId,
   getRepeatPaymentPrefill,
   resolveRepeatPaymentDetails,
   shouldUseArkDirectLightningAddressRoute,
@@ -60,6 +60,36 @@ describe("boarding transaction metadata", () => {
         received_on: [],
       }),
     ).toBe(50_000);
+  });
+});
+
+describe("lightning payment preimage", () => {
+  const preimage = "a".repeat(64);
+  const lightningMetadata = (paymentPreimage) =>
+    parseMovementMetadata(
+      JSON.stringify({
+        payment_hash: "b".repeat(64),
+        htlc_vtxos: [],
+        payment_preimage: paymentPreimage,
+      }),
+    );
+
+  test("shows the preimage of a settled lightning send or receive", () => {
+    expect(getMovementPreimage({ status: "successful" }, lightningMetadata(preimage))).toBe(
+      preimage,
+    );
+  });
+
+  test("hides the preimage until the payment settles", () => {
+    for (const status of ["pending", "failed", "canceled"]) {
+      expect(getMovementPreimage({ status }, lightningMetadata(preimage))).toBeUndefined();
+    }
+  });
+
+  test("omits missing or empty preimages", () => {
+    expect(getMovementPreimage({ status: "successful" }, lightningMetadata(null))).toBeUndefined();
+    expect(getMovementPreimage({ status: "successful" }, lightningMetadata(""))).toBeUndefined();
+    expect(getMovementPreimage({ status: "successful" }, parseMovementMetadata(""))).toBeUndefined();
   });
 });
 
@@ -164,34 +194,6 @@ describe("repeat payment metadata", () => {
     expect(shouldUseArkDirectLightningAddressRoute("ark", null)).toBe(true);
     expect(shouldUseArkDirectLightningAddressRoute("ark", "Order 307")).toBe(false);
     expect(shouldUseArkDirectLightningAddressRoute("lightning", null)).toBe(false);
-  });
-
-  test("finds the new matching Ark-routed movement", () => {
-    const movement = {
-      id: 9,
-      status: "successful",
-      subsystem: { name: "bark.arkoor", kind: "send" },
-      sent_to: [
-        { destination: "tark-destination", payment_method: "ark", amount_sat: 3_000 },
-      ],
-    };
-
-    expect(
-      findNewArkoorMovementId({
-        existingMovementIds: new Set([8]),
-        movements: [movement],
-        destination: "tark-destination",
-        amountSat: 3_000,
-      }),
-    ).toBe(9);
-    expect(
-      findNewArkoorMovementId({
-        existingMovementIds: new Set([9]),
-        movements: [movement],
-        destination: "tark-destination",
-        amountSat: 3_000,
-      }),
-    ).toBeUndefined();
   });
 });
 

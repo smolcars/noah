@@ -19,6 +19,7 @@ export type MovementMetadata = {
   offboardTxid?: string;
   onchainFeeSat?: number;
   chainAnchor?: string;
+  paymentPreimage?: string;
   repeatPayment?: RepeatPaymentMetadata;
 };
 
@@ -45,12 +46,23 @@ export const parseMovementMetadata = (metadataJson: string): MovementMetadata =>
       onchainFeeSat:
         typeof metadata.onchain_fee_sat === "number" ? metadata.onchain_fee_sat : undefined,
       chainAnchor: typeof metadata.chain_anchor === "string" ? metadata.chain_anchor : undefined,
+      // Bark records the preimage on Lightning movements once the payment succeeds.
+      paymentPreimage:
+        typeof metadata.payment_preimage === "string" && metadata.payment_preimage.length > 0
+          ? metadata.payment_preimage
+          : undefined,
       ...(repeatPayment ? { repeatPayment } : {}),
     };
   } catch {
     return {};
   }
 };
+
+// Receives carry their preimage from creation; only reveal it once the payment settled.
+export const getMovementPreimage = (
+  movement: Pick<BarkMovement, "status">,
+  metadata: MovementMetadata,
+): string | undefined => (movement.status === "successful" ? metadata.paymentPreimage : undefined);
 
 export const getMovementTransactionId = (
   movement: BarkMovement,
@@ -151,6 +163,10 @@ const getBaseTransactionDisplayLabel = (
 
   if (transaction.movementKind === "exit") {
     return gt("Ark Exit");
+  }
+
+  if (transaction.movementKind === "refresh") {
+    return gt("VTXO Refresh");
   }
 
   if (transaction.type === "Bolt11" || transaction.type === "Lnurl") {

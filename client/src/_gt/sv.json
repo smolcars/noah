@@ -29,6 +29,7 @@
     "i": 1,
     "t": "Text"
   },
+  "02517029c941d66c": "Nöduttaget stoppades eftersom Ark-servern svepte denna VTXO",
   "0282038454933cdf": "Aktuell höjd",
   "0297430087386e15": {
     "c": "Aktuell",
@@ -51,18 +52,6 @@
   "037ccb27982e3029": "Ta emot betalningar när appen är stängd",
   "03a4f3e4307a0ffe": "Det gick inte att återaktivera plånboken",
   "03a9028747523722": "Ogiltig tidsstämpel i k1",
-  "03b1227ba2508534": {
-    "c": [
-      "Väntande saldo: ",
-      {
-        "i": 2,
-        "k": "_gt_value_2",
-        "v": "v"
-      }
-    ],
-    "i": 1,
-    "t": "Text"
-  },
   "03ceb02f958859a4": "Välj VTXO:er",
   "03d6f65f05442abe": {
     "c": "Pengar mottagna",
@@ -86,6 +75,7 @@
   },
   "045741aa62df51f8": "Alla",
   "04bf554cc5495b67": "Stäng anteckningsredigeraren",
+  "04c614641bc1cb8d": "En insättning till Ark pågår redan. Vänta tills den är klar.",
   "0639120d955dfdc7": "Sydkoreansk won",
   "0639195a5c40cdad": "Esplora-slutpunkten är avsedd för ett annat Bitcoin-nätverk.",
   "066306b5bf59de73": "Betalningsbegäran för Bitcoin",
@@ -145,11 +135,6 @@
   "07a7aa376f63daed": "Offentlig Nostr-nyckel för NIP-05",
   "07b125247b8ce18f": "Webbplats",
   "07e34e31c6bdff5d": "Osignerad transaktion {value1}",
-  "07ff1f9b936a716d": {
-    "c": "Saldouppgifter",
-    "i": 1,
-    "t": "Text"
-  },
   "082b479107acd8fe": "För många försök att ladda upp säkerhetskopian. Försök igen om några minuter.",
   "084fbc241b56d0d6": "Det gick inte att generera en Lightning-faktura",
   "086fda73c6242e1f": "Beräknat belopp att ta emot",
@@ -189,6 +174,19 @@
   "0b136cbc5b9722ec": "Möjliga att lösa in sedan",
   "0b893c31eacfa34c": "Brevlådeauktoriseringens utgångstid överskrider högsta tillåtna TTL",
   "0b99c96a0fdf3ef8": "Mottagaren får",
+  "0bc678b12dcd1bcc": {
+    "c": [
+      "+",
+      {
+        "i": 2,
+        "k": "_gt_value_2",
+        "v": "v"
+      },
+      " på väg in"
+    ],
+    "i": 1,
+    "t": "Text"
+  },
   "0c0a36763a2f45c8": "Avgift",
   "0c17eed5d7b34d0c": "Transaktioner",
   "0c3f2a92ee9aa73f": {
@@ -248,6 +246,11 @@
   "0fcb0ca9abe6d5b2": "Min kod",
   "0fcfe00591ff276d": "MAX kan inte användas med en betalningsbegäran med fast belopp.",
   "0fd22c7506faa0bd": "Nöduttagets VTXO var redan förbrukad",
+  "0fe85cde5391f2ed": {
+    "c": "De här medlen kan inte skickas förrän de har förnyats.",
+    "i": 1,
+    "t": "Text"
+  },
   "1025421421b67c04": {
     "c": "Tillgängliga VTXO:er",
     "i": 1,
@@ -369,6 +372,7 @@
   },
   "1ac868def86b1553": "Delta för VTXO-nöduttag",
   "1ae05d2f8a231a20": "Ta bort en VTXO från den lokala plånboksdatabasen (riskfylld åtgärd)",
+  "1ae10a2dda7bd181": "En utgång som nöduttaget behövde förbrukades på blockkedjan. En förnyelse kan fortfarande återställa medlen.",
   "1aec7de807a4afaa": {
     "c": [
       {
@@ -443,6 +447,7 @@
     "i": 1,
     "t": "Text"
   },
+  "20c32cfc12e013f5": "Det gick inte att förbereda automatisk insättning till Ark. Försök igen senare.",
   "2139f3a924c1e3f9": {
     "c": "Laddar...",
     "i": 1,
@@ -505,6 +510,7 @@
   "2664cf5e0610f979": "Kunde inte hämta loggar.",
   "269f334e1114b33b": "Rundintervall",
   "26e4c36e67f9dd48": "Väntar på att tidslåset ska löpa ut",
+  "270263f256a9438a": "Förbrukad indata {value1}",
   "270c6cb7e1ab9838": "Flytta bitcoin manuellt från blockkedjan till Ark.",
   "272c8b85fbc6ede6": "Möjliga att lösa in",
   "2737819617fdc572": {
@@ -541,6 +547,7 @@
     "t": "Text"
   },
   "28cbbda3ece9bf6e": "Underhållsuppdateringen slutfördes",
+  "28d9fb429d7feb90": "VTXO-förnyelse",
   "28e28c5c9651795d": "Slutdatumet måste infalla efter den första betalningen.",
   "28eca905a8b16d8e": "Hitta platser nära mig",
   "2911222aaf1a7892": "Belopp (₿)",
@@ -663,6 +670,7 @@
   "2d97217c182ad45c": "Den här e-postadressen är redan verifierad.",
   "2dca8d9897070aa7": "Det gick inte att spara betalningsbegäran",
   "2e589421b5c9dfac": "Parametrar för avgiftsberäkning krävs",
+  "2e66b4441526bc23": "Tillgängliga medel täcker inte längre minimibeloppet för insättning, avgifterna och reserven.",
   "2eb2241295140ec9": {
     "c": "Tillgängligt värde",
     "i": 1,
@@ -712,6 +720,7 @@
   "3414b088dde8621b": "Sparar...",
   "34355b1831b56894": "Ange en mottagare",
   "3476f1d209b18dd3": "Lös in",
+  "3493b275040a6f69": "Stäng saldouppgifterna",
   "34d07de262ec1f48": "UnifiedPush",
   "34edad1f5f0314d9": "Det behövs mer bekräftade medel på kedjan. Du startar bevakningen ändå; sätt in medel i plånboken innan du går vidare.",
   "351ced71e84d5f6a": "Hopp om ett rättvisare finansiellt system.",
@@ -723,6 +732,7 @@
   },
   "35cb2d2214ab82e9": "{count} block",
   "35eaaa3b6b925f69": "Behandlas",
+  "36326603a2793e77": "En del av ditt Ark-saldo behöver förnyas först",
   "365eb4634ec0eeb9": {
     "c": "Välj alla",
     "i": 1,
@@ -879,6 +889,7 @@
   "469aae33a5a5bc74": "Låst",
   "46c9f9ca9548d026": "Mat & dryck",
   "475071964a78761b": "Lightning-betalningar är inte tillgängliga för den här användaren just nu.",
+  "47c309d5a48b5903": "Nöduttag pågår",
   "47cd28f6d8b7c7b1": {
     "c": "Betala med",
     "i": 1,
@@ -910,6 +921,7 @@
   "4a7677f9a5e34f4e": "Inga låsta VTXO:er hittades",
   "4a82795112110fa2": "Öppna Noahs kodarkiv på GitHub",
   "4aae50a4c17d906c": "Beräknade totala avgifter",
+  "4ac9312fd04785cb": "Visa saldouppgifter",
   "4acb5573fb336197": "Ogiltig förfallotid för återkommande betalning",
   "4ae72e3c9f26f543": "API:er för blockutforskare",
   "4af0b668c839ed34": "Fortsätt utan beräkning?",
@@ -973,6 +985,7 @@
     "t": "Text"
   },
   "508f3d714356b775": "Indisk rupie",
+  "5092b16c62cc66a3": "Beloppet för automatisk insättning har ändrats",
   "513e0e91ee2eb60d": "Kopiera insättningens transaktions-ID",
   "5163ced4ac8f6d19": "Ogiltig pushtoken",
   "51e742ddf2600dfc": "VTXO:er är för Ark vad UTXO:er är för Bitcoin",
@@ -989,11 +1002,6 @@
   "5334c1ad2586fdfa": "Ark-information",
   "53462362246a90c6": "Bakgrundsaktiviteten fortsätter att fungera",
   "534c66a6bcd5f55e": "Konfigurera Lightning & NIP-05",
-  "53a72ffced4c2898": {
-    "c": "Betrott väntande saldo",
-    "i": 1,
-    "t": "Text"
-  },
   "53bcbe469c5db0d5": "Ark-adress",
   "53c40c785e60a353": "Det går inte att kontrollera plånbokens saldon. Försök igen.",
   "54002bf654ddbab1": "Slutförd",
@@ -1043,6 +1051,7 @@
   "5611df2dd156cfd2": "HH:MM",
   "569c16b5c06a9118": "Insatt belopp",
   "56e9fabcabc90c46": "Bekräfta",
+  "56eaac3b28779d9d": "Redo att spendera",
   "570f3a107ab75d15": "…",
   "57aa788eb8b8dad5": "Säkerhetskopians SHA-256 måste bestå av 64 hexadecimala tecken",
   "57e61261bc11c42e": "Ämnet är för långt",
@@ -1164,11 +1173,6 @@
     "c": "Uppdateringen av brevlådan misslyckades!",
     "i": 1,
     "t": "AlertTitle"
-  },
-  "636b43a0b319f6fd": {
-    "c": "Väntande nöduttag",
-    "i": 1,
-    "t": "Text"
   },
   "63a68df69453055e": "Den beräknade inlösenavgiften tar hela beloppet som återförs. Det kanske inte går att lösa in medlen.",
   "63a91268d6fb67fe": {
@@ -1474,7 +1478,6 @@
   },
   "8302a3c560d45569": "Nöduttagstransaktion {value1}",
   "830ccea31252e6ed": "Med {count} veckors mellanrum",
-  "8314265849e16ec1": "Visa eller dölj saldouppgifter",
   "839e9b9affd28a95": "Belopp krävs för LNURL-betalningar",
   "841c852e825b849f": "Valfria aviseringar om brådskande meddelanden som rör plånboken.",
   "842d5cd07952d10e": "Mottagaren stöds inte",
@@ -1669,6 +1672,7 @@
   "95fed35b94ded769": "Uppskattad avgift",
   "96125e501a5e90c9": "Uppdatera nöduttagets tidslinje",
   "96e0ff26cfee3db8": "Redan förbrukad",
+  "9756b09ffd8a55c6": "Pågår",
   "9810abf0813d6b17": "Beräknad inlösenavgift",
   "98386e0bcc8623d8": {
     "c": "Bekräftat saldo på blockkedjan",
@@ -1682,6 +1686,7 @@
   "9944b1d99d139e63": "Inlösentransaktionen bekräftad",
   "994d9f157f312b4a": "{value1} {value2}",
   "99ab45e473638645": "Avveckling",
+  "99dd3b0be953f123": "Svept",
   "9a20dbdd78ee31cb": "Möjliga att lösa in sedan block {value1}",
   "9a467669ca825dcc": "Förbild",
   "9ad96aabf54ff3fd": "Återställ till Noahs standard",
@@ -1823,11 +1828,6 @@
   "a39cb3a5ab675af3": "Nätverken matchar inte: förväntat {expected}, fick {actual}",
   "a3b0e3de374c03b2": "Ögonblicksbilden från BTC Map har inte lästs in.",
   "a3b79090f538c34e": "Inlöst i block {value1}",
-  "a3ba73a40c444bb8": {
-    "c": "Väntande överföring",
-    "i": 1,
-    "t": "Text"
-  },
   "a3db76156734f3c8": "Avbryt nöduttag",
   "a3e006ea1ddeb9c1": "Adressen har kopierats",
   "a4201eeeec6d605b": "Betalningsbeloppet ligger utanför det tillåtna intervallet för den här Lightning-adressen",
@@ -1873,11 +1873,6 @@
     "t": "Text"
   },
   "a7b55475971405a5": "block",
-  "a7d2dadd7534f453": {
-    "c": "Tillgängligt",
-    "i": 1,
-    "t": "Text"
-  },
   "a80d7c76a28cbea5": {
     "c": "Inaktivera plånboken",
     "i": 1,
@@ -1927,6 +1922,7 @@
   "abc056653eeb6398": "Betalningens förbild",
   "abc92b45d4c8104c": "Kör delegerat plånboksunderhåll, inklusive on-chain-synkronisering",
   "abcd9c173d61e9a6": "De valda VTXO:erna förnyas i en delegerad Ark-omgång.",
+  "abd9bb20a41aaacf": "Förnyas",
   "ac1993e0b6cc00bd": {
     "c": "Verifieringskoden upphör att gälla om 10 minuter.",
     "i": 1,
@@ -2058,11 +2054,6 @@
     "t": "Text"
   },
   "b6223cee66ff78c0": "Visa säkerhetskopior",
-  "b6895baaf0a8d810": {
-    "c": "Utanför blockkedjan",
-    "i": 1,
-    "t": "Text"
-  },
   "b6e5b31255e011c5": "OK",
   "b6f48f031871f89a": "Schema-ID för den återkommande betalningen finns redan",
   "b73364b963ffdda6": {
@@ -2335,6 +2326,11 @@
     "t": "Text"
   },
   "cedf30c5f7e02bfe": "Verifiera din identitet för att aktivera biometri",
+  "ceec80be00b17012": {
+    "c": "Saldo",
+    "i": 1,
+    "t": "Text"
+  },
   "cefa88a30e35d39a": "Var ödmjuk, samla sats.",
   "cf446689f3b1586d": "Din e-postadress för nödfall har uppdaterats.",
   "cfeb05159a2088ae": "Inte registrerad",
@@ -2388,11 +2384,6 @@
   "d4d89c139de812a8": "Misslyckad",
   "d4df4baa39b2fba5": "Försök beräkna igen",
   "d50708f9dd6d0277": "Betala ",
-  "d50e76317a76b1ea": {
-    "c": "Bekräftat",
-    "i": 1,
-    "t": "Text"
-  },
   "d546fae6248001bf": "Ingen kan frysa dina tillgångar.",
   "d54ac9fa75a0f84c": "Öppna enhetens inställningar och tillåt Noah att köras i bakgrunden. Fortsätt sedan.",
   "d581043cf30e5d99": "Det gick inte att återställa registreringen",
@@ -2429,11 +2420,6 @@
   },
   "d894f6cb29f7a3ea": "Tillbaka",
   "d8954939729b2126": "Importera VTXO",
-  "d8c57065a0d6a1ff": {
-    "c": "Väntar på att sättas in",
-    "i": 1,
-    "t": "Text"
-  },
   "d8df14f9905f38eb": "Skickat",
   "d920116ace2b9dc2": "Skicka kod till ny e-postadress",
   "d9accca497de2ba5": "Kopiera Bitcoin-adress",
@@ -2521,6 +2507,11 @@
     "i": 1,
     "t": "Text"
   },
+  "e0e407b4dd95342d": {
+    "c": "Visa alla Bark-fält",
+    "i": 1,
+    "t": "Text"
+  },
   "e0ef166202b49100": "Kort sammanfattning",
   "e0fa959d80ac0d81": "Välj",
   "e17f512253e5fc16": "Det gick inte att dela säkerhetskopian. Försök igen.",
@@ -2582,6 +2573,7 @@
     "t": "Text"
   },
   "e4cd4480c06e944b": "Otillräckligt Ark-saldo",
+  "e4defb2c3cd42206": "Skickas",
   "e50e7cbbeba65b71": "Insättning slutförd",
   "e51d6b88233aca0f": "Inte dina nycklar, inte dina mynt.",
   "e52b44d3042f6b49": "Behörigheten för brevlådan har återkallats.",
@@ -2591,11 +2583,6 @@
     "t": "Text"
   },
   "e585acc16ee54849": "Det gick inte att uppskatta insättningsavgifterna. Försök igen senare.",
-  "e5b26458888117b2": {
-    "c": "På kedjan",
-    "i": 1,
-    "t": "Text"
-  },
   "e5c7681582f00967": "Första betalningen",
   "e5d10588fc1f9815": {
     "c": "Avgiftsuppskattning saknas",
@@ -2681,6 +2668,7 @@
   "ecccf3fad5f630a9": "Ändra Lightning & NIP-05",
   "ed1a5b772ad95692": "Varken ditt Ark-saldo eller din plånbok på kedjan kan täcka den här betalningen.",
   "ed2ab40ea26fd450": "Välj minst en VTXO.",
+  "ed634257bf9e6c0d": "På väg in",
   "ed7b94c494ee1691": "≈ ",
   "edb6a1d2c2364db5": "Mottaget på",
   "ee181a9aef7cae88": "Medlen återfördes till blockkedjan.",
@@ -2734,11 +2722,6 @@
     "i": 1,
     "t": "Text"
   },
-  "f2d1b37a6f5a6ba9": {
-    "c": "Väntar i en omgång",
-    "i": 1,
-    "t": "Text"
-  },
   "f310928f9ed3e47d": "Jag har aktiverat dem – kontrollera igen",
   "f314d35314020477": {
     "c": "Föreslagen insättning",
@@ -2766,6 +2749,18 @@
   "f6bdfaa5f8276cd2": "Säkerhetskopiera nu",
   "f6f6e12ca60e1bf4": "Beräknat belopp efter uttagsavgifter",
   "f7076912c867f4b3": "De tillgängliga VTXO:erna har ändrats. Uppdatera och granska nöduttaget igen.",
+  "f78b73c1bce7a605": {
+    "c": [
+      {
+        "i": 2,
+        "k": "_gt_value_2",
+        "v": "v"
+      },
+      " behöver förnyas"
+    ],
+    "i": 1,
+    "t": "Text"
+  },
   "f7e8460e359aa38e": {
     "c": "Android kontrollerar ungefär en gång om dagen om det är dags för några betalningar, även när Noah är stängd. Om det är dags för en betalning skickas den direkt när du öppnar Noah. För att betalningarna ska göras i tid ställer du in Noahs batterianvändning på ”Obegränsad” i appinställningarna.",
     "i": 1,
@@ -2784,11 +2779,6 @@
     "t": "Text"
   },
   "f86d1b3defd75cea": "Ingen",
-  "f89cbb5a46f94eb1": {
-    "c": "Omoget",
-    "i": 1,
-    "t": "Text"
-  },
   "f8ab8df187ccbdc7": "your@email.com",
   "f8bb1f46e5d5a072": "API för blockhöjd",
   "f8c27877ce0a01dc": "Exportera transaktioner",
@@ -2854,11 +2844,6 @@
   "ff38ebd350102cea": "Insättningsavgift för Ark",
   "ff450b81a89e0dae": "Ange en giltig e-postadress.",
   "ff6d991a8f6d1cc3": "Betala ≈ ",
-  "ff84c525d135cfd6": {
-    "c": "Ej betrott väntande saldo",
-    "i": 1,
-    "t": "Text"
-  },
   "ffa04098ba97ec93": "Otillräckligt bekräftat saldo",
   "ffd5c121422eccc4": "new@email.com",
   "ffd72a2ababdc4da": "Användaren hittades inte",

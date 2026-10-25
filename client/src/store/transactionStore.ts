@@ -35,13 +35,14 @@ const zustandStorage: StateStorage = {
 
 interface TransactionState {
   isAutoBoardingEnabled: boolean;
-  hasAttemptedAutoBoarding: boolean;
+  handledAutoBoardFundingTxids: string[];
   autoBoardSuccessBanner: {
     netBoardAmountSat: number;
     createdAt: number;
   } | null;
   setAutoBoardingEnabled: (enabled: boolean) => void;
-  setHasAttemptedAutoBoarding: (attempted: boolean) => void;
+  markAutoBoardFundingHandled: (txids: string[]) => void;
+  unmarkAutoBoardFundingHandled: (txids: string[]) => void;
   setAutoBoardSuccessBanner: (netBoardAmountSat: number) => void;
   clearAutoBoardSuccessBanner: () => void;
   reset: () => void;
@@ -49,47 +50,59 @@ interface TransactionState {
 
 type PersistedTransactionState = Pick<
   TransactionState,
-  "isAutoBoardingEnabled" | "hasAttemptedAutoBoarding"
+  "isAutoBoardingEnabled" | "handledAutoBoardFundingTxids"
 >;
 
 export const useTransactionStore = create<TransactionState>()(
   persist(
     (set) => ({
       isAutoBoardingEnabled: true,
-      hasAttemptedAutoBoarding: false,
+      handledAutoBoardFundingTxids: [],
       autoBoardSuccessBanner: null,
       setAutoBoardingEnabled: (enabled: boolean) =>
-        set({
+        set((state) => ({
           isAutoBoardingEnabled: enabled,
-          ...(enabled ? { hasAttemptedAutoBoarding: false } : {}),
-        }),
-      setHasAttemptedAutoBoarding: (attempted: boolean) =>
-        set({ hasAttemptedAutoBoarding: attempted }),
+          handledAutoBoardFundingTxids:
+            enabled && !state.isAutoBoardingEnabled ? [] : state.handledAutoBoardFundingTxids,
+        })),
+      markAutoBoardFundingHandled: (txids) =>
+        set((state) => ({
+          handledAutoBoardFundingTxids: [
+            ...new Set([...state.handledAutoBoardFundingTxids, ...txids]),
+          ],
+        })),
+      unmarkAutoBoardFundingHandled: (txids) =>
+        set((state) => ({
+          handledAutoBoardFundingTxids: state.handledAutoBoardFundingTxids.filter(
+            (txid) => !txids.includes(txid),
+          ),
+        })),
       setAutoBoardSuccessBanner: (netBoardAmountSat: number) =>
         set({ autoBoardSuccessBanner: { netBoardAmountSat, createdAt: Date.now() } }),
       clearAutoBoardSuccessBanner: () => set({ autoBoardSuccessBanner: null }),
       reset: () =>
         set({
           isAutoBoardingEnabled: true,
-          hasAttemptedAutoBoarding: false,
+          handledAutoBoardFundingTxids: [],
           autoBoardSuccessBanner: null,
         }),
     }),
     {
       name: "transaction-storage",
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
+      version: 2,
       partialize: (state): PersistedTransactionState => ({
         isAutoBoardingEnabled: state.isAutoBoardingEnabled,
-        hasAttemptedAutoBoarding: state.hasAttemptedAutoBoarding,
+        handledAutoBoardFundingTxids: state.handledAutoBoardFundingTxids,
       }),
       migrate: (persistedState, version) => {
         const state = persistedState as Partial<PersistedTransactionState>;
 
-        if (version < 1) {
+        if (version < 2) {
+          // The lifetime flag cannot identify deposits; let eligible stuck funds prompt once.
           return {
-            ...state,
-            hasAttemptedAutoBoarding: false,
+            isAutoBoardingEnabled: state.isAutoBoardingEnabled ?? true,
+            handledAutoBoardFundingTxids: [],
           };
         }
 

@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeStackParamList, TabParamList } from "../Navigators";
 import { Text } from "../components/ui/text";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { AlertCircle, ChevronDown, Eye, EyeOff, PauseCircle } from "lucide-react-native";
+import { AlertCircle, Eye, EyeOff, PauseCircle } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { COLORS } from "../lib/styleConstants";
 import { useThemeColors } from "../hooks/useTheme";
@@ -25,25 +25,20 @@ import { useBackgroundJobCoordination } from "~/hooks/useBackgroundJobCoordinati
 import { useServerStore } from "~/store/serverStore";
 import { queryClient } from "~/queryClient";
 
-import Animated, {
-  FadeInDown,
-  FadeOutDown,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
 import { NoahSafeAreaView } from "~/components/NoahSafeAreaView";
 import { useBottomTabBarHeight } from "react-native-bottom-tabs";
 import { useBtcToFiatRate } from "~/hooks/useMarketData";
 import { useWalletStore } from "~/store/walletStore";
 import { updateWidget, useWidget } from "~/hooks/useWidget";
 import { formatFiatAmount, getFiatCurrencyInfo, satsToFiat } from "~/lib/fiatCurrency";
-import { calculateBalances } from "~/lib/balanceUtils";
+import { calculateBalances, groupBalances } from "~/lib/balanceUtils";
 import { onchainSync, sync } from "~/lib/walletApi";
 import { useAdaptiveLayout } from "~/hooks/useAdaptiveLayout";
 import { PANE_GAP } from "~/lib/adaptiveLayout";
 import { useTransactions } from "~/hooks/useTransactions";
 import { Transaction } from "~/types/transaction";
 import { AppBottomSheet } from "~/components/ui/AppBottomSheet";
+import { BalanceSheet } from "~/components/BalanceSheet";
 import { TransactionDetailContent } from "~/screens/TransactionDetailScreen";
 import { usePrivacyStore } from "~/store/privacyStore";
 import { useProfileStore } from "~/store/profileStore";
@@ -96,7 +91,7 @@ const HomeScreen = () => {
   const fiatCurrency = useProfileStore((state) => state.preferredCurrency);
   const fiatCurrencyInfo = getFiatCurrencyInfo(fiatCurrency);
   const { data: btcToFiatRate, isLoading: isRateLoading } = useBtcToFiatRate();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isBalanceSheetOpen, setIsBalanceSheetOpen] = useState(false);
   const [fact, setFact] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isTransactionSheetOpen, setIsTransactionSheetOpen] = useState(false);
@@ -151,9 +146,7 @@ const HomeScreen = () => {
   const isLoading = isBalanceLoading || isSyncPending || isRateLoading;
   const balances = balance ? calculateBalances(balance) : null;
   const totalBalance = balances?.totalBalance ?? 0;
-  const onchainBalance = balances?.onchainBalance ?? 0;
-  const offchainBalance = balances?.offchainBalance ?? 0;
-  const totalPendingBalance = balances?.pendingBalance ?? 0;
+  const arrivingBalance = balance ? groupBalances(balance).arriving : 0;
   const totalBalanceInFiat = btcToFiatRate
     ? satsToFiat(totalBalance, btcToFiatRate, fiatCurrency)
     : null;
@@ -163,12 +156,6 @@ const HomeScreen = () => {
     isHomeBalanceHidden ? maskedBalance : formatBitcoinAmount(amount);
 
   useWidget(balances);
-
-  const animatedRotation = useAnimatedStyle(() => {
-    return {
-      transform: [{ rotate: withTiming(isOpen ? "180deg" : "0deg") }],
-    };
-  }, [isOpen]);
 
   if (isWalletSuspended) {
     return (
@@ -317,22 +304,16 @@ const HomeScreen = () => {
                   <View className="flex-row items-center justify-center gap-2">
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={gt("Toggle balance details")}
-                      accessibilityState={{ expanded: isOpen }}
-                      onPress={() => setIsOpen((current) => !current)}
+                      accessibilityLabel={gt("Show balance details")}
+                      onPress={() => setIsBalanceSheetOpen(true)}
                     >
-                      <View className="flex-row items-center space-x-2">
-                        <Text
-                          className="shrink text-4xl font-bold"
-                          adjustsFontSizeToFit
-                          numberOfLines={1}
-                        >
-                          {formatHomeBalance(totalBalance)}
-                        </Text>
-                        <Animated.View style={animatedRotation}>
-                          <ChevronDown color={iconColor} size={28} />
-                        </Animated.View>
-                      </View>
+                      <Text
+                        className="shrink text-4xl font-bold"
+                        adjustsFontSizeToFit
+                        numberOfLines={1}
+                      >
+                        {formatHomeBalance(totalBalance)}
+                      </Text>
                     </Pressable>
                     <Pressable
                       onPress={toggleHomeBalanceHidden}
@@ -350,115 +331,20 @@ const HomeScreen = () => {
                       )}
                     </Pressable>
                   </View>
-                  {totalPendingBalance > 0 && (
-                    <View className="mt-2 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/40">
+                  {arrivingBalance > 0 && (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setIsBalanceSheetOpen(true)}
+                      className="mt-2 px-3 py-1 rounded-full bg-blue-400/10 border border-blue-400/40"
+                    >
                       <T>
-                        <Text className="text-yellow-500 text-sm">
-                          Pending balance: <Var>{formatHomeBalance(totalPendingBalance)}</Var>
+                        <Text className="text-blue-400 text-sm">
+                          +<Var>{formatHomeBalance(arrivingBalance)}</Var> arriving
                         </Text>
                       </T>
-                    </View>
+                    </Pressable>
                   )}
                 </View>
-                {isOpen && (
-                  <Animated.View
-                    entering={FadeInDown}
-                    exiting={FadeOutDown}
-                    className="w-full max-w-[380px]"
-                  >
-                    <View className="p-4 rounded-lg bg-card mt-4">
-                      <T>
-                        <Text className="text-lg font-bold mb-4 text-center">Balance Details</Text>
-                      </T>
-
-                      <View className="mb-4">
-                        <View className="flex-row justify-between items-center mb-2">
-                          <T>
-                            <Text className="text-md font-bold">Onchain</Text>
-                          </T>
-                          <Text className="text-md font-bold">
-                            {formatHomeBalance(onchainBalance)}
-                          </Text>
-                        </View>
-                        <View className="pl-4 space-y-1">
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Confirmed</Text>
-                            </T>
-                            <Text>{formatHomeBalance(balance?.onchain.confirmed ?? 0)}</Text>
-                          </View>
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Trusted Pending</Text>
-                            </T>
-                            <Text>{formatHomeBalance(balance?.onchain.trusted_pending ?? 0)}</Text>
-                          </View>
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Untrusted Pending</Text>
-                            </T>
-                            <Text>
-                              {formatHomeBalance(balance?.onchain.untrusted_pending ?? 0)}
-                            </Text>
-                          </View>
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Immature</Text>
-                            </T>
-                            <Text>{formatHomeBalance(balance?.onchain.immature ?? 0)}</Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      <View>
-                        <View className="flex-row justify-between items-center mb-2">
-                          <T>
-                            <Text className="text-md font-bold">Offchain</Text>
-                          </T>
-                          <Text className="text-md font-bold">
-                            {formatHomeBalance(offchainBalance)}
-                          </Text>
-                        </View>
-                        <View className="pl-4 space-y-1">
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Spendable</Text>
-                            </T>
-                            <Text>{formatHomeBalance(balance?.offchain.spendable ?? 0)}</Text>
-                          </View>
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Pending Send</Text>
-                            </T>
-                            <Text>
-                              {formatHomeBalance(balance?.offchain.pending_lightning_send ?? 0)}
-                            </Text>
-                          </View>
-                          <View className="flex-row justify-between mb-2">
-                            <T>
-                              <Text className="text-muted-foreground">Pending In Round</Text>
-                            </T>
-                            <Text>
-                              {formatHomeBalance(balance?.offchain.pending_in_round ?? 0)}
-                            </Text>
-                          </View>
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Pending Exit</Text>
-                            </T>
-                            <Text>{formatHomeBalance(balance?.offchain.pending_exit ?? 0)}</Text>
-                          </View>
-                          <View className="flex-row justify-between">
-                            <T>
-                              <Text className="text-muted-foreground">Pending Board</Text>
-                            </T>
-                            <Text>{formatHomeBalance(balance?.offchain.pending_board ?? 0)}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  </Animated.View>
-                )}
               </View>
 
               <View
@@ -561,6 +447,14 @@ const HomeScreen = () => {
           <Text className="text-center text-xs text-muted-foreground">{m(fact)}</Text>
         </View>
       </ScrollView>
+      {balance ? (
+        <BalanceSheet
+          isOpen={isBalanceSheetOpen}
+          onClose={() => setIsBalanceSheetOpen(false)}
+          balance={balance}
+          formatAmount={formatHomeBalance}
+        />
+      ) : null}
       {selectedTransaction ? (
         <AppBottomSheet
           isOpen={isTransactionSheetOpen}

@@ -8,6 +8,7 @@ export const MOVEMENT_KIND_VALUES = [
   "send-onchain",
   "exit",
   "lightning-receive",
+  "refresh",
 ] as const;
 export type MovementKind = (typeof MOVEMENT_KIND_VALUES)[number];
 
@@ -28,6 +29,7 @@ export const formatMovementKindLabel = (
     "send-onchain": gt("Onchain Send"),
     exit: gt("Ark Exit"),
     "lightning-receive": gt("Lightning Receive"),
+    refresh: gt("VTXO Refresh"),
   };
   if (!kind) {
     return undefined;

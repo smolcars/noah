@@ -170,7 +170,10 @@ export const AppBottomSheet = ({
         {scrollable ? (
           <ScrollView
             bounces={false}
-            className="flex-1"
+            className={contentHeight === undefined ? undefined : "flex-1"}
+            // Content-sized sheets grow with their content, then scroll once it passes the
+            // sheet height (less the top padding and handle above).
+            style={contentHeight === undefined ? { maxHeight: sheetHeight - 28 } : undefined}
             contentContainerStyle={{
               paddingBottom: Math.max(insets.bottom, 12) + 20,
             }}

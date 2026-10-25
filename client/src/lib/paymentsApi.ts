@@ -12,6 +12,7 @@ import {
   checkLightningPayment as checkLightningPaymentNitro,
   bolt11Invoice as bolt11InvoiceNitro,
   type ArkoorPaymentResult,
+  type OffboardResult,
   type OnchainPaymentResult,
   type LightningPayment,
   newAddress as newAddressNitro,
@@ -43,6 +44,8 @@ import {
   BoardResult,
   LightningReceive,
 } from "react-native-nitro-ark";
+import { fetchOffchainBalance, fetchOnchainBalance } from "~/lib/walletApi";
+import { isBoardMovement } from "~/lib/barkMovement";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import {
   isInvoiceDescriptionValid,
@@ -154,23 +157,65 @@ export const bolt11Invoice = async (
   );
 };
 
-export const boardArk = async (amountSat: number): Promise<Result<BoardResult, Error>> => {
-  return ResultAsync.fromPromise(boardAmountNitro(amountSat), (error) => {
-    const e = new Error(
-      `Failed to board funds: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    return e;
+let isSubmittingBoard = false;
+
+// Read only when evaluating or confirming a foreground Auto-Board review.
+export const getBoardingStatus = async (): Promise<
+  Result<{ fundingTxids: string[]; confirmedOnchainBalanceSat: number; blocked: boolean }, Error>
+> => {
+  const [transactions, movements, offchain, onchain] = await Promise.all([
+    onchainTransactions(),
+    history(),
+    fetchOffchainBalance(),
+    fetchOnchainBalance(),
+  ]);
+  if (transactions.isErr()) return err(transactions.error);
+  if (movements.isErr()) return err(movements.error);
+  if (offchain.isErr()) return err(offchain.error);
+  if (onchain.isErr()) return err(onchain.error);
+
+  return ok({
+    fundingTxids: transactions.value
+      .filter((tx) => tx.has_confirmation && tx.balance_change_sat > 0)
+      .map((tx) => tx.txid)
+      .sort(),
+    confirmedOnchainBalanceSat: onchain.value.confirmed,
+    // Any pending board movement blocks, even one orphaned by a crash before Bark saved its
+    // checkpoint: a stuck broadcast also looks like that, and its inputs can be reselected.
+    // Manual boarding stays available. Telling them apart needs Nitro to expose pending boards.
+    blocked:
+      isSubmittingBoard ||
+      offchain.value.pending_board > 0 ||
+      movements.value.some(
+        (movement) => isBoardMovement(movement) && movement.status === "pending",
+      ),
   });
 };
 
-export const boardAllArk = async (): Promise<Result<BoardResult, Error>> => {
-  return ResultAsync.fromPromise(boardAllNitro(), (error) => {
-    const e = new Error(
-      `Failed to board funds: ${error instanceof Error ? error.message : String(error)}`,
+const submitBoard = async (
+  submit: () => Promise<BoardResult>,
+): Promise<Result<BoardResult, Error>> => {
+  if (isSubmittingBoard) return err(new Error("A boarding submission is already in progress"));
+  isSubmittingBoard = true;
+  try {
+    // Bark reserves signed inputs locally; only overlapping calls need an app-level guard.
+    return await ResultAsync.fromPromise(
+      Promise.resolve().then(submit),
+      (error) =>
+        new Error(
+          `Failed to board funds: ${error instanceof Error ? error.message : String(error)}`,
+        ),
     );
-    return e;
-  });
+  } finally {
+    isSubmittingBoard = false;
+  }
 };
+
+export const boardArk = (amountSat: number): Promise<Result<BoardResult, Error>> =>
+  submitBoard(() => boardAmountNitro(amountSat));
+
+export const boardAllArk = (): Promise<Result<BoardResult, Error>> =>
+  submitBoard(() => boardAllNitro());
 
 export const estimateBoardOffchainFee = async (
   amountSat: number,
@@ -182,7 +227,7 @@ export const estimateBoardOffchainFee = async (
   });
 };
 
-export const offboardAllArk = async (address: string): Promise<Result<string, Error>> => {
+export const offboardAllArk = async (address: string): Promise<Result<OffboardResult, Error>> => {
   return ResultAsync.fromPromise(offboardAllNitro(address), (error) => {
     const e = new Error(
       `Failed to offboard funds: ${error instanceof Error ? error.message : String(error)}`,
@@ -325,7 +370,7 @@ export const sendOnchainFromOffchain = async ({
     );
 
     return e;
-  }).map((txid) => ({
+  }).map(({ txid }) => ({
     txid,
     amount_sat: amountSat,
     destination_address: destination,

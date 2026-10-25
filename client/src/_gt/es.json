@@ -29,6 +29,7 @@
     "i": 1,
     "t": "Text"
   },
+  "02517029c941d66c": "La salida se detuvo porque el servidor de Ark barrió este VTXO",
   "0282038454933cdf": "Altura actual",
   "0297430087386e15": {
     "c": "Actual",
@@ -51,18 +52,6 @@
   "037ccb27982e3029": "Recibir con la aplicación cerrada",
   "03a4f3e4307a0ffe": "No se pudo reanudar la billetera",
   "03a9028747523722": "Marca de tiempo en k1 no válida",
-  "03b1227ba2508534": {
-    "c": [
-      "Saldo pendiente: ",
-      {
-        "i": 2,
-        "k": "_gt_value_2",
-        "v": "v"
-      }
-    ],
-    "i": 1,
-    "t": "Text"
-  },
   "03ceb02f958859a4": "Elegir VTXOs",
   "03d6f65f05442abe": {
     "c": "Fondos recibidos",
@@ -86,6 +75,7 @@
   },
   "045741aa62df51f8": "Todos",
   "04bf554cc5495b67": "Cerrar editor de notas",
+  "04c614641bc1cb8d": "Ya hay un ingreso a Ark en curso. Espera a que termine.",
   "0639120d955dfdc7": "Won surcoreano",
   "0639195a5c40cdad": "El punto de acceso de Esplora corresponde a otra red Bitcoin.",
   "066306b5bf59de73": "Solicitud de pago de Bitcoin",
@@ -145,11 +135,6 @@
   "07a7aa376f63daed": "Clave pública de Nostr NIP-05",
   "07b125247b8ce18f": "Sitio web",
   "07e34e31c6bdff5d": "Transacción sin firmar {value1}",
-  "07ff1f9b936a716d": {
-    "c": "Detalles del saldo",
-    "i": 1,
-    "t": "Text"
-  },
   "082b479107acd8fe": "Demasiados intentos de carga de copias de seguridad. Inténtalo de nuevo en unos minutos.",
   "084fbc241b56d0d6": "No se pudo generar la factura Lightning",
   "086fda73c6242e1f": "Importe estimado que recibirás",
@@ -189,6 +174,19 @@
   "0b136cbc5b9722ec": "Reclamable desde",
   "0b893c31eacfa34c": "La fecha de caducidad de la autorización del buzón supera el TTL máximo permitido",
   "0b99c96a0fdf3ef8": "El destinatario recibe",
+  "0bc678b12dcd1bcc": {
+    "c": [
+      "+",
+      {
+        "i": 2,
+        "k": "_gt_value_2",
+        "v": "v"
+      },
+      " entrante"
+    ],
+    "i": 1,
+    "t": "Text"
+  },
   "0c0a36763a2f45c8": "Comisión",
   "0c17eed5d7b34d0c": "Transacciones",
   "0c3f2a92ee9aa73f": {
@@ -248,6 +246,11 @@
   "0fcb0ca9abe6d5b2": "Mi código",
   "0fcfe00591ff276d": "MAX no se puede usar con una solicitud de pago de importe fijo.",
   "0fd22c7506faa0bd": "El VTXO de salida ya se había gastado",
+  "0fe85cde5391f2ed": {
+    "c": "Estos fondos no se pueden enviar hasta que se renueven.",
+    "i": 1,
+    "t": "Text"
+  },
   "1025421421b67c04": {
     "c": "VTXOs disponibles",
     "i": 1,
@@ -371,6 +374,7 @@
   },
   "1ac868def86b1553": "Delta de salida de VTXO",
   "1ae05d2f8a231a20": "Eliminar un VTXO de la base de datos de la billetera local (operación peligrosa)",
+  "1ae10a2dda7bd181": "Se gastó en cadena un output que esta salida necesitaba. Una renovación aún podría recuperar los fondos.",
   "1aec7de807a4afaa": {
     "c": [
       {
@@ -445,6 +449,7 @@
     "i": 1,
     "t": "Text"
   },
+  "20c32cfc12e013f5": "No se pudo preparar el ingreso automático a Ark. Inténtalo de nuevo más tarde.",
   "2139f3a924c1e3f9": {
     "c": "Cargando...",
     "i": 1,
@@ -513,6 +518,7 @@
   "2664cf5e0610f979": "No se pudieron obtener los registros.",
   "269f334e1114b33b": "Intervalo entre rondas",
   "26e4c36e67f9dd48": "Esperando a que venza el bloqueo temporal",
+  "270263f256a9438a": "Entrada gastada {value1}",
   "270c6cb7e1ab9838": "Transfiere manualmente a Ark tus bitcoin en cadena.",
   "272c8b85fbc6ede6": "Reclamable",
   "2737819617fdc572": {
@@ -549,6 +555,7 @@
     "t": "Text"
   },
   "28cbbda3ece9bf6e": "Renovación de mantenimiento completada correctamente",
+  "28d9fb429d7feb90": "Renovación de VTXO",
   "28e28c5c9651795d": "La fecha de finalización debe ser posterior a la del primer pago.",
   "28eca905a8b16d8e": "Buscar lugares cerca de mí",
   "2911222aaf1a7892": "Importe (₿)",
@@ -671,6 +678,7 @@
   "2d97217c182ad45c": "Este correo electrónico ya está verificado.",
   "2dca8d9897070aa7": "No se pudo guardar la factura",
   "2e589421b5c9dfac": "Se requieren los parámetros para estimar la comisión",
+  "2e66b4441526bc23": "Los fondos disponibles ya no cubren el importe mínimo de ingreso, las comisiones y la reserva.",
   "2eb2241295140ec9": {
     "c": "Valor disponible",
     "i": 1,
@@ -720,6 +728,7 @@
   "3414b088dde8621b": "Guardando...",
   "34355b1831b56894": "Introduce un destinatario",
   "3476f1d209b18dd3": "Reclamar",
+  "3493b275040a6f69": "Cerrar detalles del saldo",
   "34d07de262ec1f48": "UnifiedPush",
   "34edad1f5f0314d9": "Se necesitan más fondos confirmados en la cadena. Vas a iniciar el seguimiento de todos modos; añade fondos a la billetera antes de avanzar.",
   "351ced71e84d5f6a": "La esperanza de un sistema financiero más justo.",
@@ -731,6 +740,7 @@
   },
   "35cb2d2214ab82e9": "{count} bloque",
   "35eaaa3b6b925f69": "Procesando",
+  "36326603a2793e77": "Parte de tu saldo de Ark necesita renovarse primero",
   "365eb4634ec0eeb9": {
     "c": "Seleccionar todos",
     "i": 1,
@@ -892,6 +902,7 @@
   "469aae33a5a5bc74": "Bloqueado",
   "46c9f9ca9548d026": "Comida y bebida",
   "475071964a78761b": "Los pagos Lightning no están disponibles para este usuario en este momento.",
+  "47c309d5a48b5903": "En salida",
   "47cd28f6d8b7c7b1": {
     "c": "Pagar con",
     "i": 1,
@@ -923,6 +934,7 @@
   "4a7677f9a5e34f4e": "No se encontraron VTXOs bloqueados",
   "4a82795112110fa2": "Abrir repositorio de Noah en GitHub",
   "4aae50a4c17d906c": "Comisiones totales estimadas",
+  "4ac9312fd04785cb": "Mostrar detalles del saldo",
   "4acb5573fb336197": "Hora de vencimiento del pago recurrente no válida",
   "4ae72e3c9f26f543": "API de exploradores",
   "4af0b668c839ed34": "¿Continuar sin estimación?",
@@ -986,6 +998,7 @@
     "t": "Text"
   },
   "508f3d714356b775": "Rupia india",
+  "5092b16c62cc66a3": "El importe del ingreso automático ha cambiado",
   "513e0e91ee2eb60d": "Copiar ID de la transacción de depósito",
   "5163ced4ac8f6d19": "Token de notificaciones push no válido",
   "51e742ddf2600dfc": "Los VTXOs son para Ark lo que los UTXOs son para Bitcoin",
@@ -1002,11 +1015,6 @@
   "5334c1ad2586fdfa": "Información de Ark",
   "53462362246a90c6": "La actividad en segundo plano sigue funcionando",
   "534c66a6bcd5f55e": "Configurar Lightning & NIP-05",
-  "53a72ffced4c2898": {
-    "c": "Pendiente confiable",
-    "i": 1,
-    "t": "Text"
-  },
   "53bcbe469c5db0d5": "Dirección de Ark",
   "53c40c785e60a353": "No se pudieron consultar los saldos de la billetera. Inténtalo de nuevo.",
   "54002bf654ddbab1": "Completado",
@@ -1056,6 +1064,7 @@
   "5611df2dd156cfd2": "HH:MM",
   "569c16b5c06a9118": "Importe transferido",
   "56e9fabcabc90c46": "Confirmar",
+  "56eaac3b28779d9d": "Listo para gastar",
   "570f3a107ab75d15": "…",
   "57aa788eb8b8dad5": "El hash SHA-256 de la copia de seguridad debe tener 64 caracteres hexadecimales",
   "57e61261bc11c42e": "El asunto es demasiado largo",
@@ -1177,11 +1186,6 @@
     "c": "¡No se pudo actualizar el buzón!",
     "i": 1,
     "t": "AlertTitle"
-  },
-  "636b43a0b319f6fd": {
-    "c": "Salida pendiente",
-    "i": 1,
-    "t": "Text"
   },
   "63a68df69453055e": "La comisión estimada de reclamación consume todo el importe recuperado. Puede que no sea posible reclamar los fondos.",
   "63a91268d6fb67fe": {
@@ -1497,7 +1501,6 @@
   },
   "8302a3c560d45569": "Tx de salida {value1}",
   "830ccea31252e6ed": "Cada {count} semanas",
-  "8314265849e16ec1": "Mostrar u ocultar los detalles del saldo",
   "839e9b9affd28a95": "Se requiere un importe para los pagos LNURL",
   "841c852e825b849f": "Alertas opcionales para comunicaciones urgentes sobre la billetera.",
   "842d5cd07952d10e": "Destinatario no compatible",
@@ -1692,6 +1695,7 @@
   "95fed35b94ded769": "Comisión estimada",
   "96125e501a5e90c9": "Actualizar la cronología de salida",
   "96e0ff26cfee3db8": "Ya gastado",
+  "9756b09ffd8a55c6": "En curso",
   "9810abf0813d6b17": "Comisión estimada de reclamación",
   "98386e0bcc8623d8": {
     "c": "Saldo confirmado en la cadena",
@@ -1705,6 +1709,7 @@
   "9944b1d99d139e63": "Transacción de reclamación confirmada",
   "994d9f157f312b4a": "{value1} {value2}",
   "99ab45e473638645": "Liquidación",
+  "99dd3b0be953f123": "Barrido",
   "9a20dbdd78ee31cb": "Reclamable desde el bloque {value1}",
   "9a467669ca825dcc": "Preimagen",
   "9ad96aabf54ff3fd": "Restablecer el punto de acceso predeterminado de Noah",
@@ -1846,11 +1851,6 @@
   "a39cb3a5ab675af3": "La red no coincide: se esperaba {expected}, pero se obtuvo {actual}",
   "a3b0e3de374c03b2": "No se ha cargado la instantánea de BTC Map.",
   "a3b79090f538c34e": "Reclamado en el bloque {value1}",
-  "a3ba73a40c444bb8": {
-    "c": "Envío pendiente",
-    "i": 1,
-    "t": "Text"
-  },
   "a3db76156734f3c8": "Cancelar salida",
   "a3e006ea1ddeb9c1": "Dirección copiada",
   "a4201eeeec6d605b": "El importe del pago está fuera del rango admitido para esta dirección Lightning",
@@ -1896,11 +1896,6 @@
     "t": "Text"
   },
   "a7b55475971405a5": "bloques",
-  "a7d2dadd7534f453": {
-    "c": "Disponible para gastar",
-    "i": 1,
-    "t": "Text"
-  },
   "a80d7c76a28cbea5": {
     "c": "Suspender billetera",
     "i": 1,
@@ -1950,6 +1945,7 @@
   "abc056653eeb6398": "Preimagen del pago",
   "abc92b45d4c8104c": "Ejecutar el mantenimiento delegado de la billetera, incluida la sincronización en cadena",
   "abcd9c173d61e9a6": "Esta acción renueva los VTXOs seleccionados en una ronda delegada de Ark.",
+  "abd9bb20a41aaacf": "Renovando",
   "ac1993e0b6cc00bd": {
     "c": "El código de verificación caducará en 10 minutos.",
     "i": 1,
@@ -2081,11 +2077,6 @@
     "t": "Text"
   },
   "b6223cee66ff78c0": "Ver copias de seguridad",
-  "b6895baaf0a8d810": {
-    "c": "Fuera de la cadena",
-    "i": 1,
-    "t": "Text"
-  },
   "b6e5b31255e011c5": "Aceptar",
   "b6f48f031871f89a": "El identificador de la programación de pagos recurrentes está duplicado",
   "b73364b963ffdda6": {
@@ -2358,6 +2349,11 @@
     "t": "Text"
   },
   "cedf30c5f7e02bfe": "Autentícate para activar la biometría",
+  "ceec80be00b17012": {
+    "c": "Saldo",
+    "i": 1,
+    "t": "Text"
+  },
   "cefa88a30e35d39a": "Mantén la humildad, acumula sats.",
   "cf446689f3b1586d": "Tu correo de emergencia se ha actualizado.",
   "cfeb05159a2088ae": "Sin registrar",
@@ -2411,11 +2407,6 @@
   "d4d89c139de812a8": "Fallido",
   "d4df4baa39b2fba5": "Volver a estimar",
   "d50708f9dd6d0277": "Pagar ",
-  "d50e76317a76b1ea": {
-    "c": "Confirmado",
-    "i": 1,
-    "t": "Text"
-  },
   "d546fae6248001bf": "Nadie puede congelar tus fondos.",
   "d54ac9fa75a0f84c": "Abre la configuración de tu dispositivo y permite que Noah se ejecute en segundo plano. Luego, continúa.",
   "d581043cf30e5d99": "No se pudo restablecer el registro",
@@ -2452,11 +2443,6 @@
   },
   "d894f6cb29f7a3ea": "Volver",
   "d8954939729b2126": "Importar VTXO",
-  "d8c57065a0d6a1ff": {
-    "c": "Incorporación pendiente",
-    "i": 1,
-    "t": "Text"
-  },
   "d8df14f9905f38eb": "Enviado",
   "d920116ace2b9dc2": "Enviar código al nuevo correo",
   "d9accca497de2ba5": "Copiar dirección de Bitcoin",
@@ -2544,6 +2530,11 @@
     "i": 1,
     "t": "Text"
   },
+  "e0e407b4dd95342d": {
+    "c": "Mostrar todos los campos de Bark",
+    "i": 1,
+    "t": "Text"
+  },
   "e0ef166202b49100": "Resumen breve",
   "e0fa959d80ac0d81": "Seleccionar",
   "e17f512253e5fc16": "No se pudo compartir el archivo de copia de seguridad. Inténtalo de nuevo.",
@@ -2605,6 +2596,7 @@
     "t": "Text"
   },
   "e4cd4480c06e944b": "Saldo de Ark insuficiente",
+  "e4defb2c3cd42206": "Enviando",
   "e50e7cbbeba65b71": "Depósito completado",
   "e51d6b88233aca0f": "Si las claves no son tuyas, las monedas tampoco.",
   "e52b44d3042f6b49": "Se ha revocado la autorización del buzón.",
@@ -2614,11 +2606,6 @@
     "t": "Text"
   },
   "e585acc16ee54849": "No se pudieron estimar las comisiones de depósito. Inténtalo de nuevo más tarde.",
-  "e5b26458888117b2": {
-    "c": "En cadena",
-    "i": 1,
-    "t": "Text"
-  },
   "e5c7681582f00967": "Primer pago",
   "e5d10588fc1f9815": {
     "c": "Estimación de comisiones no disponible",
@@ -2709,6 +2696,7 @@
   "ecccf3fad5f630a9": "Cambiar Lightning & NIP-05",
   "ed1a5b772ad95692": "Ni tu saldo Ark ni tu billetera en cadena pueden cubrir este pago.",
   "ed2ab40ea26fd450": "Selecciona al menos un VTXO.",
+  "ed634257bf9e6c0d": "Entrante",
   "ed7b94c494ee1691": "≈ ",
   "edb6a1d2c2364db5": "Recibido en",
   "ee181a9aef7cae88": "Los fondos se recuperaron en la cadena.",
@@ -2762,11 +2750,6 @@
     "i": 1,
     "t": "Text"
   },
-  "f2d1b37a6f5a6ba9": {
-    "c": "Pendiente en una ronda",
-    "i": 1,
-    "t": "Text"
-  },
   "f310928f9ed3e47d": "Ya las activé: comprobar de nuevo",
   "f314d35314020477": {
     "c": "Depósito sugerido",
@@ -2799,6 +2782,18 @@
   "f6bdfaa5f8276cd2": "Crear copia de seguridad ahora",
   "f6f6e12ca60e1bf4": "Importe estimado tras descontar las comisiones de retirada",
   "f7076912c867f4b3": "Los VTXOs disponibles han cambiado. Actualiza y vuelve a revisar la salida.",
+  "f78b73c1bce7a605": {
+    "c": [
+      {
+        "i": 2,
+        "k": "_gt_value_2",
+        "v": "v"
+      },
+      " necesita renovación"
+    ],
+    "i": 1,
+    "t": "Text"
+  },
   "f7e8460e359aa38e": {
     "c": "Android comprueba si hay pagos que deban enviarse aproximadamente una vez al día, incluso cuando Noah está cerrado. Al abrir Noah, los pagos pendientes se envían de inmediato. Para que los pagos se envíen a tiempo, configura el uso de batería de Noah como \"Sin restricciones\" en los ajustes de la aplicación.",
     "i": 1,
@@ -2817,11 +2812,6 @@
     "t": "Text"
   },
   "f86d1b3defd75cea": "Ninguno",
-  "f89cbb5a46f94eb1": {
-    "c": "Sin madurar",
-    "i": 1,
-    "t": "Text"
-  },
   "f8ab8df187ccbdc7": "your@email.com",
   "f8bb1f46e5d5a072": "API de altura de bloque",
   "f8c27877ce0a01dc": "Exportar transacciones",
@@ -2887,11 +2877,6 @@
   "ff38ebd350102cea": "Comisión de depósito en Ark",
   "ff450b81a89e0dae": "Introduce una dirección de correo electrónico válida.",
   "ff6d991a8f6d1cc3": "Pagar ≈ ",
-  "ff84c525d135cfd6": {
-    "c": "Pendiente no confiable",
-    "i": 1,
-    "t": "Text"
-  },
   "ffa04098ba97ec93": "Saldo confirmado insuficiente",
   "ffd5c121422eccc4": "new@email.com",
   "ffd72a2ababdc4da": "Usuario no encontrado",

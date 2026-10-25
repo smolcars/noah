@@ -1,9 +1,9 @@
 import * as NitroArk from "react-native-nitro-ark";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import logger from "~/lib/log";
+import type { NoahExitFeeEstimate } from "~/lib/exitFeeEstimate";
 import type {
   ExitProgressStatusResult,
-  ExitFeeEstimate,
   ExitStateDetails,
   ExitStatusResult,
   ExitVtxoResult,
@@ -14,12 +14,20 @@ const log = logger("exitApi");
 export const estimateEmergencyExitFee = async (
   vtxoIds: string[],
   destinationAddress?: string,
-): Promise<Result<ExitFeeEstimate, Error>> => {
+): Promise<Result<NoahExitFeeEstimate, Error>> => {
+  const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
   // Do not sync here: Bark's sync can progress initialized exits.
-  return ResultAsync.fromPromise(
-    NitroArk.estimateEmergencyExitFee(vtxoIds, undefined, destinationAddress),
-    (error) => (error instanceof Error ? error : new Error(String(error))),
-  );
+  return ResultAsync.combine([
+    ResultAsync.fromPromise(
+      NitroArk.estimateEmergencyExitFee(vtxoIds, undefined, destinationAddress),
+      toError,
+    ),
+    ResultAsync.fromPromise(NitroArk.onchainBalance(), toError),
+  ]).map(([estimate, onchain]) => ({
+    ...estimate,
+    // Bark no longer reports this; the broadcast fee is funded from confirmed onchain UTXOs.
+    fundable: onchain.confirmed >= estimate.exit_broadcast_fee_sat,
+  }));
 };
 
 export type ExitClaimResult = {

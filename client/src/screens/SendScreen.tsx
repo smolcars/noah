@@ -52,6 +52,7 @@ const SendScreen = () => {
     btcPrice,
     toggleCurrency,
     offchainWalletBalance,
+    needsRefreshBalance,
     onchainWalletBalance,
     destination,
     setDestination,
@@ -148,14 +149,18 @@ const SendScreen = () => {
       ? undefined
       : rail === "onchain"
         ? gt("Neither balance can cover this amount")
-        : gt("Insufficient Ark balance"),
+        : amountSat <= offchainWalletBalance + needsRefreshBalance
+          ? gt("Part of your Ark balance needs a refresh first")
+          : gt("Insufficient Ark balance"),
   }));
   const sourceChoices: SendChoiceOption<OnchainSendSource>[] = [
     {
       value: "offchain",
       title: getOnchainSourceLabel("offchain", gt),
       subtitle: gt("Send on-chain by offboarding from Ark"),
-      detail: formatBitcoinAmount(offchainWalletBalance),
+      detail: formatBitcoinAmount(
+        isMaxSend ? offchainWalletBalance + needsRefreshBalance : offchainWalletBalance,
+      ),
       unavailableReason: onchainSourceOptions.includes("offchain")
         ? undefined
         : isMaxSend

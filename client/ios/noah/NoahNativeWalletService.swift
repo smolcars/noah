@@ -10,11 +10,7 @@ struct NoahNativeWalletBalance {
       + onchain.immature
       + onchain.trustedPending
       + onchain.untrustedPending
-      + offchain.pendingExit
-      + offchain.pendingLightningSend
-      + offchain.pendingInRound
-      + offchain.spendable
-      + offchain.pendingBoard
+      + offchain.total
   }
 }
 

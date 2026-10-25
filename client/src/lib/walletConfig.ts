@@ -16,6 +16,9 @@ const REGTEST_HOST = process.env.EXPO_PUBLIC_REGTEST_URL
   : Platform.OS === "android"
     ? "10.0.2.2"
     : "localhost";
+const REGTEST_BITCOIND_URL =
+  process.env.EXPO_PUBLIC_REGTEST_BITCOIND_URL ?? `http://${REGTEST_HOST}:18443`;
+const REGTEST_ARK_URL = process.env.EXPO_PUBLIC_REGTEST_ARK_URL ?? `http://${REGTEST_HOST}:3535`;
 
 const WALLET_CONFIGS: Record<AppVariant, BaseWalletConfig> = {
   mainnet: {
@@ -51,8 +54,8 @@ const WALLET_CONFIGS: Record<AppVariant, BaseWalletConfig> = {
     signet: false,
     bitcoin: false,
     config: {
-      bitcoind: `http://${REGTEST_HOST}:18443`,
-      ark: `http://${REGTEST_HOST}:3535`,
+      bitcoind: REGTEST_BITCOIND_URL,
+      ark: REGTEST_ARK_URL,
       bitcoind_user: "second",
       bitcoind_pass: "ark",
       vtxo_refresh_expiry_threshold: 24,
@@ -140,6 +143,6 @@ export const getDefaultBlockheightEndpoint = (appVariant: AppVariant = APP_VARIA
     case "signet":
       return "https://mempool.space/signet/api/blocks/tip/height";
     case "regtest":
-      return `http://${REGTEST_HOST}:18443`;
+      return REGTEST_BITCOIND_URL;
   }
 };

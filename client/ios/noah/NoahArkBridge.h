@@ -24,12 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface NoahArkOffchainBalance : NSObject
 
-@property(nonatomic, readonly) uint64_t spendable;
-@property(nonatomic, readonly) uint64_t pendingLightningSend;
-@property(nonatomic, readonly) uint64_t claimableLightningReceive;
-@property(nonatomic, readonly) uint64_t pendingInRound;
-@property(nonatomic, readonly) uint64_t pendingExit;
-@property(nonatomic, readonly) uint64_t pendingBoard;
+@property(nonatomic, readonly) uint64_t total;
 
 - (instancetype)init NS_UNAVAILABLE;
 

@@ -51,7 +51,10 @@ mock.module("gt-react-native", () => ({
   T: () => null,
   Var: () => null,
 }));
-mock.module("react-native", () => ({ View: () => null }));
+mock.module("react-native", () => ({
+  View: () => null,
+  AppState: { currentState: "active", addEventListener: () => ({ remove() {} }) },
+}));
 mock.module("../../src/components/ConfirmationDialog", () => ({
   ConfirmationDialog: () => null,
 }));
@@ -73,14 +76,25 @@ mock.module("../../src/lib/utils", () => ({ cn: (...values) => values.join(" ") 
 mock.module("../../src/hooks/useBitcoinAmountFormatter", () => ({
   useBitcoinAmountFormatter: () => (amount) => `${amount} sats`,
 }));
+const fundingTxids = ["confirmed-deposit"];
 const store = {
   isAutoBoardingEnabled: true,
-  hasAttemptedAutoBoarding: false,
+  handledAutoBoardFundingTxids: [],
   setAutoBoardingEnabled() {},
-  setHasAttemptedAutoBoarding() {},
+  markAutoBoardFundingHandled(txids) {
+    store.handledAutoBoardFundingTxids = [
+      ...new Set([...store.handledAutoBoardFundingTxids, ...txids]),
+    ];
+  },
   setAutoBoardSuccessBanner() {},
 };
-mock.module("../../src/store/transactionStore", () => ({ useTransactionStore: () => store }));
+const useTransactionStore = Object.assign(() => store, { getState: () => store });
+mock.module("../../src/store/transactionStore", () => ({ useTransactionStore }));
+mock.module("../../src/lib/paymentsApi", () => ({
+  getBoardingStatus: async () =>
+    ok({ fundingTxids, blocked: false, confirmedOnchainBalanceSat: balance.onchain.confirmed }),
+}));
+mock.module("../../src/lib/walletApi", () => ({ getArkInfo: async () => ok(arkInfo) }));
 const { AutoBoardingService } = await import("../../src/components/AutoBoardingService");
 
 function render() {
@@ -102,6 +116,7 @@ const completePlan = async (index, plan) => {
 
 test("loading renders and ineligible estimates do not restart auto-boarding", async () => {
   render();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   expect(plans).toHaveLength(1);
   await completePlan(0, null);
   for (let i = 0; i < 3; i++) render();
@@ -112,6 +127,7 @@ test("loading renders and ineligible estimates do not restart auto-boarding", as
   // A real balance change must still trigger an estimate and open its confirmation.
   balance.onchain.confirmed = 30_000;
   render();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   expect(plans).toHaveLength(2);
   expect(plans[1].input.confirmedOnchainBalanceSat).toBe(30_000);
   await completePlan(1, {

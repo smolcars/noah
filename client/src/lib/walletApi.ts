@@ -63,6 +63,7 @@ import { useWalletStore } from "~/store/walletStore";
 import { APP_VARIANT } from "~/config";
 import { getEffectiveEsploraEndpoint, validateEsploraEndpoint } from "~/lib/esplora";
 import { useEsploraStore } from "~/store/esploraStore";
+import { mmkv, mmkvPath } from "~/lib/mmkv";
 import {
   getDefaultEsploraEndpoint,
   getEffectiveWalletConfig,
@@ -519,13 +520,16 @@ export const getArkInfo = async (): Promise<Result<BarkArkInfo, Error>> => {
 
 export const deleteWallet = async (): Promise<Result<void, Error>> => {
   // Check if document directory path exists
-  // Then recursively delete all files and directories within it
+  // Then recursively delete all files and directories except the open MMKV storage
   const documentDirectoryExists = RNFSTurbo.exists(DOCUMENT_DIRECTORY_PATH);
 
   if (documentDirectoryExists) {
     const dircontents = RNFSTurbo.readdir(DOCUMENT_DIRECTORY_PATH);
     log.d(`Directory contents: ${dircontents}`);
     dircontents.forEach((n) => {
+      if (`${DOCUMENT_DIRECTORY_PATH}/${n}` === mmkvPath) {
+        return;
+      }
       log.d(`Deleting file: ${n}`);
       RNFSTurbo.unlink(`${DOCUMENT_DIRECTORY_PATH}/${n}`);
     });
@@ -544,6 +548,9 @@ export const deleteWallet = async (): Promise<Result<void, Error>> => {
       RNFSTurbo.unlink(`${CACHES_DIRECTORY_PATH}/${n}`);
     });
   }
+
+  // Keep the mmap'd files linked so writes from the next wallet reach disk.
+  mmkv.clearAll();
 
   const clearKeyChainResult = await ResultAsync.fromPromise(
     clearStaleKeychain(),

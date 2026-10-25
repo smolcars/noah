@@ -69,31 +69,16 @@ BOOL PerformVoidOperation(NSString *name, NSError **error, Operation operation) 
 
 @interface NoahArkOffchainBalance ()
 
-- (instancetype)initWithSpendable:(uint64_t)spendable
-              pendingLightningSend:(uint64_t)pendingLightningSend
-         claimableLightningReceive:(uint64_t)claimableLightningReceive
-                     pendingInRound:(uint64_t)pendingInRound
-                        pendingExit:(uint64_t)pendingExit
-                       pendingBoard:(uint64_t)pendingBoard;
+- (instancetype)initWithTotal:(uint64_t)total;
 
 @end
 
 @implementation NoahArkOffchainBalance
 
-- (instancetype)initWithSpendable:(uint64_t)spendable
-              pendingLightningSend:(uint64_t)pendingLightningSend
-         claimableLightningReceive:(uint64_t)claimableLightningReceive
-                     pendingInRound:(uint64_t)pendingInRound
-                        pendingExit:(uint64_t)pendingExit
-                       pendingBoard:(uint64_t)pendingBoard {
+- (instancetype)initWithTotal:(uint64_t)total {
   self = [super init];
   if (self) {
-    _spendable = spendable;
-    _pendingLightningSend = pendingLightningSend;
-    _claimableLightningReceive = claimableLightningReceive;
-    _pendingInRound = pendingInRound;
-    _pendingExit = pendingExit;
-    _pendingBoard = pendingBoard;
+    _total = total;
   }
   return self;
 }
@@ -196,13 +181,7 @@ BOOL PerformVoidOperation(NSString *name, NSError **error, Operation operation) 
 + (NoahArkOffchainBalance *)offchainBalanceWithError:(NSError **)error {
   try {
     const auto balance = bark_cxx::offchain_balance();
-    return [[NoahArkOffchainBalance alloc]
-        initWithSpendable:balance.spendable
-        pendingLightningSend:balance.pending_lightning_send
-        claimableLightningReceive:balance.claimable_lightning_receive
-        pendingInRound:balance.pending_in_round
-        pendingExit:balance.pending_exit
-        pendingBoard:balance.pending_board];
+    return [[NoahArkOffchainBalance alloc] initWithTotal:balance.total];
   } catch (const std::exception &exception) {
     AssignError(error, @"Read off-chain balance", exception.what());
     return nil;

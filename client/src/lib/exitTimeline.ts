@@ -15,6 +15,7 @@ export const EXIT_STATE_ORDER: ExitProgressState[] = [
   "ClaimInProgress",
   "Claimed",
   "VtxoAlreadySpent",
+  "VtxoSwept",
   "Canceled",
 ];
 
@@ -28,6 +29,7 @@ export const getExitStateLabels = (
   ClaimInProgress: gt("Claiming"),
   Claimed: gt("Claimed"),
   VtxoAlreadySpent: gt("Already spent"),
+  VtxoSwept: gt("Swept"),
   Canceled: gt("Canceled"),
 });
 
@@ -201,6 +203,11 @@ export const getExitBlockRows = (
       addRow(gt("Last scanned"), formatBlockRef(details?.last_scanned_block));
       addRow(gt("State detail"), formatKind(details?.kind));
       break;
+    case "VtxoSwept":
+      details?.spent_inputs?.forEach((input, index) => {
+        addRow(gt("Spent input {value1}", { value1: index + 1 }), truncateMiddle(input, 10, 10));
+      });
+      break;
     default:
       addRow(gt("State detail"), formatKind(details?.kind));
       break;
@@ -246,6 +253,8 @@ export const getExitStatusText = (
         : gt("Claim transaction confirmed");
     case "VtxoAlreadySpent":
       return gt("Exit VTXO was already spent");
+    case "VtxoSwept":
+      return gt("Exit stopped because the Ark server swept this VTXO");
     case "Canceled":
       return gt("Exit processing was canceled");
     case "Processing": {
@@ -307,6 +316,10 @@ const getTimelineDescription = (
         : gt("Funds were recovered on-chain.");
     case "VtxoAlreadySpent":
       return gt("Exit tracking found that this VTXO was already spent.");
+    case "VtxoSwept":
+      return gt(
+        "An output this exit needed was spent on-chain. A refresh may still recover the funds.",
+      );
     case "Canceled":
       return gt("Exit processing was canceled before completion.");
   }

@@ -1,6 +1,3 @@
-import type { BarkMovement } from "react-native-nitro-ark";
-
-import { getMovementDestinationValue } from "~/lib/barkMovement";
 import { isFiatCurrencyCode } from "~/lib/fiatCurrency";
 import type {
   PaymentAmountMode,
@@ -154,28 +151,3 @@ export const shouldUseArkDirectLightningAddressRoute = (
   routeMethod: "ark" | "lightning",
   comment: string | null,
 ): boolean => routeMethod === "ark" && !comment;
-
-export const findNewArkoorMovementId = ({
-  existingMovementIds,
-  movements,
-  destination,
-  amountSat,
-}: {
-  existingMovementIds: ReadonlySet<number>;
-  movements: BarkMovement[];
-  destination: string;
-  amountSat: number;
-}): number | undefined =>
-  movements
-    .filter(
-      (movement) =>
-        !existingMovementIds.has(movement.id) &&
-        movement.status === "successful" &&
-        movement.subsystem?.name?.toLowerCase() === "bark.arkoor" &&
-        movement.subsystem?.kind?.toLowerCase() === "send" &&
-        movement.sent_to.some(
-          (sentTo) =>
-            getMovementDestinationValue(sentTo) === destination && sentTo.amount_sat === amountSat,
-        ),
-    )
-    .sort((a, b) => b.id - a.id)[0]?.id;

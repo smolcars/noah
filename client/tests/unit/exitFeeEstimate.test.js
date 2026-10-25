@@ -32,7 +32,6 @@ const estimate = {
   total_fee_sat: 12_800,
   fee_rate_sat_per_vb: 5,
   txs_to_broadcast: 2,
-  fundable: false,
 };
 const inputs = {
   walletId: "wallet-a",
@@ -139,10 +138,12 @@ describe("exit review correspondence", () => {
 });
 
 const nativeEstimate = mock(async () => estimate);
+const nativeOnchainBalance = mock(async () => ({ confirmed: 11_999 }));
 const nativeSync = mock(async () => {});
 const nativeProgress = mock(async () => []);
 mock.module("react-native-nitro-ark", () => ({
   estimateEmergencyExitFee: nativeEstimate,
+  onchainBalance: nativeOnchainBalance,
   syncExit: nativeSync,
   progressExits: nativeProgress,
 }));
@@ -155,10 +156,16 @@ describe("read-only exit estimator boundary", () => {
   test("quotes the full set together with automatic rates and the exact claim destination", async () => {
     const result = await estimateEmergencyExitFee(["a", "b"], "claim-destination");
     expect(result.isOk()).toBe(true);
-    expect(result.value).toEqual(estimate);
+    expect(result.value).toEqual({ ...estimate, fundable: false });
     expect(nativeEstimate).toHaveBeenLastCalledWith(["a", "b"], undefined, "claim-destination");
     expect(nativeSync).not.toHaveBeenCalled();
     expect(nativeProgress).not.toHaveBeenCalled();
+  });
+
+  test("is fundable once confirmed onchain funds cover the broadcast fee", async () => {
+    nativeOnchainBalance.mockResolvedValueOnce({ confirmed: 12_000 });
+    const result = await estimateEmergencyExitFee(["a"]);
+    expect(result.value.fundable).toBe(true);
   });
 
   test("does not require a destination for a new exit", async () => {

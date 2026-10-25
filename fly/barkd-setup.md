@@ -7,6 +7,8 @@ datadir, which must not contain unexpected files when the wallet is created.
 
 The barkd apps intentionally have no `http_service`, `services`, Flycast address, or public IP.
 They must remain in the same Fly organization/private network as their corresponding Noah apps.
+Barkd 0.8.0 and later can also serve the `bark-web` wallet UI on the API port; the image sets
+`BARKD_NO_UI=true` so it never does.
 
 ## Files
 
@@ -25,14 +27,14 @@ asset through BuildKit's `TARGETARCH` and verifies a pinned SHA-256 for each arc
 ```sh
 docker build \
   --file fly/barkd.Dockerfile \
-  --tag noah-barkd:0.7.1 \
+  --tag noah-barkd:0.8.0 \
   .
 
-docker run --rm noah-barkd:0.7.1 barkd --version
+docker run --rm noah-barkd:0.8.0 barkd --version
 ```
 
 The manual build workflow builds natively on amd64 and arm64 runners, then publishes shared
-`0.7.1` and `latest` manifests to `niteshbalusu/noah-barkd` on Docker Hub and
+`0.8.0` and `latest` manifests to `niteshbalusu/noah-barkd` on Docker Hub and
 `ghcr.io/smolcars/noah-barkd` on GHCR:
 
 ```sh
@@ -40,7 +42,7 @@ gh workflow run barkd-build-push.yml --ref master
 ```
 
 The workflow uses the existing `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets.
-The Fly configs deliberately use the immutable `0.7.1` tag rather than `latest`, so signet and
+The Fly configs deliberately use the immutable `0.8.0` tag rather than `latest`, so signet and
 mainnet promote the same image version.
 
 ## Provision signet

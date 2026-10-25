@@ -33,6 +33,10 @@ export const BARK_SUBSYSTEM = {
     name: "bark.round",
     kind: "send_onchain",
   },
+  ROUND_REFRESH: {
+    name: "bark.round",
+    kind: "refresh",
+  },
   EXIT_START: {
     name: "bark.exit",
     kind: "start",
