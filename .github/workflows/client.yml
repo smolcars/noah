@@ -7,8 +7,8 @@ env:
     extra-substituters =
     substituters = https://cache.nixos.org/
 
-# React Native CI is paused while CI work focuses on the native apps (2026-10-25); run it by hand if needed.
 on:
+  pull_request:
   workflow_dispatch:
   workflow_call:
     inputs:

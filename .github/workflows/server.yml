@@ -1,8 +1,17 @@
 name: Server CI
 
-# Paused while CI work focuses on the native apps (2026-10-25); run it by hand if needed.
 on:
-  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+    paths:
+      - "server/**"
+      - "scripts/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/**"
+      - "!**/*.md"
 
 jobs:
   changes:
