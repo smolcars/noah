@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,10 +39,10 @@ internal fun WelcomeStep(model: AppModel, presentation: OnboardingPresentation) 
             style = NoahTokens.Typography.body, color = palette.muted)
     }, bottom = {
         Spacer(Modifier.height(NoahTokens.Space.xxl - NoahTokens.Space.xs))
-        PillButton(tr("Create wallet"), Modifier.fillMaxWidth().entrance(6, play)) {
+        PillButton(tr("Create wallet"), Modifier.fillMaxWidth().entrance(6, play).testTag("onboarding-create")) {
             haptics.light(); presentation.betaError = null; presentation.betaOpen = true
         }
-        TextAction(tr("I already have a wallet"), Modifier.fillMaxWidth().heightIn(min = 52.dp).entrance(7, play)) { model.step = "restore" }
+        TextAction(tr("I already have a wallet"), Modifier.fillMaxWidth().heightIn(min = 52.dp).entrance(7, play).testTag("onboarding-restore")) { model.step = "restore" }
     })
     if (presentation.languageOpen) LanguageSheet(model, presentation)
     if (presentation.betaOpen) BetaSheet(model, presentation)
@@ -170,7 +171,7 @@ private fun BetaSheet(model: AppModel, presentation: OnboardingPresentation) {
             Text(tr(it), Modifier.padding(bottom = NoahTokens.Space.l).semantics { liveRegion = LiveRegionMode.Assertive },
                 style = NoahTokens.Typography.sub, color = palette.failure)
         }
-        PillButton(tr("Got it"), Modifier.fillMaxWidth(), loading = model.busy) {
+        PillButton(tr("Got it"), Modifier.fillMaxWidth().testTag("onboarding-beta-confirm"), loading = model.busy) {
             haptics.medium()
             model.action("Creation failed. Please try again.", inline = { presentation.betaError = it }) { model.create() }
         }

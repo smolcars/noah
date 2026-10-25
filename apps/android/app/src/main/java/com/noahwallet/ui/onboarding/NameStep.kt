@@ -18,6 +18,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -95,12 +96,12 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
         }
     }
     FormLayout(trailingTop = {
-        TextAction(tr("Skip"), muted = true, enabled = !model.busy) { haptics.light(); finish(null) }
+        TextAction(tr("Skip"), Modifier.testTag("onboarding-name-skip"), muted = true, enabled = !model.busy) { haptics.light(); finish(null) }
     }, headline = { large ->
         Headline(tr("Pick a name"), tr("This is how people pay you."), large, modifier = Modifier.entrance(0, play))
     }, form = {
         NameField(name, { presentation.name = it }, domain, !model.busy, focus, tr("Pick a name"), { save() },
-            Modifier.padding(top = formGap(NoahTokens.Space.xxxl)).entrance(2, play))
+            Modifier.padding(top = formGap(NoahTokens.Space.xxxl)).entrance(2, play).testTag("lightning-username-input"))
         AvailabilityRow(availability, Modifier.padding(top = 14.dp).entrance(3, play))
         if (availability == NameAvailability.taken) FlowRow(Modifier.padding(top = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(NoahTokens.Space.s), verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.s)) {
@@ -109,7 +110,7 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
             }
         }
     }, actions = {
-        PillButton(tr("Continue"), Modifier.fillMaxWidth(), enabled = availability.canContinue, loading = model.busy) { save() }
+        PillButton(tr("Continue"), Modifier.fillMaxWidth().testTag("onboarding-name-continue"), enabled = availability.canContinue, loading = model.busy) { save() }
     })
 }
 

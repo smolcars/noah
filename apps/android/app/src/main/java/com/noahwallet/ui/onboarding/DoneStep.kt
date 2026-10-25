@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.noahwallet.localization.tr
@@ -41,7 +42,7 @@ internal fun DoneStep(model: AppModel, presentation: OnboardingPresentation) {
             centered = LocalPose.current == OnboardingPose.Compact, modifier = Modifier.fillMaxWidth())
     }
     val button: @Composable () -> Unit = {
-        PillButton(tr("Open wallet"), Modifier.fillMaxWidth(), loading = model.busy) {
+        PillButton(tr("Open wallet"), Modifier.fillMaxWidth().testTag("onboarding-open-wallet"), loading = model.busy) {
             haptics.light()
             model.action("Couldn't finish setup. Please try again.") { model.finish() }
         }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -46,7 +47,8 @@ internal fun NotificationsContent(clock: SceneClock, off: Boolean, busy: Boolean
         }
     }, bottom = {
         Spacer(Modifier.height(NoahTokens.Space.screen))
-        PillButton(if (off) tr("Open Settings") else tr("Turn on notifications"), Modifier.fillMaxWidth(), loading = busy, onClick = onPrimary)
+        PillButton(if (off) tr("Open Settings") else tr("Turn on notifications"), Modifier.fillMaxWidth().testTag(if (off) "notifications-open-settings" else "notifications-enable"),
+            loading = busy, onClick = onPrimary)
     })
 }
 

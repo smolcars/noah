@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -102,7 +103,7 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
     }
     FormLayout(trailingTop = {
         AnimatedVisibility(stage != EmailStage.verified, enter = fadeIn(), exit = fadeOut()) {
-            TextAction(tr("Skip"), muted = true, enabled = !model.busy) { haptics.light(); focusManager.clearFocus(); model.step = "notifications" }
+            TextAction(tr("Skip"), Modifier.testTag("onboarding-email-skip"), muted = true, enabled = !model.busy) { haptics.light(); focusManager.clearFocus(); model.step = "notifications" }
         }
     }, headline = { large ->
         AnimatedContent(stage == EmailStage.entry, transitionSpec = {
@@ -164,7 +165,7 @@ internal fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, ena
             val label = tr("Add your email")
             BasicTextField(email, { presentation.email = EmailRules.normalize(it) },
                 Modifier.weight(1f).focusRequester(focus).onFocusChanged { focused = it.isFocused }
-                    .semantics { contentDescription = label; contentType = ContentType.EmailAddress },
+                    .semantics { contentDescription = label; contentType = ContentType.EmailAddress }.testTag("email-address-input"),
                 enabled = enabled, textStyle = NoahTokens.Typography.field.copy(color = palette.foreground),
                 cursorBrush = SolidColor(palette.orange), singleLine = true,
                 keyboardOptions = KeyboardOptions(KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
@@ -204,7 +205,7 @@ internal fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, ena
 internal fun SendButton(enabled: Boolean, sending: Boolean, onClick: () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         val width by animateDpAsState(if (sending) NoahTokens.Size.button else maxWidth, NoahTokens.Motion.snappy(), label = "send")
-        PillButton(tr("Send code"), Modifier.width(width), enabled = enabled, loading = sending, onClick = onClick)
+        PillButton(tr("Send code"), Modifier.width(width).testTag("onboarding-email-send"), enabled = enabled, loading = sending, onClick = onClick)
     }
 }
 
@@ -237,7 +238,7 @@ internal fun CodeEntry(model: AppModel, presentation: OnboardingPresentation, on
         var rowWidth by remember { mutableIntStateOf(0) }
         BasicTextField(otp.code, onTyped, Modifier.padding(top = formGap(34.dp)).fillMaxWidth().focusRequester(focus)
             .graphicsLayer { translationX = shake.value * density }
-            .semantics { contentDescription = label; contentType = ContentType.SmsOtpCode },
+            .semantics { contentDescription = label; contentType = ContentType.SmsOtpCode }.testTag("verification-code-input"),
             // Read-only while a request runs keeps the keyboard up but takes no digits.
             enabled = !verified, readOnly = model.busy,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),

@@ -1,7 +1,0 @@
-appId: com.noahwallet.regtest
-name: Adaptive send, receive, history, settings and rotation
----
-- runFlow: ../subflows/fresh-wallet.yml
-- runFlow: adaptive-layout-checks.yml
-- runFlow: adaptive-settings-checks.yml
-- runFlow: adaptive-rotation-checks.yml

@@ -1,9 +1,0 @@
-appId: com.noahwallet.regtest
----
-- tapOn: "Continue without email"
-- runFlow: finish-platform-onboarding.yml
-- tapOn: "Skip"
-- extendedWaitUntil:
-    visible:
-      id: "home-settings-button"
-    timeout: 30000

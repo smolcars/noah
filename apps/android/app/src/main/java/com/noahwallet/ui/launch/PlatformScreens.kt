@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
@@ -68,7 +69,7 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
     }
     BackHandler { if (!proceeding) onBack?.invoke() }
     com.noahwallet.ui.onboarding.FormLayout(trailingTop = {
-        com.noahwallet.ui.onboarding.TextAction(tr("Skip"), muted = true, enabled = !proceeding) { proceed() }
+        com.noahwallet.ui.onboarding.TextAction(tr("Skip"), androidx.compose.ui.Modifier.testTag("battery-skip"), muted = true, enabled = !proceeding) { proceed() }
     }, headline = { large ->
         com.noahwallet.ui.onboarding.Headline(tr("Let Noah run in the background"),
             tr("Otherwise Android may pause Noah, and payments could stop arriving."), large)
