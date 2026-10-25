@@ -24,6 +24,7 @@ class PushRuntime(private val context: Context, private val services: AppService
         ensureWalletOpen = services::ensureWalletOpen,
         recurring = { com.noahwallet.recurring.RecurringRuntime.shared(context).execute(it) },
         maintenance = services.session::maintenanceDelegated,
+        progressExits = { services.session.progressPendingExits { log.w("Background exit progress failed: $it") } },
         backup = { services.backupCoordinator.flush(com.noahwallet.services.backup.BackupCoordinator.Reason.push, requireEnabled = false) },
         reportBackup = { k1, success ->
             val payload = ReportJobStatusPayload(errorMessage = if (success) null else "Wallet backup failed",

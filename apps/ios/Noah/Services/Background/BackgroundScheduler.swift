@@ -87,31 +87,58 @@ extension BackgroundScheduler.Dependencies {
              isForeground: { UIApplication.shared.applicationState != .background },
              perform: { kind in
                  try await services.withBackgroundWallet {
-                     try await services.ensureWalletOpen()
-                     try BackgroundExecution.checkActive()
-                     try await services.session.sync()
-                     try BackgroundExecution.checkActive()
-                     if kind == .maintenance {
-                         try await services.session.maintenanceDelegated()
-                         try BackgroundExecution.checkActive()
-                     }
-                     // Exactly the push/foreground executor: durable occurrence journal,
-                     // stop generation, ArkInfo fee cap and inherited submission budget.
-                     await RecurringExecutor.shared.execute()
-                     try BackgroundExecution.checkActive()
-                     if kind == .maintenance {
-                         let enabled = SettingsStorage.shared.persistedState(
-                             PersistedServerState.self, key: PersistedServerState.key)?.isBackupEnabled == true
-                         if enabled { try await services.backupCoordinator.flush(.startup) }
-                     }
-                     try BackgroundExecution.checkActive()
-                     if let summary = try await services.session.summary() {
-                         try BackgroundExecution.checkActive()
-                         let expiry = try? await services.session.closestExpiryBlocks()
-                         try BackgroundExecution.checkActive()
-                         WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
-                     }
+                     try await BackgroundScheduler.run(kind, .init(
+                         open: { try await services.ensureWalletOpen() },
+                         sync: { try await services.session.sync() },
+                         maintenance: { try await services.session.maintenanceDelegated() },
+                         // Exactly the push/foreground executor: durable occurrence journal,
+                         // stop generation, ArkInfo fee cap and inherited submission budget.
+                         recurring: { await RecurringExecutor.shared.execute() },
+                         backup: {
+                             let enabled = SettingsStorage.shared.persistedState(
+                                 PersistedServerState.self, key: PersistedServerState.key)?.isBackupEnabled == true
+                             if enabled { try await services.backupCoordinator.flush(.startup) }
+                         },
+                         widget: {
+                             guard let summary = try await services.session.summary() else { return }
+                             try BackgroundExecution.checkActive()
+                             let expiry = try? await services.session.closestExpiryBlocks()
+                             try BackgroundExecution.checkActive()
+                             WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
+                         },
+                         progressExits: {
+                             await services.session.progressPendingExits { AppLog("backgroundTasks").w("Background exit progress failed: \($0)") }
+                         }))
                  }
              })
+    }
+}
+
+extension BackgroundScheduler {
+    /// A task's stages, apart from the SDK so their order is tested.
+    struct Stages: Sendable {
+        var open, sync, maintenance, recurring, backup, widget: @Sendable () async throws -> Void
+        /// Never throws.
+        var progressExits: @Sendable () async -> Void
+    }
+
+    /// Each stage after a budget check; maintenance and backup only in the maintenance task.
+    nonisolated static func run(_ kind: Kind, _ stages: Stages) async throws {
+        try await stages.open()
+        try BackgroundExecution.checkActive()
+        try await stages.sync()
+        try BackgroundExecution.checkActive()
+        if kind == .maintenance {
+            try await stages.maintenance()
+            try BackgroundExecution.checkActive()
+        }
+        try await stages.recurring()
+        try BackgroundExecution.checkActive()
+        if kind == .maintenance { try await stages.backup() }
+        try BackgroundExecution.checkActive()
+        try await stages.widget()
+        // Last: exits move here even when bark's daemon isn't running.
+        try BackgroundExecution.checkActive()
+        await stages.progressExits()
     }
 }

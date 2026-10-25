@@ -24,6 +24,8 @@ struct PushJobs: Sendable {
         var announceReceived: @Sendable (_ sats: Int64, _ usd: String?) async -> Void
         var refreshWidget: @Sendable () async -> Void
         var recurring: @Sendable () async throws -> Void = {}
+        /// Pending exits' progress; never throws.
+        var progressExits: @Sendable () async -> Void = {}
         var withWalletAccess: @Sendable (@escaping @Sendable () async throws -> Void) async throws -> Void = { try await $0() }
     }
 
@@ -47,6 +49,9 @@ struct PushJobs: Sendable {
             if let result { throw result }
             try BackgroundExecution.checkActive()
             await d.refreshWidget()
+            // Last: exits move here even when bark's daemon isn't running.
+            try BackgroundExecution.checkActive()
+            await d.progressExits()
 
         case .lightningInvoiceRequest(let payload):
             try await d.ensureWalletOpen()
@@ -159,6 +164,7 @@ extension PushJobs.Dependencies {
                 WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
             },
             recurring: { await RecurringExecutor.shared.execute() },
+            progressExits: { await session.progressPendingExits { AppLog("pushJobs").w("Background exit progress failed: \($0)") } },
             withWalletAccess: { try await services.withBackgroundWallet($0) })
     }
 }

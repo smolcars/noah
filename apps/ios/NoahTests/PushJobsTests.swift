@@ -29,7 +29,8 @@ struct PushJobsTests {
             heartbeat: { id in recorder.add("heartbeat \(id)"); if recorder.failHeartbeat { throw Boom() } },
             announceReceived: { sats, usd in recorder.add("announce \(sats) \(usd ?? "-")") },
             refreshWidget: { recorder.add("widget") },
-            recurring: { recorder.add("recurring") }))
+            recurring: { recorder.add("recurring") },
+            progressExits: { recorder.add("exits") }))
     }
 
     private func decode(_ json: String) throws -> PushPayload.NotificationData {
@@ -92,6 +93,18 @@ struct PushJobsTests {
     @Test func maintenanceReportsAndRefreshesTheWidget() async throws {
         let recorder = Recorder()
         try await jobs(recorder).handle(decode(#"{"notification_type":"maintenance","notification_k1":"k1"}"#))
+        #expect(recorder.all == ["open", "maintenance", "report maintenance success k1", "widget", "exits"])
+    }
+
+    @Test func maintenanceSkipsExitProgressOnceItsBudgetIsGone() async throws {
+        let recorder = Recorder()
+        let budget = RecurringSubmissionBudget()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.refreshWidget = { recorder.add("widget"); budget.revoke() }
+        let notification = try decode(#"{"notification_type":"maintenance","notification_k1":"k1"}"#)
+        await #expect(throws: CancellationError.self) {
+            try await RecurringSubmissionBudget.$current.withValue(budget) { try await PushJobs(dependencies: dependencies).handle(notification) }
+        }
         #expect(recorder.all == ["open", "maintenance", "report maintenance success k1", "widget"])
     }
 

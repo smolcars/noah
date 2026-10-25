@@ -27,7 +27,7 @@ class PushStageAdmissionTest {
 
     @Test fun eachIndependentStageRequiresCallerAndBudget() = runBlocking {
         val paths = listOf(
-            NotificationDataMaintenance("k1") to listOf("open", "maintenance", "report", "widget"),
+            NotificationDataMaintenance("k1") to listOf("open", "maintenance", "report", "widget", "exits"),
             NotificationDataLightningInvoiceRequest(1000, "tx") to listOf("open", "invoice", "submit"),
             NotificationDataLightningClaimRequest(1, null, "hash") to listOf("open", "claim", "announce", "widget"),
             NotificationDataBackupTrigger("k1") to listOf("open", "backup", "backup-report"),
@@ -106,6 +106,6 @@ class PushStageAdmissionTest {
         announceReceived = { _, _, _ -> runBlocking { stage("announce") } },
         refreshWidget = { stage("widget") }, log = {}, backup = { stage("backup") },
         reportBackup = { _, _ -> stage("backup-report") },
-        recurring = { stage("recurring") },
+        recurring = { stage("recurring") }, progressExits = { stage("exits") },
     )
 }

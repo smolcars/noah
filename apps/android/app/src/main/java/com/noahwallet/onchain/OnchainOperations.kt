@@ -257,15 +257,10 @@ internal class OnchainOperations(
                     val refusedStart = try { wallet.start(reviewed.ids); null } catch (error: BarkError) { refusal(error, reviewed.ids) ?: throw error }
                     runCatching { newRun(reviewed.ids) }
                     refusedStart?.let { throw it }
-                    OnchainReceipt("Exit started. Noah progresses it while the app is open, paying broadcast and fee-bump fees from your onchain balance.")
+                    OnchainReceipt("Exit started. Noah progresses it on its own, including in the background when the system lets it, paying broadcast and fee-bump fees from your onchain balance.")
                 }
                 OnchainAction.progress -> {
-                    val statuses = wallet.progress(reviewed.feeRate)
-                    // Short of confirmed funds is bark's own evidence, with what it needs; bark 0.8.0's CPFP never reports it.
-                    val short = statuses.mapNotNull { status -> status.error?.takeIf { it.code == BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS }
-                        ?.let { status.vtxoId to (it.neededSats?.toLong() ?: 0) } }.toMap()
-                    runCatching { shortOfFunds(short) }
-                    val failures = statuses.count { status -> status.error?.let { it.code != BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS } == true }
+                    val failures = progressed(reviewed.feeRate, shortOfFunds)
                     OnchainReceipt(if (failures == 0) OnchainReceipt.progressedMessage
                         else "Exit progression returned $failures errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 }
@@ -296,6 +291,31 @@ internal class OnchainOperations(
                 }
             }
         } } finally { reviewed.preparedBoard?.let { wallet.discardBoard(it.id, includingClaimed = true) } }
+    }
+    /** One exit progress at [feeRate] (null: bark's own), telling [shortOfFunds] what it reported short; how many failed otherwise. */
+    private suspend fun progressed(feeRate: Long?, shortOfFunds: (Map<String, Long>) -> Unit): Int {
+        val statuses = wallet.progress(feeRate)
+        // Short of confirmed funds is bark's own evidence, with what it needs; bark 0.8.0's CPFP never reports it.
+        val short = statuses.mapNotNull { status -> status.error?.takeIf { it.code == BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS }
+            ?.let { status.vtxoId to (it.neededSats?.toLong() ?: 0) } }.toMap()
+        runCatching { shortOfFunds(short) }
+        return statuses.count { status -> status.error?.let { it.code != BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS } == true }
+    }
+    /**
+     * Background jobs' exit progress, apart from bark's daemon: nothing without a pending exit, else one call at bark's
+     * own fee rate, recorded in [funding] like a completed Move exit forward. [admitted] throws once the
+     * job's budget is gone, so a late step never starts the call. True when it called bark.
+     */
+    suspend fun progressPending(funding: ExitFunding, admitted: () -> Unit): Boolean {
+        if (wallet.exits().all { exitState(it.state).first in ExitTimeline.terminal }) return false
+        admitted()
+        val failures = try { progressed(null, funding::reported) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { funding.checked(emptyList(), completed = false); throw error }
+        // Read after the call: what's still parked is what bark tried and couldn't pay.
+        val exits = try { wallet.allExits().map(::exitModel) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptyList() }
+        funding.checked(exits, completed = failures == 0)
+        return true
     }
     suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean {
         if (!quote.automatic || quote.action != OnchainAction.board || quote.walletID != wallet.walletID) return false

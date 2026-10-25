@@ -25,6 +25,8 @@ class PushJobs(private val dependencies: Dependencies) {
         val backup: suspend () -> Unit,
         val reportBackup: suspend (String, Boolean) -> Unit,
         val recurring: suspend (com.noahwallet.recurring.RecurringBudget) -> Unit = {},
+        /** Pending exits' progress; never throws but for cancellation. */
+        val progressExits: suspend () -> Unit = {},
     )
 
     suspend fun handle(notification: NotificationData) = withContext(
@@ -51,6 +53,9 @@ class PushJobs(private val dependencies: Dependencies) {
                 }
                 if (failure != null) throw failure
                 bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
+                // Last: exits move here even when bark's daemon isn't running.
+                caller.checkWalletAdmission()
+                d.progressExits()
             }
             is NotificationDataLightningInvoiceRequest -> {
                 require(notification.amount >= 0)

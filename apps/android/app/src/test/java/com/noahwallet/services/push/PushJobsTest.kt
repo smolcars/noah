@@ -26,11 +26,11 @@ class PushJobsTest {
         reportMaintenance = { k1, success -> events += "report:$k1:$success"; if (reportFails) error("report") },
         heartbeat = { events += "heartbeat:$it"; error("offline") },
         announceReceived = { sats, usd, hash -> events += "announce:$sats:$usd:$hash" },
-        refreshWidget = { events += "widget" }, log = { events += "log" },
+        refreshWidget = { events += "widget" }, log = { events += "log" }, progressExits = { events += "exits" },
     ))
     @Test fun maintenanceReportsSuccessThenRefreshes() = runBlocking {
         jobs.handle(NotificationDataMaintenance("correlation"))
-        assertEquals(listOf("open", "maintenance", "report:correlation:true", "widget"), events)
+        assertEquals(listOf("open", "maintenance", "report:correlation:true", "widget", "exits"), events)
     }
     @Test fun openFailureStillReportsAndPropagates() = runBlocking {
         openFails = true
@@ -40,7 +40,7 @@ class PushJobsTest {
     @Test fun reportFailureDoesNotUndoMaintenanceOrSkipWidget() = runBlocking {
         reportFails = true
         jobs.handle(NotificationDataMaintenance("k1"))
-        assertEquals(listOf("open", "maintenance", "report:k1:true", "log", "widget"), events)
+        assertEquals(listOf("open", "maintenance", "report:k1:true", "log", "widget", "exits"), events)
     }
     @Test fun invoiceTruncatesMillisatsBeforeSubmitting() = runBlocking {
         jobs.handle(PushPayload.decode("""{"notification_type":"lightning_invoice_request","amount":1234999,"transaction_id":"tx"}"""))

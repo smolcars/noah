@@ -185,8 +185,29 @@ class WalletSessionTest {
         }
     }
 
+    @Test fun backgroundExitProgressFailureIsLoggedNeverThrown() = runBlocking {
+        withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            session.createNew("unused", false, "test")
+            val warnings = mutableListOf<String>()
+            // The background job holds the wallet: the step still runs, where the UI's onchain calls are refused.
+            WalletBackgroundActivity.exclusive { session.progressPendingExits { warnings += it } }
+            assertEquals(listOf("offline"), warnings)
+            assertTrue(handles.exitsRead)
+            session.close()
+        }
+    }
+
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
+        var exitsRead = false
+        override val m6 = object : com.noahwallet.onchain.OnchainWalletAccess {
+            override val walletID = "wallet"
+            override suspend fun exits(): List<io.github.niteshbalusu11.bark.ExitVtxo> {
+                exitsRead = true; throw io.github.niteshbalusu11.bark.BarkError("offline", io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)
+            }
+        }
         override val send = com.noahwallet.send.FakeSendWallet()
         var preparations: com.noahwallet.send.SendPreparations? = null
         var beforeRetry: suspend () -> Unit = {}

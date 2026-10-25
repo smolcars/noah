@@ -1,5 +1,7 @@
 import BackgroundTasks
+import BarkBoltFFI
 import Foundation
+import Synchronization
 import Testing
 @testable import Noah
 
@@ -145,5 +147,90 @@ import Testing
         h.preflight = nil
         await h.executor.execute(); await h.executor.execute()
         #expect(h.calls.withLock { $0 } == 1)
+    }
+
+    // MARK: Pending exits' progress, last in each task and push
+
+    private static func stages(_ recorder: PushJobsTests.Recorder, widget: @escaping @Sendable () -> Void = {}) -> BackgroundScheduler.Stages {
+        func stage(_ name: String) -> @Sendable () async throws -> Void { { recorder.add(name) } }
+        return .init(open: stage("open"), sync: stage("sync"), maintenance: stage("maintenance"), recurring: stage("recurring"),
+                     backup: stage("backup"), widget: { recorder.add("widget"); widget() }, progressExits: { recorder.add("exits") })
+    }
+
+    @Test(arguments: BackgroundScheduler.Kind.allCases) func taskProgressesExitsLast(kind: BackgroundScheduler.Kind) async throws {
+        let recorder = PushJobsTests.Recorder()
+        try await BackgroundScheduler.run(kind, Self.stages(recorder))
+        #expect(recorder.all == (kind == .maintenance
+            ? ["open", "sync", "maintenance", "recurring", "backup", "widget", "exits"]
+            : ["open", "sync", "recurring", "widget", "exits"]))
+    }
+
+    @Test func taskSkipsExitProgressOnceItsBudgetIsGone() async throws {
+        let recorder = PushJobsTests.Recorder()
+        let budget = RecurringSubmissionBudget()
+        await #expect(throws: CancellationError.self) {
+            try await RecurringSubmissionBudget.$current.withValue(budget) {
+                try await BackgroundScheduler.run(.refresh, Self.stages(recorder) { budget.revoke() })
+            }
+        }
+        #expect(recorder.all == ["open", "sync", "recurring", "widget"])
+    }
+
+    final class ExitCalls: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [UInt64?] = []
+        func add(_ rate: UInt64?) { lock.withLock { values.append(rate) } }
+        var rates: [UInt64?] { lock.withLock { values } }
+    }
+
+    private static func exitAccess(_ calls: ExitCalls, _ exits: [ExitVtxo], statuses: [ExitProgressStatus] = [],
+                                   failure: Error? = nil, models: [ExitModel] = []) -> WalletSession.ExitProgressAccess {
+        .init(walletID: "w", exits: { exits },
+              progress: { rate in calls.add(rate); if let failure { throw failure }; return statuses },
+              models: { models }, tip: { 120 })
+    }
+
+    @Test func backgroundExitProgressCallsBarkOnlyForPendingExitsAndRecordsLikeACheck() async throws {
+        let session = WalletSession()
+        let calls = ExitCalls()
+        // Finished exits only: no call, nothing recorded.
+        let finished = [ExitVtxo(vtxoId: "done", amountSats: 31_000, state: .canceled(tipHeight: 100), isClaimable: false),
+                        ExitVtxo(vtxoId: "gone", amountSats: 31_000, state: .vtxoAlreadySpent(tipHeight: 100), isClaimable: false)]
+        #expect(try await !session.progressPendingExits(access: Self.exitAccess(calls, finished)))
+        #expect(calls.rates.isEmpty)
+        #expect(await session.exitChecks["w"] == nil)
+        // A pending one: one call at bark's own rate, recorded as Move exit forward records it.
+        var txs = ExitProgressTests.path.map { ExitProgressTests.tx($0, "verify-inputs") }
+        txs[0] = ExitProgressTests.tx("root", "awaiting-cpfp-broadcast")
+        let parked = ExitProgressTests.exit("Processing", ExitProgressTests.processing(txs))
+        let episode = try #require(parked.parkedEpisode)
+        let pending = finished + [ExitVtxo(vtxoId: "v", amountSats: 31_000, state: .start(tipHeight: 100), isClaimable: false)]
+        let short = ExitProgressStatus(vtxoId: "v", state: .processing(tipHeight: 101, transactions: []),
+            error: BarkError(message: "private", code: .exitInsufficientConfirmedFunds, neededSats: 1_215, availableSats: 310))
+        #expect(try await session.progressPendingExits(access: Self.exitAccess(calls, pending, statuses: [short], models: [parked])))
+        #expect(calls.rates == [nil])
+        let check = try #require(await session.exitChecks["w"])
+        #expect(check.tip == 120 && !check.failed)
+        #expect(check.parked == ["v": episode] && check.needed == ["v": 1_215])
+        // A call that throws is recorded failed and rethrown to the job's wrapper.
+        await #expect(throws: PushJobsTests.Boom.self) {
+            try await session.progressPendingExits(access: Self.exitAccess(calls, pending, failure: PushJobsTests.Boom()))
+        }
+        #expect(await session.exitChecks["w"]?.failed == true)
+        // The job's budget gone after the read: bark is never called.
+        let revoked = RecurringSubmissionBudget(); revoked.revoke()
+        await #expect(throws: CancellationError.self) {
+            try await RecurringSubmissionBudget.$current.withValue(revoked) {
+                try await session.progressPendingExits(access: Self.exitAccess(calls, pending))
+            }
+        }
+        #expect(calls.rates.count == 2)
+    }
+
+    @Test func backgroundExitProgressFailureIsReportedNeverThrown() async {
+        let failures = Mutex<[String]>([])
+        // No open wallet: the job's step logs why and carries on.
+        await WalletSession().progressPendingExits { reason in failures.withLock { $0.append(reason) } }
+        #expect(failures.withLock { $0 } == ["SessionError"])
     }
 }

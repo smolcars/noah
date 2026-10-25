@@ -32,7 +32,7 @@ class PeriodicJobsTest {
             val stages = mutableListOf<String>()
             PeriodicJobs(dependencies(due = due) { stages += it }).run(PeriodicWork.Kind.refresh, RecurringBudget())
             assertEquals(listOf("eligible", "due", "open", "sync") +
-                (if (due) listOf("recurring") else emptyList()) + listOf("summary", "expiry", "widget"), stages)
+                (if (due) listOf("recurring") else emptyList()) + listOf("summary", "expiry", "widget", "exits"), stages)
         }
     }
 
@@ -41,7 +41,7 @@ class PeriodicJobsTest {
             val stages = mutableListOf<String>()
             PeriodicJobs(dependencies(backupEnabled = enabled) { stages += it }).run(PeriodicWork.Kind.maintenance, RecurringBudget())
             assertEquals(listOf("eligible", "due", "open", "sync", "maintenance", "recurring", "backup-enabled") +
-                (if (enabled) listOf("backup") else emptyList()) + listOf("summary", "expiry", "widget"), stages)
+                (if (enabled) listOf("backup") else emptyList()) + listOf("summary", "expiry", "widget", "exits"), stages)
         }
     }
 
@@ -52,7 +52,7 @@ class PeriodicJobsTest {
     }
 
     @Test fun stopAndRevocationGateEveryIndependentStage() = runBlocking {
-        val expected = listOf("eligible", "due", "open", "sync", "maintenance", "recurring", "backup-enabled", "backup", "summary", "expiry", "widget")
+        val expected = listOf("eligible", "due", "open", "sync", "maintenance", "recurring", "backup-enabled", "backup", "summary", "expiry", "widget", "exits")
         for (stopAt in expected.dropLast(1)) for (stop in listOf(true, false)) {
             val budget = RecurringBudget()
             val stages = mutableListOf<String>()
@@ -130,7 +130,7 @@ class PeriodicJobsTest {
             ensureWalletOpen = { stage("open") }, sync = { stage("sync") }, recurring = { stage("recurring") },
             widgetSummary = { stage("summary") }, widgetExpiry = { stage("expiry") }, publishWidget = { stage("widget") },
             maintenance = { stage("maintenance") }, backupEnabled = { runBlocking { stage("backup-enabled") }; backupEnabled },
-            backup = { stage("backup") },
+            backup = { stage("backup") }, progressExits = { stage("exits") },
         )
     }
 }

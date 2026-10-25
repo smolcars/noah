@@ -5,6 +5,7 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.recurring.RecurringRuntime
 import com.noahwallet.services.AppServices
 import com.noahwallet.services.backup.BackupCoordinator
+import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.push.WidgetDataWriter
 import com.noahwallet.services.wallet.WalletSession
 
@@ -23,5 +24,6 @@ internal class PeriodicRuntime(context: Context, services: AppServices) {
         widgetSummary = { summary = services.session.summary() },
         widgetExpiry = { expiry = services.session.closestExpiryBlocks() },
         publishWidget = { summary?.let { WidgetDataWriter.write(context, it.balance, expiry, BuildConfig.APP_VARIANT) } },
+        progressExits = { services.session.progressPendingExits { AppLog(context, "backgroundTasks").w("Background exit progress failed: $it") } },
     ))
 }

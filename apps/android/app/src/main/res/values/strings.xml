@@ -447,7 +447,7 @@
   <string name="gt_c3ac6596a27b89b8">"Exit moved forward"</string>
   <string name="gt_ba61a6796c9bda55">"Exit processing was canceled before completion."</string>
   <string name="gt_0cb3378726d1acba">"Exit progression returned %1$s errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing."</string>
-  <string name="gt_d59f24d5314480bf">"Exit started. Noah progresses it while the app is open, paying broadcast and fee-bump fees from your onchain balance."</string>
+  <string name="gt_0404f5868f0e18d5">"Exit started. Noah progresses it on its own, including in the background when the system lets it, paying broadcast and fee-bump fees from your onchain balance."</string>
   <string name="gt_899bbd05c2743f78">"Exit status is unavailable. Pull to refresh."</string>
   <string name="gt_e49e631bec2e7e40">"Exit tracking found that this VTXO was already spent."</string>
   <string name="gt_09fc43a650792fef">"Exit tracking was registered for this VTXO."</string>
@@ -789,7 +789,7 @@
   <string name="gt_338e68cc4323f294">"Noah notifications"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registers this wallet with the server again. Your wallet stays."</string>
   <string name="gt_286c0deecb39be99">"Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."</string>
-  <string name="gt_980773ba88acbc7c">"Noah then sends and fee-bumps the exit’s transactions while the app is open, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
+  <string name="gt_20d1c59413de15a0">"Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."</string>
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>
   <string name="gt_f802f9f1257fc080">"Noah was interrupted while sending this payment. Check your transaction history before resuming."</string>
   <string name="gt_deca5f2b35700ac7">"Noah won’t move these back to Ark."</string>
@@ -837,8 +837,8 @@
   <string name="gt_f5795926f351bd4a">"On-chain · waiting for a block"</string>
   <string name="gt_25d0eb395cc24f4e">"On-chain · %1$s"</string>
   <string name="gt_0c2cf5c7019fb7dd">"Once its last transaction is sent."</string>
-  <string name="gt_1b236df2b54f2e79">"Once started, Noah progresses the exit while the app is open, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
-  <string name="gt_dc21edf6ed9fc0ed">"Once started, Noah progresses the exit while the app is open, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
+  <string name="gt_3d369daccc4b9f25">"Once started, Noah progresses the exit on its own, including in the background when the system lets it, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
+  <string name="gt_8b0456c4f7d4bca5">"Once started, Noah progresses the exit on its own, including in the background when the system lets it, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."</string>
   <string name="gt_90822ee1d520d059">"Onchain"</string>
   <string name="gt_9ef5c3ab9edb50eb">"Onchain Send"</string>
   <string name="gt_89cc4ee3c69a3b7e">"Onchain fee"</string>
@@ -1106,7 +1106,7 @@
   <string name="gt_c5fb1b5d6362edc0">"Sending · waiting for an Ark round"</string>
   <string name="gt_a38ba37fd4f8a52a">"Sending · waiting for confirmations"</string>
   <string name="gt_b8ed5279e897be5d">"Sending…"</string>
-  <string name="gt_2e5931bc58a13ec1">"Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this while the app is open."</string>
+  <string name="gt_6ae9defa2627d65e">"Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it."</string>
   <string name="gt_c16bc82bf1f04ede">"Sent"</string>
   <string name="gt_168d6498bc4dd449">"Sent by another exit"</string>
   <string name="gt_4e7201c7b8985a98">"Sent to"</string>

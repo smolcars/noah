@@ -69,12 +69,12 @@ class PeriodicWorkTest {
         driver.setAllConstraintsMet(id)
         assertTrue(stages.isEmpty())
         driver.setInitialDelayMet(id)
-        await { stages.contains("widget") && info(PeriodicWork.Kind.refresh).state == WorkInfo.State.ENQUEUED }
-        assertEquals(listOf("eligible", "due", "open", "sync", "recurring", "summary", "expiry", "widget"), stages.toList())
+        await { stages.contains("exits") && info(PeriodicWork.Kind.refresh).state == WorkInfo.State.ENQUEUED }
+        assertEquals(listOf("eligible", "due", "open", "sync", "recurring", "summary", "expiry", "widget", "exits"), stages.toList())
         stages.clear()
         driver.setAllConstraintsMet(id)
         driver.setPeriodDelayMet(id)
-        await { stages.contains("widget") && info(PeriodicWork.Kind.refresh).state == WorkInfo.State.ENQUEUED }
+        await { stages.contains("exits") && info(PeriodicWork.Kind.refresh).state == WorkInfo.State.ENQUEUED }
         assertEquals(id, info(PeriodicWork.Kind.refresh).id)
     }
 

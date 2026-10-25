@@ -361,7 +361,7 @@ extension WalletSession {
             // The new run is recorded before bark starts, or bark isn't asked (nothing sent yet).
             do { try await access.began(quote.ids) } catch { throw OnchainFailure.constructionFailed }
             try await access.start(quote.ids)
-            return "Exit started. Noah progresses it while the app is open, paying broadcast and fee-bump fees from your onchain balance."
+            return "Exit started. Noah progresses it on its own, including in the background when the system lets it, paying broadcast and fee-bump fees from your onchain balance."
         }
     }
 
@@ -558,25 +558,7 @@ extension WalletSession {
                 case .startExit:
                     throw OnchainFailure.invalid // Handled by the start path above.
                 case .progress:
-                    let walletID = handles.wallet.fingerprint()
-                    let statuses: [ExitProgressStatus]
-                    do { statuses = try await handles.wallet.progressExits(feeRateSatPerVb: quote.feeRate) }
-                    catch {
-                        await self.recordFailedExitCheck(walletID: walletID)
-                        throw error
-                    }
-                    let (tried, needed, failures) = Self.progressOutcome(statuses)
-                    // A completed call tried to fund every parked transaction; those still parked had too
-                    // few confirmed funds (Decision 3), in this parking episode only, so the history is
-                    // read again. Other errors mark the check failed: exits may be stale.
-                    let runs = Self.exitRuns(handles)
-                    let exits = (try? await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)) ?? []
-                    let parked = exits.map { Self.exitModel($0, runs: runs) }.filter { tried.contains($0.id) }
-                        .compactMap { exit in exit.parkedEpisode.map { (exit.id, $0) } }
-                    let proven = Dictionary(parked, uniquingKeysWith: { a, _ in a })
-                    await self.recordExitCheck(.init(tip: try? await handles.onchain.tipHeight(), parked: proven,
-                                                     needed: needed.filter { proven[$0.key] != nil },
-                                                     failed: failures > 0), walletID: walletID)
+                    let failures = try await self.progressExits(quote.feeRate, access: Self.exitProgressAccess(handles))
                     return OnchainReceipt(
                         message: failures == 0
                             ? OnchainReceipt.progressedMessage
@@ -591,6 +573,69 @@ extension WalletSession {
                 }
             }
         }
+    }
+
+    /// What exit progress reads and calls, so its rules are tested without the SDK.
+    struct ExitProgressAccess: Sendable {
+        var walletID: String
+        var exits: @Sendable () async throws -> [ExitVtxo]
+        var progress: @Sendable (_ feeRate: UInt64?) async throws -> [ExitProgressStatus]
+        /// Every exit with its history, read after the call.
+        var models: @Sendable () async throws -> [ExitModel]
+        var tip: @Sendable () async throws -> UInt32
+    }
+
+    private static func exitProgressAccess(_ handles: Handles) -> ExitProgressAccess {
+        .init(
+            walletID: handles.wallet.fingerprint(),
+            exits: { try await handles.wallet.getExitVtxos() },
+            progress: { try await handles.wallet.progressExits(feeRateSatPerVb: $0) },
+            models: {
+                let runs = Self.exitRuns(handles)
+                return try await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)
+                    .map { Self.exitModel($0, runs: runs) }
+            },
+            tip: { try await handles.onchain.tipHeight() })
+    }
+
+    /// One exit progress at `feeRate` (nil: bark's own), recorded as the wallet's last exit check, which the
+    /// exit screens read; how many exits failed otherwise.
+    nonisolated func progressExits(_ feeRate: UInt64?, access: ExitProgressAccess) async throws -> Int {
+        let statuses: [ExitProgressStatus]
+        do { statuses = try await access.progress(feeRate) }
+        catch {
+            await recordFailedExitCheck(walletID: access.walletID)
+            throw error
+        }
+        let (tried, needed, failures) = Self.progressOutcome(statuses)
+        // A completed call tried to fund every parked transaction; those still parked had too
+        // few confirmed funds (Decision 3), in this parking episode only, so the history is
+        // read again. Other errors mark the check failed: exits may be stale.
+        let parked = ((try? await access.models()) ?? []).filter { tried.contains($0.id) }
+            .compactMap { exit in exit.parkedEpisode.map { (exit.id, $0) } }
+        let proven = Dictionary(parked, uniquingKeysWith: { a, _ in a })
+        await recordExitCheck(.init(tip: try? await access.tip(), parked: proven,
+                                    needed: needed.filter { proven[$0.key] != nil },
+                                    failed: failures > 0), walletID: access.walletID)
+        return failures
+    }
+
+    /// Background jobs' exit progress; their opens run without bark's daemon, which otherwise moves exits.
+    /// Skipped once the job's budget is gone. Never throws: a failure's reason, safe to log, goes to `failed`.
+    nonisolated func progressPendingExits(failed: @Sendable (String) -> Void) async {
+        do { _ = try await withOpenWallet { try await self.progressPendingExits(access: Self.exitProgressAccess($0)) } }
+        catch is CancellationError {}
+        catch { failed(SafeErrorDescription.of(error)) }
+    }
+
+    /// Nothing without a pending exit (Move exit forward's own filter), else one call at bark's own fee rate,
+    /// recorded like a completed Move exit forward, never toasted. True when it called bark.
+    @discardableResult
+    nonisolated func progressPendingExits(access: ExitProgressAccess) async throws -> Bool {
+        guard try await access.exits().contains(where: { ExitRules.live(Self.exitState($0.state).0) }) else { return false }
+        try BackgroundExecution.checkActive()
+        _ = try await progressExits(nil, access: access)
+        return true
     }
 
     /// One Check the chain, read through FFI 0.7.0's typed errors: the exits it tried to fund, bark's

@@ -447,7 +447,7 @@
   <string name="gt_c3ac6596a27b89b8">"Uttaget har flyttats fram"</string>
   <string name="gt_ba61a6796c9bda55">"Behandlingen av nöduttaget avbröts innan den slutfördes."</string>
   <string name="gt_0cb3378726d1acba">"Den fortsatta hanteringen av nöduttaget gav %1$s fel. Transaktioner kan ha sänts eller fått höjda avgifter. Uppdatera nöduttagets detaljer innan du fortsätter."</string>
-  <string name="gt_d59f24d5314480bf">"Nöduttag startat. Noah hanterar det medan appen är öppen och betalar avgifter för sändning och avgiftshöjning från ditt saldo på blockkedjan."</string>
+  <string name="gt_0404f5868f0e18d5">"Nöduttag startat. Noah hanterar det på egen hand, även i bakgrunden när systemet tillåter det, och betalar avgifter för sändning och avgiftshöjning från ditt saldo på blockkedjan."</string>
   <string name="gt_899bbd05c2743f78">"Status för nöduttaget är inte tillgänglig. Dra för att uppdatera."</string>
   <string name="gt_e49e631bec2e7e40">"Spårningen av nöduttaget visade att denna VTXO redan var förbrukad."</string>
   <string name="gt_09fc43a650792fef">"Spårning av nöduttag registrerades för denna VTXO."</string>
@@ -789,7 +789,7 @@
   <string name="gt_338e68cc4323f294">"Aviseringar från Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registrerar plånboken hos servern igen. Din plånbok finns kvar."</string>
   <string name="gt_286c0deecb39be99">"Noah skickar den här betalningen automatiskt från ditt Ark-saldo. Betalningen får bara skickas till den här mottagaren och med det här beloppet. Du kan pausa eller avsluta den när som helst."</string>
-  <string name="gt_980773ba88acbc7c">"Sedan skickar Noah uttagets transaktioner och höjer avgifterna medan appen är öppen, med betalning från dina bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."</string>
+  <string name="gt_20d1c59413de15a0">"Sedan skickar Noah uttagets transaktioner och höjer avgifterna på egen hand, även i bakgrunden när systemet tillåter det, med betalning från dina bitcoin på blockkedjan. Avgifterna är uppskattningar. Bara inlösenavgiften dras från beloppet. Du kan avbryta tills den sista transaktionen har skickats."</string>
   <string name="gt_ddecc0272120b4ba">"Noah-användare"</string>
   <string name="gt_f802f9f1257fc080">"Noah avbröts medan betalningen skickades. Kontrollera din transaktionshistorik innan du fortsätter."</string>
   <string name="gt_deca5f2b35700ac7">"Noah flyttar inte tillbaka dem till Ark."</string>
@@ -837,8 +837,8 @@
   <string name="gt_f5795926f351bd4a">"På blockkedjan · väntar på ett block"</string>
   <string name="gt_25d0eb395cc24f4e">"På blockkedjan · %1$s"</string>
   <string name="gt_0c2cf5c7019fb7dd">"När dess sista transaktion har skickats."</string>
-  <string name="gt_1b236df2b54f2e79">"När nöduttaget har startats fortsätter Noah, medan appen är öppen, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."</string>
-  <string name="gt_dc21edf6ed9fc0ed">"När nöduttaget har startats fortsätter Noah, medan appen är öppen, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. De avgifter som visas är uppskattningar och kan ändras. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."</string>
+  <string name="gt_3d369daccc4b9f25">"När nöduttaget har startats fortsätter Noah på egen hand, även i bakgrunden när systemet tillåter det, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."</string>
+  <string name="gt_8b0456c4f7d4bca5">"När nöduttaget har startats fortsätter Noah på egen hand, även i bakgrunden när systemet tillåter det, med att sända nöduttagstransaktioner och höja deras avgifter. Avgifterna betalas från ditt saldo på blockkedjan. De avgifter som visas är uppskattningar och kan ändras. Endast inlösenavgiften dras från det återvunna beloppet. Det går bara att avbryta innan den sista nöduttagstransaktionen har sänts."</string>
   <string name="gt_90822ee1d520d059">"På blockkedjan"</string>
   <string name="gt_9ef5c3ab9edb50eb">"Sändning på kedjan"</string>
   <string name="gt_89cc4ee3c69a3b7e">"Avgift på kedjan"</string>
@@ -1106,7 +1106,7 @@
   <string name="gt_c5fb1b5d6362edc0">"Skickar · väntar på en Ark-omgång"</string>
   <string name="gt_a38ba37fd4f8a52a">"Skickar · väntar på bekräftelser"</string>
   <string name="gt_b8ed5279e897be5d">"Skickar…"</string>
-  <string name="gt_2e5931bc58a13ec1">"Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta medan appen är öppen."</string>
+  <string name="gt_6ae9defa2627d65e">"Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta på egen hand, även i bakgrunden när systemet tillåter det."</string>
   <string name="gt_c16bc82bf1f04ede">"Skickat"</string>
   <string name="gt_168d6498bc4dd449">"Skickad av ett annat uttag"</string>
   <string name="gt_4e7201c7b8985a98">"Skickat till"</string>

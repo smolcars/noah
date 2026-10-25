@@ -106,7 +106,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             Warning(tr("Broadcast funding status is unknown; confirmed onchain funds are required."), failed = true)
         }
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
-        FinePrint(tr("Noah then sends and fee-bumps the exit’s transactions while the app is open, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
+        FinePrint(tr("Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
         status()
     }
 }

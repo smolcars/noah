@@ -416,7 +416,7 @@ private fun CheckSheet(quote: OnchainQuote, busy: Boolean, money: (Long) -> Stri
     val toasts = LocalSettingsToasts.current
     var current by remember(quote) { mutableStateOf(quote.current()) }
     LaunchedEffect(quote) { while (current) { kotlinx.coroutines.delay(250); current = quote.current() } }
-    SettingsSheet(dismiss, tr("Move your exit forward?"), tr("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this while the app is open."),
+    SettingsSheet(dismiss, tr("Move your exit forward?"), tr("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it."),
         modifier = Modifier.testTag("exit-check-sheet")) { close ->
         Column(Modifier.padding(top = 8.dp)) {
             DetailRow(tr("Exits"), quote.ids.size.toString(), ValueKind.number, toasts = toasts)

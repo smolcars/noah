@@ -20,6 +20,8 @@ class PeriodicJobs(private val d: Dependencies) {
         val maintenance: suspend () -> Unit,
         val backupEnabled: () -> Boolean,
         val backup: suspend () -> Unit,
+        /** Pending exits' progress; never throws but for cancellation. */
+        val progressExits: suspend () -> Unit = {},
     )
 
     suspend fun run(kind: PeriodicWork.Kind, budget: RecurringBudget, stopped: () -> Boolean = { false }) =
@@ -52,6 +54,8 @@ class PeriodicJobs(private val d: Dependencies) {
                     checkStage(); d.widgetSummary()
                     checkStage(); d.widgetExpiry()
                     checkStage(); d.publishWidget()
+                    // Last: exits move here even when bark's daemon isn't running.
+                    checkStage(); d.progressExits()
                 }
             }
         }

@@ -182,6 +182,35 @@ class OnchainOperationsTest {
         assertTrue(message, message.startsWith("Exit progression returned 2 errors."))
         assertEquals(mapOf("a" to 5_000L), reported)
     } }
+    @Test fun backgroundProgressCallsBarkOnlyForPendingExitsAndRecordsLikeACheck() = runBlocking { fixture { wallet, ops, journal, _ ->
+        val funding = ExitFunding(0) { 0 }
+        // None pending: finished exits only, so no progress call and nothing recorded.
+        wallet.active = listOf(ExitVtxo("done", 30_000u, ExitState.Canceled(100u), false),
+            ExitVtxo("gone", 30_000u, ExitState.VtxoAlreadySpent(100u), false))
+        assertFalse(ops.progressPending(funding) {})
+        assertTrue(wallet.calls.none { it == "progress" })
+        // A pending one: one call at bark's own rate, short of funds recorded, no journal attempt (nothing to acknowledge).
+        wallet.active += ExitVtxo("a", 30_000u, ExitState.Start(100u), false)
+        val short = BarkError("untrusted diagnostic", BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS, neededSats = 5_000u, availableSats = 1_200u)
+        wallet.progressStatuses = listOf(ExitProgressStatus("a", ExitState.Start(100u), short))
+        assertTrue(ops.progressPending(funding) {})
+        assertEquals(listOf<Long?>(null), wallet.progressRates)
+        assertEquals(5_000L, funding.needed("a"))
+        assertFalse(funding.checkFailed)
+        assertTrue(journal.loadAll().isEmpty())
+        // Another error marks the check failed, as Move exit forward's would.
+        wallet.progressStatuses = listOf(ExitProgressStatus("a", ExitState.Start(100u), BarkError("untrusted diagnostic", BarkErrorCode.OTHER)))
+        ops.progressPending(funding) {}
+        assertTrue(funding.checkFailed)
+        // A call that throws is recorded failed and rethrown for the caller to log.
+        funding.checked(emptyList(), completed = true); wallet.progressError = IllegalStateException("offline")
+        assertTrue(runCatching { ops.progressPending(funding) {} }.exceptionOrNull() is IllegalStateException)
+        assertTrue(funding.checkFailed)
+        // The job's budget gone after the read: bark is never called.
+        wallet.progressError = null; val calls = wallet.progressRates.size
+        assertTrue(runCatching { ops.progressPending(funding) { throw CancellationException() } }.exceptionOrNull() is CancellationException)
+        assertEquals(calls, wallet.progressRates.size)
+    } }
     @Test fun confirmationEstimatorFailureKeepsReviewIdentityScopeAndDeadline() = runBlocking {
         for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, _, journal, _ ->
             var now = 100_000L
@@ -396,7 +425,11 @@ class OnchainOperationsTest {
             }
         }
         var progressStatuses = emptyList<ExitProgressStatus>()
-        override suspend fun progress(feeRate: Long?): List<ExitProgressStatus> { calls.add("progress"); return progressStatuses }
+        var progressError: Exception? = null
+        val progressRates = mutableListOf<Long?>()
+        override suspend fun progress(feeRate: Long?): List<ExitProgressStatus> {
+            calls.add("progress"); progressRates += feeRate; progressError?.let { throw it }; return progressStatuses
+        }
         override suspend fun cancel(id: String): Boolean { duringMutation(); calls.add("cancel"); return cancelResult }
         override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { drainDestinations.add(destination); calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }
@@ -741,7 +774,7 @@ class OnchainOperationsTest {
         assertEquals(7630L, quote.chainFee); assertEquals(1295L, quote.fee)
         assertTrue(wallet.calls.isEmpty()); assertTrue(wallet.states.isEmpty())
         val message = ops.execute(quote)
-        assertTrue(message.contains("while the app is open")); assertEquals(listOf("start"), wallet.calls)
+        assertTrue(message.contains("in the background when the system lets it")); assertEquals(listOf("start"), wallet.calls)
         assertFalse(history.exists()); assertNotNull(journal.loadAll().single().receipt)
     } }
     @Test fun duplicateIDsDustAndPartialProgressAreRefused() = runBlocking { fixture { wallet, ops, _, _ ->

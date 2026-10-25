@@ -435,6 +435,16 @@ class WalletSession internal constructor(
         onchainMutation.withLock { onchainOperations(handles).abandonUnsubmittedAutoBoard(quote) }
     }
     suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
+    /**
+     * Background jobs' exit progress ([OnchainOperations.progressPending]); not [withM6], which refuses while a background
+     * job holds the wallet. Never throws but for cancellation: a failure's reason, safe to log, goes to [failed].
+     */
+    suspend fun progressPendingExits(failed: (String) -> Unit) {
+        val caller = currentCoroutineContext()
+        try { withOpen { handles -> onchainMutation.withLock { onchainOperations(handles).progressPending(ExitFunding.shared) { caller.checkWalletAdmission() } } } }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { failed(com.noahwallet.services.logging.SafeErrorDescription.of(error)) }
+    }
     suspend fun refreshOnchainReceiptFees() = withM6 { onchainOperations(it).refreshReceiptFees() }
 
     suspend fun pendingRounds() = withOpen { it.pendingRounds() }
