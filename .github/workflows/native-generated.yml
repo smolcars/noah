@@ -66,8 +66,8 @@ jobs:
           git diff --exit-code -- api/openapi.json apps/fixtures/server-notification-data.json
           test -z "$(git ls-files --others --exclude-standard -- api/openapi.json apps/fixtures/server-notification-data.json)"
 
+  # Independent of server-contract: this checks the clients against the committed api/openapi.json.
   native-clients:
-    needs: server-contract
     runs-on: blacksmith-6vcpu-macos-latest
     timeout-minutes: 15
     steps:
