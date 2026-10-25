@@ -69,7 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open --json number --jq '.[0].number // empty')
+          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open \
+            --json number,isCrossRepository --jq 'map(select(.isCrossRepository | not)) | .[0].number // empty')
           if [[ -z "$pr" ]]; then
             echo "No open bot PR."
             exit 0
@@ -151,7 +152,8 @@ jobs:
 
           CI on this PR must be started manually: Actions → Native Android CI, Native iOS CI and Native API drift → Run workflow → branch \`$BOT_BRANCH\`.
           EOF
-          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open --json number --jq '.[0].number // empty')
+          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open \
+            --json number,isCrossRepository --jq 'map(select(.isCrossRepository | not)) | .[0].number // empty')
           if [[ -n "$pr" ]]; then
             gh pr edit "$pr" --title "$title" --body-file "$RUNNER_TEMP/body.md"
           else
