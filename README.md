@@ -311,7 +311,7 @@ bun apps/tools/translations.mjs translate
 bun apps/tools/translations.mjs --check            # Offline, also used in CI
 ```
 
-Commit `apps/i18n/` (English/locale JSON and GT lock), generated `.xcstrings` / `strings.xml`, and the coverage fixture together. Native translation is machine-only; GT runs locally and no GT runtime ships in the apps. Existing RN translations can be imported once with the optional `seed` command; normal native translation/checks do not depend on `client/`. A CI bot is deferred until merge to master and will need the `GT_API_KEY` / `GT_PROJECT_ID` secrets above. See [native translation workflow](apps/tools/TRANSLATIONS.md).
+Commit `apps/i18n/` (English/locale JSON and GT lock), generated `.xcstrings` / `strings.xml`, and the coverage fixture together. Native translation is machine-only; GT runs locally and no GT runtime ships in the apps. Existing RN translations can be imported once with the optional `seed` command; normal native translation/checks do not depend on `client/`. After merges to `master`, a CI bot translates missing keys with the `GT_API_KEY` / `GT_PROJECT_ID` secrets above and opens a PR. See [native translation workflow](apps/tools/TRANSLATIONS.md).
 
 ## 📡 Running the server
 

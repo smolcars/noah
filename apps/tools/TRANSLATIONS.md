@@ -46,4 +46,12 @@ Language preference stays `generaltranslation.locale`: iOS UserDefaults.standard
 
 `TranslationsTests` / `TranslationsTest` check compiled resources for every used native key in all five locales, the 25-case RN resolver oracle, active plural forms (including zero and grouped millions on Android), live preference re-resolution, and translated native-only notification templates. The frozen RN oracle in `apps/fixtures/translations.json` remains independent of native generation. Its optional RN-only regeneration command is `bun apps/tools/generate-translations-fixture.ts`.
 
-A CI translation bot is deferred until merge to master. CI checks stay offline. The future bot needs `GT_API_KEY` and `GT_PROJECT_ID` secrets as described in the root README. CLI 2.25.2 exposes no safe file-delete operation; the trial's `i18n/en/native-spike.json` remains in the GT dashboard for manual cleanup.
+## CI bot
+
+After each merge to `master` that touches native copy, `.github/workflows/native-translations.yml` runs this tool. If no locale key is missing, it stops without contacting GT. Otherwise it runs `translate` with the `GT_API_KEY` and `GT_PROJECT_ID` repository secrets, then `--check` and the tool tests, and opens or updates one PR from `bot/native-translations`. The GT CLI reads both secrets from the environment; `GT_API_KEY` takes precedence over `gt login`, and `GT_PROJECT_ID` must match `gt.config.json`. A failed run commits nothing. While the PR is open, later runs `reuse` its translations, so GT never translates the same key twice. Each run rebuilds the branch from `master`, so don't push to it. Once the PR is merged, the next run finds nothing missing and stops. PR checks stay offline.
+
+The bot fills any missing locale keys after merge. Hand translations in PRs stay welcome, and the bot never overwrites them.
+
+CI on the bot PR must be started manually: Actions → workflow → Run workflow → branch `bot/native-translations` (Native Android CI, Native iOS CI and Native API drift). PRs opened with `GITHUB_TOKEN` don't trigger PR workflows. The bot needs the repository setting "Allow GitHub Actions to create and approve pull requests".
+
+CLI 2.25.2 exposes no safe file-delete operation; the trial's `i18n/en/native-spike.json` remains in the GT dashboard for manual cleanup.

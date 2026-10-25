@@ -1,0 +1,159 @@
+name: Native translations
+
+# After a merge, GT translates native UI copy that is missing a locale, and the result
+# lands in one PR from bot/native-translations. See apps/tools/TRANSLATIONS.md.
+on:
+  push:
+    branches: [master]
+    paths:
+      - "apps/ios/Noah/**"
+      - "apps/android/app/src/main/java/**"
+      - "apps/i18n/**"
+      - "apps/tools/translations*.mjs"
+      - ".github/workflows/native-translations.yml"
+      - "!**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# One run at a time and never cancelled mid-translation; the newest queued merge runs next.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  NIX_CONFIG: |
+    post-build-hook =
+    extra-substituters =
+    substituters = https://cache.nixos.org/
+  BOT_BRANCH: bot/native-translations
+
+jobs:
+  translate:
+    # Only master's copy is translated, even when dispatched from another branch.
+    if: github.ref == 'refs/heads/master'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 30
+    defaults:
+      run:
+        # The flake pins Bun, Node (which runs the GT CLI) and jq.
+        shell: nix develop .#android-ci --command bash --noprofile --norc -eo pipefail {0}
+    steps:
+      # The token stays out of .git/config while dependencies and GT run; only the last step pushes.
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+          save: false
+
+      # No install scripts: the tool needs only the GT CLI, and husky must not add commit hooks.
+      - name: Install locked Bun dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      # Stale English, catalogs or coverage on master fail here, before any GT call.
+      - name: Check native translations
+        run: bun apps/tools/translations.mjs --check
+
+      # The open bot PR already paid for its keys, so reuse them instead of translating them again.
+      - name: Reuse translations from the open bot PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open --json number --jq '.[0].number // empty')
+          if [[ -z "$pr" ]]; then
+            echo "No open bot PR."
+            exit 0
+          fi
+          previous="$RUNNER_TEMP/bot"
+          for locale in es ja ko sv; do
+            mkdir -p "$previous/apps/i18n/$locale"
+            gh api -H "Accept: application/vnd.github.raw+json" \
+              "repos/$GITHUB_REPOSITORY/contents/apps/i18n/$locale/native.json?ref=$BOT_BRANCH" \
+              > "$previous/apps/i18n/$locale/native.json"
+          done
+          bun apps/tools/translations.mjs reuse "$previous"
+
+      - name: Count missing translations
+        id: missing
+        run: |
+          bun apps/tools/translations.mjs translate --dry-run | tee "$RUNNER_TEMP/missing.json"
+          echo "count=$(jq '[.missing[]] | add' "$RUNNER_TEMP/missing.json")" >> "$GITHUB_OUTPUT"
+
+      # The GT CLI reads GT_API_KEY from the environment. GT_PROJECT_ID must match gt.config.json, or GT exits.
+      # GT requests time out after 60 s and each GT job wait after 15 min; the job timeout bounds the whole run.
+      - name: Translate missing keys with GT
+        if: steps.missing.outputs.count != '0'
+        env:
+          GT_API_KEY: ${{ secrets.GT_API_KEY }}
+          GT_PROJECT_ID: ${{ secrets.GT_PROJECT_ID }}
+        run: |
+          if [[ -z "$GT_API_KEY" ]]; then
+            echo "::error::The GT_API_KEY repository secret is missing."
+            exit 1
+          fi
+          bun apps/tools/translations.mjs translate
+
+      # A failure here stops the run, so half-merged catalogs are never committed.
+      - name: Regenerate and check catalogs
+        run: |
+          bun apps/tools/translations.mjs
+          bun apps/tools/translations.mjs --check
+          bun test apps/tools/translations.test.mjs
+
+      - name: Open or update the translations PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git add -- 'apps/i18n/*/native.json' apps/i18n/gt-lock.json \
+            apps/ios/Noah/Resources/Localizable.xcstrings \
+            'apps/android/app/src/main/res/values*/strings.xml' \
+            apps/fixtures/translations-coverage.json
+          unexpected=$(git diff --name-only; git ls-files --others --exclude-standard)
+          if [[ -n "$unexpected" ]]; then
+            echo "::warning::Changed but not committed: ${unexpected//$'\n'/, }"
+          fi
+          if git diff --cached --quiet; then
+            echo "Nothing to translate." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          table=$'| Locale | Keys added |\n|---|---|'
+          for locale in es ja ko sv; do
+            file="apps/i18n/$locale/native.json"
+            added=$(git show "HEAD:$file" | jq --slurpfile new "$file" '($new[0] | keys) - keys | length')
+            table+=$'\n'"| $locale | $added |"
+          done
+          echo "$table" >> "$GITHUB_STEP_SUMMARY"
+
+          title="chore(i18n): translate new native strings"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -m "$title" -m "Machine translations for native copy missing a locale on master at ${GITHUB_SHA::9}." -m "$RUN_URL"
+          gh auth setup-git
+          git push --force origin "HEAD:refs/heads/$BOT_BRANCH"
+
+          cat > "$RUNNER_TEMP/body.md" <<EOF
+          Machine translations from GT for native UI copy that had no translation on \`master\` at ${GITHUB_SHA::9}.
+
+          $table
+
+          Only static UI copy extracted from Swift and Kotlin was sent to GT. Placeholders were validated, and \`--check\` and the translation tool tests passed in [this run]($RUN_URL). Each run rebuilds this branch from \`master\`, so put fixes in a normal PR instead of pushing here.
+
+          CI on this PR must be started manually: Actions → Native Android CI, Native iOS CI and Native API drift → Run workflow → branch \`$BOT_BRANCH\`.
+          EOF
+          pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open --json number --jq '.[0].number // empty')
+          if [[ -n "$pr" ]]; then
+            gh pr edit "$pr" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base master --head "$BOT_BRANCH" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          fi

@@ -10,7 +10,7 @@ Decisions agreed with the user:
 - Keep English source-text keys in Swift and Kotlin. Hash IDs are an interchange/resource detail; developers do not write semantic translation IDs.
 - Machine translation only, with no human review/approval step.
 - Run locally with one command: `bun apps/tools/translations.mjs translate`. Commit JSON, GT lock, catalogs, and coverage together.
-- Defer a CI bot until merge to master. It will need `GT_API_KEY` and `GT_PROJECT_ID` secrets. Current CI regeneration/stale checks are fully offline.
+- Defer a CI bot until merge to master. It will need `GT_API_KEY` and `GT_PROJECT_ID` secrets. Current CI regeneration/stale checks are fully offline. (Done after the merge: `.github/workflows/native-translations.yml`.)
 
 The validated `/private/tmp/noah-dev/gt-spike` trial confirmed `{{var}}` placeholders, i18next `_one`/`_other` suffixes, multiline copy and product names across es/ja/ko/sv with CLI 2.25.2. Native plurals keep their English category definitions in `apps/i18n/plurals.json`; platform formatting and count-first argument order remain unchanged.
 

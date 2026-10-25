@@ -197,7 +197,7 @@ Local verification (2026-10-20): actionlint 1.7.7 with ShellCheck passed for all
 - [x] Background notification strings honour the persisted locale and Bitcoin unit (push, recurring results and reminders).
 - [x] Shared RN-resolver fixture plus native catalog coverage, placeholder/plural, locale switching and background-locale tests. See `apps/tools/TRANSLATIONS.md`.
 - [x] Native-owned translations: GT CLI JSON file mode in `apps/i18n/`; English extracted from Swift/Kotlin, source-text keys retained, optional non-overwriting RN seed, machine-only local translate command, native catalogs and offline stale/coverage checks. See [final design](translations-design.md) and [workflow](../../apps/tools/TRANSLATIONS.md).
-- [ ] CI bot for native translations after merge to master (needs `GT_API_KEY` and `GT_PROJECT_ID` secrets, as the README notes).
+- [x] CI bot for native translations after merge to master: `.github/workflows/native-translations.yml` translates missing keys with the `GT_API_KEY` / `GT_PROJECT_ID` secrets and opens one PR from `bot/native-translations`. See [workflow](../../apps/tools/TRANSLATIONS.md#ci-bot).
 - [x] Native translation migration verified (2026-10-21): 650 RN-seeded + 764 GT-generated keys per locale, zero missing keys; 16 tool tests and all 10 iOS / 9 Android translation tests pass. Full suites run once: Android 3,638 tests (one logging stress failure, isolated retry passed); iOS 841 tests (812 passed, 27 skipped, two logging failures; focused 12-test retry passed). APK/instrumentation compilation pass; owned simulator/build artifacts removed. [Commands, samples and full evidence](translations-design.md#migration-evidence-2026-10-21).
 
 ## M1 — Shell, onboarding, Home
