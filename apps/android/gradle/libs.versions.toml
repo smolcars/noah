@@ -72,6 +72,8 @@ datastore-preferences = { module = "androidx.datastore:datastore-preferences", v
 security-crypto = { module = "androidx.security:security-crypto", version.ref = "security-crypto" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-test-junit" }
+# Android 17 removed InputManager.getInstance, which Compose's transitive espresso-core 3.5 reflects on in every UI test.
+androidx-test-espresso = { module = "androidx.test.espresso:espresso-core", version = "3.7.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
