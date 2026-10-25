@@ -1,16 +1,8 @@
 name: Telegram Notification
 
+# Paused with React Native CI (2026-10-25); run it by hand if needed.
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - "client/**"
-      - "scripts/**"
-      - "package.json"
-      - "bun.lock"
-      - ".github/workflows/**"
-      - "!**/*.md"
+  workflow_dispatch:
 
 jobs:
   build:
