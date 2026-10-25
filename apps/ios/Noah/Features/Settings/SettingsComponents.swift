@@ -233,7 +233,7 @@ struct SettingsToggleRow: View {
         SettingsRowLabel(icon: icon, title: title, sub: sub, hairline: hairline, labelHidden: true) {
             Toggle(isOn: $isOn) { Text(verbatim: title) }
                 .labelsHidden()
-                .tint(NoahTokens.Colors.foreground)
+                .tint(NoahTokens.Colors.orange)
                 .accessibilityLabel(Text(verbatim: title))
                 .accessibilityHint(Text(verbatim: sub ?? ""))
                 .accessibilityIdentifier(id)
