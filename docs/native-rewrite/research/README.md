@@ -11,3 +11,4 @@ Source-level research that informed [../PLAN.md](../PLAN.md). Snapshot of the re
 | [typegen.md](typegen.md) | Rust → Swift/Kotlin API type generation options and trials |
 | [ui-stack.md](ui-stack.md) | SwiftUI/Liquid Glass, keyboard handling, Compose stack, RN dependency replacements, project layout |
 | [swift-android.md](swift-android.md) | Swift SDK for Android feasibility (not adopted: logic is written twice) |
+| [e2e-vs-maestro.md](e2e-vs-maestro.md) | TesterArmy `e2e` (agentic testing) vs Maestro for Android CI, with a local trial (not adopted now; smoke-job trial later) |
