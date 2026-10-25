@@ -165,9 +165,18 @@ jobs:
           BLIXT_CHAT_ID: ${{ secrets.BLIXT_CHAT_ID }}
           BLIXT_TOPIC_ID: ${{ secrets.BLIXT_TOPIC_ID }}
           COMMIT_SHA: ${{ github.sha }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
+          # Same package and signing key as the RN app, so installing replaces it in place.
           for flavor in Signet Mainnet; do
-            printf 'Native Noah %s Android build\nCommit: %s\n' "$flavor" "$COMMIT_SHA" > caption.txt
+            if [[ "$flavor" == Mainnet ]]; then
+              headline='⚠️ MAINNET · REAL FUNDS · Noah Native preview · not the React Native app'
+              warning='Installing replaces your React Native Noah mainnet app; going back needs a reinstall and wallet restore. Back up your recovery phrase first.'
+            else
+              headline='🧪 Noah Native preview (signet) · not the React Native app'
+              warning='Installing replaces your React Native Noah Signet app; going back needs a reinstall and wallet restore.'
+            fi
+            printf '%s\n%s\n\nAndroid APK\nBranch: %s\nCommit: %s\n' "$headline" "$warning" "$BRANCH" "$COMMIT_SHA" > caption.txt
             curl -fsS -X POST "http://localhost:8081/bot${TELEGRAM_TOKEN}/sendDocument" \
               -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
               -F "document=@noah-native-$(tr '[:upper:]' '[:lower:]' <<< "$flavor")-${COMMIT_SHA}.apk" \

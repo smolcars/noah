@@ -98,8 +98,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { flavor: signet, label: Signet, scheme: Noah-Signet, configuration: Release-Signet }
-          - { flavor: mainnet, label: Mainnet, scheme: Noah, configuration: Release-Mainnet }
+          - { flavor: signet, scheme: Noah-Signet, configuration: Release-Signet }
+          - { flavor: mainnet, scheme: Noah, configuration: Release-Mainnet }
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -138,10 +138,20 @@ jobs:
           BLIXT_CHAT_ID: ${{ secrets.BLIXT_CHAT_ID }}
           BLIXT_TOPIC_ID: ${{ secrets.BLIXT_TOPIC_ID }}
           COMMIT_SHA: ${{ github.sha }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
           DIAWI_LINK: ${{ steps.diawi.outputs.link }}
+          FLAVOR: ${{ matrix.flavor }}
         run: |
-          printf 'Native Noah ${{ matrix.label }} iOS build\nDownload: %s\nCommit: %s\n' \
-            "$DIAWI_LINK" "$COMMIT_SHA" > message.txt
+          # Same bundle ID as the RN app, so installing replaces it in place.
+          if [[ "$FLAVOR" == mainnet ]]; then
+            headline='⚠️ MAINNET · REAL FUNDS · Noah Native preview · not the React Native app'
+            warning='Installing replaces your React Native Noah mainnet app; going back needs a reinstall and wallet restore. Back up your recovery phrase first.'
+          else
+            headline='🧪 Noah Native preview (signet) · not the React Native app'
+            warning='Installing replaces your React Native Noah Signet app; going back needs a reinstall and wallet restore.'
+          fi
+          printf '%s\n%s\n\niOS download: %s\nBranch: %s\nCommit: %s\n' \
+            "$headline" "$warning" "$DIAWI_LINK" "$BRANCH" "$COMMIT_SHA" > message.txt
           curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
             -F 'text=<message.txt' -o "$RUNNER_TEMP/telegram.json"
