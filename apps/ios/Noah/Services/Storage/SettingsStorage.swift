@@ -23,11 +23,21 @@ final class SettingsStorage: @unchecked Sendable {
 
     @MainActor static func bootstrap() {} // MMKV is initialized only if a snapshot needs importing.
 
-    /// `step`: the file's fault injection (`NativeSettingsFile.step`), for tests.
-    init(rootPath: String, instanceID: String = SettingsStorage.instanceID, step: @escaping (String) throws -> Void = { _ in }) throws {
+    convenience init(rootPath: String, instanceID: String = SettingsStorage.instanceID) throws {
+        try self.init(rootPath: rootPath, instanceID: instanceID, file: NativeSettingsFile(file: Self.fileURL(rootPath)))
+    }
+    #if DEBUG
+    /// Tests only: the file's fault injection (`NativeSettingsFile.step`).
+    convenience init(rootPath: String, instanceID: String = SettingsStorage.instanceID, step: @escaping (String) throws -> Void) throws {
+        try self.init(rootPath: rootPath, instanceID: instanceID, file: NativeSettingsFile(file: Self.fileURL(rootPath), step: step))
+    }
+    #endif
+    private static func fileURL(_ rootPath: String) -> URL { URL(fileURLWithPath: rootPath + ".native-settings.json") }
+
+    private init(rootPath: String, instanceID: String, file: NativeSettingsFile) throws {
         Self.access.lock(); defer { Self.access.unlock() }
         root = URL(fileURLWithPath: rootPath); storeID = instanceID
-        nativeFile = NativeSettingsFile(file: URL(fileURLWithPath: rootPath + ".native-settings.json"), step: step)
+        nativeFile = file
         do {
             try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
             if nativeFile.exists || fallback != nil {
