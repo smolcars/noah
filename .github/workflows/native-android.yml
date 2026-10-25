@@ -160,8 +160,11 @@ jobs:
         with:
           cache-key: noah/maestro-server-amd64
 
+      # Rebuilds only the layers the PR changes; warm builds take seconds. No summary: its post step costs ~5 s.
       - name: Build server image for regtest
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          DOCKER_BUILD_SUMMARY: false
         with:
           context: .
           file: Dockerfile
