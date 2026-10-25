@@ -3,7 +3,13 @@ name: Native API drift
 on:
   pull_request:
     paths:
-      - "apps/**"
+      - "apps/ios/Noah/**"
+      - "apps/ios/NoahWidget/**"
+      - "apps/ios/Tools/OpenAPIGenerator/**"
+      - "apps/android/app/src/main/**"
+      - "apps/android/tools/**"
+      - "apps/fixtures/**"
+      - "apps/i18n/**"
       - "apps/tools/**"
       - "client/src/**"
       - "client/gt.config.json"
@@ -14,14 +20,21 @@ on:
       - "server/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - "rust-toolchain.toml"
       - "justfile"
       - "flake.nix"
       - "flake.lock"
       - ".github/workflows/native-generated.yml"
+      - "!**/*.md"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# A new push to the same PR cancels the old run; master and tag runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NIX_CONFIG: |
@@ -32,7 +45,7 @@ env:
 jobs:
   server-contract:
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
@@ -56,7 +69,7 @@ jobs:
   native-clients:
     needs: server-contract
     runs-on: blacksmith-6vcpu-macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 

@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# A new push to the same PR cancels the old run; master and tag runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   NIX_CONFIG: |
     post-build-hook =
@@ -20,7 +25,7 @@ jobs:
   ios:
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ios-e2e')
     runs-on: blacksmith-6vcpu-macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -143,7 +148,7 @@ jobs:
   adaptive-apk:
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ios-e2e')
     runs-on: blacksmith-8vcpu-ubuntu-2404
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1

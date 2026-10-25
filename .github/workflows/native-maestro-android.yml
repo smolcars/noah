@@ -23,7 +23,7 @@ jobs:
   maestro-test:
     name: Native Maestro Android
     runs-on: blacksmith-8vcpu-ubuntu-2404
-    timeout-minutes: 60
+    timeout-minutes: 25
     permissions:
       contents: read
     env:

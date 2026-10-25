@@ -3,28 +3,41 @@ name: Native iOS CI
 on:
   pull_request:
     paths:
-      - "apps/**"
+      - "apps/ios/**"
+      - "apps/fixtures/**"
+      - "api/openapi.json"
       - "client/assets/btcmap/places.btcmap"
       - "client/assets/geonames/cities.geonames"
+      - "client/ios/SharedAppIntents/NoahAppIntents.swift" # AppIntentTests compares against it
       - ".github/workflows/native-ios.yml"
+      - "!**/*.md"
   # Mainnet and signet build on merges and tags (path filters don't apply to tags).
   push:
     branches: [master]
     tags: ["v*"]
     paths:
-      - "apps/**"
+      - "apps/ios/**"
+      - "apps/fixtures/**"
+      - "api/openapi.json"
       - "client/assets/btcmap/places.btcmap"
       - "client/assets/geonames/cities.geonames"
+      - "client/ios/SharedAppIntents/NoahAppIntents.swift" # AppIntentTests compares against it
       - ".github/workflows/native-ios.yml"
+      - "!**/*.md"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A new push to the same PR cancels the old run; master and tag runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build-and-test:
     runs-on: blacksmith-6vcpu-macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
 

@@ -3,29 +3,46 @@ name: Native Android CI
 on:
   pull_request:
     paths:
-      - "apps/**"
+      - "apps/android/**"
+      - "apps/fixtures/**"
+      - "apps/maestro/**"
+      - "api/**"
+      - "client/assets/btcmap/**"
+      - "client/assets/geonames/**"
       - "client/android/app/debug.keystore"
       - "flake.nix"
       - "flake.lock"
       - ".github/workflows/native-android.yml"
       - ".github/workflows/native-maestro-android.yml"
       - "scripts/test-maestro-native.sh"
+      - "!**/*.md"
   # Mainnet and signet build on merges and tags (path filters don't apply to tags).
   push:
     branches: [master]
     tags: ["v*"]
     paths:
-      - "apps/**"
+      - "apps/android/**"
+      - "apps/fixtures/**"
+      - "apps/maestro/**"
+      - "api/**"
+      - "client/assets/btcmap/**"
+      - "client/assets/geonames/**"
       - "client/android/app/debug.keystore"
       - "flake.nix"
       - "flake.lock"
       - ".github/workflows/native-android.yml"
       - ".github/workflows/native-maestro-android.yml"
       - "scripts/test-maestro-native.sh"
+      - "!**/*.md"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# A new push to the same PR cancels the old run; master and tag runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NIX_CONFIG: |
@@ -36,7 +53,7 @@ env:
 jobs:
   build-and-test:
     runs-on: blacksmith-8vcpu-ubuntu-2404
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
