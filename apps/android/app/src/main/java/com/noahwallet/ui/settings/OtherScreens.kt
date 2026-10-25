@@ -173,7 +173,7 @@ internal fun AboutPage(model: AppModel, nav: SettingsNav, live: SettingsLive) {
         FinePrint(tr("The story that gave Noah its name."))
         SettingsGroup(rows = listOf(
             { d -> SettingsRow(tr("Telegram"), SettingsIcons.send, end = RowEnd.External, divider = d) { uri.openUri(telegramURL) } },
-            { d -> SettingsRow(tr("Source code"), SettingsIcons.code, end = RowEnd.External, divider = d) { uri.openUri(sourceURL) } },
+            { d -> SettingsRow(tr("Source code"), SettingsIcons.github, end = RowEnd.External, divider = d) { uri.openUri(sourceURL) } },
             { d -> SettingsRow(tr("Privacy policy"), SettingsIcons.shield, end = RowEnd.External, divider = d, modifier = Modifier.testTag("about-privacy")) { uri.openUri(privacyURL) } },
         ))
     }

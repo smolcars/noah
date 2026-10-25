@@ -71,7 +71,7 @@ internal object SettingsIcons {
     val server = R.drawable.ic_set_server; val doc = R.drawable.ic_activity_doc; val bug = R.drawable.ic_set_bug
     val refresh = R.drawable.ic_activity_refresh; val plus = R.drawable.ic_set_plus; val qr = R.drawable.ic_set_qr
     val play = R.drawable.ic_set_play; val pause = R.drawable.ic_set_pause; val stop = R.drawable.ic_set_stop
-    val send = R.drawable.ic_set_send; val code = R.drawable.ic_set_code; val battery = R.drawable.ic_set_battery
+    val send = R.drawable.ic_set_send; val github = R.drawable.ic_set_github; val battery = R.drawable.ic_set_battery
     val push = R.drawable.ic_set_push; val clock = R.drawable.ic_set_clock; val fee = R.drawable.ic_set_fee
     val noUndo = R.drawable.ic_set_noundo; val shield = R.drawable.ic_set_shield; val eye = R.drawable.ic_set_eye
     val calendar = R.drawable.ic_set_cal; val image = R.drawable.ic_set_image; val bolt = R.drawable.ic_set_bolt

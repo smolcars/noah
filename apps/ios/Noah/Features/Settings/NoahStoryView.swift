@@ -51,7 +51,7 @@ struct NoahStoryView: View {
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
             SettingsGroup {
                 link("paperplane", "Telegram", Self.telegram)
-                link("chevron.left.forwardslash.chevron.right", "Source code", Self.github)
+                link("GitHubMark", "Source code", Self.github)
                 link("hand.raised", "Privacy policy", Self.privacy, last: true)
             }
         }
