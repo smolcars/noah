@@ -10,6 +10,18 @@ on:
       - ".github/workflows/native-android.yml"
       - ".github/workflows/native-maestro-android.yml"
       - "scripts/test-maestro-native.sh"
+  # Mainnet and signet build on merges and tags (path filters don't apply to tags).
+  push:
+    branches: [master]
+    tags: ["v*"]
+    paths:
+      - "apps/**"
+      - "client/android/app/debug.keystore"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/native-android.yml"
+      - ".github/workflows/native-maestro-android.yml"
+      - "scripts/test-maestro-native.sh"
   workflow_dispatch:
 
 permissions:
@@ -57,9 +69,12 @@ jobs:
       - name: Install Android build SDK
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
 
-      - name: Assemble all flavors and run unit tests
+      # PRs build only regtest; the flavors differ only in their manifest and google-services.json.
+      - name: Assemble and run unit tests
+        env:
+          OTHER_FLAVORS: ${{ github.event_name == 'push' && ':app:assembleMainnetDebug :app:assembleSignetDebug' || '' }}
         run: |
-          nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --max-workers=2 --dependency-verification=strict :app:assembleMainnetDebug :app:assembleSignetDebug :app:assembleRegtestDebug :app:testRegtestDebugUnitTest'
+          nix develop .#android-ci --command bash -c "cd apps/android && ./gradlew --max-workers=2 --dependency-verification=strict $OTHER_FLAVORS :app:assembleRegtestDebug :app:testRegtestDebugUnitTest"
 
       - name: Upload JUnit results
         if: always()

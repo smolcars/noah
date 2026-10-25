@@ -1,18 +1,8 @@
 name: Server CI
 
+# Paused while CI work focuses on the native apps (2026-10-25); run it by hand if needed.
 on:
-  pull_request:
-  push:
-    branches:
-      - master
-    paths:
-      - "server/**"
-      - "scripts/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - ".github/workflows/**"
-      - "!**/*.md"
+  workflow_dispatch:
 
 jobs:
   changes:

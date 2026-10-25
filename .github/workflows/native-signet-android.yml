@@ -8,6 +8,9 @@ on:
       - "apps/fixtures/**"
       - ".github/workflows/native-signet-android.yml"
   workflow_dispatch:
+  # workflow_dispatch only works once this file is on master; until then, label a PR "send-to-telegram".
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
@@ -20,6 +23,8 @@ env:
 
 jobs:
   build:
+    # Self-hosted with signing secrets: only this repo's own branches, never forks.
+    if: github.event_name != 'pull_request' || (github.event.label.name == 'send-to-telegram' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: self-hosted
     timeout-minutes: 60
     steps:

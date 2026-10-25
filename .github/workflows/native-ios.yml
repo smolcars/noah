@@ -7,6 +7,15 @@ on:
       - "client/assets/btcmap/places.btcmap"
       - "client/assets/geonames/cities.geonames"
       - ".github/workflows/native-ios.yml"
+  # Mainnet and signet build on merges and tags (path filters don't apply to tags).
+  push:
+    branches: [master]
+    tags: ["v*"]
+    paths:
+      - "apps/**"
+      - "client/assets/btcmap/places.btcmap"
+      - "client/assets/geonames/cities.geonames"
+      - ".github/workflows/native-ios.yml"
   workflow_dispatch:
 
 permissions:
@@ -45,10 +54,12 @@ jobs:
         working-directory: apps/ios
         run: xcodegen generate
 
-      - name: Build all schemes without signing
+      # PRs build only Noah-Regtest, in the test step below; the schemes differ only in their xcconfig.
+      - name: Build mainnet and signet schemes without signing
+        if: github.event_name == 'push'
         working-directory: apps/ios
         run: |
-          for scheme in Noah Noah-Signet Noah-Regtest; do
+          for scheme in Noah Noah-Signet; do
             xcodebuild -project Noah.xcodeproj -scheme "$scheme" \
               -destination 'generic/platform=iOS Simulator' \
               -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/apps/ios/build/SourcePackages" \
