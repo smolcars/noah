@@ -212,7 +212,7 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_7_pro
-          cores: 2
+          cores: 4
           ram-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8592 -grpc-use-token
           disable-animations: false
