@@ -36,7 +36,7 @@ on:
 permissions:
   contents: read
 
-# A new push to the same PR cancels the old run; master and tag runs always finish.
+# A new push to the same PR cancels the old run; master runs always finish.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
