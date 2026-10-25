@@ -18061,42 +18061,6 @@
         }
       }
     },
-    "Find places that accept bitcoin": {
-      "comment": "GT gt_664fa279a9ee2f99; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Find places that accept bitcoin"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Encuentra lugares que acepten bitcoin"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ビットコインが使えるお店を探す"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bitcoin 결제가 가능한 곳 찾기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hitta ställen som tar emot bitcoin"
-          }
-        }
-      }
-    },
     "Finding your bitcoin": {
       "comment": "GT gt_280918c59094fc48; arguments: none",
       "extractionState": "manual",

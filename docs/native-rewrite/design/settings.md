@@ -57,7 +57,7 @@ The user decided these on 2026-10-23:
 - **Order:**
   1. you (initial, name, Lightning address, the network badge off mainnet);
   2. Security (Backup, Recovery phrase, Face ID / App lock);
-  3. Bitcoin (VTXOs, On-chain, Recurring payments, Emergency exit);
+  3. Bitcoin (VTXOs, On-chain, Recurring payments, Emergency exit, Spend bitcoin nearby). "Spend bitcoin nearby" opens today's BTC Map as Home did (iOS pushes it in Home's stack; Android opens it as its own screen in one pane); Back returns to Settings;
   4. Display (Bitcoin unit, Currency, Language, Hide amounts);
   5. App (Notifications, Advanced);
   6. Help (Feedback, About Noah);

@@ -17,8 +17,8 @@ Home has one layout whose content depends on the wallet:
 
 | State | When | Content |
 | --- | --- | --- |
-| **Fresh** | Balance is zero and history is empty (and loaded) | Balance (₿0), fiat, nudge, the **get-paid card** and the map row. No "No activity yet" list: the card is the empty state. |
-| **Everyday** | Anything else | Balance, fiat, any status line, nudge, **Recent** (up to five rows, "See all" opens Activity) and the map row. |
+| **Fresh** | Balance is zero and history is empty (and loaded) | Balance (₿0), fiat, nudge, the **get-paid card**. No "No activity yet" list: the card is the empty state. |
+| **Everyday** | Anything else | Balance, fiat, any status line, nudge, **Recent** (up to five rows, "See all" opens Activity). |
 | **Suspended** | `isWalletSuspended` | Today's suspended state only, restyled. No balance, nudge or list. |
 
 **Busy** in the prototype is Everyday with a pending line, pending and failed rows, and the renew nudge.
@@ -31,13 +31,13 @@ If the payment lands while Home isn't on screen, there's no animation: Home simp
 
 ## Layout (compact)
 
-From the top: top bar, balance, fiat, status line, nudge, card or Recent, map row, tab bar.
+From the top: top bar, balance, fiat, status line, nudge, card or Recent, tab bar.
 
 - **Top bar:**
   - **Leading: the name chip.** It shows an orange-ringed initial and the local part of your Lightning address, plus a small network badge on signet and regtest, which replaces `VariantBadge`. With no address yet, it shows a person glyph and no name. Tap opens Profile, whose My code row shows your Lightning address QR alone.
   - **Trailing:** the activity glyph, scan and settings. Scan opens today's scanner alone (no My code), with today's Send import; closing it or refusing the camera returns to Home.
   - **Activity glyph:** a quiet, fixed-width slot left of scan, so nothing moves. While a backup or another background task runs, a muted arrows glyph turns (it stays still under Reduce Motion); when a backup completes, a green check scales in and fades after about 2 s (a fade only under Reduce Motion). Otherwise the slot is empty. It isn't tappable; VoiceOver and TalkBack read "Backing up wallet", "Background task in progress..." or "Backup completed".
-  - The map moves out of the toolbar into the map row.
+  - The map moves out of the toolbar into Settings → Bitcoin ("Spend bitcoin nearby"); Home has no map row.
   - Scrolling tucks the balance into the centre of the top bar (prototype `onScroll`), and content fades under an edge.
 - **Balance:**
   - **Display:** Space Grotesk 600, 50 pt, formatted with today's `BitcoinAmount` and the persisted unit (BIP-177 ₿ or sats).
@@ -75,7 +75,6 @@ From the top: top bar, balance, fiat, status line, nudge, card or Recent, map ro
   - **Canceled:** like failed, without the badge.
   - **New:** a small orange dot on incoming rows that arrived since Home was last shown. This is kept in memory only, and clears when Home disappears.
   - **Tap:** opens today's transaction detail.
-- **Map row:** a small static map thumbnail with an orange "you" dot, then "Spend bitcoin nearby" over "Find places that accept bitcoin". Tap opens today's BTC Map.
 - **Tab bar:** Home, Receive, Send, **Activity** (renamed from History, with a list icon).
   - **iOS 26:** the system floating Liquid Glass tab bar, minimising on scroll as today.
   - **Android:** a Material 3 navigation bar, restyled monochrome with a hairline-tint indicator pill.
@@ -105,7 +104,7 @@ Design for the iPhone Duo first, then make Android foldables match. Geometry and
 
 - **Compact** (phones, Duo closed, Pixel Fold closed): the layout above.
 - **Wide** (Duo open or half-open, Pixel Fold open, tablets, wide landscape): two panes split at the fold, with nothing crossing it.
-  - **Leading pane:** top bar, balance, fiat, status line, nudge and map row.
+  - **Leading pane:** top bar, balance, fiat, status line and nudge.
   - **Trailing pane:**
     - Fresh: the get-paid card, centred;
     - otherwise the full activity list, titled "Activity" and grouped by day ("Today", "Yesterday", dates), scrolling on its own.
@@ -125,7 +124,7 @@ Design for the iPhone Duo first, then make Android foldables match. Geometry and
 ## Platform
 
 - **iOS 26+ Liquid Glass:**
-  - where: the name chip, scan and settings buttons, the nudge card, the map row, Copy, the balance sheet and the wide tab bar;
+  - where: the name chip, scan and settings buttons, the nudge card, Copy, the balance sheet and the wide tab bar;
   - how: use `GlassEffectContainer` around grouped controls;
   - fallback: through `GlassCompat` (materials on iOS 18–25, opaque under Reduce Transparency).
 - **Android:** the same layout with flat tonal surfaces (the prototype's `--soft`), Roboto for text and Space Grotesk for amounts.
@@ -142,7 +141,7 @@ The redesign only changes how Home looks and which existing actions it links to.
   - backup progress, failure and retry;
   - pending rounds and their sheet, automatic-boarding completion and the background-task status (the activity glyph);
   - the email prompt and the backup prompt;
-  - the suspended state, the BTC Map, the QR hub and the scanner;
+  - the suspended state, the BTC Map (from Settings), the QR hub and the scanner;
   - transaction detail with Pay again, and pull-to-sync.
 - **Tests:**
   - an RN-migrated fixture with history opens Everyday with the backup nudge;

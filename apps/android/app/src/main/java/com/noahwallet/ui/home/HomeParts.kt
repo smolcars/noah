@@ -255,37 +255,6 @@ internal fun Pill(title: String, modifier: Modifier = Modifier, height: Dp = 36.
     }
 }
 
-/** A static map thumbnail with an orange "you" dot (prototype `.map svg.t`). */
-@Composable
-internal fun MapThumb(modifier: Modifier = Modifier) {
-    Canvas(modifier.size(48.dp).clip(RoundedCornerShape(14.dp))) {
-        val u = size.width / 48f
-        fun p(x: Float, y: Float) = Offset(x * u, y * u)
-        drawRect(Color(0xFF141414))
-        for ((a, b) in listOf(p(-4f, 30f) to p(52f, 14f), p(10f, -4f) to p(22f, 52f), p(-4f, 8f) to p(30f, 52f), p(34f, -4f) to p(44f, 52f)))
-            drawLine(Color(0xFF2E2E2E), a, b, 3 * u)
-        drawLine(Color(0xFF2A2A2A), p(-4f, 40f), p(52f, 34f), 1.5f * u)
-        for (dot in listOf(p(14f, 16f), p(36f, 22f), p(31f, 38f))) drawCircle(Color.White, 2.4f * u, dot)
-        drawCircle(NoahTokens.Light.orange.copy(alpha = .22f), 7 * u, p(20f, 30f))
-        drawCircle(NoahTokens.Light.orange, 3.4f * u, p(20f, 30f))
-    }
-}
-
-@Composable
-internal fun MapRow(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val palette = LocalPalette.current
-    Row(modifier.fillMaxWidth().tonal(RoundedCornerShape(22.dp), palette.soft).clickable(role = Role.Button, onClick = onClick)
-        .padding(start = 10.dp, top = 10.dp, end = 14.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        MapThumb()
-        Column(Modifier.weight(1f)) {
-            Text(tr("Spend bitcoin nearby"), style = HomeType.strong, color = palette.foreground)
-            Text(tr("Find places that accept bitcoin"), style = HomeType.small, color = palette.muted)
-        }
-        Icon(painterResource(HomeIcons.chevron), null, Modifier.size(18.dp), tint = palette.muted)
-    }
-}
-
 /**
  * A 42 dp avatar (60 dp [large], Activity's detail): an initial for people and addresses, otherwise a rail glyph;
  * pending, failed and new marks. [fading] shrinks the new dot away (soft, prototype `fadeDot`), then [onSeen].

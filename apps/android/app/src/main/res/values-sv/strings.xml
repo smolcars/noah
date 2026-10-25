@@ -512,7 +512,6 @@
   <string name="gt_638e249f4a15ebb8">"Filter"</string>
   <string name="gt_f4ed8fa656b74c5d">"Slutgiltig"</string>
   <string name="gt_b4221133c0166c16">"Den slutliga inlösentransaktionen har sänts och väntar på bekräftelse."</string>
-  <string name="gt_664fa279a9ee2f99">"Hitta ställen som tar emot bitcoin"</string>
   <string name="gt_280918c59094fc48">"Letar efter din bitcoin"</string>
   <string name="gt_25cc2b0e08f9d856">"Slutför konfigurationen av din Lightning-adress innan du delar din QR-kod."</string>
   <string name="gt_feb81c547b248d40">"Slutför den pågående betalningen innan du öppnar en annan betalningsbegäran."</string>

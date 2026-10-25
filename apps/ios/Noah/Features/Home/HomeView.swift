@@ -157,7 +157,6 @@ struct HomeView: View {
                     case .loading, .suspended:
                         EmptyView()
                     }
-                    HomeMapRow { open(.map) }.padding(.top, 22).modifier(appear(6))
                 }
             }
             .padding(.top, 10).padding(.bottom, 32)
@@ -184,7 +183,6 @@ struct HomeView: View {
                             HomeSuspendedView { openSettings(.advanced) }.padding(.top, 24).modifier(appear(1))
                         } else {
                             balanceBlock(tuck: 0)
-                            HomeMapRow { open(.map) }.padding(.top, 22).modifier(appear(6))
                         }
                     }
                     .padding(.horizontal, 32).padding(.top, 12).padding(.bottom, 110)
@@ -648,6 +646,7 @@ struct HomeView: View {
             },
             close: { path = SettingsPath.base(path) },
             myCode: { path.append(.codes(.myCode)) },
+            map: { path.append(.map) },
             receive: onReceive,
             toast: { text in withAnimation(NoahTokens.Motion.travel(reduceMotion)) { settingsToast = HomeToast(text: text) } })
     }

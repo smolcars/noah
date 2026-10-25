@@ -77,7 +77,7 @@ internal object SettingsIcons {
     val calendar = R.drawable.ic_set_cal; val image = R.drawable.ic_set_image; val bolt = R.drawable.ic_set_bolt
     val copy = R.drawable.ic_sr_copy; val check = R.drawable.ic_activity_check; val external = R.drawable.ic_activity_external
     val gear = HomeIcons.settings; val share = R.drawable.ic_activity_share; val more = R.drawable.ic_activity_more
-    val lightning = HomeIcons.lightning; val person = HomeIcons.person
+    val lightning = HomeIcons.lightning; val person = HomeIcons.person; val map = R.drawable.ic_set_map
 }
 
 /** Settings' type (prototype sizes, Android): Roboto words, Space Grotesk amounts and the wordmark. */

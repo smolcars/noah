@@ -72,6 +72,8 @@ struct SettingsNavigator {
     /// Leaves Settings for Home.
     var close: () -> Void = {}
     var myCode: () -> Void = {}
+    /// BTC Map, in Home's stack as Home opened it, so Back returns to Settings.
+    var map: () -> Void = {}
     var receive: () -> Void = {}
     /// A short confirmation over Settings that outlives the page that shows it.
     var toast: (String) -> Void = { _ in }

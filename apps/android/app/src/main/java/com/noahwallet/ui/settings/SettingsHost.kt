@@ -53,7 +53,7 @@ import kotlinx.coroutines.withContext
  * shows a page with only its parents beneath, as a deep link does (a started exit leaves its review for its progress).
  */
 internal class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
-                           val hold: (Boolean) -> Unit = {}, val replace: (NavKey) -> Unit = {})
+                           val hold: (Boolean) -> Unit = {}, val replace: (NavKey) -> Unit = {}, val map: () -> Unit = {})
 
 /**
  * A save whose completion navigates (the Lightning address, "I wrote it down"): [AppModel.action] that holds Back, list
@@ -154,7 +154,7 @@ private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boole
  */
 @Composable
 internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: () -> Unit, myCode: () -> Unit,
-                          preview: SettingsPreview? = null, hold: NavigationHold = remember { NavigationHold() }) {
+                          preview: SettingsPreview? = null, hold: NavigationHold = remember { NavigationHold() }, map: () -> Unit = {}) {
     val initialSheet = preview?.sheet
     val entryScope = LocalEntryScope.current
     val entry = LocalSettingsEntry.current
@@ -216,6 +216,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
             }
             val leave = { if (idle()) close() }
             val code = { if (idle()) myCode() }
+            val btcMap = { if (idle()) map() }
             CompositionLocalProvider(LocalSettingsToasts provides toasts) {
                 Box(Modifier.fillMaxSize()) {
                     if (wide && !exit) Box(when (pose) {
@@ -224,7 +225,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                         else -> Modifier
                     }.testTag("settings-list-pane")) {
                         CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading) {
-                            root(SettingsNav(leave, { open(it, true) }, leave, code, leave, hold::set), pages.firstOrNull())
+                            root(SettingsNav(leave, { open(it, true) }, leave, code, leave, hold::set, map = btcMap), pages.firstOrNull())
                         }
                     }
                     Box(when {
@@ -244,7 +245,7 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
                                         val index = pages.indexOf(key)
                                         val back = if (wide && index <= 0 && !SettingsRoutes.exit(key)) null else ({ if (idle()) pop() })
                                         val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave, hold::set,
-                                            { if (SettingsRoutes.top(stack, key)) replace(it) })
+                                            { if (SettingsRoutes.top(stack, key)) replace(it) }, btcMap)
                                         @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview)
                                         if (key != SettingsDestination.Settings) Page() else if (!currentlyWide) root(nav, null)
                                     }

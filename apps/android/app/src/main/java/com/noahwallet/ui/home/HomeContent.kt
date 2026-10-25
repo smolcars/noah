@@ -111,7 +111,7 @@ class HomeToasts {
 }
 
 class HomeActions(
-    val scan: () -> Unit = {}, val settings: () -> Unit = {}, val map: () -> Unit = {},
+    val scan: () -> Unit = {}, val settings: () -> Unit = {},
     /** The suspended state's "Open Settings": Advanced, where Suspend wallet is. */
     val suspended: () -> Unit = settings,
     val toggleHidden: () -> Unit = {}, val seeAll: () -> Unit = {}, val openRow: (String) -> Unit = {}, val profile: () -> Unit = {},
@@ -122,7 +122,7 @@ class HomeActions(
 private val compactTop = 60.dp
 
 /**
- * Home's one layout: compact (one column), wide (leading: you, balance, status, nudge, map; trailing: the
+ * Home's one layout: compact (one column), wide (leading: you, balance, status and nudge; trailing: the
  * card or the activity list) and tabletop (top half: the same leading content; bottom half: card or list).
  * Must sit inside [OnboardingFrame], which resolves the pose from the full window and the fold.
  */
@@ -166,7 +166,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     val openSheet = { haptics.light(); sheet = true }
     val toggle = { haptics.medium(); actions.toggleHidden() }
 
-    // The prototype's entrance: top bar, balance, fiat, status (when shown), nudge, card or Recent, map; 40 ms apart.
+    // The prototype's entrance: top bar, balance, fiat, status (when shown), nudge, card or Recent; 40 ms apart.
     val after = if (ui.status != null) 40L else 0L
     @Composable fun Leading(tuck: Float) {
         if (state == HomeRules.State.suspended) { Box(Modifier.rise(entered, 100, 14f, reduceMotion)) { Suspended(actions.suspended) }; return }
@@ -194,7 +194,6 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
             else -> {}
         }
     }
-    val map = @Composable { Box(Modifier.padding(top = 22.dp).rise(entered, 260 + after, 14f, reduceMotion)) { MapRow({ haptics.light(); actions.map() }) } }
 
     val pullState = rememberPullToRefreshState()
     // Scroll positions live above the pose switch, so folding, unfolding and bending keep them; the saved anchor
@@ -229,7 +228,6 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
                     Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
                         Leading(tuck)
                         if (state != HomeRules.State.suspended) Primary(false)
-                        map()
                     }
                 }
                 ScrollEdge(scroll.value > 2)
@@ -245,7 +243,6 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
                 }) {
                     Pane(homeScroll.leading, top = 70.dp, horizontal = 24.dp) {
                         Leading(0f)
-                        map()
                     }
                     TopBar(ui, actions, state, 0f, Modifier.padding(top = 10.dp).padding(horizontal = 20.dp), entered)
                     HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 22.dp))
@@ -264,7 +261,6 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
                 }) {
                     Pane(homeScroll.leading, top = compactTop, horizontal = 24.dp) {
                         Leading(0f)
-                        map()
                     }
                     // Lined up with the content column below it (the bar sits 8 dp outside the content's edges).
                     TopBar(ui, actions, state, 0f, Modifier.widthIn(max = OnboardingPose.paneContent.dp).padding(horizontal = 16.dp), entered)

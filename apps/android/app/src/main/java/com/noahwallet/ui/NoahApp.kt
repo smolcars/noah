@@ -39,6 +39,10 @@ enum class Destination(val title: String) : NavKey {
 @Serializable
 data class QRDestination(val scan: Boolean = false) : NavKey
 
+/** Today's BTC Map, opened from Settings. */
+@Serializable
+data object MapDestination : NavKey
+
 internal fun mainTabEntries(tab: Destination, homeStack: List<NavKey>): List<NavKey> =
     if (tab == Destination.Home) homeStack else listOf(tab)
 
@@ -96,8 +100,8 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     }
     // A payment's VTXO, exit and recurring links, from Activity and Home alike.
     val openPage: (NavKey) -> Unit = { openSettings(it) }
-    // Home, Settings, Send, Receive and Activity split the whole window at a fold themselves; every other screen, and
-    // Home's map and email flows, keep one pane.
+    // Home, Settings, Send, Receive and Activity split the whole window at a fold themselves; every other screen (the
+    // map among them), and Home's email flow, keep one pane.
     var homeOverlay by rememberSaveable { mutableStateOf<String?>(null) }
     var sendBarHidden by remember { mutableStateOf(false) }
     var activityBarHidden by remember { mutableStateOf(false) }
@@ -131,9 +135,11 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
                             onProfile = { openSettings(SettingsDestination.Profile) },
                             onScan = ::scanned, startScanning = destination.scan)
                     }
+                    entry<MapDestination> { com.noahwallet.btcmap.BtcMapScreen { goBack() } }
                     entry<SettingsDestination>(metadata = settingsZoom()) {
                         CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
-                            SettingsHost(model, settingsStack, close = { goBack() }, myCode = { backStack.add(QRDestination(false)) })
+                            SettingsHost(model, settingsStack, close = { goBack() }, myCode = { backStack.add(QRDestination(false)) },
+                                map = { backStack.add(MapDestination) })
                         }
                     }
                     entry<Destination> { destination ->

@@ -512,7 +512,6 @@
   <string name="gt_638e249f4a15ebb8">"Filtrar"</string>
   <string name="gt_f4ed8fa656b74c5d">"Final"</string>
   <string name="gt_b4221133c0166c16">"La transacción final de reclamación se difundió y está pendiente de confirmación."</string>
-  <string name="gt_664fa279a9ee2f99">"Encuentra lugares que acepten bitcoin"</string>
   <string name="gt_280918c59094fc48">"Buscando tu bitcoin"</string>
   <string name="gt_25cc2b0e08f9d856">"Termina de configurar tu dirección Lightning antes de compartir tu código QR."</string>
   <string name="gt_feb81c547b248d40">"Termina el pago actual antes de abrir otra solicitud de pago."</string>

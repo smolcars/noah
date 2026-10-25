@@ -555,63 +555,6 @@ struct HomeNudgeSlot<Card: View>: View {
     }
 }
 
-// MARK: Map row
-
-/// "Spend bitcoin nearby": opens today's BTC Map.
-struct HomeMapRow: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                HomeMapThumbnail()
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Spend bitcoin nearby").noahText(HomeText.strong).foregroundStyle(NoahTokens.Colors.foreground)
-                    Text("Find places that accept bitcoin").noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .accessibilityHidden(true)
-            }
-            .padding(.vertical, 10).padding(.leading, 10).padding(.trailing, 14)
-            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous), interactive: true)
-        }
-        .buttonStyle(HomePressStyle(scale: 0.98))
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("home-btc-map-button")
-    }
-}
-
-/// A small static map with an orange "you" dot (prototype `.map svg.t`).
-struct HomeMapThumbnail: View {
-    var body: some View {
-        Canvas { context, size in
-            let s = size.width / 48
-            func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * s, y: y * s) }
-            context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color(hex: 0x141414)))
-            var roads = Path()
-            for (a, b) in [((-4, 30), (52, 14)), ((10, -4), (22, 52)), ((-4, 8), (30, 52)), ((34, -4), (44, 52))] as [((CGFloat, CGFloat), (CGFloat, CGFloat))] {
-                roads.move(to: p(a.0, a.1)); roads.addLine(to: p(b.0, b.1))
-            }
-            context.stroke(roads, with: .color(Color(hex: 0x2E2E2E)), lineWidth: 3 * s)
-            var lane = Path()
-            lane.move(to: p(-4, 40)); lane.addLine(to: p(52, 34))
-            context.stroke(lane, with: .color(Color(hex: 0x2A2A2A)), lineWidth: 1.5 * s)
-            func dot(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat, _ color: Color) {
-                context.fill(Path(ellipseIn: CGRect(x: (x - r) * s, y: (y - r) * s, width: 2 * r * s, height: 2 * r * s)), with: .color(color))
-            }
-            for (x, y) in [(14, 16), (36, 22), (31, 38)] as [(CGFloat, CGFloat)] { dot(x, y, 2.4, .white) }
-            dot(20, 30, 7, NoahTokens.Colors.orange.opacity(0.22))
-            dot(20, 30, 3.4, NoahTokens.Colors.orange)
-        }
-        .accessibilityHidden(true)
-    }
-}
-
 // MARK: Toast, pane sheet, suspended
 
 struct HomeToast: Equatable {

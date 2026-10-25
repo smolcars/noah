@@ -29,7 +29,7 @@ import java.util.Locale
 
 /**
  * Home (docs/native-rewrite/design/home.md): live wallet state into [HomeContent]. Every action links to an
- * existing flow; [overlay] is today's in-place BTC Map ("map") or emergency email flow ("email").
+ * existing flow; [overlay] is today's in-place emergency email flow ("email").
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,10 +60,6 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
                 kotlinx.coroutines.delay(300_000)
             }
         }
-    }
-    if (overlay == "map") {
-        com.noahwallet.btcmap.BtcMapScreen { onOverlay(null) }
-        return
     }
     if (overlay == "email") {
         BackHandler { if (!model.busy) onOverlay(null) }
@@ -171,7 +167,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
         backedUpAt = HomeRules.backedUpAt(backupBanner, signals.backup).takeIf { !model.isWalletSuspended },
     )
     val actions = HomeActions(
-        scan = onScan, settings = settings, suspended = { onSettings(SettingsDestination.Advanced) }, map = { onOverlay("map") },
+        scan = onScan, settings = settings, suspended = { onSettings(SettingsDestination.Advanced) },
         toggleHidden = model::toggleBalance, seeAll = onViewAll, openRow = { detail.open(it) }, profile = onProfile,
         nudge = { nudge ->
             when (nudge) {

@@ -78,7 +78,6 @@ class HomeFoldTest {
             assertTrue("$state: balance leads", bounds("home-balance").right <= fold.left)
             val trailing = if (state == "fresh") bounds("home-get-paid") else bounds("home-activity")
             assertTrue("$state: card or list trails: $trailing", trailing.left >= fold.right)
-            assertTrue("$state: the map row leads", text("Spend bitcoin nearby").right <= fold.left)
         }
     }
 

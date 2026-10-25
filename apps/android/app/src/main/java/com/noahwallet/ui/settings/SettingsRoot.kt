@@ -162,6 +162,7 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
             // Decision 5 (exit.md): only while an exit runs, from its start until it's claimed or canceled.
             { d -> SettingsRow(tr("Emergency exit"), SettingsIcons.exit, value = if (com.noahwallet.onchain.ExitList.live(live.overview?.exits)) tr("In progress") else null,
                 selected = selected == SettingsDestination.Exits, divider = d, modifier = Modifier.testTag("settings-emergencyExit")) { open(SettingsDestination.Exits) } },
+            { d -> SettingsRow(tr("Spend bitcoin nearby"), SettingsIcons.map, divider = d, modifier = Modifier.testTag("settings-btcmap")) { nav.map() } },
         ))
         SettingsGroup(tr("Display"), rows = listOf(
             { d -> SettingsRow(tr("Bitcoin unit"), glyph = if (model.amountUnit == BitcoinAmountUnit.sats) "s" else "₿",
