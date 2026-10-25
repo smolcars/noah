@@ -6,6 +6,8 @@ import com.noahwallet.services.wallet.EsploraSettings
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.attribute.FileTime
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,13 +27,20 @@ class SettingsCacheTest {
         try { body(context, File(context.noBackupFilesDir, "settings.native.json")) }
         finally { root.setWritable(true); File(root, "no-backup").setWritable(true); root.deleteRecursively() }
     }
+    /** The host's stat, as precise as [settingsStamp] on a device (Robolectric's Os.stat is a stub). */
+    private val hostStat: (File) -> List<Long>? = { file -> runCatching {
+        Files.readAttributes(file.toPath(), "unix:ino,size,lastModifiedTime,ctime").let {
+            listOf(it["ino"] as Long, it["size"] as Long, (it["lastModifiedTime"] as FileTime).to(TimeUnit.NANOSECONDS), (it["ctime"] as FileTime).to(TimeUnit.NANOSECONDS))
+        }
+    }.getOrNull() }
+    private fun storage(context: ContextWrapper, sync: (File) -> Unit = {}) = SettingsStorage(context, sync, hostStat)
     /** Another writer's generation, bypassing the storage (and its cache). */
     private fun replace(file: File, values: Map<String, String>) = NativeSettingsFile(file, sync = {}).save(NativeSettingsFile.State(values))
 
     @Test fun readsSeeEveryWriteAtOnce() = withSettings { context, file ->
-        val settings = SettingsStorage(context, sync = {})
+        val settings = storage(context)
         settings.set("first", "key")
-        val other = SettingsStorage(context, sync = {})
+        val other = storage(context)
         assertEquals("first", other.string("key"))
         other.set("second", "key")
         assertEquals("second", settings.string("key"))
@@ -39,7 +48,7 @@ class SettingsCacheTest {
     }
 
     @Test fun anotherWritersGenerationIsReadBack() = withSettings { context, file ->
-        val settings = SettingsStorage(context, sync = {})
+        val settings = storage(context)
         settings.set("ours", "key")
         assertEquals("ours", settings.string("key"))
         replace(file, mapOf("key" to "a longer value"))
@@ -51,7 +60,7 @@ class SettingsCacheTest {
     }
 
     @Test fun anEqualSizeReplacementWithItsModificationTimeIsReadAndKept() = withSettings { context, file ->
-        val first = SettingsStorage(context, sync = {}); val second = SettingsStorage(context, sync = {})
+        val first = storage(context); val second = storage(context)
         first.set("a", "kept"); first.set("x", "other")
         assertEquals("x", second.string("other")) // generation A, now in memory
         val size = file.length(); val modified = Files.getLastModifiedTime(file.toPath())
@@ -66,18 +75,18 @@ class SettingsCacheTest {
     @Test fun aReplacementDuringOurWriteIsReadAndKept() = withSettings { context, file ->
         var replaceAfterRename = false
         // The directory sync runs after our rename: another writer replaces the file right then.
-        val settings = SettingsStorage(context) { if (replaceAfterRename && it.isDirectory) { replaceAfterRename = false; replace(file, mapOf("key" to "theirs", "their" to "kept")) } }
+        val settings = storage(context) { if (replaceAfterRename && it.isDirectory) { replaceAfterRename = false; replace(file, mapOf("key" to "theirs", "their" to "kept")) } }
         settings.set("before", "key")
         replaceAfterRename = true
         settings.set("ours", "key")
         assertEquals("theirs", settings.string("key"))
-        assertEquals("kept", SettingsStorage(context, sync = {}).string("their"))
+        assertEquals("kept", storage(context).string("their"))
         settings.set("next", "key")
         assertEquals(mapOf("key" to "next", "their" to "kept"), NativeSettingsFile(file).load().values)
     }
 
     @Test fun aChangedPermissionIsReadAgain() = withSettings { context, file ->
-        val settings = SettingsStorage(context, sync = {})
+        val settings = storage(context)
         settings.set("value", "key")
         assertEquals("value", settings.string("key"))
         // Only the change time moves; the unreadable file falls back to defaults and the health check fails.
@@ -89,7 +98,7 @@ class SettingsCacheTest {
     @Test fun failedWritesKeepTheCommittedValue() = withSettings { context, file ->
         for (failing in listOf<(File) -> Boolean>({ !it.isDirectory }, { it.isDirectory })) { // before and after the rename
             var fail = false
-            val settings = SettingsStorage(context) { if (fail && failing(it)) throw IOException("disk") }
+            val settings = storage(context) { if (fail && failing(it)) throw IOException("disk") }
             settings.set("kept", "key")
             fail = true
             assertThrows(IOException::class.java) { settings.set("lost", "key") }

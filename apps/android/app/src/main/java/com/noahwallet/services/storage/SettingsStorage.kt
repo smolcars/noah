@@ -9,7 +9,9 @@ import java.io.File
 import kotlinx.serialization.json.*
 
 /** MMKV is only opened on a verified disposable snapshot; native writes use one atomic file. */
-class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syncDirectory) {
+class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syncDirectory,
+    /** [settingsStamp]; Robolectric's Os.stat is a stub (inode 0, whole seconds), so JVM tests pass the host's stat. */
+    private val stat: (File) -> List<Long>? = ::settingsStamp) {
     private val root = File(context.filesDir, "mmkv")
     private val backupRoot = context.noBackupFilesDir
     internal val nativeFile = NativeSettingsFile(File(backupRoot, "settings.native.json"), sync = sync)
@@ -18,16 +20,10 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         get() = fallbacks[nativeFile.file.path]
         set(value) { if (value == null) fallbacks.remove(nativeFile.file.path) else fallbacks[nativeFile.file.path] = value }
     /** The last verified read, with the [stamp] taken before it: a file replaced mid-read just looks changed next time. */
-    private var cached: Pair<List<Any?>, NativeSettingsFile.State>?
+    private var cached: Pair<List<Long>, NativeSettingsFile.State>?
         get() = caches[nativeFile.file.path]
         set(value) { if (value == null) caches.remove(nativeFile.file.path) else caches[nativeFile.file.path] = value }
-    /** One stat: the file's inode, size, modification and change times; null when it can't be read. */
-    private fun stamp(): List<Any?>? = try {
-        if (Build.VERSION.SDK_INT >= 26) java.nio.file.Files.readAttributes(nativeFile.file.toPath(), "unix:ino,size,lastModifiedTime,ctime")
-            .let { listOf(it["ino"], it["size"], it["lastModifiedTime"], it["ctime"]) } // nanosecond times
-        // Whole-second times before API 26; writes re-read the file anyway, so a missed change can't be merged over.
-        else Os.stat(nativeFile.file.path).let { listOf(it.st_ino, it.st_size, it.st_mtime, it.st_ctime) }
-    } catch (_: Exception) { null }
+    private fun stamp() = stat(nativeFile.file)
 
     init { synchronized(openLock) {
         try {
@@ -166,7 +162,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         const val emptyRecurring = """{"state":{"schedules":{},"serverSyncPending":true},"version":0}"""
         private val openLock = Any()
         private val fallbacks = mutableMapOf<String, NativeSettingsFile.State>()
-        private val caches = mutableMapOf<String, Pair<List<Any?>, NativeSettingsFile.State>>()
+        private val caches = mutableMapOf<String, Pair<List<Long>, NativeSettingsFile.State>>()
         internal fun importValues(source: Map<String, String?>): NativeSettingsFile.State {
             val values = mutableMapOf<String, String>()
             var settingsNotice = source.isEmpty()
@@ -183,3 +179,15 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         }
     }
 }
+
+/**
+ * One stat of [file]: its inode, size, and modification and change times (nanoseconds from API 27, whole seconds
+ * before, where writes still re-read the file before merging); null when it can't be read. java.nio's times are whole
+ * seconds on Android, so it doesn't do here.
+ */
+internal fun settingsStamp(file: File): List<Long>? = try {
+    Os.stat(file.path).let {
+        if (Build.VERSION.SDK_INT >= 27) listOf(it.st_ino, it.st_size, it.st_mtim.tv_sec, it.st_mtim.tv_nsec, it.st_ctim.tv_sec, it.st_ctim.tv_nsec)
+        else listOf(it.st_ino, it.st_size, it.st_mtime, it.st_ctime)
+    }
+} catch (_: android.system.ErrnoException) { null }

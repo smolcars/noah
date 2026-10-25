@@ -1,6 +1,8 @@
 package com.noahwallet.services
 
 import android.content.Context
+import android.content.ContextWrapper
+import android.os.StrictMode
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
@@ -9,6 +11,7 @@ import android.util.Base64
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.*
 import java.io.File
@@ -131,6 +134,33 @@ class AndroidStorageTest {
             directory.deleteRecursively()
             context.deleteSharedPreferences(prefsName)
         }
+    }
+
+    /** On a real filesystem the settings stamp works: unchanged reads never open the file; a same-size replacement is read. */
+    @SdkSuppress(minSdkVersion = 28) // StrictMode's violation listener
+    @Test fun settingsReadsComeFromMemoryUntilTheFileIsReplaced() {
+        val root = File(context.cacheDir, "settings-cache-${UUID.randomUUID()}").apply { check(mkdir()) }
+        val isolated = object : ContextWrapper(context) {
+            override fun getFilesDir() = root
+            override fun getNoBackupFilesDir() = root
+        }
+        val previous = StrictMode.getThreadPolicy()
+        val reads = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val watching = StrictMode.ThreadPolicy.Builder().detectDiskReads()
+            .penaltyListener(Runnable::run) { reads += it.stackTrace.joinToString("\n") }.build()
+        fun watched(body: () -> Unit) { StrictMode.setThreadPolicy(watching); try { body() } finally { StrictMode.setThreadPolicy(previous) } }
+        try {
+            val settings = SettingsStorage(isolated)
+            settings.set("ours", "key")
+            assertEquals("ours", settings.string("key")) // the read after a write verifies the file
+            watched { repeat(5) { assertEquals("ours", settings.string("key")) } }
+            assertTrue(reads.joinToString("\n\n"), reads.none { "NativeSettingsFile" in it })
+            val size = settings.nativeFile.file.length()
+            settings.nativeFile.save(NativeSettingsFile.State(mapOf("key" to "them"))) // same size, moments later
+            check(settings.nativeFile.file.length() == size)
+            watched { assertEquals("them", settings.string("key")) }
+            assertTrue("A replaced file is read again", reads.any { "NativeSettingsFile.load" in it })
+        } finally { StrictMode.setThreadPolicy(previous); root.deleteRecursively() }
     }
 
     private fun assertFound(result: SecretResult) {
