@@ -21,6 +21,7 @@ Offline commands (no GT calls, credentials, RN source, or RN catalogs needed):
 bun apps/tools/translations.mjs extract   # Write English JSON only
 bun apps/tools/translations.mjs           # Regenerate catalogs and coverage
 bun apps/tools/translations.mjs --check   # Compare English JSON, catalogs and coverage byte for byte
+bun apps/tools/translations.mjs translate --dry-run   # Count the keys translate would send per locale; writes nothing
 bun test apps/tools/translations.test.mjs
 ```
 

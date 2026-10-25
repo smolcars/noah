@@ -362,11 +362,28 @@ export function missingGroups(english, catalogs) {
     return batches;
   });
 }
-export async function translate(base = root) {
-  const { all, english } = await extractFile(base);
+const writeLocales = (catalogs, base, only = locales.slice(1)) => outputFiles(new Map(only.map(locale => [`apps/i18n/${locale}/native.json`, json(sorted(catalogs[locale]))])), false, base);
+// CI reuses an open bot PR's translations (another apps/i18n under `other`) so GT never translates a key twice.
+export async function reuse(other, base = root) {
+  const { all, english } = await extract(base);
+  const catalogs = await localeFiles(base), previous = await localeFiles(other);
+  const reused = {};
+  for (const locale of locales.slice(1)) {
+    const keys = Object.keys(english).filter(key => !hasTranslation(catalogs[locale], key) && hasTranslation(previous[locale], key));
+    for (const key of keys) catalogs[locale][key] = previous[locale][key];
+    reused[locale] = keys.length;
+  }
+  readTranslations(all, catalogs);
+  await writeLocales(catalogs, base, locales.slice(1).filter(locale => reused[locale]));
+  return { reused };
+}
+export async function translate(base = root, { dryRun = false } = {}) {
+  const { all, english } = dryRun ? await extract(base) : await extractFile(base);
   const catalogs = await localeFiles(base);
   readTranslations(all, catalogs);
   const groups = missingGroups(english, catalogs);
+  // Reports what GT would be sent without writing files or contacting GT.
+  if (dryRun) return { missing: Object.fromEntries(locales.slice(1).map(locale => [locale, groups.filter(group => group.locales.includes(locale)).reduce((count, group) => count + Object.keys(group.source).length, 0)])), batches: groups.length };
   const temporary = await mkdtemp(resolve(tmpdir(), 'noah-gt-missing-'));
   try {
     const config = JSON.parse(await readFile(resolve(base, 'apps/i18n/gt.config.json'), 'utf8'));
@@ -388,7 +405,7 @@ export async function translate(base = root) {
       }
     }
     readTranslations(all, catalogs);
-    await outputFiles(new Map(locales.slice(1).map(locale => [`apps/i18n/${locale}/native.json`, json(sorted(catalogs[locale]))])), false, base);
+    await writeLocales(catalogs, base);
   } finally { await rm(temporary, { recursive: true, force: true }); }
   // The dashboard and committed lock describe the complete catalogs, including seeds.
   await runGT('upload', resolve(base, 'apps/i18n'), base);
@@ -399,7 +416,11 @@ if (import.meta.main) {
   if (command === '--check') console.log(JSON.stringify(await generate(true)));
   else if (command === 'extract') await extractFile();
   else if (command === 'seed') await seed(Bun.argv.includes('--force'));
-  else if (command === 'translate') console.log(JSON.stringify(await translate()));
+  else if (command === 'translate') console.log(JSON.stringify(await translate(root, { dryRun: Bun.argv.includes('--dry-run') })));
+  else if (command === 'reuse') {
+    if (!Bun.argv[3]) throw new Error('Usage: reuse <directory containing apps/i18n>');
+    console.log(JSON.stringify(await reuse(resolve(Bun.argv[3]))));
+  }
   else if (command === 'generate') console.log(JSON.stringify(await generate()));
   else throw new Error(`Unknown command: ${command}`);
 }

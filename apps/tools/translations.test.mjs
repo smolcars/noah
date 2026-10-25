@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
-import { flatten, format, entries, iosCatalog, androidCatalog, resourceName, locales, sourceEntries, translationJSON, readTranslations, seedTranslations, extract, generate, root, translate, missingGroups, platformOnly } from './translations.mjs';
+import { flatten, format, entries, iosCatalog, androidCatalog, resourceName, locales, sourceEntries, translationJSON, readTranslations, seedTranslations, extract, generate, root, translate, reuse, missingGroups, platformOnly } from './translations.mjs';
 
 const text = { t: 'Text', c: ['Hello ', { t: 'strong', c: { v: 'v', k: 'name' } }, '!'] };
 test('rich text keeps text and variables in reading order', () => {
@@ -129,14 +129,14 @@ test('stale checks detect English edits, code additions/removals, locale edits a
   });
 });
 
-test('extract, generate and --check run without RN, dependencies, credentials, or invoking GT', async () => {
+test('extract, generate, --check and translate --dry-run run without RN, dependencies, credentials, or invoking GT', async () => {
   await fixture(async (base, put) => {
     await mkdir(resolve(base, 'apps/tools'), { recursive: true });
     await copyFile(resolve(root, 'apps/tools/translations.mjs'), resolve(base, 'apps/tools/translations.mjs'));
     await put('node_modules/.bin/gt', '#!/bin/sh\necho "GT must stay offline" >&2\nexit 97\n');
     await chmod(resolve(base, 'node_modules/.bin/gt'), 0o755);
-    for (const command of ['extract', 'generate', '--check']) {
-      const process = Bun.spawn([Bun.argv[0], 'apps/tools/translations.mjs', command], { cwd: base, env: { PATH: '/usr/bin:/bin' }, stdout: 'pipe', stderr: 'pipe' });
+    for (const command of [['extract'], ['generate'], ['--check'], ['translate', '--dry-run']]) {
+      const process = Bun.spawn([Bun.argv[0], 'apps/tools/translations.mjs', ...command], { cwd: base, env: { PATH: '/usr/bin:/bin' }, stdout: 'pipe', stderr: 'pipe' });
       const stderr = await new Response(process.stderr).text();
       expect(stderr).toBe('');
       expect(await process.exited).toBe(0);
@@ -162,6 +162,9 @@ if (process.argv[2] === 'translate') for (const locale of config.locales) {
 }
 `);
     await chmod(resolve(base, 'node_modules/.bin/gt'), 0o755);
+    expect(await translate(base, { dryRun: true })).toEqual({ missing: { es: 2, ja: 3, ko: 3, sv: 3 }, batches: 2 });
+    expect(await readFile(trace, 'utf8').catch(() => 'no calls')).toBe('no calls');
+    expect(await readFile(resolve(base, 'apps/i18n/en/native.json'), 'utf8').catch(() => 'not written')).toBe('not written');
     await translate(base);
     const calls = (await readFile(trace, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
     expect(calls).toHaveLength(3);
@@ -174,8 +177,26 @@ if (process.argv[2] === 'translate') for (const locale of config.locales) {
     expect(actual[seedKey]).toBe('Hola {{name}}\n100%');
     expect(actual[resourceName('Send')]).toBe('GT Send');
     await generate(true, base);
+    expect(await translate(base, { dryRun: true })).toEqual({ missing: { es: 0, ja: 0, ko: 0, sv: 0 }, batches: 0 });
     await translate(base);
     expect((await readFile(trace, 'utf8')).trim().split('\n')).toHaveLength(4); // Complete catalogs only upload.
+  });
+});
+
+test('reuse fills only missing keys still in English from another catalog, validated, never overwriting', async () => {
+  await fixture(async (base, put) => {
+    const [hello, send] = [resourceName('Hello {name}'), resourceName('Send')];
+    await put('apps/i18n/es/native.json', JSON.stringify({ [hello]: 'Hola {{name}}' }));
+    const other = resolve(base, 'bot');
+    await put('bot/apps/i18n/es/native.json', JSON.stringify({ [hello]: 'Otro {{name}}', [send]: 'Enviar' }));
+    await put('bot/apps/i18n/ja/native.json', JSON.stringify({ [send]: '送信', gt_obsolete: 'Old' }));
+    expect(await reuse(other, base)).toEqual({ reused: { es: 1, ja: 1, ko: 0, sv: 0 } });
+    expect(JSON.parse(await readFile(resolve(base, 'apps/i18n/es/native.json'), 'utf8'))).toEqual({ [hello]: 'Hola {{name}}', [send]: 'Enviar' });
+    expect(JSON.parse(await readFile(resolve(base, 'apps/i18n/ja/native.json'), 'utf8'))).toEqual({ [send]: '送信' });
+    expect((await translate(base, { dryRun: true })).missing).toEqual({ es: 1, ja: 2, ko: 3, sv: 3 });
+    await put('bot/apps/i18n/ko/native.json', JSON.stringify({ [hello]: '{{wrong}}' }));
+    await expect(reuse(other, base)).rejects.toThrow('Placeholder drift');
+    expect(await readFile(resolve(base, 'apps/i18n/ko/native.json'), 'utf8').catch(() => 'not written')).toBe('not written');
   });
 });
 
