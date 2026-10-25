@@ -59,7 +59,8 @@ env:
     extra-substituters =
     substituters = https://cache.nixos.org/
   # Merges save caches and PRs restore them, so a PR doesn't evict master's entries.
-  SAVE_CACHE: ${{ github.event_name != 'pull_request' }}
+  # Manual runs on other branches (such as bot/native-translations) restore like a PR.
+  SAVE_CACHE: ${{ github.ref == 'refs/heads/master' }}
 
 jobs:
   build-and-test:
