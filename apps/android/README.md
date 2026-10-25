@@ -462,7 +462,7 @@ as the native locale/profile UI ports remain pending.
 `PeriodicWork` adds two unique WorkManager requests, both with connected-network
 constraints and no charging, idle, exact-alarm or expedited requirement:
 
-- `noah-wallet-refresh`: 30 minutes, initially delayed 30 minutes; sync, execute
+- `noah-wallet-refresh`: 60 minutes, initially delayed 60 minutes; sync, execute
   due recurring payments, refresh the widget's summary/expiry and publish it.
 - `noah-wallet-maintenance`: 6 hours, initially delayed 6 hours; the same stages,
   plus delegated maintenance after sync and enabled-only backup after recurring.
@@ -534,7 +534,7 @@ Periodic verification on base `aea99fe4`, owned API 35 Google APIs ARM64 AVD
   that AVD deleted and its `.ini`/`.avd` absence verified. Single-use final Gradle
   processes stopped; shared devices and builds were untouched.
 
-No live funded wallet, server wake delivery, real 30-minute/6-hour wait, reboot,
+No live funded wallet, server wake delivery, real 60-minute/6-hour wait, reboot,
 package replacement or Doze measurement was attempted. Scheduling persistence uses
 WorkManager's platform implementation; the regression uses its official test driver.
 No iOS, server, RN, settings-storage internals, executor, ledger or authority code
