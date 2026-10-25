@@ -64,7 +64,7 @@ jobs:
               -destination 'generic/platform=iOS Simulator' \
               -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/apps/ios/build/SourcePackages" \
               -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" -jobs 2 \
-              CODE_SIGNING_ALLOWED=NO build
+              ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO build
           done
 
       - name: Create dedicated test simulator

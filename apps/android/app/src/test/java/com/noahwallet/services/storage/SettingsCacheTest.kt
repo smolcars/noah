@@ -9,6 +9,7 @@ import java.nio.file.Files
 import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
+import org.junit.Assume.assumeFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -91,6 +92,7 @@ class SettingsCacheTest {
         assertEquals("value", settings.string("key"))
         // Only the change time moves; the unreadable file falls back to defaults and the health check fails.
         check(file.setReadable(false) && file.parentFile!!.setWritable(false))
+        assumeFalse("permissions are ignored here (e.g. running as root)", file.canRead())
         assertNull(settings.string("key"))
         assertThrows(SettingsStorage.Unavailable::class.java) { settings.requireHealthy() }
     }

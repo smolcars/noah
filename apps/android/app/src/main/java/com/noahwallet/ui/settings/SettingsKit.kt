@@ -373,7 +373,7 @@ internal fun StatusHeader(mark: @Composable () -> Unit, title: String, line: Str
     }
 }
 
-/** One line of fine print (prototype `.fine`). */
+/** One fine-print line (prototype `.fine`). */
 @Composable
 internal fun FinePrint(text: String, modifier: Modifier = Modifier, failed: Boolean = false) {
     val palette = LocalPalette.current
