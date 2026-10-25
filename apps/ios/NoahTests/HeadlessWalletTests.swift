@@ -124,7 +124,7 @@ import Testing
         await session.release(held)
     }
 
-    @Test func cancelledBackgroundOpenClosesRealHandlesAfterSettlement() async throws {
+    @Test(.regtestStack) func cancelledBackgroundOpenClosesRealHandlesAfterSettlement() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: "headless-real-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: directory)

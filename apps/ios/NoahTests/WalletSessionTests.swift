@@ -156,7 +156,7 @@ struct WalletSessionTests {
 
     /// Exits read the daemon's clock: every path that starts bark's daemon sets it, every stop clears it.
     /// A cold launch with a custom Esplora opens through `reopen`.
-    @Test(.timeLimit(.minutes(1))) func theDaemonClockFollowsEveryOpenAndClose() async throws {
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func theDaemonClockFollowsEveryOpenAndClose() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
@@ -180,7 +180,7 @@ struct WalletSessionTests {
         await session.release(failing)
     }
 
-    @Test(.timeLimit(.minutes(1))) func silentEsploraReleasesUIGateButKeepsReservationUntilRollback() async throws {
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func silentEsploraReleasesUIGateButKeepsReservationUntilRollback() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         for lateSuccess in [false, true] {
             let server = try LocalEsploraServer(.silent)
@@ -232,7 +232,7 @@ struct WalletSessionTests {
         }
     }
 
-    @Test(.timeLimit(.minutes(1))) func launchDefaultWaitsForNativeAndReopensDespiteStorageFailure() async throws {
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func launchDefaultWaitsForNativeAndReopensDespiteStorageFailure() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let candidate = EsploraSettings.Selection(endpoint: "https://custom.invalid/api", variant: "signet")
         let fallback = EsploraSettings.Selection(variant: "signet")
@@ -279,7 +279,7 @@ struct WalletSessionTests {
         try await session.close()
     }
 
-    @Test func esploraReloadRefusesInFlightMoneyOperations() async throws {
+    @Test(.regtestStack) func esploraReloadRefusesInFlightMoneyOperations() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
@@ -314,7 +314,7 @@ struct WalletSessionTests {
         #expect(try await background.value)
     }
 
-    @Test func esploraReopenKeepsReservationThroughDurableCommit() async throws {
+    @Test(.regtestStack) func esploraReopenKeepsReservationThroughDurableCommit() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
@@ -330,7 +330,7 @@ struct WalletSessionTests {
         try await session.close()
     }
 
-    @Test func esploraCommitFailureKeepsReservationForRollback() async throws {
+    @Test(.regtestStack) func esploraCommitFailureKeepsReservationForRollback() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
@@ -346,7 +346,7 @@ struct WalletSessionTests {
         try await session.close()
     }
 
-    @Test func cancelledOrExpiredTasksCannotAdmitWalletCalls() async throws {
+    @Test(.regtestStack) func cancelledOrExpiredTasksCannotAdmitWalletCalls() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
@@ -375,7 +375,7 @@ struct WalletSessionTests {
         try await session.close()
     }
 
-    @Test func closeWaitsForWalletCallsStillRunning() async throws {
+    @Test(.regtestStack) func closeWaitsForWalletCallsStillRunning() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
@@ -396,13 +396,13 @@ struct WalletSessionTests {
         await session.release(reservation)
     }
 
-    @Test(.timeLimit(.minutes(1))) func repeatedReceiveObserverTeardown() async throws {
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func repeatedReceiveObserverTeardown() async throws {
         for _ in 0..<50 {
             try await closeStopsReceiveObserversAndWaitsForThem()
         }
     }
 
-    @Test(.timeLimit(.minutes(1))) func repeatedPendingObserversStopOnCloseAndConsumerCancellation() async throws {
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func repeatedPendingObserversStopOnCloseAndConsumerCancellation() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         for iteration in 0..<25 {
             let session = offlineSession()
@@ -432,7 +432,7 @@ struct WalletSessionTests {
         }
     }
 
-    @Test(.timeLimit(.minutes(1))) func closeStopsReceiveObserversAndWaitsForThem() async throws {
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func closeStopsReceiveObserversAndWaitsForThem() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")

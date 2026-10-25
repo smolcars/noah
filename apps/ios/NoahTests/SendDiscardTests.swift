@@ -58,7 +58,7 @@ struct SendDiscardTests {
         #expect(await session.sendPreparations.isEmpty)
     }
 
-    @Test func exhaustedRetriesRetainOwnershipAndNextWalletActivityReleases() async throws {
+    @Test(.regtestStack) func exhaustedRetriesRetainOwnershipAndNextWalletActivityReleases() async throws {
         let documents = FileManager.default.temporaryDirectory.appending(path: "send-r7-discard-\(UUID())")
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = WalletSession(variant: .regtest, location: .init(variant: .regtest, documentsDirectory: documents))
@@ -78,7 +78,7 @@ struct SendDiscardTests {
         try await session.close()
     }
 
-    @Test func closeFailureRetainsSessionAndPreparationUntilCleanupSucceeds() async throws {
+    @Test(.regtestStack) func closeFailureRetainsSessionAndPreparationUntilCleanupSucceeds() async throws {
         let documents = FileManager.default.temporaryDirectory.appending(path: "send-r7-close-\(UUID())")
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = WalletSession(variant: .regtest, location: .init(variant: .regtest, documentsDirectory: documents))

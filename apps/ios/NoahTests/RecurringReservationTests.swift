@@ -3,7 +3,7 @@ import Foundation
 import Testing
 @testable import Noah
 
-@MainActor struct RecurringReservationTests {
+@MainActor @Suite(.regtestStack) struct RecurringReservationTests {
     actor Gate {
         var entered = false
         private var continuation: CheckedContinuation<Void, Never>?

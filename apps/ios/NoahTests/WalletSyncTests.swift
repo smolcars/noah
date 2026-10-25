@@ -4,7 +4,7 @@ import Testing
 @testable import Noah
 
 struct WalletSyncTests {
-    @Test func suspensionOrCloseRevokesLaterStagesAndDrainsThePass() async throws {
+    @Test(.regtestStack) func suspensionOrCloseRevokesLaterStagesAndDrainsThePass() async throws {
         for suspend in [false, true] {
             let root = FileManager.default.temporaryDirectory.appending(path: "sync-suspension-\(UUID())")
             defer { try? FileManager.default.removeItem(at: root) }

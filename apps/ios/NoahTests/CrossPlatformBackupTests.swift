@@ -56,7 +56,7 @@ struct CrossPlatformBackupTests {
         try FileManager.default.removeItem(at: root)
     }
 
-    @Test func restoresAndroidServiceExport() async throws {
+    @Test(.regtestStack) func restoresAndroidServiceExport() async throws {
         let fixtures = try Fixtures.load("native-backups", input: Input.self, expected: Expected.self)
         let fixture = try #require(fixtures.first { $0.input.producer == "android" })
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
