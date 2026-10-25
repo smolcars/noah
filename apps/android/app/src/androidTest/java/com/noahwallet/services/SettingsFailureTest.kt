@@ -36,7 +36,8 @@ class SettingsFailureTest {
         val file = File(root, "settings.native.json")
         Os.chmod(file.path, 0); Os.chmod(root.path, 320)
         try {
-            assertNull(settings.persistedState<PersistedWalletState>(PersistedWalletState.key))
+            // The unchanged file's committed generation is still read from memory; the health check reads the disk.
+            assertEquals(true, settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended)
             services.ensureWalletOpen()
             fail("Background opened unpersisted fallback")
         } catch (failure: Exception) {

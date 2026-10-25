@@ -15,6 +15,11 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     private var fallback: NativeSettingsFile.State?
         get() = fallbacks[nativeFile.file.path]
         set(value) { if (value == null) fallbacks.remove(nativeFile.file.path) else fallbacks[nativeFile.file.path] = value }
+    /** The last generation read or committed, with the file's modification time and size when it was. */
+    private var cached: Pair<Pair<Long, Long>, NativeSettingsFile.State>?
+        get() = caches[nativeFile.file.path]
+        set(value) { if (value == null) caches.remove(nativeFile.file.path) else caches[nativeFile.file.path] = value }
+    private fun stamp() = nativeFile.file.let { it.lastModified() to it.length() }
 
     init { synchronized(openLock) {
         try {
@@ -49,12 +54,17 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
 
     class Unavailable : Exception("Native settings write failed")
     fun requireHealthy() = synchronized(openLock) {
-        load()
+        load(verify = true)
         if (fallback != null) throw Unavailable()
     }
-    private fun load(): NativeSettingsFile.State {
+    /** [verify] re-reads the file even when it looks unchanged; reads otherwise come from memory. */
+    private fun load(verify: Boolean = false): NativeSettingsFile.State {
         fallback?.let { return it }
-        return try { nativeFile.load() } catch (_: Exception) {
+        // Tests write this file directly, so a changed modification time or size re-reads and re-verifies it.
+        val stamp = stamp()
+        cached?.takeIf { !verify && it.first == stamp }?.let { return it.second }
+        return try { nativeFile.load().also { cached = stamp to it } } catch (_: Exception) {
+            cached = null
             val defaults = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true)
             fallback = defaults
             runCatching { persist(defaults) }
@@ -63,7 +73,9 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     }
     private fun persist(state: NativeSettingsFile.State) {
         check(backupRoot.isDirectory || backupRoot.mkdirs())
+        cached = null // A save that fails after its rename leaves the file changed.
         nativeFile.save(state)
+        cached = stamp() to state
         fallback = null
     }
     fun string(key: String): String? = synchronized(openLock) { load().values[key] }
@@ -84,7 +96,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         }
         try { persist(state) } catch (_: Exception) { fallback = state }
     }
-    fun validateStores() { synchronized(openLock) { load() } }
+    fun validateStores() { synchronized(openLock) { load(verify = true) } }
     // set() commits synchronously; retain this API for automation callers.
     fun sync() = requireHealthy()
     fun takeUpgradeNotices(): List<String> = synchronized(openLock) {
@@ -144,6 +156,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         const val emptyRecurring = """{"state":{"schedules":{},"serverSyncPending":true},"version":0}"""
         private val openLock = Any()
         private val fallbacks = mutableMapOf<String, NativeSettingsFile.State>()
+        private val caches = mutableMapOf<String, Pair<Pair<Long, Long>, NativeSettingsFile.State>>()
         internal fun importValues(source: Map<String, String?>): NativeSettingsFile.State {
             val values = mutableMapOf<String, String>()
             var settingsNotice = source.isEmpty()
