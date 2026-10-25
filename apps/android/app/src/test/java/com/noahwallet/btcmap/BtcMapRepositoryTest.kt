@@ -49,7 +49,8 @@ class BtcMapRepositoryTest {
     }
 
     @Test fun detailDeduplicatesExpiresAndSkipsUnneededComments() = runBlocking {
-        val urls = mutableListOf<okhttp3.HttpUrl>()
+        // detail() fetches the place and its comments concurrently on Dispatchers.IO.
+        val urls = java.util.concurrent.CopyOnWriteArrayList<okhttp3.HttpUrl>()
         val repository = repo { urls += it; delay(10); if (it.encodedPath.endsWith("/comments"))
             """[{"id":1,"text":"Paid with bitcoin","created_at":"2026-01-01"}]""" else raw }
         val place = repository.load().places.single()
