@@ -36,18 +36,27 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: blacksmith-6vcpu-macos-latest
+    runs-on: blacksmith-6vcpu-macos-27
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
 
-      - name: Check runner default Xcode
+      # Xcode 26's Swift 6.3 crashes in IRGen on this app (40191514718); use the newest Xcode 27.
+      - name: Select Xcode 27
         id: toolchain
         run: |
-          xcodebuild -version
-          xcrun --sdk iphonesimulator --show-sdk-version
-          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
-          echo "xcode=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+          shopt -s nullglob
+          xcodes=(/Applications/Xcode_27*.app)
+          xcode=$(printf '%s\n' "${xcodes[@]}" | sort -V | tail -1)
+          export DEVELOPER_DIR="${xcode:-$(xcode-select -p | sed 's|/Contents/Developer$||')}/Contents/Developer"
+          version=$(xcodebuild -version)
+          echo "$version"
+          if [[ "$version" != "Xcode 27"* ]]; then
+            echo "::error::Xcode 27 is missing; installed: $(echo /Applications/Xcode*.app)"
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+          echo "xcode=$(awk '/Build version/ {print $3}' <<< "$version")" >> "$GITHUB_OUTPUT"
 
       - name: Install XcodeGen
         run: command -v xcodegen || brew install xcodegen

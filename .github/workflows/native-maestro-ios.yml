@@ -24,7 +24,7 @@ env:
 jobs:
   ios:
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ios-e2e')
-    runs-on: blacksmith-6vcpu-macos-latest
+    runs-on: blacksmith-6vcpu-macos-27
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -37,11 +37,26 @@ jobs:
       - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
 
-      - name: Install XcodeGen and check Xcode
+      # Xcode 26's Swift 6.3 crashes in IRGen on this app (40191514718); use the newest Xcode 27.
+      - name: Select Xcode 27
+        id: toolchain
+        run: |
+          shopt -s nullglob
+          xcodes=(/Applications/Xcode_27*.app)
+          xcode=$(printf '%s\n' "${xcodes[@]}" | sort -V | tail -1)
+          export DEVELOPER_DIR="${xcode:-$(xcode-select -p | sed 's|/Contents/Developer$||')}/Contents/Developer"
+          version=$(xcodebuild -version)
+          echo "$version"
+          if [[ "$version" != "Xcode 27"* ]]; then
+            echo "::error::Xcode 27 is missing; installed: $(echo /Applications/Xcode*.app)"
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+          echo "xcode=$(awk '/Build version/ {print $3}' <<< "$version")" >> "$GITHUB_OUTPUT"
+
+      - name: Install XcodeGen
         run: |
           command -v xcodegen || brew install xcodegen
-          xcodebuild -version
-          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
           echo "NATIVE_IOS_TEMP=$(mktemp -d /private/tmp/noah-maestro-ci.XXXXXX)" >> "$GITHUB_ENV"
 
       - name: Create dedicated simulator
