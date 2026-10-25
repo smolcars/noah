@@ -1,4 +1,4 @@
-name: Native Signet Android Distribution
+name: Native Android Telegram (signet and mainnet)
 
 on:
   push:
@@ -6,7 +6,8 @@ on:
     paths:
       - "apps/android/**"
       - "apps/fixtures/**"
-      - ".github/workflows/native-signet-android.yml"
+      - ".github/workflows/native-telegram-android.yml"
+      - "!**/*.md"
   workflow_dispatch:
   # workflow_dispatch only works once this file is on master; until then, label a PR "send-to-telegram".
   pull_request:
@@ -23,12 +24,46 @@ env:
 
 jobs:
   build:
-    # Self-hosted with signing secrets: only this repo's own branches, never forks.
+    # Signing secrets: only this repo's own branches, never forks.
     if: github.event_name != 'pull_request' || (github.event.label.name == 'send-to-telegram' && github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: self-hosted
-    timeout-minutes: 60
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+          save: false
+
+      # Restores what native-android.yml saved on master; release builds don't write it back.
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+        with:
+          cache-read-only: true
+
+      - name: Locate Android SDK
+        id: sdk
+        run: echo "root=$ANDROID_HOME" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Android build SDK
+        id: sdk-cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          key: native-android-sdk-${{ runner.os }}-${{ runner.arch }}-37.0-37.0.0
+          path: |
+            ${{ steps.sdk.outputs.root }}/platforms/android-37.0
+            ${{ steps.sdk.outputs.root }}/build-tools/37.0.0
+
+      - name: Install Android build SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 3
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
 
       # Same keystore, alias and passwords as the RN signet distribution.
       - name: Prepare release signing
@@ -62,27 +97,30 @@ jobs:
           ), encoding="iso-8859-1")
           PY
 
-      - name: Build signed native signet release APK
+      # Same keystore as the RN signet and mainnet releases. Only phones install these, so arm64 only.
+      - name: Build signed signet and mainnet release APKs
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: dunder-rn
           SENTRY_PROJECT: react-native
           CI_DEBUG_SIGNING: "false"
         run: |
-          nix shell --inputs-from . nixpkgs#sentry-cli --command nix develop .# --command sh -c \
-            'cd apps/android && ./gradlew --max-workers=2 --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleSignetRelease'
+          nix shell --inputs-from . nixpkgs#sentry-cli --command nix develop .#android-ci --command sh -c \
+            'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleSignetRelease :app:assembleMainnetRelease'
 
-      - name: Name APK with commit
+      - name: Name APKs with commit
         env:
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          cp apps/android/app/build/outputs/apk/signet/release/app-signet-release.apk \
-            "noah-native-signet-${COMMIT_SHA}.apk"
+          for flavor in signet mainnet; do
+            cp "apps/android/app/build/outputs/apk/$flavor/release/app-$flavor-release.apk" \
+              "noah-native-$flavor-${COMMIT_SHA}.apk"
+          done
 
       - uses: actions/upload-artifact@v7
         with:
-          name: noah-native-signet-android-${{ github.sha }}
-          path: noah-native-signet-${{ github.sha }}.apk
+          name: noah-native-android-${{ github.sha }}
+          path: noah-native-*-${{ github.sha }}.apk
           if-no-files-found: error
 
       - name: Remove signing files
@@ -100,7 +138,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: noah-native-signet-android-${{ github.sha }}
+          name: noah-native-android-${{ github.sha }}
 
       # RN also uses a local Bot API server to support APKs over Telegram's public upload limit.
       - name: Start local Telegram Bot API server
@@ -121,19 +159,21 @@ jobs:
           echo 'Telegram Bot API server did not start.' >&2
           exit 1
 
-      - name: Post Native APK to Telegram
+      - name: Post Native APKs to Telegram
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           BLIXT_CHAT_ID: ${{ secrets.BLIXT_CHAT_ID }}
           BLIXT_TOPIC_ID: ${{ secrets.BLIXT_TOPIC_ID }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          printf 'Native Noah Signet Android build\nCommit: %s\n' "$COMMIT_SHA" > caption.txt
-          curl -fsS -X POST "http://localhost:8081/bot${TELEGRAM_TOKEN}/sendDocument" \
-            -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
-            -F "document=@noah-native-signet-${COMMIT_SHA}.apk" -F 'caption=<caption.txt' \
-            -o "$RUNNER_TEMP/telegram.json"
-          jq -e '.ok == true' "$RUNNER_TEMP/telegram.json" > /dev/null
+          for flavor in Signet Mainnet; do
+            printf 'Native Noah %s Android build\nCommit: %s\n' "$flavor" "$COMMIT_SHA" > caption.txt
+            curl -fsS -X POST "http://localhost:8081/bot${TELEGRAM_TOKEN}/sendDocument" \
+              -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
+              -F "document=@noah-native-$(tr '[:upper:]' '[:lower:]' <<< "$flavor")-${COMMIT_SHA}.apk" \
+              -F 'caption=<caption.txt' -o "$RUNNER_TEMP/telegram.json"
+            jq -e '.ok == true' "$RUNNER_TEMP/telegram.json" > /dev/null
+          done
 
       - name: Stop local Telegram Bot API server
         if: always()

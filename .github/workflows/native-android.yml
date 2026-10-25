@@ -15,10 +15,9 @@ on:
       - ".github/workflows/native-android.yml"
       - "scripts/test-maestro-native.sh"
       - "!**/*.md"
-  # Mainnet and signet build on merges and tags (path filters don't apply to tags).
+  # Merges run the same checks; native-telegram-android.yml builds signet and mainnet.
   push:
     branches: [master]
-    tags: ["v*"]
     paths:
       - "apps/android/**"
       - "apps/fixtures/**"
@@ -124,11 +123,6 @@ jobs:
           path: apps/android/app/build/test-results/testRegtestDebugUnitTest/*.xml
           if-no-files-found: error
           retention-days: 7
-
-      # Only phones run these flavors, so arm64 is enough.
-      - name: Assemble mainnet and signet
-        if: github.event_name == 'push'
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleMainnetDebug :app:assembleSignetDebug'
 
   # Two emulators in parallel; each job onboards one wallet and reuses it across its flows.
   maestro:

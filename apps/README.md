@@ -3,19 +3,22 @@
 The native apps in [ios](ios/README.md) and [android](android/README.md) replace
 the React Native wallet in `client/` through an in-place update.
 
-## Signet test builds
+## Signet and mainnet test builds
 
-**Native Signet uses the same bundle/application ID (`com.noahwallet.signet`)
-and signing identity as RN Signet. Installing it upgrades the tester's RN app
-in place, keeping its wallet data. This is intentional for upgrade testing.**
+**Native Signet and Mainnet use the same bundle/application IDs
+(`com.noahwallet.signet`, `com.noahwallet.mainnet`) and signing identity as
+RN. Installing one upgrades the tester's RN app in place, keeping its wallet
+data. This is intentional for upgrade testing. A mainnet build upgrades a
+real-funds wallet: keep its recovery phrase and a verified backup first.**
 
 After changes to the respective platform, shared fixtures, or distribution
 workflow land on `master`, GitHub Actions distributes:
 
-- [Native Signet Android](../.github/workflows/native-signet-android.yml): a
-  release APK in the existing Telegram chat/topic, labelled **Native** with
-  the commit SHA. Download and install the APK over RN Signet. The workflow
-  run also has a `noah-native-signet-android-<sha>` artifact.
+- [Native Android Telegram](../.github/workflows/native-telegram-android.yml):
+  signet and mainnet release APKs (arm64) in the existing Telegram chat/topic,
+  labelled **Native** with the flavor and commit SHA. Download and install an
+  APK over the matching RN app. The workflow run also has a
+  `noah-native-android-<sha>` artifact with both APKs.
 - [Native Signet iOS](../.github/workflows/native-signet-ios.yml): an ad-hoc IPA
   uploaded to Diawi, with its download link posted to the same Telegram topic,
   labelled **Native** with the commit SHA. Open the link on a registered test
@@ -32,13 +35,14 @@ through `secrets.*`. No signing keys are checked in.
 
 | Workflow | Secrets | Purpose |
 | --- | --- | --- |
-| Android | `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` | Same release keystore/alias as RN Signet, for in-place installation |
+| Android | `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` | Same release keystore/alias as RN Signet and Mainnet, for in-place installation |
 | Android | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH` | Same local Telegram Bot API server as RN, supporting large APK uploads |
 | Both | `TELEGRAM_TOKEN`, `BLIXT_CHAT_ID`, `BLIXT_TOPIC_ID` | Existing Telegram bot, chat and topic |
 | Both | `SENTRY_AUTH_TOKEN` | Existing native release hooks upload R8 mappings / archive dSYMs to `dunder-rn` / `react-native` |
 | iOS | `DIAWI_TOKEN` | Existing Diawi upload account |
 
-Android uses its existing `MYAPP_RELEASE_*` signing properties in a temporary
+Android builds on a Blacksmith Linux runner. It uses its existing
+`MYAPP_RELEASE_*` signing properties in a temporary
 `apps/android/local.properties`, pointing at a decoded keystore under
 `RUNNER_TEMP`. Both are deleted even on failure; Gradle signing is unchanged.
 
