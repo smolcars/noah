@@ -6,8 +6,14 @@
     <exclude domain="file" path="datastore/RN_KEYCHAIN.preferences_pb" />
     <exclude domain="file" path="noah-data-mainnet" />
     <exclude domain="file" path=".noah-data-mainnet-restore" />
+    <exclude domain="file" path=".noah-data-mainnet-deleting" />
+    <exclude domain="file" path=".noah-data-mainnet-deleting-data" />
     <exclude domain="file" path="noah-data-signet" />
     <exclude domain="file" path=".noah-data-signet-restore" />
+    <exclude domain="file" path=".noah-data-signet-deleting" />
+    <exclude domain="file" path=".noah-data-signet-deleting-data" />
     <exclude domain="file" path="noah-data-regtest" />
     <exclude domain="file" path=".noah-data-regtest-restore" />
+    <exclude domain="file" path=".noah-data-regtest-deleting" />
+    <exclude domain="file" path=".noah-data-regtest-deleting-data" />
 </full-backup-content>
