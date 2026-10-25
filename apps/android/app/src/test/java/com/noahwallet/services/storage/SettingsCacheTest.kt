@@ -10,6 +10,7 @@ import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -91,8 +92,12 @@ class SettingsCacheTest {
         settings.set("value", "key")
         assertEquals("value", settings.string("key"))
         // Only the change time moves; the unreadable file falls back to defaults and the health check fails.
+        val before = hostStat(file)
+        Thread.sleep(20) // Linux file times tick coarsely (~1-10 ms); a chmod in the same tick leaves ctime unchanged.
         check(file.setReadable(false) && file.parentFile!!.setWritable(false))
         assumeFalse("permissions are ignored here (e.g. running as root)", file.canRead())
+        // If the filesystem still shows no change, skip; the device test covers the production stamp.
+        assumeTrue("this filesystem's stat doesn't show a permission change", hostStat(file) != before)
         assertNull(settings.string("key"))
         assertThrows(SettingsStorage.Unavailable::class.java) { settings.requireHealthy() }
     }
