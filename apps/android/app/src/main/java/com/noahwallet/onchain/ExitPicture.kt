@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import com.noahwallet.localization.tr
+import com.noahwallet.localization.trPlural
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.LocalReduceMotion
@@ -173,7 +174,7 @@ private fun PictureCanvas(p: ExitPose, m: PictureMotion, balance: String?, desti
     val round = tr("round"); val next = tr("next"); val ark = tr("Ark")
     val rateLabel = p.rate?.let { tr("{rate} sat/vB", it.toString()) }
     val span = p.claimableHeight?.let { end -> p.lockedFrom?.let { end - it } }
-    val spanLabel = span?.let { tr("{n} blocks", number.format(it)) }
+    val spanLabel = span?.let { trPlural("{n} blocks", it) }
     Canvas(modifier) {
         val k = density.density
         val w = size.width / k; val full = size.height / k; val h = min(full, 430f)

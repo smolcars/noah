@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.localization.tr
+import com.noahwallet.localization.trPlural
 import com.noahwallet.services.logging.LogFile
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.wallet.EsploraSettings
@@ -157,13 +158,13 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
             SectionLabel(tr("Moving to Ark"))
             DetailRow(tr("Smallest move"), sats(current.minBoardAmountSats.toLong()), ValueKind.number, toasts = toasts)
             DetailRow(tr("Largest VTXO"), current.maxVtxoAmountSats?.let { sats(it.toLong()) } ?: tr("No limit"), ValueKind.number, toasts = toasts)
-            DetailRow(tr("Confirmations"), tr("{n} blocks", number.format(current.requiredBoardConfirmations.toLong())), toasts = toasts, last = true)
+            DetailRow(tr("Confirmations"), trPlural("{n} blocks", current.requiredBoardConfirmations.toLong()), toasts = toasts, last = true)
             SectionLabel(tr("Rounds and expiry"))
             DetailRow(tr("Round every"), tr("{n} seconds", number.format(current.roundIntervalSecs.toLong())), toasts = toasts)
             DetailRow(tr("Round nonces"), number.format(current.nbRoundNonces.toLong()), ValueKind.number, toasts = toasts)
-            DetailRow(tr("VTXO lifetime"), tr("{n} blocks", number.format(current.vtxoLifetime.toLong())), toasts = toasts)
-            DetailRow(tr("Exit delta"), tr("{n} blocks", number.format(current.vtxoExitDelta.toLong())), toasts = toasts)
-            DetailRow(tr("Lightning send delta"), tr("{n} blocks", number.format(current.htlcSendExpiryDelta.toLong())), toasts = toasts, last = true)
+            DetailRow(tr("VTXO lifetime"), trPlural("{n} blocks", current.vtxoLifetime.toLong()), toasts = toasts)
+            DetailRow(tr("Exit delta"), trPlural("{n} blocks", current.vtxoExitDelta.toLong()), toasts = toasts)
+            DetailRow(tr("Lightning send delta"), trPlural("{n} blocks", current.htlcSendExpiryDelta.toLong()), toasts = toasts, last = true)
             SectionLabel(tr("Lightning"))
             DetailRow(tr("Receive anti-DoS"), if (current.lnReceiveAntiDosRequired) tr("Required") else tr("Not required"), toasts = toasts, last = true)
         }

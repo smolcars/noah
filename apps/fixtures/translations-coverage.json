@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1480,
-  "sourceKeys": 1509,
+  "catalogEntries": 1479,
+  "sourceKeys": 1510,
   "coverage": {
     "ios": {
       "used": [
@@ -1277,7 +1277,6 @@
         "{amount} · fees ~{fee}",
         "{amount} · in Ark",
         "{amount} · {left} left",
-        "{count} block",
         "{currency} rate unavailable",
         "{date} · {size}. Your other backups stay.",
         "{interval} · next {date}",
@@ -2441,7 +2440,7 @@
         "This changes your wallet and can lose funds.",
         "This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs.",
         "This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status.",
-        "This exit is behind the current chain height: last checked at block {height}, {n} blocks ago. Checking the chain can also send exit transactions.",
+        "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.",
         "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.",
         "This is a login link, not a payment request",
         "This is how people pay you.",

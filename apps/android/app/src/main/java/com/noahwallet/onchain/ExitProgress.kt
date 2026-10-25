@@ -169,8 +169,8 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         if (wide) ExitHeader(exit, stage, received, money, exitSubLine(stage, context, money))
         if (failed) Warning(tr("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need)), failed = true)
         if (checkLink) SettingsLink(tr("Check the chain"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
-        if (stage.stale && stage.live) Warning(tr("This exit is behind the current chain height: last checked at block {height}, {n} blocks ago. Checking the chain can also send exit transactions.",
-            number(exit.details.tip_height ?: 0), number(context.tip - (exit.details.tip_height ?: context.tip))), SettingsIcons.clock)
+        if (stage.stale && stage.live) Warning(trPlural("This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.",
+            context.tip - (exit.details.tip_height ?: context.tip), number(exit.details.tip_height ?: 0)), SettingsIcons.clock)
         ExitRows(exit, stage, context, money)
         Details(details, { details = it }, scroll) { ExitDetailRows(exit, stage, context) }
         status()
@@ -323,7 +323,7 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
                     ?: context.delta?.let { tr("About block {height}", number(context.tip + (stage.total - stage.inBlocks) + it)) }
                     ?: tr("After the timelock")
                 DetailRow(tr("Claimable"), claimable, toasts = toasts, last = stage.phase != ExitStage.Phase.wait)
-                if (stage.phase == ExitStage.Phase.wait) DetailRow(tr("Left"), tr("{n} blocks", number(stage.left(context.tip) ?: 0)), ValueKind.number, toasts = toasts, last = true)
+                if (stage.phase == ExitStage.Phase.wait) DetailRow(tr("Left"), trPlural("{n} blocks", stage.left(context.tip) ?: 0), ValueKind.number, toasts = toasts, last = true)
             }
         }
     }
@@ -362,7 +362,7 @@ private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitConte
     }
     SectionLabel(tr("Exit"))
     stage.rate?.let { DetailRow(tr("Fee rate"), tr("{rate} sat/vB, raised when rates rise", it.toString()), small = true, toasts = toasts) }
-    context.delta?.let { DetailRow(tr("Timelock"), tr("{n} blocks", number(it)), small = true, toasts = toasts) }
+    context.delta?.let { DetailRow(tr("Timelock"), trPlural("{n} blocks", it), small = true, toasts = toasts) }
     stage.claimTxid?.let { DetailRow(tr("Claim"), short(it), ValueKind.mono, copy = it, explorer = OnchainDisplay.explorerURL(it, BuildConfig.APP_VARIANT),
         small = true, toasts = toasts, onExplorer = explore) }
     // bark's height for this state: it keeps it while nothing changes, so it says when the state was recorded, not when last checked.

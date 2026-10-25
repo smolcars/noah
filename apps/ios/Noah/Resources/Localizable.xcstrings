@@ -44641,38 +44641,98 @@
         }
       }
     },
-    "This exit is behind the current chain height: last checked at block {height}, {n} blocks ago. Checking the chain can also send exit transactions.": {
-      "comment": "GT gt_dbccb7274b22662b; arguments: height, n",
+    "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.": {
+      "comment": "GT gt_1140c4bcb71a3ec1; arguments: n, height",
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This exit is behind the current chain height: last checked at block %1$@, %2$@ blocks ago. Checking the chain can also send exit transactions."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "This exit is behind the current chain height: last checked %1$lld block ago, at block %2$@. Checking the chain can also send exit transactions."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "This exit is behind the current chain height: last checked %1$lld blocks ago, at block %2$@. Checking the chain can also send exit transactions."
+                }
+              }
+            }
           }
         },
         "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %1$@, hace %2$@ bloques. Revisar la cadena también puede enviar transacciones de salida."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$@, hace %1$lld bloque. Revisar la cadena también puede enviar transacciones de salida."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$@, hace %1$lld bloques. Revisar la cadena también puede enviar transacciones de salida."
+                }
+              }
+            }
           }
         },
         "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この出金は現在のブロック高より遅れています。最終確認はブロック %1$@（%2$@ブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "この出金は現在のブロック高より遅れています。最終確認はブロック %2$@（%1$lldブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "この出金は現在のブロック高より遅れています。最終確認はブロック %2$@（%1$lldブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"
+                }
+              }
+            }
           }
         },
         "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %1$@(%2$@블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$@(%1$lld블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$@(%1$lld블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."
+                }
+              }
+            }
           }
         },
         "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %1$@, för %2$@ block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$@, för %1$lld block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$@, för %1$lld block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."
+                }
+              }
+            }
           }
         }
       }
@@ -52873,42 +52933,6 @@
         }
       }
     },
-    "{count} block": {
-      "comment": "GT gt_4ace755a59e3c6fc; arguments: count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ block"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ bloque"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ ブロック"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 블록"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ block"
-          }
-        }
-      }
-    },
     "{currency} rate unavailable": {
       "comment": "GT gt_d8c81b717fe6d90e; arguments: currency",
       "extractionState": "manual",
@@ -53514,33 +53538,93 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ blocks"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld block"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld blocks"
+                }
+              }
+            }
           }
         },
         "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ bloques"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld bloque"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld bloques"
+                }
+              }
+            }
           }
         },
         "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ブロック"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lldブロック"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lldブロック"
+                }
+              }
+            }
           }
         },
         "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@블록"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld블록"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld블록"
+                }
+              }
+            }
           }
         },
         "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ block"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld block"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld block"
+                }
+              }
+            }
           }
         }
       }

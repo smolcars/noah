@@ -435,7 +435,7 @@ struct VtxoDetailView: View {
                     SettingsDetailRow(label: L10n.text("Type", locale: language), value: vtxo.kind, compact: true)
                     SettingsDetailRow(label: L10n.text("Status", locale: language),
                                       value: L10n.text(vtxo.registered ? "Registered" : "Not registered", locale: language), compact: true)
-                    SettingsDetailRow(label: L10n.text("Exit delta", locale: language), value: L10n.text("{n} blocks", vtxo.exitDelta.formatted(.number.locale(locale)), locale: language), compact: true)
+                    SettingsDetailRow(label: L10n.text("Exit delta", locale: language), value: L10n.plural("{n} blocks", count: Int(vtxo.exitDelta), locale: language), compact: true)
                     SettingsDetailRow(label: L10n.text("Exit depth", locale: language), value: "\(vtxo.exitDepth)", compact: true)
                     SettingsDetailRow(label: L10n.text("Exit weight", locale: language), value: L10n.text("{n} wu", vtxo.exitWeight.formatted(.number.locale(locale)), locale: language), compact: true)
                     SettingsDetailRow(label: L10n.text("Server key", locale: language), value: vtxo.serverPubkey, mono: true, compact: true, copy: vtxo.serverPubkey)

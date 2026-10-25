@@ -9,9 +9,7 @@ enum OnchainDisplay {
     static func remaining(current: UInt32?, target: UInt32?, locale: String) -> String {
         guard let current, let target else { return L10n.text("Unknown", locale: locale) }
         guard target > current else { return L10n.text("Now", locale: locale) }
-        let count = target - current
-        if count == 1 { return L10n.text("{count} block", count, locale: locale) }
-        return L10n.text("{n} blocks", count, locale: locale)
+        return L10n.plural("{n} blocks", count: Int(target - current), locale: locale)
     }
 
     static func block(_ block: ExitDetails.Block) -> String { "\(block.height) (\(block.hash))" }

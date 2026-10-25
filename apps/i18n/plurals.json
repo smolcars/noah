@@ -122,5 +122,13 @@
   "Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.": {
     "one": "Couldn’t check the fees of {n} VTXO, so All waits. Choose it on its own, or try again.",
     "other": "Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again."
+  },
+  "{n} blocks": {
+    "one": "{n} block",
+    "other": "{n} blocks"
+  },
+  "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.": {
+    "one": "This exit is behind the current chain height: last checked {n} block ago, at block {height}. Checking the chain can also send exit transactions.",
+    "other": "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions."
   }
 }

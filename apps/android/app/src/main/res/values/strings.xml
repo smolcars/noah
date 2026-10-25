@@ -1257,7 +1257,10 @@
   <string name="gt_9e3a6e3e9bd56700">"This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."</string>
   <string name="gt_f2faa6b386bacbee">"This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."</string>
   <string name="gt_dc8cb064d1762d2f">"This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions."</string>
-  <string name="gt_dbccb7274b22662b">"This exit is behind the current chain height: last checked at block %1$s, %2$s blocks ago. Checking the chain can also send exit transactions."</string>
+  <plurals name="gt_1140c4bcb71a3ec1">
+    <item quantity="one">"This exit is behind the current chain height: last checked %1$s block ago, at block %2$s. Checking the chain can also send exit transactions."</item>
+    <item quantity="other">"This exit is behind the current chain height: last checked %1$s blocks ago, at block %2$s. Checking the chain can also send exit transactions."</item>
+  </plurals>
   <string name="gt_5ed0c20bff01c0ca">"This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming."</string>
   <string name="gt_acec76ba83ee20ef">"This invoice was already paid: %1$s"</string>
   <string name="gt_285f2d035fb443e8">"This is a login link, not a payment request"</string>
@@ -1491,7 +1494,6 @@
   <string name="gt_ac5913769f9a4809">"%1$s · in Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · share of %2$s for %3$s exits"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · %2$s left"</string>
-  <string name="gt_4ace755a59e3c6fc">"%1$s block"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s rate unavailable"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Your other backups stay."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s at %2$s"</string>
@@ -1514,7 +1516,10 @@
     <item quantity="other">"%1$s VTXOs expire within a day"</item>
   </plurals>
   <string name="gt_f4d60c7d0545f547">"%1$s active"</string>
-  <string name="gt_00f904d64507e53f">"%1$s blocks"</string>
+  <plurals name="gt_00f904d64507e53f">
+    <item quantity="one">"%1$s block"</item>
+    <item quantity="other">"%1$s blocks"</item>
+  </plurals>
   <plurals name="gt_bdf51ce532245aa7">
     <item quantity="one">"%1$s block · %2$s"</item>
     <item quantity="other">"%1$s blocks · %2$s"</item>

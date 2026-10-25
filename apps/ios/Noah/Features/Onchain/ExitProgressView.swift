@@ -218,7 +218,7 @@ struct ExitVtxoDetailView: View {
         }
         SettingsSection(title: "Exit")
         if let delta = model.overview?.exitDelta {
-            SettingsDetailRow(label: L10n.text("Timelock", locale: language), value: L10n.text("{n} blocks", delta.formatted(), locale: language), compact: true)
+            SettingsDetailRow(label: L10n.text("Timelock", locale: language), value: L10n.plural("{n} blocks", count: Int(delta), locale: language), compact: true)
         }
         if let checked = progress.checked {
             SettingsDetailRow(label: L10n.text("Last checked", locale: language),
@@ -449,7 +449,7 @@ struct ExitStatusLine: View {
                 rows.append(.init(label: tr("Claimable"), value: tr("About block {height}", block(about))))
             }
             if progress.phase == .waiting, let left = progress.left(tip: tip) {
-                rows.append(.init(label: tr("Left"), value: L10n.text("{n} blocks", left.formatted(), locale: language), numeric: true))
+                rows.append(.init(label: tr("Left"), value: L10n.plural("{n} blocks", count: Int(left), locale: language), numeric: true))
             }
             return rows
         }

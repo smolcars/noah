@@ -1257,7 +1257,10 @@
   <string name="gt_9e3a6e3e9bd56700">"Detta avbryter inte den ursprungliga åtgärden. Om du skickar igen kan ytterligare medel förbrukas eller avgifter tillkomma. Noah sparar försöket och kontrollerar dess status när plånboken synkroniseras."</string>
   <string name="gt_f2faa6b386bacbee">"Det här nöduttaget kan inte längre avbrytas. Dess slutliga transaktion kan redan ha sänts. Uppdatera statusen."</string>
   <string name="gt_dc8cb064d1762d2f">"Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner."</string>
-  <string name="gt_dbccb7274b22662b">"Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %1$s, för %2$s block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."</string>
+  <plurals name="gt_1140c4bcb71a3ec1">
+    <item quantity="one">"Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$s, för %1$s block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."</item>
+    <item quantity="other">"Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$s, för %1$s block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."</item>
+  </plurals>
   <string name="gt_5ed0c20bff01c0ca">"Den här betalningsbegäran är redan betald. Betalningen för det här tillfället skickades inte igen. Kontrollera mottagaren innan du återupptar."</string>
   <string name="gt_acec76ba83ee20ef">"Den här fakturan är redan betald: %1$s"</string>
   <string name="gt_285f2d035fb443e8">"Det här är en inloggningslänk, inte en betalningsbegäran"</string>
@@ -1491,7 +1494,6 @@
   <string name="gt_ac5913769f9a4809">"%1$s · i Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · andel av %2$s för %3$s nöduttag"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · %2$s kvar"</string>
-  <string name="gt_4ace755a59e3c6fc">"%1$s block"</string>
   <string name="gt_d8c81b717fe6d90e">"Växelkurs för %1$s saknas"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Dina andra säkerhetskopior finns kvar."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s kl. %2$s"</string>
@@ -1514,7 +1516,10 @@
     <item quantity="other">"%1$s VTXO:er löper ut inom ett dygn"</item>
   </plurals>
   <string name="gt_f4d60c7d0545f547">"Aktiva: %1$s"</string>
-  <string name="gt_00f904d64507e53f">"%1$s block"</string>
+  <plurals name="gt_00f904d64507e53f">
+    <item quantity="one">"%1$s block"</item>
+    <item quantity="other">"%1$s block"</item>
+  </plurals>
   <plurals name="gt_bdf51ce532245aa7">
     <item quantity="one">"%1$s block · %2$s"</item>
     <item quantity="other">"%1$s block · %2$s"</item>

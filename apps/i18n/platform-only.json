@@ -115,7 +115,6 @@
     "You can still browse the full map. Enable location in Settings to see nearby places.": "platform: Settings naming and wording for the location permission",
     "days": "parity-gap (layout): iOS takes a custom interval and a payment count in text fields; Android uses steppers",
     "payments": "parity-gap (layout): iOS takes a custom interval and a payment count in text fields; Android uses steppers",
-    "{count} block": "parity-gap: Android writes \"{n} blocks\" even for one block",
     "{currency} rate unavailable": "parity-gap: Android hides the fiat line when there's no rate",
     "{n} in progress · {count} ready to claim": "parity-gap (layout): iOS writes the count line as one template; Android joins its parts"
   },
@@ -254,7 +253,7 @@
     "The bundled places could not be read. Reopen the map to try again.": "parity-gap (layout): the BTC Map screens were built differently and have no shared design spec; Android's load error has no Retry, so it asks you to reopen the map",
     "The map position could not be saved.": "parity-gap: only Android saves the map position and reports when it can't",
     "The verification code will expire in 10 minutes.": "parity-gap: Android's Home email nudge still opens the pre-redesign email form (ui/Onboarding.kt EmergencyEmailScreen); iOS opens Settings → Email",
-    "This exit is behind the current chain height: last checked at block {height}, {n} blocks ago. Checking the chain can also send exit transactions.": "parity-gap: Android's stale warning names bark's last-checked block (prototype); iOS's can't",
+    "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.": "parity-gap: Android's stale warning names bark's last-checked block (prototype); iOS's can't",
     "This link could not be opened.": "platform: Android intents can be refused with a SecurityException, have a chooser title and can find no app to share with",
     "This place provided an invalid link.": "parity-gap: only Android checks a place's link scheme before opening it",
     "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm.": "parity-gap (layout): Android's launch-gate delete is a typed-confirmation dialog; iOS uses its delete sheet",

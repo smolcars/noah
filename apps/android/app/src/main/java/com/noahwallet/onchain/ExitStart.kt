@@ -95,7 +95,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             confirmed?.let { DetailRow(tr("Paid from"), tr("On-chain · {amount}", money(it)), toasts = toasts) }
             DetailRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number, toasts = toasts)
             known?.feeRate?.let { DetailRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString()), toasts = toasts) }
-            DetailRow(tr("Timelock"), delta?.let { tr("{n} blocks", it.toString()) } ?: tr("Unknown"), toasts = toasts, last = true)
+            DetailRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), toasts = toasts, last = true)
             TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
         }
         if (known != null && !known.fundable) Warning(tr("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",

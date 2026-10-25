@@ -1257,7 +1257,10 @@
   <string name="gt_9e3a6e3e9bd56700">"元の操作は取り消されません。再送すると追加の資金や手数料が使われる場合があります。Noahはこの試行の記録を保持し、ウォレットの同期時に状態を確認します。"</string>
   <string name="gt_f2faa6b386bacbee">"この退出はもう取り消せません。最終トランザクションがすでにブロードキャストされている可能性があります。状態を更新してください。"</string>
   <string name="gt_dc8cb064d1762d2f">"この出金は現在のチェーンの高さより遅れています。「チェーンを確認」で確認してください。出金トランザクションが送信されることもあります。"</string>
-  <string name="gt_dbccb7274b22662b">"この出金は現在のブロック高より遅れています。最終確認はブロック %1$s（%2$sブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"</string>
+  <plurals name="gt_1140c4bcb71a3ec1">
+    <item quantity="one">"この出金は現在のブロック高より遅れています。最終確認はブロック %2$s（%1$sブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"</item>
+    <item quantity="other">"この出金は現在のブロック高より遅れています。最終確認はブロック %2$s（%1$sブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"</item>
+  </plurals>
   <string name="gt_5ed0c20bff01c0ca">"この請求書は支払い済みです。今回分の支払いは再送していません。再開する前に受取人を確認してください。"</string>
   <string name="gt_acec76ba83ee20ef">"この請求書は支払い済みです: %1$s"</string>
   <string name="gt_285f2d035fb443e8">"これはログイン用のリンクで、支払いリクエストではありません"</string>
@@ -1491,7 +1494,6 @@
   <string name="gt_ac5913769f9a4809">"%1$s · Ark内"</string>
   <string name="gt_59d264482aee8976">"%1$s · %3$s件の出金で%2$sを分担"</string>
   <string name="gt_59b0959cf216d9ed">"%1$s · 残り%2$s"</string>
-  <string name="gt_4ace755a59e3c6fc">"%1$s ブロック"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s。ほかのバックアップは残ります。"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
@@ -1514,7 +1516,10 @@
     <item quantity="other">"%1$s個のVTXOが1日以内に期限切れになります"</item>
   </plurals>
   <string name="gt_f4d60c7d0545f547">"%1$s件が有効"</string>
-  <string name="gt_00f904d64507e53f">"%1$sブロック"</string>
+  <plurals name="gt_00f904d64507e53f">
+    <item quantity="one">"%1$sブロック"</item>
+    <item quantity="other">"%1$sブロック"</item>
+  </plurals>
   <plurals name="gt_bdf51ce532245aa7">
     <item quantity="one">"%1$sブロック · %2$s"</item>
     <item quantity="other">"%1$sブロック · %2$s"</item>

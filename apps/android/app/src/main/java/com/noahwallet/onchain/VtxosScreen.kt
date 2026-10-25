@@ -407,7 +407,7 @@ internal fun VtxoDetailPage(app: AppModel, nav: SettingsNav, id: String) {
         Details(details, { details = it }, scroll) {
             DetailRow(tr("Type"), vtxo.kind, small = true, toasts = toasts)
             DetailRow(tr("Status"), if (vtxo.registered) tr("Registered") else tr("Not registered"), small = true, toasts = toasts)
-            DetailRow(tr("Exit delta"), tr("{n} blocks", number.format(vtxo.exitDelta)), small = true, toasts = toasts)
+            DetailRow(tr("Exit delta"), trPlural("{n} blocks", vtxo.exitDelta), small = true, toasts = toasts)
             DetailRow(tr("Exit depth"), number.format(vtxo.exitDepth), ValueKind.number, small = true, toasts = toasts)
             DetailRow(tr("Exit weight"), tr("{n} wu", number.format(vtxo.exitWeight)), small = true, toasts = toasts)
             DetailBlock(tr("Server key"), vtxo.serverPubkey, toasts)
