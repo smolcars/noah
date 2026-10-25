@@ -2078,5 +2078,6 @@
   "gt_545eb93f8194bd47": "Noah har inte kontrollerat kedjan för det här nöduttaget på ett tag. En kontroll kan också skicka dess transaktioner eller höja deras avgift.",
   "gt_064ce079abb02910": "Den här VTXO:n kan inte tas ut.",
   "gt_02b452f0133be2e5": "Förnya först",
-  "gt_98b1d38879903344": "Förnya den här VTXO:n under Inställningar → VTXO:er innan du tar ut den."
+  "gt_98b1d38879903344": "Förnya den här VTXO:n under Inställningar → VTXO:er innan du tar ut den.",
+  "gt_f889e0bd2f6e4ea8": "Uttagsavgift"
 }

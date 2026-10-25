@@ -446,6 +446,7 @@
   <string name="gt_1efedf4f4378da10">"Exit delta"</string>
   <string name="gt_22b3b7a335275593">"Exit depth"</string>
   <string name="gt_37566aa4ce592457">"Exit details"</string>
+  <string name="gt_f889e0bd2f6e4ea8">"Exit fee"</string>
   <string name="gt_dd4f2a6cf22e8e94">"Exit more VTXOs"</string>
   <string name="gt_ba61a6796c9bda55">"Exit processing was canceled before completion."</string>
   <string name="gt_0cb3378726d1acba">"Exit progression returned %1$s errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing."</string>

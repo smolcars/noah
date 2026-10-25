@@ -359,8 +359,10 @@ class WalletSession internal constructor(
     }
 
     suspend fun transactionHistory(): List<HistoryTransaction> = withOpen { handles ->
+        // Without bark's exit records, fee children list as plain on-chain rows.
+        val exitFees = runCatching { HistoryMapping.exitFees(handles.m6.allExits()) }.getOrDefault(emptyMap())
         handles.history().filter(HistoryMapping::include).map { HistoryMapping.transaction(it) } +
-            handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
+            handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it, exitFeeFor = exitFees[it.txid]) }
     }
 
     suspend fun peekAddress(index: UInt): String = withOpen { it.peekAddress(index) }

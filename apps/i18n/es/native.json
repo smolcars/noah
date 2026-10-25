@@ -2078,5 +2078,6 @@
   "gt_545eb93f8194bd47": "Noah no ha revisado la cadena para esta salida desde hace un rato. Revisarla también puede enviar o subir la comisión de sus transacciones.",
   "gt_064ce079abb02910": "No se puede sacar este VTXO.",
   "gt_02b452f0133be2e5": "Renovar primero",
-  "gt_98b1d38879903344": "Renueva este VTXO en Ajustes → VTXOs antes de sacarlo."
+  "gt_98b1d38879903344": "Renueva este VTXO en Ajustes → VTXOs antes de sacarlo.",
+  "gt_f889e0bd2f6e4ea8": "Comisión de salida"
 }

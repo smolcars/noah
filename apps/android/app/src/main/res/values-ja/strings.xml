@@ -446,6 +446,7 @@
   <string name="gt_1efedf4f4378da10">"出金待機ブロック数"</string>
   <string name="gt_22b3b7a335275593">"退出の深度"</string>
   <string name="gt_37566aa4ce592457">"出金の詳細"</string>
+  <string name="gt_f889e0bd2f6e4ea8">"出金手数料"</string>
   <string name="gt_dd4f2a6cf22e8e94">"ほかのVTXOも出金"</string>
   <string name="gt_ba61a6796c9bda55">"退出処理は完了前に取り消されました。"</string>
   <string name="gt_0cb3378726d1acba">"退出処理で%1$s件のエラーが発生しました。取引がブロードキャストされたか、手数料が引き上げられた可能性があります。続行する前に退出の詳細を更新してください。"</string>

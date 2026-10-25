@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1480,
-  "sourceKeys": 1509,
+  "catalogEntries": 1481,
+  "sourceKeys": 1510,
   "coverage": {
     "ios": {
       "used": [
@@ -1557,7 +1557,6 @@
         "Confirmed at block {nativeValue1}",
         "Confirmed in block {height}",
         "Confirmed in block {height} · {n} of {total}",
-        "Confirmed in block {height}.",
         "Confirming",
         "Conflicted",
         "Contactless",
@@ -1717,6 +1716,7 @@
         "Exit delta",
         "Exit depth",
         "Exit details",
+        "Exit fee",
         "Exit more VTXOs",
         "Exit processing was canceled before completion.",
         "Exit progression returned {nativeValue1} errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.",

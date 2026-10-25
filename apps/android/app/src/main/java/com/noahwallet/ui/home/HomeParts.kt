@@ -273,6 +273,7 @@ internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, large: Boolean 
                 HomeRow.Avatar.Sent -> HomeIcons.send
                 HomeRow.Avatar.Recurring -> HomeIcons.repeat
                 HomeRow.Avatar.Renewal -> HomeIcons.renew
+                HomeRow.Avatar.Exit -> com.noahwallet.ui.settings.SettingsIcons.exit
             }
             icon?.let { Icon(painterResource(it), null, Modifier.size(glyph), tint = palette.foreground) }
         }

@@ -27,6 +27,7 @@ data class HomeRow(
         data object Sent : Avatar
         data object Recurring : Avatar
         data object Renewal : Avatar
+        data object Exit : Avatar
     }
     /** "Sending" / "Confirming" while pending; "Failed" / "Refunded" / "Canceled" when it ended without moving funds. */
     val state get() = when {
@@ -69,6 +70,7 @@ data class HomeRow(
                 recurring != null -> Avatar.Recurring
                 local != null -> Avatar.Initial(local.take(1).lowercase(Locale.ROOT))
                 row.isRenewal -> Avatar.Renewal
+                row.exitFeeFor != null -> Avatar.Exit
                 chain -> Avatar.Chain
                 row.type == "Bolt11" || row.type == "Lnurl" -> Avatar.Lightning
                 outgoing -> Avatar.Sent

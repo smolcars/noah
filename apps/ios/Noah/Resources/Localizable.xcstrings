@@ -15781,6 +15781,42 @@
         }
       }
     },
+    "Exit fee": {
+      "comment": "GT gt_f889e0bd2f6e4ea8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit fee"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comisión de salida"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出金手数料"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출금 수수료"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uttagsavgift"
+          }
+        }
+      }
+    },
     "Exit more VTXOs": {
       "comment": "GT gt_dd4f2a6cf22e8e94; arguments: none",
       "extractionState": "manual",

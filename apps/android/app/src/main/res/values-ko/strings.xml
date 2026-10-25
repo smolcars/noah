@@ -446,6 +446,7 @@
   <string name="gt_1efedf4f4378da10">"출금 대기 블록 수"</string>
   <string name="gt_22b3b7a335275593">"출금 깊이"</string>
   <string name="gt_37566aa4ce592457">"출금 상세 정보"</string>
+  <string name="gt_f889e0bd2f6e4ea8">"출금 수수료"</string>
   <string name="gt_dd4f2a6cf22e8e94">"VTXO 더 출금하기"</string>
   <string name="gt_ba61a6796c9bda55">"출금 처리가 완료되기 전에 취소되었습니다."</string>
   <string name="gt_0cb3378726d1acba">"출금 진행 중 오류가 %1$s개 발생했습니다. 거래가 전파되었거나 수수료가 인상되었을 수 있습니다. 계속하기 전에 출금 세부 정보를 새로고침하세요."</string>

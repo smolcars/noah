@@ -1,5 +1,8 @@
 package com.noahwallet.history
 
+import io.github.niteshbalusu11.bark.ExitState
+import io.github.niteshbalusu11.bark.ExitTransactionStatus
+import io.github.niteshbalusu11.bark.ExitTxStatus
 import io.github.niteshbalusu11.bark.Movement
 import io.github.niteshbalusu11.bark.MovementDestination
 import io.github.niteshbalusu11.bark.WalletTransaction
@@ -73,13 +76,23 @@ object HistoryMapping {
                 (link.movementId != null && link.movementId == row.movementId || link.paymentHash != null && link.paymentHash == row.paymentHash) }
             if (link == null) row else row.copy(recurring = link.recurring)
         }
+    /**
+     * Each exit fee child, by txid, to the VTXO its exit is for: every child txid in bark's own exit records, current and
+     * past, never amounts. The wallet lists only transactions that moved its coins, so a match is a fee it paid.
+     */
+    fun exitFees(exits: List<ExitTransactionStatus>): Map<String, String> = exits.flatMap { exit ->
+        val past = (exit.history.orEmpty() + exit.state).filterIsInstance<ExitState.Processing>().flatMap { it.transactions }.mapNotNull { tx ->
+            when (val status = tx.status) { is ExitTxStatus.AwaitingConfirmation -> status.childTxid; is ExitTxStatus.Confirmed -> status.childTxid; else -> null }
+        }
+        (exit.transactions.mapNotNull { it.childTxid } + past).map { it to exit.vtxoId }
+    }.toMap()
     private fun destination(d: MovementDestination) = HistoryTransaction.Destination(d.paymentMethod.value, d.amountSats.toLong(), d.paymentMethod.methodType)
-    fun transaction(chain: WalletTransaction, blockTime: Date? = null) = HistoryTransaction(
+    fun transaction(chain: WalletTransaction, blockTime: Date? = null, exitFeeFor: String? = null) = HistoryTransaction(
         "onchain-wallet-${chain.txid}", "Onchain", abs(chain.balanceChangeSats), HistoryRules.isoDate(blockTime ?: Date(0)),
         if (chain.balanceChangeSats < 0) "outgoing" else "incoming",
         dateLabel = if (blockTime != null) null else chain.confirmation?.let { "Confirmed at block ${it.height}" } ?: "Unconfirmed",
         sortTimestamp = blockTime?.time?.toDouble(), sortHeight = chain.confirmation?.height, source = "onchain-wallet",
         txid = chain.txid, txHex = chain.txHex, onchainFeeSat = chain.onchainFeeSats?.toLong(), balanceChangeSat = chain.balanceChangeSats,
         hasOnchainFee = chain.onchainFeeSats != null, hasConfirmation = chain.confirmation != null,
-        confirmationHeight = chain.confirmation?.height, confirmationHash = chain.confirmation?.hash)
+        confirmationHeight = chain.confirmation?.height, confirmationHash = chain.confirmation?.hash, exitFeeFor = exitFeeFor)
 }

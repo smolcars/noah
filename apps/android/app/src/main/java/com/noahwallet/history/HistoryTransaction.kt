@@ -21,6 +21,8 @@ data class HistoryTransaction(
     val balanceChangeSat: Long? = null, val hasOnchainFee: Boolean? = null, val hasConfirmation: Boolean? = null,
     val confirmationHeight: UInt? = null, val confirmationHash: String? = null, val repeatPayment: RepeatPayment? = null,
     val preimage: String? = null, val recurring: Recurring? = null,
+    /** An exit fee child this wallet paid on-chain: the VTXO that exit is for (see [HistoryMapping.exitFees]). */
+    val exitFeeFor: String? = null,
 ) {
     @Serializable data class Destination(val destination: String, val amount_sat: Long, val paymentMethod: String? = null)
     @Serializable data class Accounting(val direction: String, val amount: Long)
@@ -55,7 +57,7 @@ data class HistoryTransaction(
     val isInternalTransfer get() = movementKind == "onboard"
     val canRepeat get() = direction == "outgoing" && movementStatus == "successful" && repeatPayment != null
     val displayLabel: String get() {
-        val label = when (movementKind) {
+        val label = if (exitFeeFor != null) "Exit fee" else when (movementKind) {
             "onboard" -> "Board"; "offboard" -> "Offboard"; "exit" -> "Ark Exit"
             else -> when (type) { "Bolt11", "Lnurl" -> "Lightning"; "Arkoor" -> "Ark"; else -> type }
         }

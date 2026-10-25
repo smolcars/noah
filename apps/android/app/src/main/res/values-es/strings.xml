@@ -446,6 +446,7 @@
   <string name="gt_1efedf4f4378da10">"Delta de salida"</string>
   <string name="gt_22b3b7a335275593">"Profundidad de la salida"</string>
   <string name="gt_37566aa4ce592457">"Detalles de la salida"</string>
+  <string name="gt_f889e0bd2f6e4ea8">"Comisión de salida"</string>
   <string name="gt_dd4f2a6cf22e8e94">"Sacar más VTXOs"</string>
   <string name="gt_ba61a6796c9bda55">"El proceso de salida se canceló antes de completarse."</string>
   <string name="gt_0cb3378726d1acba">"Se produjeron %1$s errores al avanzar la salida. Es posible que se hayan difundido transacciones o aumentado sus comisiones. Actualiza los detalles de la salida antes de continuar."</string>
