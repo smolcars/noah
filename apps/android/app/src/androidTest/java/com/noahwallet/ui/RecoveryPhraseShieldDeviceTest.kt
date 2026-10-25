@@ -75,8 +75,9 @@ class RecoveryPhraseShieldDeviceTest {
         assertFalse("Requires a disposable app without wallet data", location.hasAnyData)
         var activity: Activity? = null
         var model: AppModel? = null
-        // Home, not the battery prompt, follows creation.
+        // Home, not the battery prompt or the notifications gate (a fresh install on API 33+ starts denied), follows creation.
         shell("cmd deviceidle whitelist +${context.packageName}")
+        if (android.os.Build.VERSION.SDK_INT >= 33) shell("pm grant ${context.packageName} android.permission.POST_NOTIFICATIONS")
         try {
             val first = instrumentation.startActivitySync(Intent(context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity

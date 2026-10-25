@@ -258,8 +258,10 @@ class RestoreUIDeviceTest {
             waitFor("Deletion fallback remains available") { text("Delete Wallet") != null }
             clickText("Resume Recovery")
             waitFor("Recovery resumed") { seedOnly.second.canRestoreWallet }
-            // Home, not the battery prompt, follows Ready: this disposable app is exempt from battery optimisation.
+            // Home, not the battery prompt or the notifications gate, follows Ready: this disposable app is exempt from
+            // battery optimisation, and a fresh install on API 33+ starts with notifications denied.
             shell("cmd deviceidle whitelist +${context.packageName}")
+            if (android.os.Build.VERSION.SDK_INT >= 33) shell("pm grant ${context.packageName} android.permission.POST_NOTIFICATIONS")
             val seedModel = seedOnly.second
             fun secureWindow(): Boolean {
                 var on = false
