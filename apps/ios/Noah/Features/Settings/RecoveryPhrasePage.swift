@@ -135,9 +135,10 @@ struct RecoveryPhrasePage: View {
             await authenticate()
         }
         .onChange(of: scenePhase) { _, phase in if phase == .background { hide() } }
-        .onChange(of: shown) { _, shown in
-            if shown { haptics.play(.success) }
-            withAnimation(reduceMotion ? NoahTokens.Motion.reduceMotionFade : nil) { revealed = shown }
+        .onChange(of: shown) { _, shown in if shown { haptics.play(.success) } }
+        // Face ID answers while its prompt still covers the page; the words soften in once they can be seen.
+        .onChange(of: shown && scenePhase == .active) { _, visible in
+            withAnimation(reduceMotion ? NoahTokens.Motion.reduceMotionFade : nil) { revealed = visible }
         }
         .onDisappear(perform: hide)
         .accessibilityIdentifier("recovery-phrase")

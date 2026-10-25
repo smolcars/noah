@@ -19249,6 +19249,42 @@
         }
       }
     },
+    "Hidden while your screen is recorded or shared": {
+      "comment": "GT gt_62380501bdf8fc5b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hidden while your screen is recorded or shared"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculto mientras tu pantalla se graba o se comparte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面の収録中または共有中は非表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 기록 또는 공유 중에는 숨김"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dolt medan skärmen spelas in eller delas"
+          }
+        }
+      }
+    },
     "Hide amounts": {
       "comment": "GT gt_2ae92318e0d70a21; arguments: none",
       "extractionState": "manual",

@@ -31,6 +31,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         NoahAppShortcuts.updateAppShortcutParameters()
         Task { await BackgroundScheduler.shared.schedule() }
         UNUserNotificationCenter.current().delegate = self
+        // Secret shields hold after a capture that ended before any of them appeared.
+        NotificationCenter.default.addObserver(self, selector: #selector(sceneWillConnect),
+                                               name: UIScene.willConnectNotification, object: nil)
         // Before any push handler can start a backup: plaintext left by a
         // backup or export that died with the app.
         ScratchSpace.shared.sweepAbandoned()
@@ -41,6 +44,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             NotificationCenter.default.addObserver(self, selector: #selector(drainLifecycleLogs), name: name, object: nil)
         }
         return true
+    }
+
+    @objc func sceneWillConnect(_ notification: Notification) {
+        if let scene = notification.object as? UIWindowScene { _ = SceneCapture.of(scene) }
     }
 
     @objc func drainLifecycleLogs() {

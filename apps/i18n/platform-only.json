@@ -37,6 +37,7 @@
     "Filter": "parity-gap (layout): iOS's ⋯ menu groups the filters under a Filter heading; Android uses a chip",
     "Finish the current payment before scanning another request.": "parity-gap: only iOS stops a scan while a payment is open (the deep-link work adds the Android side)",
     "Hidden for your security": "platform: iOS blurs secrets itself when the app is inactive or captured; Android's FLAG_SECURE blanks the window",
+    "Hidden while your screen is recorded or shared": "platform: iOS blurs secrets itself when the app is inactive or captured; Android's FLAG_SECURE blanks the window",
     "Hide keyboard": "platform: iOS's number-pad keyboard has no return key, so restore adds a Hide keyboard button",
     "In {time}": "parity-gap (layout): iOS's start review shows when the exit can be claimed; Android's summary says \"about a day\"",
     "It arrived instantly.": "parity-gap: Android shows no line for a paid Ark send with a fee",

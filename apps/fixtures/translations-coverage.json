@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1479,
-  "sourceKeys": 1510,
+  "catalogEntries": 1480,
+  "sourceKeys": 1511,
   "coverage": {
     "ios": {
       "used": [
@@ -481,6 +481,7 @@
         "Have you checked?",
         "Help",
         "Hidden for your security",
+        "Hidden while your screen is recorded or shared",
         "Hide amounts",
         "Hide keyboard",
         "Hide wallet balance",
