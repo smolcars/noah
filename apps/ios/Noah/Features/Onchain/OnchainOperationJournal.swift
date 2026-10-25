@@ -152,11 +152,14 @@ actor OnchainOperationJournal {
         changes.send(())
     }
 
+    /// Saves and announces only a change: an unchanged status would wake every observer, whose reload
+    /// checks the status again.
     func observe(_ status: ChainTransactionStatus, for id: UUID) throws {
         guard !running else { return }
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { $0.id == id }) else { return }
-        statusErrors[id] = nil
+        let hadError = statusErrors.removeValue(forKey: id) != nil
+        let before = attempts[index].receipt
         attempts[index].chainStatusError = nil
         if var receipt = attempts[index].receipt {
             receipt.chainStatus = status
@@ -166,6 +169,7 @@ actor OnchainOperationJournal {
             }
             attempts[index].receipt = receipt
         }
+        guard hadError || attempts[index].receipt != before else { return }
         try save(attempts)
     }
 

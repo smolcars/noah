@@ -32,6 +32,33 @@ struct OnchainChangesTests {
         #expect(gate.asked == 3)
     }
 
+    /// A retained receipt's status check that finds nothing new neither saves nor announces, so reloads on
+    /// journal changes settle: one real change ("confirmed" recorded) gives one more load, not a loop.
+    @Test(.timeLimit(.minutes(1))) func unchangedStatusChecksSettle() async throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let journal = OnchainOperationJournal(file: file)
+        _ = try await journal.perform(BoardPreparedTests.quote) { OnchainReceipt(message: "Submitted", txid: "exact", onchainFee: 1543) }
+        let reads = WalletSession.OnchainAttemptReads(walletID: "wallet", transactionIDs: { [] }, vtxoState: { _ in "" },
+                                                      exitState: { _ in nil }, transactionStatus: { _ in .confirmed(123) })
+        let calls = OnchainModelTests.Calls()
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.attempt = { try await journal.loadAll() }
+        dependencies.check = { try await WalletSession.checkOnchainAttempt($0, journal: journal, reads: reads) }
+        let changes = journal.changes.stream()
+        dependencies.changes = { changes }
+        let model = OnchainModel(dependencies: dependencies)
+        let observer = Task { await model.observeChanges { true } }
+        defer { observer.cancel() }
+        await model.load()
+        try await Task.sleep(for: .milliseconds(500))
+        let settled = await calls.reads
+        #expect(settled <= 3)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(await calls.reads == settled)
+        #expect(try await journal.load()?.receipt?.chainStatus == .confirmed(123))
+    }
+
     @Test func aLoadAskedForDuringALoadRunsAgainAfterIt() async throws {
         let reads = Reads()
         let (release, open) = AsyncStream<Void>.makeStream()

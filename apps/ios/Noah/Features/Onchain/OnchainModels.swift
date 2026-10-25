@@ -171,7 +171,7 @@ enum OnchainFailure: LocalizedError {
     }
 }
 
-struct OnchainReceipt: Codable, Sendable, ExpressibleByStringLiteral {
+struct OnchainReceipt: Codable, Equatable, Sendable, ExpressibleByStringLiteral {
     var message: String
     var txid: String?
     var onchainFee: UInt64?
