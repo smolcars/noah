@@ -12,7 +12,11 @@ class SendModel(val controller: SendController, private val network: String,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     /** The amount a BOLT12 offer fixes, or null; the quote checks it again. */
     private val offerAmount: suspend (String) -> Long? = { null }) {
-    var amount by mutableStateOf("")
+    private var amountText by mutableStateOf("")
+    /** A valid amount clears Next's zero-amount error at once; any other error stays. */
+    var amount: String
+        get() = amountText
+        set(value) { amountText = value; if (errorSource == zeroAmount && sats in validSats) errorSource = null }
     var destination by mutableStateOf("")
         private set
     private var recipientRevision = 0
@@ -124,7 +128,7 @@ class SendModel(val controller: SendController, private val network: String,
         if (busy || controller.locked) return
         error = null
         when (stage) {
-            SendStage.amount -> { if (sats !in 1..2_100_000_000_000_000L) { error = "Enter an amount greater than zero."; return }; progress = progress.copy(amountConfirmed = true) }
+            SendStage.amount -> { if (sats !in validSats) { error = zeroAmount; return }; progress = progress.copy(amountConfirmed = true) }
             SendStage.recipient -> { acceptRecipient(); return }
             SendStage.method -> { if (availability[progress.selectedRail?.name] != true) { error = "Insufficient funds for this payment method."; return }; progress = progress.copy(railConfirmed = true) }
             SendStage.source -> { if (source !in sources || source == null) { error = "Choose a balance with sufficient funds."; return }; progress = progress.copy(sourceConfirmed = true, selectedRail = if (isMax) SendRail.onchain else progress.selectedRail) }
@@ -180,5 +184,9 @@ class SendModel(val controller: SendController, private val network: String,
     fun toggleCurrency() {
         val price = btcPrice ?: return; val value = sats
         amount = if (useFiat) value.toString() else FiatCurrency.satsToFiat(value, price, fiatCurrency); useFiat = !useFiat
+    }
+    private companion object {
+        const val zeroAmount = "Enter an amount greater than zero."
+        val validSats = 1..2_100_000_000_000_000L
     }
 }
