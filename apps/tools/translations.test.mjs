@@ -216,16 +216,15 @@ test('reuse skips a plural form whose English changed while its key did not', as
 });
 
 // Runs the bot workflow's own step scripts against a scratch repo, a local origin and a stub gh that applies --jq.
-test('the bot workflow reuses its open PR, updates it, and closes it once master needs nothing', async () => {
+async function botRepo(run) {
   const workflow = Bun.YAML.parse(await readFile(resolve(root, '.github/workflows/native-translations.yml'), 'utf8'));
   const temporary = await mkdtemp(resolve(tmpdir(), 'noah-i18n-bot-'));
   try {
     await fixture(async (base, put) => {
       await mkdir(resolve(base, 'apps/tools'), { recursive: true });
       await copyFile(resolve(root, 'apps/tools/translations.mjs'), resolve(base, 'apps/tools/translations.mjs'));
-      for (const locale of locales.slice(1)) await put(`apps/i18n/${locale}/native.json`, locale === 'es' ? JSON.stringify({ [resourceName('Send')]: 'Enviar' }) : '{}');
+      for (const locale of locales.slice(1)) await put(`apps/i18n/${locale}/native.json`, '{}');
       await put('apps/i18n/gt-lock.json', '{}');
-      await generate(false, base);
       const [origin, log, stubs] = ['origin.git', 'gh.log', 'bin'].map(name => resolve(temporary, name));
       await mkdir(stubs);
       await writeFile(resolve(stubs, 'gh'), `#!/bin/bash
@@ -238,41 +237,81 @@ esac
       await chmod(resolve(stubs, 'gh'), 0o755);
       const env = { ...process.env, ...workflow.env, PATH: `${stubs}:${process.env.PATH}`, HOME: temporary, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1',
         STUB_LOG: log, STUB_ORIGIN: origin, GH_TOKEN: 'stub', GITHUB_REPOSITORY: 'smolcars/noah', RUN_URL: 'https://example.invalid/run', RUNNER_TEMP: temporary, GITHUB_STEP_SUMMARY: resolve(temporary, 'summary.md') };
-      const run = (command, options = {}) => {
-        const result = Bun.spawnSync(command, { cwd: base, env: { ...env, ...options.env }, stdout: 'pipe', stderr: 'pipe' });
+      const sh = (command, extra = {}) => {
+        const result = Bun.spawnSync(command, { cwd: base, env: { ...env, ...extra }, stdout: 'pipe', stderr: 'pipe' });
         if (result.exitCode) throw new Error(`${command.join(' ')}:\n${result.stdout}${result.stderr}`);
         return result.stdout.toString();
       };
-      const git = (...args) => run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', ...args]);
-      const step = (name, prs) => {
-        const script = workflow.jobs.translate.steps.find(step => step.name === name).run;
-        return run(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', script], { env: { STUB_PRS: prs, GITHUB_SHA: git('rev-parse', 'HEAD').trim() } });
-      };
-      const calls = async () => (await readFile(log, 'utf8').catch(() => '')).trim().split('\n').filter(Boolean);
-      const open = JSON.stringify([{ number: 7, isCrossRepository: true }, { number: 42, isCrossRepository: false }]);
-      git('init', '-q', '-b', 'master'); git('add', '.'); git('commit', '-qm', 'master');
-      run(['git', 'clone', '-q', '--bare', base, origin]); git('remote', 'add', 'origin', origin);
-      // The open bot PR already has Japanese "Send".
-      await put('apps/i18n/ja/native.json', JSON.stringify({ [resourceName('Send')]: '送信' }));
-      git('commit', '-qam', 'bot'); git('push', '-q', 'origin', `HEAD:refs/heads/${workflow.env.BOT_BRANCH}`); git('reset', '-q', '--hard', 'HEAD~');
-
-      step('Reuse translations from the open bot PR', open);
-      expect((await calls()).filter(call => call.startsWith('api')).map(call => call.match(/i18n\/(\w+)\//)[1])).toEqual(locales);
-      await generate(false, base);
-      step('Open or update the translations PR', open);
-      expect((await calls()).filter(call => /^pr (create|edit|close)/.test(call)).map(call => call.split(' --')[0])).toEqual(['pr edit 42']);
-      expect(git('show', `origin/${workflow.env.BOT_BRANCH}:apps/i18n/ja/native.json`)).toContain('送信');
-      expect(await readFile(resolve(temporary, 'body.md'), 'utf8')).toContain('| ja | 1 |');
-
-      // Master now has every key the bot PR added, so the PR would only conflict: close it and delete its branch.
-      await writeFile(log, '');
-      step('Open or update the translations PR', open);
-      expect((await calls()).filter(call => /^pr (create|edit|close)/.test(call))).toEqual([expect.stringMatching(/^pr close 42 --delete-branch --comment Superseded/)]);
-      await writeFile(log, '');
-      expect(step('Open or update the translations PR', '[]')).toContain('Nothing to translate.');
-      expect((await calls()).filter(call => /^pr (create|edit|close)/.test(call))).toEqual([]);
+      const git = (...args) => sh(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', ...args]);
+      git('init', '-q', '-b', 'master'); sh(['git', 'init', '-q', '--bare', origin]); git('remote', 'add', 'origin', origin);
+      await run({
+        base, put, git, workflow, temporary, bot: workflow.env.BOT_BRANCH,
+        open: JSON.stringify([{ number: 7, isCrossRepository: true }, { number: 42, isCrossRepository: false }]),
+        // Regenerates, commits everything and pushes it as master; returns the commit.
+        commit: async message => { await generate(false, base); git('add', '.'); git('commit', '-qm', message); git('push', '-q', 'origin', 'HEAD:refs/heads/master'); return git('rev-parse', 'HEAD').trim(); },
+        // As actions/checkout: an explicit ref checks out that branch's current tip, otherwise the event's commit.
+        checkout: sha => { const ref = workflow.jobs.translate.steps.find(step => step.uses?.startsWith('actions/checkout')).with?.ref; git('fetch', '-q', 'origin'); git('checkout', '-q', ref ? `origin/${ref}` : sha); },
+        step: (name, prs, sha = git('rev-parse', 'HEAD').trim()) => sh(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', workflow.jobs.translate.steps.find(step => step.name === name).run], { STUB_PRS: prs, GITHUB_SHA: sha }),
+        calls: async () => (await readFile(log, 'utf8').catch(() => '')).trim().split('\n').filter(Boolean),
+        prCalls: async () => (await readFile(log, 'utf8').catch(() => '')).split('\n').filter(call => /^pr (create|edit|close)/.test(call)),
+        clearCalls: () => writeFile(log, ''),
+      });
     });
   } finally { await rm(temporary, { recursive: true, force: true }); }
+}
+
+test('the bot workflow reuses its open PR, updates it, and closes it once master needs nothing', async () => {
+  await botRepo(async ({ base, put, git, bot, open, commit, step, calls, prCalls, clearCalls, temporary }) => {
+    await put('apps/i18n/es/native.json', JSON.stringify({ [resourceName('Send')]: 'Enviar' }));
+    await commit('master');
+    // The open bot PR already has Japanese "Send".
+    await put('apps/i18n/ja/native.json', JSON.stringify({ [resourceName('Send')]: '送信' }));
+    git('commit', '-qam', 'bot'); git('push', '-q', 'origin', `HEAD:refs/heads/${bot}`); git('reset', '-q', '--hard', 'HEAD~');
+
+    step('Reuse translations from the open bot PR', open);
+    expect((await calls()).filter(call => call.startsWith('api')).map(call => call.match(/i18n\/(\w+)\//)[1])).toEqual(locales);
+    await generate(false, base);
+    step('Open or update the translations PR', open);
+    expect((await prCalls()).map(call => call.split(' --')[0])).toEqual(['pr edit 42']);
+    expect(git('show', `origin/${bot}:apps/i18n/ja/native.json`)).toContain('送信');
+    expect(await readFile(resolve(temporary, 'body.md'), 'utf8')).toContain('| ja | 1 |');
+
+    // Master now has every key the bot PR added, so the PR would only conflict: close it and delete its branch.
+    await clearCalls();
+    step('Open or update the translations PR', open);
+    expect(await prCalls()).toEqual([expect.stringMatching(/^pr close 42 --delete-branch --comment Superseded/)]);
+    await clearCalls();
+    expect(step('Open or update the translations PR', '[]')).toContain('Nothing to translate.');
+    expect(await prCalls()).toEqual([]);
+  });
+}, 30_000);
+
+// A fully translated older run would close the PR; one still missing a key would push a bot branch on the older master.
+test.each([['fully translated'], ['missing a key']])('a rerun of an older run (%s) works on the current master and keeps the bot PR', async older => {
+  await botRepo(async ({ base, put, git, bot, open, commit, checkout, step, prCalls, temporary }) => {
+    const translateAll = async (skip = '') => {
+      const english = JSON.parse(await readFile(resolve(base, 'apps/i18n/en/native.json'), 'utf8'));
+      for (const locale of locales.slice(1)) await put(`apps/i18n/${locale}/native.json`, JSON.stringify(Object.fromEntries(Object.entries(english).filter(([key]) => key !== skip).map(([key, text]) => [key, `${locale} ${text}`]))));
+    };
+    await generate(false, base); await translateAll(older === 'missing a key' ? resourceName('Native only') : '');
+    const a = await commit('A');
+    await put('apps/ios/Noah/Features/Example.swift', 'Text("Hello {name}")\nText("Native only")\nText("Receive")');
+    await put('apps/android/app/src/main/java/com/noahwallet/ui/Example.kt', 'Text(tr("Send"))\nText(tr("Receive"))');
+    const newer = await commit('B: adds Receive');
+    // The open bot PR translates everything still missing on B.
+    await translateAll();
+    git('commit', '-qam', 'bot'); git('push', '-q', 'origin', `HEAD:refs/heads/${bot}`);
+
+    // Rerunning A's run keeps A as the event commit.
+    checkout(a);
+    step('Reuse translations from the open bot PR', open, a);
+    await generate(false, base);
+    step('Open or update the translations PR', open, a);
+    expect((await prCalls()).map(call => call.split(' --')[0])).toEqual(['pr edit 42']);
+    expect(git('rev-parse', `origin/${bot}~`).trim()).toBe(newer);
+    expect(git('show', `origin/${bot}:apps/i18n/ja/native.json`)).toContain(`ja Receive`);
+    expect(await readFile(resolve(temporary, 'body.md'), 'utf8')).toContain(`at ${newer.slice(0, 9)}.`);
+  });
 }, 30_000);
 
 test('failed GT runs leave seeded files intact', async () => {

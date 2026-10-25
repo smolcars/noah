@@ -42,8 +42,11 @@ jobs:
         shell: nix develop .#android-ci --command bash --noprofile --norc -eo pipefail {0}
     steps:
       # The token stays out of .git/config while dependencies and GT run; only the last step pushes.
+      # A rerun keeps its event's commit, so check out master's current tip: an older run must not close
+      # or rewind a bot PR that a newer master still needs.
       - uses: actions/checkout@v6
         with:
+          ref: master
           persist-credentials: false
 
       - name: Install Nix
@@ -117,6 +120,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          master=$(git rev-parse --short=9 HEAD)
           pr=$(gh pr list --head "$BOT_BRANCH" --base master --state open \
             --json number,isCrossRepository --jq 'map(select(.isCrossRepository | not)) | .[0].number // empty')
           git add -- 'apps/i18n/*/native.json' apps/i18n/gt-lock.json \
@@ -131,7 +135,7 @@ jobs:
             echo "Nothing to translate." | tee -a "$GITHUB_STEP_SUMMARY"
             # Master already has or no longer needs everything an open bot PR adds; that PR would only conflict.
             if [[ -n "$pr" ]]; then
-              gh pr close "$pr" --delete-branch --comment "Superseded: nothing is missing on \`master\` at ${GITHUB_SHA::9} ([run]($RUN_URL))."
+              gh pr close "$pr" --delete-branch --comment "Superseded: nothing is missing on \`master\` at $master ([run]($RUN_URL))."
             fi
             exit 0
           fi
@@ -146,12 +150,12 @@ jobs:
 
           title="chore(i18n): translate new native strings"
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit --quiet -m "$title" -m "Machine translations for native copy missing a locale on master at ${GITHUB_SHA::9}." -m "$RUN_URL"
+            commit --quiet -m "$title" -m "Machine translations for native copy missing a locale on master at $master." -m "$RUN_URL"
           gh auth setup-git
           git push --force origin "HEAD:refs/heads/$BOT_BRANCH"
 
           cat > "$RUNNER_TEMP/body.md" <<EOF
-          Machine translations from GT for native UI copy that had no translation on \`master\` at ${GITHUB_SHA::9}.
+          Machine translations from GT for native UI copy that had no translation on \`master\` at $master.
 
           $table
 
