@@ -364,12 +364,14 @@ export function missingGroups(english, catalogs) {
 }
 const writeLocales = (catalogs, base, only = locales.slice(1)) => outputFiles(new Map(only.map(locale => [`apps/i18n/${locale}/native.json`, json(sorted(catalogs[locale]))])), false, base);
 // CI reuses an open bot PR's translations (another apps/i18n under `other`) so GT never translates a key twice.
+// Plural form keys hash only the `other` text, so a key is reused only while its English is unchanged.
 export async function reuse(other, base = root) {
   const { all, english } = await extract(base);
   const catalogs = await localeFiles(base), previous = await localeFiles(other);
+  const previousEnglish = JSON.parse(await readFile(resolve(other, 'apps/i18n/en/native.json'), 'utf8'));
   const reused = {};
   for (const locale of locales.slice(1)) {
-    const keys = Object.keys(english).filter(key => !hasTranslation(catalogs[locale], key) && hasTranslation(previous[locale], key));
+    const keys = Object.keys(english).filter(key => !hasTranslation(catalogs[locale], key) && hasTranslation(previous[locale], key) && previousEnglish[key] === english[key]);
     for (const key of keys) catalogs[locale][key] = previous[locale][key];
     reused[locale] = keys.length;
   }

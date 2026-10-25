@@ -188,6 +188,8 @@ test('reuse fills only missing keys still in English from another catalog, valid
     const [hello, send] = [resourceName('Hello {name}'), resourceName('Send')];
     await put('apps/i18n/es/native.json', JSON.stringify({ [hello]: 'Hola {{name}}' }));
     const other = resolve(base, 'bot');
+    await expect(reuse(other, base)).rejects.toThrow('en/native.json');
+    await put('bot/apps/i18n/en/native.json', JSON.stringify({ [hello]: 'Hello {{name}}', [send]: 'Send' }));
     await put('bot/apps/i18n/es/native.json', JSON.stringify({ [hello]: 'Otro {{name}}', [send]: 'Enviar' }));
     await put('bot/apps/i18n/ja/native.json', JSON.stringify({ [send]: '送信', gt_obsolete: 'Old' }));
     expect(await reuse(other, base)).toEqual({ reused: { es: 1, ja: 1, ko: 0, sv: 0 } });
@@ -197,6 +199,19 @@ test('reuse fills only missing keys still in English from another catalog, valid
     await put('bot/apps/i18n/ko/native.json', JSON.stringify({ [hello]: '{{wrong}}' }));
     await expect(reuse(other, base)).rejects.toThrow('Placeholder drift');
     expect(await readFile(resolve(base, 'apps/i18n/ko/native.json'), 'utf8').catch(() => 'not written')).toBe('not written');
+  });
+});
+
+test('reuse skips a plural form whose English changed while its key did not', async () => {
+  await fixture(async (base, put) => {
+    const source = '{count} withdrawals', id = resourceName(source);
+    await put('apps/ios/Noah/Features/Example.swift', `L10n.plural("${source}", count)`);
+    await put('apps/i18n/plurals.json', JSON.stringify({ [source]: { one: 'One pending withdrawal', other: source } }));
+    await put('bot/apps/i18n/en/native.json', JSON.stringify({ [`${id}_one`]: 'One withdrawal', [`${id}_other`]: '{{count}} withdrawals' }));
+    await put('bot/apps/i18n/es/native.json', JSON.stringify({ [`${id}_one`]: 'Un retiro', [`${id}_other`]: '{{count}} retiros' }));
+    expect(await reuse(resolve(base, 'bot'), base)).toEqual({ reused: { es: 1, ja: 0, ko: 0, sv: 0 } });
+    expect(JSON.parse(await readFile(resolve(base, 'apps/i18n/es/native.json'), 'utf8'))).toEqual({ [`${id}_other`]: '{{count}} retiros' });
+    expect((await translate(base, { dryRun: true })).missing.es).toBe(2); // The changed singular and "Send".
   });
 });
 

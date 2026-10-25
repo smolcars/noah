@@ -76,7 +76,8 @@ jobs:
             exit 0
           fi
           previous="$RUNNER_TEMP/bot"
-          for locale in es ja ko sv; do
+          # English too: a key is reused only while its English is unchanged.
+          for locale in en es ja ko sv; do
             mkdir -p "$previous/apps/i18n/$locale"
             gh api -H "Accept: application/vnd.github.raw+json" \
               "repos/$GITHUB_REPOSITORY/contents/apps/i18n/$locale/native.json?ref=$BOT_BRANCH" \
