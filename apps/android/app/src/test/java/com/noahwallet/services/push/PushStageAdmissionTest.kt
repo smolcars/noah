@@ -45,7 +45,10 @@ class PushStageAdmissionTest {
                 caller = currentCoroutineContext()[Job]
                 runCatching { jobs.handle(notification) }
             }.join()
-            assertEquals("$notification after $stopAt (cancel=$cancel)", stages.takeWhile { it != stopAt } + stopAt, events)
+            // A backup that settled still reports after the budget; caller cancellation stops it.
+            val settledBackup = notification is NotificationDataBackupTrigger && stopAt == "backup" && !cancel
+            val expected = if (settledBackup) stages else stages.takeWhile { it != stopAt } + stopAt
+            assertEquals("$notification after $stopAt (cancel=$cancel)", expected, events)
         }
     }
 

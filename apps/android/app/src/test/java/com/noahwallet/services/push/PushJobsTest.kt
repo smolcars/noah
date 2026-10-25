@@ -1,6 +1,8 @@
 package com.noahwallet.services.push
 
 import com.noahwallet.api.generated.models.*
+import com.noahwallet.recurring.RecurringBudget
+import com.noahwallet.services.wallet.WalletExecutionBudget
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -10,15 +12,20 @@ class PushJobsTest {
     private var openFails = false
     private var reportFails = false
     private var cancelled = false
+    private var afterOpen: () -> Unit = {}
+    private var afterBackup: () -> Unit = {}
+    private var reportBackupWait: suspend () -> Unit = {}
+    private var reportAllowance = PushJobs.REPORT_ALLOWANCE_MILLIS
     private val jobs get() = PushJobs(PushJobs.Dependencies(
         ensureWalletOpen = {
             events += "open"
+            afterOpen()
             if (cancelled) throw CancellationException()
             if (openFails) error("private provider error")
         },
-        backup = { events += "backup" },
+        backup = { events += "backup"; afterBackup() },
         recurring = { assertTrue(it.available); events += "recurring" },
-        reportBackup = { k1, success -> events += "backup-report:$k1:$success" },
+        reportBackup = { k1, success -> events += "backup-report:$k1:$success"; reportBackupWait() },
         maintenance = { events += "maintenance" },
         createInvoice = { events += "invoice:$it"; "bolt11" },
         submitInvoice = { id, invoice -> events += "submit:$id:$invoice" },
@@ -27,7 +34,7 @@ class PushJobsTest {
         heartbeat = { events += "heartbeat:$it"; error("offline") },
         announceReceived = { sats, usd, hash -> events += "announce:$sats:$usd:$hash" },
         refreshWidget = { events += "widget" }, log = { events += "log" }, progressExits = { events += "exits" },
-    ))
+    ), reportAllowance)
     @Test fun maintenanceReportsSuccessThenRefreshes() = runBlocking {
         jobs.handle(NotificationDataMaintenance("correlation"))
         assertEquals(listOf("open", "maintenance", "report:correlation:true", "widget", "exits"), events)
@@ -63,6 +70,38 @@ class PushJobsTest {
         openFails = true
         assertTrue(runCatching { jobs.handle(NotificationDataBackupTrigger("k1")) }.isFailure)
         assertEquals(listOf("open", "backup-report:k1:false"), events)
+    }
+    @Test fun backupSettlingAfterTheBudgetIsStillReported() = runBlocking {
+        val budget = RecurringBudget()
+        afterBackup = { budget.revoke() }
+        withContext(WalletExecutionBudget(budget)) { jobs.handle(NotificationDataBackupTrigger("k1")) }
+        assertEquals(listOf("open", "backup", "backup-report:k1:true"), events)
+    }
+    @Test fun backupFailingAfterTheBudgetIsReportedAsFailed() = runBlocking {
+        val budget = RecurringBudget()
+        afterBackup = { budget.revoke(); error("upload failed") }
+        val result = runCatching { withContext(WalletExecutionBudget(budget)) { jobs.handle(NotificationDataBackupTrigger("k1")) } }
+        assertEquals("upload failed", result.exceptionOrNull()?.message)
+        assertEquals(listOf("open", "backup", "backup-report:k1:false"), events)
+    }
+    @Test fun backupNeverStartedIsNotReportedAfterTheBudget() = runBlocking {
+        for (fails in listOf(false, true)) {
+            events.clear()
+            openFails = fails
+            val budget = RecurringBudget()
+            afterOpen = { budget.revoke() }
+            val result = runCatching { withContext(WalletExecutionBudget(budget)) { jobs.handle(NotificationDataBackupTrigger("k1")) } }
+            assertTrue(result.exceptionOrNull() is CancellationException)
+            assertEquals(listOf("open"), events)
+        }
+    }
+    @Test fun backupReportIsBoundedByItsAllowance() = runBlocking {
+        reportAllowance = 100
+        reportBackupWait = { delay(60_000) }
+        val started = System.nanoTime()
+        jobs.handle(NotificationDataBackupTrigger("k1"))
+        assertTrue((System.nanoTime() - started) / 1_000_000 < 5_000)
+        assertEquals(listOf("open", "backup", "backup-report:k1:true", "log"), events)
     }
     @Test fun cancelledBackgroundEntryCannotStartWalletOpen() = runBlocking {
         val work = launch(start = CoroutineStart.UNDISPATCHED) {
