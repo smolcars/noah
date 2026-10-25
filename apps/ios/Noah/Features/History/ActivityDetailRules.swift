@@ -31,6 +31,8 @@ struct ActivityDetail: Equatable {
     /// Waiting for (or counting) confirmations: Send's block row.
     let blockTxid: String?
     let note: String?
+    /// A confirmed transaction whose block time isn't known has no date; Confirmed names its block.
+    let showsDate: Bool
 
     init(_ transaction: HistoryTransaction, ownDomain: String) {
         let row = HomeActivityRow(transaction, ownDomain: ownDomain)
@@ -121,6 +123,7 @@ struct ActivityDetail: Equatable {
         blockTxid = walletRow && row.status.isPending ? transaction.txid : broadcast ? transaction.broadcastTxid : nil
         let comment = transaction.repeatPayment?.comment ?? ""
         note = !comment.isEmpty ? comment : row.title == transaction.paymentDescription ? nil : transaction.paymentDescription
+        showsDate = transaction.dateLabel == nil || transaction.hasConfirmation != true
     }
 
     /// What a settled Lightning send's balance change took beyond what it sent (`SendReconciliation.lightningFee`):

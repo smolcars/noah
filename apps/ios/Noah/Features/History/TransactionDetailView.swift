@@ -173,7 +173,7 @@ struct TransactionDetailView: View {
         line("Via", L10n.text(detail.rail.title, locale: language), glyph: detail.rail.symbol)
         fees
         if let total = detail.total { line("Total", money(total), numeric: true) }
-        line("Date", dateText)
+        if detail.showsDate { line("Date", dateText) }
         if let height = confirmedBlock { line("Confirmed", L10n.text("Block {height}", height.formatted(.number.locale(locale)), locale: language)) }
         if let entered = enteredAs { line("Entered as", hidden ? "••••" : entered) }
         if let note = detail.note { line("Note", note, wraps: true) }

@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 import SwiftUI
 import Testing
@@ -293,6 +294,20 @@ struct ActivityDetailTests {
 
         let failed = ActivityDetail.receipt(Self.lightningSend(status: "failed"), ownDomain: Self.own, unit: .bip177, locale: english, date: "Today")
         #expect(!failed.contains("Proof of payment"))
+    }
+
+    /// A confirmed on-chain transaction names its block once: without a block time there's no Date row
+    /// ("Confirmed at block N") above Confirmed · Block N. A known time, or no block yet, keeps the row.
+    @Test func confirmedWithoutABlockTimeHasNoDateRow() {
+        func chain(confirmed: Bool, blockTime: Date? = nil) -> HistoryTransaction {
+            HistoryMapping.transaction(WalletTransaction(txid: Self.txid, txHex: "", onchainFeeSats: 141, balanceChangeSats: -20_141,
+                                                         confirmation: confirmed ? .init(height: 1_451, hash: "h") : nil, isCpfp: false),
+                                       blockTime: blockTime)
+        }
+        #expect(!ActivityDetail(chain(confirmed: true), ownDomain: Self.own).showsDate)
+        #expect(ActivityDetail(chain(confirmed: true, blockTime: Date(timeIntervalSince1970: 1_792_896_469)), ownDomain: Self.own).showsDate)
+        #expect(ActivityDetail(chain(confirmed: false), ownDomain: Self.own).showsDate)
+        #expect(ActivityDetail(Self.lightningSend(), ownDomain: Self.own).showsDate)
     }
 }
 
