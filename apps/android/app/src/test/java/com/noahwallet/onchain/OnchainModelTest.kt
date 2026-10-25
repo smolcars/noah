@@ -190,6 +190,20 @@ class OnchainModelTest {
         m.load(); assertEquals(before + 1, m.revision)
         f.ready = false; m.load(); assertEquals("a read that failed retries nothing", before + 1, m.revision)
     }
+    @Test fun aWalletChangeReadsTheOverviewAgainAtOnce() = runBlocking {
+        val m = OnchainModel(Fake().dependencies())
+        val change = androidx.compose.runtime.mutableLongStateOf(0L)
+        suspend fun bump() { change.longValue++; androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications(); repeat(5) { yield() } }
+        val watching = launch { m.reloadOnChanges { change.longValue } }
+        repeat(5) { yield() }
+        assertEquals("the page's own first read covers the current value", 0, m.revision)
+        bump(); assertEquals(1, m.revision)
+        bump(); assertEquals(2, m.revision)
+        // An open review isn't swept away by a background change.
+        m.review(OnchainAction.board, amount = 30_000); assertNotNull(m.quote)
+        bump(); assertEquals(2, m.revision); assertNotNull(m.quote)
+        watching.cancel()
+    }
     @Test fun lateReviewCannotInstallAfterInputsOrReadinessChange() = runBlocking {
         val f = Fake().apply { gate = CompletableDeferred(); entered = CompletableDeferred() }
         val m = OnchainModel(f.dependencies())

@@ -104,6 +104,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
                     val completed = model.error == null && model.message == OnchainReceipt.progressedMessage
                     ExitFunding.shared.checked(model.overview?.exits.orEmpty(), completed)
                     if (completed) { model.load(); haptics.light() } else haptics.error()
+                    app.refresh() // Other exit and VTXO pages read the wallet again (OnchainEffects).
                 }
             }
             OnchainAction.cancel -> CancelDialog(model::invalidate) {

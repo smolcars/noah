@@ -29,6 +29,7 @@ import com.noahwallet.services.wallet.WalletBackgroundActivity
 import com.noahwallet.ui.readableWidth
 import com.noahwallet.ui.AppModel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.drop
 
 fun onchainReady(app: AppModel): Boolean {
     val persisted = app.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
@@ -75,7 +76,8 @@ internal fun rememberOnchainModel(app: AppModel, detailID: String? = null): Onch
 
 /**
  * The model's lifecycle on a page: quotes drop when Noah pauses or the wallet changes, a prepared board expires, and the
- * overview reads while the page is started (every minute) and stops while the wallet is suspended.
+ * overview reads while the page is started (at once when the wallet reports a change, else every minute) and stops
+ * while the wallet is suspended.
  */
 @Composable
 internal fun OnchainEffects(app: AppModel, model: OnchainModel, reloadOnChange: Boolean = false) {
@@ -98,10 +100,17 @@ internal fun OnchainEffects(app: AppModel, model: OnchainModel, reloadOnChange: 
         if (app.isWalletSuspended) { model.unavailable(); return@LaunchedEffect }
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             model.load()
+            // A finished renew or refresh, a sync, new funds or Check the chain: bark's change events reload history,
+            // and the balance refresh after them bumps its revision.
+            launch { model.reloadOnChanges { app.history.revision to app.summaryRevision } }
             while (isActive) { delay(60_000); if (!model.busy && model.quote == null) model.load() }
         }
     }
 }
+
+/** Reads the overview again each time [changes] moves (not for its first value), unless busy or a review is open. */
+internal suspend fun OnchainModel.reloadOnChanges(changes: () -> Any) =
+    snapshotFlow(changes).drop(1).collect { if (!busy && quote == null) load() }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
