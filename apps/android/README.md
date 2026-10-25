@@ -311,7 +311,7 @@ Maestro artifacts are private and removed on exit because an onboarding failure
 can capture a recovery phrase. Never restart/reset the shared Docker stack for
 this test. Existing `just bark` now uses `--no-deps`; the harness also uses it
 explicitly. Fund Bark via Bitcoin Core and board if needed, using quiet CLI logs.
-See [2026-10-20 live evidence](UpgradeTests/DEVICE.md#android-migration-safety-upgrade-2026-10-20)
+See [how to run it](UpgradeTests/README.md#full-rn--native-replacement)
 and the launcher parser self-check: `python3 apps/android/UpgradeTests/test-launcher.py`.
 
 ### Wallet parity verification on 2026-10-19

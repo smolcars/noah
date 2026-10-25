@@ -1,4 +1,4 @@
-# Native M1 onboarding checks
+# Native onboarding checks
 
 Use a dedicated simulator: the reset below deletes its regtest wallet and clears its Keychain. Never use a simulator holding a wallet you need.
 
@@ -31,14 +31,4 @@ The email address is submitted with the keyboard's Send key: tapping the button 
 
 All onboarding states, including ones the simulator can't reach (it never denies notifications), render from fakes in `NoahTests/OnboardingShotTests.swift`: run it with `TEST_RUNNER_NOAH_ONBOARDING_SHOTS=1` and write a state name (`welcome`, `beta`, `name-taken`, `email-code`, `notifications-required`, `restoring-ready`, …) to the app's `Documents/onboarding-shot`; `stop` ends the session. The restore states use only the public BIP-39 test vector.
 
-Use `xcrun simctl ui "$NOAH_TEST_UDID" appearance light` or `dark` before each pass. An iPhone SE (3rd generation) provides the 375 × 667 layout. Delete `apps/ios/build/DerivedData` and temporary Maestro debug output after verification. Screenshots go to the `SHOTS` directory and are not committed (`apps/ios/OnboardingTests/screenshots/` is git-ignored).
-
-The available-name suggestion is the wallet's assigned username. RN's `useLightningAddressSuggestions` searches **existing recipients**, so using that endpoint for available onboarding names would suggest other people's addresses. RN's onboarding screen itself does not use that hook.
-
-Verified on 2026-10-19 with Xcode 27.1 / iOS 27.0:
-
-- `Noah-Regtest`: 68 tests in 22 suites passed with `NOAH_SERVER_IT=1`, including live registration, Lightning identity, email verification and wallet key-0 creation/reopen. The separately gated RN upgrade suite was not enabled.
-- `create-and-verify.yaml`: passed on Noah Native iPhone (`0DFD299A-8F7D-4F42-8907-54898E50D719`), dark appearance.
-- `create-and-skip.yaml`: passed on Noah Native SE, iPhone SE 3rd generation (`150A006A-ACCF-4F35-8014-5FC7DF664181`), light appearance.
-
-Physical-device OTP autofill, production email delivery and iOS 18 runtime behavior were not exercised. The build and temporary test artifacts are removed after verification.
+Use `xcrun simctl ui "$NOAH_TEST_UDID" appearance light` or `dark` before each pass. An iPhone SE (3rd generation) provides the 375 × 667 layout. Screenshots go to the `SHOTS` directory and are not committed (`apps/ios/OnboardingTests/screenshots/` is git-ignored); Maestro debug output goes to `apps/ios/build/maestro`. Delete both and `apps/ios/build/DerivedData` when done.

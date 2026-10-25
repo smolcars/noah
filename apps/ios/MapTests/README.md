@@ -1,24 +1,33 @@
-# BTC Map verification
+# BTC Map checks (iOS)
 
-M8 uses MapLibre Native iOS 6.31.0 (exact SPM pin) and the committed RN assets
-by resource reference, without copying or regenerating them:
+The map uses the committed RN assets by resource reference, without copying them:
+`client/assets/btcmap/places.btcmap` and `client/assets/geonames/cities.geonames`
+(GeoNames, CC BY 4.0).
 
-- `client/assets/btcmap/places.btcmap`: 29,705 merchants, 4,871,499 bytes.
-- `client/assets/geonames/cities.geonames`: 2,158,467 bytes, GeoNames CC BY 4.0.
+## Coverage
 
-## Repeatable checks
+- `BtcMapFixtureTests`, `BtcMapRepositoryTests` and `BtcMapModelTests` (all in
+  `NoahTests/BtcMapTests.swift`): the shared `btc-map.json` and `city-search.json`
+  cases ported from RN's `btcMap.test.js` and `citySearch.test.js` (snapshot
+  validation, UTC sync cursors, patch deletion/replacement/insertion, Unicode
+  normalization, viewport-biased city ranking), plus atomic-cache failures, request
+  deduplication, sync/detail freshness, optional comments, viewport continuity and
+  city selection.
+- `BtcMapReviewTests`: web/phone link sanitization and viewport bounds, including
+  dateline crossings (`btc-map-review.json`, shared with Android).
+- `BtcMapLimitsTests`: the 32 MiB transfer/cache limit, 100,000-record and 16 KiB
+  string limits, the 64-container JSON depth limit (`btc-map-limits.json`, shared
+  with Android), and the five-minute oversize cooldown with its cache preservation.
 
-Generate the shared parity fixtures from RN TypeScript:
+## Running
+
+Regenerate the RN-derived fixtures (`btc-map.json`, `city-search.json`):
 
 ```sh
 bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-btc-map.ts
 ```
 
-The 61 cases port RN's `btcMap.test.js` and `citySearch.test.js`, adding snapshot
-validation, UTC sync cursors, patch deletion/replacement/insertion, Unicode normalization and
-viewport-biased city ranking. Swift Testing also verifies atomic-cache failure
-behavior, request deduplication, five-minute sync freshness, 15-minute detail
-freshness, optional comment fetching, MMKV viewport continuity and city selection.
+Run the suites on your own simulator (enter `nix develop` for the repository toolchain):
 
 ```sh
 cd apps/ios
@@ -27,129 +36,23 @@ xcodebuild -scheme Noah-Regtest \
   -destination 'platform=iOS Simulator,id=<your-own-simulator>' \
   -derivedDataPath DerivedData -packageAuthorizationProvider netrc \
   -parallel-testing-enabled NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES test \
-  -skip-testing:NoahTests/UpgradeCompatibilityTests
+  -only-testing:NoahTests/BtcMapFixtureTests -only-testing:NoahTests/BtcMapRepositoryTests \
+  -only-testing:NoahTests/BtcMapModelTests -only-testing:NoahTests/BtcMapReviewTests \
+  -only-testing:NoahTests/BtcMapLimitsTests
 ```
 
-Keep simulator signing enabled: existing Keychain tests require the app's
-entitlements. The public package resolver can use `netrc` to avoid a host Keychain
-credential prompt. Enter `nix develop` for the repository toolchain.
+`-only-testing` takes suite (struct) names, not file names. Keep simulator signing
+enabled: existing Keychain tests require the app's entitlements. The public package
+resolver can use `netrc` to avoid a host Keychain credential prompt.
 
-Debug simulator builds accept `-btc-map-preview`, which opens only the public map
-without creating/opening a wallet or starting wallet services. Normal launches
-reach it from Home's map button. This route is absent from device/release builds.
-Use an owned simulator and `xcrun simctl location <id> set 33.75,-84.39` for a
-synthetic location. Never use a real user's location in test evidence.
+## Manual checks
 
-## Behavior and native differences
+Debug simulator builds accept the `-btc-map-preview` launch argument, which opens only
+the public map without creating or opening a wallet or starting wallet services. Normal
+launches reach the map from Settings → **Spend bitcoin nearby**.
 
-- The cache remains `Documents/btcmap-places-v1.btcmap`; viewport remains raw JSON
-  under MMKV `btc-map-viewport-v1`. Invalid viewports are discarded. Writes are
-  atomic; a malformed update never advances the cursor or replaces usable data.
-- Endpoints, requested fields, deletion patches, one retry for ordinary failures, city/merchant ranking, categories and zoom levels follow RN. A local
-  snapshot loads immediately; sync refreshes on opening/foreground when stale.
-- OpenFreeMap liberty/dark styles, radius-46 clustering through zoom 14, orange
-  merchant dots and cluster counts match RN. SF Symbols replace RN category/action
-  icons. A failed initial basemap load falls back to a plain local style; merchant
-  data and search remain available, but offline street tiles are not bundled.
-- Native 390pt/large sheets adapt to a side pane at 700pt. The selected merchant
-  stays above the compact sheet; selection survives layout changes. Native
-  navigation and GlassCompat supply the system material and accessibility fallback.
-- Merchant web/social/payment-app links accept HTTP(S); phone and Maps actions
-  construct their own schemes. Arbitrary schemes from public merchant data are
-  not opened. Phone calls still require the platform handler/user action.
-- No wallet access and no application logging of location coordinates.
-
-## Size
-
-Assets add **7,029,966 bytes (6.70 MiB)** uncompressed. The embedded arm64 MapLibre
-framework in the Release-Mainnet device build is **8,091,506 bytes (7.72 MiB)**.
-Together these are **14.42 MiB**, plus the feature's compiled Swift code. This is
-installed payload accounting, not an App Store compressed-download estimate.
-
-## Verification record (2026-10-19)
-
-- Regtest simulator: full Swift Testing suite passed (207 reported tests; upgrade
-  tests excluded; opt-in live integration tests retain their own skips).
-- Release-Mainnet: unsigned generic iOS device build passed, including Swift 6
-  compilation and the exact MapLibre package.
-- Dedicated iPhone 17 / iOS 27 simulator: live v4 sync (29,741 places), denied and
-  granted When-In-Use location, synthetic Atlanta location, local city search,
-  nearby selection and live merchant details; light portrait / dark landscape;
-  selected-city filtering, sheet-to-pane rotation and selected-marker visibility.
-  Two successive live syncs saved UTC cursors; the next-cursor request returned
-  HTTP 200 (empty patch set), confirming continuation beyond the bundled cursor.
-- Fixture regeneration is deterministic. Required pre-commit checks run normally.
-- Physical-device location/phone behavior, iOS 18 runtime and full VoiceOver
-  navigation remain unverified. No screenshots are committed.
-
-## Review hardening (2026-10-19)
-
-Public BTC Map transfers stream with a **32 MiB** hard limit on received bytes,
-including responses without Content-Length. Cache reads have the same limit.
-Typed lists stop at **100,000 records** and decoded strings are limited to
-**16 KiB UTF-8**. The full v4 list with the requested map fields and deletions
-measured **7,487,631 bytes / 43,178 records** on 2026-10-19; the largest list string
-was 192 bytes. The bundled snapshot remains 4,871,499 bytes / 29,705 merchants.
-The limits leave room for growth while bounding transfer and decoding work.
-Oversize responses are canceled, never immediately retried, and put that sync
-or merchant detail request on a five-minute cooldown. Usable cached data and
-its sync cursor are preserved. Tests cover streamed overflow, exact byte
-boundaries, record/string limits, and cooldown/cache preservation.
-
-Location permission deliberately differs from RN: opening the map never asks
-for permission. Automatic initial centering uses an already-granted permission;
-only **Find places near me** requests a new grant. The permission policy is tested.
-
-**Places in view** is a native, VoiceOver-discoverable list of the filtered
-merchants inside the map's actual bounds (including dateline-crossing bounds).
-It includes clustered merchants and opens the same detail sheet/pane. City
-suggestions re-rank on viewport changes and search focus, with stale results
-rejected. `apps/fixtures/btc-map-review.json` defines 25 shared native cases for
-web/phone sanitization and viewport bounds; the Android map port should consume
-these alongside the existing map/city fixtures. Non-HTTP(S), hostless/malformed
-web links and phone strings containing letters or scheme/control characters
-are rejected; ordinary phone formatting spaces and punctuation are stripped.
-
-Review-fix verification: full `NoahTests`, XcodeGen regeneration, arm64 / active
-architecture build on a dedicated iPhone 17 / iOS 27.0 simulator: **244 reported
-tests, 235 passed, 9 opt-in integration tests skipped, 0 failures** (265 passing
-invocations including parameterized cases). Live map preview synced 29,741
-merchants without a permission prompt. The accessibility tree exposed Places
-in view, merchant rows and the matching detail sheet after selection. Full
-spoken VoiceOver navigation and physical-device phone calls were not exercised.
-The dedicated simulator was deleted after verification.
-
-## Parsing hardening — 2026-10-19
-
-- The same **64-container depth limit** as Android is checked iteratively before
-  JSONDecoder or JSONSerialization runs, including unknown fields. Root containers
-  count as one. Both platforms consume the 15 cases in
-  `apps/fixtures/btc-map-limits.json`: snapshot/patch/detail/comment boundaries,
-  roughly 20 KB hostile nesting, object nesting, and escaped string delimiters.
-- A direct Foundation probe on **iOS 27.0** accepted depths 64 and 65 and safely
-  rejected depth 10,003 with both JSONDecoder and JSONSerialization. Foundation was
-  already crash-safe for this input on that runtime, but accepted nesting beyond
-  our shared limit and returned its own error for extreme depth; map parsers now
-  consistently report `BtcMapError.resourceLimit` above 64. **iOS 18 runtime behavior
-  remains unverified**: only iOS 27.0/27.1 are installed, and Xcode reported both
-  iOS 18.0 and 18.5 unavailable for download. Building for deployment target 18.0
-  does not substitute for running Foundation on iOS 18.
-- Injected-clock regressions cover sync and per-merchant oversize cooldown rollback,
-  successful-cache freshness rollback, and forward recovery without reviving an
-  old failure. Negative elapsed time expires cooldown/freshness entries, matching
-  Android; successful requests clear their previous oversize timestamps.
-- Merged-cache byte counts sum encoded metadata, individual merchants and commas
-  before allocating the complete Data. Tests compare exact counts with JSONEncoder
-  for UTF-8/escaped strings and empty/single/multiple records, then verify a merged
-  overflow preserves the disk cache, in-memory places and sync cursor without retry.
-- XcodeGen generation and the full **NoahTests** target passed with
-  `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, an independent derived-data path
-  (`/tmp/noah-btcmap-hardening-dd`), and an owned iPhone 17 / iOS 27.0 simulator:
-  **284 reported tests, 272 passed, 12 opt-in tests skipped, 0 failures**. All eight
-  BtcMapLimitsTests passed, including all 15 shared depth cases. No tests were
-  explicitly excluded. The simulator was shut down and deleted after verification.
-- Android's required Nix/Gradle test and regtest debug assembly command also passed:
-  **515 tests, 0 failures/errors/skips**, including **136 map tests**. Its existing
-  merged-byte regression additionally passed in a **512 MiB** worker; the committed
-  2g Gradle setting remains unchanged. No other simulator, emulator, physical device
-  or Docker service was touched.
+Use an owned simulator and a synthetic location, e.g.
+`xcrun simctl location <id> set 33.75,-84.39`. Never use a real user's location in
+test evidence. Opening the map never asks for location permission; only **My location**
+requests it. Offline street tiles are not bundled, so a failed basemap load
+falls back to a plain style while merchant data and search keep working.

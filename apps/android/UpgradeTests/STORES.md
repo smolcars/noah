@@ -1,8 +1,7 @@
-# RN persistence inventory (c6283d16)
+# RN persistence inventory
 
-## Settings upgrade policy — 2026-10-20
+## Settings upgrade policy
 
-This policy supersedes every earlier MMKV recovery/retirement/Continue rule below.
 Wallet identity comes from the validated stored seed and wallet database. Seed + DB
 opens Home even if RN settings are missing, empty, cleared, damaged or unreadable.
 Only a readable `wallet-storage` explicitly containing `isInitialized=false` resumes
@@ -103,7 +102,7 @@ retry retains suspension and the automation stop, and Settings shows:
 “Restored wallet settings can't be saved yet. Try Resume again when storage is
 available. Recurring payments remain stopped.” Persistence recovery permits the
 same Resume action to succeed, without a restart or foreground activation.
-See both platforms' `RestoreTests/README.md` for regression and process-death evidence.
+Both platforms' `RestoreTests/README.md` describe how to run the process-death checks.
 
 Interrupted creation with seed + DB therefore resumes onboarding; an existing
 wallet with missing/unreadable settings still opens Home. Default preferences
@@ -119,8 +118,6 @@ checked settings health through `requireCompatibleRNStores`; its gate now also
 checks the restore-settings marker. They read seeds
 only; Android's foreground migration remains after verified SDK open. Fresh
 installs create a native file and an absent-source snapshot, never live MMKV files.
-Quarantine, support/settings-blocked states, Continue/model rebuilding, automatic
-restoration, retirement, error handlers and lazy-reload guards have been removed.
 
 The native format is a version-1 UTF-8 JSON envelope with `payload` (a JSON string)
 and `sha256` (SHA-256 of that string). Payload contains `values` (string-to-string
@@ -135,127 +132,7 @@ Paths: iOS `Documents/mmkv.native-settings.json`; Android
 `noBackupFilesDir/settings.native.json`. Snapshot paths remain
 `Documents/mmkv.native-backup` / `noBackupFilesDir/mmkv.native-backup`.
 
-
-Settings review fixes (2026-10-20, base `10c0b996`): actual file/parent permission
-faults reproduced `EACCES`/Cocoa 513 before the fix on both platforms. Interrupted
-creation probes also failed before marker ordering changed. Afterward, tests cover
-constructor and later-read fallback, once-only notice consumption while writes
-fail, recovered persistence shared across readers, creation interruption after the
-marker/seed/DB and before public-key lookup, failed marker retry without a wallet,
-restore marker ordering/retry, and recurring executor/authority fail-closed behavior.
-Creation interruptions use injected stop boundaries and reopened durable settings;
-these are not OS-kill UI tests.
-
-Final Android required command ran once after the last code change:
-`nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'`:
-**3,011 JVM tests / 106 suites / zero failures, errors or skips**, APK assembled,
-instrumentation Kotlin compiled. Targeted final checks: **25 JVM tests passed**.
-On the owned API-35 emulator at console port 5600, the broader storage run was
-**17 tests / 16 passed / 1 failed**: unchanged
-`AndroidStorageTest.realRNFormatsDataStoreAndPreferencesRemainUnchanged` uses
-`instrumentation-only-secret` as a mnemonic and receives `invalidMnemonic` from
-existing BIP39 validation. Its fixture was left untouched. Both new regressions,
-all ten real-JNI import tests, real Keystore persistence, Expo ID and both auth
-storage tests passed. Final installed APK + instrumentation APK were checked
-again after the required command: **12/12 passed** (`SettingsFailureTest` and
-`MMKVRecoveryTest`, including the real executor write-failure probe).
-
-Final iOS full `NoahTests` ran once after the last code change, with generated
-project, arm64/active architecture, signing enabled and private `/private/tmp`
-DerivedData: **667 total / 645 passed / 22 opt-in skipped / zero failures**, 135
-suites (**963 expanded passing cases**). Targeted settings and onboarding/restore
-checks passed: six test functions / ten expanded cases. Owned iPhone-17 simulator
-`NoahSettingsFix809c` was identified, shut down and deleted; private DerivedData
-and all six result bundles were removed. The same-named owned AVD at port 5600
-was identified, stopped, verified absent and deleted. No physical devices, other
-agents' devices or Docker were used. `client/` and `server/` were unchanged.
-
-
-Settings review round 2 (2026-10-20, base `aea99fe4`)
-
-- iOS recovery `15ef82cf`, Android recovery `3cd20adf`: wallet transaction
-  settlement precedes preference completion. The synced completion marker survives
-  cleanup, foreground defaults carry initialized flags without a successful write,
-  and retry persists those flags before removing the marker. The wallet-local
-  automation authority remains stopped; its existing explicit-resume requirement
-  applies after completion. Android's receipt retains backup/token completion.
-- iOS headless coverage `40440d67`, Android admission `d4c33b91`: unreadable
-  settings plus failed reset cannot admit background work even when a suspension
-  preference was lost. iOS already checked storage health; both platforms now also
-  defer pending restore-settings completion. Android edits in `AppServices` are
-  confined to the admission function and the single approved initializer-line
-  removal. WorkManager and recurring implementation files are unchanged.
-- Notices `ff8badc3` / `8bf4c648`: all eight wallet/privacy/profile-loss
-  combinations retain valid imported bytes and name only defaulted preferences.
-  Profile-only loss gets the generic line. Existing one-time consumption semantics
-  and the native file format are unchanged.
-
-Red/green evidence: with original Android `AppServices` restored, the two device
-regressions failed (background passed the unhealthy fallback; recovery threw
-`EACCES` in its settings preflight). Restoring the fixes made both pass. With the
-original iOS `RestoreCompletion` ordering, the permission-failure regression left
-the restore journal pending; wallet-first ordering passes. The original notice
-failed on both platforms (six incorrect biometric/visibility expectations on iOS).
-The corrected builders pass all eight combinations; the iOS regression additionally
-consumes and reopens each notice to check once-only behavior.
-
-Both `UpgradeTests/settings-restore-faults.sh` runners passed **9/9 actual process
-terminations and fresh-process recoveries per platform**, while settings were
-unreadable and the settings directory unwritable (the final case retains a readable
-unfinished flag but denies its completion write). Checkpoints: journal persisted,
-previous directory moved, restored directory installed, committing recorded, seed
-committed, restore marker removed, previous directory removed, transaction journal
-removed, and preference completion pending. At committed boundaries the initialized
-flags are available in memory, the transaction is settled, background remains
-rejected, automation remains stopped, the notice is nonblocking/once-only, and
-restoring permissions allows a new settings instance to persist completion.
-Android stage/recover uses real Keystore seed storage; iOS uses the controlled
-`FakeSeed` provider. Both fixtures use marker database bytes to test storage and
-recovery routing, rather than claiming a funded SDK restore or visual Home test.
-Existing real SDK restore tests also remain in the full suites.
-
-Android's required final command ran once after the last Android code change:
-`nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestKotlin'`:
-**3,058 JVM tests / 111 suites / zero failures, errors or skips**; APK assembled
-and instrumentation compiled. The final APKs passed **14/14 instrumentation tests**
-(`SettingsFailureTest`: four, including its nine-boundary loop; `MMKVRecoveryTest`:
-ten). In addition, the process-death runner passed **9 separate recovery
-instrumentation invocations**, each after an intentionally force-stopped staging
-invocation. Thus final device verification includes **23 passing instrumentation
-test invocations**, plus nine deliberate process terminations (not failures).
-
-Final iOS verification ran once after the last test change, following targeted
-checks, with `xcodegen generate`, signing enabled, `ARCHS=arm64`,
-`ONLY_ACTIVE_ARCH=YES`, private `/private/tmp` DerivedData and the owned iPhone-17
-simulator. Full `NoahTests`: **681 total / 658 passed / 23 opt-in skipped /
-zero failures**, **139 suites / 1,024 expanded passing cases**. The process-death
-hook is one of the normal opt-in skips; all nine explicit fresh-process recovery
-runs passed separately. Targeted checks passed **18 functions / one opt-in skip**
-(42 expanded passes), and both adjusted real-SDK cleanup assertions passed again
-before the final full run.
-
-The first iOS process runner attempt watched an app-container path that installation
-replaced; the runner now resolves that path again during staging. Its initial
-cleanup also left a migrated opt-in control file, causing an unrelated preliminary
-full-run fixture error after recovery had already removed the checkpoint. That run
-was stopped, cleanup was corrected to resolve the current container, the stale
-control was removed, and the final full suite was restarted after the last change.
-No app regression was found in those harness failures. The next full run found
-only two existing real-SDK restore assertions that expected an entirely empty
-restore directory. They now require exactly the deliberate `settings-pending`
-marker after a committed restore, while rollback still requires an empty directory;
-all journal, previous-wallet and plaintext cleanup assertions remain enforced.
-
-Owned AVD `NoahSettingsR2eecb` (API 35, console port 5606) was identified by
-`adb emu avd name`, stopped, verified absent and deleted after confirming its AVD
-name. Owned iPhone-17 simulator `NoahSettingsR2eecb`
-(`6687518E-D335-4E0B-8EA3-5E47152F4590`) was identified, shut down, confirmed
-`Shutdown`, deleted and verified absent. Private DerivedData and all **nine**
-explicit result bundles were deleted; default process-run results were inside the
-deleted DerivedData. No owned build/test process remains. No other agent's device,
-physical device or Docker was used; `client/`, `server/`, WorkManager and recurring
-implementation files were unchanged.
-
+## RN stores
 
 All eight stores use `client/src/lib/mmkv.ts` instance `noah-wallet-storage` in
 `files/mmkv`, with Zustand `persist` + `createJSONStorage` envelopes
@@ -267,7 +144,7 @@ Missing version means v0. No store uses encrypted MMKV. No persisted store in
 | --- | --- | --- | --- |
 | `walletStore.ts` / `wallet-storage` | `isInitialized`, `isWalletLoaded`, `staticVtxoPubkey`, `isBiometricsEnabled`, `isDebugModeEnabled`, `isWalletSuspended`, `hasSeenBatteryOptimizationPrompt` | v0; partialize excludes errors, restore progress, background job flag/time | Launch/onboarding, wallet lock, suspension, debug settings |
 | `backupStore.ts` / `backup-storage` | `backupPending`, `lastBackupAt`, `lastBackupAttemptAt`, `lastBackupStatus`, `lastBackupError`, `lastBackupId`, `lastUploadedSnapshotSha256` | v0; all data fields | Backup settings/coordinator |
-| `esploraStore.ts` / `esplora-storage` | `endpointOverride` (nullable string) | v0; partialize; merge maps non-string to null | **No native consumer yet**; codec/fixture only, no launch read or mutation |
+| `esploraStore.ts` / `esplora-storage` | `endpointOverride` (nullable string) | v0; partialize; merge maps non-string to null | Esplora server settings (`EsploraSettings`) |
 | `privacyStore.ts` / `privacy-storage` | `isHomeBalanceHidden` | v0; all data fields | Home balance visibility |
 | `profileStore.ts` / `profile-storage` | `displayName`, `preferredCurrency`, `bitcoinAmountUnit` | v0; merge defaults unsupported currencies to USD and units to bip177 | Home, amount formatting, profile/currency/unit settings |
 | `recurringPaymentStore.ts` / `recurring-payment-storage` | `schedules` record, `serverSyncPending` | v0; all data fields; complete rule shape in `client/src/types/recurringPayment.ts` | Recurring list/editor/runtime; unsupported rows remain visible and unsendable |
@@ -286,8 +163,7 @@ unknown to RN; unsupported numeric rows stay preserved and unsendable.
 incorrect known field types. During import, invalid keys are dropped independently.
 Android keeps valid raw full envelopes in its native store and merges typed writes through
 `SettingsStorage.set`, preserving unknown root/state fields. The importer uses defaults for a bad RN value; direct codec operations still reject invalid writes. Auto-board reads apply RN's v0 attempted reset;
-a corrupt envelope disables the prompt. Esplora is deliberately not wired to the
-runtime until its screen is implemented. The codec does not rewrite RN data on read.
+a corrupt envelope disables the prompt. The codec does not rewrite RN data on read.
 
 `rn-store-compatibility.json` is the same raw-envelope fixture iOS consumes.
 One deterministic generator executes the eight actual RN stores, the transaction
@@ -320,67 +196,10 @@ string: RN uses it as the backup encryption password. Even valid formatting/case
 differences between sources block automatic selection. The blocking recovery screen offers retry and support guidance, without a delete,
 create or restore action, and never displays any saved phrase.
 
-Both apps consume 6 basic and 30 safety source-level launch cases and the same
-37 normalization vectors. See `../../fixtures/README.md` for the outcome/diagnostic
+Both apps consume the same source-level launch cases and normalization vectors. See `../../fixtures/README.md` for the outcome/diagnostic
 table and the exact RN/native normalization and backup-password rules. Android
 now distinguishes `invalidSeed`, `seedConflict` and `incompatibleStorage` from
 transient secure-storage unavailability; all are blocking and preserve bytes.
 The SDK mismatch maps to `seedConflict`, as on iOS. No background opener writes
 seeds. Interrupted-restore recovery still settles through its existing exclusive
 lifecycle gate; its explicitly journaled commit is separate from seed migration.
-
-Round 1 verification (2026-10-20): targeted seed/open/store/source checks passed;
-the final required command ran once with `--max-workers=2`:
-`:app:testRegtestDebugUnitTest :app:assembleRegtestDebug` — **2,858 tests /
-78 suites, zero failures/errors/skips; regtest APK assembled successfully**.
-No emulator, physical device or Docker was used. Shared fixture regeneration was
-byte-identical (SHA-256
-`1abc20a702b77724e543687ead88c55d2b15c2f7d1f40bc7771937be4bdbe241`).
-The funded RN-to-native device procedure was not repeated; Android SDK argument
-boundaries are checked in JVM tests, and real offline SDK open/auth is covered
-on iOS with the identical public normalization vectors.
-
-MMKV recovery review (2026-10-20, base `172446b6`): automatic restoration retires
-at the first successful validated open using a fsynced record outside MMKV.
-Previously admitted RN key loss or any later CRC/length recovery blocks.
-The backup and retirement file live in `noBackupFilesDir`; wallet deletion
-removes published/staging snapshots while preserving retirement through
-re-onboarding. Absent keys may use defaults only when never admitted; present
-values with invalid UTF-8 or no decodable bytes block, using strict byte decoding
-before JSON validation. Existing seed+DB with wallet-storage already missing at
-first native open still resumes foreground onboarding. Every headless opener
-requires explicit initialization, and committed deletion waits for foreground.
-See `DEVICE.md` and shared `../../fixtures/mmkv-launch-state.json` (nine vectors).
-
-Review round 2 (2026-10-20, base `4f7228c5`): admission inventories every RN key
-on both platforms, including recurring. Its existing codec validates envelopes;
-unsupported recurring rows stay visible/stopped, while unreadable bytes or a
-missing admitted recurring key block later binding as well as launch. First-open
-live keys must cover the immutable snapshot's key inventory; partial loss or
-undecodability restores the closed pair once or blocks. Onboarding for missing
-wallet-storage applies when the snapshot itself had no such key.
-
-Recovery callbacks durably quarantine outside MMKV before returning recover.
-The marker is UTF-8 `1\nnoah-wallet-storage\n`, file- and directory-synced.
-After restoration retirement, readable recovered settings require the foreground
-**Continue** acknowledgement (`SETTINGS_RECOVERED`); unreadable/lost admitted
-values remain blocked (`STORAGE_UNSUPPORTED`). Restart/retry and headless paths
-cannot clear it. Review biometrics, wallet suspension, balance hiding and backup
-settings after acknowledging. The independent recurring policy ledger remains
-in force. See `DEVICE.md` and all **15** shared storage launch vectors.
-Final Android verification: **2,961 JVM tests / 94 suites / zero failures or
-skips**, APK assembled and all 17 JNI probes compiled; no Android device run.
-
-
-Review round 3 (2026-10-20, base `32e1b6ef`): raw-file integrity is now the primary
-admission signal, before MMKV can silently fall back to last-confirmed state
-without a callback. See `../../fixtures/rn-mmkv/README.md` for the verified
-112-byte metadata layout and fixture pinning. A durable marker precedes every
-recovery mapping; failure blocks with unchanged bytes. Secondary callbacks stay
-associated for lazy reloads and terminate before returning if marker durability
-fails, because MMKV's discard option also rewrites data. Continue rebuilds the
-biometric policy and reloads every cached settings consumer before launch;
-locked wallet content is not composed. Both real-JNI storage suites ran on an
-owned emulator: **22 passed / zero failures or skips**. No store key, RN envelope,
-seed format, recurring implementation, client or server code changed. Full check
-counts and device cleanup are recorded in `DEVICE.md`.
