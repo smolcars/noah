@@ -169,10 +169,11 @@ jobs:
           tags: ${{ env.COMPOSE_PROJECT_NAME }}-noah-server
           load: true
 
-      - name: Set up regtest
+      # Runs in the background while the APK downloads and the emulator boots; the suite step waits for it.
+      # A fresh bash, because the step's `bash -e` would exit before recording a failed setup.
+      - name: Start regtest setup
         run: |
-          docker compose -f scripts/docker-compose.yml pull --ignore-buildable
-          nix develop .#android-ci --command just setup-everything
+          bash -c 'docker compose -f scripts/docker-compose.yml pull --ignore-buildable && nix develop .#android-ci --command just setup-everything; echo $? > regtest-setup.status' > regtest-setup.log 2>&1 < /dev/null &
 
       - name: Enable KVM
         run: |
@@ -212,7 +213,10 @@ jobs:
           ram-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8592 -grpc-use-token
           disable-animations: false
-          script: nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
+          # The runner executes each line separately; the first waits for the regtest setup and prints its log.
+          script: |
+            timeout 300 sh -c 'until [ -s regtest-setup.status ]; do sleep 1; done'; cat regtest-setup.log; [ "$(cat regtest-setup.status)" = 0 ]
+            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
 
       - name: Collect regtest logs
         if: failure()
