@@ -78,6 +78,7 @@ struct RootView: View {
             if phase == .background { lock.background() }
             if phase == .active {
                 model.localeIdentifier = LegacyLocale.resolved()
+                Task { await lock.refresh() } // Face ID enrolment or permission may have changed in Settings.
                 Task {
                     if model.phase == .wallet && lock.policy.locked { await lock.unlock() }
                     await model.appBecameActive()

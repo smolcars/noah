@@ -38,22 +38,34 @@ final class WalletLock {
     var policy: BiometricLockPolicy
     private(set) var authenticating = false
     private(set) var error: String?
+    /// Stored for views, which must never make an `LAContext`: read at launch, on foreground and after each prompt.
+    private(set) var available = false
+    private(set) var biometryType = LABiometryType.none
     private var context: LAContext?
 
     init(settings: SettingsStorage = .shared) {
         policy = .init(enabled: settings.persistedState(
             PersistedWalletState.self, key: PersistedWalletState.key)?.isBiometricsEnabled == true)
+        Task { await refresh() }
     }
 
-    static var available: Bool {
-        LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
-    }
-
-    static var hasNoScreenLock: Bool {
+    /// `LAContext()` waits on coreauthd, which stalls behind the Face ID permission alert, so never on the main thread.
+    @concurrent private nonisolated static func probe() async
+        -> sending (context: LAContext, available: Bool, noScreenLock: Bool, biometryType: LABiometryType) {
+        let context = LAContext()
         var error: NSError?
-        return !LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
-            && RecoveryPhraseAuthentication.unavailable(error) == .noScreenLock
+        let available = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) // Sets biometryType.
+        return (context, available, !available && RecoveryPhraseAuthentication.unavailable(error) == .noScreenLock, context.biometryType)
     }
+
+    func refresh() async {
+        let probe = await Self.probe()
+        available = probe.available
+        biometryType = probe.biometryType
+    }
+
+    func hasNoScreenLock() async -> Bool { await Self.probe().noScreenLock }
 
     func authenticate(_ reason: String) async -> Bool {
         await authenticateRecoveryPhrase(reason) == .authenticated
@@ -63,12 +75,15 @@ final class WalletLock {
         guard !authenticating else { return .denied }
         authenticating = true
         error = nil
-        let context = LAContext()
+        let generation = policy.generation
+        let probe = await Self.probe()
+        let context = probe.context
         self.context = context
-        defer { authenticating = false; self.context = nil; context.invalidate() }
-        var unavailable: NSError?
-        if !context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &unavailable),
-           RecoveryPhraseAuthentication.unavailable(unavailable) == .noScreenLock { return .noScreenLock }
+        // "Don't Allow" on the first Face ID alert changes what the device offers.
+        defer { authenticating = false; self.context = nil; context.invalidate(); Task { await refresh() } }
+        // A background while the context was made still cancels this prompt.
+        if generation != policy.generation { context.invalidate() }
+        if probe.noScreenLock { return .noScreenLock }
         do {
             return try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) ? .authenticated : .denied
         } catch {
@@ -140,7 +155,7 @@ struct WalletLockView: View {
                     Button { Task { await lock.unlock() } } label: {
                         HStack(spacing: 8) {
                             if lock.authenticating { ProgressView().tint(NoahTokens.Colors.background) }
-                            else { Image(systemName: WalletLock.biometry.symbol) }
+                            else { Image(systemName: lock.biometry.symbol) }
                             Text("Unlock")
                         }
                     }

@@ -209,9 +209,9 @@ struct SettingsList: View {
                 dot: backup.mark == .failed ? .failure : .none, failure: backup.mark == .failed, page: .backup, id: "settings-backup")
             row("Recovery phrase", icon: "key", value: app.needsRecoveryPhraseBackup ? L10n.text("Not saved", locale: language) : nil,
                 dot: app.needsRecoveryPhraseBackup ? .attention : .none, page: .recovery,
-                last: !(WalletLock.available || lock.policy.enabled), id: "settings-recovery")
-            if WalletLock.available || lock.policy.enabled {
-                SettingsToggleRow(icon: WalletLock.biometry.symbol, title: L10n.text(WalletLock.biometry.title, locale: language),
+                last: !(lock.available || lock.policy.enabled), id: "settings-recovery")
+            if lock.available || lock.policy.enabled {
+                SettingsToggleRow(icon: lock.biometry.symbol, title: L10n.text(lock.biometry.title, locale: language),
                                   isOn: Binding(get: { lock.policy.enabled }, set: setLock), hairline: false, id: "settings-app-lock")
             }
         }
@@ -350,10 +350,8 @@ struct SettingsInitial: View {
 
 extension WalletLock {
     /// The device's biometric, for the Security row: Face ID, Touch ID or Optic ID, else the passcode lock.
-    static var biometry: (title: String, symbol: String) {
-        let context = LAContext()
-        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
-        switch context.biometryType {
+    var biometry: (title: String, symbol: String) {
+        switch biometryType {
         case .faceID: return ("Face ID", "faceid")
         case .touchID: return ("Touch ID", "touchid")
         case .opticID: return ("Optic ID", "opticid")

@@ -83,6 +83,16 @@ import UIKit
         #expect(stale.words.isEmpty && stale.state == .gated)
     }
 
+    @Test func aBackgroundDuringTheScreenLockCheckRevealsNothing() async {
+        let fake = Fake()
+        let gate = PhraseGate(dependencies: .init(authenticate: { _ in .noScreenLock },
+                                                  hasNoScreenLock: { fake.generation += 1; return true },
+                                                  words: { fake.phrase }, generation: { fake.generation }))
+        await gate.show(reason: "")
+        await gate.showAnyway(reason: "")
+        #expect(gate.words.isEmpty && gate.state == .gated)
+    }
+
     @Test func copyIsLocalOnlyAndExpiresInTwoMinutes() throws {
         let now = Date(timeIntervalSince1970: 1_000)
         let options = SecureCopy.options(now: now)

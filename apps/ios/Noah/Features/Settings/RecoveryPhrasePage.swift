@@ -7,13 +7,13 @@ import SwiftUI
 final class PhraseGate {
     struct Dependencies {
         var authenticate: (String) async -> RecoveryPhraseAuthentication
-        var hasNoScreenLock: () -> Bool
+        var hasNoScreenLock: () async -> Bool
         var words: () -> [String]
         /// Moves on whenever the app backgrounds; a result for an older one is dropped.
         var generation: () -> Int
 
         @MainActor static func live(lock: WalletLock, model: AppModel) -> Self {
-            Self(authenticate: { await lock.authenticateRecoveryPhrase($0) }, hasNoScreenLock: { WalletLock.hasNoScreenLock },
+            Self(authenticate: { await lock.authenticateRecoveryPhrase($0) }, hasNoScreenLock: { await lock.hasNoScreenLock() },
                  words: { model.currentMnemonicWords() }, generation: { lock.policy.generation })
         }
     }
@@ -48,9 +48,13 @@ final class PhraseGate {
 
     /// "Show anyway" from the No screen lock sheet, for the same visit; a lock set meanwhile asks for it.
     func showAnyway(reason: String, active: () -> Bool = { true }) async {
-        guard state == .noScreenLock, warned == dependencies.generation(), active() else { clear(); return }
+        let generation = dependencies.generation()
+        guard state == .noScreenLock, warned == generation, active() else { clear(); return }
         warned = nil
-        if dependencies.hasNoScreenLock() {
+        let noScreenLock = await dependencies.hasNoScreenLock()
+        // A background during the check clears the visit; never reveal after it.
+        guard state == .noScreenLock, generation == dependencies.generation(), active() else { clear(); return }
+        if noScreenLock {
             reveal()
         } else {
             state = .gated
@@ -171,7 +175,7 @@ struct RecoveryPhrasePage: View {
         .overlay {
             if !shown {
                 Button { Task { await authenticate() } } label: {
-                    Label(L10n.text("Show", locale: language), systemImage: WalletLock.biometry.symbol == "lock" ? "lock.open" : WalletLock.biometry.symbol)
+                    Label(L10n.text("Show", locale: language), systemImage: lock.biometry.symbol == "lock" ? "lock.open" : lock.biometry.symbol)
                         .padding(.horizontal, 6)
                 }
                 .buttonStyle(HomePillStyle(prominent: false, height: 48, font: NoahTokens.Typography.button))
