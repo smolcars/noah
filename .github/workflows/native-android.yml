@@ -13,7 +13,6 @@ on:
       - "flake.nix"
       - "flake.lock"
       - ".github/workflows/native-android.yml"
-      - ".github/workflows/native-maestro-android.yml"
       - "scripts/test-maestro-native.sh"
       - "!**/*.md"
   # Mainnet and signet build on merges and tags (path filters don't apply to tags).
@@ -31,7 +30,6 @@ on:
       - "flake.nix"
       - "flake.lock"
       - ".github/workflows/native-android.yml"
-      - ".github/workflows/native-maestro-android.yml"
       - "scripts/test-maestro-native.sh"
       - "!**/*.md"
   workflow_dispatch:
@@ -104,8 +102,8 @@ jobs:
       # The emulator runs these APKs, so they keep x86_64. Maestro installs them; nothing rebuilds them.
       # --build-cache reuses master's task outputs. The configuration cache stays off: it needs a secret
       # to persist across runs, and the release builds' Sentry upload task doesn't support it.
-      - name: Assemble regtest app and test APKs
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict :app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest'
+      - name: Assemble regtest app and test APKs, and run unit tests
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict :app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest :app:testRegtestDebugUnitTest'
 
       - name: Upload regtest APKs
         uses: actions/upload-artifact@v7
@@ -117,9 +115,6 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
-
-      - name: Run unit tests
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict :app:testRegtestDebugUnitTest'
 
       - name: Upload JUnit results
         if: always()
@@ -135,8 +130,113 @@ jobs:
         if: github.event_name == 'push'
         run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleMainnetDebug :app:assembleSignetDebug'
 
+  # Two emulators in parallel; each job onboards one wallet and reuses it across its flows.
   maestro:
+    name: Maestro (${{ matrix.suite }})
     needs: build-and-test
-    uses: ./.github/workflows/native-maestro-android.yml
-    with:
-      apk_artifact_name: native-regtest-apks
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [smoke, funded]
+    env:
+      COMPOSE_PROJECT_NAME: noah-native-maestro-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.suite }}
+      ANDROID_SERIAL: emulator-5554
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
+      MAESTRO_EMULATOR_GRPC_PORT: "8592"
+      MAESTRO_DEBUG_OUTPUT: native-maestro-output
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Restore Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Prepare Maestro environment
+        run: nix build .#devShells.x86_64-linux.android-ci --no-link
+
+      - name: Set up cached Docker builder
+        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
+        with:
+          cache-key: noah/maestro-server-amd64
+
+      - name: Build server image for regtest
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: ${{ env.COMPOSE_PROJECT_NAME }}-noah-server
+          load: true
+
+      - name: Set up regtest
+        run: |
+          docker compose -f scripts/docker-compose.yml pull --ignore-buildable
+          nix develop .#android-ci --command just setup-everything
+
+      - name: Enable KVM
+        run: |
+          emulator_runtime_dir="$RUNNER_TEMP/android-runtime"
+          mkdir -p "$emulator_runtime_dir"
+          chmod 700 "$emulator_runtime_dir"
+          echo "XDG_RUNTIME_DIR=$emulator_runtime_dir" >> "$GITHUB_ENV"
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+
+      - name: Resolve emulator SDK path
+        id: sdk
+        run: echo "root=$ANDROID_HOME" >> "$GITHUB_OUTPUT"
+
+      - name: Cache emulator system image
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          key: android-emulator-image-${{ runner.os }}-${{ runner.arch }}-36-google-apis
+          path: ${{ steps.sdk.outputs.root }}/system-images/android-36/google_apis/x86_64
+
+      - name: Download regtest APKs
+        uses: actions/download-artifact@v8
+        with:
+          name: native-regtest-apks
+          path: android-release-build
+
+      - name: Run native Maestro suite
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          cores: 2
+          ram-size: 2048M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8592 -grpc-use-token
+          disable-animations: false
+          # The runner executes each line separately. The smoke job also runs the Compose state-restoration
+          # tests from the test APK; `am instrument` exits 0 even on failures, so check for "OK (".
+          script: |
+            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/regtest/debug/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
+            if [ ${{ matrix.suite }} = smoke ]; then adb install -r -t android-release-build/androidTest/regtest/debug/app-regtest-debug-androidTest.apk && adb shell am instrument -w -e class com.noahwallet.ui.AdaptiveLayoutDeviceTest,com.noahwallet.ui.AdaptiveStateRestorationTest com.noahwallet.regtest.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation.txt && grep -q '^OK (' instrumentation.txt; fi
+
+      - name: Collect regtest logs
+        if: failure()
+        run: docker compose -f scripts/docker-compose.yml logs --no-color > regtest.log 2>&1
+
+      - name: Upload diagnostics and test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-maestro-android-${{ matrix.suite }}
+          include-hidden-files: true
+          path: |
+            native-maestro-output
+            regtest.log
+            instrumentation.txt
+          if-no-files-found: ignore

@@ -2,14 +2,14 @@
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-platform="${1:?Usage: test-maestro-native.sh <android|ios> <apk|app> <device-id> [all|core|funded|adaptive|offline]}"
+platform="${1:?Usage: test-maestro-native.sh <android|ios> <apk|app> <device-id> [all|smoke|funded]}"
 artifact="${2:?Pass the regtest APK or simulator .app}"
 device="${3:?Pass an explicit emulator serial or simulator UDID}"
 suite="${4:-all}"
 maestro_command="${MAESTRO_COMMAND:-maestro}"
 output="${MAESTRO_DEBUG_OUTPUT:-${TMPDIR:-/tmp}/noah-native-maestro-$device}"
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-120000}"
-case "$suite" in all|core|funded|adaptive|offline) ;; *) echo "Unknown suite: $suite" >&2; exit 2 ;; esac
+case "$suite" in all|smoke|funded) ;; *) echo "Unknown suite: $suite" >&2; exit 2 ;; esac
 mkdir -p "$output"
 
 case "$platform" in
@@ -62,14 +62,8 @@ clipboard() {
   fi
 }
 
-if [[ "$suite" == core || "$suite" == all ]]; then
-  run_flow core apps/maestro
-fi
-if [[ "$suite" == offline ]]; then
-  run_flow offline apps/maestro/offline/welcome.yml
-fi
-if [[ "$suite" == adaptive ]]; then
-  run_flow adaptive apps/maestro/adaptive/adaptive-layout-smoke.yml
+if [[ "$suite" == smoke || "$suite" == all ]]; then
+  run_flow smoke apps/maestro --include-tags smoke
 fi
 if [[ "$suite" == funded || "$suite" == all ]]; then
   # The caller owns the stack lifecycle. This script only funds its throwaway wallet.
