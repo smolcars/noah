@@ -17,6 +17,15 @@ struct NativeSettingsFile {
     var step: (String) throws -> Void = { _ in }
     var exists: Bool { FileManager.default.fileExists(atPath: file.path) }
 
+    /// Which bytes are on disk, from one `stat`: every save renames a new file in, and any
+    /// other write changes the size or modification time.
+    struct Stamp: Equatable { let inode: UInt64; let size: Int64; let seconds: Int; let nanoseconds: Int }
+    var stamp: Stamp? {
+        var info = stat()
+        guard stat(file.path, &info) == 0 else { return nil }
+        return Stamp(inode: info.st_ino, size: info.st_size, seconds: info.st_mtimespec.tv_sec, nanoseconds: info.st_mtimespec.tv_nsec)
+    }
+
     func load() throws -> State {
         let data = try Data(contentsOf: file)
         guard let raw = String(data: data, encoding: .utf8) else { throw SettingsStorage.OpenError() }

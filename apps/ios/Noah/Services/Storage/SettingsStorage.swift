@@ -17,6 +17,9 @@ final class SettingsStorage: @unchecked Sendable {
         get { Self.fallbacks[nativeFile.file.path] }
         set { Self.fallbacks[nativeFile.file.path] = newValue }
     }
+    /// The last verified or committed generation of each file and its stamp, so a read that finds the
+    /// same bytes on disk skips the read, parse and hash. Any other write to the file changes the stamp.
+    nonisolated(unsafe) private static var committed: [String: (stamp: NativeSettingsFile.Stamp, state: NativeSettingsFile.State)] = [:]
 
     @MainActor static func bootstrap() {} // MMKV is initialized only if a snapshot needs importing.
 
@@ -99,8 +102,14 @@ final class SettingsStorage: @unchecked Sendable {
 
     private func load() -> NativeSettingsFile.State {
         if let fallback { return fallback }
-        do { return try nativeFile.load() }
-        catch {
+        // Stamped before reading: a write in between leaves a stale stamp, so the next read loads again.
+        let stamp = nativeFile.stamp
+        if let stamp, let cached = Self.committed[nativeFile.file.path], cached.stamp == stamp { return cached.state }
+        do {
+            let state = try nativeFile.load()
+            if let stamp { Self.committed[nativeFile.file.path] = (stamp, state) }
+            return state
+        } catch {
             let defaults = NativeSettingsFile.State(values: [EsploraSettings.historyUnavailableKey: "1"], settingsNoticePending: true)
             fallback = defaults
             try? persist(defaults)
@@ -111,6 +120,8 @@ final class SettingsStorage: @unchecked Sendable {
         try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
         try nativeFile.save(state)
         fallback = nil
+        // Write-through only once the generation is committed (renamed in and synced).
+        if let stamp = nativeFile.stamp { Self.committed[nativeFile.file.path] = (stamp, state) }
     }
     func requireHealthy() throws {
         Self.access.lock(); defer { Self.access.unlock() }

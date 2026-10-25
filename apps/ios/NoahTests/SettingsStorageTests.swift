@@ -45,4 +45,55 @@ struct SettingsStorageTests {
         let raw = try #require(reopened.string(forKey: PersistedWalletState.key))
         #expect(raw.contains(#""version":0"#))
     }
+
+    @Test func repeatedReadsComeFromMemoryAndMatchTheFile() throws {
+        let storage = try SettingsStorage(rootPath: rootPath)
+        try storage.setDurably("1", forKey: "a")
+        try storage.setDurably("2", forKey: "b")
+        let disk = try storage.nativeFile.load().values
+        #expect(storage.string(forKey: "a") == disk["a"] && storage.string(forKey: "b") == disk["b"])
+        // chmod moves neither size nor modification time: an unreadable file still reads, from memory.
+        let file = storage.nativeFile.file
+        #expect(chmod(file.path, 0) == 0)
+        defer { chmod(file.path, 0o600) }
+        #expect(storage.string(forKey: "a") == "1")
+        #expect(try SettingsStorage(rootPath: rootPath).string(forKey: "b") == "2")
+    }
+
+    @Test func aWriteIsSeenAtOnceByEveryInstance() throws {
+        let storage = try SettingsStorage(rootPath: rootPath)
+        let other = try SettingsStorage(rootPath: rootPath)
+        #expect(other.string(forKey: "k") == nil)
+        try storage.setDurably("v1", forKey: "k")
+        #expect(storage.string(forKey: "k") == "v1")
+        #expect(other.string(forKey: "k") == "v1")
+        other.remove(forKey: "k")
+        #expect(storage.string(forKey: "k") == nil)
+        #expect(try storage.nativeFile.load().values["k"] == nil)
+    }
+
+    @Test func aWriteOutsideTheStorageOrDamageIsNoticed() throws {
+        let storage = try SettingsStorage(rootPath: rootPath)
+        try storage.setDurably("cached", forKey: "k")
+        #expect(storage.string(forKey: "k") == "cached")
+        try storage.nativeFile.save(.init(values: ["k": "outside"]))
+        #expect(storage.string(forKey: "k") == "outside")
+        // A damaged file still resets to defaults with the notice, as when every read went to disk.
+        try Data("damaged generation".utf8).write(to: storage.nativeFile.file)
+        #expect(storage.string(forKey: "k") == nil)
+        #expect(try storage.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
+    }
+
+    @Test func aFailedWriteKeepsTheCommittedValue() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "settings-cache-\(UUID())")
+        defer { chmod(directory.path, 0o700); try? FileManager.default.removeItem(at: directory) }
+        let storage = try SettingsStorage(rootPath: directory.appending(path: "mmkv").path)
+        try storage.setDurably("kept", forKey: "k")
+        #expect(chmod(directory.path, 0o500) == 0)
+        #expect(throws: (any Error).self) { try storage.setDurably("lost", forKey: "k") }
+        #expect(storage.string(forKey: "k") == "kept")
+        #expect(chmod(directory.path, 0o700) == 0)
+        #expect(storage.string(forKey: "k") == "kept")
+        #expect(try storage.nativeFile.load().values["k"] == "kept")
+    }
 }
