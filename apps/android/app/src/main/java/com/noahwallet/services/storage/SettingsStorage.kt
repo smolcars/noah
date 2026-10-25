@@ -1,6 +1,8 @@
 package com.noahwallet.services.storage
 
 import android.content.Context
+import android.os.Build
+import android.system.Os
 import com.tencent.mmkv.MMKV
 import com.tencent.mmkv.MMKVLogLevel
 import java.io.File
@@ -15,11 +17,17 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     private var fallback: NativeSettingsFile.State?
         get() = fallbacks[nativeFile.file.path]
         set(value) { if (value == null) fallbacks.remove(nativeFile.file.path) else fallbacks[nativeFile.file.path] = value }
-    /** The last generation read or committed, with the file's modification time and size when it was. */
-    private var cached: Pair<Pair<Long, Long>, NativeSettingsFile.State>?
+    /** The last verified read, with the [stamp] taken before it: a file replaced mid-read just looks changed next time. */
+    private var cached: Pair<List<Any?>, NativeSettingsFile.State>?
         get() = caches[nativeFile.file.path]
         set(value) { if (value == null) caches.remove(nativeFile.file.path) else caches[nativeFile.file.path] = value }
-    private fun stamp() = nativeFile.file.let { it.lastModified() to it.length() }
+    /** One stat: the file's inode, size, modification and change times; null when it can't be read. */
+    private fun stamp(): List<Any?>? = try {
+        if (Build.VERSION.SDK_INT >= 26) java.nio.file.Files.readAttributes(nativeFile.file.toPath(), "unix:ino,size,lastModifiedTime,ctime")
+            .let { listOf(it["ino"], it["size"], it["lastModifiedTime"], it["ctime"]) } // nanosecond times
+        // Whole-second times before API 26; writes re-read the file anyway, so a missed change can't be merged over.
+        else Os.stat(nativeFile.file.path).let { listOf(it.st_ino, it.st_size, it.st_mtime, it.st_ctime) }
+    } catch (_: Exception) { null }
 
     init { synchronized(openLock) {
         try {
@@ -57,13 +65,15 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         load(verify = true)
         if (fallback != null) throw Unavailable()
     }
-    /** [verify] re-reads the file even when it looks unchanged; reads otherwise come from memory. */
+    /**
+     * Reads come from memory while the file's stamp is unchanged (tests write it directly). [verify] re-reads and
+     * re-verifies it anyway: health checks, and every write before it merges, so a write never builds on a stale copy.
+     */
     private fun load(verify: Boolean = false): NativeSettingsFile.State {
         fallback?.let { return it }
-        // Tests write this file directly, so a changed modification time or size re-reads and re-verifies it.
         val stamp = stamp()
-        cached?.takeIf { !verify && it.first == stamp }?.let { return it.second }
-        return try { nativeFile.load().also { cached = stamp to it } } catch (_: Exception) {
+        cached?.takeIf { !verify && stamp != null && it.first == stamp }?.let { return it.second }
+        return try { nativeFile.load().also { cached = stamp?.let { s -> s to it } } } catch (_: Exception) {
             cached = null
             val defaults = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true)
             fallback = defaults
@@ -73,14 +83,14 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     }
     private fun persist(state: NativeSettingsFile.State) {
         check(backupRoot.isDirectory || backupRoot.mkdirs())
-        cached = null // A save that fails after its rename leaves the file changed.
+        // No stamp after saving: another writer may replace the file first. The next read verifies what's there.
+        cached = null
         nativeFile.save(state)
-        cached = stamp() to state
         fallback = null
     }
     fun string(key: String): String? = synchronized(openLock) { load().values[key] }
     fun set(value: String, key: String) = synchronized(openLock) {
-        val state = load()
+        val state = load(verify = true)
         val preserved = if (key in RNStoreCodec.versions) RNStoreCodec.merge(key, state.values[key], value) else value
         try { persist(state.copy(values = state.values + (key to preserved))) }
         catch (failure: Exception) { fallback = state; throw failure }
@@ -89,7 +99,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     fun useDefaultEsplora(variant: String) = synchronized(openLock) {
         val record = com.noahwallet.services.wallet.EsploraSettings.Record(
             com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant))
-        val state = load().let {
+        val state = load(verify = true).let {
             val retained = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(it.values)
             val previous = retained[com.noahwallet.services.wallet.EsploraSettings.key]?.let { raw -> Json.decodeFromString<com.noahwallet.services.wallet.EsploraSettings.Record>(raw) }
             it.copy(values = it.values + (com.noahwallet.services.wallet.EsploraSettings.key to Json.encodeToString(record.copy(logEndpoints = previous?.logEndpoints.orEmpty()))))
@@ -100,7 +110,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     // set() commits synchronously; retain this API for automation callers.
     fun sync() = requireHealthy()
     fun takeUpgradeNotices(): List<String> = synchronized(openLock) {
-        val state = load()
+        val state = load(verify = true)
         val notices = listOfNotNull(settingsNotice(state.values).takeIf { state.settingsNoticePending }, recurringNotice.takeIf { state.recurringNoticePending })
         if (notices.isNotEmpty()) {
             val consumed = state.copy(settingsNoticePending = false, recurringNoticePending = false)
@@ -110,7 +120,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         notices
     }
     fun removeAll() = synchronized(openLock) {
-        val state = load()
+        val state = load(verify = true)
         try { persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(state.values), cleanupPending = true)) }
         catch (failure: Exception) { fallback = state; throw failure }
         finishCleanup()
@@ -120,11 +130,11 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         check(!root.exists() || root.deleteRecursively())
         sync(root.parentFile!!)
         MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot, sync = sync).deleteSnapshot()
-        persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(load().values))) // Keep log protection through re-onboarding.
+        persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(load(verify = true).values))) // Keep log protection through re-onboarding.
     }
     /** Committed wallet recovery may publish flags in memory; durable completion retries later. */
     fun completeRestore(): Boolean = synchronized(openLock) {
-        val state = load()
+        val state = load(verify = true)
         val wallet = persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         val raw = PersistedStateCodec.encode(wallet.copy(isInitialized = true, isWalletLoaded = true), 0)
         val completed = state.copy(values = state.values + (PersistedWalletState.key to RNStoreCodec.merge(PersistedWalletState.key, state.values[PersistedWalletState.key], raw)))
@@ -156,7 +166,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         const val emptyRecurring = """{"state":{"schedules":{},"serverSyncPending":true},"version":0}"""
         private val openLock = Any()
         private val fallbacks = mutableMapOf<String, NativeSettingsFile.State>()
-        private val caches = mutableMapOf<String, Pair<Pair<Long, Long>, NativeSettingsFile.State>>()
+        private val caches = mutableMapOf<String, Pair<List<Any?>, NativeSettingsFile.State>>()
         internal fun importValues(source: Map<String, String?>): NativeSettingsFile.State {
             val values = mutableMapOf<String, String>()
             var settingsNotice = source.isEmpty()
