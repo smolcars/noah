@@ -113,7 +113,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     /// Silent pushes from the Noah server (via Expo). iOS allows ~30 s; jobs
-    /// get 25 s so the completion handler is always called in time.
+    /// get 25 s and a settled backup's report up to 3 s more, so the
+    /// completion handler is always called in time.
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any]
