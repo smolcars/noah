@@ -1166,7 +1166,6 @@
   "gt_c7954684c87d96cd": "The lock is open. Claim it to another wallet or to this phone’s on-chain wallet.",
   "gt_c79e8899fb446b95": "Blocks are full right now. Noah raises the fee when rates rise. Check the chain to try again now.",
   "gt_c7f937836f5d82d5": "Choose",
-  "gt_c8231c9c5838def9": "Confirmed in block {{height}}.",
   "gt_c863d86963f48c57": "You can still browse the full map. Enable location in Settings to see nearby places.",
   "gt_c8e3e92a62ecf181": "Processing",
   "gt_c8e5709f89baf900": "Fees rose, so Noah paid more",

@@ -262,7 +262,6 @@
   <string name="gt_aeae980b83b4c572">"Confirmed at block %1$s"</string>
   <string name="gt_c0c33c452704cf4e">"Confirmed in block %1$s"</string>
   <string name="gt_9cc7f22c09b0772a">"Confirmed in block %1$s · %2$s of %3$s"</string>
-  <string name="gt_c8231c9c5838def9">"Confirmed in block %1$s."</string>
   <string name="gt_d978a5522ce4865f">"Confirming"</string>
   <string name="gt_916a464e6cfffe51">"Conflicted"</string>
   <string name="gt_f8d6b3c8e8b286e3">"Conflicting wallet data"</string>

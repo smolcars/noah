@@ -9301,42 +9301,6 @@
         }
       }
     },
-    "Confirmed in block {height}.": {
-      "comment": "GT gt_c8231c9c5838def9; arguments: height",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmed in block %1$@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmado en el bloque %1$@."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ブロック %1$@ で承認されました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "블록 %1$@에서 확인되었어요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bekräftad i block %1$@."
-          }
-        }
-      }
-    },
     "Confirming": {
       "comment": "GT gt_d978a5522ce4865f; arguments: none",
       "extractionState": "manual",

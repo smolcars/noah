@@ -262,7 +262,6 @@
   <string name="gt_aeae980b83b4c572">"ブロック %1$s で確認済み"</string>
   <string name="gt_c0c33c452704cf4e">"ブロック %1$s で承認"</string>
   <string name="gt_9cc7f22c09b0772a">"ブロック %1$s で承認 · %2$s/%3$s"</string>
-  <string name="gt_c8231c9c5838def9">"ブロック %1$s で承認されました。"</string>
   <string name="gt_d978a5522ce4865f">"確認中"</string>
   <string name="gt_916a464e6cfffe51">"競合あり"</string>
   <string name="gt_f8d6b3c8e8b286e3">"ウォレットデータの不整合"</string>
