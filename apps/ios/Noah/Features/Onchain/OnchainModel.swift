@@ -23,6 +23,9 @@ final class OnchainModel {
         var exclusions: @Sendable () async throws -> [ExcludedExitVtxo] = { [] }
         /// Where Noah keeps when it first saw each exit transaction in its status (in memory unless given).
         var sightings: ExitSightings.Store? = nil
+        /// Something these pages show may have changed: the wallet committed (a round or renew, an exit step, an
+        /// on-chain sync that found funds) or an on-chain operation moved. Coalesced to the latest.
+        var changes: @Sendable () async -> AsyncStream<Void> = { AsyncStream { $0.finish() } }
         static func live(session: WalletSession = .shared) -> Self {
             Self(
                 ready: {
@@ -46,7 +49,26 @@ final class OnchainModel {
                 discardReview: { await session.discardBoard($0) },
                 estimate: { try await session.exitEstimate($0) },
                 exclusions: { try await session.exitExclusions() },
-                sightings: .init(key: ExitSightings.key))
+                sightings: .init(key: ExitSightings.key),
+                changes: {
+                    let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+                    let wallet = Task {
+                        // bark's subscription ends after `resyncRequired`; subscribe again then, as History does.
+                        var resubscribe = true
+                        while resubscribe, !Task.isCancelled, let events = try? await session.stateChanges() {
+                            resubscribe = false
+                            do {
+                                for try await event in events where event.reason != "initial" {
+                                    continuation.yield()
+                                    if event.reason == "resyncRequired" { resubscribe = true }
+                                }
+                            } catch { return }
+                        }
+                    }
+                    let journal = Task { for await _ in OnchainOperationJournal.shared.changes.stream() { continuation.yield() } }
+                    continuation.onTermination = { _ in wallet.cancel(); journal.cancel() }
+                    return stream
+                })
         }
 
         /// Home's Renew: the same review, submitted through the renewal path that rechecks
@@ -123,10 +145,24 @@ final class OnchainModel {
         estimateFallback = nil
     }
 
+    /// A load asked for while one runs runs again after it, so a change it may have missed isn't dropped.
     func load() async {
-        guard !loading else { return }
+        guard !loading else { reloadPending = true; return }
         loading = true
         defer { loading = false }
+        repeat {
+            reloadPending = false
+            await read()
+        } while reloadPending
+    }
+    @ObservationIgnored private var reloadPending = false
+
+    /// Reloads as soon as `changes` reports one, rather than at the page's next minute. `canLoad` is the page's guard.
+    func observeChanges(canLoad: @escaping () -> Bool) async {
+        for await _ in await dependencies.changes() where canLoad() { await load() }
+    }
+
+    private func read() async {
         do {
             let saved = try await dependencies.attempt()
             attempts = saved.filter { $0.overrideAudit?.acknowledgedAt == nil }

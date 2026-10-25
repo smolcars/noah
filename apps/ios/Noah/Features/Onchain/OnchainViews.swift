@@ -226,6 +226,11 @@ struct OnchainScreen: ViewModifier {
                     if phase == .active && !model.busy && model.quote == nil { await model.load() }
                 }
             }
+            // A renew, an exit step or arriving funds show at once, not at the next minute (keyed as History's observer).
+            .task(id: app.summary == nil ? nil : app.walletSessionRevision) {
+                guard app.summary != nil else { return }
+                await model.observeChanges { phase == .active && !model.busy && model.quote == nil }
+            }
             .refreshable {
                 model.invalidate()
                 await model.load()
