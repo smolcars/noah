@@ -21,7 +21,7 @@ import androidx.core.widget.doAfterTextChanged
  * shortcuts, the IME or accessibility, and no dragging a selection out. Paste keeps working, including a
  * whole phrase. The screen adds FLAG_SECURE and clears the words on background or leaving.
  */
-internal class RecoveryWordEditText(context: Context, index: Int) : EditText(context) {
+internal class RecoveryWordEditText(context: Context, private val index: Int) : EditText(context) {
     init {
         // The visible number labels the cell; TalkBack gets "Word N" from an invisible hint.
         hint = com.noahwallet.localization.L10n.text(context, "Word {number}", index + 1)
@@ -74,6 +74,8 @@ internal class RecoveryWordEditText(context: Context, index: Int) : EditText(con
         super.onInitializeAccessibilityNodeInfo(info)
         info.removeAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_COPY)
         info.removeAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_CUT)
+        // A platform view: Compose's testTag doesn't reach UI Automator, so name the cell like iOS does.
+        info.viewIdResourceName = "restore-word-${index + 1}"
     }
 
     override fun performAccessibilityAction(action: Int, arguments: android.os.Bundle?): Boolean =

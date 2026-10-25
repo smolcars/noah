@@ -697,7 +697,8 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val show = remember { Animatable(if (resultShown) 1f else 0f) }
     LaunchedEffect(resultShown) { if (resultShown) show.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) }
     StepPanes(nav = { }, leadingCentred = false, trailingAt = Alignment.CenterVertically, leading = {
-        SwapTitle(title, SendType.big, Modifier.padding(top = 6.dp).testTag("send-title"))
+        val sent = resultShown && ending in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent)
+        SwapTitle(title, SendType.big, Modifier.padding(top = 6.dp).testTag(if (sent) "send-success" else "send-title"))
         if (who.name.isNotEmpty()) Text(tr("to {recipient}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt, Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
         PhaseText(line?.let { phase ->
