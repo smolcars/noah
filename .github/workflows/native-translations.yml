@@ -18,9 +18,11 @@ permissions:
   contents: write
   pull-requests: write
 
-# One run at a time and never cancelled mid-translation; the newest queued merge runs next.
+# Master runs go one at a time, never cancelled mid-translation; the newest queued merge runs next.
+# GitHub replaces a group's pending run with any newer one, so a dispatch on another branch (whose
+# job is skipped) gets its own group instead of dropping master's queued run.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:

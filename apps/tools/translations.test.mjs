@@ -215,6 +215,18 @@ test('reuse skips a plural form whose English changed while its key did not', as
   });
 });
 
+// GitHub keeps one pending run per concurrency group and replaces it with any newer one, so a dispatch on
+// another branch (whose job is then skipped) must not share master's group and drop a queued merge.
+test('bot runs queue per ref, so a dispatch on another branch cannot replace master\'s pending run', async () => {
+  const workflow = Bun.YAML.parse(await readFile(resolve(root, '.github/workflows/native-translations.yml'), 'utf8'));
+  const group = ref => workflow.concurrency.group.replace(/\$\{\{\s*github\.(workflow|ref)\s*\}\}/g, (_, key) => ({ workflow: workflow.name, ref })[key]);
+  expect(group('refs/heads/master')).not.toContain('${{');
+  expect(group('refs/heads/master')).toBe(group('refs/heads/master'));
+  expect(group('refs/heads/bot/native-translations')).not.toBe(group('refs/heads/master'));
+  expect(workflow.concurrency['cancel-in-progress']).toBe(false);
+  expect(workflow.jobs.translate.if).toBe("github.ref == 'refs/heads/master'");
+});
+
 // Runs the bot workflow's own step scripts against a scratch repo, a local origin and a stub gh that applies --jq.
 async function botRepo(run) {
   const workflow = Bun.YAML.parse(await readFile(resolve(root, '.github/workflows/native-translations.yml'), 'utf8'));
