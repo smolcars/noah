@@ -33,6 +33,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  # Merges save caches and PRs restore them, so a PR doesn't evict master's entries.
+  # shortcut: the native PR saves too, so its reruns are warm; remove the head_ref check once it merges.
+  SAVE_CACHE: ${{ github.event_name != 'pull_request' || github.head_ref == 'feat/native-rewrite' }}
+
 jobs:
   build-and-test:
     runs-on: blacksmith-6vcpu-macos-27
@@ -62,13 +67,21 @@ jobs:
       - name: Install XcodeGen
         run: command -v xcodegen || brew install xcodegen
 
-      - name: Cache Swift packages
+      # Only the git clones: the 3.6 GB of binary artifacts (mostly Sentry) download faster than they restore.
+      - name: Cache Swift package clones
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
-          path: |
-            apps/ios/build/SourcePackages
-            ~/Library/Caches/org.swift.swiftpm
-          key: native-ios-spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.xcode }}-${{ hashFiles('apps/ios/project.yml') }}
+          path: apps/ios/build/SourcePackages/repositories
+          key: native-ios-spm-repositories-${{ hashFiles('apps/ios/Noah.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      # Merges build cold and save, so the cache holds only the latest master build (~650 MB).
+      - name: Restore Xcode compilation cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.NATIVE_IOS_TEMP }}/CompilationCache.noindex
+          key: native-ios-cas-v1-${{ steps.toolchain.outputs.xcode }}-${{ github.sha }}
+          restore-keys: native-ios-cas-v1-${{ steps.toolchain.outputs.xcode }}-
 
       - name: Generate Xcode project
         working-directory: apps/ios
@@ -100,7 +113,15 @@ jobs:
             -derivedDataPath "$NATIVE_IOS_TEMP/DerivedData" \
             -parallel-testing-enabled NO -only-testing:NoahTests \
             -resultBundlePath "$NATIVE_IOS_TEMP/NoahTests.xcresult" \
+            COMPILATION_CACHE_ENABLE_CACHING=YES "COMPILATION_CACHE_CAS_PATH=$NATIVE_IOS_TEMP/CompilationCache.noindex" \
             CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES test
+
+      - name: Save Xcode compilation cache
+        if: env.SAVE_CACHE == 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.NATIVE_IOS_TEMP }}/CompilationCache.noindex
+          key: native-ios-cas-v1-${{ steps.toolchain.outputs.xcode }}-${{ github.sha }}
 
       - name: Summarize test results
         if: always()
