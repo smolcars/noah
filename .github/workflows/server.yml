@@ -67,7 +67,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       dragonfly:
-        image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+        image: docker.dragonflydb.io/dragonflydb/dragonfly:v2.0.2
         ports:
           - 6379:6379
     steps:
@@ -75,9 +75,17 @@ jobs:
       - name: 📦 Install dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev protobuf-compiler
       - name: 🦀 Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
           components: rustfmt
+          cache: false
+      # Merges save the cache and PRs restore it, so a PR doesn't evict master's entry.
+      # The key follows rustc, rust-toolchain.toml and every Cargo.toml/Cargo.lock.
+      - name: 📦 Cache Rust build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: server
+          save-if: ${{ github.event_name != 'pull_request' }}
       - name: ✨ Check formatting
         run: cargo fmt --check
       - name: 🧪 Run tests
@@ -85,8 +93,9 @@ jobs:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/noah_test
           TEST_REDIS_URL: redis://127.0.0.1:6379
         run: cargo test
+      # Debug only; the Dockerfile builds the release binaries on master and tags (server-push.yml).
       - name: 🔨 Build noah-cli
-        run: cargo build --release --bin noah-cli
+        run: cargo build --bin noah-cli
 
   server_gate:
     runs-on: blacksmith-4vcpu-ubuntu-2404
