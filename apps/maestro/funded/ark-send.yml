@@ -1,0 +1,43 @@
+appId: com.noahwallet.regtest
+name: ark-send
+tags:
+  - funded
+---
+# Needs the runner: after subflows/fund-wallet.yml it pays the request's Lightning invoice from LND
+# and passes the request's Ark address (this wallet's own, a valid recipient on any stack) as ARK.
+- openLink: "bitcoin:?ark=${ARK}&amount=0.00005"
+- extendedWaitUntil:
+    visible:
+      id: send-review-title
+      text: ".*5,000.*"
+    timeout: 20000
+# Without a quote yet, the review offers Next (which prepares one) instead of Hold to send.
+- extendedWaitUntil:
+    visible:
+      id: "send-hold|send-continue"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: send-continue
+        enabled: true
+    commands:
+      - tapOn:
+          id: send-continue
+- extendedWaitUntil:
+    visible:
+      id: send-hold
+    timeout: 20000
+- longPressOn:
+    id: send-hold
+- extendedWaitUntil:
+    visible:
+      id: send-success
+    timeout: 30000
+- tapOn:
+    id: send-success-done
+- tapOn: "Activity"
+- extendedWaitUntil:
+    visible:
+      id: "activity-row-.*"
+    timeout: 10000

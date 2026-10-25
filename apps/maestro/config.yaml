@@ -1,3 +1,13 @@
-# Only independent PR flows are discovered here. Helpers and adaptive flows run explicitly.
+# CI runs two jobs in parallel, picked by tag: `smoke` (no money moves) and `funded`.
+# Each job creates one wallet and reuses it, so the smoke chain runs in this order. Ordered flows
+# must all match the tag filter, so the funded job runs its own folder (see the runner).
 flows:
-  - "*.yml"
+  - "smoke/*"
+  - "funded/*"
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - onboard-and-receive
+    - amountless-request
+    - delete-wallet
+    - restore-validation

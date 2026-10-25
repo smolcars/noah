@@ -1,0 +1,27 @@
+appId: com.noahwallet.regtest
+---
+# Funded job setup, run by scripts/test-maestro-native.sh: the job's wallet and a
+# 10,000-sat payment request in the clipboard. The script pays its Lightning invoice
+# from LND and passes its Ark address to the funded flows.
+- runFlow: create-wallet.yml
+- tapOn: "Receive"
+- tapOn:
+    id: receive-amount-button
+- tapOn:
+    id: send-key-1
+- repeat:
+    times: 4
+    commands:
+      - tapOn:
+          id: send-key-0
+- tapOn:
+    id: receive-amount-submit
+- extendedWaitUntil:
+    visible:
+      id: receive-band
+    timeout: 20000
+- tapOn:
+    id: receive-formats
+- tapOn:
+    id: receive-copy-request
+- pressKey: BACK

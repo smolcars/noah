@@ -168,7 +168,7 @@ def consume(result, kind, apk, helper, scratch, port):
         device.launch()
         destination = next(line for line in test.command("just", "bark", "--quiet", "--no-logfile", "address").splitlines() if line.startswith("tark1"))
         device.clipboard(destination)
-        path = test.ROOT / ("client/.maestro/subflows" if kind == "rn" else "apps/maestro/subflows") / "send-funded-ark.yml"
+        path = test.ROOT / ("client/.maestro/subflows" if kind == "rn" else "apps/maestro/subflows") / ("send-funded-ark.yml" if kind == "rn" else "send-ark-from-clipboard.yml")
         test.flow(device.serial, str(path), scratch, {"DESTINATION": destination})
         result["spent"] = device.capture(helper, vector)
         test.check_spent(result["restored"], result["spent"])

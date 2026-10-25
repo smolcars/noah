@@ -1,0 +1,24 @@
+appId: com.noahwallet.regtest
+name: delete-wallet
+tags:
+  - smoke
+---
+- tapOn: "Home"
+- tapOn:
+    id: home-settings-button
+- scrollUntilVisible:
+    element:
+      id: settings-delete-wallet
+    direction: DOWN
+- tapOn:
+    id: settings-delete-wallet
+- tapOn:
+    id: delete-wallet-input
+- inputText: "delete"
+- hideKeyboard
+- tapOn:
+    id: delete-wallet-confirm
+- extendedWaitUntil:
+    visible:
+      id: onboarding-create
+    timeout: 30000

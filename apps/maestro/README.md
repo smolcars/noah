@@ -1,142 +1,89 @@
-# Native Maestro tests
+# Native Maestro tests (Android)
 
-These flows target **only** `com.noahwallet.regtest`, installed from `apps/android` or `apps/ios`. They clear the wallet and iOS keychain. Use dedicated, disposable emulators/simulators, never a personal wallet or physical device. The RN tests and workflows under `client/` remain independent.
+These flows target **only** `com.noahwallet.regtest`, installed from `apps/android`, on one phone profile. They clear the app's data. Use a dedicated, disposable emulator, never a personal wallet or a physical device. The RN flows under `client/` are separate. iOS has no Maestro flows here; its onboarding checks live in `apps/ios/OnboardingTests`.
 
-## Coverage
+## Flows
 
-| Entry point | Checks |
-| --- | --- |
-| `wallet-onboarding-back.yml` | Beta back/decline, wallet creation, email → recovery back twice, finish without email, persisted wallet after restart |
-| `receive.yml` | Ark/onchain details; Lightning appears after adding 500 sats and a note; edit/remove amount |
-| `delete-wallet.yml` | Create a disposable wallet, type the delete confirmation, return to Welcome |
-| `email-verification.yml` | Regtest code `000000`, unique Lightning username, saved email/identity and verified state in Profile |
-| `manual-boarding-settings.yml` | Open manual boarding through Settings, read confirmed balance, enter a draft without submitting |
-| `subflows/prepare-funded-send.yml` | Create a throwaway wallet and copy its Ark address for the host harness |
-| `subflows/send-funded-ark.yml` | Send 5,000 sats to Bark and assert successful payment |
-| `subflows/send-recipient-reset-on-back.yml` | Cancel review, start over, enter a new amount, ensure abandoned recipient is absent |
-| `subflows/send-max-back-fixed-request.yml` | Enter MAX, cancel with Start over, paste a fixed BIP-321 request, review without submitting |
-| `subflows/send-amountless-request.yml` | A zero-amount BIP-321 request opens the amount composer and can be reset |
-| `subflows/exit-deposit-landscape.yml` | Reach/copy an exit deposit address in landscape without starting an exit |
-| `adaptive/adaptive-layout-smoke.yml` | Fresh wallet, then all three adaptive checks below |
-| `adaptive/adaptive-layout-checks.yml` | Send amount, receive amount/note and History survive portrait/landscape changes |
-| `adaptive/adaptive-settings-checks.yml` | Currency/unit preferences, unsaved profile, backup, exit, VTXOs, boarding and recurring drafts remain reachable |
-| `adaptive/adaptive-rotation-checks.yml` | Three rotated profile drafts return safely through Settings |
-| `offline/welcome.yml` | Welcome, beta back/decline and restore inputs without creating a wallet or contacting the stack |
+Every PR runs both groups, as two parallel CI jobs, each with its own emulator and regtest stack. The tag decides the job. Each job creates **one wallet** and reuses it, so its flows run in order and can't be split across shards.
 
-`config.yaml` discovers only the five independent top-level flows. Subflows depend on their caller; the runner invokes funded and adaptive flows explicitly. One shared flow set runs on both platforms. Branches cover actual native differences: Android battery optimization, keyboard dismissal, the iPadOS 27 numeric popover, and platform back/sheet controls.
+| Flow | Tag | Covers | Time |
+| --- | --- | --- | --- |
+| `smoke/onboard-and-receive.yml` | `smoke` | Create → Beta → skip Name and Email → Notifications → Android's battery step → Done → Home; Receive, Ways to pay you, copy the Ark address | 37 s |
+| `smoke/amountless-request.yml` | `smoke` | A `bitcoin:` link without an amount opens Send on the keypad with the recipient set | 3 s |
+| `smoke/delete-wallet.yml` | `smoke` | Settings → Delete wallet, typed confirmation, back to Welcome | 16 s |
+| `smoke/restore-validation.yml` | `smoke` | Restore: twelve valid words with a bad checksum are rejected | 16 s |
+| `subflows/fund-wallet.yml` (setup, run by the script) | — | Create the wallet as above; Receive → Add amount 10,000 → copy the payment request | 51 s |
+| `funded/ark-send.yml` | `funded` | A `bitcoin:?ark=…&amount=` link opens the review at ₿5,000 via Ark; hold to send; success; the payment in Activity | 14–18 s |
 
-Native onboarding intentionally prevents backing past the created recovery phrase. Native Receive uses text fields rather than the RN keypad/note sheet. Native Send uses Start over when abandoning a recipient/MAX draft. Adaptive form navigation scrolls within the primary column, since the wide iOS layout has independent columns and Android centers its form. Tests preserve these behaviors. RN-only upgrade/Expo-launch flows remain in `client/`; native RN→native upgrade tests have their own platform runbooks. Native receipts currently have no RN-style copy-destination button, so that RN subflow is not applicable. Exit deposit details are opened after rotating: Android currently dismisses that sheet on activity rotation; retaining it across rotation needs a separate behavior change.
+Times are from the local runs below. A job's wall time adds the APK install and Maestro start-up: **smoke about 80 s, funded about 83 s**.
 
-## Local prerequisites
+`config.yaml` orders the smoke chain (`flowsOrder`). Maestro refuses an order naming flows that a tag filter removes, so the funded job runs the `funded/` folder on its own. Subflows are never selected by tag.
 
-- Maestro 2.6.0 (tested locally at `~/.maestro/bin/maestro`), Java 17, Android SDK/ADB or Xcode and XcodeGen. CI uses the repository's pinned Nix `android-ci` shell, including Maestro.
-- An already initialized Docker regtest stack reachable on localhost. Check it with `docker compose -f scripts/docker-compose.yml ps` and `nix develop --command just bark balance`.
-- The runner **never starts, stops, recreates or mines the stack**. It uses `just bark send --wait ADDRESS '20000 sats'` once per funded run, generates Bark/Bitcoin destinations, and sends 5,000 sats back from the app. Keep sufficient Bark funds available. Do not rerun a funding step after an ambiguous failure without checking whether the transfer completed.
-- Run one heavy native build at a time on a shared machine. Pass the explicit device ID to every command. Do not use other people's devices.
+The funded job is three steps in `scripts/test-maestro-native.sh`: `fund-wallet.yml`; the script reads the request from the emulator clipboard and pays its `lightning=` invoice from LND (`just lncli payinvoice`, no blocks mined); then `funded/` runs with the request's Ark address as `ARK`. The send goes to the wallet's own Ark address, which is valid on any stack. Fixed and amountless requests use BIP-173's regtest vector `bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080`, never paid.
 
-The script takes `PLATFORM ARTIFACT DEVICE SUITE`, where suite is `all` (five core flows plus funded setup, four send checks and exit deposit copy), `core`, `funded`, `adaptive`, or `offline`. It installs the artifact and verifies that the device is an emulator or a booted simulator. Set `MAESTRO_COMMAND` to select the local binary and `MAESTRO_DEBUG_OUTPUT` to an absolute output directory; otherwise artifacts go under the system temporary directory. Each invocation writes JUnit XML plus Maestro diagnostics. The runner does not clean up your device or build output.
+## Speed
 
-### Android
+- **One wallet per job** and onboarding once; no `clearState` after the first flow.
+- **Deep links** (`openLink: bitcoin:…`) start Send at the state a flow needs.
+- **No sleeps.** Only element waits, at most 30 s (a Lightning or Ark round trip).
+- **No animations.** The script sets the emulator's animation scales to 0, which also gives the app's reduced-motion path. It turns Wi-Fi off too: the emulator's Wi-Fi reconnected mid-send once locally, which left the payment's outcome uncertain; mobile data reaches the stack the same way.
+- A tap costs about 2.5 s here (Maestro settles before and after it), so flows avoid taps rather than wait less. Capping `waitToSettleTimeoutMs` made the runs slower.
 
-Create your own AVD, using an unused even console port at least 5592. Never select an existing emulator implicitly. The default native regtest host is `10.0.2.2`; do not use a physical-device host override for this build.
+## Running locally
+
+Prerequisites: the Android SDK and the repository's `android-ci` Nix shell, which pins Maestro 2.11.0, `grpcurl` and `jq` as CI does (`MAESTRO_COMMAND` picks another Maestro). The funded group also needs a regtest stack whose LND has a channel to CLN. The script never starts, stops or mines the stack.
 
 ```sh
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
-  --name NoahMaestroLocal --package 'system-images;android-35;google_apis;arm64-v8a' --device pixel_7
-"$ANDROID_HOME/emulator/emulator" -avd NoahMaestroLocal -port 5592 \
-  -no-snapshot -grpc 8592 -grpc-use-token
+  --name noah-maestro-phone --package 'system-images;android-35;google_apis;arm64-v8a' --device pixel_7
+"$ANDROID_HOME/emulator/emulator" -avd noah-maestro-phone -port 5592 \
+  -no-snapshot -no-window -grpc 8592 -grpc-use-token &
+adb -s emulator-5592 emu avd name   # confirm it's yours
 
-nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:assembleRegtestDebug'
-MAESTRO_COMMAND="$HOME/.maestro/bin/maestro" MAESTRO_EMULATOR_GRPC_PORT=8592 \
-  nix develop --command scripts/test-maestro-native.sh android \
-  apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk emulator-5592 all
+nix develop --command sh -c 'cd apps/android && ./gradlew :app:assembleRegtestDebug'
+apk=apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
+nix develop .#android-ci --command scripts/test-maestro-native.sh android "$apk" emulator-5592 smoke
+MAESTRO_EMULATOR_GRPC_PORT=8592 nix develop .#android-ci --command \
+  scripts/test-maestro-native.sh android "$apk" emulator-5592 funded
 ```
 
-The funded tests use the emulator's authenticated gRPC clipboard API (`grpcurl`, `jq`, and the emulator's bundled `emulator_controller.proto`). Pass the gRPC port belonging to this emulator. No fixed shared clipboard/emulator port is assumed.
+The suite is `smoke`, `funded` or `all` (both, one after the other). Results (JUnit and Maestro debug output) go to `MAESTRO_DEBUG_OUTPUT`, or the system temporary directory.
 
-For adaptive coverage, create a separate `pixel_tablet` or `pixel_fold` AVD and run the same artifact with `adaptive`. Test the foldable's closed and open postures; the same flow set applies at each size. Screenshots are saved at the send, receive, history and settings drafts. Maestro rotation checks complement the existing Compose `AdaptiveLayoutDeviceTest` and `AdaptiveStateRestorationTest`, which CI runs after Maestro.
+For a second stack on other ports, build with its endpoints, as the `noah-bark08` stack needs (from the emulator the host is `10.0.2.2`): `-PnoahRegtestServerURL=http://10.0.2.2:13000 -PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443`, and point the script at that stack's LND with `MAESTRO_LNCLI="docker exec noah-bark08-lnd-1 lncli --network=regtest"`.
 
-### iOS
+captaind pays Lightning receives from a pool of ten 10,000-sat VTXOs and refills it only once a block confirms its issue. A fresh CI stack funds one wallet per run. Many local funded runs without a block end in "vtxo pool is empty" in logcat and LND reporting the payment FAILED; mine one block.
 
-Create a dedicated iOS 27.0 simulator, then build the regtest simulator app:
+When you're done, shut the emulator down (`adb -s emulator-5592 emu kill`), delete the AVD (`avdmanager delete avd --name noah-maestro-phone`) and your output. Leave other devices and the stack alone.
 
-```sh
-simulator_id=$(xcrun simctl create 'Noah Maestro Local' \
-  com.apple.CoreSimulator.SimDeviceType.iPhone-17 com.apple.CoreSimulator.SimRuntime.iOS-27-0)
-xcrun simctl boot "$simulator_id"
-xcrun simctl bootstatus "$simulator_id" -b
-(cd apps/ios && xcodegen generate && xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
-  -destination 'generic/platform=iOS Simulator' -derivedDataPath /private/tmp/noah-maestro-dd \
-  -jobs 2 ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
-  CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES build)
-MAESTRO_COMMAND="$HOME/.maestro/bin/maestro" nix develop --command \
-  scripts/test-maestro-native.sh ios \
-  /private/tmp/noah-maestro-dd/Build/Products/Debug-Regtest-iphonesimulator/Noah.app "$simulator_id" all
-```
+## Test IDs
 
-Use `adaptive` on your own iPad simulator or a supported iPhone Duo runtime. The harness grants simulator pasteboard permission on iOS 27+ for funded flows. Like the RN harness, it writes public payment requests to the host Mac's clipboard too, so automatic pasteboard sync cannot replace the simulator's request. Give Maestro permission to control the simulator if requested by macOS.
+Flows select by ID except the tab bar (Home, Receive, Send, Activity), which has none. The IDs match iOS wherever iOS has the same control. Added for these flows:
 
-Before deleting any device, verify its ID/name belongs to this run, shut it down, and confirm it is shut down. Then delete that simulator/AVD, your DerivedData, and your result bundles. Leave other devices and the shared Docker stack alone.
-
-## CI
-
-- `native-android.yml` uploads its native regtest debug APK, then calls reusable `native-maestro-android.yml`. PRs affecting `apps/**` (including Android, shared fixtures and these flows), the runner script or these workflows trigger it. It uses the existing Blacksmith Linux runner, KVM emulator and isolated Docker regtest stack. Core and funded flows run on a phone; existing adaptive Compose instrumentation runs on the emulator too.
-- `native-maestro-ios.yml` runs at **06:17 UTC nightly**, on `workflow_dispatch`, or for a PR bearing **`ios-e2e`** (label, synchronize and reopen events). It creates dedicated iPhone 17 and iPhone Duo simulators using a compatible installed runtime and builds the native app the same way as `native-ios.yml`.
-- macOS runners commonly have no Docker daemon. The iOS job probes Docker and starts an isolated CI stack only when available. Without it, **only the offline welcome flow runs**, with that limitation written to the job summary. It does not claim wallet, funded or adaptive success. Full iOS coverage requires a macOS runner with Docker support and reachable forwarded regtest ports, or local runs against an existing stack. A missing Duo runtime fails explicitly instead of silently substituting a phone.
-- The nightly/label workflow also builds an Android APK and runs shared adaptive flows on `pixel_tablet` and `pixel_fold` Linux emulators, with Docker available. Fold posture changes beyond the profile's default posture require the explicit local posture runs above.
-- JUnit reports, screenshots, emulator logs and failure diagnostics are uploaded as artifacts. CI stack lifecycle commands are confined to workflow steps on isolated CI runners. None of the RN workflows are changed.
-- Schedules run from the default branch. Pushing `feat/native-rewrite` does not trigger these workflows; use local verification until the workflow is merged or explicitly dispatched from a branch where GitHub permits it.
-
-Validation:
-
-```sh
-nix shell nixpkgs#actionlint nixpkgs#shellcheck --command sh -c \
-  'actionlint .github/workflows/native-android.yml .github/workflows/native-maestro-android.yml .github/workflows/native-maestro-ios.yml && shellcheck scripts/test-maestro-native.sh'
-```
-
-`.github/actionlint.yaml` declares the repository's custom Blacksmith runner labels.
-
-## Test ID locations
-
-IDs match across platforms. iOS already exposed the receive, onboarding input, keypad, recipient, continue, confirm, profile and recurring IDs; those are reused. Android now exposes their equivalents. Activity and modal windows each need ID export at their own accessibility root.
-
-| Source (line at implementation) | Added/exposed IDs |
+| Android source | IDs |
 | --- | --- |
-| [apps/android/app/src/main/java/com/noahwallet/MainActivity.kt:114](../android/app/src/main/java/com/noahwallet/MainActivity.kt#L114) | Activity root exports tags |
-| [apps/android/app/src/main/java/com/noahwallet/ui/WalletPrivacy.kt:43](../android/app/src/main/java/com/noahwallet/ui/WalletPrivacy.kt#L43) | Shared alert/sheet roots export tags |
-| [apps/android/app/src/main/java/com/noahwallet/ui/NoahTheme.kt:50](../android/app/src/main/java/com/noahwallet/ui/NoahTheme.kt#L50) | Modifier support for button IDs |
-| [apps/android/app/src/main/java/com/noahwallet/ui/HomeScreen.kt:74](../android/app/src/main/java/com/noahwallet/ui/HomeScreen.kt#L74) | `home-settings-button` |
-| [apps/android/app/src/main/java/com/noahwallet/ui/Onboarding.kt:193](../android/app/src/main/java/com/noahwallet/ui/Onboarding.kt#L193) | `verification-code-input`, `email-address-input`, `lightning-username-input` |
-| [apps/android/app/src/main/java/com/noahwallet/ui/ReceiveScreen.kt:151](../android/app/src/main/java/com/noahwallet/ui/ReceiveScreen.kt#L151) | `receive-qr-button`, `receive-copy-*`, `receive-amount-button/input/submit/remove`, `receive-description-input` |
-| [apps/android/app/src/main/java/com/noahwallet/ui/SendScreen.kt:128](../android/app/src/main/java/com/noahwallet/ui/SendScreen.kt#L128) | `send-key-*`, `send-amount`, `send-recipient`, `send-continue`, `send-paste`, `send-max`, `send-start-over`, `send-currency-toggle`, `send-confirm`, `send-review-back` |
-| [apps/android/app/src/main/java/com/noahwallet/ui/settings/SettingsScreen.kt:123](../android/app/src/main/java/com/noahwallet/ui/settings/SettingsScreen.kt#L123) | `settings-profile/currency/bitcoinUnit/vtxos/emergencyExit/recurring-payments/backup/board-ark`, `delete-wallet-input/confirm` |
-| [apps/android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt:53](../android/app/src/main/java/com/noahwallet/ui/settings/AccountScreens.kt#L53) | `profile-name-input`, `preference-*` |
-| [apps/android/app/src/main/java/com/noahwallet/onchain/BoardArkScreen.kt:27](../android/app/src/main/java/com/noahwallet/onchain/BoardArkScreen.kt#L27) | `board-amount`, `board-review` |
-| [apps/android/app/src/main/java/com/noahwallet/recurring/RecurringPaymentEditorScreen.kt:65](../android/app/src/main/java/com/noahwallet/recurring/RecurringPaymentEditorScreen.kt#L65) | `recurring-label-input`, `recurring-recipient-input`, `recurring-amount-input`, `recurring-save-button` |
-| [apps/android/app/src/main/java/com/noahwallet/recurring/RecurringPaymentsScreen.kt:45](../android/app/src/main/java/com/noahwallet/recurring/RecurringPaymentsScreen.kt#L45) | `recurring-new-button` |
-| [apps/ios/Noah/Features/Send/SendView.swift:141](../ios/Noah/Features/Send/SendView.swift#L141) | `send-start-over`, `send-currency-toggle`, `send-max`, `send-paste`, `send-review-back` |
-| [apps/ios/Noah/Features/Settings/SettingsView.swift:28](../ios/Noah/Features/Settings/SettingsView.swift#L28) | Matching settings rows and `delete-wallet-input/confirm` |
-| [apps/ios/Noah/Features/Onchain/BoardArkView.swift:31](../ios/Noah/Features/Onchain/BoardArkView.swift#L31) | `board-review` |
+| `ui/onboarding/WelcomeStep.kt` | `onboarding-create`, `onboarding-restore`, `onboarding-beta-confirm` |
+| `ui/onboarding/NameStep.kt` | `onboarding-name-skip`, `onboarding-name-continue`, `lightning-username-input` |
+| `ui/onboarding/EmailStep.kt` | `onboarding-email-skip`, `onboarding-email-send`, `email-address-input`, `verification-code-input` (shared with Settings → Email) |
+| `ui/onboarding/NotificationsStep.kt` | `notifications-enable`, or `notifications-open-settings` once denied (shared with the launch gate) |
+| `ui/onboarding/DoneStep.kt` | `onboarding-open-wallet` |
+| `ui/launch/PlatformScreens.kt` | `battery-skip` (Android only) |
+| `ui/RecoveryWordField.kt` | `restore-word-1…24`: the cells are platform `EditText`s, so the ID is set on their accessibility node; Compose's `testTag` doesn't reach UI Automator |
+| `ui/send/SendContent.kt` | `send-success` on a sent result's title, `send-title` otherwise |
 
-## Local Maestro verification (2026-10-21)
+## Local verification (2026-10-25)
 
-Maestro 2.6.0 passed these entry points on dedicated devices. Counts combine completed runs after selector fixes; the core/funded suites were resumed during debugging rather than passing in one uninterrupted `all` invocation. Helper flows are included through their callers, not counted again.
+Android API 35 Google APIs arm64 emulator (`pixel_7`, port 5592), regtest debug build against the `noah-bark08` stack, every group run through the script. Runs 1–2 used Maestro 2.6.0; runs 3–4 used 2.11.0 from `nix develop .#android-ci`, CI's version (run 3's smoke job includes installing its driver). Every run passed. The machine was shared with other heavy builds (load average 4–22), so times vary by a few seconds.
 
-| Suite | Android | iOS |
-| --- | --- | --- |
-| Five core wallet flows | 5/5 | 5/5 |
-| Funded preparation, four send regressions and exit deposit copy | 6/6 | 6/6 |
-| Offline welcome | 1/1 | 1/1 |
-| Adaptive wrapper (all three adaptive component flows) | 2/2: tablet and foldable | 1/1: iPad |
-| Total entry-point/device checks | **14/14** | **13/13** |
+| Flow | Run 1 | Run 2 | Run 3 | Run 4 |
+| --- | --- | --- | --- | --- |
+| `onboard-and-receive` | 38 s | 37 s | 39 s | 38 s |
+| `amountless-request` | 3 s | 3 s | 3 s | 3 s |
+| `delete-wallet` | 16 s | 16 s | 17 s | 16 s |
+| `restore-validation` | 15 s | 16 s | 16 s | 16 s |
+| **smoke job (wall)** | **79 s** | **80 s** | **83 s** | **81 s** |
+| `fund-wallet` (setup) | 51 s | 51 s | 53 s | 53 s |
+| `funded/ark-send` | 18 s | 14 s | 13 s | 14 s |
+| **funded job (wall)** | **84 s** | **82 s** | **80 s** | **82 s** |
 
-Android used dedicated API 35 Google APIs ARM64 AVDs on ports 5592 (phone), 5594 (tablet), and 5596 (Pixel Fold, default open posture). iOS used dedicated iPhone 17 and iPad Pro simulators on iOS 27.0. Both platforms received 20,000 regtest sats from Bark and successfully sent 5,000 sats back over Ark. Both copied exit addresses were validated by Bitcoin Core. No funded flow was skipped. Fold posture transitions and actual CI execution remain unverified locally.
-
-The shared Android stack was left running; no local stack lifecycle commands were used. All owned devices were identified, shut down and deleted after testing. Owned DerivedData, result bundles and test/build processes were cleaned up; JUnit reports, summaries and logs remain under `/private/tmp/noah-maestro-evidence`.
-
-## Native unit-suite verification (2026-10-21)
-
-The requested Android command completed unit testing, APK assembly and instrumentation compilation: **3,634 passed / 1 failed / 3,635 total**. The existing `AppLogTest.redactionPerformance` scaling assertion failed during the full shared-machine run (2.68 ms → 391 ms). Its isolated rerun passed; no app/logging behavior was changed.
-
-The full iOS `NoahTests` suite ran once after the last native source change with `xcodegen generate`, `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, two build jobs, and DerivedData under `/private/tmp/noah-maestro-dd`: **810 passed / 27 skipped / 1 failed / 838 total**. The run used the dedicated iOS 27.0 iPad. The failure was `DeviceInfoTests.collectsAppOSAndHardware`, which expects `iOS` while an iPad reports `iPadOS`. All **7 DeviceInfoTests passed** in an isolated iPhone run using `test-without-building`. The 27 skipped tests require their opt-in live-test environments.
+The review reached by a deep link sometimes already had its quote (Hold to send) and sometimes showed Next first; `ark-send` handles both, and both happened in these runs. `subflows/send-ark-from-clipboard.yml`, used by the RN↔native BackupTests, passed once on Android; the BackupTests themselves weren't run.

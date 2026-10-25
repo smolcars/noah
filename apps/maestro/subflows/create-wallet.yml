@@ -1,0 +1,47 @@
+appId: com.noahwallet.regtest
+---
+# The job's one wallet: Create → Beta → Name (skip) → Email (skip) → Notifications → Done → Home.
+# Retry only launch/clearing on a disposable wallet when ADB briefly reconnects.
+- retry:
+    maxRetries: 2
+    commands:
+      - launchApp:
+          clearState: true
+          permissions:
+            all: allow
+- extendedWaitUntil:
+    visible:
+      id: onboarding-create
+    timeout: 20000
+- tapOn:
+    id: onboarding-create
+- tapOn:
+    id: onboarding-beta-confirm
+- extendedWaitUntil:
+    visible:
+      id: onboarding-name-skip
+    timeout: 20000
+- tapOn:
+    id: onboarding-name-skip
+- tapOn:
+    id: onboarding-email-skip
+- tapOn:
+    id: notifications-enable
+# The battery step shows only while battery optimisation is on.
+- extendedWaitUntil:
+    visible:
+      id: "battery-skip|onboarding-open-wallet"
+    timeout: 10000
+- runFlow:
+    when:
+      visible:
+        id: battery-skip
+    commands:
+      - tapOn:
+          id: battery-skip
+- tapOn:
+    id: onboarding-open-wallet
+- extendedWaitUntil:
+    visible:
+      id: home-balance
+    timeout: 20000

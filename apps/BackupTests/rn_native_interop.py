@@ -250,7 +250,7 @@ def spend_ios(sim, kind, helper, vector, scratch):
     destination = next(line for line in command("just", "bark", "--quiet", "--no-logfile", "address").splitlines() if line.startswith("tark1"))
     command("pbcopy", input=destination)
     command("xcrun", "simctl", "pbcopy", sim, input=destination)
-    path = ROOT / ("client/.maestro/subflows" if kind == "rn" else "apps/maestro/subflows") / "send-funded-ark.yml"
+    path = ROOT / ("client/.maestro/subflows" if kind == "rn" else "apps/maestro/subflows") / ("send-funded-ark.yml" if kind == "rn" else "send-ark-from-clipboard.yml")
     flow(sim, str(path), scratch, {"DESTINATION": destination})
     state = {"state": app_state(sim), "sdk": app_sdk_state(sim, helper, vector, scratch)}
     output = command("just", "bark", "--quiet", "--no-logfile", "movements")

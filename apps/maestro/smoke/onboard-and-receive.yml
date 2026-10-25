@@ -1,0 +1,13 @@
+appId: com.noahwallet.regtest
+name: onboard-and-receive
+tags:
+  - smoke
+---
+- runFlow: ../subflows/create-wallet.yml
+- tapOn: "Receive"
+- tapOn:
+    id: receive-formats
+- assertVisible: "tark1.*"
+- tapOn:
+    id: receive-copy-ark
+- pressKey: BACK

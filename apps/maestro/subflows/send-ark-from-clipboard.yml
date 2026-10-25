@@ -1,0 +1,32 @@
+appId: com.noahwallet.regtest
+---
+# Send 5,000 sats to the Ark address in the clipboard: paste, amount, review, hold to send.
+- tapOn: "Send"
+- tapOn:
+    id: send-paste-from-amount
+- extendedWaitUntil:
+    visible:
+      id: send-amount-recipient
+    timeout: 10000
+- tapOn:
+    id: send-key-5
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: send-key-0
+- tapOn:
+    id: send-continue
+- extendedWaitUntil:
+    visible:
+      id: send-review-title
+      text: ".*5,000.*"
+    timeout: 20000
+- longPressOn:
+    id: send-hold
+- extendedWaitUntil:
+    visible:
+      id: send-success
+    timeout: 30000
+- tapOn:
+    id: send-success-done

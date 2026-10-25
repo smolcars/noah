@@ -1,0 +1,18 @@
+appId: com.noahwallet.regtest
+name: restore-validation
+tags:
+  - smoke
+---
+# Starts on Welcome, where delete-wallet leaves the app.
+- tapOn:
+    id: onboarding-restore
+- tapOn:
+    id: restore-word-1
+# Twelve valid, short words with a bad checksum; typing a space moves to the next cell.
+- inputText: "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo"
+- hideKeyboard
+- tapOn:
+    id: restore-submit
+- assertVisible:
+    id: restore-error
+    text: ".+"

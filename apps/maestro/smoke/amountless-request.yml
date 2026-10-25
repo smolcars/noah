@@ -1,0 +1,18 @@
+appId: com.noahwallet.regtest
+name: amountless-request
+tags:
+  - smoke
+env:
+  # BIP-173's regtest vector; never paid.
+  ONCHAIN: bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080
+---
+# A request without an amount opens Send on the keypad with the recipient set.
+- openLink: "bitcoin:${ONCHAIN}?amount=0"
+- extendedWaitUntil:
+    visible:
+      id: send-amount-recipient
+    timeout: 10000
+- assertVisible:
+    id: send-key-5
+- assertNotVisible:
+    id: send-review-title
