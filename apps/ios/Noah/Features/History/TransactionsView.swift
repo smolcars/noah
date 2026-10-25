@@ -223,6 +223,8 @@ private struct ActivityListPane: View {
     let onExport: () -> Void
     let onReceive: () -> Void
     @State private var tucked = false
+    /// Where the list was when search opened: clearing the query or Cancel puts it back.
+    @State private var listAnchor: String?
     @State private var haptics = OnboardingHaptics()
     @State private var refreshing = false
 
@@ -242,19 +244,28 @@ private struct ActivityListPane: View {
         }
     }
 
+    /// The large title's scroll ID: a list at the top goes back to the top.
+    private static let titleID = "activity-title"
+
     /// The prototype's side padding: 24 on phones, 32 in the wide pane.
     private var pad: CGFloat { wide ? 32 : NoahTokens.Space.screen }
 
     var body: some View {
-        let list = ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                if !wide && !searching { largeTitle.padding(.horizontal, pad) }
-                content
+        let list = ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    if !wide && !searching { largeTitle.padding(.horizontal, pad).id(Self.titleID) }
+                    content
+                }
+                .scrollTargetLayout()
+                .padding(.bottom, 32)
             }
-            .scrollTargetLayout()
-            .padding(.bottom, 32)
+            .scrollPosition(id: $scrollAnchor, anchor: .top)
+            // After the update, so the list is back to full length first.
+            .onChange(of: query.isEmpty || !searching) { _, showsList in
+                if showsList { proxy.scrollTo(listAnchor ?? Self.titleID, anchor: .top) }
+            }
         }
-        .scrollPosition(id: $scrollAnchor, anchor: .top)
         .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 42 } action: { _, value in
             tucked = value
         }
@@ -265,20 +276,24 @@ private struct ActivityListPane: View {
             // No system bar: on the open Duo its buttons move to the far edge, across the fold.
             list
                 .toolbar(.hidden, for: .navigationBar)
-                .safeAreaInset(edge: .top, spacing: 0) { wideHeader }
+                .safeAreaInset(edge: .top, spacing: 0) { header }
                 .tint(NoahTokens.Colors.foreground)
         } else {
+            // Search is the wide pane's field over the system bar, not `.searchable`: in a tab on iOS 27
+            // the minimized toolbar field reopened as soon as its × closed it.
             list
                 .navigationTitle("Activity")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar }
-                .modifier(ActivitySearch(query: $query, searching: $searching))
+                .toolbar(searching ? .hidden : .automatic, for: .navigationBar)
+                .safeAreaInset(edge: .top, spacing: 0) { if searching { header } }
                 .tint(NoahTokens.Colors.foreground)
         }
     }
 
     /// The leading pane's own bar (prototype `.ph.wide .nav`): the title and chip, then search and ⋯.
-    private var wideHeader: some View {
+    /// Phones show it only while searching.
+    private var header: some View {
         HStack(alignment: .top, spacing: 8) {
             if searching {
                 ActivitySearchField(query: $query) {
@@ -292,10 +307,7 @@ private struct ActivityListPane: View {
                 Spacer(minLength: 8)
                 GlassGroup(spacing: 8) {
                     HStack(spacing: 8) {
-                        Button {
-                            haptics.play(.light)
-                            withAnimation(NoahTokens.Motion.travel(reduceMotion)) { searching = true }
-                        } label: { ActivityCircleIcon(systemName: "magnifyingglass") }
+                        Button(action: openSearch) { ActivityCircleIcon(systemName: "magnifyingglass") }
                         .buttonStyle(HomePressStyle())
                         .accessibilityLabel(Text("Search"))
                         .accessibilityIdentifier("activity-search")
@@ -338,7 +350,9 @@ private struct ActivityListPane: View {
                 .animation(NoahTokens.Motion.travel(reduceMotion), value: tucked)
                 .accessibilityHidden(!tucked)
         }
-        ActivitySearchButton()
+        ToolbarItem(placement: .topBarTrailing) {
+            Button("Search", systemImage: "magnifyingglass", action: openSearch).accessibilityIdentifier("activity-search")
+        }
         ToolbarItem(placement: .topBarTrailing) { menu(label: Label("More", systemImage: "ellipsis")) }
     }
 
@@ -420,6 +434,12 @@ private struct ActivityListPane: View {
     }
 
     // MARK: Actions
+
+    private func openSearch() {
+        haptics.play(.light)
+        listAnchor = scrollAnchor
+        withAnimation(NoahTokens.Motion.travel(reduceMotion)) { searching = true }
+    }
 
     private func setFilter(_ value: HistoryFilter) {
         guard value != filter else { return }
@@ -787,7 +807,8 @@ private struct ActivitySearchField: View {
                 .foregroundStyle(NoahTokens.Colors.foreground)
                 .padding(.leading, 6)
         }
-        .onAppear { focused = true }
+        // Opening search brings the keyboard; coming back from a result keeps it down over the results.
+        .onAppear { if query.isEmpty { focused = true } }
     }
 }
 
@@ -803,32 +824,6 @@ struct ActivitySelectPrompt: View {
         .foregroundStyle(NoahTokens.Colors.muted)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(NoahTokens.Colors.background.ignoresSafeArea())
-    }
-}
-
-/// `.searchable`: on iOS 26 a search button beside ⋯ that opens the field over the bar.
-private struct ActivitySearch: ViewModifier {
-    @Binding var query: String
-    @Binding var searching: Bool
-
-    func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content
-                .searchable(text: $query, isPresented: $searching, placement: .toolbar, prompt: Text("Search"))
-                .searchToolbarBehavior(.minimize)
-        } else {
-            content.searchable(text: $query, isPresented: $searching, placement: .navigationBarDrawer(displayMode: .automatic),
-                               prompt: Text("Search"))
-        }
-    }
-}
-
-/// Where iOS 26 puts the minimized search field: top right, before ⋯.
-private struct ActivitySearchButton: ToolbarContent {
-    var body: some ToolbarContent {
-        if #available(iOS 26, *) {
-            DefaultToolbarItem(kind: .search, placement: .topBarTrailing)
-        }
     }
 }
 

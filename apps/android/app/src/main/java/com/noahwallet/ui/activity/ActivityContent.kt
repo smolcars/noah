@@ -327,8 +327,11 @@ private fun ActivityList(ui: ActivityUi, actions: ActivityActions, state: Activi
         }
     }
     LazyColumn(Modifier.fillMaxSize().testTag("activity-list"), listState, contentPadding = PaddingValues(bottom = if (wide) 36.dp else 24.dp)) {
-        if (!wide && !(state.searching)) item(key = "title") {
-            Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 24.dp).rise(entered, 40, 10f, reduceMotion),
+        // Searching shrinks it to 1 dp rather than dropping it, so the list stays anchored to it and closing search shows the
+        // title again (a dropped or 0-size first item moves the anchor to the next row, which leaves the title scrolled off).
+        if (!wide) item(key = "title") {
+            if (state.searching) Spacer(Modifier.height(1.dp))
+            else Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 24.dp).rise(entered, 40, 10f, reduceMotion),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(tr("Activity"), Modifier.semantics { heading() }, style = ActivityType.large, color = palette.foreground)
                 FilterChip(state)
@@ -435,13 +438,16 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     fun close() { state.searching = false; state.query = ""; focusManager.clearFocus(); keyboard?.hide() }
-    BackHandler(state.searching) { close() }
+    // Only tapping Search focuses the field: coming back to an open search (from a payment, a rotation, another tab) keeps the keyboard down.
+    var focusOnOpen by remember { mutableStateOf(false) }
+    // An open payment closes first, as on phones, where back from it returns to the results.
+    BackHandler(state.searching && state.selected == null) { close() }
     Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(navHeight).background(palette.background)
         .padding(start = if (wide && !state.searching) 24.dp else 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (state.searching) {
             val open = remember { Animatable(if (reduceMotion) 1f else 0f) }
             LaunchedEffect(Unit) { open.animateTo(1f, if (reduceMotion) tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS) else NoahTokens.Motion.snappy()) }
-            LaunchedEffect(Unit) { focus.requestFocus() }
+            LaunchedEffect(Unit) { if (focusOnOpen) focus.requestFocus() }
             Row(Modifier.weight(1f).height(48.dp).graphicsLayer { alpha = .4f + .6f * open.value.coerceIn(0f, 1f) }
                 .tonal(RoundedCornerShape(24.dp), palette.soft).padding(start = 0.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 BarButton(R.drawable.ic_activity_back, tr("Close search")) { haptics.light(); close() }
@@ -454,7 +460,8 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
                         }
                     })
                 if (state.query.isNotEmpty()) Box(Modifier.size(30.dp).clip(CircleShape).clickable(onClickLabel = tr("Clear search"), role = Role.Button) {
-                    state.query = ""; focus.requestFocus()
+                    // show(): an already focused field (keyboard hidden by back or Search) doesn't bring it back on focus.
+                    state.query = ""; focus.requestFocus(); keyboard?.show()
                 }, contentAlignment = Alignment.Center) { Icon(painterResource(HomeIcons.close), tr("Clear search"), Modifier.size(16.dp), tint = palette.muted) }
             }
             return@Row
@@ -469,7 +476,7 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
             Text(tr("Activity"), Modifier.padding(start = 12.dp).weight(1f).graphicsLayer { this.alpha = alpha }.clearAndSetSemantics { },
                 style = ActivityType.mini, color = palette.foreground, maxLines = 1)
         }
-        BarButton(R.drawable.ic_activity_search, tr("Search"), Modifier.testTag("activity-search")) { haptics.light(); state.searching = true }
+        BarButton(R.drawable.ic_activity_search, tr("Search"), Modifier.testTag("activity-search")) { haptics.light(); focusOnOpen = true; state.searching = true }
         Box {
             var menu by remember { mutableStateOf(false) }
             BarButton(R.drawable.ic_activity_more, tr("More"), Modifier.testTag("activity-more")) { haptics.light(); menu = true }

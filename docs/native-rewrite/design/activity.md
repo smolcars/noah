@@ -172,7 +172,7 @@ Keep the existing rules unchanged:
 - **iOS:**
   - **Glass:** Liquid Glass through `GlassCompat` for the bar buttons, the chip, the menu and the sheet.
   - **Push transition:** iOS 18+ zoom navigation transition from the row; a standard push on older versions.
-  - **Search:** `.searchable`.
+  - **Search:** Noah's own field over the bar, with Cancel, not `.searchable`: in a tab on iOS 27 the system's minimized toolbar search reopened as soon as it was closed.
 - **Android:**
   - Compose `SharedTransitionLayout` for the row → detail transition;
   - Material pull-to-refresh;

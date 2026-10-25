@@ -68,7 +68,7 @@ The Activity tab follows [`docs/native-rewrite/design/activity.md`](../../docs/n
   - `ActivityRules` / `ActivityDetailRules`: pure list and detail rules;
   - `ActivityExport`: the export sheet and the share presenter.
 - **Shared with Home:** `HistoryMapping`'s Data changes and `HomeActivityRow`. Home's "new" set (`HomeActivityTracker`) now lives in `WalletTabs`, so both tabs read the same one.
-- **Wide windows** (the iPhone Duo open, iPad, landscape) draw each pane's own bar. The system bar would move its buttons to the Duo's side column, across the fold. So search there is a field in the leading pane rather than `.searchable`.
+- **Wide windows** (the iPhone Duo open, iPad, landscape) draw each pane's own bar. The system bar would move its buttons to the Duo's side column, across the fold. So search there is a field in the leading pane. Phones use the same field over the system bar: inside a tab on iOS 27, `.searchable`'s minimized toolbar field reopened as soon as it was closed.
 - **Lazy list caveat:** don't put `onScrollVisibilityChange` on rows inside the list's `LazyVStack`. It left rows that moved from Pending to a day drawn with their old record. The new dot's 1.4 s runs as a row `.task` instead.
 - **Fixtures:** `NoahTests/ActivityShotTests` (opt-in, `TEST_RUNNER_NOAH_ACT_SHOTS=1`). Write a state to the app's `Documents/act-shot`, as with the Send/Receive shots. States: `everyday`, `busy`, `empty`, `loading`, `error`, `suspended`, `filter`, `filter-empty`, `search`, `csv`, `confirm`, `detail-<id>[-details]`.
 - **Tests:**
