@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1480,
-  "sourceKeys": 1511,
+  "catalogEntries": 1479,
+  "sourceKeys": 1510,
   "coverage": {
     "ios": {
       "used": [
@@ -815,7 +815,6 @@
         "Push tokens are only available on a physical device",
         "QR Code",
         "QR code unavailable. Use payment details to copy your request.",
-        "QR mode",
         "Raw transaction",
         "Reading this screen and estimating fees never broadcasts an exit.",
         "Ready",

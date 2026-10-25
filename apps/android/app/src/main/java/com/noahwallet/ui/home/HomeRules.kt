@@ -67,23 +67,31 @@ object HomeRules {
         else -> null
     }
 
-    /** At most one line under the fiat, in the spec's order. */
+    /** At most one line under the fiat, in the spec's order: money and rounds only (backups and background tasks are [activity]). */
     sealed interface Status {
         data class Error(val message: String) : Status
         data class Arriving(val sats: ULong) : Status
         data class InRound(val sats: ULong) : Status
         data class Rounds(val count: Int) : Status
-        data object BackingUp : Status
-        data class Background(val message: String) : Status
+
+        /**
+         * What a tap opens: only a place that explains the line. Funds in a round open the round (its funding
+         * transaction) while one is active; an error already says what to do, so it's plain text.
+         */
+        fun tap(roundsActive: Boolean): StatusTap? = when (this) {
+            is Arriving -> StatusTap.Balance
+            is InRound -> if (roundsActive) StatusTap.Rounds else StatusTap.Balance
+            is Rounds -> StatusTap.Rounds
+            is Error -> null
+        }
     }
+    enum class StatusTap { Balance, Rounds }
     fun status(error: String?, balance: com.noahwallet.services.wallet.WalletBalance?, rows: List<com.noahwallet.history.HistoryTransaction>,
-               activeRounds: Int, backup: Banner?, background: String?): Status? = when {
+               activeRounds: Int): Status? = when {
         error != null -> Status.Error(error)
         balance != null && arriving(balance, rows) > 0uL -> Status.Arriving(arriving(balance, rows))
         balance != null && balance.ark.pendingInRound > 0uL -> Status.InRound(balance.ark.pendingInRound)
         activeRounds > 0 -> Status.Rounds(activeRounds)
-        backup != null && !backup.failed && backup.title == "Backing up wallet" -> Status.BackingUp
-        background != null -> Status.Background(background)
         else -> null
     }
     /**
@@ -106,6 +114,8 @@ object HomeRules {
             it.effectiveBalanceSat, it.intendedBalanceSat, it.balanceChangeSat, it.offchainFeeSat, it.onchainFeeSat)
     }
     /** "Backup completed" and automatic-boarding completion are toasts now, within today's expiry. */
-    fun toast(backup: Banner?, boarding: Banner?): String? =
-        backup?.title?.takeIf { it == "Backup completed" } ?: boarding?.title
+    /** The top bar's activity glyph while a backup or another background task runs: what runs, for TalkBack. */
+    fun activity(backup: Banner?, background: String?): String? = backup?.title?.takeIf { it == "Backing up wallet" } ?: background
+    /** A backup completed within today's banner expiry: the glyph's check, in place of the old toast. */
+    fun backedUpAt(backup: Banner?, state: PersistedBackupState): Long? = state.lastBackupAt?.toLong()?.takeIf { backup?.title == "Backup completed" }
 }

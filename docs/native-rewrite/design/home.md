@@ -34,8 +34,9 @@ If the payment lands while Home isn't on screen, there's no animation: Home simp
 From the top: top bar, balance, fiat, status line, nudge, card or Recent, map row, tab bar.
 
 - **Top bar:**
-  - **Leading: the name chip.** It shows an orange-ringed initial and the local part of your Lightning address, plus a small network badge on signet and regtest, which replaces `VariantBadge`. With no address yet, it shows a person glyph and no name. Tap opens today's QR hub on My code.
-  - **Trailing:** scan, which opens the QR hub on Scan through today's scanner and Send import, and settings.
+  - **Leading: the name chip.** It shows an orange-ringed initial and the local part of your Lightning address, plus a small network badge on signet and regtest, which replaces `VariantBadge`. With no address yet, it shows a person glyph and no name. Tap opens Profile, whose My code row shows your Lightning address QR alone.
+  - **Trailing:** the activity glyph, scan and settings. Scan opens today's scanner alone (no My code), with today's Send import; closing it or refusing the camera returns to Home.
+  - **Activity glyph:** a quiet, fixed-width slot left of scan, so nothing moves. While a backup or another background task runs, a muted arrows glyph turns (it stays still under Reduce Motion); when a backup completes, a green check scales in and fades after about 2 s (a fade only under Reduce Motion). Otherwise the slot is empty. It isn't tappable; VoiceOver and TalkBack read "Backing up wallet", "Background task in progress..." or "Backup completed".
   - The map moves out of the toolbar into the map row.
   - Scrolling tucks the balance into the centre of the top bar (prototype `onScroll`), and content fades under an edge.
 - **Balance:**
@@ -46,14 +47,12 @@ From the top: top bar, balance, fiat, status line, nudge, card or Recent, map ro
   - **Hidden:** the fiat value, row amounts, the pending line and the tucked balance all show dots too.
 - **Fiat:** today's 5-minute quote and rounding, in the muted colour. It's display-only this round.
 - **Status line:** at most one, under the fiat, with a small pulsing dot, in this order:
-  1. today's wallet error, in the failure colour, with no dot;
-  2. `+{amount} arriving` for today's pending balance;
-  3. today's `pendingRoundMessage`;
-  4. "Round in progress", which opens today's Pending Rounds sheet;
-  5. "Backing up wallet";
-  6. today's background-task message.
+  1. today's wallet error, in the failure colour, with no dot; not tappable, since it says what to do;
+  2. `+{amount} arriving` for today's pending balance, which opens the balance sheet;
+  3. today's `pendingRoundMessage`, which opens today's Pending Rounds sheet (the round and its funding transaction) while a round is active, otherwise the balance sheet;
+  4. "Round in progress", which opens today's Pending Rounds sheet.
 
-  Taps open the balance sheet unless noted.
+  Backups and background tasks are the top bar's activity glyph, never a line. The line's slot always keeps two lines of its text style, so a line appearing or going never moves the nudge, the card or Recent; only a longer one at large text sizes takes more room.
 - **Balance sheet:**
   - **Content:** "Balance", the total, then today's `balance.details` rows with their existing labels. No new explanatory copy.
   - **Compact:** a medium-detent sheet.
@@ -96,7 +95,7 @@ There is one nudge card at a time, in this order:
 | **Email** | email not verified and the prompt not dismissed (today's server state) | "Add your email" / "For urgent wallet alerts" | "Add" opens today's email flow; × dismisses it with today's `dismissEmailPrompt` |
 | Update | today's `updateRequired` | "Update available" / "Get the latest fixes" | "Update" opens today's update link |
 
-Resolving or dismissing a nudge folds it away with the soft spring, and the next one slides in with snappy. The prototype's "Backed up" and "Email added" toasts appear only after real success. There is no "Renewed" toast: submitting a renewal only hands the coins to a round, so the app can't confirm it at that moment; the nudge folds away once nothing is due. "Backup completed" and today's automatic-boarding completion become 5-second toasts instead of cards, keeping today's expiry rules.
+Resolving or dismissing a nudge folds it away with the soft spring, and the next one slides in with snappy. The prototype's "Backed up" and "Email added" toasts appear only after real success. There is no "Renewed" toast: submitting a renewal only hands the coins to a round, so the app can't confirm it at that moment; the nudge folds away once nothing is due. Today's automatic-boarding completion becomes a 5-second toast instead of a card, keeping today's expiry rules; "Backup completed" is the activity glyph's check instead.
 
 The renew check reuses today's refresh moments: Home appearing, wallet change events, round checks and pull-to-refresh. Don't add a faster timer.
 
@@ -141,7 +140,7 @@ The redesign only changes how Home looks and which existing actions it links to.
 - **Existing Home features stay reachable:**
   - upgrade notices, the update warning and the wallet error;
   - backup progress, failure and retry;
-  - pending rounds and their sheet, automatic-boarding completion and the background-task status;
+  - pending rounds and their sheet, automatic-boarding completion and the background-task status (the activity glyph);
   - the email prompt and the backup prompt;
   - the suspended state, the BTC Map, the QR hub and the scanner;
   - transaction detail with Pay again, and pull-to-sync.

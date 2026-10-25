@@ -1,6 +1,7 @@
 package com.noahwallet.ui
 
 import android.Manifest
+import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -153,24 +154,27 @@ class ParityUIDeviceTest {
             waitFor("Profile route") { text("Profile opened") != null }
         } finally { instrumentation.runOnMainSync { activity.finish() } }
     }
-    @Test fun scannerPasteAndCloseReturnToCode() {
+    /** Home's scan button: the scanner alone, which goes back when closed. */
+    @Test fun scannerOnlyPastesAndCloseGoesBack() {
         optIn()
         automation.grantRuntimePermission(context.packageName, Manifest.permission.CAMERA)
-        val activity = preview("qr")
+        val activity = preview("qr-scan")
         try {
-            click("Scan")
             waitFor("Existing scanner appears") { text("Scan QR code") != null }
+            assertNull("No My code beside the scanner", text("My code"))
             shot("qr-scanner")
             click("Close")
-            waitFor("Close restores My code") { text("This QR contains only your Lightning address.") != null }
-            click("Scan")
+            waitFor("Close goes back") { activity.isFinishing || activity.isDestroyed }
+        } finally { instrumentation.runOnMainSync { activity.finish() } }
+        val pasting = preview("qr-scan")
+        try {
             waitFor("Scanner paste") { text("Paste") != null }
             instrumentation.runOnMainSync {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Payment", "satoshi@example.test"))
             }
             click("Paste")
             waitFor("Paste routes payment request") { text("Payment request routed") != null }
-        } finally { instrumentation.runOnMainSync { activity.finish() } }
+        } finally { instrumentation.runOnMainSync { pasting.finish() } }
     }
     @Test fun notificationActionsAndBatterySkip() {
         optIn()
@@ -258,11 +262,17 @@ class ParityUIDeviceTest {
             val live = checkNotNull(HomeRules.fiat(total, rate, currency, Locale.forLanguageTag(LegacyLocale.resolved(context)), hidden = false)) { "a live $currency rate" }
             waitFor("Live fiat amount $live") { text(live) != null }
             shot("home-live")
-            act("QR Code")
+            // The name chip opens Profile; its My code row shows the code alone.
+            act("Profile")
+            click("My code")
             waitFor("Live identity QR") { text("This QR contains only your Lightning address.") != null }
+            assertNull("My code has no Scan beside it", text("Scan"))
             shot("qr-live-address")
+            // Back through Profile and Settings to Home, whose scan button opens the scanner alone.
+            for (step in 1..4) if (text("Scan") == null) { automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); instrumentation.waitForIdleSync(); Thread.sleep(500) }
             click("Scan")
             waitFor("Live scanner") { text("Scan QR code") != null }
+            assertNull("The scanner has no My code beside it", text("My code"))
             instrumentation.runOnMainSync {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Receive request", request))
             }

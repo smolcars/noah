@@ -34,7 +34,7 @@ extension AnyTransition {
 
 // MARK: Top bar
 
-/// You on the leading side (initial, name, network badge); scan and settings trailing.
+/// You on the leading side (initial, name, network badge); the activity glyph, scan and settings trailing.
 /// Compact layouts tuck the balance into the centre on scroll.
 struct HomeTopBar: View {
     let address: String?
@@ -43,16 +43,19 @@ struct HomeTopBar: View {
     var tuckShown = false
     /// Settings zooms out of the gear on phones.
     var settingsZoom: Namespace.ID?
-    let onCodes: () -> Void
+    let onProfile: () -> Void
     let onScan: () -> Void
     let onSettings: () -> Void
+    /// `HomeActivityGlyph`'s state.
+    var activity: LocalizedStringKey?
+    var backedUpAt: Double?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var name: String? { address?.split(separator: "@").first.map(String.init) }
 
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: onCodes) {
+            Button(action: onProfile) {
                 HStack(spacing: 8) {
                     ZStack {
                         Circle().strokeBorder(NoahTokens.Colors.orange, lineWidth: 1.5)
@@ -80,7 +83,7 @@ struct HomeTopBar: View {
             }
             .buttonStyle(HomePressStyle())
             .layoutPriority(1)
-            .accessibilityLabel(Text("My code"))
+            .accessibilityLabel(Text("Profile"))
             .accessibilityValue(Text(verbatim: address ?? ""))
             .accessibilityIdentifier("home-qr-button")
             // The tucked balance sits centred in the room between you and the buttons, never over them.
@@ -98,6 +101,7 @@ struct HomeTopBar: View {
                     .accessibilityHidden(true)
                 Spacer(minLength: 8)
             }
+            HomeActivityGlyph(running: activity, backedUpAt: backedUpAt).padding(.trailing, 4)
             GlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
                     iconButton(systemName: "qrcode.viewfinder", label: "Scan QR code", id: "home-scan-button", action: onScan)
@@ -261,39 +265,51 @@ struct HomeBalanceView: View {
     }
 }
 
-/// The one status line under the fiat value.
+/// The status line under the fiat value. Its slot always holds two lines, so a line coming or going never
+/// moves what's below it; only a longer one (at large text sizes) takes more room.
 struct HomeStatusRow: View {
-    let line: HomeStatusLine
+    let line: HomeStatusLine?
     let balance: WalletBalance?
     let unit: BitcoinAmountUnit
     let hidden: Bool
-    let action: () -> Void
+    /// Nil: plain text (`HomeStatusLine.tap`).
+    let action: (() -> Void)?
     @Environment(\.locale) private var locale
 
-    private var isError: Bool { if case .error = line { true } else { false } }
-
     var body: some View {
-        Button(action: action) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if !isError { HomePulseDot().alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 } }
-                text
-                    .noahText(NoahTokens.Typography.sub)
-                    .foregroundStyle(isError ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+        ZStack(alignment: .topLeading) {
+            Text(verbatim: " \n ").noahText(NoahTokens.Typography.sub).hidden().accessibilityHidden(true)
+            if let line {
+                if let action {
+                    Button(action: action) { content(line).contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("home-status")
+                } else {
+                    content(line).accessibilityElement(children: .combine).accessibilityIdentifier("home-status")
+                }
             }
-            .frame(minHeight: 20)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("home-status")
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func content(_ line: HomeStatusLine) -> some View {
+        let isError = if case .error = line { true } else { false }
+        return HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if !isError { HomePulseDot().alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 } }
+            text(line)
+                .noahText(NoahTokens.Typography.sub)
+                .foregroundStyle(isError ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(minHeight: 20)
     }
 
     private func amount(_ sats: UInt64) -> String {
         WalletBalance.display(sats, hidden: hidden, unit: unit, locale: locale)
     }
 
-    private var text: Text {
+    private func text(_ line: HomeStatusLine) -> Text {
         switch line {
         case .error(let message): Text(LocalizedStringKey(message))
         case .arriving(let sats):
@@ -301,8 +317,44 @@ struct HomeStatusRow: View {
         case .pendingRound(let sats):
             Text(LocalizedStringKey(balance?.pendingRoundMessage(amount: amount(sats)) ?? ""))
         case .rounds(let count): Text(LocalizedStringKey(count == 1 ? "Round in progress" : "Rounds in progress"))
-        case .backingUp: Text("Backing up wallet")
-        case .background(let message): Text(LocalizedStringKey(message))
+        }
+    }
+}
+
+/// The top bar's quiet wallet activity, in a fixed slot so nothing moves: a turning glyph while a
+/// background task or backup runs, a green check for about 2 s once a backup completes, else nothing.
+struct HomeActivityGlyph: View {
+    /// What's running, for VoiceOver; nil when idle.
+    let running: LocalizedStringKey?
+    /// A backup that has just completed.
+    let backedUpAt: Double?
+    @State private var checked = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            if checked {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(NoahColor.success)
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.3).combined(with: .opacity))
+                    .accessibilityLabel(Text("Backup completed"))
+            } else if let running {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .symbolEffect(.rotate, options: .repeat(.continuous), isActive: !reduceMotion)
+                    .transition(.opacity)
+                    .accessibilityLabel(Text(running))
+            }
+        }
+        .font(.system(size: 17, weight: .semibold))
+        .frame(width: 26, height: NoahTokens.Size.hitTarget)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: checked)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: running == nil)
+        .task(id: backedUpAt) {
+            guard backedUpAt != nil else { checked = false; return }
+            checked = true
+            try? await Task.sleep(for: .seconds(2))
+            checked = false
         }
     }
 }

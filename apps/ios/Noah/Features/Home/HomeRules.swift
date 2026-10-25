@@ -106,20 +106,29 @@ enum HomeNudge: Equatable, Identifiable {
     }
 }
 
-/// At most one line under the fiat value, in the spec's order.
+/// At most one line under the fiat value, in the spec's order: money and rounds only. Background
+/// tasks and backups show as the top bar's activity glyph instead.
 enum HomeStatusLine: Equatable {
     case error(String)
     case arriving(UInt64)
     case pendingRound(UInt64)
     case rounds(Int)
-    case backingUp
-    case background(String)
 
-    var opensRounds: Bool { if case .rounds = self { true } else { false } }
+    enum Tap { case balance, rounds }
+
+    /// What a tap opens: only a place that explains the line. Funds in a round open the round (its funding
+    /// transaction) while one is active; an error already says what to do, so it's plain text.
+    func tap(roundsActive: Bool) -> Tap? {
+        switch self {
+        case .arriving: .balance
+        case .pendingRound: roundsActive ? .rounds : .balance
+        case .rounds: .rounds
+        case .error: nil
+        }
+    }
 
     /// `incomingOnchain` comes from `incomingOnchain(_:)`: only money coming in counts as arriving.
-    static func current(error: String?, balance: WalletBalance?, incomingOnchain: UInt64, activeRounds: Int,
-                        backingUp: Bool, backgroundMessage: String?) -> Self? {
+    static func current(error: String?, balance: WalletBalance?, incomingOnchain: UInt64, activeRounds: Int) -> Self? {
         if let error { return .error(error) }
         // Never sends, offboards, exits or boards: those are your own money leaving or moving.
         // The records' incoming amount can't exceed what the wallet itself counts as pending on-chain.
@@ -127,8 +136,6 @@ enum HomeStatusLine: Equatable {
         if arriving > 0 { return .arriving(arriving) }
         if let balance, balance.ark.pendingInRound > 0 { return .pendingRound(balance.ark.pendingInRound) }
         if activeRounds > 0 { return .rounds(activeRounds) }
-        if backingUp { return .backingUp }
-        if let backgroundMessage { return .background(backgroundMessage) }
         return nil
     }
 

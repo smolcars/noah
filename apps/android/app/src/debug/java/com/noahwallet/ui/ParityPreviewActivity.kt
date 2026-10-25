@@ -45,7 +45,8 @@ class ParityPreviewActivity : FragmentActivity() {
                     StatusLine("Backing up wallet", failed = false, dot = true, onClick = {})
                 } }
                 else -> QRHubScreen(if (intent.getStringExtra("screen") == "qr-missing") null else "satoshi@example.test", "Satoshi",
-                    onBack = { finish() }, onProfile = { result = "Profile opened" }, onScan = { result = "Payment request routed" })
+                    onBack = { finish() }, onProfile = { result = "Profile opened" }, onScan = { result = "Payment request routed" },
+                    startScanning = intent.getStringExtra("screen") == "qr-scan")
             }
             result?.let { text -> AlertDialog(onDismissRequest = { result = null }, title = { Text(text) },
                 confirmButton = { TextButton({ result = null }) { Text("OK") } }) }

@@ -70,7 +70,6 @@
     "Push permission not granted": "parity-gap: Android's debug push action shows the raw registration outcome instead (debug-only, shown verbatim)",
     "Push tokens are only available on a physical device": "parity-gap: Android's debug push action shows the raw registration outcome instead (debug-only, shown verbatim)",
     "QR code unavailable. Use payment details to copy your request.": "parity-gap: only iOS's Receive, Home and QR hub QR has a fallback when the code can't be drawn",
-    "QR mode": "parity-gap (layout): iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera",
     "Recovery phrase hidden": "parity-gap (accessibility): iOS labels the hidden phrase grid; Android labels its Show button instead",
     "Recovery phrase needed": "flagged: Android's launch gate reads hand-written English-only values/native.xml (outside the catalogs and the extractor) and groups secure storage, invalid seed and seed conflict under one message; unifying this safety copy needs your wording decision",
     "Recurring consumption evidence is incomplete. Sending remains stopped.": "parity-gap (shown): only iOS checks recurring consumption evidence with its own message",

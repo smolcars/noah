@@ -140,7 +140,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
                         if (destination == Destination.Home || model.isWalletSuspended) CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
                             HomeScreen(model, homeOverlay, { homeOverlay = it }, onViewAll = {
                                 selectedTab = Destination.History
-                            }, onRepeatPayment = repeat, onSettings = openPage, onQR = { scan -> backStack.add(QRDestination(scan)) },
+                            }, onRepeatPayment = repeat, onSettings = openPage, onScan = { backStack.add(QRDestination(true)) },
                                 onBackup = { openSettings(SettingsDestination.Seed) },
                                 onProfile = { openSettings(SettingsDestination.Profile) },
                                 onRenew = { ids -> model.renewVtxos = ids; openSettings(SettingsDestination.Vtxos) }) {

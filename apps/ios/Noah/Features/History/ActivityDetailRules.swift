@@ -117,8 +117,8 @@ struct ActivityDetail: Equatable {
         }
 
         proof = outgoing && lightning && transaction.movementStatus == "successful" ? transaction.preimage : nil
-        // Only a transaction the record names; never a coin ID's parent.
-        chainTxid = rail == .onchain ? transaction.chainTxid : nil
+        // Only a transaction the record names; never a coin ID's parent. A renewal names its round's.
+        chainTxid = rail == .onchain ? transaction.chainTxid : transaction.isRenewal ? transaction.fundingTxid : nil
         let broadcast = row.status == .confirming && ["offboard", "send-onchain"].contains(transaction.movementKind)
         blockTxid = walletRow && row.status.isPending ? transaction.txid : broadcast ? transaction.broadcastTxid : nil
         let comment = transaction.repeatPayment?.comment ?? ""

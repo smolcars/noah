@@ -240,12 +240,9 @@ struct HomeView: View {
                         tuck: tuck, onDetails: openBalance, onToggleHidden: toggleHidden)
             .padding(.top, 8).modifier(appear(1))
         fiat.padding(.top, 10).modifier(appear(2))
-        if let status {
-            HomeStatusRow(line: status, balance: summary?.balance, unit: model.amountUnit, hidden: model.isBalanceHidden) {
-                statusTapped(status)
-            }
-                .padding(.top, 8).modifier(appear(3))
-        }
+        HomeStatusRow(line: status, balance: summary?.balance, unit: model.amountUnit, hidden: model.isBalanceHidden,
+                      action: status?.tap(roundsActive: !home.activeRounds.isEmpty).map { tap in { statusTapped(tap) } })
+            .padding(.top, 8).modifier(appear(3))
         HomeNudgeSlot(nudge: nudge) { nudge in
             HomeNudgeCard(nudge: nudge, unit: model.amountUnit, hidden: model.isBalanceHidden, busy: busy(nudge),
                           action: { act(nudge) }, dismiss: { dismiss(nudge) })
@@ -285,7 +282,8 @@ struct HomeView: View {
         HomeTopBar(address: address, variant: model.variant,
                    tucked: tucked && !model.isWalletSuspended ? tuckedBalance : nil, tuckShown: tuck > 0.7,
                    settingsZoom: window.wide ? nil : settingsZoom,
-                   onCodes: { open(.codes(.myCode)) }, onScan: { open(.codes(.scan)) }, onSettings: { open(.settings) })
+                   onProfile: { open(.page(.profile)) }, onScan: { open(.codes(.scan)) }, onSettings: { open(.settings) },
+                   activity: activity, backedUpAt: backedUpAt)
     }
 
     private var tuckedBalance: String? {
@@ -403,10 +401,9 @@ struct HomeView: View {
         .allowsHitTesting(false)
     }
 
-    /// Backup completion and automatic boarding show for five seconds, as their banners did.
+    /// Automatic boarding shows for five seconds, as its banner did.
     private var statusToast: String? {
         if model.isWalletSuspended { return nil }
-        if home.backup.lastBackupStatus == .success, backupBanner != nil { return "Backup completed" }
         if let board = home.autoBoard {
             return L10n.text("{amount} available in Ark",
                              WalletBalance.display(board.netSats, hidden: model.isBalanceHidden, unit: model.amountUnit, locale: locale),
@@ -451,8 +448,19 @@ struct HomeView: View {
 
     private var status: HomeStatusLine? {
         HomeStatusLine.current(error: walletError, balance: summary?.balance,
-                               incomingOnchain: HomeStatusLine.incomingOnchain(history.transactions), activeRounds: home.activeRounds.count,
-                               backingUp: home.backup.lastBackupStatus == .inProgress, backgroundMessage: home.backgroundMessage)
+                               incomingOnchain: HomeStatusLine.incomingOnchain(history.transactions), activeRounds: home.activeRounds.count)
+    }
+
+    /// What the top bar's activity glyph names while it turns: a backup, or another background task.
+    private var activity: LocalizedStringKey? {
+        if model.isWalletSuspended { return nil }
+        if home.backup.lastBackupStatus == .inProgress { return "Backing up wallet" }
+        return home.backgroundMessage.map { LocalizedStringKey($0) }
+    }
+
+    /// A backup that completed in the last few seconds, for the glyph's check.
+    private var backedUpAt: Double? {
+        home.backup.lastBackupStatus == .success && backupBanner != nil && !model.isWalletSuspended ? home.backup.lastBackupAt : nil
     }
 
     struct TrackerInput: Equatable {
@@ -500,12 +508,12 @@ struct HomeView: View {
         withAnimation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy)) { model.isBalanceHidden.toggle() }
     }
 
-    private func statusTapped(_ line: HomeStatusLine) {
-        if line.opensRounds {
+    private func statusTapped(_ tap: HomeStatusLine.Tap) {
+        switch tap {
+        case .balance: openBalance()
+        case .rounds:
             haptics.play(.light)
             withAnimation(window.wide ? NoahTokens.Motion.travel(reduceMotion) : nil) { sheet = .rounds }
-        } else {
-            openBalance()
         }
     }
 
@@ -606,7 +614,7 @@ struct HomeView: View {
         case .settings:
             // Phones zoom out of the gear; wide windows swap the panes.
             SettingsHost(page: nil).navigationTransition(.zoom(sourceID: "settings", in: settingsZoom))
-        case .codes(let mode): QRHubView(isActive: isActive, initialMode: mode, onScan: onScan)
+        case .codes(let mode): QRHubView(isActive: isActive, mode: mode, onScan: onScan)
         case .map: BtcMapView()
         case .page(let page): SettingsHost(page: page)
         }

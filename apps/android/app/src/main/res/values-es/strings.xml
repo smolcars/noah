@@ -935,7 +935,6 @@
   <string name="gt_cce48536f85a3b10">"Los tokens de notificaciones push solo están disponibles en un dispositivo físico"</string>
   <string name="gt_5a779155eadaaa3b">"Código QR"</string>
   <string name="gt_e0e3f72b2d272077">"Código QR no disponible. Usa los detalles del pago para copiar tu solicitud."</string>
-  <string name="gt_93f355ad6107bcb8">"Modo QR"</string>
   <string name="gt_66b1e18e98c4a1d5">"QR no disponible. Toca para copiar los detalles del pago."</string>
   <string name="gt_ecf58b0c890a1c76">"Transacción sin procesar"</string>
   <string name="gt_cb1838ea58a69336">"Consultar esta pantalla y estimar las comisiones no provoca la difusión de ninguna transacción de salida."</string>

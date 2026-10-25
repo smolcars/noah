@@ -9,45 +9,47 @@ struct QRHubTests {
         let cases = try Fixtures.load("qr-hub", input: Input.self, expected: String?.self)
         #expect(cases.count == 8)
         for fixture in cases {
-            let hub = QRHubModel(requestCamera: { true })
-            hub.mode = .scan
+            let hub = QRHubModel(mode: .scan, requestCamera: { true })
             #expect(hub.receive(fixture.input.value, pasted: fixture.input.pasted) == fixture.expected)
-            #expect(hub.mode == (fixture.expected == nil ? .scan : .myCode))
             #expect(!hub.scannerPresented)
         }
         #expect(QRHubModel.displayAddress("alice@pay.example.com") == "alice@\u{200B}pay.\u{200B}example.\u{200B}com")
     }
 
-    @Test func deniedCameraResetsModeAndShowsRNCopy() async {
-        let hub = QRHubModel(requestCamera: { false })
-        hub.mode = .scan
+    /// Home's scanner never turns into My code: a denial shows the RN copy, then the view goes back.
+    @Test func deniedCameraShowsRNCopyAndStaysOnScan() async {
+        let hub = QRHubModel(mode: .scan, requestCamera: { false })
         await hub.openScanner()
-        #expect(hub.mode == .myCode)
+        #expect(hub.mode == .scan)
         #expect(hub.permissionError)
         #expect(!hub.scannerPresented)
     }
 
-    @Test func scannerClosesAndResetsOnCancelOrFocusLoss() async {
-        let hub = QRHubModel(requestCamera: { true })
-        hub.mode = .scan
+    @Test func scannerClosesOnCancelOrFocusLoss() async {
+        let hub = QRHubModel(mode: .scan, requestCamera: { true })
         await hub.openScanner()
         #expect(hub.scannerPresented)
         hub.closeScanner()
         #expect(!hub.scannerPresented)
-        #expect(hub.mode == .myCode)
+        #expect(hub.mode == .scan)
+    }
+
+    @Test func myCodeNeverAsksForTheCamera() async {
+        var asked = false
+        let hub = QRHubModel(requestCamera: { asked = true; return true })
+        await hub.openScanner()
+        #expect(hub.mode == .myCode && !asked && !hub.scannerPresented)
     }
 
     @Test func lateCameraApprovalCannotReopenAfterLeavingHub() async {
         var continuation: CheckedContinuation<Bool, Never>?
-        let hub = QRHubModel(requestCamera: { await withCheckedContinuation { continuation = $0 } })
-        hub.mode = .scan
+        let hub = QRHubModel(mode: .scan, requestCamera: { await withCheckedContinuation { continuation = $0 } })
         let request = Task { await hub.openScanner() }
         while continuation == nil { await Task.yield() }
         hub.closeScanner()
         continuation?.resume(returning: true)
         await request.value
         #expect(!hub.scannerPresented)
-        #expect(hub.mode == .myCode)
     }
 
     @Test func scanRoutingReusesImporterAndClearsPreviousDraftWithoutSubmitting() async {

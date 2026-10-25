@@ -89,7 +89,7 @@ internal fun CircleButton(icon: Int, label: String, modifier: Modifier = Modifie
 internal fun NameChip(address: String?, variant: String, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val local = address?.substringBefore('@')?.takeIf { it.isNotEmpty() }
-    val label = tr("QR Code")
+    val label = tr("Profile")
     Row(Modifier.height(40.dp).tonal(RoundedCornerShape(20.dp), palette.soft)
         .clickable(onClickLabel = label, role = Role.Button, onClick = onClick)
         .padding(start = 5.dp, end = if (local != null || variant != "mainnet") 14.dp else 5.dp),
@@ -169,12 +169,50 @@ internal fun PulseDot(color: Color) {
 }
 
 @Composable
-internal fun StatusLine(text: String, emphasis: String? = null, failed: Boolean, dot: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun StatusLine(text: String, emphasis: String? = null, failed: Boolean, dot: Boolean, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
-    Row(modifier.clickable(role = Role.Button, onClick = onClick), verticalAlignment = Alignment.CenterVertically,
+    // No onClick: plain text, not a button.
+    Row(if (onClick != null) modifier.clickable(role = Role.Button, onClick = onClick) else modifier, verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (dot) PulseDot(palette.muted)
         Text(text + (emphasis?.let { " $it" } ?: ""), style = HomeType.line, color = if (failed) palette.failure else palette.foreground)
+    }
+}
+
+/**
+ * The top bar's quiet wallet activity, in a fixed slot so nothing moves: a turning glyph while a background task or
+ * backup runs ([running] names it for TalkBack), a green check for about 2 s once a backup completes, else nothing.
+ */
+@Composable
+internal fun ActivityGlyph(running: String?, backedUpAt: Long?) {
+    val palette = LocalPalette.current
+    val reduceMotion = LocalReduceMotion.current
+    var checked by remember { mutableStateOf(false) }
+    LaunchedEffect(backedUpAt) {
+        if (backedUpAt == null) { checked = false; return@LaunchedEffect }
+        checked = true
+        try { kotlinx.coroutines.delay(2_000) } finally { checked = false }
+    }
+    val fade = tween<Float>(if (reduceMotion) 180 else 250)
+    Box(Modifier.size(26.dp, 44.dp), contentAlignment = Alignment.Center) {
+        androidx.compose.animation.AnimatedVisibility(!checked && running != null,
+            enter = androidx.compose.animation.fadeIn(fade), exit = androidx.compose.animation.fadeOut(fade)) {
+            val turn by rememberInfiniteTransition(label = "activity").animateFloat(0f, 360f,
+                infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "turn")
+            val label = tr(running ?: "")
+            Icon(painterResource(HomeIcons.sync), null, Modifier.size(20.dp).graphicsLayer { rotationZ = if (reduceMotion) 0f else turn }
+                .semantics { contentDescription = label }, tint = palette.muted)
+        }
+        androidx.compose.animation.AnimatedVisibility(checked,
+            enter = androidx.compose.animation.fadeIn(fade) + if (reduceMotion) androidx.compose.animation.EnterTransition.None
+                else androidx.compose.animation.scaleIn(spring(.5f, 400f), initialScale = .3f),
+            exit = androidx.compose.animation.fadeOut(fade)) {
+            val label = tr("Backup completed")
+            // Today's success green (Send's ✓, the widget).
+            Box(Modifier.size(20.dp).background(Color(0xFF22C55E), CircleShape).semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
+                Icon(painterResource(HomeIcons.check), null, Modifier.size(14.dp), tint = Color.White)
+            }
+        }
     }
 }
 

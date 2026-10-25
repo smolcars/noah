@@ -84,13 +84,15 @@ object ActivityRules {
 
     /**
      * The on-chain transaction a payment made, from explicit evidence only: the on-chain wallet's own transaction, or
-     * the offboard txid or board anchor bark recorded. Never a coin's ID: before an offboard's transaction exists, that
+     * the offboard txid, board anchor or a renewal's round funding txid bark recorded. Never a coin's ID: before an offboard's transaction exists, that
      * names the coin's parent transaction, which this payment didn't make.
      */
     fun chainTxid(record: HistoryTransaction): String? {
         val txid = when (record.source) {
             "onchain-wallet" -> record.txid
-            "ark" -> HistoryMetadata.parse(record.metadataJson ?: "").let { it.offboardTxid ?: it.chainAnchor?.substringBefore(':') }
+            "ark" -> HistoryMetadata.parse(record.metadataJson ?: "").let {
+                it.offboardTxid ?: it.chainAnchor?.substringBefore(':') ?: it.fundingTxid?.takeIf { record.isRenewal }
+            }
             else -> null
         }
         return txid?.takeIf { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }

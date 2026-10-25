@@ -71,6 +71,11 @@ data class HomeUi(
     val newRows: Set<String> = emptySet(),
     val retrying: Boolean = false,
     val now: Date = Date(),
+    /** A round is active: funds in a round open it. */
+    val roundsActive: Boolean = false,
+    /** The top bar's [ActivityGlyph]. */
+    val activity: String? = null,
+    val backedUpAt: Long? = null,
 ) {
     val domain get() = address?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }
     fun amount(sats: ULong) = if (hidden) "••••" else BitcoinAmount.format(sats.toLong(), unit, locale)
@@ -106,7 +111,7 @@ class HomeToasts {
 }
 
 class HomeActions(
-    val myCode: () -> Unit = {}, val scan: () -> Unit = {}, val settings: () -> Unit = {}, val map: () -> Unit = {},
+    val scan: () -> Unit = {}, val settings: () -> Unit = {}, val map: () -> Unit = {},
     /** The suspended state's "Open Settings": Advanced, where Suspend wallet is. */
     val suspended: () -> Unit = settings,
     val toggleHidden: () -> Unit = {}, val seeAll: () -> Unit = {}, val openRow: (String) -> Unit = {}, val profile: () -> Unit = {},
@@ -301,7 +306,7 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
         // The buttons keep their size; the chip gets the rest (its name ellipsizes) and the tucked balance is
         // centred in the gap between them, so a long name never pushes the buttons out of a narrow pane.
         androidx.compose.ui.layout.Layout(contents = listOf(
-            { if (!suspended) NameChip(ui.address, ui.variant) { haptics.light(); actions.myCode() } },
+            { if (!suspended) NameChip(ui.address, ui.variant) { haptics.light(); actions.profile() } },
             {
                 if (!suspended) {
                     val shown = tuck > .7f
@@ -314,6 +319,7 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
             },
             {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!suspended) ActivityGlyph(ui.activity, ui.backedUpAt)
                     if (!suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
                     val entry = com.noahwallet.ui.settings.LocalSettingsEntry.current
                     CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button").then(if (entry == null) Modifier
@@ -450,19 +456,26 @@ internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolea
     }
 }
 
+/** The status line's slot always holds two lines, so a line coming or going never moves what's below it; only a longer one
+ *  (at large text sizes) takes more room. */
 @Composable
 private fun StatusBlock(ui: HomeUi, onBalance: () -> Unit, onRounds: () -> Unit) {
-    val status = ui.status ?: return
-    val (text, failed, dot) = when (status) {
-        is HomeRules.Status.Error -> Triple(tr(status.message), true, false)
-        is HomeRules.Status.Arriving -> Triple(tr("{amount} arriving", if (ui.hidden) "••••" else "+" + ui.amount(status.sats)), false, true)
-        is HomeRules.Status.InRound -> Triple(tr(ui.balance!!.pendingRoundMessage(ui.amount(status.sats))!!), false, true)
-        is HomeRules.Status.Rounds -> Triple(tr(if (status.count == 1) "Round in progress" else "Rounds in progress"), false, true)
-        HomeRules.Status.BackingUp -> Triple(tr("Backing up wallet"), false, true)
-        is HomeRules.Status.Background -> Triple(tr(status.message), false, true)
+    Box(Modifier.padding(top = 8.dp)) {
+        Text("", style = HomeType.line, minLines = 2, modifier = Modifier.clearAndSetSemantics { })
+        val status = ui.status ?: return@Box
+        val (text, failed, dot) = when (status) {
+            is HomeRules.Status.Error -> Triple(tr(status.message), true, false)
+            is HomeRules.Status.Arriving -> Triple(tr("{amount} arriving", if (ui.hidden) "••••" else "+" + ui.amount(status.sats)), false, true)
+            is HomeRules.Status.InRound -> Triple(tr(ui.balance!!.pendingRoundMessage(ui.amount(status.sats))!!), false, true)
+            is HomeRules.Status.Rounds -> Triple(tr(if (status.count == 1) "Round in progress" else "Rounds in progress"), false, true)
+        }
+        val onClick = when (status.tap(ui.roundsActive)) {
+            HomeRules.StatusTap.Balance -> onBalance
+            HomeRules.StatusTap.Rounds -> onRounds
+            null -> null
+        }
+        StatusLine(text, failed = failed, dot = dot, onClick = onClick)
     }
-    StatusLine(text, failed = failed, dot = dot, onClick = if (status is HomeRules.Status.Rounds) onRounds else onBalance,
-        modifier = Modifier.padding(top = 8.dp))
 }
 
 /** One nudge at a time: resolving or dismissing folds it away (soft); the next slides in (snappy). */

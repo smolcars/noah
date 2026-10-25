@@ -53,6 +53,9 @@ class HomeGalleryTest {
         show(Scene("everyday-new", HomeFixtures.ui("everyday", now = now, newRows = setOf("f-1"))))
         show(Scene("everyday-long-name", HomeFixtures.ui("everyday", now = now, address = "grandstanders49@localhost.com")))
         show(Scene("everyday-backed-up", HomeFixtures.ui("everyday", now = now, backedUp = true)))
+        // The top bar's activity glyph: turning while a background task runs; the check while a backup has just completed.
+        show(Scene("everyday-syncing", HomeFixtures.ui("everyday", now = now).copy(activity = "Background task in progress...")))
+        show(Scene("everyday-backup-completed", HomeFixtures.ui("everyday", now = now).copy(backedUpAt = now.time)))
         // The sheet's dialog window attaches on real frames; its show animation runs on the test clock.
         fun openSheet() { compose.onNodeWithTag("home-balance").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
             compose.mainClock.advanceTimeBy(500); Thread.sleep(700); compose.mainClock.advanceTimeBy(1_500) }

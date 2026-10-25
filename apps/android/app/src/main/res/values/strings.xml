@@ -935,7 +935,6 @@
   <string name="gt_cce48536f85a3b10">"Push tokens are only available on a physical device"</string>
   <string name="gt_5a779155eadaaa3b">"QR Code"</string>
   <string name="gt_e0e3f72b2d272077">"QR code unavailable. Use payment details to copy your request."</string>
-  <string name="gt_93f355ad6107bcb8">"QR mode"</string>
   <string name="gt_66b1e18e98c4a1d5">"QR unavailable. Tap to copy payment details."</string>
   <string name="gt_ecf58b0c890a1c76">"Raw transaction"</string>
   <string name="gt_cb1838ea58a69336">"Reading this screen and estimating fees never broadcasts an exit."</string>

@@ -70,6 +70,10 @@ struct ActivityDetailTests {
         let renewed = ActivityDetail(renewal, ownDomain: Self.own)
         #expect(renewed.status == "Renewed {n} coins" && renewed.renewedCoins == 3 && renewed.rail == .arkRound)
         #expect(renewed.fee == .amount(45) && renewed.total == nil)
+        // Its Transaction ID is the round's funding transaction bark records, never a coin's parent.
+        #expect(renewed.chainTxid == nil)
+        renewal.metadataJson = #"{"funding_txid":"946ac4fd55f8e5ea2a04b525cd163993261d541561cbfd1bbe4f28957b17dd40"}"#
+        #expect(ActivityDetail(renewal, ownDomain: Self.own).chainTxid == "946ac4fd55f8e5ea2a04b525cd163993261d541561cbfd1bbe4f28957b17dd40")
     }
 
     @Test func rowsApplyOnlyWhenTheyMeanSomething() {

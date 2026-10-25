@@ -34,7 +34,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, onViewAll: () -> Unit,
-               onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (androidx.navigation3.runtime.NavKey) -> Unit, onQR: (scan: Boolean) -> Unit, onBackup: () -> Unit = {},
+               onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (androidx.navigation3.runtime.NavKey) -> Unit, onScan: () -> Unit, onBackup: () -> Unit = {},
                onProfile: () -> Unit = {}, onRenew: (List<String>) -> Unit = {}, settings: () -> Unit) {
     val appColors = MaterialTheme.colorScheme
     val appTypography = MaterialTheme.typography
@@ -141,10 +141,11 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
         if (memory.emailSeen == false && emailVerified) { toasts.show(emailAdded); haptics.success() }
         memory.emailSeen = emailVerified
     }
-    val completion = HomeRules.toast(backupBanner, boardingBanner)
-    val completionAt = if (completion == "Backup completed") signals.backup.lastBackupAt?.toLong() else boarding?.second
+    // A completed backup is the top bar's check, not a toast.
+    val completion = boardingBanner?.title
+    val completionAt = boarding?.second
     // Boarding names its amount in Home's format, so a hidden balance stays hidden.
-    val completionText = if (completion == "Backup completed") tr(completion) else completion?.let { boarding?.let { (amount, _) ->
+    val completionText = completion?.let { boarding?.let { (amount, _) ->
         tr("{amount} available in Ark", if (model.hidden) "••••" else com.noahwallet.formatting.BitcoinAmount.format(amount, model.amountUnit, locale)) } }
     LaunchedEffect(completionText, completionAt) {
         val key = "$completion:$completionAt"
@@ -161,13 +162,16 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
         state = if (starting) HomeRules.State.fresh else state, address = address, variant = BuildConfig.APP_VARIANT, balance = balance, unit = model.amountUnit,
         locale = locale, hidden = model.hidden,
         fiat = HomeRules.fiat(balance?.totalSats?.toLong(), price, currency, locale, model.hidden),
-        status = HomeRules.status(model.error, balance, rows, signals.active.size, backupBanner, signals.background),
+        status = HomeRules.status(model.error, balance, rows, signals.active.size),
         nudge = HomeRules.nudge(memory.notices, memory.renew, backupBanner, model.recoveryPhraseBackedUp,
             emailPrompt = !dismissed && !emailVerified, updateRequired = signals.version?.updateRequired == true),
         rows = rows, historyError = model.history.error, newRows = newRows, retrying = signals.retrying, now = Date(),
+        roundsActive = signals.active.isNotEmpty(),
+        activity = HomeRules.activity(backupBanner, signals.background).takeIf { !model.isWalletSuspended },
+        backedUpAt = HomeRules.backedUpAt(backupBanner, signals.backup).takeIf { !model.isWalletSuspended },
     )
     val actions = HomeActions(
-        myCode = { onQR(false) }, scan = { onQR(true) }, settings = settings, suspended = { onSettings(SettingsDestination.Advanced) }, map = { onOverlay("map") },
+        scan = onScan, settings = settings, suspended = { onSettings(SettingsDestination.Advanced) }, map = { onOverlay("map") },
         toggleHidden = model::toggleBalance, seeAll = onViewAll, openRow = { detail.open(it) }, profile = onProfile,
         nudge = { nudge ->
             when (nudge) {

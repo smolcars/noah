@@ -163,29 +163,34 @@ struct HomeRulesTests {
     }
 
     @Test func statusLineShowsTheFirstThatApplies() {
-        func line(_ balance: WalletBalance?, incoming: UInt64 = 0, error: String? = nil, rounds: Int = 0,
-                  backingUp: Bool = false, background: String? = nil) -> HomeStatusLine? {
-            HomeStatusLine.current(error: error, balance: balance, incomingOnchain: incoming, activeRounds: rounds,
-                                   backingUp: backingUp, backgroundMessage: background)
+        func line(_ balance: WalletBalance?, incoming: UInt64 = 0, error: String? = nil, rounds: Int = 0) -> HomeStatusLine? {
+            HomeStatusLine.current(error: error, balance: balance, incomingOnchain: incoming, activeRounds: rounds)
         }
         let deposit = Self.balance(ark: 10, onchainPending: 100_000)
-        #expect(line(deposit, incoming: 100_000, error: "Couldn't open your wallet.", rounds: 1, backingUp: true, background: "x")
-                == .error("Couldn't open your wallet."))
-        #expect(line(deposit, incoming: 100_000, rounds: 1, backingUp: true, background: "x") == .arriving(100_000))
+        #expect(line(deposit, incoming: 100_000, error: "Couldn't open your wallet.", rounds: 1) == .error("Couldn't open your wallet."))
+        #expect(line(deposit, incoming: 100_000, rounds: 1) == .arriving(100_000))
         // Funds in a round get their own line, after anything that is arriving.
         #expect(line(Self.balance(inRound: 5, claimable: 7), rounds: 1) == .arriving(7))
         #expect(line(Self.balance(inRound: 5), rounds: 1) == .pendingRound(5))
-        #expect(line(Self.balance(ark: 1), rounds: 2, backingUp: true, background: "x") == .rounds(2))
-        #expect(line(Self.balance(ark: 1), backingUp: true, background: "x") == .backingUp)
-        #expect(line(nil, background: "Background task in progress...") == .background("Background task in progress..."))
+        #expect(line(Self.balance(ark: 1), rounds: 2) == .rounds(2))
+        // Backups and background tasks are the top bar's glyph, never a line.
         #expect(line(Self.balance(ark: 1)) == nil)
-        #expect(HomeStatusLine.rounds(1).opensRounds && !HomeStatusLine.backingUp.opensRounds)
+        #expect(line(nil) == nil)
+    }
+
+    /// A line is tappable only where something explains it; funds in a round open the round while one is active.
+    @Test func statusLineTapsOnlyWhereSomethingExplainsIt() {
+        #expect(HomeStatusLine.arriving(1).tap(roundsActive: true) == .balance)
+        #expect(HomeStatusLine.pendingRound(1).tap(roundsActive: true) == .rounds)
+        #expect(HomeStatusLine.pendingRound(1).tap(roundsActive: false) == .balance)
+        #expect(HomeStatusLine.rounds(1).tap(roundsActive: true) == .rounds)
+        #expect(HomeStatusLine.error("Couldn't load your balance. Pull down to try again.").tap(roundsActive: true) == nil)
     }
 
     @Test func onlyIncomingFundsAreArriving() {
         func line(_ balance: WalletBalance, _ transactions: [HistoryTransaction] = []) -> HomeStatusLine? {
             HomeStatusLine.current(error: nil, balance: balance, incomingOnchain: HomeStatusLine.incomingOnchain(transactions),
-                                   activeRounds: 0, backingUp: false, backgroundMessage: nil)
+                                   activeRounds: 0)
         }
         // Your own money leaving or moving is never "arriving".
         #expect(line(Self.balance(ark: 20_000, lightningSend: 5_000)) == nil)

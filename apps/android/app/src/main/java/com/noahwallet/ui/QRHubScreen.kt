@@ -30,7 +30,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 
-/** QRHub's code is the literal Lightning address, never the unified Receive request. [startScanning] opens it on Scan. */
+/**
+ * QRHub's code is the literal Lightning address, never the unified Receive request. It shows one thing: My code, or with
+ * [startScanning] (Home's scan button) the scanner alone, which goes back once the camera closes or is refused.
+ */
 @Composable
 fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Unit, onProfile: () -> Unit, onScan: (String) -> Unit,
                 startScanning: Boolean = false) {
@@ -46,35 +49,25 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         scanning = granted; permissionDenied = !granted
     }
-    // Opened from Home's scan button: ask for the camera once, as the Scan button does.
+    // Opened from Home's scan button: ask for the camera once.
     LaunchedEffect(Unit) { if (startScanning && !cameraGranted && !askedToScan) { askedToScan = true; permission.launch(Manifest.permission.CAMERA) } }
     LaunchedEffect(copied) { if (copied) { delay(1800); copied = false } }
+    fun close() { scanning = false; if (startScanning) onBack() }
     DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && !(context as android.app.Activity).isChangingConfigurations) scanning = false }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && !(context as android.app.Activity).isChangingConfigurations && scanning) close() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    BackHandler { if (scanning) scanning = false else onBack() }
+    BackHandler { if (scanning) close() else onBack() }
     fun scan(value: String) { scanning = false; onScan(value) }
     if (scanning) Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) { SendScanner(onClose = { scanning = false }, onScan = ::scan) }
+        Box(Modifier.weight(1f)) { SendScanner(onClose = ::close, onScan = ::scan) }
         TextButton({ clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()?.takeIf { it.trim().isNotEmpty() }?.let(::scan) },
             modifier = Modifier.fillMaxWidth()) { Text(tr("Paste")) }
-    } else BoxWithConstraints(Modifier.fillMaxSize()) {
+    } else if (!startScanning) BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = AdaptiveLayout.useDetailPane(maxWidth.value, maxHeight.value)
         val qrSide = AdaptiveLayout.qrSide(maxHeight.value - if (wide) 0f else 160f).dp
-        val controls: @Composable () -> Unit = {
-            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                TextButton(onBack) { Text(tr("Back")) }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FilledTonalButton({}, Modifier.weight(1f)) { Text(tr("My code")) }
-                    OutlinedButton({
-                        if (context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) scanning = true
-                        else permission.launch(Manifest.permission.CAMERA)
-                    }, Modifier.weight(1f)) { Text(tr("Scan")) }
-                }
-            }
-        }
+        val controls: @Composable () -> Unit = { TextButton(onBack) { Text(tr("Back")) } }
         val code: @Composable () -> Unit = {
             if (address != null) LightningAddressQR(address, qrSide) {
                 clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", address)); copied = true
@@ -105,9 +98,9 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
             }
         }
     }
-    if (permissionDenied) WalletAlertDialog(onDismissRequest = { permissionDenied = false }, title = { Text(tr("Permission required")) },
+    if (permissionDenied) WalletAlertDialog(onDismissRequest = { permissionDenied = false; close() }, title = { Text(tr("Permission required")) },
         text = { Text(tr("Camera permission is required to scan QR codes.")) },
-        confirmButton = { TextButton({ permissionDenied = false }) { Text(tr("OK")) } })
+        confirmButton = { TextButton({ permissionDenied = false; close() }) { Text(tr("OK")) } })
 }
 
 /** My code: the styled QR of the literal Lightning address on its always-white tile; tapping copies it. */

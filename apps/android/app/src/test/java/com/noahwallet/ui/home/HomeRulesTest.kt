@@ -118,18 +118,25 @@ class HomeRulesTest {
         balanceChangeSat = change, hasConfirmation = confirmed)
 
     @Test fun atMostOneStatusLineInTheSpecOrder() {
-        val running = HomeRules.backup(PersistedBackupState(lastBackupStatus = "in_progress"), 0, Locale.US)
         val busy = balance(1_000u, pendingInRound = 300u, onchainPending = 5_000u)
         val deposit = listOf(chain("d", 5_000))
-        assertEquals(HomeRules.Status.Error("e"), HomeRules.status("e", busy, deposit, 2, running, "bg"))
-        assertEquals(HomeRules.Status.Arriving(5_000uL), HomeRules.status(null, busy, deposit, 2, running, "bg"))
+        assertEquals(HomeRules.Status.Error("e"), HomeRules.status("e", busy, deposit, 2))
+        assertEquals(HomeRules.Status.Arriving(5_000uL), HomeRules.status(null, busy, deposit, 2))
         // A round in progress is your own funds, its own line after anything arriving.
-        assertEquals(HomeRules.Status.InRound(300uL), HomeRules.status(null, balance(1_000u, pendingInRound = 300u), emptyList(), 2, running, "bg"))
-        assertEquals(HomeRules.Status.Rounds(2), HomeRules.status(null, balance(1_000u), emptyList(), 2, running, "bg"))
-        assertEquals(HomeRules.Status.BackingUp, HomeRules.status(null, balance(1_000u), emptyList(), 0, running, "bg"))
-        assertEquals(HomeRules.Status.Background("bg"), HomeRules.status(null, balance(1_000u), emptyList(), 0, null, "bg"))
-        assertNull(HomeRules.status(null, balance(1_000u), emptyList(), 0, HomeRules.backup(PersistedBackupState(lastBackupStatus = "failed"), 0, Locale.US), null))
-        assertNull(HomeRules.status(null, null, emptyList(), 0, null, null))
+        assertEquals(HomeRules.Status.InRound(300uL), HomeRules.status(null, balance(1_000u, pendingInRound = 300u), emptyList(), 2))
+        assertEquals(HomeRules.Status.Rounds(2), HomeRules.status(null, balance(1_000u), emptyList(), 2))
+        // Backups and background tasks are the top bar's glyph, never a line.
+        assertNull(HomeRules.status(null, balance(1_000u), emptyList(), 0))
+        assertNull(HomeRules.status(null, null, emptyList(), 0))
+    }
+
+    /** A line is tappable only where something explains it; funds in a round open the round while one is active. */
+    @Test fun statusLineTapsOnlyWhereSomethingExplainsIt() {
+        assertEquals(HomeRules.StatusTap.Balance, HomeRules.Status.Arriving(1uL).tap(roundsActive = true))
+        assertEquals(HomeRules.StatusTap.Rounds, HomeRules.Status.InRound(1uL).tap(roundsActive = true))
+        assertEquals(HomeRules.StatusTap.Balance, HomeRules.Status.InRound(1uL).tap(roundsActive = false))
+        assertEquals(HomeRules.StatusTap.Rounds, HomeRules.Status.Rounds(1).tap(roundsActive = true))
+        assertNull(HomeRules.Status.Error("Couldn't load your balance. Pull down to try again.").tap(roundsActive = true))
     }
 
     @Test fun arrivingCountsIncomingFundsOnly() {
@@ -139,7 +146,7 @@ class HomeRulesTest {
                 pendingInRound = inRound, pendingExit = exit, pendingBoard = board, pendingArkoorSend = arkoorSend, pendingOffboard = offboard),
             com.noahwallet.services.wallet.WalletBalance.Onchain(0u, onchainPending, onchainPending))
         fun status(balance: com.noahwallet.services.wallet.WalletBalance, rows: List<com.noahwallet.history.HistoryTransaction> = emptyList()) =
-            HomeRules.status(null, balance, rows, 0, null, null)
+            HomeRules.status(null, balance, rows, 0)
         // Paying someone over Lightning: the Sending row shows it, never an arriving line.
         val paying = com.noahwallet.history.HistoryTransaction("ln", "Bolt11", 5_000, "1970-01-01T00:00:00.000Z", "outgoing", source = "ark",
             movementStatus = "pending", effectiveBalanceSat = -5_000)
@@ -158,12 +165,18 @@ class HomeRulesTest {
         assertEquals(HomeRules.Status.Arriving(30_000uL), status(ark(onchainPending = 30_000u), listOf(chain("d", 100_000))))
     }
 
-    @Test fun backupAndBoardingCompletionAreToastsWithinTodaysExpiry() {
+    /** Backups and background tasks are the top bar's glyph: turning while they run, a check (not a toast) when a backup completes. */
+    @Test fun backupAndBackgroundWorkAreTheTopBarGlyph() {
+        val running = HomeRules.backup(PersistedBackupState(lastBackupStatus = "in_progress"), 0, Locale.US)
+        assertEquals("Backing up wallet", HomeRules.activity(running, "Background task in progress..."))
+        assertEquals("Background task in progress...", HomeRules.activity(null, "Background task in progress..."))
+        assertNull(HomeRules.activity(null, null))
         val done = PersistedBackupState(lastBackupStatus = "success", lastBackupAt = 1_000.0)
-        assertEquals("Backup completed", HomeRules.toast(HomeRules.backup(done, 5_999, Locale.US), null))
-        assertNull(HomeRules.toast(HomeRules.backup(done, 6_000, Locale.US), null))
-        assertEquals("Boarding completed", HomeRules.toast(null, HomeRules.boarding(20_000, 1_000, 2_000, Locale.US)))
-        assertNull(HomeRules.toast(HomeRules.backup(PersistedBackupState(lastBackupStatus = "in_progress"), 0, Locale.US), null))
+        assertEquals(1_000L, HomeRules.backedUpAt(HomeRules.backup(done, 5_999, Locale.US), done))
+        assertNull(HomeRules.backedUpAt(HomeRules.backup(done, 6_000, Locale.US), done))
+        assertNull(HomeRules.activity(HomeRules.backup(done, 5_999, Locale.US), null))
+        // Boarding keeps its toast.
+        assertEquals("Boarding completed", HomeRules.boarding(20_000, 1_000, 2_000, Locale.US)?.title)
     }
 
     @Test fun balanceReReadsFollowAccountingChangesButNotEnrichment() {

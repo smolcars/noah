@@ -232,6 +232,10 @@ class ActivityRulesTest {
         // A board's anchor, without its vout.
         val board = record("b", Date(), type = "Onchain").copy(movementKind = "onboard", metadataJson = """{"chain_anchor":"$signed:0"}""")
         assertEquals(signed, ActivityRules.chainTxid(board))
+        // A renewal's round funding transaction.
+        val renewal = record("r", Date()).copy(movementKind = "refresh", metadataJson = """{"funding_txid":"$signed"}""")
+        assertEquals(signed, ActivityRules.chainTxid(renewal))
+        assertNull(ActivityRules.chainTxid(renewal.copy(movementKind = "arkoor-receive")))
         // The on-chain wallet's own transaction.
         assertEquals(signed, ActivityRules.chainTxid(record("c", Date(), type = "Onchain", source = "onchain-wallet").copy(txid = signed)))
         // Movement placeholders and Ark payments name none.

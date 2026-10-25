@@ -935,7 +935,6 @@
   <string name="gt_cce48536f85a3b10">"푸시 토큰은 실제 기기에서만 사용할 수 있습니다"</string>
   <string name="gt_5a779155eadaaa3b">"QR 코드"</string>
   <string name="gt_e0e3f72b2d272077">"QR 코드를 사용할 수 없습니다. 결제 상세 정보에서 요청을 복사하세요."</string>
-  <string name="gt_93f355ad6107bcb8">"QR 모드"</string>
   <string name="gt_66b1e18e98c4a1d5">"QR 코드를 표시할 수 없습니다. 눌러서 결제 상세 정보를 복사하세요."</string>
   <string name="gt_ecf58b0c890a1c76">"원시 거래"</string>
   <string name="gt_cb1838ea58a69336">"이 화면을 보거나 수수료를 추정하는 것만으로는 출금 거래가 전파되지 않습니다."</string>

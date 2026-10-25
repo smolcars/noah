@@ -22,4 +22,6 @@ internal object HomeIcons {
     val chevron = R.drawable.ic_home_chevron
     val close = R.drawable.ic_home_close
     val repeat = R.drawable.ic_activity_repeat
+    val sync = R.drawable.ic_activity_refresh
+    val check = R.drawable.ic_activity_check
 }

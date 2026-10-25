@@ -5,14 +5,16 @@ import Observation
 @Observable
 final class QRHubModel {
     enum Mode: String { case myCode, scan }
-    var mode = Mode.myCode
+    /// One per hub: Home's scan button opens the scanner alone, Profile's My code the code alone.
+    let mode: Mode
     private(set) var scannerPresented = false
     var permissionError = false
     var copied = false
     private let requestCamera: () async -> Bool
     private var generation = 0
 
-    init(requestCamera: @escaping () async -> Bool = { await AVCaptureDevice.requestAccess(for: .video) }) {
+    init(mode: Mode = .myCode, requestCamera: @escaping () async -> Bool = { await AVCaptureDevice.requestAccess(for: .video) }) {
+        self.mode = mode
         self.requestCamera = requestCamera
     }
 
@@ -20,15 +22,13 @@ final class QRHubModel {
         guard mode == .scan, !scannerPresented else { return }
         let token = generation
         let allowed = await requestCamera()
-        guard token == generation, !Task.isCancelled, mode == .scan else { return }
-        if allowed { scannerPresented = true }
-        else { mode = .myCode; permissionError = true }
+        guard token == generation, !Task.isCancelled else { return }
+        if allowed { scannerPresented = true } else { permissionError = true }
     }
 
     func closeScanner() {
         generation += 1
         scannerPresented = false
-        mode = .myCode
     }
 
     func receive(_ value: String, pasted: Bool = false) -> String? {

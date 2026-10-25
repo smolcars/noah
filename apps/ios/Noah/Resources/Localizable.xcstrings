@@ -33145,42 +33145,6 @@
         }
       }
     },
-    "QR mode": {
-      "comment": "GT gt_93f355ad6107bcb8; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "QR mode"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modo QR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "QRモード"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "QR 모드"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "QR-läge"
-          }
-        }
-      }
-    },
     "QR unavailable. Tap to copy payment details.": {
       "comment": "GT gt_66b1e18e98c4a1d5; arguments: none",
       "extractionState": "manual",

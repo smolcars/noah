@@ -160,7 +160,7 @@ struct SettingsHost: View {
         .navigationBarBackButtonHidden(settings.wide)
         .environment(\.settings, settings)
         .navigationDestination(item: $standalonePage) { SettingsHost(page: $0) }
-        .navigationDestination(isPresented: $standaloneMyCode) { QRHubView(isActive: true, initialMode: .myCode, onScan: scanPayment) }
+        .navigationDestination(isPresented: $standaloneMyCode) { QRHubView(isActive: true, mode: .myCode, onScan: scanPayment) }
         .task { if page == nil, let open = fixture?.sheet { sheet = open } }
         .foregroundStyle(NoahTokens.Colors.foreground)
         .tint(NoahTokens.Colors.foreground)

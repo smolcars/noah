@@ -8,7 +8,8 @@ import UIKit
 /// history, balance and status (no wallet, server writes or recovery phrase).
 /// Write a state name to Documents/home-shot ("hidden-" prefix hides the
 /// balance); "stop" ends the session. States: fresh, fresh-noaddress, everyday,
-/// busy, suspended, rounds, error, celebrate (a first payment lands after 2.5 s).
+/// busy, suspended, rounds, error, celebrate (a first payment lands after 2.5 s), syncing (a background task runs),
+/// backedup (a backup completes as the state opens).
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_HOME_SHOTS"] == "1"))
 struct HomeShotTests {
@@ -127,9 +128,14 @@ struct HomeShotTests {
         await history.refresh(currency: app.preferredCurrency)
         let rounds = name == "rounds" ? [HomeRound(roundID: 42, status: "pending", isFinal: false, isSuccess: false)] : []
         let renewal = name == "busy" ? HomeRenewal(ids: ["fixture"], sats: 20_000, blocksLeft: 108) : nil
+        var backup = PersistedBackupState()
+        if name == "backedup" {
+            backup.lastBackupStatus = .success
+            backup.lastBackupAt = Date().timeIntervalSince1970 * 1000
+        }
         let home = HomeModel(dependencies: .init(
-            price: { _ in 112_000 }, rounds: { rounds }, backup: { PersistedBackupState() }, retryBackup: {},
-            autoBoards: { [] }, backgroundSnapshot: { .init(isRunning: false, completionRevision: 0) },
+            price: { _ in 112_000 }, rounds: { rounds }, backup: { [backup] in backup }, retryBackup: {},
+            autoBoards: { [] }, backgroundSnapshot: { .init(isRunning: name == "syncing", completionRevision: 0) },
             renewal: { renewal }))
         let summary = fresh ? Self.summary(ark: 0) : name == "busy" ? Self.summary(ark: 142_742, onchain: 10_000, pending: 100_000)
             : Self.summary(ark: 142_742, onchain: 10_000)

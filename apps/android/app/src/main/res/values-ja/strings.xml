@@ -935,7 +935,6 @@
   <string name="gt_cce48536f85a3b10">"プッシュトークンは実機でのみ利用できます"</string>
   <string name="gt_5a779155eadaaa3b">"QRコード"</string>
   <string name="gt_e0e3f72b2d272077">"QRコードを利用できません。支払いの詳細からリクエストをコピーしてください。"</string>
-  <string name="gt_93f355ad6107bcb8">"QRモード"</string>
   <string name="gt_66b1e18e98c4a1d5">"QRコードを表示できません。タップして支払いの詳細をコピーしてください。"</string>
   <string name="gt_ecf58b0c890a1c76">"生の取引データ"</string>
   <string name="gt_cb1838ea58a69336">"この画面の閲覧や手数料の見積もりだけでは、退出取引はブロードキャストされません。"</string>

@@ -69,6 +69,8 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var isPending: Bool { movementStatus == "pending" || (source == "onchain-wallet" && hasConfirmation != true) }
     /// Bark records an Ark-funded on-chain send's txid once its transaction is broadcast.
     var broadcastTxid: String? { HistoryMetadata.parse(metadataJson ?? "").offboardTxid }
+    /// Bark records a round's funding transaction on the renewal that joined it.
+    var fundingTxid: String? { HistoryMetadata.parse(metadataJson ?? "").fundingTxid }
     /// A settled Lightning send to an invoice without its own amount. Retrying one, bark 0.8 reuses its movement
     /// and keeps the first attempt's destination amount and fee field, so those numbers prove nothing.
     var paidAmountlessInvoice: Bool {
@@ -174,6 +176,7 @@ enum HistoryFilter: String, CaseIterable, Identifiable {
 
 struct HistoryMetadata: Codable, Equatable, Sendable {
     var offboardTxid: String?
+    var fundingTxid: String?
     var onchainFeeSat: Int64?
     var chainAnchor: String?
     var paymentPreimage: String?
@@ -185,6 +188,7 @@ struct HistoryMetadata: Codable, Equatable, Sendable {
         let fee = object["onchain_fee_sat"] as? NSNumber
         return Self(
             offboardTxid: object["offboard_txid"] as? String,
+            fundingTxid: object["funding_txid"] as? String,
             onchainFeeSat: fee.flatMap { CFGetTypeID($0) != CFBooleanGetTypeID() ? Int64(exactly: $0.doubleValue) : nil },
             chainAnchor: object["chain_anchor"] as? String,
             paymentPreimage: object["payment_preimage"] as? String,
