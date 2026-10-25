@@ -26,16 +26,17 @@ final class OnchainModel {
         /// Something these pages show may have changed: the wallet committed (a round or renew, an exit step, an
         /// on-chain sync that found funds) or an on-chain operation moved. Coalesced to the latest.
         var changes: @Sendable () async -> AsyncStream<Void> = { AsyncStream { $0.finish() } }
+        /// Waits while the wallet is only briefly not ready (`ExitRules.settling`), as after every app switch; true once
+        /// it's ready.
+        var settle: @Sendable () async -> Bool = { false }
         static func live(session: WalletSession = .shared) -> Self {
-            Self(
-                ready: {
-                    let state = SettingsStorage.shared.persistedState(
-                        PersistedWalletState.self, key: PersistedWalletState.key)
-                    return await ExitRules.ready(
-                        initialized: state?.isInitialized != false, loaded: session.isOpen,
-                        suspended: state?.isWalletSuspended == true,
-                        background: WalletBackgroundActivity.shared.isRunning)
-                }, overview: { try await session.onchainOverview() },
+            @Sendable func wallet(_ rule: (Bool, Bool, Bool, Bool) -> Bool) async -> Bool {
+                let state = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+                return await rule(state?.isInitialized != false, session.isOpen, state?.isWalletSuspended == true,
+                                  WalletBackgroundActivity.shared.isRunning)
+            }
+            return Self(
+                ready: { await wallet(ExitRules.ready) }, overview: { try await session.onchainOverview() },
                 quote: { try await session.quoteOnchain($0, ids: $1, amount: $2, destination: $3) },
                 execute: { try await session.executeOnchain($0) },
                 attempt: { try await OnchainOperationJournal.shared.loadAll() },
@@ -52,6 +53,13 @@ final class OnchainModel {
                 sightings: .init(key: ExitSightings.key),
                 changes: {
                     Self.changes(subscribe: { try await session.stateChanges() }, journal: OnchainOperationJournal.shared.changes.stream())
+                },
+                settle: {
+                    // shortcut: checks every half second for up to 30 s; a stream of the session's state would replace it.
+                    for _ in 0..<60 {
+                        guard await wallet(ExitRules.settling), (try? await Task.sleep(for: .milliseconds(500))) != nil else { break }
+                    }
+                    return await wallet(ExitRules.ready)
                 })
         }
 
@@ -174,7 +182,8 @@ final class OnchainModel {
         do {
             let saved = try await dependencies.attempt()
             attempts = saved.filter { $0.overrideAudit?.acknowledgedAt == nil }
-            guard await dependencies.ready() else {
+            // A sync, a background job or a reopen holds the wallet for a moment: keep what's shown and wait for it.
+            if await !dependencies.ready(), await !dependencies.settle() {
                 overview = nil
                 exit = nil
                 invalidate()
@@ -192,11 +201,14 @@ final class OnchainModel {
             let token = generation
             if let detailID {
                 let detail = try await dependencies.detail(detailID)
-                guard await dependencies.ready(), token == generation else { return }
+                guard token == generation else { return }
+                // The wallet got busy during the read: read again, which waits for it.
+                guard await dependencies.ready() else { reloadPending = true; return }
                 exit = detail
             }
             let latest = try await dependencies.overview()
-            guard await dependencies.ready(), token == generation else { return }
+            guard token == generation else { return }
+            guard await dependencies.ready() else { reloadPending = true; return }
             overview = latest
             var seen = sightings.walletID == latest.walletID ? sightings.value
                 : dependencies.sightings?.load(walletID: latest.walletID) ?? .init()

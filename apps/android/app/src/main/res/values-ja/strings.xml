@@ -158,7 +158,7 @@
   <string name="gt_72e6d3aef9cf136d">"ブロック高API"</string>
   <string name="gt_b69792e8c9b6b4aa">"ブロック %1$s"</string>
   <string name="gt_52d8701c498a04d0">"ブロック%1$s · %2$s"</string>
-  <string name="gt_c79e8899fb446b95">"現在ブロックが混雑しています。手数料率が上がるとNoahは手数料を引き上げます。今すぐ再試行するにはチェーンを確認してください。"</string>
+  <string name="gt_8ee565450a0e320e">"現在ブロックが混雑しています。手数料率が上がるとNoahは手数料を引き上げます。今すぐ再試行するには出金を進めてください。"</string>
   <string name="gt_b9dba3190e1924dc">"残りブロック数"</string>
   <string name="gt_0ce74d1d6042dd44">"ブロック %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Arkに入金する"</string>
@@ -196,15 +196,12 @@
   <string name="gt_ff2ec2618b91b367">"メールアドレスを変更"</string>
   <string name="gt_dd16e499335d3a53">"メールアドレスを変更"</string>
   <string name="gt_77a94e1521d6a8e8">"Telegramでチャット"</string>
-  <string name="gt_9d60841e0a7891df">"確認"</string>
   <string name="gt_d0e3a822635c961f">"アクティビティでこの支払いの最後の試行を確認し、受取人に届いたかどうか確認してください。"</string>
   <string name="gt_fb7099ad8e818d42">"もう一度確認"</string>
   <string name="gt_c52a96b66db5c212">"操作状況を確認"</string>
   <string name="gt_69cd3590300a68c6">"状態を確認"</string>
   <string name="gt_44cb983669c9d0a9">"アドレスを確認してください。元に戻せません。"</string>
   <string name="gt_c31be569a492274b">"金額、選択したVTXO、送信先を確認してください。確認済みの資金が不足している可能性があります。"</string>
-  <string name="gt_0a4944369b913265">"チェーンを確認"</string>
-  <string name="gt_5b08e343d8089308">"チェーンを確認しますか？"</string>
   <string name="gt_ff65032d5e881811">"再度承認する前に、この支払いの結果を確認してください。"</string>
   <string name="gt_6f113ce35347ffe6">"編集する前に、この支払いの結果を確認してください。"</string>
   <string name="gt_710d52f182321f4a">"%1$s番目の単語を確認してください"</string>
@@ -212,7 +209,6 @@
   <string name="gt_4ac7dc7e4285ca5d">"履歴を確認し、受取人にも確認してください。この支払いはすでに送金されている可能性があります。"</string>
   <string name="gt_9b69d23b16f9a10b">"復元フレーズを確認してください。12個または24個すべての単語を正しい順序で入力してください。"</string>
   <string name="gt_a3c8ad0d500b6aae">"取引履歴を確認し、再開する前に、破壊的な変更を伴う強制上書きを承認してください。"</string>
-  <string name="gt_b52a42bc5c24c659">"チェーンを確認しました"</string>
   <string name="gt_0dfe1d63c9d86896">"確認中"</string>
   <string name="gt_ec963ffc911b8401">"確認中…"</string>
   <string name="gt_c7f937836f5d82d5">"選択"</string>
@@ -419,6 +415,7 @@
   <string name="gt_f81c8539f3f844d2">"ブロードキャストの推定手数料"</string>
   <string name="gt_4eb4fb13e39d4b50">"受け取り手数料の見積額"</string>
   <string name="gt_5bea3831fdd39f8b">"推定手数料"</string>
+  <string name="gt_485d888652133aa1">"推定手数料"</string>
   <string name="gt_8019400caf0913fa">"合計見積額"</string>
   <string name="gt_d9f3d2f604dad97a">"手数料の見積総額が回収額以上です。"</string>
   <string name="gt_c4e42b974c335dc5">"毎日"</string>
@@ -447,6 +444,7 @@
   <string name="gt_37566aa4ce592457">"出金の詳細"</string>
   <string name="gt_f889e0bd2f6e4ea8">"出金手数料"</string>
   <string name="gt_dd4f2a6cf22e8e94">"ほかのVTXOも出金"</string>
+  <string name="gt_c3ac6596a27b89b8">"出金を進めました"</string>
   <string name="gt_ba61a6796c9bda55">"退出処理は完了前に取り消されました。"</string>
   <string name="gt_0cb3378726d1acba">"退出処理で%1$s件のエラーが発生しました。取引がブロードキャストされたか、手数料が引き上げられた可能性があります。続行する前に退出の詳細を更新してください。"</string>
   <string name="gt_1bc751fa07b37246">"退出を開始しました。Noahはバックグラウンドで自動的に処理を進め、ブロードキャストと手数料引き上げにかかる費用をオンチェーン残高から支払います。"</string>
@@ -688,8 +686,11 @@
   <string name="gt_d47d7cb0e4f8fd2b">"その他"</string>
   <string name="gt_6ecc3df6bffdd06c">"移動"</string>
   <string name="gt_ae88a18039eabe64">"自動で移動"</string>
+  <string name="gt_013a643a423137ed">"出金を進める"</string>
+  <string name="gt_03244d3bb2b077f2">"進める"</string>
   <string name="gt_85720a9d10dec1ca">"この署名済み入金トランザクションをそのまま使用して、オンチェーンのBitcoinをArkに入金します。Arkへの入金額にはArkの手数料が含まれますが、オンチェーン手数料は別途かかります。Arkへの入金が完了すると資金を使用できます。この確認内容は2分後に失効します。"</string>
   <string name="gt_44541f362e819e01">"Arkに移動"</string>
+  <string name="gt_e5aa7874e42cca96">"出金を進めますか？"</string>
   <string name="gt_5c948b346d0764f3">"Arkに移動しました"</string>
   <string name="gt_dcfb842231d789f7">"資金移動ID"</string>
   <string name="gt_0850cf54792998dd">"資金移動の種類"</string>
@@ -782,7 +783,7 @@
   <string name="gt_db92e3e2f6075f8b">"Noahは復元を安全に取り消せませんでした。再試行しないでください。ウォレットを復旧できるよう、Noahを閉じて再起動してください。"</string>
   <string name="gt_822918727e4f828f">"Noahの標準設定"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noahは最終結果を確認できていません。再度支払わないでください。状態の確認によって別の支払いが送信されることはありません。"</string>
-  <string name="gt_545eb93f8194bd47">"Noahはしばらくこの出金のチェーンを確認していません。確認すると、トランザクションの送信や手数料の引き上げが行われることもあります。"</string>
+  <string name="gt_a8a0b1813d01e36a">"Noahはしばらくこの出金を確認していません。出金を進めると、次のステップの送信や手数料の引き上げが行われることもあります。"</string>
   <string name="gt_9354e260e9c82293">"Noah はベータ版です。失っても構わない金額だけを保管してください。"</string>
   <string name="gt_2588c7db9f3fe277">"Noahはロックされています"</string>
   <string name="gt_f590e31a6eb944e2">"Noahでバックアップ処理が続いています。少し待ってからもう一度お試しください。"</string>
@@ -812,6 +813,7 @@
   <string name="gt_d8da2c49df39d91d">"メモ"</string>
   <string name="gt_f9b73e1abc37cf5b">"メモ（任意）"</string>
   <string name="gt_045f910e6b3ce120">"メモは639文字以内にしてください。"</string>
+  <string name="gt_0ded20d6a749d6bf">"まだ送信するものはありません"</string>
   <string name="gt_788011833a5a0f22">"通知"</string>
   <string name="gt_54ee6b72ca5e79e6">"通知が必要です"</string>
   <string name="gt_fce40565eda8090e">"通知により、Noah は支払いを受け取り、ビットコインが期限切れになる前に更新できます。"</string>
@@ -1105,6 +1107,7 @@
   <string name="gt_c5fb1b5d6362edc0">"送金中 · Arkのラウンド待ち"</string>
   <string name="gt_a38ba37fd4f8a52a">"送金中 · 承認待ち"</string>
   <string name="gt_b8ed5279e897be5d">"送信中…"</string>
+  <string name="gt_3e631aab2f131c60">"出金の次のステップを送信するか、止まっているステップの手数料を引き上げます。手数料はオンチェーンのビットコインから支払われます。Noahはこれを自動でも行います。"</string>
   <string name="gt_c16bc82bf1f04ede">"送金済み"</string>
   <string name="gt_168d6498bc4dd449">"別の出金で送信済み"</string>
   <string name="gt_4e7201c7b8985a98">"送金先"</string>
@@ -1255,10 +1258,10 @@
   <string name="gt_dfa27aa18fe3eb7c">"先ほど確認した %1$s sats と異なります。"</string>
   <string name="gt_9e3a6e3e9bd56700">"元の操作は取り消されません。再送すると追加の資金や手数料が使われる場合があります。Noahはこの試行の記録を保持し、ウォレットの同期時に状態を確認します。"</string>
   <string name="gt_f2faa6b386bacbee">"この退出はもう取り消せません。最終トランザクションがすでにブロードキャストされている可能性があります。状態を更新してください。"</string>
-  <string name="gt_dc8cb064d1762d2f">"この出金は現在のチェーンの高さより遅れています。「チェーンを確認」で確認してください。出金トランザクションが送信されることもあります。"</string>
-  <plurals name="gt_1140c4bcb71a3ec1">
-    <item quantity="one">"この出金は現在のブロック高より遅れています。最終確認はブロック %2$s（%1$sブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"</item>
-    <item quantity="other">"この出金は現在のブロック高より遅れています。最終確認はブロック %2$s（%1$sブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"</item>
+  <string name="gt_5e306b07871ba45a">"この出金は現在のチェーンの高さより遅れています。出金を進めて追いつかせてください。出金トランザクションが送信されることもあります。"</string>
+  <plurals name="gt_02ca5673a1cb2959">
+    <item quantity="one">"この出金は現在のブロック高より遅れています。最終確認はブロック %2$s（%1$sブロック前）です。出金を進めると、出金トランザクションが送信されることもあります。"</item>
+    <item quantity="other">"この出金は現在のブロック高より遅れています。最終確認はブロック %2$s（%1$sブロック前）です。出金を進めると、出金トランザクションが送信されることもあります。"</item>
   </plurals>
   <string name="gt_5ed0c20bff01c0ca">"この請求書は支払い済みです。今回分の支払いは再送していません。再開する前に受取人を確認してください。"</string>
   <string name="gt_acec76ba83ee20ef">"この請求書は支払い済みです: %1$s"</string>
@@ -1267,7 +1270,6 @@
   <string name="gt_766460156a897a88">"この旧形式の支払いにはウォレットの識別情報がありません。破棄する前に履歴と受取人を確認してください。"</string>
   <string name="gt_bfbb491d06ec6963">"このリンクを開けませんでした。"</string>
   <string name="gt_70f6be0e72ef41e2">"緊急退出処理に必要なBitcoin取引をブロードキャストしたり、手数料を引き上げたりする場合があります。手数料はオンチェーン残高から支払われます。キャンセルできるのは、最終の退出取引がブロードキャストされる前までです。"</string>
-  <string name="gt_b993a2fe02860fb3">"出金トランザクションの送信や手数料の引き上げが行われることがあります。手数料はオンチェーンのビットコインから支払われます。Noahはこれを自動でも行います。"</string>
   <string name="gt_fd5e7812c7b65887">"この操作は、結果が確定していない試行と重複しています。再度実行する前に、その状況を確認してください。"</string>
   <string name="gt_9e73b9f6cffbb279">"この支払いを準備できませんでした。支払いは送信されていません。"</string>
   <string name="gt_2580b9f907abe759">"この支払いは不要になりました。"</string>
@@ -1528,9 +1530,9 @@
     <item quantity="one">"%1$s日"</item>
     <item quantity="other">"%1$s日"</item>
   </plurals>
-  <plurals name="gt_8e909a1137e15c7e">
-    <item quantity="one">"1件の出金が現在のチェーンの高さより遅れています。その出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"</item>
-    <item quantity="other">"%1$s件の出金が現在のチェーンの高さより遅れています。いずれかの出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"</item>
+  <plurals name="gt_cea13885ad32653d">
+    <item quantity="one">"1件の出金が現在のチェーンの高さより遅れています。その出金を進めて追いつかせてください。出金トランザクションが送信される場合もあります。"</item>
+    <item quantity="other">"%1$s件の出金が現在のチェーンの高さより遅れています。いずれかの出金を進めて追いつかせてください。出金トランザクションが送信される場合もあります。"</item>
   </plurals>
   <string name="gt_8338b13e065297c7">"1つのラウンドからの%1$s件の出金: トランザクションは%3$s件ではなく%2$s件。共有分の送信と支払いは1回だけです。"</string>
   <string name="gt_068deca46a360c34">"%1$s時間"</string>

@@ -2082,5 +2082,19 @@
   "gt_064ce079abb02910": "Den här VTXO:n kan inte tas ut.",
   "gt_02b452f0133be2e5": "Förnya först",
   "gt_98b1d38879903344": "Förnya den här VTXO:n under Inställningar → VTXO:er innan du tar ut den.",
-  "gt_f889e0bd2f6e4ea8": "Uttagsavgift"
+  "gt_f889e0bd2f6e4ea8": "Uttagsavgift",
+  "gt_013a643a423137ed": "Flytta fram uttaget",
+  "gt_e5aa7874e42cca96": "Flytta fram ditt uttag?",
+  "gt_3e631aab2f131c60": "Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta själv.",
+  "gt_485d888652133aa1": "Beräknade avgifter",
+  "gt_03244d3bb2b077f2": "Flytta fram",
+  "gt_c3ac6596a27b89b8": "Uttaget har flyttats fram",
+  "gt_0ded20d6a749d6bf": "Inget att skicka än",
+  "gt_5e306b07871ba45a": "Det här uttaget ligger efter blockkedjans aktuella höjd. Flytta fram det för att komma ikapp; det kan också skicka uttagstransaktioner.",
+  "gt_02ca5673a1cb2959_one": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block {{height}}, för {{n}} block sedan. Att flytta fram det kan också skicka nöduttagstransaktioner.",
+  "gt_02ca5673a1cb2959_other": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block {{height}}, för {{n}} block sedan. Att flytta fram det kan också skicka nöduttagstransaktioner.",
+  "gt_a8a0b1813d01e36a": "Noah har inte kontrollerat det här nöduttaget på ett tag. Att flytta fram det kan också skicka nästa steg eller höja en avgift.",
+  "gt_8ee565450a0e320e": "Blocken är fulla just nu. Noah höjer avgiften när nivåerna stiger. Flytta fram ditt uttag för att försöka igen nu.",
+  "gt_cea13885ad32653d_one": "Ett nöduttag ligger efter den aktuella blockhöjden. Flytta fram det för att komma ikapp. Det kan även innebära att nöduttagstransaktioner skickas.",
+  "gt_cea13885ad32653d_other": "{{n}} nöduttag ligger efter den aktuella blockhöjden. Flytta fram något av dem för att komma ikapp. Det kan även innebära att nöduttagstransaktioner skickas."
 }

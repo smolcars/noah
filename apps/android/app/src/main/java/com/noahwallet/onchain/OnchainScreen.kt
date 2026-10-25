@@ -31,19 +31,27 @@ import com.noahwallet.ui.AppModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.drop
 
-fun onchainReady(app: AppModel): Boolean {
+fun onchainReady(app: AppModel) = onchainWallet(app, ExitRules::ready)
+private fun onchainWallet(app: AppModel, rule: (Boolean, Boolean, Boolean, Boolean) -> Boolean): Boolean {
     val persisted = app.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-    return ExitRules.ready(persisted?.isInitialized != false, app.session.isOpen,
+    return rule(persisted?.isInitialized != false, app.session.isOpen,
         app.isWalletSuspended || persisted?.isWalletSuspended == true, WalletBackgroundActivity.isRunning)
+}
+/** Waits while the wallet is only briefly not ready ([ExitRules.settling]), as after every app switch; true once it's ready. */
+internal suspend fun onchainSettle(app: AppModel): Boolean {
+    // shortcut: checks every half second for up to 30 s; a flow of the session's state would replace it.
+    repeat(60) { if (!onchainWallet(app, ExitRules::settling)) return onchainReady(app); delay(500) }
+    return onchainReady(app)
 }
 internal fun onchainDependencies(app: AppModel) =
     onchainDependencies(app.session, app.services.lifecycle, AutoBoardFunding.stored(app.settings), ExitClaimRecords.stored(app.settings),
-        ExitSeen.stored(app.settings)) { onchainReady(app) }
+        ExitSeen.stored(app.settings), settle = { onchainSettle(app) }) { onchainReady(app) }
 
 /** The model's calls on [session], each mutation under [lifecycle]'s gate; a device test runs them on a fake wallet. */
 internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletSession, lifecycle: com.noahwallet.services.wallet.WalletLifecycle,
-                                 funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, ready: () -> Boolean) = OnchainModel.Dependencies(
-    ready = ready, overview = session::onchainOverview,
+                                 funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, settle: suspend () -> Boolean = { false },
+                                 ready: () -> Boolean) = OnchainModel.Dependencies(
+    ready = ready, settle = settle, overview = session::onchainOverview,
     quote = { action, ids, amount, destination -> session.quoteOnchain(action, ids, amount, destination) },
     execute = { quote -> lifecycle.withWalletMutation {
         if (!ready()) fail(OnchainFailure.unavailable)
@@ -88,7 +96,10 @@ internal fun OnchainEffects(app: AppModel, model: OnchainModel, reloadOnChange: 
         onDispose { lifecycle.removeObserver(observer); model.invalidate() }
     }
     // Settings' pages read the wallet again at once rather than showing nothing until the next periodic read.
-    LaunchedEffect(model, app.session) { app.session.walletChanges.collect { model.unavailable(); if (reloadOnChange && !app.isWalletSuspended) model.load() } }
+    // One that reads again at once keeps what it shows until that read replaces it (it waits out a reopen) or finds the wallet gone.
+    LaunchedEffect(model, app.session) { app.session.walletChanges.collect {
+        if (reloadOnChange && !app.isWalletSuspended) { model.invalidate(); model.load() } else model.unavailable()
+    } }
     LaunchedEffect(model.quote) {
         val held = model.quote ?: return@LaunchedEffect
         if (held.preparedBoard != null) {

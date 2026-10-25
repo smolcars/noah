@@ -190,6 +190,8 @@ struct OnchainReceipt: Codable, Equatable, Sendable, ExpressibleByStringLiteral 
     func boardAmounts(quote: OnchainQuote) -> BoardAmounts {
         .init(arkReceives: quote.net, totalLeaving: quote.amount + (onchainFee ?? quote.chainFee!))
     }
+    /// Move exit forward's receipt when bark progressed every exit without an error.
+    static let progressedMessage = "Exits progressed. Transactions may have been broadcast or fee-bumped."
     static let broadcastFailedMessage = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
     static func boardingMessage(fee: UInt64?) -> String {
         "Boarding submitted. Funds become spendable after the board completes."

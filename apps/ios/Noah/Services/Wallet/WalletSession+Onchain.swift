@@ -579,7 +579,7 @@ extension WalletSession {
                                                      failed: failures > 0), walletID: walletID)
                     return OnchainReceipt(
                         message: failures == 0
-                            ? "Exits progressed. Transactions may have been broadcast or fee-bumped."
+                            ? OnchainReceipt.progressedMessage
                             : "Exit progression returned \(failures) errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 case .claim:
                     throw OnchainFailure.invalid // Handled by the shared claim path above.

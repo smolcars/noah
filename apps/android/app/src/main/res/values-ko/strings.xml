@@ -158,7 +158,7 @@
   <string name="gt_72e6d3aef9cf136d">"블록 높이 API"</string>
   <string name="gt_b69792e8c9b6b4aa">"블록 %1$s"</string>
   <string name="gt_52d8701c498a04d0">"블록 %1$s · %2$s"</string>
-  <string name="gt_c79e8899fb446b95">"지금은 블록이 가득 찼어요. 수수료율이 오르면 Noah가 수수료를 올려요. 지금 다시 시도하려면 체인을 확인하세요."</string>
+  <string name="gt_8ee565450a0e320e">"지금은 블록이 가득 찼어요. 수수료율이 오르면 Noah가 수수료를 올려요. 지금 다시 시도하려면 출금을 진행하세요."</string>
   <string name="gt_b9dba3190e1924dc">"남은 블록"</string>
   <string name="gt_0ce74d1d6042dd44">"블록 %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"입금하기"</string>
@@ -196,15 +196,12 @@
   <string name="gt_ff2ec2618b91b367">"이메일 변경"</string>
   <string name="gt_dd16e499335d3a53">"이메일 주소 변경"</string>
   <string name="gt_77a94e1521d6a8e8">"Telegram에서 채팅"</string>
-  <string name="gt_9d60841e0a7891df">"확인"</string>
   <string name="gt_d0e3a822635c961f">"활동에서 이 결제의 마지막 시도를 확인하고 받는 사람에게 도착했는지 물어보세요."</string>
   <string name="gt_fb7099ad8e818d42">"다시 확인"</string>
   <string name="gt_c52a96b66db5c212">"작업 상태 확인"</string>
   <string name="gt_69cd3590300a68c6">"상태 확인"</string>
   <string name="gt_44cb983669c9d0a9">"주소를 확인하세요. 되돌릴 수 없어요."</string>
   <string name="gt_c31be569a492274b">"금액, 선택한 VTXO, 목적지를 확인하세요. 확정된 자금이 부족할 수 있습니다."</string>
-  <string name="gt_0a4944369b913265">"체인 확인"</string>
-  <string name="gt_5b08e343d8089308">"체인을 확인할까요?"</string>
   <string name="gt_ff65032d5e881811">"다시 승인하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_6f113ce35347ffe6">"수정하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_710d52f182321f4a">"%1$s번째 단어를 확인하세요"</string>
@@ -212,7 +209,6 @@
   <string name="gt_4ac7dc7e4285ca5d">"결제 내역을 살펴보고 받는 사람에게도 확인하세요. 이미 전송된 결제일 수 있습니다."</string>
   <string name="gt_9b69d23b16f9a10b">"복구 문구를 확인하세요. 12개 또는 24개 단어를 모두 올바른 순서로 입력하세요."</string>
   <string name="gt_a3c8ad0d500b6aae">"거래 내역을 확인하고 위험을 수반하는 강제 적용을 승인한 후 재개하세요."</string>
-  <string name="gt_b52a42bc5c24c659">"체인을 확인했어요"</string>
   <string name="gt_0dfe1d63c9d86896">"확인 중"</string>
   <string name="gt_ec963ffc911b8401">"확인 중…"</string>
   <string name="gt_c7f937836f5d82d5">"선택"</string>
@@ -419,6 +415,7 @@
   <string name="gt_f81c8539f3f844d2">"예상 전파 수수료"</string>
   <string name="gt_4eb4fb13e39d4b50">"예상 청구 수수료"</string>
   <string name="gt_5bea3831fdd39f8b">"예상 수수료"</string>
+  <string name="gt_485d888652133aa1">"예상 수수료"</string>
   <string name="gt_8019400caf0913fa">"예상 총액"</string>
   <string name="gt_d9f3d2f604dad97a">"예상 총 수수료가 회수할 금액 이상입니다."</string>
   <string name="gt_c4e42b974c335dc5">"매일"</string>
@@ -447,6 +444,7 @@
   <string name="gt_37566aa4ce592457">"출금 상세 정보"</string>
   <string name="gt_f889e0bd2f6e4ea8">"출금 수수료"</string>
   <string name="gt_dd4f2a6cf22e8e94">"VTXO 더 출금하기"</string>
+  <string name="gt_c3ac6596a27b89b8">"출금을 진행했어요"</string>
   <string name="gt_ba61a6796c9bda55">"출금 처리가 완료되기 전에 취소되었습니다."</string>
   <string name="gt_0cb3378726d1acba">"출금 진행 중 오류가 %1$s개 발생했습니다. 거래가 전파되었거나 수수료가 인상되었을 수 있습니다. 계속하기 전에 출금 세부 정보를 새로고침하세요."</string>
   <string name="gt_1bc751fa07b37246">"출금이 시작되었습니다. Noah가 백그라운드에서 자동으로 진행하며, 거래 전파 및 수수료 인상에 드는 비용은 온체인 잔액에서 지불합니다."</string>
@@ -688,8 +686,11 @@
   <string name="gt_d47d7cb0e4f8fd2b">"더 보기"</string>
   <string name="gt_6ecc3df6bffdd06c">"이동"</string>
   <string name="gt_ae88a18039eabe64">"자동으로 이동"</string>
+  <string name="gt_013a643a423137ed">"출금 진행하기"</string>
+  <string name="gt_03244d3bb2b077f2">"진행"</string>
   <string name="gt_85720a9d10dec1ca">"이 서명된 자금 조달 거래를 그대로 사용하여 온체인 Bitcoin을 Ark로 이동합니다. 입금 금액에는 Ark 수수료가 포함되며 온체인 수수료는 별도로 지불합니다. 입금이 완료되면 자금을 사용할 수 있습니다. 이 검토 내용은 2분 후 만료됩니다."</string>
   <string name="gt_44541f362e819e01">"Ark로 이동"</string>
+  <string name="gt_e5aa7874e42cca96">"출금을 진행할까요?"</string>
   <string name="gt_5c948b346d0764f3">"Ark로 이동됨"</string>
   <string name="gt_dcfb842231d789f7">"자금 이동 ID"</string>
   <string name="gt_0850cf54792998dd">"자금 이동 유형"</string>
@@ -782,7 +783,7 @@
   <string name="gt_db92e3e2f6075f8b">"Noah가 복원을 안전하게 되돌리지 못했습니다. 다시 시도하지 마세요. 지갑을 복구할 수 있도록 Noah를 종료한 후 다시 시작하세요."</string>
   <string name="gt_822918727e4f828f">"Noah 기본값"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah가 최종 결과를 확인하지 못했습니다. 다시 결제하지 마세요. 상태 확인으로는 새 결제가 제출되지 않습니다."</string>
-  <string name="gt_545eb93f8194bd47">"Noah가 한동안 이 출금의 체인을 확인하지 않았습니다. 확인하면 거래를 보내거나 수수료를 올릴 수도 있습니다."</string>
+  <string name="gt_a8a0b1813d01e36a">"Noah가 한동안 이 출금을 확인하지 않았습니다. 출금을 진행하면 다음 단계를 보내거나 수수료를 올릴 수도 있습니다."</string>
   <string name="gt_9354e260e9c82293">"Noah는 베타 버전입니다. 잃어도 괜찮은 만큼만 보관하세요."</string>
   <string name="gt_2588c7db9f3fe277">"Noah가 잠겨 있어요"</string>
   <string name="gt_f590e31a6eb944e2">"Noah에서 백업을 마무리하는 중입니다. 잠시 후 다시 시도하세요."</string>
@@ -812,6 +813,7 @@
   <string name="gt_d8da2c49df39d91d">"메모"</string>
   <string name="gt_f9b73e1abc37cf5b">"메모(선택 사항)"</string>
   <string name="gt_045f910e6b3ce120">"메모는 639자 이하여야 합니다."</string>
+  <string name="gt_0ded20d6a749d6bf">"아직 보낼 것이 없어요"</string>
   <string name="gt_788011833a5a0f22">"알림"</string>
   <string name="gt_54ee6b72ca5e79e6">"알림이 필요합니다"</string>
   <string name="gt_fce40565eda8090e">"알림을 켜면 Noah가 결제를 받고 비트코인이 만료되기 전에 갱신할 수 있습니다."</string>
@@ -1105,6 +1107,7 @@
   <string name="gt_c5fb1b5d6362edc0">"전송 중 · Ark 라운드 대기 중"</string>
   <string name="gt_a38ba37fd4f8a52a">"전송 중 · 확인 대기 중"</string>
   <string name="gt_b8ed5279e897be5d">"전송 중…"</string>
+  <string name="gt_3e631aab2f131c60">"출금의 다음 단계를 보내거나, 멈춰 있는 단계의 수수료를 올려요. 수수료는 온체인 비트코인에서 나가요. Noah도 알아서 이 작업을 해요."</string>
   <string name="gt_c16bc82bf1f04ede">"보냄"</string>
   <string name="gt_168d6498bc4dd449">"다른 출금이 보냄"</string>
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>
@@ -1255,10 +1258,10 @@
   <string name="gt_dfa27aa18fe3eb7c">"앞서 확인한 %1$s sats와 다른 금액입니다."</string>
   <string name="gt_9e3a6e3e9bd56700">"기존 작업은 취소되지 않습니다. 다시 제출하면 자금이나 수수료가 추가로 지출될 수 있습니다. Noah는 이번 시도를 기록해 두고 지갑 동기화 중에 상태를 확인합니다."</string>
   <string name="gt_f2faa6b386bacbee">"이 출금은 더 이상 취소할 수 없습니다. 최종 거래가 이미 전파되었을 수 있습니다. 상태를 새로 고치세요."</string>
-  <string name="gt_dc8cb064d1762d2f">"이 출금은 현재 체인 높이보다 뒤처져 있어요. ‘체인 확인’으로 확인하세요. 출금 트랜잭션을 보낼 수도 있어요."</string>
-  <plurals name="gt_1140c4bcb71a3ec1">
-    <item quantity="one">"이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$s(%1$s블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."</item>
-    <item quantity="other">"이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$s(%1$s블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."</item>
+  <string name="gt_5e306b07871ba45a">"이 출금은 현재 체인 높이보다 뒤처져 있어요. 출금을 진행해 따라잡으세요. 출금 트랜잭션을 보낼 수도 있어요."</string>
+  <plurals name="gt_02ca5673a1cb2959">
+    <item quantity="one">"이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$s(%1$s블록 전)입니다. 출금을 진행하면 출금 거래를 보낼 수도 있습니다."</item>
+    <item quantity="other">"이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$s(%1$s블록 전)입니다. 출금을 진행하면 출금 거래를 보낼 수도 있습니다."</item>
   </plurals>
   <string name="gt_5ed0c20bff01c0ca">"이 결제 요청서는 이미 결제되었습니다. 이번 회차에는 다시 전송하지 않았습니다. 재개하기 전에 받는 사람에게 확인하세요."</string>
   <string name="gt_acec76ba83ee20ef">"이미 결제된 인보이스입니다: %1$s"</string>
@@ -1267,7 +1270,6 @@
   <string name="gt_766460156a897a88">"이 이전 버전의 결제에는 지갑 식별 정보가 없습니다. 삭제하기 전에 기록과 받는 사람을 확인하세요."</string>
   <string name="gt_bfbb491d06ec6963">"이 링크를 열 수 없습니다."</string>
   <string name="gt_70f6be0e72ef41e2">"이 작업으로 비상 출금 절차에 필요한 Bitcoin 거래가 전파되거나 거래 수수료가 인상될 수 있습니다. 수수료는 온체인 잔액에서 지불됩니다. 최종 출금 거래가 전파되기 전까지만 취소할 수 있습니다."</string>
-  <string name="gt_b993a2fe02860fb3">"출금 트랜잭션을 보내거나 수수료를 올릴 수 있어요. 수수료는 온체인 비트코인에서 나가요. Noah도 알아서 이 작업을 해요."</string>
   <string name="gt_fd5e7812c7b65887">"이 작업은 아직 처리 결과가 확인되지 않은 시도와 중복됩니다. 다시 시도하기 전에 상태를 확인하세요."</string>
   <string name="gt_9e73b9f6cffbb279">"이 결제를 준비하지 못했습니다. 결제는 제출되지 않았습니다."</string>
   <string name="gt_2580b9f907abe759">"더 이상 이 결제를 진행할 필요가 없습니다."</string>
@@ -1528,9 +1530,9 @@
     <item quantity="one">"%1$s일"</item>
     <item quantity="other">"%1$s일"</item>
   </plurals>
-  <plurals name="gt_8e909a1137e15c7e">
-    <item quantity="one">"출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 해당 출금에서 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."</item>
-    <item quantity="other">"출금 %1$s건이 현재 체인 높이보다 뒤처져 있습니다. 아무 출금에서나 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."</item>
+  <plurals name="gt_cea13885ad32653d">
+    <item quantity="one">"출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 해당 출금을 진행해 따라잡으세요. 이 과정에서 출금 거래를 보낼 수도 있습니다."</item>
+    <item quantity="other">"출금 %1$s건이 현재 체인 높이보다 뒤처져 있습니다. 아무 출금이나 진행해 따라잡으세요. 이 과정에서 출금 거래를 보낼 수도 있습니다."</item>
   </plurals>
   <string name="gt_8338b13e065297c7">"한 라운드에서 나온 출금 %1$s개: 트랜잭션 %3$s개가 아니라 %2$s개예요. 공유된 트랜잭션은 한 번만 보내고 지불해요."</string>
   <string name="gt_068deca46a360c34">"%1$s시간"</string>

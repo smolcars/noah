@@ -173,12 +173,13 @@ class OnchainModelTest {
         var overviewGate: CompletableDeferred<Unit>? = null
         val discarded = mutableListOf<OnchainQuote>()
         var coin: suspend (String) -> VtxoModel = { error("unused") }
+        var settle: suspend () -> Boolean = { false }
         val overview = OnchainOverview("wallet", emptyList(), emptyList(), 100_000, 100, 0, null)
         fun dependencies() = OnchainModel.Dependencies(
             { ready }, { overviewReads++; overviewGate?.await(); overview }, { action, ids, amount, destination ->
                 entered?.complete(Unit); gate?.await(); if (failPreparation) fail(OnchainFailure.notSynced); OnchainQuote(action, "wallet", ids, destination, amount)
             }, { calls++; "submitted" }, { attempts }, { id -> attempts = attempts.filter { it.id != id } },
-            { checks++; if (failStatusRead) error("transport"); false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, discard = { discarded.add(it) }, coin = { coin(it) })
+            { checks++; if (failStatusRead) error("transport"); false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, settle = { settle() }, discard = { discarded.add(it) }, coin = { coin(it) })
     }
     @Test fun aFailedCoinLookupIsUnknownAndEachCompletedReadRetriesIt() = runBlocking {
         val f = Fake(); val m = OnchainModel(f.dependencies())
@@ -191,6 +192,33 @@ class OnchainModelTest {
         val before = m.revision
         m.load(); assertEquals(before + 1, m.revision)
         f.ready = false; m.load(); assertEquals("a read that failed retries nothing", before + 1, m.revision)
+    }
+    @Test fun aBrieflyBusyWalletKeepsTheLastStateAndReadsOnceReady() = runBlocking {
+        val f = Fake(); val m = OnchainModel(f.dependencies())
+        m.load()
+        // After an app switch the foreground sync holds the wallet for a moment: nothing clears, no error, one read once it's ready.
+        f.settle = { f.ready = true; true }
+        f.ready = false; m.load()
+        assertEquals(2, f.overviewReads); assertNotNull(m.overview); assertNull(m.error)
+        // Unavailable for a real reason (suspended, say): cleared and said so, as before.
+        f.settle = { false }
+        f.ready = false; m.load()
+        assertEquals(2, f.overviewReads); assertNull(m.overview); assertEquals(OnchainFailure.unavailable.text, m.error)
+    }
+    @Test fun aSyncStartingDuringAReadReadsAgainInsteadOfClearing() = runBlocking {
+        val f = Fake(); val m = OnchainModel(f.dependencies())
+        m.load()
+        val gate = CompletableDeferred<Unit>(); f.overviewGate = gate
+        f.settle = { f.overviewGate = null; f.ready = true; true }
+        val loading = launch { m.load() }
+        while (f.overviewReads < 2) yield()
+        f.ready = false; gate.complete(Unit); loading.join()
+        assertEquals(3, f.overviewReads); assertNotNull(m.overview); assertNull(m.error)
+    }
+    @Test fun onlyABusyOrOpeningWalletSettles() {
+        assertTrue(ExitRules.settling(true, true, false, true)); assertTrue(ExitRules.settling(true, false, false, false))
+        assertFalse(ExitRules.settling(true, false, true, true)); assertFalse(ExitRules.settling(false, false, false, false))
+        assertFalse(ExitRules.settling(true, true, false, false))
     }
     @Test fun aWalletChangeReadsTheOverviewAgainAtOnce() = runBlocking {
         val m = OnchainModel(Fake().dependencies())

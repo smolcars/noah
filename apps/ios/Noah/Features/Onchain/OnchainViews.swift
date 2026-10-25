@@ -236,9 +236,11 @@ struct OnchainScreen: ViewModifier {
                 await model.load()
                 await refresh?()
             }
-            .onChange(of: phase) { _, _ in
+            .onChange(of: phase) { _, new in
                 model.invalidate()
                 model.sceneChanged()
+                // Back in the app: read again once the foreground sync lets go of the wallet (the read waits for it).
+                if new == .active, !model.busy { Task { await model.load() } }
             }
             .onChange(of: app.isWalletSuspended) { _, suspended in
                 if suspended { model.invalidate() }

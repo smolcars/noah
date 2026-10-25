@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One exit in progress (exit.md, "The exit in progress"): the amount and its status, the picture
-/// and its phase line, the rows and Details. Check the chain is today's progress review; Cancel exit
+/// and its phase line, the rows and Details. Move exit forward is today's progress review; Cancel exit
 /// shows only while bark allows it. Everything follows the wallet's state as Noah reads it (the
 /// page's existing 60 s read and pull to refresh); no new polling.
 struct ExitVtxoDetailView: View {
@@ -63,7 +63,7 @@ struct ExitVtxoDetailView: View {
                         ExitWarning(text: L10n.text("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need), locale: language))
                     }
                     if progress.stale {
-                        ExitWarning(text: L10n.text("This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions.", locale: language),
+                        ExitWarning(text: L10n.text("This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.", locale: language),
                                     symbol: "clock", muted: true)
                     }
                     VStack(spacing: 0) {
@@ -74,6 +74,16 @@ struct ExitVtxoDetailView: View {
                     }
                     .padding(.top, 22)
                     if let line = text.batchLine { SettingsFine(text: line) }
+                    // The explorer without opening Details: the transaction that says the most about where the exit is.
+                    if let url = exit.explorerTxid.flatMap(explorer) {
+                        Link(destination: url) {
+                            Label(L10n.text("View in explorer", locale: language), systemImage: "arrow.up.right.square").noahText(HomeText.strong)
+                        }
+                        .foregroundStyle(NoahTokens.Colors.foreground)
+                        .frame(minHeight: NoahTokens.Size.hitTarget)
+                        .padding(.top, 12)
+                        .accessibilityIdentifier("exit-explorer")
+                    }
                     SettingsDetails(open: $details) { detailRows(exit, progress, text) }
                     OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
                 } footer: {
@@ -154,13 +164,13 @@ struct ExitVtxoDetailView: View {
         }
     }
 
-    /// Check the chain (the main action when the exit is stale) and, while bark allows it, Cancel exit.
+    /// Move exit forward (the main action when the exit is stale) and, while bark allows it, Cancel exit.
     @ViewBuilder private func checkAndCancel(_ progress: ExitProgress, primary: Bool) -> some View {
         Group {
             if primary {
-                Button(L10n.text("Check the chain", locale: language)) { check() }.buttonStyle(SettingsActionStyle())
+                Button(L10n.text("Move exit forward", locale: language)) { check() }.buttonStyle(SettingsActionStyle())
             } else {
-                Button(L10n.text("Check the chain", locale: language)) { check() }
+                Button(L10n.text("Move exit forward", locale: language)) { check() }
                     .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
             }
         }
@@ -184,20 +194,24 @@ struct ExitVtxoDetailView: View {
     }
 
     private func checkSheet(_ money: ExitMoney) -> some View {
-        SettingsSheetBody(title: L10n.text("Check the chain?", locale: language),
-                          line: L10n.text("This may send or fee-bump exit transactions. Their fees come from your on-chain bitcoin. Noah also does this by itself.", locale: language)) {
+        SettingsSheetBody(title: L10n.text("Move your exit forward?", locale: language),
+                          line: L10n.text("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own.", locale: language)) {
             if let quote = model.quote, quote.action == .progress, let chainFee = quote.chainFee {
-                SettingsDetailRow(label: L10n.text("Estimated broadcast fees", locale: language), value: money.about(chainFee), numeric: true, hairline: false)
+                SettingsDetailRow(label: L10n.text("Estimated fees", locale: language), value: money.about(chainFee), numeric: true, hairline: false)
                     .padding(.top, 8)
             }
         } actions: {
-            SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Check", locale: language),
+            SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Move forward", locale: language),
                                  enabled: model.quote?.action == .progress, busy: model.busy, actionID: "exit-check-confirm",
                                  onCancel: { sheet = nil; model.invalidate() }) {
+                let before = exit
                 Task {
                     await model.confirm()
                     sheet = nil
-                    if model.error == nil { settings.toast(L10n.text("Checked the chain", locale: language)) }
+                    // bark can't say whether it sent anything, so the exit itself tells; short of funds, the page says what it needs.
+                    guard model.error == nil, model.message == OnchainReceipt.progressedMessage, let after = exit,
+                          model.progress(after).phase != .needsFunds else { return }
+                    settings.toast(L10n.text(after != before ? "Exit moved forward" : "Nothing to send yet", locale: language))
                 }
             }
         }
@@ -394,7 +408,7 @@ struct ExitStatusLine: View {
 
     /// One sentence per phase for the wide layout's leading pane.
     var explanation: String {
-        if progress.stale { return tr("Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.") }
+        if progress.stale { return tr("Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.") }
         switch progress.phase {
         case .starting: return tr("Your VTXO leaves Ark. Nothing from here on needs Ark’s server.")
         case .publishing: return L10n.plural("Your bitcoin sits at the end of a path of {n} transactions in the round’s tree. The round’s own transaction is already on-chain.",
@@ -403,7 +417,7 @@ struct ExitStatusLine: View {
         case .needsFunds: return tr("Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms.")
         case .mempool:
             if progress.bumped { return tr("A block came without it. Noah pays more when the fee rate rises, so it gets into the next one.") }
-            if progress.stuck > 0 { return tr("Blocks are full right now. Noah raises the fee when rates rise. Check the chain to try again now.") }
+            if progress.stuck > 0 { return tr("Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now.") }
             return tr("Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin.")
         case .shared: return tr("Another exit from your round already sent this one, with its own fee. You don’t pay for it.")
         case .confirmed: return tr("One transaction per block: about ten minutes each.")

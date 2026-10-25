@@ -7,6 +7,9 @@ object ExitRules {
     fun eligible(state: String, amount: Long) = state == "Spendable" && amount >= dust
     fun ready(initialized: Boolean, loaded: Boolean, suspended: Boolean, background: Boolean) =
         initialized && loaded && !suspended && !background
+    /** Not ready only for a moment: a sync or background job holds the wallet, or it's still opening. Suspended or not set up isn't a moment. */
+    fun settling(initialized: Boolean, loaded: Boolean, suspended: Boolean, background: Boolean) =
+        initialized && !suspended && (background || !loaded)
     fun current(reviewedAt: Long, now: Long = System.currentTimeMillis()) = now >= reviewedAt && now - reviewedAt < 30_000
     fun received(amount: Long, claimFee: Long) = (amount - claimFee).coerceAtLeast(0)
     fun warning(amount: Long, claimFee: Long, totalFee: Long, claimOnly: Boolean): String? = when {

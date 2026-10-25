@@ -5605,38 +5605,38 @@
         }
       }
     },
-    "Blocks are full right now. Noah raises the fee when rates rise. Check the chain to try again now.": {
-      "comment": "GT gt_c79e8899fb446b95; arguments: none",
+    "Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now.": {
+      "comment": "GT gt_8ee565450a0e320e; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blocks are full right now. Noah raises the fee when rates rise. Check the chain to try again now."
+            "value": "Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los bloques están llenos ahora. Noah sube la comisión cuando suben las tasas. Consulta la cadena para reintentarlo ya."
+            "value": "Los bloques están llenos ahora. Noah sube la comisión cuando suben las tasas. Avanza tu salida para reintentarlo ya."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在ブロックが混雑しています。手数料率が上がるとNoahは手数料を引き上げます。今すぐ再試行するにはチェーンを確認してください。"
+            "value": "現在ブロックが混雑しています。手数料率が上がるとNoahは手数料を引き上げます。今すぐ再試行するには出金を進めてください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "지금은 블록이 가득 찼어요. 수수료율이 오르면 Noah가 수수료를 올려요. 지금 다시 시도하려면 체인을 확인하세요."
+            "value": "지금은 블록이 가득 찼어요. 수수료율이 오르면 Noah가 수수료를 올려요. 지금 다시 시도하려면 출금을 진행하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blocken är fulla just nu. Noah höjer avgiften när nivåerna stiger. Kontrollera blockkedjan för att försöka igen nu."
+            "value": "Blocken är fulla just nu. Noah höjer avgiften när nivåerna stiger. Flytta fram ditt uttag för att försöka igen nu."
           }
         }
       }
@@ -6973,42 +6973,6 @@
         }
       }
     },
-    "Check": {
-      "comment": "GT gt_9d60841e0a7891df; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Consultar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "確認"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "확인"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrollera"
-          }
-        }
-      }
-    },
     "Check Activity for this payment's last attempt and ask the recipient whether it arrived.": {
       "comment": "GT gt_d0e3a822635c961f; arguments: none",
       "extractionState": "manual",
@@ -7221,78 +7185,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontrollera beloppet, valda VTXO:er och destinationen. Det kanske inte finns tillräckligt med bekräftade medel."
-          }
-        }
-      }
-    },
-    "Check the chain": {
-      "comment": "GT gt_0a4944369b913265; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check the chain"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Consultar la cadena"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チェーンを確認"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "체인 확인"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrollera blockkedjan"
-          }
-        }
-      }
-    },
-    "Check the chain?": {
-      "comment": "GT gt_5b08e343d8089308; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check the chain?"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Consultar la cadena?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チェーンを確認しますか？"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "체인을 확인할까요?"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrollera blockkedjan?"
           }
         }
       }
@@ -7545,42 +7437,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontrollera din transaktionshistorik och bekräfta sedan det destruktiva åsidosättandet innan du fortsätter."
-          }
-        }
-      }
-    },
-    "Checked the chain": {
-      "comment": "GT gt_b52a42bc5c24c659; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checked the chain"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cadena consultada"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チェーンを確認しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "체인을 확인했어요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Blockkedjan kontrollerad"
           }
         }
       }
@@ -14905,6 +14761,42 @@
         }
       }
     },
+    "Estimated fees": {
+      "comment": "GT gt_485d888652133aa1; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimated fees"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comisiones estimadas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推定手数料"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예상 수수료"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beräknade avgifter"
+          }
+        }
+      }
+    },
     "Estimated total": {
       "comment": "GT gt_8019400caf0913fa; arguments: none",
       "extractionState": "manual",
@@ -15813,6 +15705,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ta ut fler VTXO:er"
+          }
+        }
+      }
+    },
+    "Exit moved forward": {
+      "comment": "GT gt_c3ac6596a27b89b8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit moved forward"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La salida ha avanzado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出金を進めました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출금을 진행했어요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uttaget har flyttats fram"
           }
         }
       }
@@ -24349,6 +24277,78 @@
         }
       }
     },
+    "Move exit forward": {
+      "comment": "GT gt_013a643a423137ed; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move exit forward"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avanzar la salida"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出金を進める"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출금 진행하기"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flytta fram uttaget"
+          }
+        }
+      }
+    },
+    "Move forward": {
+      "comment": "GT gt_03244d3bb2b077f2; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move forward"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avanzar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "進める"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진행"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flytta fram"
+          }
+        }
+      }
+    },
     "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.": {
       "comment": "GT gt_85720a9d10dec1ca; arguments: none",
       "extractionState": "manual",
@@ -24417,6 +24417,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flytta till Ark"
+          }
+        }
+      }
+    },
+    "Move your exit forward?": {
+      "comment": "GT gt_e5aa7874e42cca96; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move your exit forward?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Avanzar tu salida?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出金を進めますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출금을 진행할까요?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flytta fram ditt uttag?"
           }
         }
       }
@@ -27733,38 +27769,38 @@
         }
       }
     },
-    "Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.": {
-      "comment": "GT gt_545eb93f8194bd47; arguments: none",
+    "Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.": {
+      "comment": "GT gt_a8a0b1813d01e36a; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."
+            "value": "Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah no ha revisado la cadena para esta salida desde hace un rato. Revisarla también puede enviar o subir la comisión de sus transacciones."
+            "value": "Noah no ha revisado esta salida desde hace un rato. Avanzarla también puede enviar su siguiente paso o subir una comisión."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noahはしばらくこの出金のチェーンを確認していません。確認すると、トランザクションの送信や手数料の引き上げが行われることもあります。"
+            "value": "Noahはしばらくこの出金を確認していません。出金を進めると、次のステップの送信や手数料の引き上げが行われることもあります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah가 한동안 이 출금의 체인을 확인하지 않았습니다. 확인하면 거래를 보내거나 수수료를 올릴 수도 있습니다."
+            "value": "Noah가 한동안 이 출금을 확인하지 않았습니다. 출금을 진행하면 다음 단계를 보내거나 수수료를 올릴 수도 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah har inte kontrollerat kedjan för det här nöduttaget på ett tag. En kontroll kan också skicka dess transaktioner eller höja deras avgift."
+            "value": "Noah har inte kontrollerat det här nöduttaget på ett tag. Att flytta fram det kan också skicka nästa steg eller höja en avgift."
           }
         }
       }
@@ -28761,6 +28797,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anteckningen får vara högst 639 tecken."
+          }
+        }
+      }
+    },
+    "Nothing to send yet": {
+      "comment": "GT gt_0ded20d6a749d6bf; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to send yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay nada que enviar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ送信するものはありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 보낼 것이 없어요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inget att skicka än"
           }
         }
       }
@@ -39169,6 +39241,42 @@
         }
       }
     },
+    "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own.": {
+      "comment": "GT gt_3e631aab2f131c60; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出金の次のステップを送信するか、止まっているステップの手数料を引き上げます。手数料はオンチェーンのビットコインから支払われます。Noahはこれを自動でも行います。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출금의 다음 단계를 보내거나, 멈춰 있는 단계의 수수료를 올려요. 수수료는 온체인 비트코인에서 나가요. Noah도 알아서 이 작업을 해요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skickar nästa steg i ditt uttag, eller höjer avgiften för ett steg som har fastnat. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta själv."
+          }
+        }
+      }
+    },
     "Sent": {
       "comment": "GT gt_c16bc82bf1f04ede; arguments: none",
       "extractionState": "manual",
@@ -44569,44 +44677,44 @@
         }
       }
     },
-    "This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions.": {
-      "comment": "GT gt_dc8cb064d1762d2f; arguments: none",
+    "This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.": {
+      "comment": "GT gt_5e306b07871ba45a; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions."
+            "value": "This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esta salida va por detrás de la altura actual de la cadena. Usa Consultar la cadena para revisarla; también puede enviar transacciones de salida."
+            "value": "Esta salida va por detrás de la altura actual de la cadena. Avánzala para ponerla al día; también puede enviar transacciones de salida."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この出金は現在のチェーンの高さより遅れています。「チェーンを確認」で確認してください。出金トランザクションが送信されることもあります。"
+            "value": "この出金は現在のチェーンの高さより遅れています。出金を進めて追いつかせてください。出金トランザクションが送信されることもあります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 출금은 현재 체인 높이보다 뒤처져 있어요. ‘체인 확인’으로 확인하세요. 출금 트랜잭션을 보낼 수도 있어요."
+            "value": "이 출금은 현재 체인 높이보다 뒤처져 있어요. 출금을 진행해 따라잡으세요. 출금 트랜잭션을 보낼 수도 있어요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Det här uttaget ligger efter blockkedjans aktuella höjd. Använd Kontrollera blockkedjan för att kontrollera det; det kan också skicka uttagstransaktioner."
+            "value": "Det här uttaget ligger efter blockkedjans aktuella höjd. Flytta fram det för att komma ikapp; det kan också skicka uttagstransaktioner."
           }
         }
       }
     },
-    "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.": {
-      "comment": "GT gt_1140c4bcb71a3ec1; arguments: n, height",
+    "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions.": {
+      "comment": "GT gt_02ca5673a1cb2959; arguments: n, height",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -44615,13 +44723,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "This exit is behind the current chain height: last checked %1$lld block ago, at block %2$@. Checking the chain can also send exit transactions."
+                  "value": "This exit is behind the current chain height: last checked %1$lld block ago, at block %2$@. Moving it forward can also send exit transactions."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "This exit is behind the current chain height: last checked %1$lld blocks ago, at block %2$@. Checking the chain can also send exit transactions."
+                  "value": "This exit is behind the current chain height: last checked %1$lld blocks ago, at block %2$@. Moving it forward can also send exit transactions."
                 }
               }
             }
@@ -44633,13 +44741,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$@, hace %1$lld bloque. Revisar la cadena también puede enviar transacciones de salida."
+                  "value": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$@, hace %1$lld bloque. Avanzarla también puede enviar transacciones de salida."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$@, hace %1$lld bloques. Revisar la cadena también puede enviar transacciones de salida."
+                  "value": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$@, hace %1$lld bloques. Avanzarla también puede enviar transacciones de salida."
                 }
               }
             }
@@ -44651,13 +44759,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "この出金は現在のブロック高より遅れています。最終確認はブロック %2$@（%1$lldブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"
+                  "value": "この出金は現在のブロック高より遅れています。最終確認はブロック %2$@（%1$lldブロック前）です。出金を進めると、出金トランザクションが送信されることもあります。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "この出金は現在のブロック高より遅れています。最終確認はブロック %2$@（%1$lldブロック前）です。チェーンを確認すると、出金トランザクションが送信されることもあります。"
+                  "value": "この出金は現在のブロック高より遅れています。最終確認はブロック %2$@（%1$lldブロック前）です。出金を進めると、出金トランザクションが送信されることもあります。"
                 }
               }
             }
@@ -44669,13 +44777,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$@(%1$lld블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."
+                  "value": "이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$@(%1$lld블록 전)입니다. 출금을 진행하면 출금 거래를 보낼 수도 있습니다."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$@(%1$lld블록 전)입니다. 체인을 확인하면 출금 거래를 보낼 수도 있습니다."
+                  "value": "이 출금은 현재 블록 높이보다 뒤처져 있습니다. 마지막 확인은 블록 %2$@(%1$lld블록 전)입니다. 출금을 진행하면 출금 거래를 보낼 수도 있습니다."
                 }
               }
             }
@@ -44687,13 +44795,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$@, för %1$lld block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."
+                  "value": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$@, för %1$lld block sedan. Att flytta fram det kan också skicka nöduttagstransaktioner."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$@, för %1$lld block sedan. En kontroll av kedjan kan också skicka nöduttagstransaktioner."
+                  "value": "Det här nöduttaget ligger efter kedjans aktuella höjd: senast kontrollerat i block %2$@, för %1$lld block sedan. Att flytta fram det kan också skicka nöduttagstransaktioner."
                 }
               }
             }
@@ -44949,42 +45057,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det här kan innebära att Bitcoin-transaktioner som krävs för nöduttaget sänds eller får höjda avgifter. Avgifterna betalas från ditt saldo på blockkedjan. Det går bara att avbryta innan den sista nöduttagstransaktionen sänds."
-          }
-        }
-      }
-    },
-    "This may send or fee-bump exit transactions. Their fees come from your on-chain bitcoin. Noah also does this by itself.": {
-      "comment": "GT gt_b993a2fe02860fb3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This may send or fee-bump exit transactions. Their fees come from your on-chain bitcoin. Noah also does this by itself."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esto puede enviar transacciones de salida o subir sus comisiones. Sus comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "出金トランザクションの送信や手数料の引き上げが行われることがあります。手数料はオンチェーンのビットコインから支払われます。Noahはこれを自動でも行います。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "출금 트랜잭션을 보내거나 수수료를 올릴 수 있어요. 수수료는 온체인 비트코인에서 나가요. Noah도 알아서 이 작업을 해요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det här kan skicka uttagstransaktioner eller höja deras avgifter. Avgifterna tas från dina bitcoin på blockkedjan. Noah gör också detta själv."
           }
         }
       }
@@ -53821,8 +53893,8 @@
         }
       }
     },
-    "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.": {
-      "comment": "GT gt_8e909a1137e15c7e; arguments: n",
+    "{n} exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions.": {
+      "comment": "GT gt_cea13885ad32653d; arguments: n",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -53831,13 +53903,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions."
+                  "value": "One exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions."
+                  "value": "%1$lld exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions."
                 }
               }
             }
@@ -53849,13 +53921,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Una salida está por detrás de la altura actual de la cadena. Usa Revisar la cadena en ella; esto también puede difundir transacciones de salida."
+                  "value": "Una salida está por detrás de la altura actual de la cadena. Avánzala para ponerla al día; esto también puede enviar transacciones de salida."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld salidas están por detrás de la altura actual de la cadena. Usa Revisar la cadena en cualquiera de ellas; esto también puede difundir transacciones de salida."
+                  "value": "%1$lld salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida."
                 }
               }
             }
@@ -53867,13 +53939,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "1件の出金が現在のチェーンの高さより遅れています。その出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"
+                  "value": "1件の出金が現在のチェーンの高さより遅れています。その出金を進めて追いつかせてください。出金トランザクションが送信される場合もあります。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld件の出金が現在のチェーンの高さより遅れています。いずれかの出金で「チェーンを確認」を使ってください。出金トランザクションがブロードキャストされる場合もあります。"
+                  "value": "%1$lld件の出金が現在のチェーンの高さより遅れています。いずれかの出金を進めて追いつかせてください。出金トランザクションが送信される場合もあります。"
                 }
               }
             }
@@ -53885,13 +53957,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 해당 출금에서 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."
+                  "value": "출금 1건이 현재 체인 높이보다 뒤처져 있습니다. 해당 출금을 진행해 따라잡으세요. 이 과정에서 출금 거래를 보낼 수도 있습니다."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "출금 %1$lld건이 현재 체인 높이보다 뒤처져 있습니다. 아무 출금에서나 체인 확인을 사용하세요. 이 과정에서 출금 거래가 전파될 수도 있습니다."
+                  "value": "출금 %1$lld건이 현재 체인 높이보다 뒤처져 있습니다. 아무 출금이나 진행해 따라잡으세요. 이 과정에서 출금 거래를 보낼 수도 있습니다."
                 }
               }
             }
@@ -53903,13 +53975,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Ett nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på det. Det kan även innebära att nöduttagstransaktioner sänds."
+                  "value": "Ett nöduttag ligger efter den aktuella blockhöjden. Flytta fram det för att komma ikapp. Det kan även innebära att nöduttagstransaktioner skickas."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$lld nöduttag ligger efter den aktuella blockhöjden. Använd Kontrollera kedjan på något av dem. Det kan även innebära att nöduttagstransaktioner sänds."
+                  "value": "%1$lld nöduttag ligger efter den aktuella blockhöjden. Flytta fram något av dem för att komma ikapp. Det kan även innebära att nöduttagstransaktioner skickas."
                 }
               }
             }

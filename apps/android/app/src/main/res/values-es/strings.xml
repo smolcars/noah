@@ -158,7 +158,7 @@
   <string name="gt_72e6d3aef9cf136d">"API de altura de bloque"</string>
   <string name="gt_b69792e8c9b6b4aa">"Bloque %1$s"</string>
   <string name="gt_52d8701c498a04d0">"Bloque %1$s · %2$s"</string>
-  <string name="gt_c79e8899fb446b95">"Los bloques están llenos ahora. Noah sube la comisión cuando suben las tasas. Consulta la cadena para reintentarlo ya."</string>
+  <string name="gt_8ee565450a0e320e">"Los bloques están llenos ahora. Noah sube la comisión cuando suben las tasas. Avanza tu salida para reintentarlo ya."</string>
   <string name="gt_b9dba3190e1924dc">"Bloques restantes"</string>
   <string name="gt_0ce74d1d6042dd44">"Bloques %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Transferir"</string>
@@ -196,15 +196,12 @@
   <string name="gt_ff2ec2618b91b367">"Cambiar correo"</string>
   <string name="gt_dd16e499335d3a53">"Cambiar dirección de correo electrónico"</string>
   <string name="gt_77a94e1521d6a8e8">"Chatea en Telegram"</string>
-  <string name="gt_9d60841e0a7891df">"Consultar"</string>
   <string name="gt_d0e3a822635c961f">"Revisa en Actividad el último intento de este pago y pregunta al destinatario si le llegó."</string>
   <string name="gt_fb7099ad8e818d42">"Volver a comprobar"</string>
   <string name="gt_c52a96b66db5c212">"Comprobar estado de la operación"</string>
   <string name="gt_69cd3590300a68c6">"Comprobar estado"</string>
   <string name="gt_44cb983669c9d0a9">"Revisa la dirección. Esto no se puede deshacer."</string>
   <string name="gt_c31be569a492274b">"Comprueba el importe, los VTXO seleccionados y el destino. Puede que no haya suficientes fondos confirmados."</string>
-  <string name="gt_0a4944369b913265">"Consultar la cadena"</string>
-  <string name="gt_5b08e343d8089308">"¿Consultar la cadena?"</string>
   <string name="gt_ff65032d5e881811">"Comprueba el resultado de este pago antes de aprobarlo de nuevo."</string>
   <string name="gt_6f113ce35347ffe6">"Comprueba el resultado de este pago antes de editarlo."</string>
   <string name="gt_710d52f182321f4a">"Revisa la palabra %1$s"</string>
@@ -212,7 +209,6 @@
   <string name="gt_4ac7dc7e4285ca5d">"Revisa tu historial y confírmalo con el destinatario. Es posible que este pago ya se haya enviado."</string>
   <string name="gt_9b69d23b16f9a10b">"Revisa tu frase de recuperación. Introduce las 12 o 24 palabras en el orden correcto."</string>
   <string name="gt_a3c8ad0d500b6aae">"Revisa tu historial de transacciones y confirma la anulación destructiva antes de reanudar."</string>
-  <string name="gt_b52a42bc5c24c659">"Cadena consultada"</string>
   <string name="gt_0dfe1d63c9d86896">"Comprobando"</string>
   <string name="gt_ec963ffc911b8401">"Comprobando…"</string>
   <string name="gt_c7f937836f5d82d5">"Elegir"</string>
@@ -419,6 +415,7 @@
   <string name="gt_f81c8539f3f844d2">"Comisiones de difusión estimadas"</string>
   <string name="gt_4eb4fb13e39d4b50">"Comisión estimada de reclamación"</string>
   <string name="gt_5bea3831fdd39f8b">"Comisión estimada"</string>
+  <string name="gt_485d888652133aa1">"Comisiones estimadas"</string>
   <string name="gt_8019400caf0913fa">"Total estimado"</string>
   <string name="gt_d9f3d2f604dad97a">"Las comisiones totales estimadas igualan o superan el importe que se recuperará."</string>
   <string name="gt_c4e42b974c335dc5">"Cada día"</string>
@@ -447,6 +444,7 @@
   <string name="gt_37566aa4ce592457">"Detalles de la salida"</string>
   <string name="gt_f889e0bd2f6e4ea8">"Comisión de salida"</string>
   <string name="gt_dd4f2a6cf22e8e94">"Sacar más VTXOs"</string>
+  <string name="gt_c3ac6596a27b89b8">"La salida ha avanzado"</string>
   <string name="gt_ba61a6796c9bda55">"El proceso de salida se canceló antes de completarse."</string>
   <string name="gt_0cb3378726d1acba">"Se produjeron %1$s errores al avanzar la salida. Es posible que se hayan difundido transacciones o aumentado sus comisiones. Actualiza los detalles de la salida antes de continuar."</string>
   <string name="gt_1bc751fa07b37246">"Salida iniciada. Noah la hace avanzar automáticamente en segundo plano y usa tu saldo en cadena para cubrir las comisiones de difusión y los aumentos de comisión."</string>
@@ -688,8 +686,11 @@
   <string name="gt_d47d7cb0e4f8fd2b">"Más"</string>
   <string name="gt_6ecc3df6bffdd06c">"Mover"</string>
   <string name="gt_ae88a18039eabe64">"Mover automáticamente"</string>
+  <string name="gt_013a643a423137ed">"Avanzar la salida"</string>
+  <string name="gt_03244d3bb2b077f2">"Avanzar"</string>
   <string name="gt_85720a9d10dec1ca">"Transfiere Bitcoin en cadena a Ark usando esta misma transacción de financiación firmada. El importe del depósito incluye la comisión de Ark; la comisión en cadena se paga aparte. Podrás gastar los fondos cuando se complete el depósito. Esta revisión caduca a los dos minutos."</string>
   <string name="gt_44541f362e819e01">"Mover a Ark"</string>
+  <string name="gt_e5aa7874e42cca96">"¿Avanzar tu salida?"</string>
   <string name="gt_5c948b346d0764f3">"Movido a Ark"</string>
   <string name="gt_dcfb842231d789f7">"ID del movimiento"</string>
   <string name="gt_0850cf54792998dd">"Tipo de movimiento"</string>
@@ -782,7 +783,7 @@
   <string name="gt_db92e3e2f6075f8b">"Noah no pudo deshacer la restauración de forma segura. No lo intentes de nuevo. Cierra y reinicia Noah para que pueda recuperar tu billetera."</string>
   <string name="gt_822918727e4f828f">"Predeterminado de Noah"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah no ha confirmado el resultado final. No vuelvas a pagar. Consultar el estado nunca provoca el envío de otro pago."</string>
-  <string name="gt_545eb93f8194bd47">"Noah no ha revisado la cadena para esta salida desde hace un rato. Revisarla también puede enviar o subir la comisión de sus transacciones."</string>
+  <string name="gt_a8a0b1813d01e36a">"Noah no ha revisado esta salida desde hace un rato. Avanzarla también puede enviar su siguiente paso o subir una comisión."</string>
   <string name="gt_9354e260e9c82293">"Noah está en beta. Guarda solo lo que estés dispuesto a perder."</string>
   <string name="gt_2588c7db9f3fe277">"Noah está bloqueado"</string>
   <string name="gt_f590e31a6eb944e2">"Noah aún está terminando una copia de seguridad. Inténtalo de nuevo en un momento."</string>
@@ -812,6 +813,7 @@
   <string name="gt_d8da2c49df39d91d">"Nota"</string>
   <string name="gt_f9b73e1abc37cf5b">"Nota (opcional)"</string>
   <string name="gt_045f910e6b3ce120">"La nota debe tener un máximo de 639 caracteres."</string>
+  <string name="gt_0ded20d6a749d6bf">"Aún no hay nada que enviar"</string>
   <string name="gt_788011833a5a0f22">"Notificaciones"</string>
   <string name="gt_54ee6b72ca5e79e6">"Las notificaciones son necesarias"</string>
   <string name="gt_fce40565eda8090e">"Las notificaciones permiten a Noah recibir pagos y renovar tu bitcoin antes de que caduque."</string>
@@ -1105,6 +1107,7 @@
   <string name="gt_c5fb1b5d6362edc0">"Enviando · esperando una ronda de Ark"</string>
   <string name="gt_a38ba37fd4f8a52a">"Enviando · esperando confirmaciones"</string>
   <string name="gt_b8ed5279e897be5d">"Enviando…"</string>
+  <string name="gt_3e631aab2f131c60">"Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta."</string>
   <string name="gt_c16bc82bf1f04ede">"Enviado"</string>
   <string name="gt_168d6498bc4dd449">"Enviada por otra salida"</string>
   <string name="gt_4e7201c7b8985a98">"Enviado a"</string>
@@ -1255,10 +1258,10 @@
   <string name="gt_dfa27aa18fe3eb7c">"Este importe no coincide con los %1$s sats que revisaste."</string>
   <string name="gt_9e3a6e3e9bd56700">"Esto no cancela la operación original. Volver a enviarla puede suponer un gasto adicional de fondos o comisiones. Noah conserva este intento y comprueba su estado mientras tu billetera se sincroniza."</string>
   <string name="gt_f2faa6b386bacbee">"Esta salida ya no se puede cancelar. Es posible que su transacción final ya se haya difundido. Actualiza su estado."</string>
-  <string name="gt_dc8cb064d1762d2f">"Esta salida va por detrás de la altura actual de la cadena. Usa Consultar la cadena para revisarla; también puede enviar transacciones de salida."</string>
-  <plurals name="gt_1140c4bcb71a3ec1">
-    <item quantity="one">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$s, hace %1$s bloque. Revisar la cadena también puede enviar transacciones de salida."</item>
-    <item quantity="other">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$s, hace %1$s bloques. Revisar la cadena también puede enviar transacciones de salida."</item>
+  <string name="gt_5e306b07871ba45a">"Esta salida va por detrás de la altura actual de la cadena. Avánzala para ponerla al día; también puede enviar transacciones de salida."</string>
+  <plurals name="gt_02ca5673a1cb2959">
+    <item quantity="one">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$s, hace %1$s bloque. Avanzarla también puede enviar transacciones de salida."</item>
+    <item quantity="other">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$s, hace %1$s bloques. Avanzarla también puede enviar transacciones de salida."</item>
   </plurals>
   <string name="gt_5ed0c20bff01c0ca">"Esta solicitud de pago ya está pagada. Este pago programado no se volvió a enviar. Comprueba el destinatario antes de reanudar."</string>
   <string name="gt_acec76ba83ee20ef">"Esta factura ya se pagó: %1$s"</string>
@@ -1267,7 +1270,6 @@
   <string name="gt_766460156a897a88">"Este pago heredado no tiene una identidad de billetera asociada. Comprueba tu historial y el destinatario antes de descartarlo."</string>
   <string name="gt_bfbb491d06ec6963">"No se pudo abrir este enlace."</string>
   <string name="gt_70f6be0e72ef41e2">"Esto puede difundir transacciones de Bitcoin necesarias para el proceso de salida de emergencia o aumentar sus comisiones. Las comisiones se pagan con tu saldo en cadena. Solo se puede cancelar antes de que se difunda la transacción final de salida."</string>
-  <string name="gt_b993a2fe02860fb3">"Esto puede enviar transacciones de salida o subir sus comisiones. Sus comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta."</string>
   <string name="gt_fd5e7812c7b65887">"Esta operación coincide con un intento aún sin resolver. Consulta su estado antes de repetirla."</string>
   <string name="gt_9e73b9f6cffbb279">"No se pudo preparar este pago. No se envió ningún pago."</string>
   <string name="gt_2580b9f907abe759">"Este pago ya no está pendiente."</string>
@@ -1528,9 +1530,9 @@
     <item quantity="one">"%1$s día"</item>
     <item quantity="other">"%1$s días"</item>
   </plurals>
-  <plurals name="gt_8e909a1137e15c7e">
-    <item quantity="one">"Una salida está por detrás de la altura actual de la cadena. Usa Revisar la cadena en ella; esto también puede difundir transacciones de salida."</item>
-    <item quantity="other">"%1$s salidas están por detrás de la altura actual de la cadena. Usa Revisar la cadena en cualquiera de ellas; esto también puede difundir transacciones de salida."</item>
+  <plurals name="gt_cea13885ad32653d">
+    <item quantity="one">"Una salida está por detrás de la altura actual de la cadena. Avánzala para ponerla al día; esto también puede enviar transacciones de salida."</item>
+    <item quantity="other">"%1$s salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida."</item>
   </plurals>
   <string name="gt_8338b13e065297c7">"%1$s salidas de una ronda: %2$s transacciones, no %3$s. Las compartidas se envían y pagan una vez."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>

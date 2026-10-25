@@ -158,7 +158,7 @@
   <string name="gt_72e6d3aef9cf136d">"Block height API"</string>
   <string name="gt_b69792e8c9b6b4aa">"Block %1$s"</string>
   <string name="gt_52d8701c498a04d0">"Block %1$s · %2$s"</string>
-  <string name="gt_c79e8899fb446b95">"Blocks are full right now. Noah raises the fee when rates rise. Check the chain to try again now."</string>
+  <string name="gt_8ee565450a0e320e">"Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now."</string>
   <string name="gt_b9dba3190e1924dc">"Blocks left"</string>
   <string name="gt_0ce74d1d6042dd44">"Blocks %1$s–%2$s"</string>
   <string name="gt_4816cbfd74aa8297">"Board"</string>
@@ -196,15 +196,12 @@
   <string name="gt_ff2ec2618b91b367">"Change email"</string>
   <string name="gt_dd16e499335d3a53">"Change email address"</string>
   <string name="gt_77a94e1521d6a8e8">"Chat on Telegram"</string>
-  <string name="gt_9d60841e0a7891df">"Check"</string>
   <string name="gt_d0e3a822635c961f">"Check Activity for this payment\'s last attempt and ask the recipient whether it arrived."</string>
   <string name="gt_fb7099ad8e818d42">"Check again"</string>
   <string name="gt_c52a96b66db5c212">"Check operation status"</string>
   <string name="gt_69cd3590300a68c6">"Check status"</string>
   <string name="gt_44cb983669c9d0a9">"Check the address. This can’t be undone."</string>
   <string name="gt_c31be569a492274b">"Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."</string>
-  <string name="gt_0a4944369b913265">"Check the chain"</string>
-  <string name="gt_5b08e343d8089308">"Check the chain?"</string>
   <string name="gt_ff65032d5e881811">"Check this payment\'s outcome before approving it again."</string>
   <string name="gt_6f113ce35347ffe6">"Check this payment\'s outcome before editing it."</string>
   <string name="gt_710d52f182321f4a">"Check word %1$s"</string>
@@ -212,7 +209,6 @@
   <string name="gt_4ac7dc7e4285ca5d">"Check your history and confirm with the recipient. This payment may already have been sent."</string>
   <string name="gt_9b69d23b16f9a10b">"Check your recovery phrase. Enter all 12 or 24 words in the correct order."</string>
   <string name="gt_a3c8ad0d500b6aae">"Check your transaction history, then confirm the destructive override before resuming."</string>
-  <string name="gt_b52a42bc5c24c659">"Checked the chain"</string>
   <string name="gt_0dfe1d63c9d86896">"Checking"</string>
   <string name="gt_ec963ffc911b8401">"Checking…"</string>
   <string name="gt_c7f937836f5d82d5">"Choose"</string>
@@ -419,6 +415,7 @@
   <string name="gt_f81c8539f3f844d2">"Estimated broadcast fees"</string>
   <string name="gt_4eb4fb13e39d4b50">"Estimated claim fee"</string>
   <string name="gt_5bea3831fdd39f8b">"Estimated fee"</string>
+  <string name="gt_485d888652133aa1">"Estimated fees"</string>
   <string name="gt_8019400caf0913fa">"Estimated total"</string>
   <string name="gt_d9f3d2f604dad97a">"Estimated total fees meet or exceed the value being recovered."</string>
   <string name="gt_c4e42b974c335dc5">"Every day"</string>
@@ -447,6 +444,7 @@
   <string name="gt_37566aa4ce592457">"Exit details"</string>
   <string name="gt_f889e0bd2f6e4ea8">"Exit fee"</string>
   <string name="gt_dd4f2a6cf22e8e94">"Exit more VTXOs"</string>
+  <string name="gt_c3ac6596a27b89b8">"Exit moved forward"</string>
   <string name="gt_ba61a6796c9bda55">"Exit processing was canceled before completion."</string>
   <string name="gt_0cb3378726d1acba">"Exit progression returned %1$s errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing."</string>
   <string name="gt_1bc751fa07b37246">"Exit started. Noah progresses it automatically in the background, paying broadcast and fee-bump fees from your onchain balance."</string>
@@ -688,8 +686,11 @@
   <string name="gt_d47d7cb0e4f8fd2b">"More"</string>
   <string name="gt_6ecc3df6bffdd06c">"Move"</string>
   <string name="gt_ae88a18039eabe64">"Move automatically"</string>
+  <string name="gt_013a643a423137ed">"Move exit forward"</string>
+  <string name="gt_03244d3bb2b077f2">"Move forward"</string>
   <string name="gt_85720a9d10dec1ca">"Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."</string>
   <string name="gt_44541f362e819e01">"Move to Ark"</string>
+  <string name="gt_e5aa7874e42cca96">"Move your exit forward?"</string>
   <string name="gt_5c948b346d0764f3">"Moved to Ark"</string>
   <string name="gt_dcfb842231d789f7">"Movement ID"</string>
   <string name="gt_0850cf54792998dd">"Movement type"</string>
@@ -782,7 +783,7 @@
   <string name="gt_db92e3e2f6075f8b">"Noah couldn\'t safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet."</string>
   <string name="gt_822918727e4f828f">"Noah default"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."</string>
-  <string name="gt_545eb93f8194bd47">"Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions."</string>
+  <string name="gt_a8a0b1813d01e36a">"Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee."</string>
   <string name="gt_9354e260e9c82293">"Noah is in beta. Only keep what you’re comfortable losing."</string>
   <string name="gt_2588c7db9f3fe277">"Noah is locked"</string>
   <string name="gt_f590e31a6eb944e2">"Noah is still finishing a backup. Try again in a moment."</string>
@@ -812,6 +813,7 @@
   <string name="gt_d8da2c49df39d91d">"Note"</string>
   <string name="gt_f9b73e1abc37cf5b">"Note (optional)"</string>
   <string name="gt_045f910e6b3ce120">"Note must be 639 characters or fewer."</string>
+  <string name="gt_0ded20d6a749d6bf">"Nothing to send yet"</string>
   <string name="gt_788011833a5a0f22">"Notifications"</string>
   <string name="gt_54ee6b72ca5e79e6">"Notifications are required"</string>
   <string name="gt_fce40565eda8090e">"Notifications let Noah receive payments and renew your bitcoin before it expires."</string>
@@ -1105,6 +1107,7 @@
   <string name="gt_c5fb1b5d6362edc0">"Sending · waiting for an Ark round"</string>
   <string name="gt_a38ba37fd4f8a52a">"Sending · waiting for confirmations"</string>
   <string name="gt_b8ed5279e897be5d">"Sending…"</string>
+  <string name="gt_3e631aab2f131c60">"Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own."</string>
   <string name="gt_c16bc82bf1f04ede">"Sent"</string>
   <string name="gt_168d6498bc4dd449">"Sent by another exit"</string>
   <string name="gt_4e7201c7b8985a98">"Sent to"</string>
@@ -1255,10 +1258,10 @@
   <string name="gt_dfa27aa18fe3eb7c">"This differs from the %1$s sats you reviewed."</string>
   <string name="gt_9e3a6e3e9bd56700">"This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."</string>
   <string name="gt_f2faa6b386bacbee">"This exit can no longer be canceled. Its final transaction may already be broadcast. Refresh its status."</string>
-  <string name="gt_dc8cb064d1762d2f">"This exit is behind the current chain height. Use Check the chain to check it; this can also send exit transactions."</string>
-  <plurals name="gt_1140c4bcb71a3ec1">
-    <item quantity="one">"This exit is behind the current chain height: last checked %1$s block ago, at block %2$s. Checking the chain can also send exit transactions."</item>
-    <item quantity="other">"This exit is behind the current chain height: last checked %1$s blocks ago, at block %2$s. Checking the chain can also send exit transactions."</item>
+  <string name="gt_5e306b07871ba45a">"This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions."</string>
+  <plurals name="gt_02ca5673a1cb2959">
+    <item quantity="one">"This exit is behind the current chain height: last checked %1$s block ago, at block %2$s. Moving it forward can also send exit transactions."</item>
+    <item quantity="other">"This exit is behind the current chain height: last checked %1$s blocks ago, at block %2$s. Moving it forward can also send exit transactions."</item>
   </plurals>
   <string name="gt_5ed0c20bff01c0ca">"This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming."</string>
   <string name="gt_acec76ba83ee20ef">"This invoice was already paid: %1$s"</string>
@@ -1267,7 +1270,6 @@
   <string name="gt_766460156a897a88">"This legacy payment has no wallet identity. Check your history and recipient before discarding it."</string>
   <string name="gt_bfbb491d06ec6963">"This link could not be opened."</string>
   <string name="gt_70f6be0e72ef41e2">"This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast."</string>
-  <string name="gt_b993a2fe02860fb3">"This may send or fee-bump exit transactions. Their fees come from your on-chain bitcoin. Noah also does this by itself."</string>
   <string name="gt_fd5e7812c7b65887">"This operation overlaps an unresolved attempt. Check its status before repeating it."</string>
   <string name="gt_9e73b9f6cffbb279">"This payment could not be prepared. No payment was submitted."</string>
   <string name="gt_2580b9f907abe759">"This payment is no longer due."</string>
@@ -1528,9 +1530,9 @@
     <item quantity="one">"%1$s day"</item>
     <item quantity="other">"%1$s days"</item>
   </plurals>
-  <plurals name="gt_8e909a1137e15c7e">
-    <item quantity="one">"One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions."</item>
-    <item quantity="other">"%1$s exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions."</item>
+  <plurals name="gt_cea13885ad32653d">
+    <item quantity="one">"One exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions."</item>
+    <item quantity="other">"%1$s exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions."</item>
   </plurals>
   <string name="gt_8338b13e065297c7">"%1$s exits from one round: %2$s transactions, not %3$s. Shared ones are sent and paid once."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>

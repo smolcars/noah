@@ -141,6 +141,11 @@ extension ExitModel {
         records.last { $0.transactions?.isEmpty == false }?.transactions ?? []
     }
 
+    /// The transaction to open in an explorer: the claim once there is one, else the furthest step that's been sent.
+    var explorerTxid: String? {
+        details.claimTxid ?? path.last { $0.status.block != nil || $0.status.kind == "awaiting-confirmation" }?.txid
+    }
+
     /// A claim Noah broadcast (`txid`, from its journal) that bark hasn't recorded yet: shown as
     /// claiming until bark first sees it. After that bark's state counts, so a claim that fell out
     /// of the mempool reads Claimable again.

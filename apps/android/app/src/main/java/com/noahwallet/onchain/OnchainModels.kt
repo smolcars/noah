@@ -70,7 +70,7 @@ data class OnchainReceipt(val message: String, val txid: String? = null, val onc
     fun boardAmounts(quote: OnchainQuote) = BoardAmounts(quote.net, quote.amount + (onchainFee ?: checkNotNull(quote.chainFee)))
     companion object {
         const val broadcastFailedMessage = "Boarding submitted but unconfirmed. Noah will keep trying the broadcast. Do not board these funds again."
-        /** Check the chain's receipt when bark progressed every exit without an error. */
+        /** Move exit forward's receipt when bark progressed every exit without an error. */
         const val progressedMessage = "Exits progressed. Transactions may have been broadcast or fee-bumped."
         fun boardingMessage(fee: Long?) = "Boarding submitted. Funds become spendable after the board completes." +
             (fee?.let { " Actual onchain fee: $it sats." } ?: " Actual onchain fee is not yet available.")

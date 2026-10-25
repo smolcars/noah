@@ -12,6 +12,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val acknowledge: suspend (String) -> Unit, val check: suspend (String) -> Boolean,
         val override: suspend (String) -> Unit, val detail: suspend (String) -> ExitModel?,
         val refreshReceipts: suspend () -> Unit,
+        /** Waits while the wallet is only briefly not ready ([ExitRules.settling]), as after every app switch; true once it's ready. */
+        val settle: suspend () -> Boolean = { false },
         val claimAddress: suspend () -> String = { fail(OnchainFailure.unavailable) },
         val claimOwnership: suspend (String) -> Boolean = { fail(OnchainFailure.unavailable) },
         val discard: suspend (OnchainQuote) -> Unit = {},
@@ -86,7 +88,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         try {
             val saved = dependencies.attempts()
             attempts = visible(saved)
-            if (!dependencies.ready()) { unavailable(); fail(OnchainFailure.unavailable) }
+            // A sync, a background job or a reopen holds the wallet for a moment: keep what's shown and wait for it.
+            if (!dependencies.ready() && !dependencies.settle()) { unavailable(); fail(OnchainFailure.unavailable) }
             var receiptError: String? = null
             for (attempt in saved.filter { it.receipt == null || it.receipt.txid != null }) {
                 try { dependencies.check(attempt.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { receiptError = com.noahwallet.services.wallet.ChainStatus.errorText }
@@ -97,7 +100,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             val detail = detailID?.let { dependencies.detail(it) }
             val latest = dependencies.overview()
             if (generation == token && dependencies.ready()) { exit = detail; overview = latest; error = receiptError; revision++ }
-            else if (!dependencies.ready()) unavailable()
+            // The wallet got busy during the read: read again, which waits for it.
+            else if (!dependencies.ready()) readAgain = true
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }
     }

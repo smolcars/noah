@@ -60,13 +60,15 @@ internal data class ExitContext(val tip: Long, val confirmed: Long?, val delta: 
 
 /**
  * One exit (prototype `SCR.progress`): the picture follows bark's state as Noah progresses it by itself; the rows, Details
- * and the actions the state allows. Reading it never broadcasts: Check the chain and Cancel exit each review first.
+ * and the actions the state allows. Reading it never broadcasts: Move exit forward and Cancel exit each review first.
  */
 @Composable
 internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     val model = rememberOnchainModel(app, id)
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
+    val toasts = LocalSettingsToasts.current
+    val moved = tr("Exit moved forward"); val nothing = tr("Nothing to send yet")
     OnchainEffects(app, model, reloadOnChange = true)
     val overview = model.overview
     // What bark said the waiting package needs, when a check reported funds short: the amount to add comes from it.
@@ -98,12 +100,15 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     model.quote?.let { quote ->
         when (quote.action) {
             OnchainAction.progress -> CheckSheet(quote, model.busy, { money(app, it) }, model::invalidate) {
+                val before = model.exit
                 scope.launch {
                     model.confirm()
                     // A completed check is bark's full progress: read again so a transaction still waiting shows why at once.
                     val completed = model.error == null && model.message == OnchainReceipt.progressedMessage
                     ExitFunding.shared.checked(model.overview?.exits.orEmpty(), completed)
                     if (completed) { model.load(); haptics.light() } else haptics.error()
+                    // bark can't say whether it sent anything, so the exit itself tells; short of funds, the page says what it needs.
+                    if (completed && ExitFunding.shared.needed(id) == null) toasts.show(if (model.exit != before) moved else nothing)
                     app.refresh() // Other exit and VTXO pages read the wallet again (OnchainEffects).
                 }
             }
@@ -144,7 +149,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         }
     }
     val actions = ExitActions.of(stage, context.cancelable)
-    // Beside a primary Claim or "Add on-chain funds", Check the chain is a link at the top of the details, not a pill.
+    // Beside a primary Claim or "Add on-chain funds", Move exit forward is a link at the top of the details, not a pill.
     val checkLink = ExitActions.Action.check in actions && (ExitActions.Action.claim in actions || ExitActions.Action.addFunds in actions)
     val received = context.claimShare(exit.id)?.takeIf { stage.phase == ExitStage.Phase.claimed }?.let { ExitRules.received(exit.amount, it) } ?: exit.amount
     val need = exit.nextPackageFee?.let { fee -> context.confirmed?.let { fee - it } }?.coerceAtLeast(0) ?: 0
@@ -156,7 +161,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
             ExitActions.Action.addFunds -> FootPill(tr("Add on-chain funds"), Modifier.testTag("exit-add-funds"), enabled = !suspended) { addFunds(need) }
             ExitActions.Action.cancel -> FootPill(tr("Cancel exit"), Modifier.testTag("exit-cancel"), outlined = true, weight = .8f,
                 enabled = !busy && !suspended, onClick = cancel)
-            ExitActions.Action.check -> if (!checkLink) FootPill(tr("Check the chain"), Modifier.testTag("exit-check"),
+            ExitActions.Action.check -> if (!checkLink) FootPill(tr("Move exit forward"), Modifier.testTag("exit-check"),
                 outlined = !stage.stale, enabled = !busy && !suspended, loading = busy, onClick = check)
         }
     }), leading = {
@@ -168,10 +173,15 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
     }) {
         if (wide) ExitHeader(exit, stage, received, money, exitSubLine(stage, context, money))
         if (failed) Warning(tr("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need)), failed = true)
-        if (checkLink) SettingsLink(tr("Check the chain"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
-        if (stage.stale && stage.live) Warning(trPlural("This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.",
+        if (checkLink) SettingsLink(tr("Move exit forward"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
+        if (stage.stale && stage.live) Warning(trPlural("This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions.",
             context.tip - (exit.details.tip_height ?: context.tip), number(exit.details.tip_height ?: 0)), SettingsIcons.clock)
         ExitRows(exit, stage, context, money)
+        // The explorer without opening Details: the transaction that says the most about where the exit is.
+        val explore = rememberExplore()
+        exit.explorerTxid(stage.claimTxid)?.let { OnchainDisplay.explorerURL(it, BuildConfig.APP_VARIANT) }?.let { url ->
+            SettingsLink(tr("View in explorer"), Modifier.padding(top = 8.dp).testTag("exit-explorer")) { explore(url) }
+        }
         Details(details, { details = it }, scroll) { ExitDetailRows(exit, stage, context) }
         status()
     }
@@ -273,10 +283,10 @@ private fun exitSubLine(stage: ExitStage, context: ExitContext, money: (Long) ->
 /** One sentence per phase beside the picture on wide windows (prototype `EXPL`). */
 @Composable
 private fun exitExplanation(stage: ExitStage, delta: Long?): String = when {
-    stage.stale && stage.live -> tr("Noah hasn’t checked the chain for this exit in a while. Checking can also send or fee-bump its transactions.")
+    stage.stale && stage.live -> tr("Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.")
     stage.attention == ExitStage.Attention.needsFunds -> tr("Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms.")
     stage.attention == ExitStage.Attention.feesRose -> tr("A block came without it. Noah pays more when the fee rate rises, so it gets into the next one.")
-    stage.attention == ExitStage.Attention.stuck -> tr("Blocks are full right now. Noah raises the fee when rates rise. Check the chain to try again now.")
+    stage.attention == ExitStage.Attention.stuck -> tr("Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now.")
     stage.attention == ExitStage.Attention.shared -> tr("Another exit from your round already sent this one, with its own fee. You don’t pay for it.")
     else -> when (stage.phase) {
         ExitStage.Phase.lift -> tr("Your VTXO leaves Ark. Nothing from here on needs Ark’s server.")
@@ -329,18 +339,32 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
     }
 }
 
+/** bark's transactions for the exit, root first: the current state's, or the last list it recorded (later states don't carry them). */
+internal val ExitModel.path get() = details.transactions ?: historyDetails.lastOrNull { !it.transactions.isNullOrEmpty() }?.transactions.orEmpty()
+
+/** The transaction to open in an explorer: the claim once there is one, else the furthest step that's been sent. */
+internal fun ExitModel.explorerTxid(claimTxid: String?): String? =
+    claimTxid ?: path.lastOrNull { it.status.block != null || it.status.kind == "awaiting-confirmation" }?.txid
+
+/** Opens an explorer page, or says there's no browser. */
+@Composable
+private fun rememberExplore(): (String) -> Unit {
+    val toasts = LocalSettingsToasts.current
+    val host = LocalContext.current
+    val noBrowser = tr("No browser available to open the explorer.")
+    return { url ->
+        try { host.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+        catch (_: android.content.ActivityNotFoundException) { toasts.show(noBrowser) }
+    }
+}
+
 /** Details: the VTXO, each transaction root first with its state (and the explorer), the exit, and bark's timeline. */
 @Composable
 private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitContext) {
     val toasts = LocalSettingsToasts.current
-    val host = LocalContext.current
-    val noBrowser = tr("No browser available to open the explorer.")
-    val explore: (String) -> Unit = { url ->
-        try { host.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
-        catch (_: android.content.ActivityNotFoundException) { toasts.show(noBrowser) }
-    }
+    val explore = rememberExplore()
     DetailRow(tr("VTXO ID"), short(exit.id, 10, 6), ValueKind.mono, copy = exit.id, small = true, toasts = toasts)
-    val txs = exit.details.transactions ?: exit.historyDetails.lastOrNull { !it.transactions.isNullOrEmpty() }?.transactions.orEmpty()
+    val txs = exit.path
     val ids = txs.map { it.txid }.ifEmpty { exit.packages.map { it.txid } }
     if (ids.isNotEmpty()) {
         SectionLabel(tr("Transactions, root first"))
@@ -379,20 +403,20 @@ private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitConte
     }
 }
 
-/** "Check the chain" (today's review): what checking does, its estimated broadcast fees, and an explicit Check. */
+/** "Move exit forward" (today's review): what it does, its estimated fees, and an explicit Move forward. */
 @Composable
 private fun CheckSheet(quote: OnchainQuote, busy: Boolean, money: (Long) -> String, dismiss: () -> Unit, check: () -> Unit) {
     val toasts = LocalSettingsToasts.current
     var current by remember(quote) { mutableStateOf(quote.current()) }
     LaunchedEffect(quote) { while (current) { kotlinx.coroutines.delay(250); current = quote.current() } }
-    SettingsSheet(dismiss, tr("Check the chain?"), tr("This may send or fee-bump exit transactions. Their fees come from your on-chain bitcoin. Noah also does this by itself."),
+    SettingsSheet(dismiss, tr("Move your exit forward?"), tr("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own."),
         modifier = Modifier.testTag("exit-check-sheet")) { close ->
         Column(Modifier.padding(top = 8.dp)) {
             DetailRow(tr("Exits"), quote.ids.size.toString(), ValueKind.number, toasts = toasts)
-            quote.chainFee?.let { DetailRow(tr("Network fees"), "~" + money(it), ValueKind.number, toasts = toasts, last = true) }
+            quote.chainFee?.let { DetailRow(tr("Estimated fees"), "~" + money(it), ValueKind.number, toasts = toasts, last = true) }
         }
         if (!current) Warning(tr(OnchainFailure.changed.text), failed = true)
-        SheetActions(tr("Cancel"), tr("Check"), onCancel = close, onConfirm = check, enabled = current && !busy, loading = busy, confirmTag = "exit-check-confirm")
+        SheetActions(tr("Cancel"), tr("Move forward"), onCancel = close, onConfirm = check, enabled = current && !busy, loading = busy, confirmTag = "exit-check-confirm")
     }
 }
 

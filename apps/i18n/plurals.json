@@ -91,9 +91,9 @@
     "one": "Your bitcoin sits at the end of a path of one transaction in the round's tree. The round's own transaction is already on-chain.",
     "other": "Your bitcoin sits at the end of a path of {n} transactions in the round's tree. The round's own transaction is already on-chain."
   },
-  "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.": {
-    "one": "One exit is behind the current chain height. Use Check the chain on it; this can also broadcast exit transactions.",
-    "other": "{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions."
+  "{n} exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions.": {
+    "one": "One exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.",
+    "other": "{n} exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions."
   },
   "Your bitcoin sits at the end of a path of {n} transactions in the round’s tree. The round’s own transaction is already on-chain.": {
     "one": "Your bitcoin sits at the end of a path of {n} transaction in the round’s tree. The round’s own transaction is already on-chain.",
@@ -127,8 +127,8 @@
     "one": "{n} block",
     "other": "{n} blocks"
   },
-  "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions.": {
-    "one": "This exit is behind the current chain height: last checked {n} block ago, at block {height}. Checking the chain can also send exit transactions.",
-    "other": "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Checking the chain can also send exit transactions."
+  "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions.": {
+    "one": "This exit is behind the current chain height: last checked {n} block ago, at block {height}. Moving it forward can also send exit transactions.",
+    "other": "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions."
   }
 }

@@ -9,6 +9,11 @@ enum ExitRules {
     static func ready(initialized: Bool, loaded: Bool, suspended: Bool, background: Bool) -> Bool {
         initialized && loaded && !suspended && !background
     }
+    /// Not ready only for a moment: a sync or background job holds the wallet, or it's still opening. Suspended or
+    /// not set up isn't a moment.
+    static func settling(initialized: Bool, loaded: Bool, suspended: Bool, background: Bool) -> Bool {
+        initialized && !suspended && (background || !loaded)
+    }
     static func current(reviewedAt: Date, now: Date = Date()) -> Bool {
         now.timeIntervalSince(reviewedAt) >= 0 && now.timeIntervalSince(reviewedAt) < 30
     }

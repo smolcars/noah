@@ -127,4 +127,51 @@ struct OnchainChangesTests {
         await model.load()
         #expect(reads.count.withLock { $0 } == 3)
     }
+
+    /// After an app switch the foreground sync holds the wallet for a moment: the page keeps what it showed, shows no
+    /// error, and reads once the wallet is ready. One unavailable for a real reason is still cleared and says so.
+    @Test func aBrieflyBusyWalletKeepsTheLastStateAndReadsOnceReady() async {
+        let calls = OnchainModelTests.Calls(), settles = Mutex(true)
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.settle = {
+            guard settles.withLock({ $0 }) else { return false }
+            await calls.setReady(true)
+            return true
+        }
+        let model = OnchainModel(dependencies: dependencies)
+        await model.load()
+        await calls.setReady(false)
+        await model.load()
+        #expect(await calls.reads == 2)
+        #expect(model.overview != nil && model.error == nil)
+        settles.withLock { $0 = false }
+        await calls.setReady(false)
+        await model.load()
+        #expect(await calls.reads == 2)
+        #expect(model.overview == nil && model.error == OnchainFailure.unavailable.errorDescription)
+    }
+
+    /// A sync that starts during a read doesn't wipe the page: it reads again once the wallet is ready.
+    @Test func aSyncStartingDuringAReadReadsAgainInsteadOfClearing() async {
+        let calls = OnchainModelTests.Calls()
+        var dependencies = OnchainModelTests().dependencies(calls)
+        dependencies.overview = {
+            let overview = await calls.read()
+            if await calls.reads == 1 { await calls.setReady(false) }
+            return overview
+        }
+        dependencies.settle = { await calls.setReady(true); return true }
+        let model = OnchainModel(dependencies: dependencies)
+        await model.load()
+        #expect(await calls.reads == 2)
+        #expect(model.overview != nil && model.error == nil)
+    }
+
+    @Test func onlyABusyOrOpeningWalletSettles() {
+        #expect(ExitRules.settling(initialized: true, loaded: true, suspended: false, background: true))
+        #expect(ExitRules.settling(initialized: true, loaded: false, suspended: false, background: false))
+        #expect(!ExitRules.settling(initialized: true, loaded: false, suspended: true, background: true))
+        #expect(!ExitRules.settling(initialized: false, loaded: false, suspended: false, background: false))
+        #expect(!ExitRules.settling(initialized: true, loaded: true, suspended: false, background: false))
+    }
 }

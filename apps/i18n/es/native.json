@@ -2082,5 +2082,19 @@
   "gt_064ce079abb02910": "No se puede sacar este VTXO.",
   "gt_02b452f0133be2e5": "Renovar primero",
   "gt_98b1d38879903344": "Renueva este VTXO en Ajustes → VTXOs antes de sacarlo.",
-  "gt_f889e0bd2f6e4ea8": "Comisión de salida"
+  "gt_f889e0bd2f6e4ea8": "Comisión de salida",
+  "gt_013a643a423137ed": "Avanzar la salida",
+  "gt_e5aa7874e42cca96": "¿Avanzar tu salida?",
+  "gt_3e631aab2f131c60": "Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta.",
+  "gt_485d888652133aa1": "Comisiones estimadas",
+  "gt_03244d3bb2b077f2": "Avanzar",
+  "gt_c3ac6596a27b89b8": "La salida ha avanzado",
+  "gt_0ded20d6a749d6bf": "Aún no hay nada que enviar",
+  "gt_5e306b07871ba45a": "Esta salida va por detrás de la altura actual de la cadena. Avánzala para ponerla al día; también puede enviar transacciones de salida.",
+  "gt_02ca5673a1cb2959_one": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque {{height}}, hace {{n}} bloque. Avanzarla también puede enviar transacciones de salida.",
+  "gt_02ca5673a1cb2959_other": "Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque {{height}}, hace {{n}} bloques. Avanzarla también puede enviar transacciones de salida.",
+  "gt_a8a0b1813d01e36a": "Noah no ha revisado esta salida desde hace un rato. Avanzarla también puede enviar su siguiente paso o subir una comisión.",
+  "gt_8ee565450a0e320e": "Los bloques están llenos ahora. Noah sube la comisión cuando suben las tasas. Avanza tu salida para reintentarlo ya.",
+  "gt_cea13885ad32653d_one": "Una salida está por detrás de la altura actual de la cadena. Avánzala para ponerla al día; esto también puede enviar transacciones de salida.",
+  "gt_cea13885ad32653d_other": "{{n}} salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida."
 }

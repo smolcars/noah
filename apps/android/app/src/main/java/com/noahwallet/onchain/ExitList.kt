@@ -100,7 +100,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
         }
         // Today's stale-exit warning, only with Noah's evidence that nothing progresses these.
         val stale = live.count { stages.getValue(it.id).stale }
-        if (stale > 0) Warning(trPlural("{n} exits are behind the current chain height. Use Check the chain on any of them; this can also broadcast exit transactions.", stale),
+        if (stale > 0) Warning(trPlural("{n} exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions.", stale),
             SettingsIcons.clock)
         val visible = exits.filter { filter == null || it.state == filter }
         if (exits.isNotEmpty() && visible.isEmpty()) FinePrint(tr("No exits in this view."))
