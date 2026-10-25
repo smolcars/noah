@@ -456,13 +456,22 @@ internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolea
     }
 }
 
-/** The status line's slot always holds two lines, so a line coming or going never moves what's below it; only a longer one
- *  (at large text sizes) takes more room. */
+/** The status line under the fiat value. Coming or going it expands or shrinks (snappy), so what's below glides rather than
+ *  jumps; under Reduce Motion it comes and goes at once. A new line in its place just replaces the text. */
 @Composable
 private fun StatusBlock(ui: HomeUi, onBalance: () -> Unit, onRounds: () -> Unit) {
-    Box(Modifier.padding(top = 8.dp)) {
-        Text("", style = HomeType.line, minLines = 2, modifier = Modifier.clearAndSetSemantics { })
-        val status = ui.status ?: return@Box
+    val reduceMotion = LocalReduceMotion.current
+    // The last line, so one shrinking away keeps its text.
+    var last by remember { mutableStateOf(ui.status) }
+    if (ui.status != null) last = ui.status
+    androidx.compose.animation.AnimatedVisibility(ui.status != null,
+        enter = if (reduceMotion) androidx.compose.animation.EnterTransition.None
+            else androidx.compose.animation.expandVertically(NoahTokens.Motion.snappy(), Alignment.Top) +
+                androidx.compose.animation.fadeIn(NoahTokens.Motion.snappy()),
+        exit = if (reduceMotion) androidx.compose.animation.ExitTransition.None
+            else androidx.compose.animation.shrinkVertically(NoahTokens.Motion.snappy(), Alignment.Top) +
+                androidx.compose.animation.fadeOut(NoahTokens.Motion.snappy())) {
+        val status = last ?: return@AnimatedVisibility
         val (text, failed, dot) = when (status) {
             is HomeRules.Status.Error -> Triple(tr(status.message), true, false)
             is HomeRules.Status.Arriving -> Triple(tr("{amount} arriving", if (ui.hidden) "••••" else "+" + ui.amount(status.sats)), false, true)
@@ -474,7 +483,7 @@ private fun StatusBlock(ui: HomeUi, onBalance: () -> Unit, onRounds: () -> Unit)
             HomeRules.StatusTap.Rounds -> onRounds
             null -> null
         }
-        StatusLine(text, failed = failed, dot = dot, onClick = onClick)
+        StatusLine(text, failed = failed, dot = dot, onClick = onClick, modifier = Modifier.padding(top = 8.dp))
     }
 }
 

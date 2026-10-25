@@ -265,8 +265,8 @@ struct HomeBalanceView: View {
     }
 }
 
-/// The status line under the fiat value. Its slot always holds two lines, so a line coming or going never
-/// moves what's below it; only a longer one (at large text sizes) takes more room.
+/// The status line under the fiat value. Coming or going it fades and what's below glides (snappy); under
+/// Reduce Motion it comes and goes at once. A new line in its place just replaces the text.
 struct HomeStatusRow: View {
     let line: HomeStatusLine?
     let balance: WalletBalance?
@@ -274,22 +274,34 @@ struct HomeStatusRow: View {
     let hidden: Bool
     /// Nil: plain text (`HomeStatusLine.tap`).
     let action: (() -> Void)?
+    /// `line`, set in an animation only when it comes or goes, so what's below moves with it.
+    @State private var shown: HomeStatusLine?
     @Environment(\.locale) private var locale
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            Text(verbatim: " \n ").noahText(NoahTokens.Typography.sub).hidden().accessibilityHidden(true)
-            if let line {
-                if let action {
-                    Button(action: action) { content(line).contentShape(Rectangle()) }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("home-status")
-                } else {
-                    content(line).accessibilityElement(children: .combine).accessibilityIdentifier("home-status")
+        VStack(alignment: .leading, spacing: 0) {
+            // Never empty, so the row appears (and observes) before its first line.
+            Color.clear.frame(height: 0)
+            if let shown {
+                Group {
+                    if let action {
+                        Button(action: action) { content(shown).contentShape(Rectangle()) }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("home-status")
+                    } else {
+                        content(shown).accessibilityElement(children: .combine).accessibilityIdentifier("home-status")
+                    }
                 }
+                .padding(.top, 8)
+                .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { shown = line }
+        .onChange(of: line) { old, new in
+            withAnimation((old == nil) != (new == nil) && !reduceMotion ? NoahTokens.Motion.snappy : nil) { shown = new }
+        }
     }
 
     private func content(_ line: HomeStatusLine) -> some View {

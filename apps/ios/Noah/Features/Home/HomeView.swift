@@ -242,7 +242,7 @@ struct HomeView: View {
         fiat.padding(.top, 10).modifier(appear(2))
         HomeStatusRow(line: status, balance: summary?.balance, unit: model.amountUnit, hidden: model.isBalanceHidden,
                       action: status?.tap(roundsActive: !home.activeRounds.isEmpty).map { tap in { statusTapped(tap) } })
-            .padding(.top, 8).modifier(appear(3))
+            .modifier(appear(3))
         HomeNudgeSlot(nudge: nudge) { nudge in
             HomeNudgeCard(nudge: nudge, unit: model.amountUnit, hidden: model.isBalanceHidden, busy: busy(nudge),
                           action: { act(nudge) }, dismiss: { dismiss(nudge) })

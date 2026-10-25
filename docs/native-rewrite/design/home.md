@@ -52,7 +52,7 @@ From the top: top bar, balance, fiat, status line, nudge, card or Recent, map ro
   3. today's `pendingRoundMessage`, which opens today's Pending Rounds sheet (the round and its funding transaction) while a round is active, otherwise the balance sheet;
   4. "Round in progress", which opens today's Pending Rounds sheet.
 
-  Backups and background tasks are the top bar's activity glyph, never a line. The line's slot always keeps two lines of its text style, so a line appearing or going never moves the nudge, the card or Recent; only a longer one at large text sizes takes more room.
+  Backups and background tasks are the top bar's activity glyph, never a line. With no line there's no gap: the nudge, the card or Recent sit at their usual spacing under the fiat. A line appearing or going fades while what's below glides with snappy (at once under Reduce Motion); a new line in its place just replaces the text.
 - **Balance sheet:**
   - **Content:** "Balance", the total, then today's `balance.details` rows with their existing labels. No new explanatory copy.
   - **Compact:** a medium-detent sheet.
