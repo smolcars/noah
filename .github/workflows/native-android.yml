@@ -98,21 +98,20 @@ jobs:
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
 
       # PRs build only regtest; the flavors differ only in their manifest and google-services.json.
-      # The emulator runs these APKs, so they keep x86_64. Maestro installs them; nothing rebuilds them.
+      # Only the x86_64 emulator runs this APK, so it leaves out arm64-v8a. Maestro installs it; nothing
+      # rebuilds it. CI runs no instrumentation, so the device tests are only compiled.
       # --build-cache reuses master's task outputs. The configuration cache stays off: it needs a secret
       # to persist across runs, and the release builds' Sentry upload task doesn't support it.
-      - name: Assemble regtest app and test APKs, and run unit tests
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict :app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest :app:testRegtestDebugUnitTest'
+      - name: Assemble regtest APK, compile device tests and run unit tests
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestDebug :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest'
 
-      - name: Upload regtest APKs
+      # Default compression: the APK stores its native libraries uncompressed, and zipping takes 86 MB to 52 MB.
+      - name: Upload regtest APK
         uses: actions/upload-artifact@v7
         with:
           name: native-regtest-apks
-          path: |
-            apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
-            apps/android/app/build/outputs/apk/androidTest/regtest/debug/app-regtest-debug-androidTest.apk
+          path: apps/android/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk
           if-no-files-found: error
-          compression-level: 0
           retention-days: 7
 
       - name: Upload JUnit results
@@ -196,7 +195,7 @@ jobs:
           key: android-emulator-image-${{ runner.os }}-${{ runner.arch }}-36-google-apis
           path: ${{ steps.sdk.outputs.root }}/system-images/android-36/google_apis/x86_64
 
-      - name: Download regtest APKs
+      - name: Download regtest APK
         uses: actions/download-artifact@v8
         with:
           name: native-regtest-apks
@@ -213,7 +212,7 @@ jobs:
           ram-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -grpc 8592 -grpc-use-token
           disable-animations: false
-          script: nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/regtest/debug/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
+          script: nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/app-regtest-debug.apk emulator-5554 ${{ matrix.suite }}
 
       - name: Collect regtest logs
         if: failure()
