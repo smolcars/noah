@@ -741,7 +741,7 @@ class OnchainOperationsTest {
         assertEquals(7630L, quote.chainFee); assertEquals(1295L, quote.fee)
         assertTrue(wallet.calls.isEmpty()); assertTrue(wallet.states.isEmpty())
         val message = ops.execute(quote)
-        assertTrue(message.contains("automatically")); assertEquals(listOf("start"), wallet.calls)
+        assertTrue(message.contains("while the app is open")); assertEquals(listOf("start"), wallet.calls)
         assertFalse(history.exists()); assertNotNull(journal.loadAll().single().receipt)
     } }
     @Test fun duplicateIDsDustAndPartialProgressAreRefused() = runBlocking { fixture { wallet, ops, _, _ ->

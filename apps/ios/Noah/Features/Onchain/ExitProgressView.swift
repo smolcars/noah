@@ -488,6 +488,8 @@ struct ExitStatusLine: View {
 
     func status(of tx: ExitDetails.Transaction, index: Int) -> String {
         if let height = tx.status.block?.height { return tr("Block {height}", block(height)) }
+        // Later states don't list transactions: the last list bark recorded can predate the last one's block (as Android).
+        if [.onchain, .waiting, .claimable, .claiming, .claimed].contains(progress.phase) { return tr("In a block") }
         switch tx.status.kind {
         case "awaiting-confirmation": return tx.status.origin == "wallet" || tx.status.origin == nil ? tr("Waiting for a block") : tr("Sent by another exit")
         case "awaiting-cpfp-broadcast": return progress.phase == .needsFunds ? tr("Needs on-chain funds") : tr("Ready to send")

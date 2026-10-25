@@ -118,6 +118,13 @@ class ExitStagesTest {
         // The list counts each child once, as Activity's "Exit fee" rows: 961 + 31 + 29, not each exit's path again.
         assertEquals(1_021L, ExitFees.total(listOf(self, twin, other)))
     }
+    /** The explorer link opens the claim once there is one, else the furthest step that's been sent; nothing sent, none. */
+    @Test fun theExplorerOpensTheClaimElseTheFurthestSentStep() {
+        val sent = exit("Processing", processing(101, tx("root", "confirmed", "c1", 101), tx("l1", "awaiting-confirmation", "c2"), tx("leaf", "awaiting-cpfp-broadcast")))
+        assertEquals("l1", sent.explorerTxid(null))
+        assertNull(exit("Processing", processing(100, tx("root", "awaiting-cpfp-broadcast"))).explorerTxid(null))
+        assertEquals("claim", sent.explorerTxid("claim"))
+    }
     @Test fun anotherWalletsChildIsSharedAndCostsNothing() {
         // Its child isn't one of this wallet's transactions, so the overview has no fee for it.
         val stage = ExitStages.of(exit("Processing", processing(100, tx("root", "awaiting-confirmation", "theirs", origin = "mempool"), tx("leaf", "verify-inputs")),

@@ -174,7 +174,6 @@
     "Hide places": "parity-gap: only Android can hide the places list",
     "Hours: {nativeValue1}": "parity-gap (layout, not localized): Android prefixes opening hours with \"Hours:\" by interpolation; iOS shows a clock icon",
     "I checked history": "parity-gap: Android asks 'Have you checked?' before the could-pay-twice warning; iOS goes straight to the warning",
-    "In a block": "parity-gap: Android's exit Details list each transaction with its name, block and fee rate (prototype); iOS's don't",
     "Install a distributor app like \"ntfy\" from F-Droid to enable push notifications.": "platform: UnifiedPush and distributors replace Google Play's push where it's missing",
     "Install ntfy from F-Droid, then come back.": "platform: UnifiedPush and distributors replace Google Play's push where it's missing",
     "Invalid or expired verification code. Please try again.": "parity-gap (shown): Android reports a failed verify request this way; iOS treats every failure as a wrong code",

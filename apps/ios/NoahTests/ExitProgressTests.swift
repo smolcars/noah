@@ -49,6 +49,14 @@ struct ExitProgressTests {
         #expect(ExitFees.total([this, twin, other], childFees: childFees) == 1_021)
     }
 
+    /// The explorer link opens the claim once there is one, else the furthest step that's been sent; nothing sent, none.
+    @Test func theExplorerOpensTheClaimElseTheFurthestSentStep() {
+        let path = [Self.tx("root", "confirmed", height: 101, child: "c1"), Self.tx("l1", "awaiting-confirmation", child: "c2"), Self.tx("leaf", "awaiting-cpfp-broadcast")]
+        #expect(Self.exit("Processing", Self.processing(path)).explorerTxid == "l1")
+        #expect(Self.exit("Processing", Self.processing([Self.tx("root", "awaiting-cpfp-broadcast")])).explorerTxid == nil)
+        #expect(Self.exit("Claimed", .init(kind: "claimed", txid: "claim"), history: [Self.processing(path)]).explorerTxid == "claim")
+    }
+
     @Test func everyBarkStateMapsToItsPhaseAndPicture() {
         let start = ExitProgress(Self.exit("Start", .init(kind: "start", tip_height: 100)), tip: 100)
         #expect(start.phase == .starting && start.picture == .lift && start.cancelable && start.live)
