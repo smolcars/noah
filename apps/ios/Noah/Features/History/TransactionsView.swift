@@ -522,9 +522,11 @@ private struct ZoomSource: ViewModifier {
 
     func body(content: Content) -> some View {
         if let namespace {
-            content.matchedTransitionSource(id: id, in: namespace) {
+            // The source clips even at rest: outset it so the pending ring (3 pt past the avatar) stays whole.
+            content.padding(.horizontal, 4).matchedTransitionSource(id: id, in: namespace) {
                 $0.background(NoahTokens.Colors.background).clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
+            .padding(.horizontal, -4)
         } else {
             content
         }
