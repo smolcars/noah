@@ -679,7 +679,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val amount = receipt?.takeIf { it.amount > 0 && !it.amountIsPending }?.amount ?: attempt?.existingLightning?.amount ?: attempt?.quote?.amount ?: payment?.amount ?: 0
     val who = payment?.let { SendWhoRules.of(it.destination, it.method, env.ownDomain) } ?: SendWho("")
     val confirmedAt = receipt?.chainStatus?.takeIf { it.kind == com.noahwallet.services.wallet.ChainStatus.Kind.confirmed }?.height
-    val tip = env.tip?.let { tip -> confirmedAt?.let { maxOf(tip, it) } ?: tip }
+    val tip = env.tip?.let { tip -> confirmedAt?.let { maxOf(tip, it) } ?: tip } ?: confirmedAt
     val needed = if (route == SendRoute.chainArk) env.chainNeeded else 1
     val format = remember(env.locale) { java.text.NumberFormat.getIntegerInstance(env.locale) }
     val line = SendPhaseLines.of(motion, elapsed, reduceMotion, formatted(amount, env), tip, confirmedAt, needed) { format.format(it) }
@@ -757,7 +757,7 @@ private fun resultTitle(ending: SendEnding, amount: Long, receipt: SendReceipt?,
  * today's meaning and wording (status, messages, retries and the override audit), restyled.
  */
 @Composable
-private fun ResultArea(ending: SendEnding, controller: SendController, attempt: SendAttempt?, receipt: SendReceipt?, amount: Long, who: SendWho,
+internal fun ResultArea(ending: SendEnding, controller: SendController, attempt: SendAttempt?, receipt: SendReceipt?, amount: Long, who: SendWho,
                        confirmedAt: Long?, env: SendEnv, actions: SendActions) {
     val palette = LocalPalette.current
     val context = LocalContext.current
@@ -774,7 +774,7 @@ private fun ResultArea(ending: SendEnding, controller: SendController, attempt: 
         SendEnding.lightningSent -> tr("Paid over Lightning. Their secret is your proof of payment.")
         SendEnding.chainSent -> when {
             receipt?.broadcastRetryPending == true -> tr(SendReceipt.broadcastPendingMessage)
-            confirmedAt != null -> tr("Confirmed in block {height}.", java.text.NumberFormat.getIntegerInstance(env.locale).format(confirmedAt))
+            confirmedAt != null -> null // The block row's phase line names the block.
             else -> tr("It confirms in about 20 minutes. Activity shows when.")
         }
         SendEnding.pending -> tr("Lightning is still finding a route. You can leave this screen; Noah finishes it in the background.")
