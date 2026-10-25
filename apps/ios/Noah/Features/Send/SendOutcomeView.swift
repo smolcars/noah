@@ -336,10 +336,7 @@ struct SendOutcomeView: View {
                     : L10n.text("It arrived instantly.", locale: language)
             case .lightning: return L10n.text("Paid over Lightning. Their secret is your proof of payment.", locale: language)
             case .onchainSwap, .onchainWallet:
-                if let height = motion.confirmedHeight {
-                    return L10n.text("Confirmed in block {height}.", height.formatted(.number.locale(locale)), locale: language)
-                }
-                return L10n.text("It confirms in about 20 minutes. Activity shows when.", locale: language)
+                return Self.onchainLine(confirmed: motion.confirmedHeight != nil).map { L10n.text($0, locale: language) }
             }
         case .refunded:
             // Only a person or address can be "reached"; an invoice or offer just gets the refund line.
@@ -525,6 +522,12 @@ struct SendOutcomeView: View {
     private func copied() {
         haptics.play(.success)
         UIAccessibility.post(notification: .announcement, argument: L10n.text("Copied", locale: locale.identifier))
+    }
+
+    /// An on-chain send's line: none once confirmed, when the block row's phase line already says
+    /// "Confirmed in block N" (send-receive.md, the block row).
+    static func onchainLine(confirmed: Bool) -> String? {
+        confirmed ? nil : "It confirms in about 20 minutes. Activity shows when."
     }
 
     /// A proof shortened to its ends, as the prototype shows it ("9f2c…a41e").

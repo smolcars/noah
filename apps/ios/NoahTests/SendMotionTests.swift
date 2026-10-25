@@ -521,6 +521,12 @@ struct SendMotionTests {
         #expect(recents.last?.label.avatar == .chain)
         #expect(SendRecent.matching(recents, query: "ma").map(\.destination) == ["maya@localhost.com"])
     }
+
+    /// A confirmed on-chain send says "Confirmed in block N" once: in the block row's phase line, not again below.
+    @Test func confirmedOnchainSendHasNoSecondConfirmationLine() {
+        #expect(SendOutcomeView.onchainLine(confirmed: false) == "It confirms in about 20 minutes. Activity shows when.")
+        #expect(SendOutcomeView.onchainLine(confirmed: true) == nil)
+    }
 }
 
 /// Receive shows exactly the chosen format, and its arrivals follow real events.
