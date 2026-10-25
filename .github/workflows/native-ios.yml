@@ -35,8 +35,7 @@ concurrency:
 
 env:
   # Merges save caches and PRs restore them, so a PR doesn't evict master's entries.
-  # shortcut: the native PR saves too, so its reruns are warm; remove the head_ref check once it merges.
-  SAVE_CACHE: ${{ github.event_name != 'pull_request' || github.head_ref == 'feat/native-rewrite' }}
+  SAVE_CACHE: ${{ github.event_name != 'pull_request' }}
 
 jobs:
   build-and-test:
