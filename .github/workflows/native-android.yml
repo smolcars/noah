@@ -10,8 +10,6 @@ on:
       - "client/assets/btcmap/**"
       - "client/assets/geonames/**"
       - "client/android/app/debug.keystore"
-      - "flake.nix"
-      - "flake.lock"
       - "justfile"
       - "Dockerfile"
       - ".github/workflows/native-android.yml"
@@ -33,12 +31,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  NIX_CONFIG: |
-    post-build-hook =
-    extra-substituters =
-    substituters = https://cache.nixos.org/
-
+# No Nix here: Gradle needs only JDK 17, and Maestro needs Maestro, just and grpcurl. The flake's
+# android-ci shell stays for local use.
 jobs:
   build-and-test:
     runs-on: blacksmith-8vcpu-ubuntu-2404
@@ -46,14 +40,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-
-      - name: Restore Nix store
-        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
-          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
-          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+          distribution: temurin
+          java-version: 17
 
       # Restores what native-telegram-android.yml saved on master.
       - name: Cache Gradle
@@ -97,7 +88,8 @@ jobs:
       - name: Assemble minified regtest APK, compile device tests and run unit tests
         env:
           CI_DEBUG_SIGNING: "true"
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestRelease -x lintVitalRegtestRelease :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest'
+        working-directory: apps/android
+        run: ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestRelease -x lintVitalRegtestRelease :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest
 
       # Default compression: the APK stores its native libraries uncompressed, and zipping takes 65 MB to 31 MB.
       - name: Upload regtest APK
@@ -137,17 +129,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-
-      - name: Restore Nix store
-        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+      # Maestro runs on JDK 17. jq, curl and Docker come with the runner.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
-          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
-          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
+          distribution: temurin
+          java-version: 17
 
-      - name: Prepare Maestro environment
-        run: nix build .#devShells.x86_64-linux.android-ci --no-link
+      - name: Install just
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: just
+
+      # Maestro stays pinned (a new release can change how flows behave), as in the flake. grpcurl reads the
+      # emulator's clipboard in the funded suite.
+      - name: Install Maestro and grpcurl
+        env:
+          MAESTRO_VERSION: 2.11.0
+          MAESTRO_SHA256: 5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a
+          GRPCURL_VERSION: 1.9.4
+          GRPCURL_SHA256: 97e13d58d2733a0e62cd2571d1d5f0c02823f0d25282f08bddedf1ad9c5d1736
+        run: |
+          tools="$RUNNER_TEMP/tools"
+          mkdir -p "$tools/bin"
+          curl -fsSL -o "$tools/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
+          echo "$MAESTRO_SHA256  $tools/maestro.zip" | sha256sum -c -
+          unzip -q "$tools/maestro.zip" -d "$tools"
+          curl -fsSL -o "$tools/grpcurl.tar.gz" "https://github.com/fullstorydev/grpcurl/releases/download/v$GRPCURL_VERSION/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz"
+          echo "$GRPCURL_SHA256  $tools/grpcurl.tar.gz" | sha256sum -c -
+          tar -xzf "$tools/grpcurl.tar.gz" -C "$tools/bin" grpcurl
+          echo "$tools/maestro/bin" >> "$GITHUB_PATH"
+          echo "$tools/bin" >> "$GITHUB_PATH"
 
       - name: Set up cached Docker builder
         uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
@@ -170,7 +182,7 @@ jobs:
       # A fresh bash, because the step's `bash -e` would exit before recording a failed setup.
       - name: Start regtest setup
         run: |
-          bash -c 'docker compose -f scripts/docker-compose.yml pull --ignore-buildable && nix develop .#android-ci --command just setup-everything; echo $? > regtest-setup.status' > regtest-setup.log 2>&1 < /dev/null &
+          bash -c 'docker compose -f scripts/docker-compose.yml pull --ignore-buildable && just setup-everything; echo $? > regtest-setup.status' > regtest-setup.log 2>&1 < /dev/null &
 
       - name: Enable KVM
         run: |
@@ -213,7 +225,7 @@ jobs:
           # The runner executes each line separately; the first waits for the regtest setup and prints its log.
           script: |
             timeout 300 sh -c 'until [ -s regtest-setup.status ]; do sleep 1; done'; cat regtest-setup.log; [ "$(cat regtest-setup.status)" = 0 ]
-            nix develop .#android-ci --command scripts/test-maestro-native.sh android android-release-build/app-regtest-release.apk emulator-5554 ${{ matrix.suite }}
+            scripts/test-maestro-native.sh android android-release-build/app-regtest-release.apk emulator-5554 ${{ matrix.suite }}
 
       - name: Collect regtest logs
         if: failure()

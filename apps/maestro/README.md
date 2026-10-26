@@ -31,7 +31,7 @@ The funded job is three steps in `scripts/test-maestro-native.sh`: `fund-wallet.
 
 ## Running locally
 
-Prerequisites: the Android SDK and the repository's `android-ci` Nix shell, which pins Maestro 2.11.0, `grpcurl` and `jq` as CI does (`MAESTRO_COMMAND` picks another Maestro). The funded group also needs a regtest stack whose LND has a channel to CLN. The script never starts, stops or mines the stack.
+Prerequisites: the Android SDK and the repository's `android-ci` Nix shell, which pins Maestro 2.11.0 (the version CI downloads) and provides `grpcurl`, `jq` and `just` (`MAESTRO_COMMAND` picks another Maestro). CI doesn't use Nix; it installs the same tools directly. The funded group also needs a regtest stack whose LND has a channel to CLN. The script never starts, stops or mines the stack.
 
 ```sh
 export ANDROID_HOME="$HOME/Library/Android/sdk"

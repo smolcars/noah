@@ -6,9 +6,6 @@ on:
     paths:
       - "apps/android/**"
       - "apps/fixtures/**"
-      # The Nix store it saves for PRs is keyed by these.
-      - "flake.nix"
-      - "flake.lock"
       - ".github/workflows/native-telegram-android.yml"
       - "!**/*.md"
   workflow_dispatch:
@@ -19,12 +16,6 @@ on:
 permissions:
   contents: read
 
-env:
-  NIX_CONFIG: |
-    post-build-hook =
-    extra-substituters =
-    substituters = https://cache.nixos.org/
-
 jobs:
   build:
     # Signing secrets: only this repo's own branches, never forks.
@@ -34,16 +25,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-
-      - name: Restore Nix store
-        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+      # No Nix: Gradle needs only JDK 17, and the Sentry mapping upload needs sentry-cli.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
-          primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
-          restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
-          # Merges don't run Native Android CI, so master saves the store its PR runs restore.
-          save: ${{ github.ref == 'refs/heads/master' }}
+          distribution: temurin
+          java-version: 17
+
+      - name: Install sentry-cli
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL -o "$RUNNER_TEMP/bin/sentry-cli" https://github.com/getsentry/sentry-cli/releases/latest/download/sentry-cli-Linux-x86_64
+          chmod +x "$RUNNER_TEMP/bin/sentry-cli"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/bin/sentry-cli" --version
 
       # Master writes the Gradle cache that Native Android CI restores on PRs.
       - name: Cache Gradle
@@ -110,9 +105,9 @@ jobs:
           SENTRY_PROJECT: react-native
           CI_DEBUG_SIGNING: "false"
           TEST_LIBRARIES: ${{ github.ref == 'refs/heads/master' && '--init-script scripts/resolve-test-dependencies.init.gradle :app:resolveTestDependencies' || '' }}
-        run: |
-          nix shell --inputs-from . nixpkgs#sentry-cli --command nix develop .#android-ci --command sh -c \
-            'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleSignetRelease :app:assembleMainnetRelease $TEST_LIBRARIES'
+        working-directory: apps/android
+        # TEST_LIBRARIES is unquoted on purpose: it's empty, or an init script and a task.
+        run: ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleSignetRelease :app:assembleMainnetRelease $TEST_LIBRARIES
 
       - name: Name APKs with commit
         env:
