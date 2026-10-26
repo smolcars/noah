@@ -454,22 +454,32 @@ struct RestoreFieldPrivacyTests {
         try #require(condition())
     }
 
-    /// The items load after the tap. Text that arrives after Back (the flow's reset moves the generation, as the 12/24
-    /// switch and Restore do) or after a newer tap is dropped: it never refills the draft or reaches the clipboard.
-    @Test func aLatePasteIsDropped() async throws {
+    private static func wordField(_ number: Int, in view: UIView) -> RecoveryWordTextField? {
+        if let field = view as? RecoveryWordTextField, field.accessibilityIdentifier == "restore-word-\(number)" { return field }
+        return view.subviews.lazy.compactMap { wordField(number, in: $0) }.first
+    }
+
+    /// Restore in a window, its paste control's target, and the window to hide afterwards.
+    private func hostRestore(_ box: DraftBox) async throws -> (UIWindow, UIHostingController<RestoreWalletScreen>, RestorePasteControl.Target) {
         let scene = try #require(UIApplication.shared.connectedScenes.lazy.compactMap { $0 as? UIWindowScene }.first)
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(x: 0, y: 0, width: 402, height: 874)
-        let box = DraftBox()
         let host = UIHostingController(rootView: RestoreWalletScreen(
             layout: OnboardingLayout(size: window.frame.size, insets: EdgeInsets()),
             draft: Binding(get: { box.draft }, set: { box.draft = $0 }), issue: nil, haptics: OnboardingHaptics(),
             onPaste: { text, _ in box.pasted.append(text) }, onRestore: {}, onBack: {}))
         window.rootViewController = host
         window.isHidden = false
-        defer { window.isHidden = true }
         try await until { Self.pasteControl(in: host.view) != nil }
-        let target = try #require(Self.pasteControl(in: host.view)?.target as? RestorePasteControl.Target)
+        return (window, host, try #require(Self.pasteControl(in: host.view)?.target as? RestorePasteControl.Target))
+    }
+
+    /// The items load after the tap. Text that arrives after Back (the flow's reset moves the generation, as the 12/24
+    /// switch and Restore do) or after a newer tap is dropped: it never refills the draft or reaches the clipboard.
+    @Test func aLatePasteIsDropped() async throws {
+        let box = DraftBox()
+        let (window, _, target) = try await hostRestore(box)
+        defer { window.isHidden = true }
         let older = (Array(repeating: "zoo", count: 11) + ["wrong"]).joined(separator: " ")
         let newer = (Array(repeating: "abandon", count: 11) + ["about"]).joined(separator: " ")
 
@@ -491,6 +501,27 @@ struct RestoreFieldPrivacyTests {
         try await Task.sleep(for: .milliseconds(300))
         let newerKept = box.pasted.count == 1 && box.draft.input.phrase == newer
         #expect(newerKept)
+    }
+
+    /// Any edit to a word since the tap drops a paste still loading too: typing a correction, or pasting one word
+    /// into a field, neither of which restarts the fields.
+    @Test func aLatePasteIsDroppedAfterAnEdit() async throws {
+        let box = DraftBox()
+        let (window, host, target) = try await hostRestore(box)
+        defer { window.isHidden = true }
+        let phrase = (Array(repeating: "abandon", count: 11) + ["about"]).joined(separator: " ")
+        for edit in ["zo", "zoo"] {
+            let slow = DelayedText()
+            target.paste(itemProviders: [slow.provider])
+            try await until { slow.loading }
+            let field = try #require(Self.wordField(1, in: host.view))
+            field.text = edit
+            field.sendActions(for: .editingChanged)
+            slow.finish(phrase)
+            try await Task.sleep(for: .milliseconds(300))
+            let editKept = box.draft.input.words[0] == edit && box.draft.input.wordCount == 1 && box.pasted.isEmpty
+            #expect(editKept)
+        }
     }
 
     /// RTF alone, from the paste control's decoding to the clipboard being cleared; then a copy made after the paste,

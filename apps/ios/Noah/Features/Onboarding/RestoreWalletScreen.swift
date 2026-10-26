@@ -14,6 +14,8 @@ struct RestoreDraft {
     var shakes = 0
     /// Bumped when every field is replaced at once (paste, 12/24); fields restart and stagger in.
     var generation = 0
+    /// Bumped by every edit to a word, which a paste still loading must not overwrite.
+    var edits = 0
 
     var allInList: Bool { input.words.allSatisfy { RecoveryPhraseInput.wordSet.contains($0) } }
     var canRestore: Bool { input.isComplete && allInList }
@@ -157,6 +159,7 @@ struct RestoreWalletScreen: View {
 
     private func update(_ text: String, at index: Int) {
         let pasted = RecoveryPhraseInput.normalizedWords(text).count > 1
+        draft.edits += 1
         draft.input.update(text, at: index)
         draft.invalidPhrase = false
         draft.pasteRejected = false
@@ -180,6 +183,7 @@ struct RestoreWalletScreen: View {
     }
 
     private func accept(_ word: String, at index: Int) {
+        draft.edits += 1
         draft.input.update(word, at: index)
         draft.invalidPhrase = false
         draft.focusedWord = index < draft.input.words.count - 1 ? index + 1 : nil
@@ -233,10 +237,10 @@ struct RestoreWalletScreen: View {
             // The system paste control: tapping it is consent, so it reads without asking. A plain button's
             // read returns nil unless pasting from other apps is allowed in Settings.
             RestorePasteControl {
-                // The items load after the tap. Back, the 12/24 switch, Restore or a field paste meanwhile move the
-                // generation, and the late text is dropped.
-                let generation = draft.generation, change = UIPasteboard.general.changeCount
-                return { text in if draft.generation == generation { paste(text, change: change) } }
+                // The items load after the tap. Back, the 12/24 switch, Restore (the generation) or any edit to a word
+                // meanwhile drop the late text.
+                let generation = draft.generation, edits = draft.edits, change = UIPasteboard.general.changeCount
+                return { text in if draft.generation == generation && draft.edits == edits { paste(text, change: change) } }
             }
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button, maxHeight: NoahTokens.Size.button)
                 .accessibilityIdentifier("restore-paste")
