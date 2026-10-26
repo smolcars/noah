@@ -108,8 +108,8 @@ struct SendDetailRow<Value: View>: View {
 
 extension SendDetailRow where Value == AnyView {
     /// A number in Space Grotesk with tabular digits.
-    init(_ label: LocalizedStringKey, number: String, last: Bool = false) {
-        self.init(label: label, last: last) {
+    init(_ label: LocalizedStringKey, number: String, last: Bool = false, wraps: Bool = false) {
+        self.init(label: label, last: last, wraps: wraps) {
             AnyView(Text(verbatim: number).noahText(SendText.rowNumber).monospacedDigit())
         }
     }

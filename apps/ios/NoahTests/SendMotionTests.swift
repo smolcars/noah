@@ -442,14 +442,16 @@ struct SendMotionTests {
         }
     }
 
+    /// A view's size in a column `width` wide, in `locale` at text size `type`.
+    static func fitted(_ view: some View, width: CGFloat, _ locale: String, _ type: DynamicTypeSize) -> CGSize {
+        UIHostingController(rootView: view.environment(\.locale, Locale(identifier: locale)).environment(\.dynamicTypeSize, type))
+            .sizeThatFits(in: CGSize(width: width, height: 10_000))
+    }
+
     /// The Arrives row never cuts its value off on an SE-width phone (a 335-pt review column):
     /// too long for one line (Swedish at xxxLarge, every language at accessibility sizes), its label
     /// and value stack and wrap. A row that fits keeps its one line.
     @Test func arrivesStaysReadableAtEveryTextSize() {
-        func size(_ view: some View, width: CGFloat, _ locale: String, _ type: DynamicTypeSize) -> CGSize {
-            UIHostingController(rootView: view.environment(\.locale, Locale(identifier: locale)).environment(\.dynamicTypeSize, type))
-                .sizeThatFits(in: CGSize(width: width, height: 10_000))
-        }
         let column: CGFloat = 335
         var stacked = 0
         for locale in LegacyLocale.supported {
@@ -457,20 +459,76 @@ struct SendMotionTests {
                 + [1, 2].map { SendConfirmation.arrives(.onchainSwap, required: $0, locale: locale) }
             for type in DynamicTypeSize.allCases {
                 for text in rows {
-                    let row = size(SendDetailRow("Arrives", text: text, verbatim: true, wraps: true), width: column, locale, type)
-                    let line = size(SendDetailRow("Arrives", text: text, verbatim: true).fixedSize(), width: 10_000, locale, type)
+                    let row = Self.fitted(SendDetailRow("Arrives", text: text, verbatim: true, wraps: true), width: column, locale, type)
+                    let line = Self.fitted(SendDetailRow("Arrives", text: text, verbatim: true).fixedSize(), width: 10_000, locale, type)
                     if line.width <= column {
                         #expect(row.height == line.height, "\(locale) \(type) \(text)")
                         continue
                     }
                     stacked += 1
-                    let label = size(Text("Arrives").noahText(NoahTokens.Typography.body), width: column, locale, type)
-                    let value = size(Text(verbatim: text).noahText(NoahTokens.Typography.label), width: column, locale, type)
+                    let label = Self.fitted(Text("Arrives").noahText(NoahTokens.Typography.body), width: column, locale, type)
+                    let value = Self.fitted(Text(verbatim: text).noahText(NoahTokens.Typography.label), width: column, locale, type)
                     #expect(row.height >= label.height + value.height, "\(locale) \(type) \(text)")
                 }
             }
         }
         #expect(stacked > 0)
+    }
+
+    /// Review's other rows (Via, From, Fee, Total and Note) do as Arrives does in the same SE-width column:
+    /// a row too long for one line stacks its label above its value and both wrap, so no label or amount is cut off.
+    @Test func reviewRowsStayReadableAtEveryTextSize() {
+        let column: CGFloat = 335
+        var stacked = 0
+        for locale in LegacyLocale.supported {
+            let amount = BitcoinAmount.format(sats: 152_742, unit: .bip177, locale: Locale(identifier: locale))
+            // Each row: its label, the row itself (one line only, or wrapping) and its value alone.
+            func text(_ label: String, _ value: String, verbatim: Bool = false, glyph: String? = nil) -> (String, (Bool) -> AnyView, AnyView) {
+                (label, { AnyView(SendDetailRow(LocalizedStringKey(label), text: value, verbatim: verbatim, glyph: glyph, wraps: $0)) },
+                 AnyView(Group { if verbatim { Text(verbatim: value) } else { Text(LocalizedStringKey(value)) } }.noahText(NoahTokens.Typography.label)))
+            }
+            func number(_ label: String) -> (String, (Bool) -> AnyView, AnyView) {
+                (label, { AnyView(SendDetailRow(LocalizedStringKey(label), number: amount, wraps: $0)) },
+                 AnyView(Text(verbatim: amount).noahText(SendText.rowNumber).monospacedDigit()))
+            }
+            let rows = [SendMotion.Rail.ark, .lightning, .onchainSwap].map { text("Via", SendOutcomeView.railName($0), glyph: SendOutcomeView.railGlyph($0)) }
+                + SendSource.allCases.map { text("From", $0.label) }
+                + ["Fee", "Estimated fee"].map { text($0, "Free") }
+                + ["Fee", "Estimated fee", "Total", "Estimated total", "Total (reviewed coins)"].map(number)
+                + [text("Note", "Coffee and a croissant, thanks!", verbatim: true)]
+            for type in DynamicTypeSize.allCases {
+                for (label, row, value) in rows {
+                    let wrapping = Self.fitted(row(true), width: column, locale, type)
+                    let line = Self.fitted(row(false).fixedSize(), width: 10_000, locale, type)
+                    if line.width <= column {
+                        #expect(wrapping.height == line.height, "\(locale) \(type) \(label)")
+                        continue
+                    }
+                    stacked += 1
+                    let title = Self.fitted(Text(LocalizedStringKey(label)).noahText(NoahTokens.Typography.body), width: column, locale, type)
+                    #expect(wrapping.height >= title.height + Self.fitted(value, width: column, locale, type).height, "\(locale) \(type) \(label)")
+                }
+            }
+        }
+        #expect(stacked > 0)
+    }
+
+    /// Hold to send keeps all its words at every text size: they wrap inside a taller pill rather
+    /// than truncate. At the default size the pill is still 58 pt.
+    @Test func holdToSendWrapsAtEveryTextSize() {
+        let column: CGFloat = 335
+        var wrapped = 0
+        for locale in LegacyLocale.supported {
+            for type in DynamicTypeSize.allCases {
+                let pill = Self.fitted(SendHoldButton(amount: "₿1,500") {}, width: column, locale, type)
+                let words = Self.fitted(Text("Hold to send").noahText(NoahTokens.Typography.button), width: column - 40, locale, type)
+                let line = Self.fitted(Text("Hold to send").noahText(NoahTokens.Typography.button).fixedSize(), width: 10_000, locale, type)
+                if words.height > line.height { wrapped += 1 }
+                #expect(pill.height >= words.height + 20, "\(locale) \(type)")
+                if type == .large { #expect(pill.height == 58, "\(locale)") }
+            }
+        }
+        #expect(wrapped > 0)
     }
 
     /// The ticks land at 25, 50 and 75% of the 0.8 s hold, so completion never cuts the last one.

@@ -36,7 +36,9 @@ struct SendHoldButton: View {
     var body: some View {
         Text(title)
             .noahText(NoahTokens.Typography.button)
-            .lineLimit(1)
+            // Large text wraps the words inside a taller pill rather than cutting them off.
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 20).padding(.vertical, 10)
             .foregroundStyle(NoahTokens.Colors.background)
             .frame(maxWidth: .infinity, minHeight: 58)
             .background(NoahTokens.Colors.foreground, in: Capsule())
