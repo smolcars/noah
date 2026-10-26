@@ -112,11 +112,14 @@ jobs:
           bun apps/tools/translations.mjs translate
 
       # A failure here stops the run, so half-merged catalogs are never committed.
+      # The tool's tests guard what the bot commits, so they run only when there's something to commit.
       - name: Regenerate and check catalogs
         run: |
           bun apps/tools/translations.mjs
           bun apps/tools/translations.mjs --check
-          bun test apps/tools/translations.test.mjs
+          if [[ -n "$(git status --porcelain -- apps/i18n apps/ios/Noah/Resources apps/android/app/src/main/res apps/fixtures)" ]]; then
+            bun test apps/tools/translations.test.mjs
+          fi
 
       - name: Open or update the translations PR
         env:
