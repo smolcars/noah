@@ -34,6 +34,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -256,26 +258,62 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
     }
 }
 
-/** A review or result row (48 dp): muted label, value on the right; amounts in Space Grotesk. */
+/**
+ * A review or result row (48 dp): muted label, value on the right; amounts in Space Grotesk. A [wraps] row too long for
+ * one line puts its label above its value and both wrap rather than ellipsize (Review's rows, as on iOS).
+ */
 @Composable
-internal fun ValueRow(label: String, value: String, number: Boolean = false, icon: Int? = null, divider: Boolean = true, copy: (() -> Unit)? = null, maxLines: Int = 1, modifier: Modifier = Modifier) {
+internal fun ValueRow(label: String, value: String, number: Boolean = false, icon: Int? = null, divider: Boolean = true, copy: (() -> Unit)? = null, wraps: Boolean = false, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
-    Row(modifier.fillMaxWidth().heightIn(min = 48.dp)
+    val row = modifier.fillMaxWidth().heightIn(min = 48.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
-        .semantics(mergeDescendants = true) { }, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.padding(end = 12.dp), style = SendType.body, color = palette.muted, maxLines = 1)
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
-            Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground,
-                maxLines = maxLines, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
-        }
+        .semantics(mergeDescendants = true) { }
+    val copyButton = @Composable {
         val copyLabel = tr("Copy")
         if (copy != null) Box(Modifier.padding(start = 8.dp).size(36.dp).tonal(CircleShape, palette.soft)
             .clickable(role = Role.Button, onClickLabel = copyLabel, onClick = copy).semantics { contentDescription = copyLabel }, contentAlignment = Alignment.Center) {
             Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
         }
     }
+    if (wraps) LineOrStack(row, label = { Text(label, style = SendType.body, color = palette.muted) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
+            Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground)
+            copyButton()
+        }
+    } else Row(row, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.padding(end = 12.dp), style = SendType.body, color = palette.muted, maxLines = 1)
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
+            Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+        }
+        copyButton()
+    }
 }
+
+/** [label] and [value] side by side (value at the end) when they fit on one line, else the label above the value. */
+@Composable
+private fun LineOrStack(modifier: Modifier, label: @Composable () -> Unit, value: @Composable () -> Unit) =
+    Layout(listOf(label, value), modifier) { (labels, values), constraints ->
+        val title = labels.single()
+        val content = values.single()
+        val width = constraints.maxWidth
+        val gap = 12.dp.roundToPx()
+        if (title.maxIntrinsicWidth(Constraints.Infinity) + gap + content.maxIntrinsicWidth(Constraints.Infinity) <= width) {
+            val t = title.measure(Constraints(maxWidth = width))
+            val v = content.measure(Constraints(maxWidth = width - t.width - gap))
+            val height = maxOf(constraints.minHeight, t.height, v.height)
+            layout(width, height) { t.place(0, (height - t.height) / 2); v.place(width - v.width, (height - v.height) / 2) }
+        } else {
+            val padding = 10.dp.roundToPx()
+            val spacing = 2.dp.roundToPx()
+            val t = title.measure(Constraints(maxWidth = width))
+            val v = content.measure(Constraints(maxWidth = width))
+            val height = maxOf(constraints.minHeight, padding + t.height + spacing + v.height + padding)
+            layout(width, height) { t.place(0, padding); v.place(0, padding + t.height + spacing) }
+        }
+    }
 
 /** How long the finger stays down before a hold sends. */
 internal const val HoldMillis = 800L

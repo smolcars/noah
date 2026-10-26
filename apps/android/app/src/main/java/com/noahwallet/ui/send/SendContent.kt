@@ -602,15 +602,15 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
 
 @Composable
 private fun ReviewRows(model: SendModel, quote: SendQuote?, payment: SendPayment?, rail: SendRail?, env: SendEnv, top: Dp) {
+        // Every row puts its label above its value at large text sizes rather than cutting either off.
         Column(Modifier.padding(top = top)) {
-            if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail))
-            // Wraps at large text sizes rather than cutting off the count.
-            if (rail != null) ValueRow(tr("Arrives"), arrives(rail, model.source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, maxLines = Int.MAX_VALUE)
+            if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), wraps = true)
+            if (rail != null) ValueRow(tr("Arrives"), arrives(rail, model.source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
             if (quote != null) {
-                ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark)
-                payment?.source?.let { ValueRow(tr("From"), tr(it.label)) }
-                if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment)
-                ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false)
+                ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark, wraps = true)
+                payment?.source?.let { ValueRow(tr("From"), tr(it.label), wraps = true) }
+                if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment, wraps = true)
+                ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false, wraps = true)
             }
         }
 }
