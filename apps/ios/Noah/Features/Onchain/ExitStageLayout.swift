@@ -6,13 +6,16 @@ import UIKit
 /// the round's block at its foot and your coin at the top. Pure, so the tests read the numbers the
 /// painter draws.
 struct ExitStageGeometry: Equatable {
-    var width: Double
-    var height: Double
+    let width: Double
+    let height: Double
     /// Dynamic Type for the picture's labels, capped at 1.25.
-    var scale = 1.0
-    var wide = false
+    let scale: Double
+    let wide: Bool
     /// Transactions on the path; the last one's output is your coin.
-    var count = 4
+    let count: Int
+    /// A transaction's square: 14 pt where the levels have 22 pt or more, else 11, and smaller still on
+    /// a long path so every level keeps its spacing with the timelock's dial reserved (7 pt at least).
+    private(set) var side = 14.0
 
     init(size: CGSize, scale: Double = 1, wide: Bool = false, count: Int = 4) {
         width = size.width
@@ -20,6 +23,9 @@ struct ExitStageGeometry: Equatable {
         self.scale = min(1.25, max(1, scale))
         self.wide = wide
         self.count = max(1, count)
+        var side = room / Double(self.count) < 22 ? 11.0 : 14.0
+        while side > 7, (1...self.count).reduce(0, { $0 + minimumGap($1, side: side, reserve: coinReserve(1)) }) > room { side -= 1 }
+        self.side = side
     }
 
     var ground: Double { (height - 24 - 13 * scale).rounded() }
@@ -38,14 +44,6 @@ struct ExitStageGeometry: Equatable {
     var spread: Double { min(26, width * 0.068) }
     /// What every two drawn elements keep between them.
     static let clearance = 2.0
-
-    /// A transaction's square: 14 pt where the levels have 22 pt or more, else 11, and smaller still on
-    /// a long path so every level keeps its spacing with the timelock's dial reserved (7 pt at least).
-    var side: Double {
-        var side = room / Double(count) < 22 ? 11.0 : 14.0
-        while side > 7, (1...count).map({ minimumGap($0, side: side, reserve: coinReserve(1)) }).reduce(0, +) > room { side -= 1 }
-        return side
-    }
 
     /// The most transactions that can be drawn below your coin with every level at full spacing: 7 pt nodes,
     /// the timelock's dial reserved. A longer path is folded to fit (`ExitStageScene.folded`).
