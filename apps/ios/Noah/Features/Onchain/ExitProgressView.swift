@@ -506,9 +506,22 @@ struct ExitStatusLine: View {
         }
     }
 
-    /// The picture as one VoiceOver element: the phase line and how many transactions are in blocks.
+    /// The picture as one VoiceOver element: the phase line, how many transactions are in blocks, and
+    /// where a claim goes (this phone, or another wallet and its whole address), which only the picture shows.
     var pictureLabel: String {
-        progress.total > 0 ? phase + ", " + tr("{n} of {total} in blocks", progress.confirmed, progress.total) : phase
+        var parts = [phase]
+        if progress.total > 0 { parts.append(tr("{n} of {total} in blocks", progress.confirmed, progress.total)) }
+        if [.claiming, .claimed].contains(progress.phase) {
+            let destination = claimDestination
+            parts.append(destination.toPhone ? tr("This phone") : tr("Another wallet"))
+            if !destination.toPhone, let address = destination.address { parts.append(address) }
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    /// Where this exit's claim went, as Noah journaled or recorded it.
+    private var claimDestination: (toPhone: Bool, address: String?) {
+        (record?.toPhone ?? claim?.destinationIsMine ?? (received != nil), claim?.destination ?? record?.destination)
     }
 
     /// The picture's still for this state: each transaction's status, what's shared, the waiting fee and the claim.
@@ -551,8 +564,7 @@ struct ExitStatusLine: View {
         scene.claimFee = batchFee.map(money.callAsFunction)
         scene.claimHeight = progress.claimedHeight
         // Where the claim went: this phone, or another wallet and its address.
-        let toPhone = record?.toPhone ?? claim?.destinationIsMine ?? (received != nil)
-        let address = claim?.destination ?? record?.destination
+        let (toPhone, address) = claimDestination
         scene.destination = toPhone ? .phone : .other(address.map { $0.count > 14 ? $0.prefix(6) + "…" + $0.suffix(4) : $0 })
         if toPhone, progress.phase == .claimed { scene.received = "+" + money(amount) }
         return scene

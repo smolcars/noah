@@ -330,9 +330,18 @@ struct ExitStageTests {
         overview.exits = [claimed]
         let done = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money, language: "en").scene
         #expect(done.picture == .claimed && done.destination == .other("bcrt1q…u202") && done.claimHeight == 300 && done.claimFee == money(262))
+        // VoiceOver reads where it went, address in full: the picture is the only place that says so.
+        let label = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money,
+                             language: "en").pictureLabel
+        #expect(label.hasPrefix("Claimed in block 300") && label.hasSuffix("Another wallet, bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"))
         overview.claimRecords["claim"]?.toPhone = true
         overview.claimRecords["claim"]?.destination = nil
         let phone = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money, language: "en").scene
         #expect(phone.destination == .phone && phone.received != nil)
+        let phoneLabel = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money,
+                                  language: "en").pictureLabel
+        #expect(phoneLabel.hasSuffix("This phone") && !phoneLabel.contains("bcrt1q"))
+        // Before the claim, the label doesn't name a destination.
+        #expect(!text.pictureLabel.contains("This phone") && !text.pictureLabel.contains("Another wallet"))
     }
 }
