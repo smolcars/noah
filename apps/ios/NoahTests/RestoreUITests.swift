@@ -404,6 +404,24 @@ struct RestoreFieldPrivacyTests {
         #expect(filled)
     }
 
+    /// A field turns a copy's line breaks into spaces and the paste control joins items: the same words still clear.
+    @Test func acceptedPasteClearsTheSameWordsWhateverTheirSpacing() {
+        let name = UIPasteboard.Name("noah-restore-test-\(UUID().uuidString)")
+        let board = UIPasteboard(name: name, create: true)!
+        defer { UIPasteboard.remove(withName: name) }
+        let words = Array(repeating: "abandon", count: 11) + ["about"]
+        let line = words.joined(separator: " ")
+        for copy in [[line + "\n"], [words.joined(separator: "\r\n")], [words.joined(separator: "\u{00A0}")],
+                     [words.prefix(6).joined(separator: " "), words.suffix(6).joined(separator: " ")]] {
+            board.strings = copy
+            RestorePasteboard(board).accepted(line)
+            #expect(!board.hasStrings)
+        }
+        board.strings = [line + " zoo"]
+        RestorePasteboard(board).accepted(line)
+        #expect(board.hasStrings)
+    }
+
     @Test func acceptedPasteClearsOnlyMatchingClipboardContent() {
         let name = UIPasteboard.Name("noah-restore-test-\(UUID().uuidString)")
         let board = UIPasteboard(name: name, create: true)!
