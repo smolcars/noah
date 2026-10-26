@@ -113,6 +113,8 @@ class ExitGalleryTest {
             "bcrt1qphonephonephone", false, false, false, money, {}, {}, {}, {}, {}, {}) }
         show("list") { ExitListContent(f.list, f.tip + 2, setOf(f.list[5].id), true, false, false, money, {}, {}, {}, {}) }
         show("list-deep") { ExitListContent(f.deep, f.tip + 2, emptySet(), true, false, false, money, {}, {}, {}, {}) }
+        // Three exits sharing a 60-transaction path: their gutter folds as the picture does.
+        show("list-long") { ExitListContent(listOf(f.long, f.longTwin, f.longSibling), f.tip + 25, emptySet(), true, false, false, money, {}, {}, {}, {}) }
         show("list-one") { ExitListContent(listOf(f.bump), f.tip, emptySet(), true, false, false, money, {}, {}, {}, {}) }
         show("deposit") { ExitDepositContent("bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg", null, 4_533, money) {} }
     }

@@ -475,34 +475,60 @@ internal object ExitGutter {
         seen.maxBy { listOf(St.unsent, St.ready, St.needsFunds, St.waiting, St.mined).indexOf(it) }
     }
 
-    /** A drawn transaction: its place in the gutter (dp) and its state; [coin] is an exit's own output, at the right. */
-    data class Node(val id: String, val x: Float, val y: Float, val st: St, val coin: Boolean)
+    /**
+     * A drawn transaction: its place in the gutter (dp) and its state; [coin] is an exit's own output, at the right; [folded]
+     * stands for several (a stack of blocks, or ones still to send).
+     */
+    data class Node(val id: String, val x: Float, val y: Float, val st: St, val coin: Boolean, val folded: Boolean = false)
     data class Link(val from: Pair<Float, Float>, val to: Pair<Float, Float>, val ink: Boolean)
     data class Layout(val root: Pair<Float, Float>, val nodes: List<Node>, val links: List<Link>)
 
     /** The gutter for a shared group: the round's block at [x0], each transaction [step] further, every coin at [coinX]. */
     const val sharedWidth = 112f
     const val coinWidth = 44f
+    /** The least distance between two transactions' centres: their 8 dp squares and 3 dp of link between. */
+    const val minStep = 11f
     fun shared(paths: List<List<Pair<String, St>>>, ys: List<Float>, x0: Float = 2f, coinX: Float = 90f, step: Float = 12f): Layout {
-        val longest = paths.maxOfOrNull { it.size } ?: 1
-        // A long path steps closer, so its last transaction stays clear of the coins.
-        val d = if (longest <= 1) step else min(step, (coinX - 14 - 6 - x0) / (longest - 1))
+        val states = states(paths)
+        val depth = (paths.maxOfOrNull { it.size } ?: 1) - 1
+        // A long path steps closer, down to the least step, so its last transaction stays clear of the coins; longer still,
+        // it folds as the picture does: each exit's transaction being sent on its own, the oldest blocks stacked, the rest
+        // to send in one.
+        val room = coinX - 14 - 6 - x0; val fit = (room / minStep).toInt()
+        val columns = if (depth <= fit) (0 until depth).map { it..it } else {
+            val rows = paths.map { path -> path.dropLast(1).map { states.getValue(it.first) } }
+            val sending = rows.mapNotNull { row -> row.indexOfFirst { it != St.mined }.takeIf { it >= 0 } }.toSet()
+            val kinds = List(depth) { i -> when {
+                i in sending -> ExitFold.Kind.current
+                rows.all { row -> row.getOrNull(i)?.let { it == St.mined } ?: true } -> ExitFold.Kind.mined
+                else -> ExitFold.Kind.unsent
+            } }
+            // Where paths part, so what they share folds apart from what they don't; across them only if that's too many.
+            val ids = paths.map { path -> path.dropLast(1).map { it.first } }
+            val parts = (1 until depth).filter { i -> ids.any { a -> ids.any { b -> a.getOrNull(i - 1) != null && a.getOrNull(i - 1) == b.getOrNull(i - 1) && a.getOrNull(i) != b.getOrNull(i) } } }.toSet()
+            ExitFold.spans(kinds, fit, parts).takeIf { it.size <= fit } ?: ExitFold.spans(kinds, fit)
+        }
+        val d = if (columns.isEmpty()) step else min(step, room / columns.size)
         val rows = mutableMapOf<String, MutableList<Float>>()
         paths.forEachIndexed { r, path -> path.dropLast(1).forEach { (id, _) -> rows.getOrPut(id) { mutableListOf() } += ys[r] } }
         val root = x0 to ys.average().toFloat()
-        val states = states(paths)
         val nodes = linkedMapOf<String, Node>(); val links = linkedMapOf<String, Link>()
         paths.forEachIndexed { r, path ->
             var from = root; var previous = "root"
-            path.forEachIndexed { i, (id, own) ->
-                val coin = i == path.lastIndex
-                val st = if (coin) own else states.getValue(id)
-                val at = if (coin) coinX to ys[r] else x0 + (i + 1) * d + 6 to rows.getValue(id).average().toFloat()
-                val key = if (coin) "$id@$r" else id
-                nodes.putIfAbsent(key, Node(id, at.first, at.second, st, coin))
-                links.putIfAbsent("$previous>$key", Link(from.first + 4 to from.second, at.first - (if (coin) 11 else 4) to at.second, st == St.mined))
-                from = at; previous = key
+            val own = path.dropLast(1)
+            columns.forEachIndexed { c, span ->
+                // A column that folds is drawn once for the exits that share its last transaction (and so all of it).
+                val mine = span.filter { it < own.size }.ifEmpty { return@forEachIndexed }
+                val id = own[mine.last()].first; val folded = mine.size > 1
+                val st = if (!folded) states.getValue(id) else if (mine.all { states.getValue(own[it].first) == St.mined }) St.mined else St.unsent
+                val at = x0 + (c + 1) * d + 6 to rows.getValue(id).average().toFloat()
+                nodes.putIfAbsent(id, Node(id, at.first, at.second, st, false, folded))
+                links.putIfAbsent("$previous>$id", Link(from.first + 4 to from.second, at.first - 4 to at.second, st == St.mined))
+                from = at; previous = id
             }
+            val (id, st) = path.last(); val at = coinX to ys[r]; val key = "$id@$r"
+            nodes.putIfAbsent(key, Node(id, at.first, at.second, st, true))
+            links.putIfAbsent("$previous>$key", Link(from.first + 4 to from.second, at.first - 11 to at.second, st == St.mined))
         }
         return Layout(root, nodes.values.toList(), links.values.toList())
     }

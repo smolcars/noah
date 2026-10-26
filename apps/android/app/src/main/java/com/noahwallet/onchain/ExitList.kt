@@ -212,7 +212,7 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
                 for (link in l.links) treeLink(Offset(link.from.first, link.from.second), Offset(link.to.first, link.to.second), 0f, 1f,
                     if (link.ink) palette.foreground else palette.orange, if (link.ink) 2f else 1.6f, 1f, horizontal = true)
                 drawRoundRect(palette.foreground, Offset(l.root.first - 4.5f, l.root.second - 4.5f), Size(9f, 9f), CornerRadius(2f))
-                for (node in l.nodes) if (!node.coin) gutterNode(Offset(node.x, node.y), node.st, palette)
+                for (node in l.nodes) if (!node.coin) gutterNode(Offset(node.x, node.y), node.st, palette, node.folded)
                 coins.forEachIndexed { i, coin -> coin.draw(this, Offset(90f, centers[i]), palette) }
             }
         }) {
@@ -240,10 +240,18 @@ private fun GutterSpot(side: Float, center: () -> Offset?, draw: DrawScope.(Offs
 
 /**
  * A transaction in a gutter (prototype `txNode` at 8 dp): ink when mined, a filled square while it waits in the mempool, an
- * outlined square when it's ready to send (ringed red when short of funds), hollow when not sent.
+ * outlined square when it's ready to send (ringed red when short of funds), hollow when not sent. A long path's [folded]
+ * ones: its oldest blocks as one stacked square, the rest to send as three dots.
  */
-private fun DrawScope.gutterNode(at: Offset, st: ExitGutter.St, palette: NoahTokens.Palette) {
+private fun DrawScope.gutterNode(at: Offset, st: ExitGutter.St, palette: NoahTokens.Palette, folded: Boolean = false) {
     val z = 8f
+    if (folded) {
+        if (st == ExitGutter.St.mined) {
+            drawRoundRect(palette.foreground, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f))
+            for (plate in 1..2) drawLine(palette.background, Offset(at.x - z / 2 + 1f, at.y - z / 2 + z * plate / 3f), Offset(at.x + z / 2 - 1f, at.y - z / 2 + z * plate / 3f), 1f)
+        } else for (dx in listOf(-2.8f, 0f, 2.8f)) drawCircle(palette.orange, 1f, Offset(at.x + dx, at.y))
+        return
+    }
     when (st) {
         ExitGutter.St.mined -> drawRoundRect(palette.foreground, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f))
         ExitGutter.St.waiting -> drawRoundRect(palette.background, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f))

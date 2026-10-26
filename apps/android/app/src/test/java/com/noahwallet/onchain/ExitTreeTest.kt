@@ -191,6 +191,38 @@ class ExitTreeTest {
         assertEquals("nothing folds where everything fits", List(5) { it..it }, ExitFold.spans(List(5) { unsent }, 5))
     }
 
+    @Test fun aLongSharedPathFoldsInItsGutterRatherThanSqueezing() {
+        // Two exits sharing a 20- or 100-transaction path, one a block behind: squares at least 11 dp apart, each exit's
+        // transaction being sent on its own, the oldest blocks stacked and the rest to send in one.
+        for (n in listOf(20, 100)) {
+            val paths = listOf(0, 1).map { r ->
+                val done = 12 - r
+                List(n) { i -> (if (i < n - 1) "t$i" else "coin$r") to when { i < done -> st.mined; i == done -> st.waiting; else -> st.unsent } }
+            }
+            val layout = ExitGutter.shared(paths, listOf(32f, 96f))
+            val columns = layout.nodes.filter { !it.coin }.map { it.x }.distinct().sorted()
+            for ((a, b) in columns.zipWithNext()) assertTrue("$n: $a → $b", b - a >= ExitGutter.minStep - .01f)
+            assertTrue(columns.last() <= 90f - 14)
+            assertTrue("t11 and t12 each on their own", listOf("t11", "t12").all { id -> layout.nodes.any { it.id == id && !it.folded } })
+            assertTrue("the oldest blocks stacked", layout.nodes.any { it.folded && it.st == st.mined })
+            assertTrue("the rest to send in one", layout.nodes.any { it.folded && it.st == st.unsent })
+        }
+    }
+
+    @Test fun aFoldedGutterKeepsWhatPathsShareInOnePlace() {
+        // Three exits on a 60-transaction path, the third leaving it after 22: the 22 fold into one stack drawn once, and
+        // the third's own blocks fold apart from the others'.
+        val paths = listOf("a", "b", "c").map { r ->
+            List(60) { i -> (if (i < 59 && (r != "c" || i < 22)) "t$i" else "$r$i") to when { i < 25 -> st.mined; i == 25 -> st.waiting; else -> st.unsent } }
+        }
+        val layout = ExitGutter.shared(paths, listOf(32f, 96f, 160f))
+        val first = layout.nodes.filter { !it.coin }.minBy { it.x }
+        assertEquals("t21", first.id)
+        assertTrue(first.folded && first.st == st.mined)
+        assertEquals("drawn once, between the rows", 1, layout.nodes.count { it.x == first.x })
+        assertTrue("then the third's own, apart", layout.nodes.any { it.id.startsWith("c") && !it.coin })
+    }
+
     @Test fun aRestartedExitNeverHidesASiblingsProgress() {
         // The first row restarted (Start: nothing listed yet); its sibling has the shared root in a block and the next one waiting.
         val paths = listOf(listOf("root" to st.unsent, "x" to st.unsent, "leafA" to st.unsent), listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))

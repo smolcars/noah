@@ -107,6 +107,8 @@ internal object ExitFixtures {
             names.mapIndexed { i, id -> ExitPackage(id, 1_000, if (i < 40) 5 else 2, 1, if (i <= mined) "lfee$i" else null, 608, if (i <= mined) "wallet" else null) },
             (0..mined).associate { "lfee$it" to 1_215L })
     }
+    /** Another exit sharing all of the long path but its coin, a block behind. */
+    val longTwin: ExitModel get() = long(24).let { it.copy(id = vtxos[2].id, amount = 21_000, packages = it.packages.dropLast(1) + ExitPackage(txid("longTwinCoin"))) }
     /** Another exit from the long path's round, leaving it after its 22nd transaction. */
     val longSibling: ExitModel get() = long(25).let { it.copy(id = vtxos[1].id, amount = 24_500, packages = it.packages.take(22) + List(38) { i -> ExitPackage(txid("longB$i")) }) }
 

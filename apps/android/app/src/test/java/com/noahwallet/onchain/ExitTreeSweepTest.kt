@@ -28,7 +28,7 @@ import kotlin.math.min
  * the canvas, required ones always show and keep their spacing, and a long path folds rather than squeezes. Paths of 1–20,
  * 50 and 100 transactions, the explainer, every mined count, your other exits at every pair of levels and every state, on a
  * phone at the default text size and a small phone at twice it, in English and in Swedish with sats, measured with the
- * picture's own text measurement.
+ * picture's own text measurement. The Exits list's shared gutters fold the same paths the same way.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -149,6 +149,39 @@ class ExitTreeSweepTest {
         // Reported by the test's name; at least this many layouts were checked.
         assertTrue("$layouts", layouts > 10_000)
         println("ExitTreeSweepTest: $layouts layouts checked")
+    }
+
+    @Test fun theGutterFoldsRatherThanSqueezing() {
+        var gutters = 0
+        val st = ExitGutter.St.entries
+        for (n in (1..20) + listOf(50, 100)) {
+            val sampled = n > 20
+            // Two or three exits that part after k shared transactions, the last a block behind, at every mined count and with
+            // the one being sent waiting, ready, short of funds or not sent yet.
+            for (rows in 2..3) for (k in (0 until n).filter { !sampled || it % 9 == 1 || it >= n - 2 }) for (mined in (0..n).filter { !sampled || it % 7 == 0 || it >= n - 2 })
+                for (current in listOf(ExitGutter.St.waiting, ExitGutter.St.ready, ExitGutter.St.needsFunds, ExitGutter.St.unsent)) {
+                    val paths = List(rows) { r ->
+                        val done = if (r == rows - 1) (mined - 1).coerceAtLeast(0) else mined
+                        List(n) { i -> (if (i < k) "s$i" else "r$r.$i") to when { i < done -> ExitGutter.St.mined; i == done -> current; else -> ExitGutter.St.unsent } }
+                    }
+                    val label = "gutter: $rows exits, $n transactions, parting after $k, $mined mined, $current"
+                    val layout = ExitGutter.shared(paths, List(rows) { 32f + 64f * it })
+                    val drawn = layout.nodes.filter { !it.coin }
+                    val columns = drawn.map { it.x }.distinct().sorted()
+                    for ((a, b) in columns.zipWithNext()) assertTrue("$label: columns $a and $b", b - a >= ExitGutter.minStep - .01f)
+                    columns.lastOrNull()?.let { assertTrue("$label: clear of the coins", it <= 90f - 14) }
+                    for (a in drawn) for (b in drawn) if (a !== b) assertFalse("$label: ${a.id} on ${b.id}", kotlin.math.abs(a.x - b.x) < 10 && kotlin.math.abs(a.y - b.y) < 10)
+                    // What they share is drawn once: they leave the round together.
+                    if (k >= 1) assertEquals("$label: the first column", 1, drawn.count { it.x == columns.first() })
+                    // Each exit's transaction being sent keeps its own place.
+                    val states = ExitGutter.states(paths)
+                    for (path in paths) path.dropLast(1).firstOrNull { states.getValue(it.first) != ExitGutter.St.mined }?.let { (id, _) ->
+                        assertTrue("$label: $id is being sent", drawn.any { it.id == id && !it.folded })
+                    }
+                    gutters++
+                }
+        }
+        println("ExitTreeSweepTest: $gutters gutters checked")
     }
 
     @Test fun anOrdinaryPictureKeepsEverything() {
