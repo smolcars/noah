@@ -368,9 +368,16 @@ enum ExitStageText {
     static func font(_ size: Double, strong: Bool) -> Font { .system(size: size, weight: strong ? .semibold : .medium) }
 
     static func width(_ text: String, size: Double, strong: Bool = false) -> Double {
+        let key = "\(strong ? 1 : 0)|\(size)|\(text)" as NSString
+        if let known = widths.object(forKey: key) { return known.doubleValue }
         let font = UIFont.systemFont(ofSize: size, weight: strong ? .semibold : .medium)
-        return ceil((text as NSString).size(withAttributes: [.font: font]).width)
+        let width = ceil((text as NSString).size(withAttributes: [.font: font]).width)
+        widths.setObject(width as NSNumber, forKey: key)
+        return width
     }
+
+    /// Measured widths: a moving picture lays its labels out every frame. NSCache is thread-safe.
+    nonisolated(unsafe) private static let widths = NSCache<NSString, NSNumber>()
 }
 
 extension Double {
