@@ -51,7 +51,7 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
     LaunchedEffect(app.session) { app.session.walletChanges.collect { releasePlan() } }
     LaunchedEffect(plan) {
         val held = plan ?: return@LaunchedEffect
-        delay((held.createdAt + BoardPrepared.lifetimeMillis - System.currentTimeMillis()).coerceAtLeast(0))
+        delay((BoardPrepared.lifetimeMillis - held.elapsed()).coerceAtLeast(0))
         if (plan == held) { releasePlan() }
     }
     LaunchedEffect(app.summaryRevision, app.isWalletSuspended, generation) {

@@ -1,6 +1,7 @@
 package com.noahwallet.onchain
 
 import com.noahwallet.services.wallet.ChainStatus
+import com.noahwallet.services.wallet.ReviewClock
 import io.github.niteshbalusu11.bark.*
 import kotlinx.coroutines.*
 
@@ -8,6 +9,8 @@ internal class OnchainOperations(
     private val wallet: OnchainWalletAccess, private val journal: OnchainOperationJournal,
     private val ready: () -> Boolean = { true },
     private val now: () -> Long = System::currentTimeMillis,
+    /** Review deadlines' clock ([ReviewClock]); [now] stays the wall time reviews record. */
+    private val elapsed: () -> Long = ReviewClock::now,
     /** VTXOs bark refused to exit, with their reason ([ExitErrors.refused] in the app). */
     private val refused: MutableMap<String, String> = mutableMapOf(),
 ) {
@@ -128,7 +131,8 @@ internal class OnchainOperations(
         destination: String? = null, automatic: Boolean = false, estimate: Boolean = true, excluded: Set<String> = emptySet()): OnchainQuote {
         if (!ready()) fail(OnchainFailure.unavailable)
         val balance = wallet.confirmed()
-        var quote = OnchainQuote(action, wallet.walletID, ids.sorted(), destination, amount, confirmed = balance, automatic = automatic, createdAt = now())
+        var quote = OnchainQuote(action, wallet.walletID, ids.sorted(), destination, amount, confirmed = balance, automatic = automatic, createdAt = now(),
+            reviewedAt = elapsed())
         if (ids.distinct().size != ids.size) fail(OnchainFailure.invalid)
         when (action) {
             OnchainAction.board -> {
@@ -212,7 +216,7 @@ internal class OnchainOperations(
                         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
                         recordClaim: (ExitClaimRecords.Record) -> Unit = {}, newRun: (List<String>) -> Unit = {},
                         shortOfFunds: (Map<String, Long>) -> Unit = {}): String {
-        if (!ready() || !reviewed.current(now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
+        if (!ready() || !reviewed.current(elapsed(), now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding(kept) != funding)) fail(OnchainFailure.changed)
             if (reviewed.preparedBoard == null) fail(OnchainFailure.changed)
@@ -224,8 +228,8 @@ internal class OnchainOperations(
             val fresh = try {
                 quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic,
                     estimate = !reviewed.hasUnknownFeeConsent)
-            } catch (failure: ExitEstimateUnavailable) { throw failure.preserving(reviewed, now()) }
-            if (!ready() || !reviewed.matches(fresh) || !reviewed.current(now())) fail(OnchainFailure.changed)
+            } catch (failure: ExitEstimateUnavailable) { throw failure.preserving(reviewed, elapsed(), now()) }
+            if (!ready() || !reviewed.matches(fresh) || !reviewed.current(elapsed(), now())) fail(OnchainFailure.changed)
             // A sync while this waited for the locks can move the tip past an expiry; the quote above can't tell.
             if (renewalThreshold != null && (reviewed.action != OnchainAction.refresh || !renewable(reviewed.ids, renewalThreshold))) fail(OnchainFailure.changed)
         }

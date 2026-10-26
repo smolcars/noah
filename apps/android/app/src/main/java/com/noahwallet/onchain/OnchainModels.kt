@@ -1,6 +1,7 @@
 package com.noahwallet.onchain
 
 import java.util.UUID
+import com.noahwallet.services.wallet.ReviewClock
 import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.Serializable
 
@@ -20,9 +21,12 @@ data class OnchainQuote(
     val boardAll: Boolean = false, val preparedBoard: BoardPrepared? = null, val id: String = UUID.randomUUID().toString(),
     /** An exit's transactions still to broadcast, shared ones once (bark's estimate). */
     val transactions: Long? = null,
+    /** When this review opened on [ReviewClock]. Never persisted, so null once read back from storage. */
+    @kotlinx.serialization.Transient val reviewedAt: Long? = null,
 ) {
-    fun current(now: Long = System.currentTimeMillis()) = now >= createdAt && now - createdAt <
-        (if (preparedBoard != null) BoardPrepared.lifetimeMillis else 30_000L)
+    fun elapsed(now: Long = ReviewClock.now(), wall: Long = System.currentTimeMillis()) = ReviewClock.elapsed(reviewedAt, createdAt, now, wall)
+    fun current(now: Long = ReviewClock.now(), wall: Long = System.currentTimeMillis()) = elapsed(now, wall) in
+        0L until (if (preparedBoard != null) BoardPrepared.lifetimeMillis else 30_000L)
     val feesUnknown get() = fee == null && chainFee == null && action in setOf(OnchainAction.startExit, OnchainAction.claim)
     val hasUnknownFeeConsent get() = feesUnknown && unknownFeeConsent == id
     val totalLeaving get() = amount + checkNotNull(chainFee)
@@ -32,8 +36,8 @@ data class OnchainQuote(
     val net get() = ExitRules.received(amount, checkNotNull(fee))
     val totalFee get() = checkNotNull(fee) + checkNotNull(chainFee)
     val fundable get() = chainFee?.let { confirmed >= it } ?: false
-    fun matches(other: OnchainQuote) = copy(id = "", createdAt = 0, ids = ids.sorted(), unknownFeeConsent = null) ==
-        other.copy(id = "", createdAt = 0, ids = other.ids.sorted(), unknownFeeConsent = null)
+    fun matches(other: OnchainQuote) = copy(id = "", createdAt = 0, reviewedAt = null, ids = ids.sorted(), unknownFeeConsent = null) ==
+        other.copy(id = "", createdAt = 0, reviewedAt = null, ids = other.ids.sorted(), unknownFeeConsent = null)
 }
 
 @Serializable
@@ -118,10 +122,11 @@ class ExitEstimateUnavailable(val review: OnchainQuote) : Exception() {
             else -> false
         }
     }
-    fun preserving(original: OnchainQuote, now: Long = System.currentTimeMillis()): ExitEstimateUnavailable {
+    fun preserving(original: OnchainQuote, now: Long = ReviewClock.now(), wall: Long = System.currentTimeMillis()): ExitEstimateUnavailable {
         val scope = original.copy(fee = null, chainFee = null, feeRate = null, transactions = null)
-        if (!original.current(now) || !review.feesUnknown || !scope.matches(review)) fail(OnchainFailure.changed)
-        return ExitEstimateUnavailable(review.copy(id = original.id, createdAt = original.createdAt, unknownFeeConsent = null))
+        if (!original.current(now, wall) || !review.feesUnknown || !scope.matches(review)) fail(OnchainFailure.changed)
+        return ExitEstimateUnavailable(review.copy(id = original.id, createdAt = original.createdAt, reviewedAt = original.reviewedAt,
+            unknownFeeConsent = null))
     }
 }
 

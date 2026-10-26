@@ -129,7 +129,7 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     val quote = model.quote
     if (model.showReview && quote != null && !controller.locked) LaunchedEffect(quote) {
         quote.prepared?.let { prepared ->
-            delay(maxOf(0, prepared.createdAt + SendPrepared.lifetimeMillis - System.currentTimeMillis()))
+            delay(maxOf(0, SendPrepared.lifetimeMillis - prepared.elapsed()))
             if (!controller.locked && model.quote == quote) { leaveReview(); model.error = "This review expired. Review the payment again." }
         }
     }

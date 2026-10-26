@@ -103,7 +103,7 @@ internal fun OnchainEffects(app: AppModel, model: OnchainModel, reloadOnChange: 
     LaunchedEffect(model.quote) {
         val held = model.quote ?: return@LaunchedEffect
         if (held.preparedBoard != null) {
-            delay((held.createdAt + BoardPrepared.lifetimeMillis - System.currentTimeMillis()).coerceAtLeast(0))
+            delay((BoardPrepared.lifetimeMillis - held.elapsed()).coerceAtLeast(0))
             if (model.quote == held) model.invalidate()
         }
     }

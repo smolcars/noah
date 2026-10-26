@@ -8,7 +8,8 @@ import org.junit.Test
 class SendPreparedTest {
     @Test fun exactValuesAndTwoMinuteExpiry() {
         assertEquals(143L, chainQuote.prepared!!.vsize); assertEquals(1, chainQuote.prepared.inputCount)
-        assertTrue(chainQuote.prepared.isCurrent(chainQuote.prepared.createdAt + 119999)); assertFalse(chainQuote.prepared.isCurrent(chainQuote.prepared.createdAt + 120000))
+        val prepared = chainQuote.prepared.copy(reviewedAt = 1_000)
+        assertTrue(prepared.isCurrent(120_999)); assertFalse(prepared.isCurrent(121_000)); assertFalse(prepared.isCurrent(999))
         assertEquals(2uL, SendFlow.sdkFeeRate(375u)); assertEquals(10uL, SendFlow.sdkFeeRate(2500u)); assertTrue(SendFlow.sdkFeeRate(ULong.MAX_VALUE) > 0u)
     }
     @Test fun allBroadcastOutcomesAndWrongTxid() {

@@ -1,5 +1,6 @@
 package com.noahwallet.send
 
+import com.noahwallet.services.wallet.ReviewClock
 import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
@@ -19,8 +20,11 @@ import kotlinx.serialization.json.*
 }
 @Serializable data class SendInput(val txid: String, val vout: UInt)
 @Serializable data class SendPrepared(val id: String, val txid: String, val vsize: Long, val inputCount: Int,
-    val createdAt: Long = System.currentTimeMillis(), val inputs: List<SendInput>? = null) {
-    fun isCurrent(now: Long = System.currentTimeMillis()) = now >= createdAt && now - createdAt < lifetimeMillis
+    val createdAt: Long = System.currentTimeMillis(), val inputs: List<SendInput>? = null,
+    /** When this review opened on [ReviewClock]. Never persisted, so null once read back from storage. */
+    @kotlinx.serialization.Transient val reviewedAt: Long? = null) {
+    fun elapsed(now: Long = ReviewClock.now(), wall: Long = System.currentTimeMillis()) = ReviewClock.elapsed(reviewedAt, createdAt, now, wall)
+    fun isCurrent(now: Long = ReviewClock.now(), wall: Long = System.currentTimeMillis()) = elapsed(now, wall) in 0L until lifetimeMillis
     companion object { const val lifetimeMillis = 120_000L }
 }
 @Serializable data class SendQuote(val amount: Long, val fee: Long, val total: Long,

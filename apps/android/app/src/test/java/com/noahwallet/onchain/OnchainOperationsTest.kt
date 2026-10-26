@@ -214,7 +214,7 @@ class OnchainOperationsTest {
     @Test fun confirmationEstimatorFailureKeepsReviewIdentityScopeAndDeadline() = runBlocking {
         for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, _, journal, _ ->
             var now = 100_000L
-            val ops = OnchainOperations(wallet, journal, now = { now })
+            val ops = OnchainOperations(wallet, journal, now = { now }, elapsed = { now })
             wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
             val original = ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null)
             now += 29_000
@@ -234,6 +234,24 @@ class OnchainOperationsTest {
             assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
         }
     }
+    @Test fun reviewDeadlinesRunOnTheReviewClockWhereverTheWallClockMoves() = runBlocking {
+        for (move in listOf(-86_400_000L, 86_400_000L)) fixture { wallet, _, journal, _ ->
+            var wall = 1_760_000_000_000L; var elapsed = 5_000L
+            val ops = OnchainOperations(wallet, journal, now = { wall }, elapsed = { elapsed })
+            val exit = ops.quote(OnchainAction.startExit, listOf("a"))
+            val board = ops.quote(OnchainAction.board, amount = 30_000)
+            assertEquals(5_000L, exit.reviewedAt); assertEquals(1_760_000_000_000L, exit.createdAt); assertEquals(5_000L, board.reviewedAt)
+            wall += move; elapsed += 29_999
+            assertTrue(exit.current(elapsed, wall))
+            wall += 1; elapsed += 1
+            assertTrue(runCatching { ops.execute(exit) }.exceptionOrNull() is OnchainException)
+            elapsed += 89_999
+            assertTrue(board.current(elapsed, wall))
+            wall += 1; elapsed += 1
+            assertTrue(runCatching { ops.execute(board) }.exceptionOrNull() is OnchainException)
+            assertTrue(wallet.calls.isEmpty()); assertTrue(journal.loadAll().isEmpty())
+        }
+    }
     @Test fun exitEstimatorFailureRequiresScopedConsentWithoutRetryOrFabricatedFees() = runBlocking {
         for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, ops, journal, _ ->
             wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
@@ -244,7 +262,7 @@ class OnchainOperationsTest {
             assertTrue(runCatching { ops.execute(unknown) }.isFailure)
             assertTrue(wallet.calls.isEmpty()); assertEquals(1, wallet.estimates)
             val reviewed = unknown.copy(unknownFeeConsent = unknown.id)
-            for (invalid in listOf(reviewed.copy(createdAt = 0), reviewed.copy(walletID = "other"), reviewed.copy(ids = listOf("missing"))))
+            for (invalid in listOf(reviewed.copy(reviewedAt = checkNotNull(reviewed.reviewedAt) - 30_000), reviewed.copy(walletID = "other"), reviewed.copy(ids = listOf("missing"))))
                 assertTrue(runCatching { ops.execute(invalid) }.isFailure)
             if (action == OnchainAction.claim) {
                 wallet.ownershipError = true
@@ -761,7 +779,7 @@ class OnchainOperationsTest {
     }
     @Test fun staleChangedFeesBalanceIdentityAndInputsPreventAllMutations() = runBlocking { fixture { wallet, ops, journal, _ ->
         val quote = ops.quote(OnchainAction.board, amount = 30_000)
-        val invalid = listOf(quote.copy(createdAt = System.currentTimeMillis() - 120_000), quote.copy(walletID = "other"),
+        val invalid = listOf(quote.copy(reviewedAt = checkNotNull(quote.reviewedAt) - 120_000), quote.copy(walletID = "other"),
             quote.copy(fee = checkNotNull(quote.fee) + 1), quote.copy(chainFee = checkNotNull(quote.chainFee) + 1), quote.copy(confirmed = quote.confirmed + 1))
         for (q in invalid) assertTrue(runCatching { ops.execute(q) }.isFailure)
         val exit = ops.quote(OnchainAction.startExit, listOf("a"))
@@ -1183,7 +1201,7 @@ class OnchainOperationsTest {
             BarkErrorCode.PREPARED_BOARD_CHANGED to OnchainFailure.changed,
             BarkErrorCode.UNSUPPORTED_OPERATION to OnchainFailure.notSynced)
         expected.forEach { (code, reason) -> assertEquals(reason, boardFailure(BarkError("untrusted", code))) }
-        val quote = OnchainQuote(OnchainAction.board, "wallet", createdAt = 1000,
+        val quote = OnchainQuote(OnchainAction.board, "wallet", reviewedAt = 1000,
             preparedBoard = BoardPrepared("id", "tx", 199, listOf(BoardInput("in", 0u))))
         assertTrue(quote.current(120_999)); assertFalse(quote.current(121_000)); assertFalse(quote.current(999))
     }

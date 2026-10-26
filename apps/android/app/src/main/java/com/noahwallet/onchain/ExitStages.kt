@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.noahwallet.services.wallet.ReviewClock
 import kotlinx.serialization.json.Json
 
 /**
@@ -402,7 +403,7 @@ internal object ExitClaim {
     }
 
     /** Hold to claim works only with a valid destination and today's review of exactly it, still fresh. */
-    fun ready(destination: String?, quote: OnchainQuote?, now: Long = System.currentTimeMillis()) =
+    fun ready(destination: String?, quote: OnchainQuote?, now: Long = ReviewClock.now()) =
         destination != null && quote != null && quote.action == OnchainAction.claim && quote.destination == destination && quote.current(now)
 
     /**

@@ -2,6 +2,7 @@ package com.noahwallet.send
 
 import io.github.niteshbalusu11.bark.*
 import com.noahwallet.services.wallet.ChainStatus
+import com.noahwallet.services.wallet.ReviewClock
 
 /** Called only inside WalletSession's counted, cancellation-shielded Send reservation. */
 internal class SdkSendWallet(private val wallet: Wallet, private val onchain: OnchainWallet,
@@ -64,7 +65,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 preparations.retain(prepared.id)
                 SendQuote(prepared.amountSats.toLong(), prepared.feeSats.toLong(), Math.addExact(prepared.amountSats.toLong(), prepared.feeSats.toLong()), rate.toLong(),
                     prepared = SendPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.size,
-                        inputs = prepared.inputs.map { SendInput(it.txid, it.vout) }))
+                        inputs = prepared.inputs.map { SendInput(it.txid, it.vout) }, reviewedAt = ReviewClock.now()))
             } else {
                 var ids: List<String>? = null
                 val estimate = when (payment.method) {

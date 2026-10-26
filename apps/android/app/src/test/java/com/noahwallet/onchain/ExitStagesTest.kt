@@ -430,7 +430,7 @@ class ExitStagesTest {
         assertEquals("phone-address", ExitClaim.destination(ClaimTo.phone, mainnet, "phone-address", "regtest"))
         assertNull("this phone's address is still loading", ExitClaim.destination(ClaimTo.phone, regtest, null, "regtest"))
         val now = System.currentTimeMillis()
-        val review = OnchainQuote(OnchainAction.claim, "wallet", listOf("a"), regtest, 31_000, fee = 262, chainFee = 0, createdAt = now)
+        val review = OnchainQuote(OnchainAction.claim, "wallet", listOf("a"), regtest, 31_000, fee = 262, chainFee = 0, reviewedAt = now)
         assertTrue(ExitClaim.ready(regtest, review, now))
         assertFalse("no valid address", ExitClaim.ready(null, review, now))
         assertFalse("not reviewed yet", ExitClaim.ready(regtest, null, now))

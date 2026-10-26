@@ -55,7 +55,7 @@ class ExitLiveTest {
             }
             suspend fun reviewExecute(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0, destination: String? = null): OnchainQuote {
                 val quote = session.quoteOnchain(action, ids, amount, destination)
-                check(ExitRules.current(quote.createdAt))
+                check(quote.current())
                 check(reviewExplanation(quote).isNotBlank())
                 session.executeOnchain(quote)
                 return quote
