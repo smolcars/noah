@@ -84,7 +84,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                balance: Long? = null, received: Long? = null): TreeLayout {
             val geo = TreeGeometry(width, height, scene.n, scale, wide)
             val lock = if (scene.locked && !scene.claiming) 1f else 0f
-            val ys = geo.levels(lock, scene.docked) { if (scene.mined(it)) 1f else 0f }
+            val ys = geo.levels(lock, scene.docked, scene.ringed) { if (scene.mined(it)) 1f else 0f }
             val server = scene.explain || scene.lifting || scene.canceled
             val fit = { item: TreeLabels.Item -> fit(item, geo, measure, server) }
             val labels = TreeLabels.place(items(scene, geo, ys, words), geo.lineHeight, scale, geo.labelTop, geo.labelBottom, fit) { a, b ->
@@ -250,8 +250,9 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                     half = max(half, (measure.width(label, moreSize, true) + 6) / 2)
                 }
                 shapes += TreeShape.box(TreeShape.Kind.node, "node$level", tx - half, ys[level] - geo.node / 2, tx + half, ys[level] + geo.node / 2)
-                // The fee child docked on the waiting transaction's anchor.
+                // The fee child docked on the waiting transaction's anchor; the red ring of one short of funds.
                 if (s.marks[i] == ExitScene.Mark.waiting && s.paid[i]) shapes += TreeShape.circle(TreeShape.Kind.node, "node$level", tx + 9, ys[level] + 7, 4.8f)
+                if (s.marks[i] == ExitScene.Mark.needsFee) shapes += TreeShape.circle(TreeShape.Kind.node, "node$level", tx, ys[level], geo.ring(geo.node))
             }
             // Your coin with its dashed ring or, while locked, the timelock's dial; while claiming, the coin alone.
             shapes += TreeShape.circle(TreeShape.Kind.coin, "coin", tx, geo.coinY - if (s.lifting) 5 else 0, if (s.claiming) geo.coinR else geo.coinReserve(lock))

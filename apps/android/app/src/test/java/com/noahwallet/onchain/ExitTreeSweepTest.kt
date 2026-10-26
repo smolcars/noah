@@ -75,7 +75,7 @@ class ExitTreeSweepTest {
         if (drawn.claiming) assertTrue("$label: the claim's label", layout.labels.any { it.x != null })
         // Never below the minimum spacing; long paths fold instead.
         val geo = layout.geo; val lock = if (drawn.locked && !drawn.claiming) 1f else 0f
-        for (j in 1..drawn.n) assertTrue("$label: gap $j", layout.ys[j - 1] - layout.ys[j] >= geo.minimumGap(j, geo.node, geo.coinReserve(lock), docked = j == drawn.docked) - .01f)
+        for (j in 1..drawn.n) assertTrue("$label: gap $j", layout.ys[j - 1] - layout.ys[j] >= geo.minimumGap(j, geo.node, geo.coinReserve(lock), docked = drawn.docked, ringed = drawn.ringed) - .01f)
         assertEquals("$label: the real count", scene.n, drawn.count)
         layouts++
         return layout

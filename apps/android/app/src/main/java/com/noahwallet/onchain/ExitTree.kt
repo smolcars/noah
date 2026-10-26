@@ -87,6 +87,8 @@ internal data class ExitScene(
     val left get() = claimableHeight?.let { (it - tip).coerceAtLeast(0) } ?: 0
     /** The level (1-based) whose fee child is docked below it: the waiting transaction's, when it has one and isn't your coin. */
     val docked get() = waiting.takeIf { it in 0 until n - 1 && paid[it] }?.plus(1) ?: -1
+    /** The level (1-based) ringed red, short of funds, when it isn't your coin. */
+    val ringed get() = marks.indexOf(Mark.needsFee).takeIf { it in 0 until n - 1 }?.plus(1) ?: -1
     /** The first real transaction drawn level [i] stands for. */
     fun real(i: Int) = spans?.getOrNull(i)?.first ?: i
     /** Level [i] stands for several transactions: a stack of mined ones, or "+N" not sent yet. */
@@ -207,16 +209,21 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
 
     /**
      * The least gap below level [level] of [count]: half of each neighbour (the round's block, a transaction's square, or
-     * your coin with its [reserve]) and the clearance, so every link shows and nothing touches. A level with its fee child
-     * docked ([docked]) keeps the dot's room below it too.
+     * your coin with its [reserve]) and the clearance, so every link shows and nothing touches. The level with its fee child
+     * docked ([docked]) keeps the dot's room below it; the one short of funds ([ringed]) its red ring's, both sides.
      */
-    fun minimumGap(level: Int, side: Float, reserve: Float, count: Int = n, docked: Boolean = false) =
-        (if (level == 1) block / 2 else side / 2) + (if (level == count) reserve else if (docked) max(side / 2, feeDrop) else side / 2) + clearance
+    fun minimumGap(level: Int, side: Float, reserve: Float, count: Int = n, docked: Int = -1, ringed: Int = -1): Float {
+        val below = when { level - 1 == 0 -> block / 2; level - 1 == ringed -> ring(side); else -> side / 2 }
+        val above = when { level == count -> reserve; level == ringed -> ring(side); level == docked -> max(side / 2, feeDrop); else -> side / 2 }
+        return below + above + clearance
+    }
+    /** The red dashed ring around a transaction short of funds, stroke and all. */
+    fun ring(side: Float) = side * .95f + 1
 
     /** Each transaction's square: 14 dp where levels have 22 dp, else 11, smaller only if even that doesn't keep the spacing. */
     val node: Float = run {
         var side = if (room / n.coerceAtLeast(1) < 22) 11f else 14f
-        while (side > 7 && (1..n).sumOf { minimumGap(it, side, coinReserve(1f), docked = it == 2).toDouble() } > room) side -= 1
+        while (side > 7 && (1..n).sumOf { minimumGap(it, side, coinReserve(1f)).toDouble() } + allowance(side) > room) side -= 1
         side
     }
 
@@ -225,23 +232,25 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
      * mined transactions ([mined], 0 → 1 each) stack tighter, like a pile of blocks; no gap goes below its minimum, and
      * the waiting one and your coin never shrink.
      */
-    fun levels(lock: Float = 0f, docked: Int = -1, mined: (Int) -> Float): FloatArray {
+    fun levels(lock: Float = 0f, docked: Int = -1, ringed: Int = -1, mined: (Int) -> Float): FloatArray {
         val tight = if (room / n.coerceAtLeast(1) >= 26) 1f else .42f
         fun confirmed(j: Int) = if (j == 0) 1f else mined(j - 1)
         val weights = FloatArray(n) { 1 + (tight - 1) * min(confirmed(it), confirmed(it + 1)) }
-        val gaps = share(room, weights, FloatArray(n) { minimumGap(it + 1, node, coinReserve(lock), docked = it + 1 == docked) })
+        val gaps = share(room, weights, FloatArray(n) { minimumGap(it + 1, node, coinReserve(lock), docked = docked, ringed = ringed) })
         val ys = FloatArray(n + 1); ys[0] = roundY
         for (j in 1..n) ys[j] = ys[j - 1] - gaps[j - 1]
         ys[n] = coinY
         return ys
     }
 
-    /** How many levels fit at their minimum spacing ([lock]: the dial's room around your coin; one fee child docked): a longer path folds. */
+    /** How many levels fit at their minimum spacing ([lock]: the dial's room around your coin): a longer path folds. */
     fun capacity(lock: Float = 0f): Int {
         var k = 1
-        while (k < 200 && (1..k + 1).sumOf { minimumGap(it, 11f, coinReserve(lock), k + 1, docked = it == 2).toDouble() } <= room) k++
+        while (k < 200 && (1..k + 1).sumOf { minimumGap(it, 11f, coinReserve(lock), k + 1).toDouble() } + allowance(11f) <= room) k++
         return k
     }
+    /** Room for the one level that reaches past its square: a docked fee child below it, or a red ring both sides. */
+    private fun allowance(side: Float) = max(feeDrop - side / 2, 2 * (ring(side) - side / 2))
 
     /**
      * The other people's stubs at level [level]: three short faint branches ending in rings, or none where levels have less

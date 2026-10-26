@@ -156,7 +156,7 @@ private class TreeStyles(density: androidx.compose.ui.unit.Density) {
 private class TreeFrame(val geo: TreeGeometry, val move: TreeMotion, val t: Float) {
     val scene get() = move.to
     val n get() = move.n
-    val ys = geo.levels(move.lock(t) * (1 - move.stem(t)), move.to.docked) { move.mine(it, t) }
+    val ys = geo.levels(move.lock(t) * (1 - move.stem(t)), move.to.docked, move.to.ringed) { move.mine(it, t) }
     val cancel = move.cancel(t)
     val dim = move.dim(t)
     val tree = 1 - .6f * dim
@@ -557,8 +557,9 @@ private fun Pulses(frame: () -> TreeFrame, breath: Breath, palette: NoahTokens.P
     // Ready but short of funds: a red dashed ring that breathes.
     val short = scene.marks.indexOf(ExitScene.Mark.needsFee)
     if (short >= 0) Spot(44f, { frame().let { f -> if (short == f.n - 1) f.coin else f.node(short + 1) } }) { half ->
-        val f = frame(); val z = if (short == f.n - 1) f.coinR * 1.9f else f.geo.node
-        drawCircle(palette.failure, z * .95f, Offset(half, half), alpha = .55f + .45f * breath.breathe,
+        // Round your coin, where its dashed ring would be; round a transaction, just outside its square.
+        val f = frame(); val r = if (short == f.n - 1) f.coinR + 5 else f.geo.ring(f.geo.node) - 1
+        drawCircle(palette.failure, r, Offset(half, half), alpha = .55f + .45f * breath.breathe,
             style = Stroke(1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f))))
     }
     // The timelock's tip: the block it has reached.
