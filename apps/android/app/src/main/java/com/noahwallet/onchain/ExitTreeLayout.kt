@@ -26,12 +26,24 @@ internal class TreeStrings(private val text: (String, Array<out String>) -> Stri
     }
 }
 
+/**
+ * The point [u] (0 → 1) along a link from ([px], [py]) to ([cx], [cy]): onboarding's S-curve, leaving and arriving
+ * vertically, or sideways when [horizontal]. The picture draws links along it; a branch's outline follows it.
+ */
+internal fun linkAt(px: Float, py: Float, cx: Float, cy: Float, u: Float, horizontal: Boolean = false): Pair<Float, Float> {
+    val a = 1 - u
+    return if (horizontal) { val mx = (px + cx) / 2; (a * a * a * px + 3 * a * a * u * mx + 3 * a * u * u * mx + u * u * u * cx) to
+        (a * a * a * py + 3 * a * a * u * py + 3 * a * u * u * cy + u * u * u * cy) }
+    else { val my = (py + cy) / 2; (a * a * a * px + 3 * a * a * u * px + 3 * a * u * u * cx + u * u * u * cx) to
+        (a * a * a * py + 3 * a * a * u * my + 3 * a * u * u * my + u * u * u * cy) }
+}
+
 /** How wide [text] is at [size] dp (medium, or semibold when [bold]), as the picture draws it. */
 internal fun interface TreeMeasure { fun width(text: String, size: Float, bold: Boolean): Float }
 
 /** A drawn element's outline: a box, or a circle in its [l]…[b] square. */
 internal data class TreeShape(val kind: Kind, val group: String, val l: Float, val t: Float, val r: Float, val b: Float, val circle: Boolean = false) {
-    enum class Kind { round, node, coin, claim, badge, server, text, label, brace, stub, sibling, amount, caption }
+    enum class Kind { round, node, coin, claim, badge, server, text, label, brace, stub, sibling, branch, amount, caption }
     val x get() = (l + r) / 2
     val y get() = (t + b) / 2
 
@@ -285,16 +297,31 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                     stubs += Stub(level, x, y - ys[level]); shapes += shape
                 }
             }
-            // Your other exits' coins: at their place, else slid down their branch toward it, else further out.
+            // Your other exits' coins: at their place, else slid down their branch toward it or up it (where a branch clears
+            // the coins nearer your path), else further out. Each branch is outlined along the curve drawn, short of where it
+            // joins your path: there it may meet the stubs, the other branches and its level, but nowhere may a branch and
+            // another coin cross.
+            fun branch(x: Float, y: Float, level: Int, group: String): List<TreeShape> {
+                val joinY = ys[level] - 4
+                return (1..20).map { linkAt(x, y + 6, tx, joinY, it / 20f) }.filter { (bx, by) -> hypot(bx - tx, by - joinY) > 9 }
+                    .map { (bx, by) -> TreeShape.circle(TreeShape.Kind.branch, group, bx, by, .7f) }
+            }
+            fun meets(shape: TreeShape, level: Int) = shape.kind == TreeShape.Kind.stub || shape.kind == TreeShape.Kind.branch || shape.group == "node$level"
             val siblings = mutableListOf<Sibling>()
             for (level in othersAt.keys.sorted()) for ((index, other) in othersAt.getValue(level).withIndex()) {
                 val (bx, by) = geo.other(ys, level, index); val group = "sibling$level.$index"
                 val spots = listOf(0f, .45f, .9f).flatMap { shift ->
-                    generateSequence(by) { it + 3 }.takeWhile { it <= max(by, ys[level] - 10) }.map { bx - shift * geo.spread to it }.toList()
+                    (generateSequence(by) { it + 3 }.takeWhile { it <= max(by, ys[level] - 10) } + generateSequence(by - 3) { it - 3 }.takeWhile { it >= geo.otherTop })
+                        .map { bx - shift * geo.spread to it }.toList()
                 }
-                val spot = spots.firstOrNull { (x, y) -> clear(TreeShape.circle(TreeShape.Kind.sibling, group, x, y, 6f)) } ?: continue
+                val spot = spots.firstOrNull { (x, y) ->
+                    clear(TreeShape.circle(TreeShape.Kind.sibling, group, x, y, 6f)) && branch(x, y, level, group).all { b ->
+                        shapes.none { it.group != group && !meets(it, level) && it.overlaps(b, TreeGeometry.clearance) }
+                    }
+                } ?: continue
                 siblings += Sibling(other.index, level, index, spot.first, spot.second - ys[level], null)
                 shapes += TreeShape.circle(TreeShape.Kind.sibling, group, spot.first, spot.second, 6f)
+                shapes += branch(spot.first, spot.second, level, group)
             }
             // Their amounts, left of each coin (on a halo): the list says them when there's no room.
             for ((index, sibling) in siblings.withIndex()) {

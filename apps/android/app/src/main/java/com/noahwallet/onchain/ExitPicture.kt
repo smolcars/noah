@@ -187,13 +187,7 @@ private object TreeIcons {
 internal fun DrawScope.treeLink(p: Offset, c: Offset, u0: Float, u1: Float, color: Color, width: Float, alpha: Float, dash: FloatArray? = null,
                                 horizontal: Boolean = false) {
     if (u1 <= u0 || alpha <= 0f) return
-    fun at(u: Float): Offset {
-        val a = 1 - u
-        return if (horizontal) { val mx = (p.x + c.x) / 2; Offset(a * a * a * p.x + 3 * a * a * u * mx + 3 * a * u * u * mx + u * u * u * c.x,
-            a * a * a * p.y + 3 * a * a * u * p.y + 3 * a * u * u * c.y + u * u * u * c.y) }
-        else { val my = (p.y + c.y) / 2; Offset(a * a * a * p.x + 3 * a * a * u * p.x + 3 * a * u * u * c.x + u * u * u * c.x,
-            a * a * a * p.y + 3 * a * a * u * my + 3 * a * u * u * my + u * u * u * c.y) }
-    }
+    fun at(u: Float) = linkAt(p.x, p.y, c.x, c.y, u, horizontal).let { (x, y) -> Offset(x, y) }
     val path = Path().apply { for (i in 0..20) { val q = at(u0 + (u1 - u0) * i / 20); if (i == 0) moveTo(q.x, q.y) else lineTo(q.x, q.y) } }
     drawPath(path, color, alpha = clamp(alpha), style = Stroke(width, cap = StrokeCap.Round, pathEffect = dash?.let { PathEffect.dashPathEffect(it) }))
 }

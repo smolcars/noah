@@ -20,6 +20,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
+import kotlin.math.hypot
 import kotlin.math.min
 
 /**
@@ -64,9 +65,12 @@ class ExitTreeSweepTest {
         val layout = TreeLayout.of(drawn, frame.width, height, frame.scale, false, words, measure, balance = 18_400, received = 30_738)
         val shapes = layout.shapes
         for (shape in shapes) assertTrue("$label: ${shape.group} leaves the canvas: $shape", shape.inside(frame.width, height))
+        // A branch may meet the stubs, the other branches and the level it joins; nothing else may touch.
+        fun meets(a: TreeShape, b: TreeShape) = a.kind == TreeShape.Kind.branch &&
+            (b.kind == TreeShape.Kind.stub || b.kind == TreeShape.Kind.branch || b.group == "node" + a.group.removePrefix("sibling").substringBefore('.'))
         for (i in shapes.indices) for (j in i + 1 until shapes.size) {
             val (a, b) = shapes[i] to shapes[j]
-            if (a.group != b.group) assertFalse("$label: ${a.group} overlaps ${b.group}: $a / $b", a.overlaps(b))
+            if (a.group != b.group && !meets(a, b) && !meets(b, a)) assertFalse("$label: ${a.group} overlaps ${b.group}: $a / $b", a.overlaps(b))
         }
         // Required: every drawn level of your path, your coin, the round's block; the pill and the claim's label.
         assertEquals("$label: nodes", drawn.n - 1, shapes.map { it.group }.filter { it.startsWith("node") }.distinct().size)
@@ -183,6 +187,15 @@ class ExitTreeSweepTest {
         for (frame in listOf(phone, small)) {
             val others = listOf(ExitScene.Other(1, 24_500), ExitScene.Other(1, 21_000), ExitScene.Other(1, 15_000))
             assertEquals("three others on ${frame.name}", 3, check(path(2, 0, others = others), frame, w, "two transactions, three others").siblings.size)
+        }
+        // Four transactions, the first waiting, three others leaving at the root: no branch, drawn whole, runs through
+        // another's coin.
+        for (frame in listOf(phone, small)) {
+            val layout = check(path(4, 0, others = List(3) { ExitScene.Other(1, 24_500L - 3_000 * it) }), frame, w, "four transactions, three others at the root")
+            for (a in layout.siblings) for (b in layout.siblings) if (a !== b) for (i in 0..40) {
+                val (x, y) = linkAt(a.x, layout.ys[a.level] + a.dy + 6, layout.geo.trunk, layout.ys[a.level] - 4, i / 40f)
+                assertTrue("${frame.name}: $a's branch crosses $b", hypot(x - b.x, y - (layout.ys[b.level] + b.dy)) >= 6 + .7f)
+            }
         }
         // At packed levels on a long path, they slide or step out, never onto each other.
         val deep = check(path(20, 12, others = listOf(ExitScene.Other(3, 24_500), ExitScene.Other(4, 21_000))), small, w, "packed others")
