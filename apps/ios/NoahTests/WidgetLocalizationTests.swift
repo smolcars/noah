@@ -33,4 +33,27 @@ struct WidgetLocalizationTests {
         WidgetDataWriter.publishLanguage(variant: .regtest)
         #expect(group.string(forKey: LegacyLocale.key) == nil)
     }
+
+    /// After an upgrade the choice is only in the app's own defaults, and a suspended wallet never
+    /// writes a balance, so startup itself must hand the language to the widget.
+    @MainActor @Test func startupPublishesTheLanguageWhileTheWalletIsSuspended() async throws {
+        let group = try #require(UserDefaults(suiteName: AppVariant.current.appGroup))
+        let preference = UserDefaults.standard.string(forKey: LegacyLocale.key)
+        let mirrored = group.string(forKey: LegacyLocale.key)
+        let root = FileManager.default.temporaryDirectory.appending(path: "widget-language-\(UUID())")
+        defer {
+            UserDefaults.standard.set(preference, forKey: LegacyLocale.key)
+            group.set(mirrored, forKey: LegacyLocale.key)
+            try? FileManager.default.removeItem(at: root)
+        }
+        UserDefaults.standard.set("es", forKey: LegacyLocale.key)
+        group.removeObject(forKey: LegacyLocale.key)
+        let settings = try SettingsStorage(rootPath: root.path)
+        try settings.setPersistedState(PersistedWalletState(isInitialized: true, isWalletSuspended: true),
+                                       key: PersistedWalletState.key, version: PersistedWalletState.version)
+        let model = AppModel(settings: settings, readLaunchState: { .existingWallet }, settleRestore: { .nothingPending })
+        await model.start()
+        #expect(model.isWalletSuspended)
+        #expect(group.string(forKey: LegacyLocale.key) == "es")
+    }
 }
