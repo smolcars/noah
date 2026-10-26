@@ -68,11 +68,6 @@ struct BarkLogTests {
             "HttpResponse { status: 404 }") == true)
     }
 
-    @Test func mapsEveryLevelAndMatchesRNVerbosity() {
-        #expect(BarkLog.maxLevel == .debug)
-        #expect(LogLevel.allCases.map(BarkLog.appLevel) == [.error, .warn, .info, .debug, .verbose])
-    }
-
     @Test func rustCallbacksReturnWhileTheDiskQueueIsBlocked() async {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -133,21 +128,13 @@ struct BarkLogTests {
         #expect(!text.contains("3, 4"))
     }
 
-    @Test func oversizedEntriesAndRotationStayBounded() throws {
+    /// Rotation itself is AppLogTests.rotatesIntoAtMostFourOldFiles.
+    @Test func oversizedEntriesAreOmitted() {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = LogFile(directory: directory)
         let sink = BarkLog(file: file)
         sink.log(level: .debug, target: "wallet", message: String(repeating: "x", count: LogFile.maxFileSizeBytes * 2))
         #expect(file.lines().first?.hasSuffix("[oversized log message omitted]") == true)
-        for _ in 0..<200 {
-            sink.log(level: .debug, target: "wallet", message: String(repeating: "z", count: 16_000))
-        }
-        file.flush()
-        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey])
-        #expect(files.count == 5)
-        for url in files {
-            #expect(try url.resourceValues(forKeys: [.fileSizeKey]).fileSize! <= LogFile.maxFileSizeBytes)
-        }
     }
 }

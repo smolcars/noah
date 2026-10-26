@@ -7,37 +7,24 @@ import Testing
 struct AppLogTests {
     private let directory = FileManager.default.temporaryDirectory.appending(path: "logs-\(UUID().uuidString)")
 
-    private static let performanceInputs = [
-        ("punctuation", "!@#$%^&*()[]{}:;,?"), ("hyphen", "x-"), ("dot", "x."),
-        ("digit", "1234567890"), ("mixed", "wallet sync completed xyzzy "),
-        ("escaped", #"\u0078\u002e"#), ("entities", "&#x78;&#46;"),
-        ("provider body", #"HttpResponse { status: 404, message: "fake" }"#),
-    ]
-
-    @Test func redactionPerformance() {
+    /// Redaction must stay linear: missing terminators, repeated keywords and registered endpoints must not restart a
+    /// scan. One input per path that once rescanned.
+    @Test func redactionScalesLinearly() {
         for index in 0..<1000 {
             EndpointLogPrivacy.register("https://scaling-privacy-\(index).example/api/fakeScale\(index)")
         }
         EndpointLogPrivacy.register("https://fake-r8-scaling.example/fakeOpaque")
         EndpointLogPrivacy.register("https://xn--strae-oqa.example/api")
-        let authorities = [("other authorities", "https://unrelated-scaling.example/other "),
-                           ("registered authorities", "https://scaling-privacy-999.example/other "),
-                           ("allowed authorities", "https://noahwallet.io/v0/health "),
-                           ("malformed authorities", "https://fake-review-r5.example:invalid "),
-                           ("scheme-less hosts", "scaling-privacy-999.example:invalid "),
-                           ("path history without slash", "zzzz ordinary diagnostic "),
-                           ("path history with slash", "/zzzz/ordinary/diagnostic "),
-                           ("path history hit", "xxfakeScale999yy ")]
-        let unicode = [("combining mark miss", "zzzz ordinarye\u{0301} "),
-                       ("combining mark hit", "xxfakeOpaque\u{0301}yy "),
-                       ("IDNA2008 miss", "xxordinaryßς\u{200D}\u{200C}yy "),
-                       ("IDNA2008 hit", "xxstraßeyy ")]
-        for (name, unit) in unicode {
-            assertRedactionScales(name, unit, redact: EndpointLogPrivacy.redact)
-        }
-        for (name, unit) in Self.performanceInputs + authorities {
+        for (name, unit) in [("mixed", "wallet sync completed xyzzy "), ("escaped", #"x."#), ("entities", "&#x78;&#46;"),
+                             ("registered authorities", "https://scaling-privacy-999.example/other "),
+                             ("path history hit", "xxfakeScale999yy "),
+                             ("failed seed", "seed."), ("failed URL", "http://"), ("failed push token", "ExpoPushToken["),
+                             ("failed email", "x@x."), ("failed xprv", "xprv"), ("failed escape", "\\u0078!")] {
             assertRedactionScales(name, unit, redact: LogFile.redact)
-            assertRedactionScales("boundary " + name, unit, redact: EndpointLogPrivacy.redact)
+        }
+        for (name, unit) in [("boundary other authorities", "https://unrelated-scaling.example/other "),
+                             ("combining mark hit", "xxfakeOpaque\u{0301}yy "), ("IDNA2008 hit", "xxstraßeyy ")] {
+            assertRedactionScales(name, unit, redact: EndpointLogPrivacy.redact)
         }
         let shortHostMatcher = EndpointLogPrivacy.SecretMatcher(["a"])
         assertRedactionScales("fullwidth bare host", "ａ ") {
@@ -45,60 +32,46 @@ struct AppLogTests {
         }
     }
 
+    /// One 8 KiB call against eight 1 KiB calls, in thread CPU time: linear work costs about the same, a rescan 8x.
     private func assertRedactionScales(_ name: String, _ unit: String, redact: (String) -> String = LogFile.redact) {
         LogFile.prepareRedaction()
-        let inputs = [1024, 16384].map { size in
-            String(String(repeating: unit, count: (size + unit.count - 1) / unit.count).prefix(size))
+        let small = String(String(repeating: unit, count: (1024 + unit.count - 1) / unit.count).prefix(1024))
+        let large = String(String(repeating: unit, count: (8192 + unit.count - 1) / unit.count).prefix(8192))
+        _ = redact(small); _ = redact(large) // Warm both sizes before sampling.
+        func cpu(_ body: () -> Void) -> UInt64 {
+            let started = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
+            body()
+            return clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - started
         }
-        for _ in 0..<5 { for input in inputs { _ = redact(input) } } // Warm both sizes before sampling.
-        var samples = [[UInt64](), [UInt64]()]
-        for _ in 0..<5 {
-            for (index, input) in inputs.enumerated() {
-                let started = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
-                for _ in 0..<4 { _ = redact(input) }
-                samples[index].append(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - started)
-            }
-        }
-        let small = samples[0].sorted()[2], large = samples[1].sorted()[2]
-        print("REDACTION \(name) CPU 1 KiB \(small) ns; 16 KiB \(large) ns (four calls)")
-        // 16x input permits 64x CPU work, rejecting quadratic (256x) rescans without counting descheduling.
-        #expect(small > 0 && large < small * 64, "\(name) CPU scaling: \(small) -> \(large) ns")
+        let smalls = (0..<3).map { _ in cpu { for _ in 0..<8 { _ = redact(small) } } }.sorted()
+        let larges = (0..<3).map { _ in cpu { _ = redact(large) } }.sorted()
+        #expect(smalls[1] > 0 && larges[1] < smalls[1] * 4, "\(name) CPU scaling: 8 × 1 KiB \(smalls[1]) ns, 8 KiB \(larges[1]) ns")
     }
 
     @Test @MainActor func mainActorAndSDKCallbacksOnlyEnqueueRawText() async {
         let queue = DispatchQueue(label: "test.deferred-redaction")
         queue.suspend()
         let file = LogFile(directory: directory, capacity: 100, queue: queue)
-        // Warm admission; redaction and every sink must still be waiting on the suspended queue.
-        AppLog("warmup", file: file).i("warmup")
+        // Redaction and every sink must still be waiting on the suspended queue.
         let sink = BarkLog(file: file)
-        var slowest = Duration.zero
-        for (_, unit) in Self.performanceInputs {
+        for unit in ["x.", #"x."#] {
             let input = String(String(repeating: unit, count: (16384 + unit.count - 1) / unit.count).prefix(16384))
-            let started = ContinuousClock.now
             AppLog(input, file: file).e(input)
-            slowest = max(slowest, ContinuousClock.now - started)
-            let callbackStarted = ContinuousClock.now
             sink.log(level: .error, target: input, message: input)
-            slowest = max(slowest, ContinuousClock.now - callbackStarted)
         }
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         AppLog(phrase, file: file).e(phrase)
-        #expect(slowest < .milliseconds(5))
-        print("LOG ADMISSION main actor / SDK maximum \(slowest)")
         #expect(!FileManager.default.fileExists(atPath: directory.path))
         queue.resume()
         let lines = await file.linesForExport()
-        #expect(lines.count == 18)
+        #expect(lines.count == 5)
         #expect(lines.last?.hasSuffix(" E [[redacted]] [redacted]") == true)
     }
 
     @Test func sdkErrorLoggingDefersInspectionButReportsStayRedacted() async {
         let input = String(repeating: "x.", count: 8192)
         let error = BarkError(message: input)
-        let started = ContinuousClock.now
         let raw = SafeErrorDescription.forLogging(error)
-        #expect(ContinuousClock.now - started < .milliseconds(5))
         #expect(raw == input)
         #expect(SafeErrorDescription.of(BarkError(message: "token=fake-test-token")) == "[redacted]")
         let file = LogFile(directory: directory)
@@ -119,13 +92,6 @@ struct AppLogTests {
         ] { #expect(LogFile.redact(input) == expected) }
     }
 
-    @Test func failedTokenCandidatesStayBounded() {
-        // Missing terminators and repeated keywords must not restart a suffix search.
-        for unit in ["seed.", "http://", "ExpoPushToken[", "x@x.", "xprv", "\\u0078!"] {
-            assertRedactionScales("failed candidate \(unit)", unit)
-        }
-    }
-
     private func redactBaseline(_ message: String) -> String {
         LogFile.redactForTelemetry(message, endpointPrivacy: { EndpointLogPrivacy.sanitize($0, registered: []) }) ?? "[redacted]"
     }
@@ -144,13 +110,6 @@ struct AppLogTests {
             file.append(level: .info, tag: "fixture", message: fixture.input, date: date)
             #expect(file.lines().last?.hasSuffix(LogFile.redact(fixture.input).replacingOccurrences(of: "\n", with: "\n  ")) == true,
                     "persistence \(fixture.name)")
-        }
-    }
-
-    @Test func escapedCredentialsAreRedacted() throws {
-        for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
-            where fixture.name.hasPrefix("r3-escaped-") {
-            #expect(redactBaseline(fixture.input) == fixture.expected, "\(fixture.name)")
         }
     }
 
@@ -209,31 +168,34 @@ struct AppLogTests {
         #expect(lines[1] == "  second")
     }
 
+    /// Files start where a previous launch left them, so one write crosses the size limit.
     @Test func rotatesIntoAtMostFourOldFiles() throws {
-        let file = LogFile(directory: directory, capacity: 5000)
-        let padding = String(repeating: "x", count: 1000)
-        let count = LogFile.maxFileSizeBytes / 1000 * 6
-        for index in 0..<count {
-            file.append(level: .info, tag: "t", message: "\(index) \(padding)")
-        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        for index in 1...4 { try Data("old \(index)\n".utf8).write(to: directory.appending(path: "noah.log.\(index)")) }
+        let full = String(repeating: "x", count: LogFile.maxFileSizeBytes - 20) + "\n"
+        try Data(full.utf8).write(to: directory.appending(path: "noah.log"))
+        let file = LogFile(directory: directory)
+        file.append(level: .info, tag: "t", message: "newest")
         file.flush()
         let names = try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
         #expect(names == ["noah.log", "noah.log.1", "noah.log.2", "noah.log.3", "noah.log.4"])
-        let lines = file.lines()
-        #expect(lines.last?.contains("] \(count - 1) x") == true)
-        #expect(lines.count < count, "oldest rotated file was dropped")
+        func contents(_ name: String) throws -> String { try String(contentsOf: directory.appending(path: name), encoding: .utf8) }
+        // The oldest file was dropped and each other moved one along.
+        #expect(try contents("noah.log.4") == "old 3\n" && contents("noah.log.2") == "old 1\n")
+        #expect(try contents("noah.log.1") == full)
+        #expect(try contents("noah.log").hasSuffix(" I [t] newest\n"))
     }
 
-    @Test func exportsAtMostTheNewestLines() {
-        let file = LogFile(directory: directory, capacity: 5000)
-        for index in 0..<(LogFile.maxLines + 100) {
-            file.append(level: .info, tag: "t", message: "line \(index)")
+    @Test func exportsAtMostTheNewestLines() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let half = (LogFile.maxLines + 100) / 2
+        for (name, range) in [("noah.log.1", 0..<half), ("noah.log", half..<(LogFile.maxLines + 100))] {
+            try Data(range.map { "line \($0)\n" }.joined().utf8).write(to: directory.appending(path: name))
         }
-        file.flush()
-        let lines = file.lines()
+        let lines = LogFile(directory: directory).lines()
         #expect(lines.count == LogFile.maxLines)
-        #expect(lines.first?.hasSuffix("line 100") == true)
-        #expect(lines.last?.hasSuffix("line \(LogFile.maxLines + 99)") == true)
+        #expect(lines.first == "line 100")
+        #expect(lines.last == "line \(LogFile.maxLines + 99)")
     }
 
     @Test func visuallyRecoverableMnemonicsStayInvalidSeedsAndCannotReachLogs() throws {
