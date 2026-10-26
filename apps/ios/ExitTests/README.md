@@ -96,3 +96,10 @@ to Documents. Pass means the single selected test passed.
 fake wallet data. Write a state name (listed in the test's header comment) to
 `Documents/exit-shot`, wait for `exit-shot-ready`, and take the screenshot. `stop` ends
 the session. Light and dark follow the simulator. A wide window shows the panes.
+
+The states include the v2 pictures' harder cases: `progress-deep` (nine transactions),
+`progress-shared3` (three exits sharing a path), `progress-claimed-other` (claimed to
+another wallet) and `warn-many` (the Exits row). After a progress state, `step
+progress-<state>` keeps the page on screen and moves it to that state, as a new read
+would, so the motion can be recorded (for example `progress-mempool`, then `step
+progress-confirm`).
