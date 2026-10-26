@@ -28,14 +28,13 @@ struct UnilateralExitView: View {
                 .fixedSize(horizontal: false, vertical: true)
             // The exits already running, or ended: one opens directly, several open the list.
             if exits.count == 1, let exit = exits.first {
-                ExitListRow(exit: exit, progress: model.progress(exit), text: ExitText(progress: model.progress(exit), exit: exit,
-                            tip: model.overview?.tip ?? 0, overview: model.overview, attempts: model.attempts, money: money, language: language),
-                            hairline: false) { settings.open(.exitProgress(exit.id)) }
+                let progress = model.progress(exit), tip = model.overview?.tip ?? 0
+                ExitListRow(exit: exit, progress: progress, text: ExitText(progress: progress, exit: exit, tip: tip, overview: model.overview,
+                                                                           attempts: model.attempts, money: money, language: language),
+                            coin: ExitGutterCoin(progress, tip: tip, delta: model.overview?.exitDelta ?? 144), hairline: false) { settings.open(.exitProgress(exit.id)) }
                     .padding(.top, 14)
             } else if !exits.isEmpty {
-                SettingsRow(icon: "list.bullet", title: L10n.text("Exits", locale: language),
-                            value: L10n.text("{n} in progress · {count} ready to claim", exits.filter { ExitRules.live($0.state) && !$0.claimable }.count.formatted(),
-                                             exits.filter(\.claimable).count.formatted(), locale: language),
+                SettingsRow(icon: "list.bullet", title: L10n.text("Exits", locale: language), sub: ExitListView.subtitle(exits, language: language),
                             hairline: false, id: "exit-entry") { settings.open(.exitList) }
                     .padding(.top, 14)
             } else {
