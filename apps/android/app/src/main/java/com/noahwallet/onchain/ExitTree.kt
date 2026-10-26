@@ -385,7 +385,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
 
     // Your branch, at t seconds into the move.
     fun grow(j: Int, t: Float) = if (grow.isNaN()) flag(!to.lifting) else ((t - grow - (j - 1) * growStep) / growStep).coerceIn(0f, 1f)
-    fun pop(j: Int, t: Float) = if (grow.isNaN()) 1f else HouseSpring.bouncy(t - grow - (j * growStep - .05f))
+    /** A node's pop as the growing branch reaches it; before the branch grows (Start) only its ghost shows. */
+    fun pop(j: Int, t: Float) = if (grow.isNaN()) flag(!to.lifting) else HouseSpring.bouncy(t - grow - (j * growStep - .05f))
     fun ghost(t: Float) = when { to.lifting -> .5f; from?.lifting == true && !grow.isNaN() -> .5f * (1 - ((t - grow) / growSeconds).coerceIn(0f, 1f)); else -> 0f }
     fun lift(t: Float) = when {
         to.lifting -> if (lift.isNaN()) 1f else HouseSpring.snappy(t - lift)

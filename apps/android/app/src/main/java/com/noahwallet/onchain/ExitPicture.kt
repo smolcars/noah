@@ -451,7 +451,7 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
     // The transactions.
     for (j in 1 until n) {
         val i = j - 1
-        val pop = if (m.grow.isNaN()) 1f else clamp(m.pop(j, t), 0f, 1.3f)
+        val pop = clamp(m.pop(j, t), 0f, 1.3f)
         if (pop <= 0f) continue
         val mU = m.mine(i, t)
         txNode(f.node(j), geo.node, if (f.cancel >= 1f) ExitScene.Mark.unsent else s.marks[i], f.send(i), mU, m.stamp(i, t), m.ripple(i, t),

@@ -202,5 +202,8 @@ class ExitTreeTest {
         assertTrue("root first", open.grow(1, .2f) > open.grow(3, .2f))
         assertEquals(0f, open.labels(1f), 0f); assertEquals(1f, open.labels(open.seconds), 0f)
         assertEquals("seen again, it's grown", 1f, TreeMotion(explainer, explainer).grow(1, 0f), 0f)
+        val start = ExitScene(4, ExitStage.Phase.lift, List(4) { m.unsent })
+        assertEquals("before it's sent, only the ghost shows", 0f, TreeMotion(start, start).pop(1, 0f), 0f)
+        assertEquals(.5f, TreeMotion(start, start).ghost(0f), 0f)
     }
 }
