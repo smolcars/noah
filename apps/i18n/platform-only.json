@@ -65,7 +65,6 @@
     "Opening the bundled BTC Map…": "parity-gap (layout): the BTC Map screens were built differently and have no shared design spec; iOS labels its loading and error states",
     "Opens coin details": "parity-gap: Android's coin rows have no accessibility hint (prototype: \"Opens coin details\")",
     "Optic ID": "platform: iOS names the device's biometric (Face ID, Touch ID or Optic ID)",
-    "Other people's coins in this round": "pending: emergency exit v2 (exit-v2-notes.md); Android's v2 is built in parallel with the same English, so drop this entry once it lands",
     "Override confirmation": "parity-gap (layout): iOS folds an override's audit text into a disclosure; Android lists it",
     "Paste payment request": "parity-gap (layout): iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera",
     "Payment sent": "parity-gap (layout): iOS titles a sent result without a receipt \"Payment sent\"; Android's says \"Sent {amount}\" with the reviewed amount",
@@ -282,7 +281,6 @@
     "{n} exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions.": "parity-gap: only Android's exits list warns about stale exits",
     "{n} seconds": "parity-gap: iOS formats the round interval with the system duration formatter (\"1 hour\", as the prototype); Android shows seconds",
     "{rate} sat/vB, raised when rates rise": "parity-gap: Android's exit Details list each transaction with its name, block and fee rate (prototype); iOS's don't",
-    "Other people’s coins in this round": "transitional (exit v2): new v2 copy, on Android first; iOS's exit v2 branch adds it. Remove once both platforms use it",
     "fee raised · {rate} sat/vB": "parity-gap: after a re-bump, Android's exit picture follows \"a block came without it\" with the new fee rate (exit-v2-notes.md); iOS keeps \"a block came without it\""
   }
 }

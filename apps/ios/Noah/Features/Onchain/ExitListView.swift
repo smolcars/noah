@@ -118,8 +118,8 @@ struct ExitListView: View {
     /// "6 in progress · 1 ready to claim", leaving out the parts that are zero; nil when both are.
     nonisolated static func subtitle(_ exits: [ExitModel], language: String) -> String? {
         let progress = exits.filter { ExitRules.live($0.state) && !$0.claimable }.count, ready = exits.filter(\.claimable).count
-        let parts = [progress > 0 ? L10n.text("{n} in progress", progress.formatted(), locale: language) : nil,
-                     ready > 0 ? L10n.text("{n} ready to claim", ready.formatted(), locale: language) : nil].compactMap { $0 }
+        let parts = [progress > 0 ? L10n.plural("{n} in progress", count: progress, locale: language) : nil,
+                     ready > 0 ? L10n.plural("{n} ready to claim", count: ready, locale: language) : nil].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }

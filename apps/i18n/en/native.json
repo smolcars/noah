@@ -328,7 +328,6 @@
   "gt_3234d0b9764f1a1f": "Switched",
   "gt_3257f5015ad3153c": "Scan with any bitcoin or Lightning wallet",
   "gt_325d3644954c9188": "Ark's published Lightning fees for this amount can reach {{nativeValue1}} sats, above your automatic limit of {{nativeValue2}} sats. Review it to pay manually.",
-  "gt_329eddee92986d1b": "Other people's coins in this round",
   "gt_32a9a43b06393d19": "Claim transaction",
   "gt_330cc4388c5218a4": "Use default server",
   "gt_331207ee9863d023": "Shared with the recipient",

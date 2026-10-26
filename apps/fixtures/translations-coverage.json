@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1491,
-  "sourceKeys": 1528,
+  "catalogEntries": 1490,
+  "sourceKeys": 1527,
   "coverage": {
     "ios": {
       "used": [
@@ -763,7 +763,7 @@
         "Opens coin details",
         "Optic ID",
         "Optional. We only write when your bitcoin needs you.",
-        "Other people's coins in this round",
+        "Other people’s coins in this round",
         "Outgoing",
         "Overridden attempt",
         "Override confirmation",

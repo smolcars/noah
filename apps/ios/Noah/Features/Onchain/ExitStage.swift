@@ -476,7 +476,7 @@ struct ExitStagePainter {
             if let first = firstUnsent, first != n, scene.picture != .lift {
                 // Counting every transaction still to send, folded ones too; beside a later unsent one (up to the "+N"
                 // node) when the "Next block" pill takes this one's room.
-                var more = ExitStageLabel(y: Y(first), lines: [.init(text: tr("{n} more to send", scene.realCount - scene.real(first - 1)))], priority: 1.5)
+                var more = ExitStageLabel(y: Y(first), lines: [.init(text: L10n.plural("{n} more to send", count: scene.realCount - scene.real(first - 1), locale: language))], priority: 1.5)
                 more.fallbacks = ((first + 1)..<n).map { var label = more; label.y = Y($0); return label }
                 items.append(more)
             }
@@ -658,7 +658,7 @@ struct ExitStagePainter {
             result.shapes.append(shape)
         }
         // The caption, under the lowest stubs.
-        if let lines = g.caption(tr("Other people's coins in this round"), ys, width: { ExitStageText.width($0, size: 10 * L) }) {
+        if let lines = g.caption(tr("Other people’s coins in this round"), ys, width: { ExitStageText.width($0, size: 10 * L) }) {
             let lineHeight = 12.5 * L, top = Y(1) + 9, room = (g.ground - g.roundSide - 5) - top
             let y0 = top + (room - Double(lines.count) * lineHeight) / 2 + lineHeight / 2, right = g.trunk - g.roundSide / 2 - 9
             let width = lines.map { ExitStageText.width($0, size: 10 * L) }.max() ?? 0

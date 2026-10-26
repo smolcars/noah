@@ -30649,42 +30649,6 @@
         }
       }
     },
-    "Other people's coins in this round": {
-      "comment": "GT gt_329eddee92986d1b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Other people's coins in this round"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monedas de otras personas en esta ronda"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このラウンドの他の人のコイン"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 라운드에 있는 다른 사람들의 코인"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Andras mynt i den här rundan"
-          }
-        }
-      }
-    },
     "Other people’s coins in this round": {
       "comment": "GT gt_6201f81787adfaf8; arguments: none",
       "extractionState": "manual",
