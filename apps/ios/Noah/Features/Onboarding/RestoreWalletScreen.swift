@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// The words being entered. Memory only: the flow clears it when the app
 /// leaves the foreground, when Restore leaves the screen, and before restoring.
@@ -227,11 +228,11 @@ struct RestoreWalletScreen: View {
         let layout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(spacing: NoahTokens.Space.s)) : AnyLayout(HStackLayout(spacing: NoahTokens.Space.m))
         return layout {
-            Button(action: paste) {
-                Label("Paste", systemImage: "doc.on.clipboard")
-            }
-            .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
-            .accessibilityIdentifier("restore-paste")
+            // The system paste control: tapping it is consent, so it reads without asking. A plain button's
+            // read returns nil unless pasting from other apps is allowed in Settings.
+            RestorePasteControl(onPaste: paste)
+                .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button, maxHeight: NoahTokens.Size.button)
+                .accessibilityIdentifier("restore-paste")
             Button("Restore", action: onRestore)
                 .buttonStyle(OnboardingPrimaryButtonStyle())
                 .disabled(!draft.canRestore)
@@ -239,10 +240,8 @@ struct RestoreWalletScreen: View {
         }
     }
 
-    /// Reads the clipboard only on this explicit tap; `RestorePasteboard`
-    /// (in the flow) clears an accepted phrase from it.
-    private func paste() {
-        guard UIPasteboard.general.hasStrings, let text = UIPasteboard.general.string else { return }
+    /// What the paste control read; `RestorePasteboard` (in the flow) clears an accepted phrase from the clipboard.
+    private func paste(_ text: String) {
         guard [12, 24].contains(RecoveryPhraseInput.normalizedWords(text).count) else {
             draft.pasteRejected = true
             haptics.play(.warning)
@@ -252,6 +251,66 @@ struct RestoreWalletScreen: View {
         draft.invalidPhrase = false
         draft.pasteRejected = false
         onPasted(text)
+    }
+}
+
+/// `UIPasteControl` as the secondary capsule (the system draws it, so it can't be glass). Passes on
+/// every pasted string, one per line.
+struct RestorePasteControl: UIViewRepresentable {
+    let onPaste: (String) -> Void
+
+    func makeCoordinator() -> Target { Target() }
+
+    func makeUIView(context: Context) -> UIPasteControl {
+        var configuration = UIPasteControl.Configuration()
+        configuration.displayMode = .iconAndLabel
+        configuration.cornerStyle = .capsule
+        configuration.baseBackgroundColor = UIColor(NoahTokens.Colors.soft)
+        configuration.baseForegroundColor = UIColor(NoahTokens.Colors.foreground)
+        let control = UIPasteControl(configuration: configuration)
+        control.target = context.coordinator
+        return control
+    }
+
+    func updateUIView(_ control: UIPasteControl, context: Context) {
+        context.coordinator.onPaste = onPaste
+    }
+
+    final class Target: UIResponder {
+        var onPaste: (String) -> Void = { _ in }
+
+        override init() {
+            super.init()
+            // Plain text, or RTF alone (a text field accepts that too).
+            let configuration = UIPasteConfiguration(forAccepting: String.self)
+            configuration.addAcceptableTypeIdentifiers([UTType.rtf.identifier])
+            pasteConfiguration = configuration
+        }
+
+        override func paste(itemProviders: [NSItemProvider]) {
+            Task {
+                var strings: [String] = []
+                for provider in itemProviders {
+                    if let text = await Self.text(provider) { strings.append(text) }
+                }
+                onPaste(strings.joined(separator: "\n"))
+            }
+        }
+
+        private static func text(_ provider: NSItemProvider) async -> String? {
+            if provider.canLoadObject(ofClass: String.self) {
+                return await withCheckedContinuation { continuation in
+                    _ = provider.loadObject(ofClass: String.self) { text, _ in continuation.resume(returning: text) }
+                }
+            }
+            guard provider.hasItemConformingToTypeIdentifier(UTType.rtf.identifier) else { return nil }
+            return await withCheckedContinuation { continuation in
+                _ = provider.loadDataRepresentation(for: .rtf) { data, _ in
+                    let text = data.flatMap { try? NSAttributedString(data: $0, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) }
+                    continuation.resume(returning: text?.string)
+                }
+            }
+        }
     }
 }
 

@@ -4,6 +4,7 @@ import UIKit
 import Foundation
 import OpenAPIRuntime
 import Testing
+import UniformTypeIdentifiers
 
 @testable import Noah
 
@@ -50,6 +51,23 @@ struct RecoveryPhraseInputTests {
         #expect(input.wordCount == 12)
         #expect(input.isComplete)
         #expect(RecoveryPhraseInput.isValid(input.phrase))
+    }
+
+    /// The shapes a phrase copied from Notes or another app arrives in fill every word, 12 or 24.
+    @Test func everyCopiedShapeFillsEveryWord() {
+        for count in [12, 24] {
+            let words = (0..<count).map { RecoveryPhraseInput.wordList[($0 * 89 + 7) % RecoveryPhraseInput.wordList.count] }
+            let line = words.joined(separator: " ")
+            let shapes = [line, line + "\n", line + "\r\n", " " + line.capitalized + " \n", words.joined(separator: "\n"),
+                          words.joined(separator: "\r\n"), words.joined(separator: "\u{00A0}"), words.joined(separator: "\u{202F}"),
+                          words.joined(separator: "\u{2009}"), words.joined(separator: "\u{3000}"), words.joined(separator: "\u{2028}")]
+            for shape in shapes {
+                var input = RecoveryPhraseInput()
+                input.update(shape, at: 3)
+                let filled = input.words == words && input.isComplete
+                #expect(filled)
+            }
+        }
     }
 
     @Test func countsIndividualWordsAndRejectsOversizedPastes() {
@@ -366,6 +384,24 @@ struct RestoreFieldPrivacyTests {
         field.insertText(phrase)
         #expect(field.text == phrase)
         #expect(received == phrase) // RecoveryPhraseInput and RestorePasteboard take it from here.
+    }
+
+    /// The paste control passes on every item's text, plain or RTF alone, one per line.
+    @Test func pasteControlReadsPlainRTFAndSplitCopies() async throws {
+        let words = Array(repeating: "abandon", count: 23) + ["art"]
+        let first = words.prefix(12).joined(separator: " "), second = words.suffix(12).joined(separator: " ") + "\n"
+        let rtf = try NSAttributedString(string: second).data(from: NSRange(location: 0, length: second.utf16.count),
+                                                              documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
+        let rtfOnly = NSItemProvider()
+        rtfOnly.registerDataRepresentation(for: .rtf) { completion in completion(rtf, nil); return nil }
+        let target = RestorePasteControl.Target()
+        #expect(target.pasteConfiguration?.acceptableTypeIdentifiers.contains(UTType.rtf.identifier) == true)
+        let pasted: String = await withCheckedContinuation { continuation in
+            target.onPaste = { continuation.resume(returning: $0) }
+            target.paste(itemProviders: [NSItemProvider(object: first as NSString), rtfOnly])
+        }
+        let filled = RecoveryPhraseInput.normalizedWords(pasted) == words
+        #expect(filled)
     }
 
     @Test func acceptedPasteClearsOnlyMatchingClipboardContent() {
