@@ -23,6 +23,7 @@ struct HomeParityTests {
     }
     struct StatusFixtures: Decodable {
         let facts: [String]
+        let symbols: [String: String]
         let cases: [Fixtures.File<StatusInput, StatusExpected>.Case]
     }
 
@@ -55,6 +56,15 @@ struct HomeParityTests {
         #expect(cases.count == 2)
         for fixture in cases {
             #expect(HomeRound(roundID: 1, status: fixture.input.status, isFinal: fixture.input.isFinal, isSuccess: false).active == fixture.expected)
+        }
+    }
+
+    // Home v2 dropped the Bitcoin facts line; hidden fiat still matches RN.
+    @Test func hiddenFiatMatchesSharedRNFixtures() throws {
+        let fixtures = try Fixtures.decode("home-status", as: StatusFixtures.self)
+        #expect(fixtures.symbols.count == FiatCurrency.supported.count)
+        for (currency, symbol) in fixtures.symbols {
+            #expect(HomeModel.hiddenFiat(currency: currency) == "\(symbol) ••••")
         }
     }
 

@@ -5,6 +5,7 @@ import Testing
 
 @MainActor struct PaymentParityTests {
     struct Table: Decodable {
+        let copy: [String: String]
         struct Receipt: Decodable {
             let gross: UInt64, arkFee: UInt64, chainFee: UInt64
             let actualChainFee: UInt64?
@@ -12,8 +13,22 @@ import Testing
         }
         let receipts: [Receipt]
     }
-    @Test func boardReceiptTotalsMatchTheSharedTable() throws {
+    @Test func sharedCopyAndBoardReceiptTotals() throws {
         let table = try Fixtures.decode("payment-status-copy", as: Table.self)
+        let actual = ["notFound": ChainTransactionStatus.notFound.message,
+            "inMempool": ChainTransactionStatus.inMempool.message,
+            "confirmed": ChainTransactionStatus.confirmed(123).message,
+            "lookupError": ChainTransactionStatus.errorText,
+            "insufficientFunds": OnchainFailure.insufficientFunds.errorDescription!,
+            "belowMinimum": OnchainFailure.belowMinimum.errorDescription!,
+            "reservedInputs": OnchainFailure.reservedInputs.errorDescription!,
+            "tooManyInputs": OnchainFailure.tooManyInputs.errorDescription!,
+            "notSynced": OnchainFailure.notSynced.errorDescription!,
+            "boardNotAttempted": OnchainFailure.boardNotAttempted.errorDescription!,
+            "broadcastFailed": OnchainReceipt.broadcastFailedMessage,
+            "broadcastPending": SendReceipt.broadcastPendingMessage,
+            "submitted": SendReceipt.submittedMessage, "uncertain": SendReceipt.uncertainMessage]
+        #expect(actual == table.copy)
         for row in table.receipts {
             let quote = OnchainQuote(action: .board, walletID: "wallet", ids: [], amount: row.gross, fee: row.arkFee, chainFee: row.chainFee, confirmed: 100_000)
             let receipt = OnchainReceipt(message: "Submitted", onchainFee: row.actualChainFee)
