@@ -93,6 +93,19 @@ internal object ExitFixtures {
             (0..6).associate { "fee$it" to 1_215L })
     }
 
+    /** A 60-transaction path (a deep round and arkoor hops): 25 mined, the 26th waiting for the next block. */
+    val long: ExitModel = run {
+        val names = List(60) { txid("long$it") }
+        val statuses = names.mapIndexed { i, id -> when {
+            i < 25 -> ExitDetails.Transaction(id, ExitDetails.Status("confirmed", "lfee$i", ExitDetails.Block(tip + i), "wallet"))
+            i == 25 -> ExitDetails.Transaction(id, ExitDetails.Status("awaiting-confirmation", "lfee$i", null, "wallet"))
+            else -> ExitDetails.Transaction(id, ExitDetails.Status("verify-inputs", null, null, null))
+        } }
+        ExitModel(vtxos[0].id, 31_000, "Processing", processing(tip + 25, *statuses.toTypedArray()), listOf("processing"), emptyList(),
+            names.mapIndexed { i, id -> ExitPackage(id, 1_000, if (i < 40) 5 else 2, 1, if (i <= 25) "lfee$i" else null, 608, if (i <= 25) "wallet" else null) },
+            (0..25).associate { "lfee$it" to 1_215L })
+    }
+
     /** The list: exits in every group, three of them from one round sharing its root. */
     val list: List<ExitModel> = run {
         fun from(id: String, amount: Long, base: ExitModel, path: List<String>) = base.copy(id = vtxos.first { it.id.startsWith(id) }.id, amount = amount,
