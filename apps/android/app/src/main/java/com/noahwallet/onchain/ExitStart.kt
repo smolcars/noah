@@ -52,7 +52,8 @@ internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<St
         if (!started && !model.busy && live.size == ids.size) nav.replace(if (ids.size == 1) ExitPage(ids.single()) else ExitsPage)
     }
     ExitStartContent(model.quote, model.estimateFallback, model.overview?.confirmed, model.busy, suspended, delta,
-        money, nav.back, reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
+        money, nav.back, depth = model.overview?.vtxos.orEmpty().filter { it.id in ids }.maxOfOrNull { it.exitDepth.toInt() },
+        reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
         withoutEstimate = model::continueWithoutEstimate,
         start = {
             if (!model.busy && model.quote != null) {
@@ -71,7 +72,7 @@ internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<St
 @Composable
 internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, confirmed: Long?, busy: Boolean, suspended: Boolean, delta: Long?,
                               money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
-                              status: @Composable () -> Unit = {}) {
+                              depth: Int? = null, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val review = quote ?: fallback
     var current by remember(quote) { mutableStateOf(quote?.current() ?: false) }
@@ -92,9 +93,10 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
                 Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
-        val path = known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4
+        // One branch, the deepest selected VTXO's (a batch's total isn't one path); a round's usual four until it's known.
+        val path = depth ?: known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4
         if (wide) ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), exitPicture().padding(top = 14.dp))
-        else if (review != null) ExitPath(if (review.ids.size == 1) path else null, known?.transactions?.toInt(), delta)
+        else if (review != null) ExitPath(path, review.ids.size > 1, known?.transactions?.toInt(), delta)
     }) {
         Column(Modifier.padding(top = 18.dp)) {
             ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number)
@@ -119,14 +121,14 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
 
 /**
  * Review's one-line path on phones (exit-v2-notes.md, Screens): the round's block and your transactions, your coin, the
- * timelock's dial, then the claim to its destination, with a caption under each third. [path] is one VTXO's transactions
- * as drawn (a round's usual four until bark's estimate says); null for several. The captions give only what's known: the
- * estimate's [count] and the server's [delta].
+ * timelock's dial, then the claim to its destination, with a caption under each third. [path] is the deepest selected
+ * VTXO's transactions, drawn 8 at most; [batch] several VTXOs, whose shared ones are sent once. The captions give only
+ * what's known: the estimate's [count] and the server's [delta].
  */
 @Composable
-private fun ExitPath(path: Int?, count: Int?, delta: Long?) {
+private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?) {
     val palette = LocalPalette.current
-    val n = path ?: 5
+    val n = path.coerceIn(1, 8)
     androidx.compose.foundation.Canvas(Modifier.padding(top = 18.dp).fillMaxWidth().height(58.dp).clearAndSetSemantics { }) {
         scale(density, density, Offset.Zero) {
             val w = size.width / density; val y = size.height / density / 2 - 4; val x0 = 10f; val x1 = w - 14; val cx = w / 2
@@ -155,7 +157,7 @@ private fun ExitPath(path: Int?, count: Int?, delta: Long?) {
     }
     // Three columns, one per third of the path; at large text they stack, each caption whole.
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
-    val captions = listOf(count?.let { trPlural("{n} transactions", it) } to if (path == null) tr("shared ones once") else tr("one block each"),
+    val captions = listOf(count?.let { trPlural("{n} transactions", it) } to if (batch) tr("shared ones once") else tr("one block each"),
         delta?.let { trPlural("{n} blocks", it) } to tr("about a day"), tr("Claim") to tr("to another wallet"))
     @Composable fun caption(title: String?, line: String, align: androidx.compose.ui.text.style.TextAlign, modifier: Modifier) = Column(modifier) {
         title?.let { Text(it, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground, textAlign = align) }
