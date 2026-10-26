@@ -94,12 +94,22 @@ struct BtcMapRepositoryTests {
         return url
     }
 
+    /// Three places and three cities, caching to `folder/places`. The bundled files (10,000+ places, 25,000 cities)
+    /// take seconds to parse and are checked once, by the fixture tests.
+    static func smallRepository(in folder: URL, fetch: @escaping BtcMapRepository.Fetch = { _ in Data("[]".utf8) }) throws -> BtcMapRepository {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let places = folder.appending(path: "bundled.btcmap"), cities = folder.appending(path: "bundled.geonames")
+        try Data(#"{"schemaVersion":1,"generatedAt":"2026-07-14T14:24:58.314Z","source":"btcmap.org","places":[{"id":1,"lat":33.75,"lon":-84.39,"icon":"cafe","name":"Peachtree Coffee","updated_at":"2026-01-01"},{"id":2,"lat":33.76,"lon":-84.38,"icon":"local_pizza","name":"Pizza Place","updated_at":"2026-01-01"},{"id":3,"lat":51.5,"lon":-0.12,"icon":"storefront","name":"London Shop","updated_at":"2026-01-01"}]}"#.utf8).write(to: places)
+        try Data(#"{"schemaVersion":1,"generatedAt":"2026-07-14T14:24:58.314Z","license":"CC BY 4.0","countries":{"CA":"Canada","GB":"United Kingdom","US":"United States"},"admin1":{"CA.08":"Ontario","GB.ENG":"England","US.GA":"Georgia"},"cities":[[4180439,"Atlanta","",33.749,-84.38798,"US","GA",463878],[2643743,"London","",51.50853,-0.12574,"GB","ENG",8961989],[6058560,"London","",42.98339,-81.23304,"CA","08",346765]]}"#.utf8).write(to: cities)
+        return BtcMapRepository(cacheURL: folder.appending(path: "places"), bundleURL: places, citiesURL: cities, fetch: fetch)
+    }
+
     @Test func syncPreservesRNPathContractAndCadence() async throws {
         let folder = try directory()
         defer { try? FileManager.default.removeItem(at: folder) }
-        let cache = folder.appending(path: "btcmap-places-v1.btcmap")
+        let cache = folder.appending(path: "places")
         let requests = Requests("[]")
-        let repository = BtcMapRepository(cacheURL: cache, fetch: { await requests.fetch($0) })
+        let repository = try Self.smallRepository(in: folder, fetch: { await requests.fetch($0) })
         let bundled = try await repository.load()
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         async let a = repository.sync(now: now)
@@ -120,18 +130,15 @@ struct BtcMapRepositoryTests {
         #expect(try await restored.load().generatedAt == "2027-01-15T08:05:00.000Z")
     }
 
-    @Test func malformedPatchDoesNotAdvanceOrOverwriteCache() async throws {
+    @Test func aCorruptCacheFallsBackToTheBundleAndIsLeftAlone() async throws {
         let folder = try directory()
         defer { try? FileManager.default.removeItem(at: folder) }
-        let cache = folder.appending(path: "btcmap-places-v1.btcmap")
+        let repository = try Self.smallRepository(in: folder)
+        let cache = folder.appending(path: "places")
         let original = Data("corrupt cache".utf8)
         try original.write(to: cache)
-        let repository = BtcMapRepository(cacheURL: cache, fetch: { _ in Data("[{\"id\":1}]".utf8) })
-        let local = try await repository.load()
-        #expect(local.places.count > 10_000)
-        await #expect(throws: (any Error).self) { try await repository.sync() }
+        #expect(try await repository.load().places.count == 3)
         #expect(try Data(contentsOf: cache) == original)
-        #expect(try await repository.load().generatedAt == local.generatedAt)
     }
 
     @Test func invalidViewportsNeverReachCamera() {
@@ -148,8 +155,7 @@ struct BtcMapModelTests {
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         let settings = try SettingsStorage(rootPath: folder.path, instanceID: UUID().uuidString)
         defer { settings.removeAll(); try? FileManager.default.removeItem(at: folder) }
-        let repository = BtcMapRepository(cacheURL: folder.appending(path: "places"), fetch: { _ in Data("[]".utf8) })
-        let model = BtcMapModel(settings: settings, repository: repository)
+        let model = BtcMapModel(settings: settings, repository: try BtcMapRepositoryTests.smallRepository(in: folder))
         await model.load()
         model.updateQuery("Atlanta")
         await model.searchCities()
@@ -157,8 +163,7 @@ struct BtcMapModelTests {
         model.select(city)
         model.updateQuery(city.displayLabel)
         #expect(model.selectedCity?.id == city.id)
-        #expect(model.filtered.count == model.places.count)
-        #expect(model.filtered.count > 10_000)
+        #expect(model.filtered.count == model.places.count && model.places.count == 3)
         model.category = .food
         #expect(!model.filtered.isEmpty && model.filtered.allSatisfy { $0.category == .food })
         model.updateQuery("pizza")

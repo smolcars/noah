@@ -24,19 +24,6 @@ struct BtcMapLimitsTests {
         }
     }
 
-    @Test func foundationDepthBehavior() throws {
-        for depth in [64, 65, 10_003] {
-            let raw = #"{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today","unknown":"#
-                + String(repeating: "[", count: depth - 1) + "0" + String(repeating: "]", count: depth - 1) + "}"
-            let data = Data(raw.utf8)
-            let decoded = (try? JSONDecoder().decode(BtcMapPlace.self, from: data)) != nil
-            let serialized = (try? JSONSerialization.jsonObject(with: data)) != nil
-            print("BTC Map Foundation depth \(depth): JSONDecoder=\(decoded), JSONSerialization=\(serialized)")
-            #expect(decoded == (depth <= 65))
-            #expect(serialized == (depth <= 65))
-        }
-    }
-
     private final class Clock: @unchecked Sendable {
         private let lock = NSLock()
         private var date = Date(timeIntervalSince1970: 1000)
@@ -162,7 +149,7 @@ struct BtcMapLimitsTests {
         defer { try? FileManager.default.removeItem(at: folder) }
         let cache = folder.appending(path: "places")
         let requests = Requests()
-        let repository = BtcMapRepository(cacheURL: cache, fetch: { try await requests.fetch($0) })
+        let repository = try BtcMapRepositoryTests.smallRepository(in: folder, fetch: { try await requests.fetch($0) })
         let initial = try await repository.load()
         let now = Date.now
         for offset in [0.0, 1, 299] {

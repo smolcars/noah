@@ -41,8 +41,7 @@ struct BtcMapReviewTests {
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         let settings = try SettingsStorage(rootPath: folder.path, instanceID: UUID().uuidString)
         defer { settings.removeAll(); try? FileManager.default.removeItem(at: folder) }
-        let repository = BtcMapRepository(cacheURL: folder.appending(path: "places"), fetch: { _ in Data("[]".utf8) })
-        let model = BtcMapModel(settings: settings, repository: repository)
+        let model = BtcMapModel(settings: settings, repository: try BtcMapRepositoryTests.smallRepository(in: folder))
         await model.load()
         model.updateQuery("london")
         model.move(to: .init(center: [-81.23, 42.98], zoom: 11))
