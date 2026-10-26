@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use chrono::Utc;
 use expo_push_notification_client::Priority;
 use server_rpc::protos::mailbox_server::{
-    IncomingLightningPaymentMessage, MailboxMessage, mailbox_message::Message,
+    ArkoorMessage, IncomingLightningPaymentMessage, MailboxMessage, mailbox_message::Message,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -94,6 +94,95 @@ async fn mailbox_claim_push_reaches_expo_and_unified_push() {
             42
         );
     }
+}
+
+#[tokio::test]
+async fn mailbox_arkoor_payment_sends_one_push_for_all_its_vtxos() {
+    use ark::{ProtocolEncoding, test_util::VTXO_VECTORS};
+
+    let (_, state, _guard) = setup_test_app().await;
+    let (sender, mut deliveries) = tokio::sync::mpsc::unbounded_channel();
+    let state = Arc::new(AppStruct {
+        push_deliveries: Some(sender),
+        ..(*state).clone()
+    });
+    let user = TestUser::new();
+    create_test_user(&state, &user, None).await;
+    let pubkey = user.pubkey().to_string();
+    let token = "ExpoPushToken[test-token]";
+    PushTokenRepository::new(&state.db_pool)
+        .upsert(&pubkey, token)
+        .await
+        .unwrap();
+    let repo = MailboxAuthorizationRepository::new(&state.db_pool);
+    let session = MailboxSessionContext {
+        worker_id: "transport-test".to_string(),
+        stream_idle_reconnect: Duration::from_secs(10),
+        cancellation_token: CancellationToken::new(),
+    };
+    repo.upsert(
+        &pubkey,
+        "deadbeef",
+        "cafebabe",
+        Utc::now().timestamp() + 3600,
+    )
+    .await
+    .unwrap();
+    let mailbox = repo
+        .claim_runnable(
+            Utc::now(),
+            &session.worker_id,
+            Utc::now() + chrono::Duration::minutes(1),
+            1,
+        )
+        .await
+        .unwrap()
+        .remove(0);
+
+    // One payment of three pubkey VTXOs (8,000 + 10,000 + 10,000 sats) plus an
+    // HTLC VTXO that doesn't count towards it.
+    let message = MailboxMessage {
+        checkpoint: 43,
+        message: Some(Message::Arkoor(ArkoorMessage {
+            vtxos: [
+                &VTXO_VECTORS.arkoor2_vtxo,
+                &VTXO_VECTORS.round1_vtxo,
+                &VTXO_VECTORS.round2_vtxo,
+                &VTXO_VECTORS.arkoor3_vtxo,
+            ]
+            .iter()
+            .map(|vtxo| vtxo.serialize())
+            .collect(),
+        })),
+    };
+    assert!(
+        process_mailbox_message(&state, &mailbox, &session, &message, true)
+            .await
+            .unwrap()
+    );
+
+    let (target, notification) = deliveries.try_recv().expect("expected one receive push");
+    assert_eq!(target, token);
+    assert_eq!(notification.title.as_deref(), Some("Payment received"));
+    assert_eq!(
+        notification.body.as_deref(),
+        Some("You received 28000 sats via Ark.")
+    );
+    assert_eq!(notification.data, "{}");
+    assert_eq!(notification.priority, Priority::High);
+    assert!(!notification.content_available);
+    assert!(
+        deliveries.try_recv().is_err(),
+        "one payment must send one push"
+    );
+    assert_eq!(
+        repo.find_by_pubkey(&pubkey)
+            .await
+            .unwrap()
+            .unwrap()
+            .last_checkpoint,
+        43
+    );
 }
 
 #[tokio::test]

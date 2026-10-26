@@ -10,6 +10,7 @@ use std::{
 use anyhow::Result;
 use ark::{ProtocolEncoding, Vtxo, vtxo::Full, vtxo::policy::VtxoPolicyKind};
 use async_trait::async_trait;
+use bitcoin::Amount;
 use chrono::Utc;
 use expo_push_notification_client::Priority;
 use futures_util::StreamExt;
@@ -768,27 +769,19 @@ pub(crate) async fn process_mailbox_message(
                 "mailbox arkoor message received"
             );
 
+            // captaind stores each post (all VTXOs of one payment) under one
+            // checkpoint, so one arkoor message is one payment and gets one push.
+            let amount = incoming_ark_amount(&arkoor.vtxos)?;
             let usd_rate = load_notification_usd_rate(app_state).await;
-            for raw_vtxo in &arkoor.vtxos {
-                let Some(notification) = build_receive_notification(raw_vtxo, usd_rate.as_ref())?
-                else {
-                    continue;
-                };
-                let notification_kind = if notification.content_available
-                    && notification.title.is_none()
-                    && notification.body.is_none()
-                {
-                    "lightning_claim_request"
-                } else {
-                    "visible_receive"
-                };
-
+            if let Some(notification) = build_receive_notification(amount, usd_rate.as_ref()) {
                 tracing::info!(
                     service = "mailbox_worker",
                     pubkey = %mailbox.pubkey,
                     checkpoint = message.checkpoint,
-                    notification_kind,
-                    silent = notification.title.is_none() && notification.body.is_none(),
+                    vtxo_count = arkoor.vtxos.len(),
+                    amount_sat = amount.to_sat(),
+                    notification_kind = "visible_receive",
+                    silent = false,
                     content_available = notification.content_available,
                     "sending mailbox push notification"
                 );
@@ -870,31 +863,45 @@ fn build_lightning_claim_notification(
     })
 }
 
-fn build_receive_notification(
-    raw_vtxo: &[u8],
-    usd_rate: Option<&FiatRate>,
-) -> Result<Option<PushNotificationData>, ApiError> {
-    let mut cursor = std::io::Cursor::new(raw_vtxo);
-    let vtxo: Vtxo<Full> = Vtxo::decode(&mut cursor)
-        .map_err(|e| ApiError::Anyhow(anyhow::anyhow!("failed to decode mailbox vtxo: {}", e)))?;
+/// Sums the payment (`Pubkey`) VTXOs of one arkoor message. Lightning HTLC
+/// VTXOs are skipped: incoming Lightning payments have their own mailbox event.
+fn incoming_ark_amount(raw_vtxos: &[Vec<u8>]) -> Result<Amount, ApiError> {
+    raw_vtxos.iter().try_fold(Amount::ZERO, |total, raw_vtxo| {
+        let mut cursor = std::io::Cursor::new(raw_vtxo);
+        let vtxo: Vtxo<Full> = Vtxo::decode(&mut cursor).map_err(|e| {
+            ApiError::Anyhow(anyhow::anyhow!("failed to decode mailbox vtxo: {}", e))
+        })?;
 
-    let amount_sats = vtxo.amount().to_sat();
+        match vtxo.policy_type() {
+            VtxoPolicyKind::Pubkey => total
+                .checked_add(vtxo.amount())
+                .ok_or_else(|| ApiError::Anyhow(anyhow::anyhow!("mailbox vtxo amounts overflow"))),
+            _ => Ok(total),
+        }
+    })
+}
+
+fn build_receive_notification(
+    amount: Amount,
+    usd_rate: Option<&FiatRate>,
+) -> Option<PushNotificationData> {
+    if amount == Amount::ZERO {
+        return None;
+    }
+
+    let amount_sats = amount.to_sat();
     let amount = match notification_usd_amount(amount_sats, usd_rate) {
         Some(usd) => format!("{amount_sats} sats (≈ US${usd})"),
         None => format!("{amount_sats} sats"),
     };
 
-    match vtxo.policy_type() {
-        VtxoPolicyKind::Pubkey => Ok(Some(PushNotificationData {
-            title: Some("Payment received".to_string()),
-            body: Some(format!("You received {amount} via Ark.")),
-            data: "{}".to_string(),
-            priority: Priority::High,
-            content_available: false,
-        })),
-        VtxoPolicyKind::ServerHtlcRecv | VtxoPolicyKind::ServerHtlcSend => Ok(None),
-        _ => Ok(None),
-    }
+    Some(PushNotificationData {
+        title: Some("Payment received".to_string()),
+        body: Some(format!("You received {amount} via Ark.")),
+        data: "{}".to_string(),
+        priority: Priority::High,
+        content_available: false,
+    })
 }
 
 #[cfg(test)]
@@ -1008,12 +1015,18 @@ mod tests {
         assert_eq!(config.claim_renew_interval, Duration::from_secs(60));
     }
 
+    fn receive_notification(
+        vtxos: &[&Vtxo<Full>],
+        usd_rate: Option<&FiatRate>,
+    ) -> Option<PushNotificationData> {
+        let raw: Vec<Vec<u8>> = vtxos.iter().map(|vtxo| vtxo.serialize()).collect();
+        let amount = incoming_ark_amount(&raw).expect("test vtxos should decode");
+        build_receive_notification(amount, usd_rate)
+    }
+
     #[test]
     fn build_receive_notification_for_pubkey_vtxo() {
-        let raw = VTXO_VECTORS.arkoor2_vtxo.serialize();
-
-        let notification = build_receive_notification(&raw, None)
-            .expect("pubkey vtxo should decode")
+        let notification = receive_notification(&[&VTXO_VECTORS.arkoor2_vtxo], None)
             .expect("pubkey vtxo should notify");
 
         assert_eq!(notification.title.as_deref(), Some("Payment received"));
@@ -1021,19 +1034,78 @@ mod tests {
             notification.body.as_deref(),
             Some("You received 8000 sats via Ark.")
         );
+        assert_eq!(notification.data, "{}");
+        assert_eq!(notification.priority, Priority::High);
+        assert!(!notification.content_available);
     }
 
     #[test]
     fn build_receive_notification_includes_usd_when_rate_is_fresh() {
-        let raw = VTXO_VECTORS.arkoor2_vtxo.serialize();
-        let notification = build_receive_notification(&raw, Some(&usd_rate(100_000.0)))
-            .expect("pubkey vtxo should decode")
-            .expect("pubkey vtxo should notify");
+        let notification =
+            receive_notification(&[&VTXO_VECTORS.arkoor2_vtxo], Some(&usd_rate(100_000.0)))
+                .expect("pubkey vtxo should notify");
 
         assert_eq!(
             notification.body.as_deref(),
             Some("You received 8000 sats (≈ US$8.00) via Ark.")
         );
+    }
+
+    #[test]
+    fn build_receive_notification_sums_a_multi_vtxo_payment() {
+        let vtxos = [
+            &VTXO_VECTORS.arkoor2_vtxo,
+            &VTXO_VECTORS.round1_vtxo,
+            &VTXO_VECTORS.arkoor3_vtxo,
+        ];
+
+        let notification = receive_notification(&vtxos, None).expect("pubkey vtxos should notify");
+        assert_eq!(notification.title.as_deref(), Some("Payment received"));
+        assert_eq!(
+            notification.body.as_deref(),
+            Some("You received 28000 sats via Ark.")
+        );
+
+        let notification = receive_notification(&vtxos, Some(&usd_rate(100_000.0)))
+            .expect("pubkey vtxos should notify");
+        assert_eq!(
+            notification.body.as_deref(),
+            Some("You received 28000 sats (≈ US$28.00) via Ark.")
+        );
+    }
+
+    #[test]
+    fn build_receive_notification_counts_only_pubkey_vtxos() {
+        let notification = receive_notification(
+            &[
+                &VTXO_VECTORS.round2_vtxo,
+                &VTXO_VECTORS.arkoor2_vtxo,
+                &VTXO_VECTORS.arkoor_htlc_out_vtxo,
+            ],
+            None,
+        )
+        .expect("the pubkey vtxo should notify");
+
+        assert_eq!(
+            notification.body.as_deref(),
+            Some("You received 8000 sats via Ark.")
+        );
+    }
+
+    #[test]
+    fn build_receive_notification_skips_htlc_only_and_empty_messages() {
+        let htlcs = [
+            &VTXO_VECTORS.round2_vtxo,
+            &VTXO_VECTORS.arkoor_htlc_out_vtxo,
+        ];
+        assert!(receive_notification(&htlcs, None).is_none());
+        assert!(receive_notification(&[], None).is_none());
+    }
+
+    #[test]
+    fn incoming_ark_amount_fails_when_any_vtxo_fails_to_decode() {
+        let raw = vec![VTXO_VECTORS.arkoor2_vtxo.serialize(), vec![0xff; 4]];
+        assert!(incoming_ark_amount(&raw).is_err());
     }
 
     #[test]
@@ -1084,10 +1156,7 @@ mod tests {
 
     #[test]
     fn build_receive_notification_skips_lightning_receive_vtxo() {
-        let raw = VTXO_VECTORS.round2_vtxo.serialize();
-
-        let notification =
-            build_receive_notification(&raw, None).expect("lightning receive vtxo should decode");
+        let notification = receive_notification(&[&VTXO_VECTORS.round2_vtxo], None);
 
         assert!(
             notification.is_none(),
@@ -1097,10 +1166,7 @@ mod tests {
 
     #[test]
     fn build_receive_notification_skips_lightning_send_vtxo() {
-        let raw = VTXO_VECTORS.arkoor_htlc_out_vtxo.serialize();
-
-        let notification =
-            build_receive_notification(&raw, None).expect("lightning send vtxo should decode");
+        let notification = receive_notification(&[&VTXO_VECTORS.arkoor_htlc_out_vtxo], None);
 
         assert!(notification.is_none(), "lightning send should not notify");
     }
