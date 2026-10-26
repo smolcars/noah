@@ -30,6 +30,7 @@ class WalletRestorer(
         catch (_: BoundedDownload.TooLarge) { throw Failure(Reason.downloadMismatch) }
     },
     private val beginOnboarding: () -> Unit = {},
+    private val rounds: Int = BackupCrypto.pbkdf2Rounds,
 ) {
     enum class Reason { wrongNetwork, identityMismatch, noUsableBackup, unsupportedFormat, downloadMismatch,
         secureStorageUnavailable, rollbackFailed, seedStateUnknown }
@@ -96,7 +97,7 @@ class WalletRestorer(
             val url = V0BackupDownloadUrlClient(client).getDownloadUrl(GetDownloadUrlPayload()).value().downloadUrl
             val file = File(transaction.work, "legacy.txt")
             download(url, file, maxEncryptedBytes / 3 * 4 + 1024)
-            BackupArchive.openLegacy(file.readBytes(), mnemonic, variant, transaction.staged)
+            BackupArchive.openLegacy(file.readBytes(), mnemonic, variant, transaction.staged, rounds)
             return Outcome(null, null)
         }
         var firstError: Exception? = null
@@ -121,7 +122,7 @@ class WalletRestorer(
             throw Failure(Reason.downloadMismatch)
         }
         progress(Step.validating)
-        val opened = BackupArchive.open(file, mnemonic, File(transaction.work, "unpacked"))
+        val opened = BackupArchive.open(file, mnemonic, File(transaction.work, "unpacked"), rounds)
         if (opened.manifest.network != if (variant == "mainnet") "bitcoin" else variant) throw Failure(Reason.wrongNetwork)
         withContext(NonCancellable) { validate(opened.snapshot, opened.manifest) }
         check(transaction.staged.mkdir())

@@ -60,10 +60,10 @@ class BackupArchiveTest {
     }
     @Test fun roundTripAndNoOverwrite() = temp { root ->
         val snapshot = File(root, "snapshot").apply { writeBytes(ByteArray(4096) { (it % 251).toByte() }) }
-        val encrypted = BackupArchive.seal(snapshot, manifest, phrase, File(root, "sealed"), root, ::publish)
+        val encrypted = BackupArchive.seal(snapshot, manifest, phrase, File(root, "sealed"), root, publish = ::publish)
         val opened = BackupArchive.open(encrypted.file, phrase, File(root, "open"))
         assertEquals(manifest, opened.manifest); assertArrayEquals(snapshot.readBytes(), opened.snapshot.readBytes())
-        assertTrue(runCatching { BackupArchive.seal(snapshot, manifest, phrase, encrypted.file, root, ::publish) }.isFailure)
+        assertTrue(runCatching { BackupArchive.seal(snapshot, manifest, phrase, encrypted.file, root, publish = ::publish) }.isFailure)
     }
     @Test fun strictManifest() {
         val valid = BackupArchive.encode(manifest).toString(Charsets.UTF_8)

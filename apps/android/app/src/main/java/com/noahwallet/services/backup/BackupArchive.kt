@@ -63,6 +63,7 @@ object BackupArchive {
     private fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
 
     fun seal(snapshot: File, manifest: Manifest, mnemonic: String, destination: File, workDirectory: File,
+        rounds: Int = BackupCrypto.pbkdf2Rounds,
         publish: (File, File) -> Unit = { complete, target -> AtomicBackupMove.publish(complete, target) },
     ): EncryptedFile {
         if (!snapshot.isFile) throw Failure(Reason.snapshotMissing)
@@ -73,7 +74,7 @@ object BackupArchive {
                 output.putNextEntry(ZipEntry("manifest.json")); output.write(encode(manifest)); output.closeEntry()
                 output.putNextEntry(ZipEntry("db.sqlite")); snapshot.inputStream().use { it.copyTo(output) }; output.closeEntry()
             }
-            val bytes = BackupCrypto.encrypt(zip.readBytes(), mnemonic, BackupCrypto.Version.snapshot)
+            val bytes = BackupCrypto.encrypt(zip.readBytes(), mnemonic, BackupCrypto.Version.snapshot, rounds)
             // Publish the complete file atomically, refusing an existing target.
             val partial = File(destination.parentFile, ".${UUID.randomUUID()}.partial")
             try {
@@ -84,17 +85,17 @@ object BackupArchive {
         } finally { zip.delete() }
     }
 
-    fun open(encrypted: File, mnemonic: String, directory: File): Opened {
-        val bytes = BackupCrypto.decrypt(encrypted.readBytes(), mnemonic, BackupCrypto.Version.snapshot)
+    fun open(encrypted: File, mnemonic: String, directory: File, rounds: Int = BackupCrypto.pbkdf2Rounds): Opened {
+        val bytes = BackupCrypto.decrypt(encrypted.readBytes(), mnemonic, BackupCrypto.Version.snapshot, rounds)
         unpack(bytes, directory, null)
         try {
             return Opened(parseManifest(File(directory, "manifest.json").readBytes()), File(directory, "db.sqlite"))
         } catch (failure: Throwable) { directory.deleteRecursively(); throw failure }
     }
-    fun openLegacy(base64: ByteArray, mnemonic: String, variant: String, directory: File) {
+    fun openLegacy(base64: ByteArray, mnemonic: String, variant: String, directory: File, rounds: Int = BackupCrypto.pbkdf2Rounds) {
         val envelope = try { Base64.decode(base64.toString(Charsets.UTF_8).trim()) }
         catch (_: Exception) { throw Failure(Reason.notLegacyBackup) }
-        unpack(BackupCrypto.decrypt(envelope, mnemonic, BackupCrypto.Version.legacyDirectory), directory,
+        unpack(BackupCrypto.decrypt(envelope, mnemonic, BackupCrypto.Version.legacyDirectory, rounds), directory,
             "backup_staging/noah-data-$variant/")
     }
     private fun unpack(bytes: ByteArray, directory: File, prefix: String?) {
