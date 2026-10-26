@@ -18,8 +18,8 @@ import org.junit.Test
 class ExitMovieTest {
     /**
      * Opt-in (`-e noahExitMovie pulse|claim|list`): plays an exit's moves on the real clock for a screen recording. "pulse"
-     * waits in the mempool, then its block comes and the next is sent; "claim" sends the claim and lands it; "list" holds the
-     * list, its glowing rows breathing.
+     * is ready, goes to the mempool and waits, then its block comes and the next is sent; "claim" sends the claim and lands
+     * it; "list" holds the list, its glowing rows breathing.
      */
     @Test fun playExit() {
         val movie = InstrumentationRegistry.getArguments().getString("noahExitMovie")
@@ -29,7 +29,7 @@ class ExitMovieTest {
         val claimed = ExitContext(f.tip + 149, 18_400, 144, claimFee = 262, claimIds = listOf(f.claimed.id),
             claimedTo = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg")
         val frames: List<Pair<ExitModel, ExitContext>> = when (movie) {
-            "pulse" -> listOf(f.bump to ExitContext(f.tip, 18_400, 144, cancelable = true),
+            "pulse" -> listOf(f.mempool to ExitContext(f.tip, 18_400, 144, cancelable = true), f.bump to ExitContext(f.tip, 18_400, 144, cancelable = true),
                 f.confirm.copy(details = ExitDetails(kind = "processing", tip_height = f.tip + 1, transactions = listOf(
                     ExitDetails.Transaction(f.ids[0], ExitDetails.Status("confirmed", "fee1", ExitDetails.Block(f.tip + 1), "wallet")),
                     ExitDetails.Transaction(f.ids[1], ExitDetails.Status("awaiting-confirmation", "fee2", null, "wallet")),
