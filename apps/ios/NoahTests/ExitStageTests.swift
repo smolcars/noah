@@ -145,19 +145,27 @@ struct ExitStageTests {
     }
 
     /// The picture's one rule: no two drawn elements (the round's block, your path's nodes, your coin, the destination,
-    /// the server, texts and labels, stubs, your other exits' coins and amounts, the caption) overlap, and none leaves
-    /// the canvas. Sweeps path lengths 1–9 and the capped explainer, every mined count, your other exits at every pair of
-    /// levels, every picture, on the iPhone 17 at its default size and an SE at AX1, in English and Swedish.
+    /// the server, texts and labels, stubs, your other exits' coins and amounts, the caption) overlap, none leaves the
+    /// canvas, and every level keeps its full spacing. Sweeps path lengths 1–20, 50 and 100 (folded where they don't
+    /// fit) and the capped explainer; every mined count up to 12 and a sample beyond; every picture; your other exits at
+    /// every pair of levels up to 9 transactions (a sample beyond, and for the variants that lay out like another picture);
+    /// on the iPhone 17 at its default size and an SE at AX1, in English and Swedish.
     @Test func noTwoDrawnElementsOverlap() {
         var problems: [String] = [], checked = 0
         for (size, scale, device) in [(CGSize(width: 393, height: 300), 1.0, "iPhone 17"), (CGSize(width: 375, height: 236), 1.65, "SE AX1")] {
             for locale in ["en", "sv"] {
-                func check(_ scene: ExitStageScene, _ note: @autoclosure () -> String) {
-                    let g = ExitStageGeometry(size: size, scale: scale, count: scene.levels.count)
+                func check(_ real: ExitStageScene, _ note: @autoclosure () -> String) {
+                    let (g, scene) = ExitStageGeometry.fitting(real, size: size, scale: scale)
                     let painter = ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: Locale(identifier: locale))
                     let still = ExitStageStill(scene), ys = g.levels(still.mined, lock: still.lock)
                     let shapes = painter.arrange(scene, ys: ys, lock: still.lock, labels: painter.labels(scene, ys: ys)).shapes
                     checked += 1
+                    if scene.realCount != real.levels.count || scene.levels.count - 1 > max(g.foldCapacity, real.explain ? 7 : 0) {
+                        problems.append("\(device) \(locale) \(note()): drew \(scene.levels.count) of \(scene.realCount)")
+                    }
+                    for level in 1..<ys.count where ys[level - 1] - ys[level] < g.minimumGap(level, side: g.side, reserve: g.coinReserve(still.lock)) - 0.001 {
+                        problems.append("\(device) \(locale) \(note()): gap \(level) below its minimum")
+                    }
                     for (index, a) in shapes.enumerated() {
                         if !CGRect(origin: .zero, size: size).contains(a.frame) { problems.append("\(device) \(locale) \(note()): \(a.kind) \(a.group) leaves the canvas") }
                         for b in shapes[(index + 1)...] where a.group != b.group && a.overlaps(b) {
@@ -166,10 +174,12 @@ struct ExitStageTests {
                     }
                 }
                 for count in [1, 2, 3, 4, 5, 6, 7, 8, 9, 100] { check(.explainer(count: count), "explainer \(count)") }
-                for count in 1...9 {
-                    // Your other exits: none, or two at every pair of levels.
-                    let pairs = [nil] + (1..<max(1, count)).flatMap { i in (i..<count).map { Optional((i, $0)) } }
-                    for mined in 0...count {
+                for count in Array(1...20) + [50, 100] {
+                    // Your other exits: none, or two at every pair of levels (a sample on longer paths).
+                    let pairs: [(Int, Int)?] = count <= 9 ? [nil] + (1..<max(1, count)).flatMap { i in (i..<count).map { Optional((i, $0)) } }
+                        : [nil, (1, count - 1), (count / 2, count / 2), (count - 2, count - 1)]
+                    let mineds = count <= 12 ? Array(0...count) : Array(Set([0, 1, 2, 3, count / 2, count - 3, count - 2, count - 1, count])).sorted()
+                    for mined in mineds {
                         var scenes: [(ExitStageScene, String)] = []
                         func scene(_ picture: ExitProgress.Picture, waiting: ExitStageScene.Level? = .pending(theirs: false, bumped: false)) -> ExitStageScene {
                             var scene = ExitStageScene(picture: picture, levels: (0..<count).map { index in
@@ -182,7 +192,8 @@ struct ExitStageTests {
                         scenes.append((scene(.path), "waiting"))
                         if mined < count {
                             scenes.append((scene(.path, waiting: .needsFunds), "needs funds"))
-                            scenes.append((scene(.path, waiting: .pending(theirs: true, bumped: true)), "theirs"))
+                            // Sent by someone else lays out as waiting; on short paths it's checked too.
+                            if count <= 9 { scenes.append((scene(.path, waiting: .pending(theirs: true, bumped: true)), "theirs")) }
                         }
                         scenes.append((scene(.canceled, waiting: nil), "canceled"))
                         if mined == 0 { scenes.append((scene(.lift, waiting: nil), "lift")) }
@@ -193,7 +204,9 @@ struct ExitStageTests {
                             scenes.append((other, "claimed to another wallet"))
                         }
                         for (base, name) in scenes {
-                            for pair in pairs {
+                            // Every pair for the pictures that lay out differently; the variants that lay out like them, a sample.
+                            let all = ["waiting", "needs funds", "lock", "claimed"].contains(name)
+                            for pair in all ? pairs : pairs.filter({ $0 == nil || $0! == (1, count - 1) || $0! == (count / 2, count / 2) }) {
                                 var scene = base
                                 if let (low, high) = pair {
                                     scene.others = [.init(level: low, amount: "100 000 000 sats", sent: true), .init(level: high, amount: "₿24,500", sent: false)]
@@ -206,9 +219,57 @@ struct ExitStageTests {
                 }
             }
         }
-        #expect(checked > 10_000)
+        #expect(checked > 15_000)
         let kinds = Dictionary(grouping: problems) { $0.components(separatedBy: ": ").last ?? $0 }
         #expect(problems.isEmpty, "\(problems.count) problems:\n\(kinds.map { "\($0.value.count)× \($0.key), e.g. \($0.value[0])" }.sorted().prefix(40).joined(separator: "\n"))")
+    }
+
+    /// A path too long for the picture is folded so every level keeps its full spacing: the oldest blocks stack into one
+    /// at the base, the one being sent and the next two stay on their own, the rest of the unsent fold into one "+N" node.
+    /// Labels count the real transactions. (It drew 20 transactions on an SE at AX1 as 7 pt nodes 5.96 pt apart.)
+    @Test func aLongPathFoldsRatherThanSqueezing() {
+        let size = CGSize(width: 375, height: 236), english = Locale(identifier: "en")
+        var scene = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 20)
+        scene.others = [.init(level: 2, amount: "₿21,000", sent: true)]
+        scene.shared = (0..<20).map { $0 < 2 }
+        let (g, drawn) = ExitStageGeometry.fitting(scene, size: size, scale: 1.65)
+        #expect(drawn.realCount == 20 && drawn.levels.count - 1 == 8 && g.side >= 7)
+        // The oldest two blocks stacked, the latest three on their own.
+        #expect(drawn.folds.first == .init(kind: .stack, index: 0, count: 2, heights: 921_346...921_347))
+        let current = drawn.levels.firstIndex { $0.isPending }
+        #expect(current.map { drawn.real($0) } == 5)
+        // At least the next two unsent after it are drawn on their own, then one "+N" node, then your coin.
+        let more = drawn.folds.first { $0.kind == .more }
+        if let current, let more {
+            #expect(more.index >= current + 3 && more.index == drawn.levels.count - 2)
+            #expect(drawn.levels[(current + 1)..<more.index].allSatisfy { $0 == .unsent } && drawn.real(more.index) + more.count == 19)
+        } else {
+            Issue.record("no current or no +N node")
+        }
+        // Your other exit branching at the second transaction branches from where it's drawn.
+        if let level = drawn.others.first?.level {
+            let first = drawn.real(level - 1), count = drawn.fold(at: level - 1)?.count ?? 1
+            #expect(first <= 1 && 1 < first + count)
+        }
+        let ys = g.levels(ExitStageStill(drawn).mined)
+        for level in 1..<ys.count { #expect(ys[level - 1] - ys[level] >= g.minimumGap(level, side: g.side, reserve: g.coinReserve()) - 0.001) }
+        #expect(Self.texts(ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: english).labels(drawn, ys: ys)).contains("Next block"))
+        // The labels count the real transactions: on the iPhone 17's picture, folded too, all 14 still to send.
+        let (p, phone) = ExitStageGeometry.fitting(scene, size: CGSize(width: 393, height: 300), scale: 1)
+        let phoneTexts = Self.texts(ExitStagePainter(geometry: p, colors: .theme(.light), reduceMotion: false, locale: english)
+                                    .labels(phone, ys: p.levels(ExitStageStill(phone).mined)))
+        #expect(!phone.folds.isEmpty && phoneTexts.contains("14 more to send") && phoneTexts.contains { $0.hasPrefix("Blocks 921,346–") || $0.hasPrefix("Block ") })
+        // A hundred, all in blocks and locked: the oldest stacked with their range, the coin's dial clear.
+        var locked = ExitStageScene(picture: .lock, levels: (0..<100).map { .mined(921_000 + UInt32($0)) })
+        (locked.tip, locked.leaf, locked.unlock) = (921_150, 921_099, 921_243)
+        let (h, hundred) = ExitStageGeometry.fitting(locked, size: size, scale: 1.65)
+        #expect(hundred.realCount == 100 && hundred.folds.map(\.kind) == [.stack] && hundred.folds[0].heights?.lowerBound == 921_000)
+        let hys = h.levels(ExitStageStill(hundred).mined, lock: 1)
+        #expect(hys[hys.count - 2] - hys[hys.count - 1] >= h.side / 2 + h.coinReserve(1) + ExitStageGeometry.clearance - 0.001)
+        let lockLabels = ExitStagePainter(geometry: h, colors: .theme(.light), reduceMotion: false, locale: english).labels(hundred, ys: hys)
+        #expect(lockLabels.contains { $0.lines.map(\.text).joined(separator: " ").hasPrefix("Blocks 921,000–") })
+        // Paths that fit are drawn as they are.
+        #expect(ExitStageGeometry.fitting(Self.mempool(heights: [1, 2, 3, 4], pending: 4, count: 9), size: size, scale: 1.65).scene.folds.isEmpty)
     }
 
     /// Optional elements give way to everything required, in order: amounts first, then your other exits' coins (moved

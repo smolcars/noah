@@ -12,8 +12,8 @@ import UIKit
 /// States: warn, warn-live, warn-many, choose, choose-all, choose-unfunded, review, review-unfunded,
 /// progress-<lift|publish|sending|mempool|confirm|mempool3|onchain|wait|claimable|claiming|claimed>,
 /// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, progress-shared3 (three exits sharing a path),
-/// progress-deep (nine transactions), progress-<claiming|claimed>-other (to another wallet), review-again, claim-other,
-/// claim-phone, claim-again, list, list-plain. "step <progress state>" moves the page on screen to that state, as a new
+/// progress-deep (nine transactions), progress-deep20 (twenty, folded to fit), progress-<claiming|claimed>-other (to another
+/// wallet), review-again, claim-other, claim-phone, claim-again, list, list-plain. "step <progress state>" moves the page on screen to that state, as a new
 /// read would, so the picture's motion can be recorded.
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_EXIT_SHOTS"] == "1"))
@@ -80,7 +80,8 @@ struct ExitShotTests {
     nonisolated static func followed(_ state: String) -> ExitModel {
         let id = vtxos[0].id
         // A 4,096-leaf round plus an arkoor hop: nine transactions.
-        let names = state == "deep" ? ["root", "l5", "l4", "l3", "l2", "l1", "leaf", "ckpt", "ark"] : ["root", "l2", "l1", "leaf"]
+        let names = state == "deep" ? ["root", "l5", "l4", "l3", "l2", "l1", "leaf", "ckpt", "ark"]
+            : state == "deep20" ? ["root"] + (1...13).map { "n\($0)" } + ["leaf"] + (1...5).map { "hop\($0)" } : ["root", "l2", "l1", "leaf"]
         func path(_ confirmed: Int, next: String? = nil, child: String = "c", origin: String = "wallet") -> [Tx] {
             names.enumerated().map { index, name in
                 if index < confirmed { return tx(name, "confirmed", height: tip + 1 + UInt32(index), child: "\(child)\(index)") }
@@ -105,7 +106,7 @@ struct ExitShotTests {
         case "mempool": return model("Processing", processing(path(1, next: "awaiting-confirmation"), tip: tip + 1))
         case "confirm": return model("Processing", processing(path(2), tip: tip + 2))
         case "mempool3", "shared3": return model("Processing", processing(path(2, next: "awaiting-confirmation"), tip: tip + 2))
-        case "deep": return model("Processing", processing(path(5, next: "awaiting-confirmation"), tip: tip + 5))
+        case "deep", "deep20": return model("Processing", processing(path(5, next: "awaiting-confirmation"), tip: tip + 5))
         case "onchain": return model("Processing", mined)
         case "nofunds":
             let parked = processing(path(1, next: "awaiting-cpfp-broadcast"), tip: tip + 1)

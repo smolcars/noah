@@ -43,6 +43,8 @@ struct ExitStageScene: Equatable {
     /// Which transactions your other exits share.
     var shared: [Bool] = []
     var others: [Other] = []
+    /// Levels that stand for several transactions on a path too long to draw (`folded`).
+    var folds: [Fold] = []
     var tip: UInt32 = 0
     var stale = false
     var checked: UInt32?
@@ -80,6 +82,80 @@ struct ExitStageScene: Equatable {
 
     var claiming: Bool { picture == .claim || picture == .claimed }
     var locked: Bool { picture == .lock || picture == .unlocked }
+
+    /// A drawn level standing for several transactions: the oldest confirmed ones as a stack of blocks at the
+    /// base, or unsent ones between the next few and your coin as one "+N" node.
+    struct Fold: Equatable {
+        enum Kind: Equatable { case stack, more }
+        var kind: Kind
+        /// Its index in `levels`, and how many transactions it stands for.
+        var index: Int
+        var count: Int
+        /// A stack's blocks, oldest to newest, when bark gave their heights.
+        var heights: ClosedRange<UInt32>?
+    }
+
+    func fold(at index: Int) -> Fold? { folds.first { $0.index == index } }
+
+    /// The real path's length, folds counted in full.
+    var realCount: Int { levels.count + folds.reduce(0) { $0 + $1.count - 1 } }
+
+    /// The real index of the first transaction drawn at `index`.
+    func real(_ index: Int) -> Int { index + folds.filter { $0.index < index }.reduce(0) { $0 + $1.count - 1 } }
+
+    /// The scene with at most `capacity` transactions drawn below your coin, so every level keeps its full
+    /// spacing however long the path. The one being sent (or waiting, or needing funds) and the next two are
+    /// always drawn on their own, and the coin; then as many of the latest confirmed ones as fit, the oldest
+    /// stacked into one block; then more of the unsent ones, the rest folded into one "+N" node.
+    func folded(nodes capacity: Int) -> ExitStageScene {
+        let n = levels.count, nodes = n - 1
+        guard !explain, folds.isEmpty, nodes > max(1, capacity) else { return self }
+        let current = levels.firstIndex { !$0.isMined } ?? n, sending = current < nodes
+        let confirmed = min(current, nodes), after = sending ? nodes - current - 1 : 0
+        // The best fold that fits: the next unsent ones first (two), then the latest blocks, then more unsent.
+        var best: (shown: Int, latest: Int)?, score = (-1, -1, -1)
+        for shown in 0...after {
+            for latest in 0...confirmed {
+                let more = after - shown, stacked = confirmed - latest
+                guard more != 1, stacked != 1 else { continue }
+                let slots = (sending ? 1 : 0) + shown + (more > 0 ? 1 : 0) + latest + (stacked > 0 ? 1 : 0)
+                let candidate = (min(shown, 2), latest, shown)
+                if slots <= capacity, candidate > score { (best, score) = ((shown, latest), candidate) }
+            }
+        }
+        guard let (shown, latest) = best else { return self }
+        let stacked = confirmed - latest, more = after - shown
+        var scene = self
+        var drawn: [Int] = []   // each real node's drawn index
+        scene.levels = []
+        scene.folds = []
+        if stacked > 0 {
+            let heights = levels[0..<stacked].compactMap { if case .mined(let height) = $0 { height } else { nil } }
+            scene.folds.append(.init(kind: .stack, index: 0, count: stacked,
+                                     heights: heights.count == stacked ? heights.min()!...heights.max()! : nil))
+            scene.levels.append(levels[stacked - 1])
+            drawn += Array(repeating: 0, count: stacked)
+        }
+        for index in stacked..<(sending ? current + 1 + shown : confirmed) {
+            drawn.append(scene.levels.count)
+            scene.levels.append(levels[index])
+        }
+        if more > 0 {
+            scene.folds.append(.init(kind: .more, index: scene.levels.count, count: more))
+            drawn += Array(repeating: scene.levels.count, count: more)
+            scene.levels.append(.unsent)
+        }
+        scene.levels.append(levels[nodes])
+        drawn.append(scene.levels.count - 1)
+        // What your other exits share, and where they branch, on the drawn levels.
+        scene.shared = scene.levels.indices.map { level in drawn.indices.contains { drawn[$0] == level && shared[safe: $0] == true } }
+        scene.others = others.map { other in
+            var other = other
+            other.level = (drawn[safe: other.level - 1] ?? scene.levels.count - 2) + 1
+            return other
+        }
+        return scene
+    }
 }
 
 /// The numbers one still picture stands for; two of them are mixed while the picture moves.
@@ -231,17 +307,20 @@ struct ExitStageView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let painter = ExitStagePainter(geometry: ExitStageGeometry(size: proxy.size, scale: textScale, wide: wide, count: scene.levels.count),
-                                           colors: .theme(colorScheme), reduceMotion: reduceMotion, locale: locale)
+            // A path too long for the picture is drawn folded; VoiceOver and the rows keep the real counts.
+            let fit = ExitStageGeometry.fitting(scene, size: proxy.size, scale: textScale, wide: wide)
+            let drawn = fit.scene, capacity = fit.geometry.foldCapacity
+            let painter = ExitStagePainter(geometry: fit.geometry, colors: .theme(colorScheme), reduceMotion: reduceMotion, locale: locale)
             // At rest the tree stands still; what waits for a block moves in small overlays.
-            let pulses = settled ? painter.pulses(scene) : []
+            let pulses = settled ? painter.pulses(drawn) : []
             let animating = visible && scenePhase == .active && !reduceMotion
             ZStack(alignment: .topLeading) {
                 ForEach(pulses) { ExitPulseView(pulse: $0, front: false, animating: animating, colors: painter.colors) }
                 TimelineView(.animation(paused: settled || scenePhase != .active)) { timeline in
                     Canvas { context, _ in
                         let elapsed = timeline.date.timeIntervalSince(changedAt), now = timeline.date.timeIntervalSinceReferenceDate
-                        painter.draw(context, from: settled ? nil : from, to: scene, elapsed: elapsed, now: now, inline: !settled, animating: animating)
+                        painter.draw(context, from: settled ? nil : from?.folded(nodes: capacity), to: drawn, elapsed: elapsed, now: now, inline: !settled,
+                                     animating: animating)
                     }
                 }
                 ForEach(pulses) { ExitPulseView(pulse: $0, front: true, animating: animating, colors: painter.colors) }
@@ -336,6 +415,14 @@ struct ExitStagePainter {
                 switch scene.levels[j - 1] {
                 case .mined(let block):
                     guard !(j == n && scene.locked), let block else { continue }
+                    if let stack = scene.fold(at: j - 1) {
+                        // A stack of the oldest blocks: their range, ahead of the round's caption (which then takes one line).
+                        guard let heights = stack.heights else { continue }
+                        items.append(.init(y: y, lines: [.init(text: tr("Blocks {from}–{to}", height(heights.lowerBound), height(heights.upperBound)) + shared,
+                                                               tone: .ink)], priority: j == minedCount ? 2.2 : 2.1, block: heights.upperBound,
+                                           first: heights.lowerBound))
+                        continue
+                    }
                     items.append(.init(y: y, lines: [.init(text: tr("Block {height}", height(block)) + shared, tone: .ink)],
                                        priority: j == minedCount ? 2.2 : 1, block: block))
                 case .needsFunds:
@@ -354,7 +441,11 @@ struct ExitStagePainter {
                 }
             }
             if let first = firstUnsent, first != n, scene.picture != .lift {
-                items.append(.init(y: Y(first), lines: [.init(text: tr("{n} more to send", n - first + 1))], priority: 1.5))
+                // Counting every transaction still to send, folded ones too; beside a later unsent one (up to the "+N"
+                // node) when the "Next block" pill takes this one's room.
+                var more = ExitStageLabel(y: Y(first), lines: [.init(text: tr("{n} more to send", scene.realCount - scene.real(first - 1)))], priority: 1.5)
+                more.fallbacks = ((first + 1)..<n).map { var label = more; label.y = Y($0); return label }
+                items.append(more)
             }
             if scene.locked, let unlock = scene.unlock {
                 let left = unlock > scene.tip ? unlock - scene.tip : 0
@@ -684,10 +775,23 @@ struct ExitStagePainter {
         for level in 1..<max(1, n) {
             let index = level - 1, pop = f.pop[safe: level] ?? 1
             guard pop > 0.001 else { continue }
-            let alpha = f.tree * (f.mined[index] < 1 ? 1 - 0.65 * f.cancel : 1)
-            node(canvas, CGPoint(x: TX, y: Y(level)), level: s.levels[index], mined: f.mined[index], stamp: f.stamp[index], ripple: f.ripple[index],
-                 pending: f.pending[index], side: g.side, pop: min(1.3, pop), alpha: alpha, grey: s.stale, inline: inline, now: now, breathe: breathe,
+            let alpha = f.tree * (f.mined[index] < 1 ? 1 - 0.65 * f.cancel : 1), p = CGPoint(x: TX, y: Y(level)), z = g.side
+            if s.fold(at: index)?.kind == .more {
+                // Unsent transactions folded into one: a dashed hollow node ("N more to send" says how many).
+                let r = z / 2 * min(1, pop)
+                canvas.fill(canvas.circle(p.x, p.y, r), c.background.opacity(alpha))
+                canvas.stroke(canvas.circle(p.x, p.y, r), c.orange.opacity(alpha), 1.4, dash: [1.6, 1.6])
+                continue
+            }
+            node(canvas, p, level: s.levels[index], mined: f.mined[index], stamp: f.stamp[index], ripple: f.ripple[index],
+                 pending: f.pending[index], side: z, pop: min(1.3, pop), alpha: alpha, grey: s.stale, inline: inline, now: now, breathe: breathe,
                  animating: animating && inline)
+            if s.fold(at: index)?.kind == .stack, f.mined[index] > 0.9 {
+                // The oldest blocks stacked into one: an ink block in layers.
+                for offset in [-z / 6, z / 6] {
+                    canvas.stroke(canvas.line(CGPoint(x: p.x - z / 2, y: p.y + offset), CGPoint(x: p.x + z / 2, y: p.y + offset)), c.background.opacity(alpha), 1)
+                }
+            }
         }
         // Needs funds: a dashed red line from the phone to the transaction it can't pay for.
         if let index = s.levels.firstIndex(of: .needsFunds), f.wallet > 0.01 {

@@ -47,6 +47,23 @@ struct ExitStageGeometry: Equatable {
         return side
     }
 
+    /// The most transactions that can be drawn below your coin with every level at full spacing: 7 pt nodes,
+    /// the timelock's dial reserved. A longer path is folded to fit (`ExitStageScene.folded`).
+    var nodeCapacity: Int {
+        let bottom = roundSide / 2 + 3.5 + Self.clearance, top = 3.5 + coinReserve(1) + Self.clearance
+        return max(1, Int(((room - bottom - top) / (7 + Self.clearance)).rounded(.down)) + 1)
+    }
+
+    /// How many transactions a path draws below your coin at most: the deep tree's eight (nine transactions), or
+    /// `nodeCapacity` where fewer fit. Longer paths fold, so their levels stay far enough apart to read.
+    var foldCapacity: Int { min(nodeCapacity, 8) }
+
+    /// The geometry for `scene` in `size`, and the scene as drawn there: folded to `foldCapacity` when its path is longer.
+    static func fitting(_ scene: ExitStageScene, size: CGSize, scale: Double = 1, wide: Bool = false) -> (geometry: Self, scene: ExitStageScene) {
+        let drawn = scene.folded(nodes: Self(size: size, scale: scale, wide: wide, count: scene.levels.count).foldCapacity)
+        return (Self(size: size, scale: scale, wide: wide, count: drawn.levels.count), drawn)
+    }
+
     /// The room your coin keeps around it: its dashed ring, or the timelock's dial while it's locked (`lock`, 0…1).
     func coinReserve(_ lock: Double = 0) -> Double { coinRadius + 5 + 13 * lock.clamped(0, 1) }
 
@@ -236,6 +253,8 @@ struct ExitStageLabel: Equatable {
     var fallbacks: [ExitStageLabel] = []
     /// A confirmed transaction's block: labels that don't fit fold into one range.
     var block: UInt32?
+    /// A stack of blocks' oldest block, folding with the rest.
+    var first: UInt32?
     /// Right-aligned at this x; nil for the label column.
     var trailing: Double?
     /// The explainer's bracket, from y to y.
@@ -296,7 +315,7 @@ enum ExitStageLabels {
             // The older blocks fold together, those placed on their own too; the latest keeps its own label.
             let alone = placed.filter { $0.block != nil && $0.priority < 2 }
             placed.removeAll { $0.block != nil && $0.priority < 2 }
-            let folded = skipped + alone, heights = folded.compactMap(\.block).sorted()
+            let folded = skipped + alone, heights = (folded.compactMap(\.block) + folded.compactMap(\.first)).sorted()
             let middle = folded.map(\.y).reduce(0, +) / Double(folded.count)
             let candidates = [middle] + folded.map(\.y).sorted { abs($0 - middle) < abs($1 - middle) }
             let folds = candidates.map { y in
