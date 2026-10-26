@@ -210,17 +210,32 @@ class ExitTreeTest {
     }
 
     @Test fun aFoldedGutterKeepsWhatPathsShareInOnePlace() {
-        // Three exits on a 60-transaction path, the third leaving it after 22: the 22 fold into one stack drawn once, and
-        // the third's own blocks fold apart from the others'.
+        // Three exits on a 60-transaction path, the third leaving it after 22: the 22 fold as one trunk (the oldest stacked)
+        // drawn once, between all three rows, and the third's own blocks fold apart from the others'.
         val paths = listOf("a", "b", "c").map { r ->
             List(60) { i -> (if (i < 59 && (r != "c" || i < 22)) "t$i" else "$r$i") to when { i < 25 -> st.mined; i == 25 -> st.waiting; else -> st.unsent } }
         }
         val layout = ExitGutter.shared(paths, listOf(32f, 96f, 160f))
-        val first = layout.nodes.filter { !it.coin }.minBy { it.x }
-        assertEquals("t21", first.id)
-        assertTrue(first.folded && first.st == st.mined)
-        assertEquals("drawn once, between the rows", 1, layout.nodes.count { it.x == first.x })
-        assertTrue("then the third's own, apart", layout.nodes.any { it.id.startsWith("c") && !it.coin })
+        val trunk = layout.nodes.filter { !it.coin && it.id.startsWith("t") && it.id.drop(1).toInt() < 22 }
+        assertTrue("the oldest stacked", trunk.minBy { it.x }.let { it.folded && it.st == st.mined })
+        assertEquals("up to the 22nd", "t21", trunk.maxBy { it.x }.id)
+        for (node in trunk) assertEquals("${node.id} drawn once, between the rows", 96f, node.y, .01f)
+        assertTrue("then the third's own, apart", layout.nodes.any { it.id.startsWith("c") && !it.coin && it.y == 160f })
+    }
+
+    @Test fun exitsThatMoveOnApartEachKeepTheirOwnTransactionBeingSent() {
+        // Four exits on 20-transaction paths sharing only the first, being sent at the 3rd, 7th, 11th and 15th: one column
+        // each for those would be too many, so each branch folds on its own after the shared one.
+        val paths = (0 until 4).map { r ->
+            List(20) { i -> (if (i == 0) "t0" else "r$r.$i") to when { i < 2 + 4 * r -> st.mined; i == 2 + 4 * r -> st.waiting; else -> st.unsent } }
+        }
+        val layout = ExitGutter.shared(paths, listOf(32f, 96f, 160f, 224f))
+        val drawn = layout.nodes.filter { !it.coin }
+        val columns = drawn.map { it.x }.distinct().sorted()
+        for ((a, b) in columns.zipWithNext()) assertTrue("$a → $b", b - a >= ExitGutter.minStep - .01f)
+        assertTrue(columns.last() <= 90f - 14)
+        for (r in 0 until 4) assertTrue("exit $r's", drawn.any { it.id == "r$r.${2 + 4 * r}" && !it.folded })
+        assertEquals("the shared one drawn once", 1, drawn.count { it.id == "t0" })
     }
 
     @Test fun aRestartedExitNeverHidesASiblingsProgress() {

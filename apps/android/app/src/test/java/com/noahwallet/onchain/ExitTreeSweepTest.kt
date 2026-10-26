@@ -156,15 +156,15 @@ class ExitTreeSweepTest {
         val st = ExitGutter.St.entries
         for (n in (1..20) + listOf(50, 100)) {
             val sampled = n > 20
-            // Two or three exits that part after k shared transactions, the last a block behind, at every mined count and with
-            // the one being sent waiting, ready, short of funds or not sent yet.
-            for (rows in 2..3) for (k in (0 until n).filter { !sampled || it % 9 == 1 || it >= n - 2 }) for (mined in (0..n).filter { !sampled || it % 7 == 0 || it >= n - 2 })
-                for (current in listOf(ExitGutter.St.waiting, ExitGutter.St.ready, ExitGutter.St.needsFunds, ExitGutter.St.unsent)) {
+            // Two to four exits that part after k shared transactions, each a block (or a fifth of the path) behind the one
+            // before, at every mined count and with the one being sent waiting, ready, short of funds or not sent yet.
+            for (rows in 2..4) for (lag in listOf(1, maxOf(2, n / 5)).distinct()) for (k in (0 until n).filter { !sampled || it % 9 == 1 || it >= n - 2 })
+                for (mined in (0..n).filter { !sampled || it % 7 == 0 || it >= n - 2 }) for (current in listOf(ExitGutter.St.waiting, ExitGutter.St.ready, ExitGutter.St.needsFunds, ExitGutter.St.unsent)) {
                     val paths = List(rows) { r ->
-                        val done = if (r == rows - 1) (mined - 1).coerceAtLeast(0) else mined
+                        val done = (mined - r * lag).coerceAtLeast(0)
                         List(n) { i -> (if (i < k) "s$i" else "r$r.$i") to when { i < done -> ExitGutter.St.mined; i == done -> current; else -> ExitGutter.St.unsent } }
                     }
-                    val label = "gutter: $rows exits, $n transactions, parting after $k, $mined mined, $current"
+                    val label = "gutter: $rows exits, $n transactions, parting after $k, $mined mined, $lag behind, $current"
                     val layout = ExitGutter.shared(paths, List(rows) { 32f + 64f * it })
                     val drawn = layout.nodes.filter { !it.coin }
                     val columns = drawn.map { it.x }.distinct().sorted()

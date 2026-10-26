@@ -167,23 +167,22 @@ internal data class ExitScene(
  * rail all draw a long path the same way rather than squeezing it.
  */
 internal object ExitFold {
-    /** A transaction as the fold sees it: in a block, being sent (the first not in a block on some path), or still to send. */
+    /** A transaction as the fold sees it: in a block, being sent (the first not in a block on its path), or still to send. */
     enum class Kind { mined, current, unsent }
 
     /**
      * The places [kinds] (root first, your coin left out) get when only [cap] fit: each one being sent on its own, and between
      * them runs that fold. A run of blocks keeps its latest on their own and stacks the oldest in one place; a run still to
      * send keeps its next ones and folds the rest in one "+N". The next two to send and the latest block keep their own
-     * places longest; folding one alone saves nothing. No run folds across a break ([breaks]: where paths part). Returns
-     * the transactions each place stands for, in order.
+     * places longest; folding one alone saves nothing. Returns the transactions each place stands for, in order.
      */
-    fun spans(kinds: List<Kind>, cap: Int, breaks: Set<Int> = emptySet()): List<IntRange> {
+    fun spans(kinds: List<Kind>, cap: Int): List<IntRange> {
         if (kinds.size <= cap) return kinds.indices.map { it..it }
         class Run(val range: IntRange, val old: Boolean) { var own = range.count() }
         val runs = mutableListOf<Run>(); var start = 0
-        for (i in 0..kinds.size) if (i == kinds.size || kinds[i] == Kind.current || i in breaks) {
+        for (i in 0..kinds.size) if (i == kinds.size || kinds[i] == Kind.current) {
             if (i > start) runs += Run(start until i, (start until i).all { kinds[it] == Kind.mined })
-            start = if (i < kinds.size && kinds[i] != Kind.current) i else i + 1
+            start = i + 1
         }
         val required = kinds.count { it == Kind.current }
         fun total() = required + runs.sumOf { it.own + if (it.own < it.range.count()) 1 else 0 }
@@ -490,41 +489,55 @@ internal object ExitGutter {
     const val minStep = 11f
     fun shared(paths: List<List<Pair<String, St>>>, ys: List<Float>, x0: Float = 2f, coinX: Float = 90f, step: Float = 12f): Layout {
         val states = states(paths)
-        val depth = (paths.maxOfOrNull { it.size } ?: 1) - 1
+        val ids = paths.map { path -> path.dropLast(1).map { it.first } }
+        val depth = ids.maxOfOrNull { it.size } ?: 0
+        // Each exit's transaction being sent: its first not in a block (shared ones in their furthest state).
+        val sending = ids.map { row -> row.indexOfFirst { states.getValue(it) != St.mined } }
+        fun kinds(group: List<Int>, from: Int, to: Int) = (from until to).map { i -> when {
+            group.any { sending[it] == i } -> ExitFold.Kind.current
+            group.all { states.getValue(ids[it][i]) == St.mined } -> ExitFold.Kind.mined
+            else -> ExitFold.Kind.unsent
+        } }
         // A long path steps closer, down to the least step, so its last transaction stays clear of the coins; longer still,
-        // it folds as the picture does: each exit's transaction being sent on its own, the oldest blocks stacked, the rest
-        // to send in one.
+        // it folds as the picture's does. What exits share is one trunk, folded alike for all of them, then each branch where
+        // they part folds in the room the trunk leaves it, the trunk leaving its branches the least they need: so every path
+        // keeps the least step, each exit's transaction being sent on its own.
         val room = coinX - 14 - 6 - x0; val fit = (room / minStep).toInt()
-        val columns = if (depth <= fit) (0 until depth).map { it..it } else {
-            val rows = paths.map { path -> path.dropLast(1).map { states.getValue(it.first) } }
-            val sending = rows.mapNotNull { row -> row.indexOfFirst { it != St.mined }.takeIf { it >= 0 } }.toSet()
-            val kinds = List(depth) { i -> when {
-                i in sending -> ExitFold.Kind.current
-                rows.all { row -> row.getOrNull(i)?.let { it == St.mined } ?: true } -> ExitFold.Kind.mined
-                else -> ExitFold.Kind.unsent
-            } }
-            // Where paths part, so what they share folds apart from what they don't; across them only if that's too many.
-            val ids = paths.map { path -> path.dropLast(1).map { it.first } }
-            val parts = (1 until depth).filter { i -> ids.any { a -> ids.any { b -> a.getOrNull(i - 1) != null && a.getOrNull(i - 1) == b.getOrNull(i - 1) && a.getOrNull(i) != b.getOrNull(i) } } }.toSet()
-            ExitFold.spans(kinds, fit, parts).takeIf { it.size <= fit } ?: ExitFold.spans(kinds, fit)
+        val columns = List(paths.size) { mutableListOf<IntRange>() }
+        fun parting(group: List<Int>, from: Int) = generateSequence(from) { it + 1 }.first { i -> group.any { ids[it].size <= i } || group.map { ids[it][i] }.distinct().size > 1 }
+        fun branches(group: List<Int>, at: Int) = group.filter { ids[it].size > at }.groupBy { ids[it][at] }.values
+        fun least(group: List<Int>, from: Int): Int {
+            val p = parting(group, from); val trunk = kinds(group, from, p)
+            val own = trunk.count { it == ExitFold.Kind.current } + trunk.indices.count { i -> trunk[i] != ExitFold.Kind.current && trunk.getOrNull(i - 1).let { it == null || it == ExitFold.Kind.current } }
+            return own + (branches(group, p).maxOfOrNull { least(it, p) } ?: 0)
         }
-        val d = if (columns.isEmpty()) step else min(step, room / columns.size)
+        fun fold(group: List<Int>, from: Int, budget: Int) {
+            val p = parting(group, from); val parts = branches(group, p)
+            val trunk = if (depth <= fit) (from until p).map { it..it }
+                else ExitFold.spans(kinds(group, from, p), max(1, budget - (parts.maxOfOrNull { least(it, p) } ?: 0))).map { it.first + from..it.last + from }
+            for (r in group) columns[r] += trunk
+            for (part in parts) fold(part, p, budget - trunk.size)
+        }
+        fold(paths.indices.toList(), 0, fit)
+        // A path that parts too often for that: each exit's folds alone.
+        val alone = columns.any { it.size > fit }
+        if (alone) for (r in paths.indices) { columns[r].clear(); columns[r] += ExitFold.spans(kinds(listOf(r), 0, ids[r].size), fit) }
+        val d = (columns.maxOfOrNull { it.size } ?: 0).let { if (it == 0) step else min(step, room / it) }
+        // Each drawn transaction once (a folded one by its last), at the height of the rows it leads to.
+        fun key(r: Int, span: IntRange) = ids[r][span.last].let { if (alone) "$it@$r" else it }
         val rows = mutableMapOf<String, MutableList<Float>>()
-        paths.forEachIndexed { r, path -> path.dropLast(1).forEach { (id, _) -> rows.getOrPut(id) { mutableListOf() } += ys[r] } }
+        for (r in paths.indices) for (span in columns[r]) rows.getOrPut(key(r, span)) { mutableListOf() } += ys[r]
         val root = x0 to ys.average().toFloat()
         val nodes = linkedMapOf<String, Node>(); val links = linkedMapOf<String, Link>()
         paths.forEachIndexed { r, path ->
             var from = root; var previous = "root"
-            val own = path.dropLast(1)
-            columns.forEachIndexed { c, span ->
-                // A column that folds is drawn once for the exits that share its last transaction (and so all of it).
-                val mine = span.filter { it < own.size }.ifEmpty { return@forEachIndexed }
-                val id = own[mine.last()].first; val folded = mine.size > 1
-                val st = if (!folded) states.getValue(id) else if (mine.all { states.getValue(own[it].first) == St.mined }) St.mined else St.unsent
-                val at = x0 + (c + 1) * d + 6 to rows.getValue(id).average().toFloat()
-                nodes.putIfAbsent(id, Node(id, at.first, at.second, st, false, folded))
-                links.putIfAbsent("$previous>$id", Link(from.first + 4 to from.second, at.first - 4 to at.second, st == St.mined))
-                from = at; previous = id
+            columns[r].forEachIndexed { c, span ->
+                val key = key(r, span); val id = ids[r][span.last]; val folded = span.count() > 1
+                val st = if (!folded) states.getValue(id) else if (span.all { states.getValue(ids[r][it]) == St.mined }) St.mined else St.unsent
+                val at = x0 + (c + 1) * d + 6 to rows.getValue(key).average().toFloat()
+                nodes.putIfAbsent(key, Node(id, at.first, at.second, st, false, folded))
+                links.putIfAbsent("$previous>$key", Link(from.first + 4 to from.second, at.first - 4 to at.second, st == St.mined))
+                from = at; previous = key
             }
             val (id, st) = path.last(); val at = coinX to ys[r]; val key = "$id@$r"
             nodes.putIfAbsent(key, Node(id, at.first, at.second, st, true))
