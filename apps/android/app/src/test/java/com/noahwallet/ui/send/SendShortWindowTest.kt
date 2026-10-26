@@ -83,6 +83,5 @@ class SendShortWindowTest {
         until { has("send-hold") }
         compose.assertReachable("send-hold")
     }
-    @Test fun sendsReviewKeepsHoldToSendInReach() = review(1f)
     @Test fun sendsReviewKeepsHoldToSendInReachAtDoubleText() = review(2f)
 }

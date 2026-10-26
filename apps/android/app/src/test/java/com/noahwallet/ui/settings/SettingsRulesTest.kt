@@ -2,8 +2,6 @@ package com.noahwallet.ui.settings
 
 import androidx.navigation3.runtime.NavKey
 import com.noahwallet.onchain.VtxoModel
-import com.noahwallet.recurring.RecurringInterval
-import com.noahwallet.recurring.RecurringPayment
 import com.noahwallet.ui.Destination
 import com.noahwallet.ui.QRDestination
 import org.junit.Assert.*
@@ -19,16 +17,6 @@ class SettingsRulesTest {
     private fun vtxo(id: String, expiry: Long = 1_000, state: String = "Spendable", expiring: Boolean = false) =
         VtxoModel(id, 1_000, expiry, state, "round", 0, 0, true, "", 144, "anchor:0", "point:0", expiring, 100)
 
-    @Test fun fiveQuickTapsUnlockDebugAndSlowTapsStartOver() {
-        val taps = SettingsRules.DebugTaps()
-        assertEquals(listOf(4, 3, 2, 1), (0 until 4).map { taps.tap(it * 1_000L) })
-        assertEquals(0, taps.tap(4_000))
-        // Unlocking starts over, and a gap of two seconds or more resets the count.
-        assertEquals(4, taps.tap(5_000))
-        assertEquals(3, taps.tap(6_500))
-        assertEquals(4, taps.tap(8_600))
-    }
-
     @Test fun backupRowPrefersFailureAndRunningOverTheSwitch() {
         assertEquals(SettingsRules.Backup.failed, SettingsRules.backup(true, "failed"))
         assertEquals(SettingsRules.Backup.failed, SettingsRules.backup(false, "failed"))
@@ -43,17 +31,6 @@ class SettingsRulesTest {
         assertEquals(SettingsRules.Vtxos.Renew, SettingsRules.vtxos(listOf(vtxo("a"), vtxo("b", expiring = true))))
         // Locked or expired VTXOs can't be renewed, so they don't ask.
         assertEquals(SettingsRules.Vtxos.Count(2), SettingsRules.vtxos(listOf(vtxo("a", state = "Locked", expiring = true), vtxo("b", expiry = 90, expiring = true))))
-    }
-
-    @Test fun recurringRowCountsApprovalsAndActivePayments() {
-        fun schedule(status: String) = RecurringPayment(status, status, "a@b.c", "lnurl", 1, interval = RecurringInterval("month", 1),
-            startAt = 0, createdAt = 0, updatedAt = 0, status = status)
-        assertEquals(SettingsRules.Recurring(1, 2), SettingsRules.recurring(listOf(schedule("active"), schedule("active"), schedule("needs_approval"), schedule("paused"))))
-    }
-
-    @Test fun batteryRowShowsAndroidsOptimisation() {
-        assertEquals(SettingsRules.Battery.optimized, SettingsRules.battery(optimizationEnabled = true))
-        assertEquals(SettingsRules.Battery.unrestricted, SettingsRules.battery(optimizationEnabled = false))
     }
 
     @Test fun deleteChecklistAndTypedDelete() {

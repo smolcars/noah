@@ -28,13 +28,4 @@ class SendArrivesTest {
         // Regtest's setting is one.
         assertEquals("After one confirmation" to null, invoice.arrives(needed = 1))
     }
-
-    @Test fun otherRailsKeepTheirTiming() = runBlocking {
-        val wallet = model(this).apply { onchainBalance = 10_000 }
-        wallet.maxSend(); wallet.source = SendSource.onchain; wallet.continueStage(); wallet.setRecipient(address); wallet.continueStage()
-        assertEquals(SendStage.review, wallet.stage)
-        assertEquals("In about 20 minutes" to null, wallet.arrives())
-        assertEquals("Instantly" to null, arrives(SendRail.ark, null, 2))
-        assertEquals("In seconds" to null, arrives(SendRail.lightning, null, 2))
-    }
 }

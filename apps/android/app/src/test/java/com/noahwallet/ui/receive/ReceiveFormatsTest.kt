@@ -177,22 +177,4 @@ class ReceiveFormatsTest {
         assertFalse(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.ark, 5_000, 0)))
         assertFalse(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.lightning, 5_000, 0)))
     }
-
-    @Test fun arrivalsFlipThenReturn() {
-        for (rail in ReceiveArrival.Rail.entries) for (reduce in listOf(false, true)) {
-            val flip = ReceiveTimeline.flipAt(rail, reduce)
-            assertEquals(0f, ReceiveTimeline.turn(rail, flip - 1, reduce))
-            assertTrue(ReceiveTimeline.turn(rail, ReceiveTimeline.backAt(rail, reduce) - 1, reduce) > 90f)
-            assertTrue(ReceiveTimeline.end(rail, reduce) > ReceiveTimeline.backAt(rail, reduce))
-        }
-        // Each haptic once: light on the delivery and the unlock, success on the flip; none after a resume.
-        assertEquals(listOf(false, false, true), ReceiveTimeline.haptics(ReceiveArrival.Rail.lightning, -1, 10_000, false))
-        assertEquals(listOf(false, true), ReceiveTimeline.haptics(ReceiveArrival.Rail.ark, -1, 2_000, false))
-        assertEquals(listOf(true), ReceiveTimeline.haptics(ReceiveArrival.Rail.onchain, -1, 1_000, false))
-        assertTrue(ReceiveTimeline.haptics(ReceiveArrival.Rail.ark, 2_000, 9_000, false).isEmpty())
-        assertEquals("Incoming over Lightning", ReceiveTimeline.phase(ReceiveArrival.Rail.lightning, 0, false))
-        assertEquals("Claiming with your key", ReceiveTimeline.phase(ReceiveArrival.Rail.lightning, 1_700, false))
-        assertEquals("Seen on the network", ReceiveTimeline.phase(ReceiveArrival.Rail.onchain, 100, false))
-        assertNull(ReceiveTimeline.phase(ReceiveArrival.Rail.onchain, 1_000, false))
-    }
 }

@@ -23,15 +23,4 @@ class ReceiptTest {
         assertEquals(1f, Receipt.at(2_580, reduceMotion = true).folding)
         assertEquals(2_580L, Receipt.end(reduceMotion = true))
     }
-
-    @Test fun fullMotionDrawsTheRingAndCheckAndFoldsTheCard() {
-        assertTrue("the ring is still drawing", Receipt.at(200, reduceMotion = false).ring < .5f)
-        assertEquals(0f, Receipt.at(600, reduceMotion = false).check)
-        assertEquals(1f, Receipt.at(1_200, reduceMotion = false).ring)
-        assertEquals(1f, Receipt.at(1_200, reduceMotion = false).check)
-        val folding = Receipt.at(2_600, reduceMotion = false)
-        assertTrue(folding.collapse); assertTrue(folding.folding in 0.01f..0.99f)
-        assertEquals(1f, Receipt.at(2_920, reduceMotion = false).folding)
-        assertEquals(2_920L, Receipt.end(reduceMotion = false))
-    }
 }

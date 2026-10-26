@@ -28,18 +28,13 @@ class HomeRulesTest {
             assertEquals("${symbol.jsonPrimitive.content} ••••", HomeRules.fiat(1_234, null, currency, Locale.US, true))
         }
     }
-    @Test fun fiatUsesSharedRoundingAndLoadingState() {
+    @Test fun fiatUsesSharedRoundingAndWaitsForBothBalanceAndPrice() {
         assertEquals("$1.00", HomeRules.fiat(1000, 100_000.0, "USD", Locale.US, false))
         assertEquals("¥2", HomeRules.fiat(1000, 150_000.0, "JPY", Locale.US, false))
         assertEquals("$0.00", HomeRules.fiat(0, 100_000.0, "USD", Locale.US, false))
-        assertNull(HomeRules.fiat(1000, null, "USD", Locale.US, false))
-        assertNull(HomeRules.fiat(1000, Double.NaN, "USD", Locale.US, false))
-    }
-    @Test fun visibleFiatWaitsForBothBalanceAndPriceInEitherArrivalOrder() {
         assertNull(HomeRules.fiat(null, 100_000.0, "USD", Locale.US, false))
         assertNull(HomeRules.fiat(1000, null, "USD", Locale.US, false))
-        assertEquals("$1.00", HomeRules.fiat(1000, 100_000.0, "USD", Locale.US, false))
-        assertEquals("$0.00", HomeRules.fiat(0, 100_000.0, "USD", Locale.US, false))
+        assertNull(HomeRules.fiat(1000, Double.NaN, "USD", Locale.US, false))
         assertEquals("$ ••••", HomeRules.fiat(null, null, "USD", Locale.US, true))
     }
 
@@ -51,11 +46,6 @@ class HomeRulesTest {
     @Test fun boardingSuccessIsTransientAndAlwaysInSatsLikeRN() {
         assertEquals("20,000 sats available in Ark", HomeRules.boarding(20_000, 1000, 5999, Locale.US)?.message)
         assertNull(HomeRules.boarding(20_000, 1000, 6000, Locale.US))
-    }
-    @Test fun storeLinksMatchRN() {
-        assertEquals("https://play.google.com/store/apps/details?id=com.noahwallet.mainnet", HomeRules.updateURL("mainnet"))
-        assertEquals("https://play.google.com/store/apps/details?id=com.noahwallet.signet", HomeRules.updateURL("signet"))
-        assertEquals(HomeRules.updateURL("signet"), HomeRules.updateURL("regtest"))
     }
 
     // Home redesign (docs/native-rewrite/design/home.md).

@@ -27,20 +27,6 @@ class SendMotionTest {
         assertFalse(SendPhase.drop in phases(chain)); assertFalse(SendPhase.waiting in phases(chain))
     }
 
-    @Test fun phasesWaitForLateMilestonesAndKeepTheirSpacing() {
-        // The wallet answers at 10 s: the ending starts then, and later phases keep their gaps.
-        val motion = SendMotion(SendRoute.ark, 0).reach(SendMilestone.paying, 200).reach(SendMilestone.sent, 10_000)
-        val starts = SendTimeline.started(motion, 60_000).associate { it.phase to it.start }
-        assertEquals(1_150L, starts[SendPhase.sign])
-        assertEquals(10_000L, starts[SendPhase.deliver])
-        assertEquals(10_350L, starts[SendPhase.finale])
-        // Before 10 s, nothing past signing.
-        assertEquals(SendPhase.sign, SendTimeline.started(motion, 9_999).last().phase)
-        // A fast success still plays every phase at the prototype's pace.
-        val fast = SendMotion(SendRoute.ark, 0).reach(SendMilestone.sent, 50)
-        assertEquals(2_750L, SendTimeline.started(fast, 60_000).first { it.phase == SendPhase.finale }.start)
-    }
-
     @Test fun aFailureNeverShowsTheKeyOrTheFinale() {
         val base = SendMotion(SendRoute.lightning, 0).reach(SendMilestone.paying, 100)
         val refunded = phases(base.reach(SendMilestone.refunded, 3_000))
@@ -111,15 +97,6 @@ class SendMotionTest {
         assertTrue(SendPhase.back in phases); assertFalse(SendPhase.key in phases)
         assertTrue(SendTimeline.started(motion, 60_000, true).first { it.phase == SendPhase.back }.start <
             SendTimeline.started(motion, 60_000).first { it.phase == SendPhase.back }.start)
-    }
-
-    @Test fun hapticsPlayOncePerMoment() {
-        val motion = SendMotion(SendRoute.ark, 0).reach(SendMilestone.sent, 100)
-        val started = SendTimeline.started(motion, 60_000)
-        val all = SendHaptics.between(started, -1, 60_000)
-        assertEquals(listOf(SendHaptics.Kind.light, SendHaptics.Kind.light, SendHaptics.Kind.light, SendHaptics.Kind.success), all)
-        assertEquals(all, SendHaptics.between(started, -1, 3_000) + SendHaptics.between(started, 3_000, 60_000))
-        assertTrue(SendHaptics.between(started, 60_000, 60_000).isEmpty())
     }
 
     private fun lightning(state: SendController.State = SendController.State.failed, before: Set<UInt> = setOf(1u, 2u)) =

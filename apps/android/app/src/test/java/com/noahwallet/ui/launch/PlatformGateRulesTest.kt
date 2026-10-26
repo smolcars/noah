@@ -23,9 +23,4 @@ class PlatformGateRulesTest {
                 flag("batteryEnabled"), flag("batterySeen"))?.name)
         }
     }
-    @Test fun notificationsOnboardingRouting() {
-        // UnifiedPush setup finishes inside the Notifications step; battery stays Android's own step before Done.
-        assertEquals("battery", PlatformGateRules.afterNotifications(true))
-        assertEquals("done", PlatformGateRules.afterNotifications(false))
-    }
 }

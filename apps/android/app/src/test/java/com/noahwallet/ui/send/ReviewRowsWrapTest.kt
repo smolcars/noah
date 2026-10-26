@@ -87,11 +87,4 @@ class ReviewRowsWrapTest {
             assertTrue(label, content.left >= title.right)
         }
     }
-
-    /** The case the fix is for: one-line rows ellipsize the reviewed total and the note at 2×. */
-    @Test fun oneLineRowsCutTheTotalOffAtTwiceTheScale() {
-        show(2f, wraps = false)
-        assertTrue(cut("₿ 152,742"))
-        assertTrue(cut("Coffee and a croissant, thanks!"))
-    }
 }

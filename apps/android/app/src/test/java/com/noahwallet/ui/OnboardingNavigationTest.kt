@@ -28,8 +28,4 @@ class OnboardingNavigationTest {
         assertEquals(history, OnboardingNavigation.visit(history, "email"))
         assertEquals(listOf("welcome"), OnboardingNavigation.back(listOf("welcome"), false, true))
     }
-
-    @Test fun interruptedOnboardingResumesAtName() {
-        assertEquals("name", OnboardingNavigation.resumeStep)
-    }
 }

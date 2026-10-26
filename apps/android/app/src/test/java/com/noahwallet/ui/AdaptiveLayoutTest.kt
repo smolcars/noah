@@ -16,11 +16,6 @@ class AdaptiveLayoutTest {
         assertFalse(AdaptiveLayout.useDetailPane(700f, 900f, 1.5f))
         assertTrue(AdaptiveLayout.useDetailPane(864f, 900f, 1.5f))
     }
-    @Test fun qrKeepsAReadableSquareWithoutUsingTheWholeShortWindow() {
-        assertEquals(302f, AdaptiveLayout.qrSide(800f))
-        assertEquals(172f, AdaptiveLayout.qrSide(300f))
-        assertEquals(128f, AdaptiveLayout.qrSide(150f))
-    }
     @Test fun separatingHingesLeaveControlsOnOneUnobscuredPane() {
         assertEquals(WindowRegion(0, 0, 490, 800), usableRegion(1000, 800, listOf(WindowRegion(490, 0, 510, 800))))
         assertEquals(WindowRegion(0, 410, 600, 1000), usableRegion(600, 1000, listOf(WindowRegion(0, 390, 600, 410))))

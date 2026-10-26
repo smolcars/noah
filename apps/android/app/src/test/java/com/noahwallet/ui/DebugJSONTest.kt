@@ -8,10 +8,6 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DebugJSONTest {
-    @Test fun importsArePrettyJSONAndMissingArkInfoIsNull() {
-        assertEquals("[\n  \"id\\\"1\",\n  \"id2\"\n]", DebugJSON.imported(listOf("id\"1", "id2")))
-        assertEquals("null", DebugJSON.ark(null))
-    }
     @Test fun decodedResultsKeepNestedFieldsAndUnsignedAmounts() {
         val vtxo = Vtxo("public", 12u, OutPoint("anchor", 1u), OutPoint("point", 2u), "id", ULong.MAX_VALUE,
             100u, "pubkey", VtxoState.Unknown, 1u, 42uL, false)

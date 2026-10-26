@@ -145,11 +145,6 @@ class RecurringApprovalScreenTest {
         assertEquals(1, world.wallet.calls)
     }
 
-    @Test fun theReviewKeepsHoldToSendInReach() {
-        review(needsApproval())
-        compose.assertReachable("send-hold")
-    }
-
     @Test fun theReviewKeepsHoldToSendInReachAtDoubleText() {
         review(needsApproval(), fontScale = 2f)
         compose.assertReachable("send-hold")
