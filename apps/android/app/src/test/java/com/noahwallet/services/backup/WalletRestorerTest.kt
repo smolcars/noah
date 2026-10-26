@@ -1,6 +1,7 @@
 package com.noahwallet.services.backup
 
 import com.noahwallet.services.storage.*
+import com.noahwallet.services.testRounds
 import com.noahwallet.services.wallet.*
 import com.noahwallet.services.server.ServerClient
 import io.github.niteshbalusu11.bark.*
@@ -15,8 +16,6 @@ import org.junit.Test
 class WalletRestorerTest {
     companion object {
         private val validSeed = List(11) { StoredMnemonic.wordList[0] }.plus(StoredMnemonic.wordList[3]).joinToString(" ")
-        /** Each network's sealed backup: sealing derives a 600,000-round PBKDF2 key, so it happens once per run. */
-        private val sealed = HashMap<String, ByteArray>()
     }
     private class Boom : Exception()
     private class Handles : WalletSession.Handles {
@@ -66,13 +65,8 @@ class WalletRestorerTest {
         fun restorer(transaction: RestoreTransaction = tx): WalletRestorer {
             val source = File(root, "snapshot").apply { writeText("new wallet") }
             val encrypted = File(root, "backup")
-            if (!encrypted.exists()) encrypted.writeBytes(sealed.getOrPut(network) {
-                val once = File(root, "sealed")
-                BackupArchive.seal(source, BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), validSeed, once, root) { complete, target ->
-                    Files.createLink(target.toPath(), complete.toPath()); Unit
-                }
-                once.readBytes().also { once.delete() }
-            })
+            if (!encrypted.exists()) BackupArchive.seal(source,
+                BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), validSeed, encrypted, root, testRounds) { complete, target -> Files.createLink(target.toPath(), complete.toPath()); Unit }
             val legacyFile = File(root, "legacy")
             if (legacy) {
                 val bytes = java.io.ByteArrayOutputStream()
@@ -81,7 +75,7 @@ class WalletRestorerTest {
                     zip.write("new wallet".toByteArray()); zip.closeEntry()
                 }
                 legacyFile.writeBytes(java.util.Base64.getEncoder().encode(
-                    BackupCrypto.encrypt(bytes.toByteArray(), validSeed, BackupCrypto.Version.legacyDirectory)))
+                    BackupCrypto.encrypt(bytes.toByteArray(), validSeed, BackupCrypto.Version.legacyDirectory, testRounds)))
             }
             val info = """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}","encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
             return WalletRestorer("regtest", session, location, seed,
@@ -106,7 +100,7 @@ class WalletRestorerTest {
                     val file = if (url == "http://legacy") legacyFile else encrypted
                     if (file.length() > limit || url == "http://bad") throw WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)
                     file.copyTo(destination)
-                }, beginOnboarding = { if (markerFails) throw Boom(); initialized = false })
+                }, beginOnboarding = { if (markerFails) throw Boom(); initialized = false }, rounds = testRounds)
         }
         fun previous() {
             assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
@@ -141,7 +135,7 @@ class WalletRestorerTest {
     } }
     private suspend fun world(block: suspend World.() -> Unit) {
         val world = World()
-        // Each restore runs PBKDF2 (600k iterations) to seal and open; 10 s timed out on a loaded machine.
+        // A hung restore fails rather than stalling the suite.
         try { withTimeout(60_000) { world.block() } } finally { world.root.deleteRecursively() }
     }
     @Test fun stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline() = runBlocking {
