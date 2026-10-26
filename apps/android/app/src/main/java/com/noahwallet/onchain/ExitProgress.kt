@@ -170,7 +170,10 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         }
     }), leading = {
         if (!wide) ExitHeader(exit, stage, received, money, null)
-        ExitPicture(scene, phase.first + ". " + tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString()),
+        // TalkBack hears the phase, the progress and, once claiming, where the claim goes: the whole address.
+        val destination = if (stage.phase == ExitStage.Phase.claiming || stage.phase == ExitStage.Phase.claimed)
+            context.claimedTo?.let { tr("Another wallet") + ", " + it } ?: tr("This phone") else null
+        ExitPicture(scene, listOfNotNull(phase.first, tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString()), destination).joinToString(". "),
             exitPicture().testTag("exit-picture"), money, balance = context.confirmed, received = received)
         ExitPhaseLine(phase.first, if (failed) palette.failure else if (phase.second) palette.foreground else palette.muted, Modifier.testTag("exit-phase"))
         if (wide) Text(exitExplanation(stage, context.delta), Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 40.dp),
