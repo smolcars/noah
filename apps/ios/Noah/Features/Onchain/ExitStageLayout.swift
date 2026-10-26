@@ -36,27 +36,58 @@ struct ExitStageGeometry: Equatable {
     var room: Double { roundY - coinY }
     /// Sideways spacing of the other people's stubs.
     var spread: Double { min(26, width * 0.068) }
-    /// A transaction's square; smaller when the levels are packed.
-    var side: Double { room / Double(count) < 22 ? 11 : 14 }
+    /// What every two drawn elements keep between them.
+    static let clearance = 2.0
+
+    /// A transaction's square: 14 pt where the levels have 22 pt or more, else 11, and smaller still on
+    /// a long path so every level keeps its spacing with the timelock's dial reserved (7 pt at least).
+    var side: Double {
+        var side = room / Double(count) < 22 ? 11.0 : 14.0
+        while side > 7, (1...count).map({ minimumGap($0, side: side, reserve: coinReserve(1)) }).reduce(0, +) > room { side -= 1 }
+        return side
+    }
+
+    /// The room your coin keeps around it: its dashed ring, or the timelock's dial while it's locked (`lock`, 0…1).
+    func coinReserve(_ lock: Double = 0) -> Double { coinRadius + 5 + 13 * lock.clamped(0, 1) }
+
+    /// The least gap `level` (between levels `level - 1` and `level`) can be: half of each neighbour, the
+    /// round's block, a node or your coin with its reserve, and the clearance, so the final link always shows.
+    func minimumGap(_ level: Int, side: Double, reserve: Double) -> Double {
+        (level == 1 ? roundSide / 2 : side / 2) + (level == count ? reserve : side / 2) + Self.clearance
+    }
     var fontSize: Double { 11.5 * scale }
     var subSize: Double { 10.5 * scale }
     var lineHeight: Double { 14 * scale }
 
     /// Each level's y, root first: 0 is the round's block, `count` your coin. `mined[j]` is how far
-    /// transaction j is in a block (0…1). When a long path doesn't fit at 26 pt, the gaps between
-    /// confirmed transactions shrink, like a pile of blocks; the waiting one and the coin never do.
-    func levels(_ mined: [Double]) -> [Double] {
-        let tight = room / Double(count) >= 26 ? 1 : 0.42
+    /// transaction j is in a block (0…1); `lock` how far the timelock's dial is drawn. When a long path
+    /// doesn't fit at 26 pt, the gaps between confirmed transactions shrink, like a pile of blocks; the
+    /// waiting one and the coin never do. No gap goes below its `minimumGap`: the room for your coin and
+    /// the final link comes first, then the rest is shared.
+    func levels(_ mined: [Double], lock: Double = 0) -> [Double] {
+        let tight = room / Double(count) >= 26 ? 1 : 0.42, side = side, reserve = coinReserve(lock)
         func done(_ level: Int) -> Double { level == 0 ? 1 : mined[safe: level - 1] ?? 0 }
-        var weights = [0.0]
-        for level in 1...count { weights.append(1 + (tight - 1) * min(done(level - 1), done(level))) }
-        let sum = weights.reduce(0, +)
-        var ys = [roundY], acc = 0.0
-        for level in 1...count {
-            acc += weights[level]
-            ys.append(roundY - room * acc / sum)
-        }
+        let weights = (1...count).map { 1 + (tight - 1) * min(done($0 - 1), done($0)) }
+        let gaps = Self.share(room, weights: weights, minimums: (1...count).map { minimumGap($0, side: side, reserve: reserve) })
+        var ys = [roundY]
+        for gap in gaps { ys.append(ys[ys.count - 1] - gap) }
+        ys[count] = coinY
         return ys
+    }
+
+    /// `total` shared by `weights`, each share at least its minimum: shares that fall short take their
+    /// minimum and the rest is shared again. When the minimums don't fit, in proportion to them.
+    static func share(_ total: Double, weights: [Double], minimums: [Double]) -> [Double] {
+        let need = minimums.reduce(0, +)
+        guard need < total else { return minimums.map { $0 * total / max(need, 1) } }
+        var fixed = Set<Int>()
+        while true {
+            let free = weights.indices.filter { !fixed.contains($0) }
+            let left = total - fixed.reduce(0) { $0 + minimums[$1] }, sum = free.reduce(0) { $0 + weights[$1] }
+            let short = free.filter { left * weights[$0] / sum < minimums[$0] }
+            guard short.isEmpty else { fixed.formUnion(short); continue }
+            return weights.indices.map { fixed.contains($0) ? minimums[$0] : left * weights[$0] / sum }
+        }
     }
 
     /// The other people's stubs at transaction `level` (1…count-1): three short faint branches,
@@ -110,9 +141,13 @@ struct ExitStageGeometry: Equatable {
     var claimNode: CGPoint { stem(0.42) }
 
     /// How wide a label in the right-hand column can be between `top` and `bottom`: to the canvas's
-    /// edge, or to the phone's badge where it would run into it.
-    func column(top: Double, bottom: Double) -> Double {
-        (bottom > walletY - 18 && top < walletY + 18 ? walletX - 22 : width - 12) - labelX
+    /// edge, or short of the phone's badge (and, while the Ark line shows, the server's) where it would
+    /// run into it, leaving a pill's 8 pt and the clearance.
+    func column(top: Double, bottom: Double, server: Bool = false) -> Double {
+        var right = width - 12
+        if bottom > walletY - 20 && top < walletY + 18 { right = min(right, walletX - 15 - Self.clearance - 9) }
+        if server && bottom > coinY - 16 && top < coinY + 16 { right = min(right, width - 44 - Self.clearance - 9) }
+        return right - labelX
     }
 
     /// How wide the claim's label can be, right-aligned at `x`: it stays right of your coin.
@@ -120,6 +155,63 @@ struct ExitStageGeometry: Equatable {
 
     /// Where labels can go: below the top and above the ground line.
     var labelBounds: ClosedRange<Double> { 2...(ground - 3) }
+}
+
+/// A drawn element's clearance outline (a box, or a circle), so the picture can keep its elements apart.
+struct ExitStageShape: Equatable {
+    enum Kind: Equatable { case round, node, coin, claimNode, badge, server, text, label, brace, stub, sibling, amount, caption }
+    var kind: Kind
+    /// Parts of one element (a badge and its alarm dot, a label and its bracket) may touch each other.
+    var group: String
+    var frame: CGRect
+    var circle = false
+
+    static func box(_ kind: Kind, _ group: String, _ frame: CGRect) -> Self { .init(kind: kind, group: group, frame: frame) }
+    static func circle(_ kind: Kind, _ group: String, _ center: CGPoint, _ radius: Double) -> Self {
+        .init(kind: kind, group: group, frame: CGRect(x: center.x - radius, y: center.y - radius, width: 2 * radius, height: 2 * radius), circle: true)
+    }
+
+    /// Whether the two come closer than `margin`.
+    func overlaps(_ other: Self, margin: Double = 0) -> Bool {
+        switch (circle, other.circle) {
+        case (true, true):
+            return hypot(frame.midX - other.frame.midX, frame.midY - other.frame.midY) < frame.width / 2 + other.frame.width / 2 + margin
+        case (true, false): return Self.near(self, other.frame, margin)
+        case (false, true): return Self.near(other, frame, margin)
+        case (false, false): return frame.insetBy(dx: -margin / 2, dy: -margin / 2).intersects(other.frame.insetBy(dx: -margin / 2, dy: -margin / 2))
+        }
+    }
+
+    private static func near(_ circle: Self, _ box: CGRect, _ margin: Double) -> Bool {
+        let x = min(max(circle.frame.midX, box.minX), box.maxX), y = min(max(circle.frame.midY, box.minY), box.maxY)
+        return hypot(circle.frame.midX - x, circle.frame.midY - y) < circle.frame.width / 2 + margin
+    }
+}
+
+/// Where the picture's optional elements go once everything required has its room: the other people's
+/// stubs, your other exits' coins and amounts, and the caption. Anything that would collide moves or is
+/// left out, amounts first, then your other exits' coins, then stubs.
+struct ExitStageArrangement {
+    struct Stub: Equatable {
+        var level: Int
+        var tip: CGPoint
+    }
+
+    struct Sibling: Equatable {
+        var other: ExitStageScene.Other
+        var index: Int
+        var coin: CGPoint
+        /// Its amount's text size; nil when there's no room for it.
+        var amount: Double?
+    }
+
+    var stubs: [Stub] = []
+    var siblings: [Sibling] = []
+    var caption: [String]?
+    /// The caption's first line.
+    var captionY = 0.0
+    /// Every drawn element's outline; no two of different groups overlap.
+    var shapes: [ExitStageShape] = []
 }
 
 /// One label in the picture's right-hand column (or, for the claim, beside its node).

@@ -325,7 +325,7 @@ struct ExitStagePainter {
                                    priority: 2, brace: min(Y(n) + g.coinRadius + 5, Y(1) + 7)...(Y(1) + 7)))
             }
             items.append(round)
-            return place(items)
+            return place(items, server: true)
         }
         if !scene.claiming {
             items.append(round)
@@ -372,25 +372,27 @@ struct ExitStagePainter {
                 : [.init(text: tr("Next block"), tone: .strong)] + (scene.claimFee.map { [.init(text: tr("claim fee {amount}", $0))] } ?? [])
             items.append(.init(y: node.y, lines: lines, priority: 4, pill: scene.picture == .claimed ? nil : .orange, trailing: node.x - 16))
         }
-        return place(items)
+        return place(items, server: [.lift, .canceled].contains(scene.picture))
     }
 
-    private func place(_ items: [ExitStageLabel]) -> [ExitStageLabel] {
-        ExitStageLabels.place(items.map(fit), lineHeight: geometry.lineHeight, scale: geometry.scale, bounds: geometry.labelBounds, fit: fit) {
+    /// `server`: the Ark line and its server show, so labels keep clear of its badge too.
+    private func place(_ items: [ExitStageLabel], server: Bool) -> [ExitStageLabel] {
+        let fit = { (label: ExitStageLabel) in self.fit(label, server: server) }
+        return ExitStageLabels.place(items.map(fit), lineHeight: geometry.lineHeight, scale: geometry.scale, bounds: geometry.labelBounds, fit: fit) {
             tr("Blocks {from}–{to}", height($0), height($1))
         }
     }
 
     /// A label wrapped to the room it has (translations and large text run long): its column, narrower
     /// beside the phone's badge, or for the claim, right of your coin. A pill's text keeps 8 pt inside it.
-    func fit(_ label: ExitStageLabel) -> ExitStageLabel {
+    func fit(_ label: ExitStageLabel, server: Bool = false) -> ExitStageLabel {
         let g = geometry
         var label = label
         // Fallbacks that can't fit are no help.
-        label.fallbacks = label.fallbacks.map(fit).filter { !$0.shrinks || $0.size >= 0.75 }
+        label.fallbacks = label.fallbacks.map { fit($0, server: server) }.filter { !$0.shrinks || $0.size >= 0.75 }
         if label.shrinks, let line = label.lines.first {
             let width = ExitStageText.width(line.text, size: g.fontSize, strong: [.strong, .failureStrong].contains(line.tone))
-            let top = label.y - g.lineHeight / 2, room = label.trailing.map(g.claimColumn) ?? g.column(top: top, bottom: top + g.lineHeight)
+            let top = label.y - g.lineHeight / 2, room = label.trailing.map(g.claimColumn) ?? g.column(top: top, bottom: top + g.lineHeight, server: server)
             label.size = min(1, room / max(1, width))
             return label
         }
@@ -410,7 +412,8 @@ struct ExitStagePainter {
         if let x = label.trailing { return wrapped(g.claimColumn(x)) }
         let full = wrapped(g.width - 12 - g.labelX), top = full.y - g.lineHeight / 2
         let bottom = top + Double(full.lines.count) * g.lineHeight + (full.pill == nil ? 0 : 5 * g.scale)
-        return g.column(top: top, bottom: bottom) < g.width - 12 - g.labelX ? wrapped(g.column(top: top, bottom: bottom)) : full
+        let room = g.column(top: top, bottom: bottom, server: server)
+        return room < g.width - 12 - g.labelX ? wrapped(room) : full
     }
 
     /// A pill's frame around a label's first line, however many lines it wrapped to.
@@ -422,13 +425,121 @@ struct ExitStagePainter {
         return CGRect(x: x, y: label.y - (g.lineHeight + 5) / 2, width: width + 16, height: height)
     }
 
+    /// A label's outline: its pill, and its lines at their sizes.
+    func frame(_ label: ExitStageLabel) -> CGRect {
+        let g = geometry
+        let width = label.lines.enumerated().map { index, line in
+            ExitStageText.width(line.text, size: (index < label.head ? g.fontSize : g.subSize) * label.size, strong: [.strong, .failureStrong].contains(line.tone))
+        }.max() ?? 0
+        let box = CGRect(x: label.trailing.map { $0 - width } ?? g.labelX, y: label.top, width: width, height: label.bottom - label.top)
+        return label.pill == nil ? box : box.union(pill(label))
+    }
+
+    // MARK: Arrangement
+
+    /// Every drawn element's outline, the required ones first (the round's block, your path, your coin, the
+    /// destination, the server, the texts and labels), then the optional ones where they're clear of
+    /// everything before them: the other people's stubs, your other exits' coins (slid down their branch or
+    /// further out if they must be), their amounts, and the caption. So amounts give way first, then those
+    /// coins, then stubs. `ys` and `lock` are the picture's at this moment; `labels` are placed.
+    func arrange(_ s: ExitStageScene, ys: [Double], lock: Double, labels: [ExitStageLabel]) -> ExitStageArrangement {
+        let g = geometry, n = s.levels.count, L = g.scale
+        var result = ExitStageArrangement()
+        guard s.picture != .none || s.explain else { return result }
+        func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
+        func text(_ string: String, x: Double, y: Double, size: Double, strong: Bool = false, trailing: Bool = false) -> CGRect {
+            let width = ExitStageText.width(string, size: size, strong: strong), height = size * 1.25
+            return CGRect(x: trailing ? x - width : x, y: y - height / 2, width: width, height: height)
+        }
+        var shapes: [ExitStageShape] = [.box(.round, "round", CGRect(x: g.trunk - g.roundSide / 2, y: g.ground - g.roundSide, width: g.roundSide, height: g.roundSide))]
+        for level in 1..<max(1, n) {
+            shapes.append(.box(.node, "node\(level)", CGRect(x: g.trunk - g.side / 2, y: Y(level) - g.side / 2, width: g.side, height: g.side)))
+        }
+        // Your coin with its dashed ring or, while locked, the timelock's dial; while claiming, the coin alone.
+        shapes.append(.circle(.coin, "coin", CGPoint(x: g.trunk, y: g.coinY - (s.picture == .lift ? 5 : 0)), s.claiming ? g.coinRadius : g.coinReserve(lock)))
+        if s.claiming {
+            shapes.append(.box(.claimNode, "claim", CGRect(x: g.claimNode.x - 6.5, y: g.claimNode.y - 6.5, width: 13, height: 13)))
+        }
+        if s.claiming || ExitStageStill(s).wallet > 0.5 {
+            let center = CGPoint(x: g.walletX, y: g.walletY)
+            shapes.append(.circle(.badge, "badge", center, s.picture == .claimed ? 24 : 15))
+            if s.picture == .claimed { shapes.append(.circle(.badge, "badge", CGPoint(x: center.x + 15, y: center.y - 15), 9)) }
+            if s.levels.contains(.needsFunds) { shapes.append(.circle(.badge, "badge", CGPoint(x: center.x + 12, y: center.y - 12), 6.5)) }
+            for line in destinationLines(s, landed: s.picture == .claimed) {
+                shapes.append(.box(.text, "badge", text(line.text, x: g.width - 12, y: line.y, size: line.size, strong: line.strong, trailing: true)))
+            }
+        }
+        shapes.append(.box(.text, "bitcoin", text(tr("Bitcoin"), x: 14, y: g.ground + 12 * L, size: 10.5 * L)))
+        if s.explain || [.lift, .canceled].contains(s.picture) {
+            shapes.append(.box(.text, "ark", text(tr("Ark"), x: 14, y: g.coinY - 10, size: 11 * L)))
+            shapes.append(.circle(.server, "server", CGPoint(x: g.width - 30, y: g.coinY), 14))
+        }
+        for (index, label) in labels.enumerated() {
+            shapes.append(.box(.label, "label\(index)", frame(label)))
+            if let brace = label.brace { shapes.append(.box(.brace, "label\(index)", CGRect(x: g.trunk + 27, y: brace.lowerBound, width: 5, height: brace.upperBound - brace.lowerBound))) }
+        }
+        result.shapes = shapes
+        func clear(_ shape: ExitStageShape) -> Bool {
+            CGRect(x: 0, y: 0, width: g.width, height: g.height).contains(shape.frame)
+                && !result.shapes.contains { $0.group != shape.group && $0.overlaps(shape, margin: ExitStageGeometry.clearance) }
+        }
+        // The other people's stubs.
+        let othersAt = Dictionary(grouping: s.others, by: \.level)
+        for level in 1..<max(1, n) {
+            for tip in g.stubs(ys, level: level, others: othersAt[level]?.count ?? 0) {
+                let shape = ExitStageShape.circle(.stub, "stub\(level)", tip, 3)
+                guard clear(shape) else { continue }
+                result.stubs.append(.init(level: level, tip: tip))
+                result.shapes.append(shape)
+            }
+        }
+        // Your other exits' coins: at their place, else slid down their branch toward it, else further out.
+        for level in othersAt.keys.sorted() {
+            for (index, other) in (othersAt[level] ?? []).prefix(2).enumerated() {
+                let base = g.other(ys, level: level, index: index), group = "sibling\(level).\(index)"
+                var spots: [CGPoint] = []
+                for shift in [0.0, 0.45, 0.9] {
+                    for y in stride(from: Double(base.y), through: max(Double(base.y), Y(level) - 10), by: 3) {
+                        spots.append(CGPoint(x: Double(base.x) - shift * g.spread, y: y))
+                    }
+                }
+                guard let spot = spots.first(where: { clear(.circle(.sibling, group, $0, 6)) }) else { continue }
+                result.siblings.append(.init(other: other, index: index, coin: spot))
+                result.shapes.append(.circle(.sibling, group, spot, 6))
+            }
+        }
+        // Their amounts, left of each coin: the list carries the numbers when there's no room.
+        for index in result.siblings.indices {
+            let sibling = result.siblings[index]
+            guard let size = Self.fitted(sibling.other.amount, 9.5 * L, room: sibling.coin.x - 14) else { continue }
+            let shape = ExitStageShape.box(.amount, "sibling\(sibling.other.level).\(sibling.index)",
+                                           text(sibling.other.amount, x: sibling.coin.x - 10, y: sibling.coin.y, size: size, trailing: true))
+            guard clear(shape) else { continue }
+            result.siblings[index].amount = size
+            result.shapes.append(shape)
+        }
+        // The caption, under the lowest stubs.
+        if let lines = g.caption(tr("Other people's coins in this round"), ys, width: { ExitStageText.width($0, size: 10 * L) }) {
+            let lineHeight = 12.5 * L, top = Y(1) + 9, room = (g.ground - g.roundSide - 5) - top
+            let y0 = top + (room - Double(lines.count) * lineHeight) / 2 + lineHeight / 2, right = g.trunk - g.roundSide / 2 - 9
+            let width = lines.map { ExitStageText.width($0, size: 10 * L) }.max() ?? 0
+            let shape = ExitStageShape.box(.caption, "caption", CGRect(x: right - width, y: y0 - lineHeight / 2, width: width, height: Double(lines.count) * lineHeight))
+            if clear(shape) {
+                result.caption = lines
+                result.captionY = y0
+                result.shapes.append(shape)
+            }
+        }
+        return result
+    }
+
     // MARK: Pulses
 
     /// What moves while the still stands: the waiting transaction, coin or claim, its pill, the dial's
     /// tip and a needs-funds ring. Overlays draw them; the Canvas draws them itself only while it moves.
     func pulses(_ scene: ExitStageScene) -> [ExitPulse] {
         guard !scene.explain, scene.picture != .none else { return [] }
-        let g = geometry, still = ExitStageStill(scene), ys = g.levels(still.mined), n = scene.levels.count
+        let g = geometry, still = ExitStageStill(scene), ys = g.levels(still.mined, lock: still.lock), n = scene.levels.count
         var pulses: [ExitPulse] = []
         if !scene.claiming && scene.picture != .canceled {
             for (index, level) in scene.levels.enumerated() {
@@ -485,7 +596,9 @@ struct ExitStagePainter {
         let canvas = MotionCanvas(context: context, size: CGSize(width: g.width, height: g.height),
                                   viewBox: CGRect(x: 0, y: 0, width: g.width, height: g.height), colors: c)
         let breathe = ExitPulse.breathe(now, animating: animating && inline)
-        let ys = g.levels(f.mined), TX = g.trunk, yC = g.coinY
+        let ys = g.levels(f.mined, lock: f.lock), TX = g.trunk, yC = g.coinY
+        let target = ExitStageStill(s), new = labels(s, ys: g.levels(target.mined, lock: target.lock))
+        let arrangement = arrange(s, ys: ys, lock: f.lock, labels: new)
         func Y(_ level: Int) -> Double { ys[safe: level] ?? yC }
         func text(_ string: String, _ x: Double, _ y: Double, size: Double, strong: Bool = false, color: Color, anchor: UnitPoint = .leading,
                   opacity: Double = 1) {
@@ -508,38 +621,32 @@ struct ExitStagePainter {
         // The chain: the ground line, with the round's transaction in its block as the trunk's foot.
         canvas.stroke(canvas.line(CGPoint(x: 12, y: g.ground + 0.5), CGPoint(x: g.width - 12, y: g.ground + 0.5)), c.foreground.opacity(0.32), 1.2)
         text(tr("Bitcoin"), 14, g.ground + 12 * L, size: 10.5 * L, color: c.muted)
-        // Everyone else's part of the round: one level of short faint stubs per transaction, and one caption.
-        let othersAt = Dictionary(grouping: s.others, by: \.level)
-        for level in 1..<max(1, n) {
-            let alpha = f.tree * (f.pop[safe: level] ?? 1) * (1 - 0.6 * f.cancel)
+        // Everyone else's part of the round: one level of short faint stubs per transaction, and one caption,
+        // where they're clear of everything else (`arrange`).
+        for stub in arrangement.stubs {
+            let alpha = f.tree * (f.pop[safe: stub.level] ?? 1) * (1 - 0.6 * f.cancel), tip = stub.tip
             guard alpha > 0.02 else { continue }
-            for tip in g.stubs(ys, level: level, others: othersAt[level]?.count ?? 0) {
-                canvas.context.stroke(Self.link(CGPoint(x: tip.x, y: tip.y + 3), CGPoint(x: TX, y: Y(level) - 8)),
-                                      with: .color(c.foreground.opacity(0.22 * alpha)), lineWidth: 1)
-                canvas.fill(canvas.circle(tip.x, tip.y, 2.6), c.background.opacity(alpha))
-                canvas.stroke(canvas.circle(tip.x, tip.y, 2.6), c.foreground.opacity(0.34 * alpha), 1)
-            }
+            canvas.context.stroke(Self.link(CGPoint(x: tip.x, y: tip.y + 3), CGPoint(x: TX, y: Y(stub.level) - 8)),
+                                  with: .color(c.foreground.opacity(0.22 * alpha)), lineWidth: 1)
+            canvas.fill(canvas.circle(tip.x, tip.y, 2.6), c.background.opacity(alpha))
+            canvas.stroke(canvas.circle(tip.x, tip.y, 2.6), c.foreground.opacity(0.34 * alpha), 1)
         }
         let captionAlpha = f.tree * (f.pop[safe: 1] ?? 1) * (1 - 0.6 * f.cancel) * (s.explain ? f.labels : 1 - f.dim)
-        if captionAlpha > 0.02, let lines = g.caption(tr("Other people's coins in this round"), ys, width: { ExitStageText.width($0, size: 10 * L) }) {
-            let lineHeight = 12.5 * L, top = Y(1) + 9, room = (g.ground - g.roundSide - 5) - top
-            let y0 = top + (room - Double(lines.count) * lineHeight) / 2 + lineHeight / 2
+        if captionAlpha > 0.02, let lines = arrangement.caption {
             for (index, line) in lines.enumerated() {
-                text(line, TX - g.roundSide / 2 - 9, y0 + Double(index) * lineHeight, size: 10 * L, color: c.muted, anchor: .trailing, opacity: captionAlpha * 0.9)
+                text(line, TX - g.roundSide / 2 - 9, arrangement.captionY + Double(index) * 12.5 * L, size: 10 * L, color: c.muted, anchor: .trailing,
+                     opacity: captionAlpha * 0.9)
             }
         }
         // Your other exits from this round leave your branch where they stop sharing.
-        for (level, others) in othersAt {
-            for (index, other) in others.prefix(2).enumerated() {
-                let p = g.other(ys, level: level, index: index), alpha = f.tree * (f.pop[safe: level] ?? 1)
-                canvas.context.stroke(Self.link(CGPoint(x: p.x, y: p.y + 6), CGPoint(x: TX, y: Y(level) - 4)),
-                                      with: .color(c.orange.opacity(0.7 * alpha)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: other.sent ? [] : [3, 3]))
-                canvas.fill(canvas.circle(p.x, p.y, 6), c.soft.opacity(alpha))
-                canvas.stroke(canvas.circle(p.x, p.y, 6), c.orange.opacity(alpha), 1.6)
-                // An amount that can't fit left of its coin is left out: the list carries the numbers.
-                if let size = Self.fitted(other.amount, 9.5 * L, room: p.x - 14) {
-                    text(other.amount, p.x - 10, p.y, size: size, color: c.muted, anchor: .trailing, opacity: alpha * f.labels)
-                }
+        for sibling in arrangement.siblings {
+            let p = sibling.coin, level = sibling.other.level, alpha = f.tree * (f.pop[safe: level] ?? 1)
+            canvas.context.stroke(Self.link(CGPoint(x: p.x, y: p.y + 6), CGPoint(x: TX, y: Y(level) - 4)),
+                                  with: .color(c.orange.opacity(0.7 * alpha)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: sibling.other.sent ? [] : [3, 3]))
+            canvas.fill(canvas.circle(p.x, p.y, 6), c.soft.opacity(alpha))
+            canvas.stroke(canvas.circle(p.x, p.y, 6), c.orange.opacity(alpha), 1.6)
+            if let size = sibling.amount {
+                text(sibling.other.amount, p.x - 10, p.y, size: size, color: c.muted, anchor: .trailing, opacity: alpha * f.labels)
             }
         }
         // Before bark lists the path (Start): a ghost of the branch, what the exit will send.
@@ -555,8 +662,8 @@ struct ExitStagePainter {
         for level in 1...n {
             let u = f.grow[safe: level] ?? 1, mined = f.mined[level - 1]
             guard u > 0.001 else { continue }
-            let p0 = CGPoint(x: TX, y: level == 1 ? g.ground - g.roundSide : Y(level - 1) - 7)
-            let p1 = CGPoint(x: TX, y: Y(level) + (level == n ? g.coinRadius : 7))
+            let p0 = CGPoint(x: TX, y: level == 1 ? g.ground - g.roundSide : Y(level - 1) - g.side / 2)
+            let p1 = CGPoint(x: TX, y: Y(level) + (level == n ? g.coinRadius : g.side / 2))
             guard p0.y - p1.y >= 1 else { continue }
             let width = 4.6 + (2.2 - 4.6) * Double(level - 1) / Double(max(1, n - 1))
             let alpha = f.tree * (mined < 1 ? 1 - 0.6 * f.cancel : 1)
@@ -606,8 +713,7 @@ struct ExitStagePainter {
         dial(canvas, f, s, inline: inline, breathe: breathe)
         destination(canvas, f, s)
         // Labels: the right-hand column says which block each transaction is in, and what's waiting.
-        let new = labels(s, ys: g.levels(ExitStageStill(s).mined))
-        let old = f.fadeIn < 1 ? labels(a, ys: g.levels(ExitStageStill(a).mined)) : []
+        let old = f.fadeIn < 1 ? labels(a, ys: g.levels(ExitStageStill(a).mined, lock: ExitStageStill(a).lock)) : []
         func same(_ x: ExitStageLabel, _ y: ExitStageLabel) -> Bool { x.lines == y.lines && x.y == y.y && x.pill == y.pill }
         drawLabels(context, old.filter { label in !new.contains { same($0, label) } }, tree: 1 - f.fadeIn, trailing: 1 - f.fadeIn,
                    inline: true, breathe: breathe, flash: 0)
@@ -820,22 +926,30 @@ struct ExitStagePainter {
             canvas.fill(canvas.circle(center.x + 12, center.y - 12, 6.5), NoahTokens.Colors.failure)
             canvas.context.draw(Text(verbatim: "!").font(.system(size: 10, weight: .bold)).foregroundColor(.white), at: CGPoint(x: center.x + 12, y: center.y - 12))
         }
-        let other: String? = if case .other(let address) = s.destination { address } else { nil }
-        let first = !claiming ? tr("On-chain") : s.destination == .phone ? tr("This phone") : tr("Another wallet")
-        let second = claiming ? (s.destination != .phone ? other : f.land > 0.9 ? s.received ?? s.balance : s.balance) : s.balance
-        let size = claiming ? 1.1 : 1.0
-        // Right of the "Bitcoin" label, however long the translation.
-        let room = g.width - 12 - (14 + ExitStageText.width(tr("Bitcoin"), size: 10.5 * L) + 12)
         var layer = canvas.context
         layer.opacity *= alpha
-        layer.draw(Text(verbatim: first).font(ExitStageText.font(Self.shrunk(first, 10.5 * L * size, room: room, strong: claiming), strong: claiming))
-                    .foregroundColor(claiming ? colors.foreground : colors.muted),
-                   at: CGPoint(x: g.width - 12, y: g.ground + 11 * L), anchor: .trailing)
-        if let second {
-            layer.draw(Text(verbatim: second).font(ExitStageText.font(Self.shrunk(second, 11 * L * size, room: room, strong: true), strong: true))
-                        .foregroundColor(alarm ? NoahTokens.Colors.failure : claiming ? colors.muted : colors.foreground),
-                       at: CGPoint(x: g.width - 12, y: g.ground + 24 * L * size), anchor: .trailing)
+        for (index, line) in destinationLines(s, landed: f.land > 0.9).enumerated() {
+            layer.draw(Text(verbatim: line.text).font(ExitStageText.font(line.size, strong: line.strong))
+                        .foregroundColor(index == 0 ? (claiming ? colors.foreground : colors.muted) : alarm ? NoahTokens.Colors.failure : claiming ? colors.muted : colors.foreground),
+                       at: CGPoint(x: g.width - 12, y: line.y), anchor: .trailing)
         }
+    }
+
+    /// The two lines under the phone's (or other wallet's) badge: what it is, then the balance, the address or what
+    /// landed. Right of the "Bitcoin" label, however long the translation.
+    func destinationLines(_ s: ExitStageScene, landed: Bool) -> [(text: String, size: Double, strong: Bool, y: Double)] {
+        let g = geometry, L = g.scale, claiming = s.claiming
+        // While claiming the lines are a little larger, where they still fit above the picture's bottom.
+        let scale = claiming && g.ground + 24 * L * 1.1 + 11 * L * 1.1 * 0.625 <= g.height - 1 ? 1.1 : 1.0
+        let other: String? = if case .other(let address) = s.destination { address } else { nil }
+        let first = !claiming ? tr("On-chain") : s.destination == .phone ? tr("This phone") : tr("Another wallet")
+        let second = claiming ? (s.destination != .phone ? other : landed ? s.received ?? s.balance : s.balance) : s.balance
+        let room = g.width - 12 - (14 + ExitStageText.width(tr("Bitcoin"), size: 10.5 * L) + 12)
+        var lines = [(text: first, size: Self.shrunk(first, 10.5 * L * scale, room: room, strong: claiming), strong: claiming, y: g.ground + 11 * L)]
+        if let second {
+            lines.append((second, Self.shrunk(second, 11 * L * scale, room: room, strong: true), true, min(g.ground + 24 * L * scale, g.height - 11 * L * scale * 0.625 - 1)))
+        }
+        return lines
     }
 
     /// The fee child: a dot flies from your phone to the transaction's anchor and rides with it into the block.

@@ -49,17 +49,43 @@ struct ExitStageTests {
         #expect(gaps.allSatisfy { abs($0 - gaps[0]) < 0.001 } && gaps[0] >= 26)
         // As blocks confirm nothing moves: the pile only tightens when the path doesn't fit.
         #expect(g.levels([1, 1, 0, 0]) == ys)
-        #expect(g.side == 14 && Self.se.side == 11)
+        // Nine transactions on the SE's 236 pt picture take smaller squares, so every level keeps its spacing.
+        #expect(g.side == 14 && Self.se.side == 10)
     }
 
     @Test func aDeepTreeStacksItsConfirmedBlocksAndNeverSqueezesTheWaitingOneOrTheCoin() {
         let g = Self.se, ys = g.levels([1, 1, 1, 1, 1, 0, 0, 0, 0])
         #expect(ys.first == g.roundY && ys.last == g.coinY)
-        let gaps = zip(ys, ys.dropFirst()).map { $0 - $1 }
-        // Between confirmed transactions: a pile of blocks. From the last confirmed one up: full gaps.
-        #expect(gaps[0..<5].allSatisfy { $0 < 12 })
-        #expect(gaps[5...].allSatisfy { $0 > 20 })
-        #expect(gaps[5...].allSatisfy { abs($0 - gaps[5]) < 0.001 })
+        let gaps = zip(ys, ys.dropFirst()).map { $0 - $1 }, clearance = ExitStageGeometry.clearance
+        // Between confirmed transactions: a pile of blocks, as tight as their spacing allows.
+        #expect(abs(gaps[0] - (g.roundSide / 2 + g.side / 2 + clearance)) < 0.001)
+        #expect(gaps[1..<5].allSatisfy { abs($0 - (g.side + clearance)) < 0.001 })
+        // From the last confirmed one up, more room; the coin and its final link keep theirs.
+        #expect(gaps[5...].allSatisfy { $0 > g.side + clearance + 3 })
+        #expect(gaps[8] >= g.side / 2 + g.coinReserve() + clearance - 0.001)
+    }
+
+    /// Before the levels are shared out, each gap keeps half of each neighbour and the clearance, the coin's with its
+    /// ring (or the timelock's dial while locked), so the final link always shows.
+    @Test func everyGapKeepsItsMinimum() {
+        for (size, scale) in [(CGSize(width: 393, height: 300), 1.0), (CGSize(width: 375, height: 236), 1.25)] {
+            for count in 1...9 {
+                let g = ExitStageGeometry(size: size, scale: scale, count: count)
+                for lock in [0.0, 1] {
+                    for mined in 0...count {
+                        let ys = g.levels((0..<count).map { $0 < mined ? 1 : 0 }, lock: lock)
+                        for level in 1...count {
+                            #expect(ys[level - 1] - ys[level] >= g.minimumGap(level, side: g.side, reserve: g.coinReserve(lock)) - 0.001,
+                                    "\(count) \(mined) \(lock) \(level)")
+                        }
+                        #expect(ys[0] == g.roundY && ys[count] == g.coinY)
+                    }
+                }
+            }
+        }
+        // The capped explainer on an SE at AX1: its top node clears your coin (it was 18.125 pt away, inside it).
+        let g = ExitStageGeometry(size: CGSize(width: 375, height: 236), scale: 1.65, count: 8), ys = g.levels(Array(repeating: 0, count: 8))
+        #expect(ys[7] - ys[8] >= g.coinRadius + 5 + g.side / 2 + ExitStageGeometry.clearance - 0.001)
     }
 
     @Test func stubsHideWherePackedAndYieldToYourOtherExits() {
@@ -72,7 +98,7 @@ struct ExitStageTests {
         // A deep tree packs its confirmed levels tighter than 20 pt: no stubs there.
         let deep = Self.se.levels([1, 1, 1, 1, 1, 0, 0, 0, 0])
         for level in 1...4 { #expect(Self.se.stubs(deep, level: level).isEmpty, "level \(level)") }
-        #expect(!Self.se.stubs(deep, level: 6).isEmpty)
+        for level in 5...8 { #expect(Self.se.stubs(deep, level: level).isEmpty == (deep[level] - deep[level + 1] < 20), "level \(level)") }
     }
 
     /// Your other exits' coins stay inside the picture, with room for their amount, however short the path; the second
@@ -116,6 +142,97 @@ struct ExitStageTests {
         // Below 72 blocks: one tick per 6 blocks, no hour reading.
         #expect(ExitStagePainter.ticks(36) == (6, false))
         #expect(ExitStagePainter.ticks(3) == (1, false))
+    }
+
+    /// The picture's one rule: no two drawn elements (the round's block, your path's nodes, your coin, the destination,
+    /// the server, texts and labels, stubs, your other exits' coins and amounts, the caption) overlap, and none leaves
+    /// the canvas. Sweeps path lengths 1–9 and the capped explainer, every mined count, your other exits at every pair of
+    /// levels, every picture, on the iPhone 17 at its default size and an SE at AX1, in English and Swedish.
+    @Test func noTwoDrawnElementsOverlap() {
+        var problems: [String] = [], checked = 0
+        for (size, scale, device) in [(CGSize(width: 393, height: 300), 1.0, "iPhone 17"), (CGSize(width: 375, height: 236), 1.65, "SE AX1")] {
+            for locale in ["en", "sv"] {
+                func check(_ scene: ExitStageScene, _ note: @autoclosure () -> String) {
+                    let g = ExitStageGeometry(size: size, scale: scale, count: scene.levels.count)
+                    let painter = ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: Locale(identifier: locale))
+                    let still = ExitStageStill(scene), ys = g.levels(still.mined, lock: still.lock)
+                    let shapes = painter.arrange(scene, ys: ys, lock: still.lock, labels: painter.labels(scene, ys: ys)).shapes
+                    checked += 1
+                    for (index, a) in shapes.enumerated() {
+                        if !CGRect(origin: .zero, size: size).contains(a.frame) { problems.append("\(device) \(locale) \(note()): \(a.kind) \(a.group) leaves the canvas") }
+                        for b in shapes[(index + 1)...] where a.group != b.group && a.overlaps(b) {
+                            problems.append("\(device) \(locale) \(note()): \(a.kind) \(a.group) overlaps \(b.kind) \(b.group)")
+                        }
+                    }
+                }
+                for count in [1, 2, 3, 4, 5, 6, 7, 8, 9, 100] { check(.explainer(count: count), "explainer \(count)") }
+                for count in 1...9 {
+                    // Your other exits: none, or two at every pair of levels.
+                    let pairs = [nil] + (1..<max(1, count)).flatMap { i in (i..<count).map { Optional((i, $0)) } }
+                    for mined in 0...count {
+                        var scenes: [(ExitStageScene, String)] = []
+                        func scene(_ picture: ExitProgress.Picture, waiting: ExitStageScene.Level? = .pending(theirs: false, bumped: false)) -> ExitStageScene {
+                            var scene = ExitStageScene(picture: picture, levels: (0..<count).map { index in
+                                index < mined ? .mined(921_346 + UInt32(index)) : index == mined ? waiting ?? .unsent : .unsent
+                            })
+                            (scene.fee, scene.need, scene.balance, scene.tip) = ("12 345 sats", "3 765 sats", "18 400 sats", 921_394)
+                            (scene.leaf, scene.unlock, scene.claimFee, scene.claimHeight) = (921_349, 921_493, "262 sats", 921_494)
+                            return scene
+                        }
+                        scenes.append((scene(.path), "waiting"))
+                        if mined < count {
+                            scenes.append((scene(.path, waiting: .needsFunds), "needs funds"))
+                            scenes.append((scene(.path, waiting: .pending(theirs: true, bumped: true)), "theirs"))
+                        }
+                        scenes.append((scene(.canceled, waiting: nil), "canceled"))
+                        if mined == 0 { scenes.append((scene(.lift, waiting: nil), "lift")) }
+                        if mined == count {
+                            for picture in [ExitProgress.Picture.lock, .unlocked, .claim, .claimed] { scenes.append((scene(picture), "\(picture)")) }
+                            var other = scene(.claimed)
+                            other.destination = .other("bcrt1q…m4k2")
+                            scenes.append((other, "claimed to another wallet"))
+                        }
+                        for (base, name) in scenes {
+                            for pair in pairs {
+                                var scene = base
+                                if let (low, high) = pair {
+                                    scene.others = [.init(level: low, amount: "100 000 000 sats", sent: true), .init(level: high, amount: "₿24,500", sent: false)]
+                                    scene.shared = (0..<count).map { $0 < high }
+                                }
+                                check(scene, "\(count) transactions, \(mined) mined, \(name), others at \(pair.map { "\($0.0)/\($0.1)" } ?? "none")")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #expect(checked > 10_000)
+        let kinds = Dictionary(grouping: problems) { $0.components(separatedBy: ": ").last ?? $0 }
+        #expect(problems.isEmpty, "\(problems.count) problems:\n\(kinds.map { "\($0.value.count)× \($0.key), e.g. \($0.value[0])" }.sorted().prefix(40).joined(separator: "\n"))")
+    }
+
+    /// Optional elements give way to everything required, in order: amounts first, then your other exits' coins (moved
+    /// down their branch before they're left out), then stubs. Nine transactions, five mined, others at levels 1 and 2 on
+    /// an SE at AX1: their coins no longer share a spot 9.98 pt apart.
+    @Test func optionalElementsGiveWayInOrder() {
+        let g = ExitStageGeometry(size: CGSize(width: 375, height: 236), scale: 1.65, count: 9), painter = Self.painter(g)
+        var scene = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 9)
+        scene.others = [.init(level: 1, amount: "₿21,000", sent: true), .init(level: 2, amount: "₿24,500", sent: true)]
+        let ys = g.levels(ExitStageStill(scene).mined)
+        let arrangement = painter.arrange(scene, ys: ys, lock: 0, labels: painter.labels(scene, ys: ys))
+        let coins = arrangement.siblings.map(\.coin)
+        for (index, a) in coins.enumerated() { for b in coins[(index + 1)...] { #expect(hypot(a.x - b.x, a.y - b.y) >= 12 + ExitStageGeometry.clearance) } }
+        // A sibling that moved stays on its own side of its branch, below where it would have been.
+        for sibling in arrangement.siblings {
+            let base = g.other(ys, level: sibling.other.level, index: sibling.index)
+            #expect(sibling.coin.x <= base.x && sibling.coin.y >= base.y && sibling.coin.y <= ys[sibling.other.level])
+        }
+        // The amount of a sibling goes before the sibling itself, and a sibling before a stub.
+        #expect(arrangement.siblings.allSatisfy { $0.amount == nil } || !arrangement.siblings.isEmpty)
+        let stubsWithout = painter.arrange(ExitStageScene(picture: .path, levels: scene.levels), ys: ys, lock: 0, labels: []).stubs
+        let stubsWith = painter.arrange(scene, ys: ys, lock: 0, labels: []).stubs
+        // Siblings take their own level's stub slots, and never push out another level's stub.
+        #expect(stubsWith.filter { ![1, 2].contains($0.level) } == stubsWithout.filter { ![1, 2].contains($0.level) })
     }
 
     // MARK: Labels
