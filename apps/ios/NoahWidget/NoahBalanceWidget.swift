@@ -183,40 +183,32 @@ struct NoahBalanceWidgetView: View {
 
             Spacer(minLength: shouldUseCompactSmallLayout ? 2 : 6)
 
-            HStack(spacing: shouldUseCompactSmallLayout ? 6 : 8) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(L10n.text("Onchain", locale: language))
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text("\(formatSatsCompact(entry.onchainBalance))")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .minimumScaleFactor(0.8)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 4)
-
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(L10n.text("Offchain", locale: language))
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text("\(formatSatsCompact(entry.offchainBalance))")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .minimumScaleFactor(0.8)
-                        .lineLimit(1)
-                }
+            // One row each, so a translated label gets the widget's width.
+            VStack(spacing: 1) {
+                smallBalanceRow(L10n.text("Onchain", locale: language), entry.onchainBalance)
+                smallBalanceRow(L10n.text("Offchain", locale: language), entry.offchainBalance)
             }
         }
         .padding(.horizontal, shouldUseCompactSmallLayout ? 10 : 12)
         .padding(.vertical, shouldUseCompactSmallLayout ? 10 : 12)
+    }
+
+    private func smallBalanceRow(_ label: String, _ value: Double) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Spacer(minLength: 0)
+            Text("\(formatSatsCompact(value))")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.white)
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+                .layoutPriority(1)
+        }
     }
 
     private var mediumWidgetLayout: some View {
