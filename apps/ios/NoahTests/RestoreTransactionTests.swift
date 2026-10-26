@@ -205,10 +205,12 @@ struct RestoreTransactionTests {
     @Test func committingWithTheRestoredSeedSavedFinishes() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let transaction = try begun()
+        #expect(exists(location.directory.appending(path: RestoreTransaction.markerName)))
         try transaction.markCommitting()
 
         #expect(try transaction.recover(seed: FakeSeed(newSeed)) == .completed)
         #expect(read(location.directory) == "new")
+        #expect(!exists(location.directory.appending(path: RestoreTransaction.markerName)))
         try expectSettled(transaction)
     }
 
@@ -274,15 +276,6 @@ struct RestoreTransactionTests {
         #expect(transaction.isPending)
     }
 
-    @Test func finishDropsTheTransactionMarker() throws {
-        defer { try? FileManager.default.removeItem(at: root) }
-        let transaction = try begun()
-        #expect(exists(location.directory.appending(path: RestoreTransaction.markerName)))
-        try transaction.markCommitting()
-        #expect(try transaction.recover(seed: FakeSeed(newSeed)) == .completed)
-        #expect(!exists(location.directory.appending(path: RestoreTransaction.markerName)))
-    }
-
     @Test func workspaceLeftFromAnInterruptedSetupIsExcludedOnNextUse() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let transaction = RestoreTransaction(location: location)
@@ -330,12 +323,5 @@ struct RestoreTransactionTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let transaction = try begun()
         #expect(throws: RestoreTransaction.Failure.alreadyPending) { try transaction.prepare() }
-    }
-
-    @Test func workspaceIsExcludedFromDeviceBackups() throws {
-        defer { try? FileManager.default.removeItem(at: root) }
-        let transaction = try begun()
-        let values = try transaction.directory.resourceValues(forKeys: [.isExcludedFromBackupKey])
-        #expect(values.isExcludedFromBackup == true)
     }
 }

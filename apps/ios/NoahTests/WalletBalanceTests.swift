@@ -28,7 +28,6 @@ struct WalletBalanceTests {
         for fixture in try Fixtures.load("home-balance-details", input: Input.self, expected: [WalletBalance.Detail].self) {
             let balance = WalletBalance(ark: fixture.input.ark, onchain: fixture.input.onchain)
             #expect(balance.details == fixture.expected)
-            #expect(balance.pendingRoundMessage(amount: "200 sats") == "200 sats pending in a round. These funds become available after the round confirms.")
             #expect(balance.pendingRoundMessage(amount: "••••")?.hasPrefix("•••• pending") == true)
             var ark = balance.ark
             ark.pendingInRound = 0

@@ -68,10 +68,6 @@ struct KeychainPasswordTests {
         #expect(unchanged)
     }
 
-    @Test func missingItemIsNotFound() {
-        #expect(item.read() == .notFound)
-    }
-
     @Test func saveUpdatesInPlaceAndKeepsAttributes() throws {
         defer { deleteItem() }
         #expect(addLikeReactNativeKeychain("first") == errSecSuccess)

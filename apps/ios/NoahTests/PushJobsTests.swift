@@ -323,10 +323,10 @@ struct PushJobsTests {
         // The wallet access wrapper keeps settling after the job, as the live session does.
         dependencies.withWalletAccess = { operation in try await operation(); await settling.wait(); recorder.add("settled") }
         var completed: [Bool] = []
-        _ = try execute(PushJobs(dependencies: dependencies), allowance: .seconds(1)) { completed.append($0) }
+        _ = try execute(PushJobs(dependencies: dependencies), allowance: .milliseconds(250)) { completed.append($0) }
         try await waitUntil { await settling.entered }
         // Past the report's own timeout, which must have been cancelled when it ended.
-        try await Task.sleep(for: .milliseconds(1500))
+        try await Task.sleep(for: .milliseconds(500))
         #expect(completed.isEmpty)
         await settling.release()
         try await waitUntil { !completed.isEmpty }

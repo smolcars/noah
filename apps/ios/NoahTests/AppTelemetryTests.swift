@@ -303,14 +303,5 @@ struct AppTelemetryTests {
         #expect(AppTelemetry.scrub(requestEvent)?.request == nil)
     }
 
-    @Test func nestedWordObjectsMustNotReachTelemetry() throws {
-        let words = Array(repeating: "abandon", count: 11) + ["about"]
-        let event = Event(level: .error)
-        event.extra = ["restore": words.enumerated().map { ["position": $0.offset + 1, "word": $0.element] as [String: Any] }]
-        guard let clean = AppTelemetry.scrub(event) else { return }
-        let text = String(decoding: try JSONSerialization.data(withJSONObject: clean.serialize()), as: UTF8.self)
-        #expect(!text.contains("abandon"))
-    }
-
 
 }

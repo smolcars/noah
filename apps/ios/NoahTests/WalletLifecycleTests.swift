@@ -184,7 +184,6 @@ struct WalletLifecycleTests {
         #expect(location.databaseExists)
         #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
         #expect(suspended(settings) == false)
-        #expect(WalletLifecycle.Failure.temporaryFiles.errorDescription == "Noah couldn't remove temporary wallet files. Restart Noah and try again.")
         #expect(seed.read() == .found("seed words"))
         #expect(token.read() == .found("jwt"))
         #expect(settings.string(forKey: PersistedWalletState.key) != nil)

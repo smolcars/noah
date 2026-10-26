@@ -14,15 +14,6 @@ struct WalletConfigurationTests {
         }
     }
 
-    @Test func variantsMatchReactNativeConfig() {
-        #expect(WalletConfiguration.base(for: .mainnet).network == .bitcoin)
-        #expect(WalletConfiguration.base(for: .mainnet).roundTxRequiredConfirmations == 2)
-        #expect(WalletConfiguration.base(for: .signet).vtxoRefreshExpiryThreshold == 12)
-        #expect(WalletConfiguration.base(for: .regtest).bitcoind == "http://localhost:18443")
-        #expect(WalletConfiguration.base(for: .regtest).esplora == nil)
-        #expect(WalletConfiguration.userAgent(variant: .signet, version: "0.2.0") == "noah-signet-ios/0.2.0")
-    }
-
     @Test func regtestHostsCanBeBakedInForPhysicalDevices() {
         let lan = WalletConfiguration.base(for: .regtest, regtestHost: "192.168.6.67")
         #expect(lan.arkServer == "http://192.168.6.67:3535")

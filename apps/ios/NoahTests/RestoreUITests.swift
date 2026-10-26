@@ -194,47 +194,28 @@ struct RestoreCompletionTests {
 }
 
 struct RestoreIssueTests {
-    private let updateRequired = "This backup was created by a newer version of Noah. Update the app, then try restoring again."
-
-    @Test(arguments: [UInt8(3), 255])
-    func futureEnvelopeVersionsExplainUpdateRequired(_ version: UInt8) throws {
-        var bytes = Data(repeating: 0, count: 45)
-        bytes[0] = version
-        do {
-            _ = try BackupCrypto.decrypt(bytes, mnemonic: "unused", expecting: .snapshot)
-            Issue.record("A future envelope was accepted")
-        } catch {
-            #expect(error as? BackupCrypto.Failure == .newerVersion)
-            #expect(RestoreIssue.from(error) == RestoreIssue(message: updateRequired))
+    /// Future envelopes (any version byte), manifests and bark schemas all ask for an update.
+    @Test func futureVersionsExplainUpdateRequired() throws {
+        for version in [UInt8(3), 255] {
+            var bytes = Data(repeating: 0, count: 45)
+            bytes[0] = version
+            #expect(throws: BackupCrypto.Failure.newerVersion) { try BackupCrypto.decrypt(bytes, mnemonic: "unused", expecting: .snapshot) }
+            #expect(RestoreIssue.from(BackupCrypto.Failure.newerVersion) == .newerBackup)
         }
-    }
-
-    @Test func futureManifestVersionExplainsUpdateRequired() throws {
         let manifest = BackupArchive.Manifest(formatVersion: 3, createdAt: "x", snapshotSha256: "sha",
             network: "regtest", walletFingerprint: "abcd", serverPubkey: nil, mailboxPubkey: nil, barkSchemaVersion: 42)
-        do {
-            _ = try BackupArchive.parseManifest(BackupArchive.encode(manifest))
-            Issue.record("A future manifest was accepted")
-        } catch {
-            #expect(error as? BackupArchive.Failure == .newerVersion)
-            #expect(RestoreIssue.from(error) == RestoreIssue(message: updateRequired))
-        }
+        #expect(throws: BackupArchive.Failure.newerVersion) { try BackupArchive.parseManifest(BackupArchive.encode(manifest)) }
+        #expect(RestoreIssue.from(BackupArchive.Failure.newerVersion) == .newerBackup)
+        #expect(RestoreIssue.from(BarkError(message: "Snapshot schema version 9999 is newer than supported version 42")) == .newerBackup)
     }
 
-    @Test func futureSchemaVersionExplainsUpdateRequired() {
-        let error = BarkError(message: "Snapshot schema version 9999 is newer than supported version 42")
-        #expect(RestoreIssue.from(error) == RestoreIssue(message: updateRequired))
-    }
-
-    @Test func wrongPhraseDamagedBackupAndUnrelatedDiagnosticsKeepTheirCopy() {
-        #expect(RestoreIssue.from(BackupCrypto.Failure.authenticationFailed).message ==
-            "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.")
-        #expect(RestoreIssue.from(WalletRestorer.Failure.downloadMismatch).message ==
-            "The downloaded backup is incomplete or damaged. Check your connection and try again.")
+    /// Unrelated diagnostics, even a server echoing the schema wording, get the generic message.
+    @Test func unrelatedDiagnosticsFallBackToTheGenericMessage() {
+        let generic = RestoreIssue.from(BarkError(message: "snapshot is damaged"))
+        #expect(generic != .newerBackup && !generic.requiresRestart)
         for error: any Error in [BackupCrypto.Failure.unexpectedVersion(1), BackupArchive.Failure.invalidManifest,
-            BarkError(message: "snapshot is damaged"),
             ServerFailure(message: "Snapshot schema version 9999 is newer than supported version 42")] {
-            #expect(RestoreIssue.from(error).message == "Noah couldn't restore your wallet. Please try again later.")
+            #expect(RestoreIssue.from(error) == generic)
         }
     }
 
@@ -488,7 +469,7 @@ struct RestoreFieldPrivacyTests {
         try await until { afterBack.loading }
         box.draft = RestoreDraft(generation: box.draft.generation + 1)
         afterBack.finish(newer)
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(100))
         #expect(box.draft.input.wordCount == 0 && box.pasted.isEmpty)
 
         let first = DelayedText(), second = DelayedText()
@@ -498,7 +479,7 @@ struct RestoreFieldPrivacyTests {
         second.finish(newer)
         try await until { box.pasted.count == 1 }
         first.finish(older)
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(100))
         let newerKept = box.pasted.count == 1 && box.draft.input.phrase == newer
         #expect(newerKept)
     }
@@ -518,7 +499,7 @@ struct RestoreFieldPrivacyTests {
             field.text = edit
             field.sendActions(for: .editingChanged)
             slow.finish(phrase)
-            try await Task.sleep(for: .milliseconds(300))
+            try await Task.sleep(for: .milliseconds(100))
             let editKept = box.draft.input.words[0] == edit && box.draft.input.wordCount == 1 && box.pasted.isEmpty
             #expect(editKept)
         }

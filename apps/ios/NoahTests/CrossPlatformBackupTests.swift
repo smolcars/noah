@@ -160,12 +160,7 @@ struct CrossPlatformBackupTests {
         case "envelope": #expect(failure as? BackupCrypto.Failure == .newerVersion)
         default: #expect((failure as? BarkError)?.message.contains("newer than supported version") == true)
         }
-    }
-
-    @Test(arguments: ["manifest", "envelope", "schema"])
-    func newerBackupsExplainUpdateRequired(_ kind: String) async throws {
-        let failure = try await refuseNewer(kind)
-        #expect(RestoreIssue.from(failure).message == "This backup was created by a newer version of Noah. Update the app, then try restoring again.")
+        #expect(RestoreIssue.from(failure) == .newerBackup)
     }
 
 }
