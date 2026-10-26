@@ -4,6 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.noahwallet.localization.tr
@@ -87,8 +93,9 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
                 Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
-        if (wide) ExitPicture(ExitScene.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4), tr("Your VTXO’s path to the chain"),
-            exitPicture().padding(top = 14.dp))
+        val path = known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4
+        if (wide) ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), exitPicture().padding(top = 14.dp))
+        else if (review != null) ExitPath(if (review.ids.size == 1) path else null, known?.transactions?.toInt(), delta)
     }) {
         Column(Modifier.padding(top = 18.dp)) {
             DetailRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number, toasts = toasts)
@@ -108,5 +115,51 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
         FinePrint(tr("Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
         status()
+    }
+}
+
+/**
+ * Review's one-line path on phones (exit-v2-notes.md, Screens): the round's block and your transactions, your coin, the
+ * timelock's dial, then the claim to its destination, with a caption under each third. [path] is one VTXO's transactions;
+ * null for several, whose [count] shares transactions.
+ */
+@Composable
+private fun ExitPath(path: Int?, count: Int?, delta: Long?) {
+    val palette = LocalPalette.current
+    val n = path ?: 5
+    androidx.compose.foundation.Canvas(Modifier.padding(top = 18.dp).fillMaxWidth().height(58.dp).clearAndSetSemantics { }) {
+        scale(density, density, Offset.Zero) {
+            val w = size.width / density; val y = size.height / density / 2 - 4; val x0 = 10f; val x1 = w - 14; val cx = w / 2
+            drawRoundRect(palette.foreground, Offset(x0, y - 8), Size(16f, 16f), CornerRadius(4f))
+            val step = (w * .36f - x0 - 34) / n
+            var px = x0 + 16
+            for (i in 0 until n) {
+                val x = x0 + 30 + i * step
+                treeLink(Offset(px, y), Offset(x - 5.5f, y), 0f, 1f, palette.orange, 2f, 1f, horizontal = true)
+                px = x + 5.5f
+                if (i == n - 1) { treeCoin(Offset(x + 4, y), 9f, palette.soft, palette.orange); px = x + 13 }
+                else { drawCircle(palette.background, 5f, Offset(x, y)); drawCircle(palette.orange, 5f, Offset(x, y), style = Stroke(1.6f)) }
+            }
+            treeLink(Offset(px, y), Offset(cx - 17, y), 0f, 1f, palette.hairline, 1.5f, 1f, floatArrayOf(3f, 3f), horizontal = true)
+            drawCircle(palette.hairline, 13f, Offset(cx, y), style = Stroke(2f))
+            val ticks = ExitDial.ticks(delta ?: 144)
+            for (h in 0 until ticks) {
+                val an = -kotlin.math.PI / 2 + h * 2 * kotlin.math.PI / ticks; val r1 = if (ExitDial.major(delta ?: 144, h)) 19.5f else 17.5f
+                drawLine(palette.muted, Offset(cx + kotlin.math.cos(an).toFloat() * 16, y + kotlin.math.sin(an).toFloat() * 16),
+                    Offset(cx + kotlin.math.cos(an).toFloat() * r1, y + kotlin.math.sin(an).toFloat() * r1), 1f, alpha = .5f)
+            }
+            treePadlock(Offset(cx, y - 1), 12f, 0f, 1f, palette.foreground, palette.background)
+            treeLink(Offset(cx + 21, y), Offset(x1 - 36, y), 0f, 1f, palette.hairline, 1.5f, 1f, floatArrayOf(3f, 3f), horizontal = true)
+            exitWalletBadge(Offset(x1 - 20, y), palette)
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        @Composable fun caption(title: String, line: String, align: androidx.compose.ui.text.style.TextAlign) = Column(Modifier.weight(1f)) {
+            Text(title, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground, textAlign = align)
+            Text(line, Modifier.fillMaxWidth(), style = HomeType.small, color = palette.muted, textAlign = align)
+        }
+        caption(trPlural("{n} transactions", count ?: n), if (path == null) tr("shared ones once") else tr("one block each"), androidx.compose.ui.text.style.TextAlign.Start)
+        caption(trPlural("{n} blocks", delta ?: 144), tr("about a day"), androidx.compose.ui.text.style.TextAlign.Center)
+        caption(tr("Claim"), tr("to another wallet"), androidx.compose.ui.text.style.TextAlign.End)
     }
 }
