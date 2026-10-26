@@ -658,15 +658,97 @@ struct ExitStageTests {
         let routes = [a, b].map { ExitGutterTree.Route($0, ExitProgress($0, tip: 100), coin: ExitGutterCoin()) }
         let layout = ExitGutterTree.layout(routes, ys: [32, 96], gutter: ExitListGroup.gutter(12), step: 12)
         #expect(layout.root.y == 64 && layout.coins.map(\.y) == [32, 96])
-        // Each path's last transaction is its coin.
-        #expect(layout.nodes.map(\.id) == ["r1", "l2", "a1"])
-        #expect(layout.nodes.first { $0.id == "l2" }?.point.y == 64 && layout.nodes.first { $0.id == "a1" }?.point.y == 32)
-        #expect(layout.nodes.first { $0.id == "a1" }?.status == .pending)
+        // Each path's last transaction is its coin; a step's id names its column and transaction.
+        func node(_ txid: String) -> ExitGutterTree.Node? { layout.nodes.first { $0.id.hasSuffix("/" + txid) } }
+        #expect(layout.nodes.map { $0.id.components(separatedBy: "/").last } == ["r1", "l2", "a1"])
+        #expect(node("l2")?.point.y == 64 && node("a1")?.point.y == 32 && node("a1")?.status == .pending)
         #expect(Set(layout.links.map { "\($0.from)>\($0.to)" }).count == layout.links.count)
-        // Long paths step closer, so they end before the coins.
+        // A long path folds, so its steps stay apart and end before the coin.
         let long = ExitGutterTree.Route(txids: (0..<9).map { "t\($0)" }, statuses: Array(repeating: .unsent, count: 9), coin: ExitGutterCoin())
         let deep = ExitGutterTree.layout([long], ys: [32], gutter: ExitListGroup.gutter(12), step: 12)
-        #expect(deep.nodes.allSatisfy { $0.point.x + 4 < deep.coins[0].x - 10 })
+        #expect(deep.nodes.count <= ExitGutterTree.capacity(gutter: ExitListGroup.gutter(12)) && deep.nodes.contains { $0.fold == .more })
+        #expect(deep.nodes.allSatisfy { $0.point.x + 6 + ExitStageGeometry.clearance <= deep.coins[0].x - 14 })
+    }
+
+    /// The Exits list's shared gutters keep their steps apart however long the paths: a long route folds as the picture
+    /// does, its current transaction drawn on its own. Sweeps gutters for the SE, the iPhone 17 and wide windows; path
+    /// lengths 1–20, 50 and 100; three exits sharing a prefix of several lengths; mined counts; waiting and needing funds.
+    @Test func listGuttersKeepTheirSpacing() {
+        var problems: [String] = [], checked = 0
+        for step in [11.0, 12, 13] {
+            let gutter = ExitListGroup.gutter(step), capacity = ExitGutterTree.capacity(gutter: gutter)
+            for length in Array(1...20) + [50, 100] {
+                for shared in Set([1, length / 2, length - 1]).filter({ $0 >= 1 && $0 < max(2, length) }).sorted() {
+                    let lengths = [length, length, max(shared + 1, length / 2)]
+                    let mineds = Set([0, 1, shared, length / 2, length - 1, length]).filter { $0 <= length }.sorted()
+                    // Shared transactions have one status on every row; past them, rows can be further along or behind.
+                    for (mined, spread) in mineds.flatMap({ mined in [(mined, 0), (mined, max(1, (length - shared) / 3))] }) {
+                        for alarm in [false, true] {
+                            var routes = lengths.enumerated().map { route, count in
+                                let txids = (0..<count).map { $0 < shared ? "s\($0)" : "r\(route)-\($0)" }
+                                let done = mined < shared ? mined : max(shared, min(count, mined + (route - 1) * spread))
+                                let statuses: [ExitGutterTree.Status] = (0..<count).map {
+                                    $0 < done ? .mined : $0 == done ? (alarm ? .needsFunds : .pending) : .unsent
+                                }
+                                return ExitGutterTree.Route(txids: txids, statuses: statuses, coin: ExitGutterCoin())
+                            }
+                            routes.sort { $0.txids.lexicographicallyPrecedes($1.txids) }
+                            let ys = routes.indices.map { 32 + Double($0) * 64 }
+                            let layout = ExitGutterTree.layout(routes, ys: ys, gutter: gutter, step: step)
+                            checked += 1
+                            let note = "gutter \(gutter), \(length) long, \(shared) shared, \(mined) mined ±\(spread)\(alarm ? ", needs funds" : "")"
+                            var shapes = [ExitStageShape.box(.round, "root", CGRect(x: layout.root.x - 4.5, y: layout.root.y - 4.5, width: 9, height: 9))]
+                            for node in layout.nodes {
+                                shapes.append(node.status == .needsFunds ? .circle(.node, node.id, node.point, 6)
+                                              : .box(.node, node.id, CGRect(x: node.point.x - 4, y: node.point.y - 4, width: 8, height: 8)))
+                            }
+                            shapes += layout.coins.enumerated().map { .circle(.coin, "coin\($0.offset)", $0.element, 14) }
+                            for (index, a) in shapes.enumerated() {
+                                if a.frame.minX < 0 || a.frame.maxX > gutter + 14 { problems.append("\(note): \(a.group) leaves the gutter") }
+                                for b in shapes[(index + 1)...] where a.overlaps(b, margin: ExitStageGeometry.clearance) {
+                                    problems.append("\(note): \(a.group) overlaps \(b.group)")
+                                }
+                            }
+                            let plan = ExitGutterTree.plan(routes, capacity: capacity)
+                            for route in routes {
+                                let drawn = plan.map(route.drawn(plan:)) ?? route.drawn(capacity: capacity)
+                                if drawn.count - 1 > capacity { problems.append("\(note): \(drawn.count - 1) steps") }
+                                // Its current transaction, where it's a step, is drawn on its own.
+                                if route.current < route.txids.count - 1,
+                                   !drawn.contains(where: { $0.fold == nil && $0.id.hasSuffix("/" + route.txids[route.current]) }) {
+                                    problems.append("\(note): current folded away")
+                                }
+                            }
+                            // Shared transactions are drawn once while one plan fits.
+                            if plan != nil, shared > 0, layout.nodes.filter({ $0.id.hasSuffix("/s0") }).count > 1 { problems.append("\(note): s0 drawn twice") }
+                        }
+                    }
+                }
+            }
+        }
+        #expect(checked > 1_000)
+        #expect(problems.isEmpty, "\(problems.count) problems, e.g. \(problems.prefix(12).joined(separator: "\n"))")
+    }
+
+    /// Review's one-line path keeps its transactions apart: as many as fit 14 pt apart, eight at most, the caption saying
+    /// how many there are. Sweeps phone and wide widths and 1–20, 50 and 100 transactions.
+    @Test func reviewsRailKeepsItsSpacing() {
+        var problems: [String] = []
+        for width in [280.0, 300, 327, 345, 360, 393, 420, 500, 700] {
+            for transactions in Array(1...20) + [50, 100] {
+                let size = CGSize(width: width, height: 58), layout = ExitPathRail.layout(size, transactions: transactions), shapes = layout.shapes
+                if layout.nodes.count + 1 > min(8, transactions) { problems.append("\(width) \(transactions): drew \(layout.nodes.count + 1)") }
+                for (index, a) in shapes.enumerated() {
+                    if !CGRect(origin: .zero, size: size).contains(a.frame) { problems.append("\(width) \(transactions): \(a.group) leaves") }
+                    for b in shapes[(index + 1)...] where a.overlaps(b, margin: ExitStageGeometry.clearance) {
+                        problems.append("\(width) \(transactions): \(a.group) overlaps \(b.group)")
+                    }
+                }
+            }
+        }
+        #expect(problems.isEmpty, "\(problems.prefix(12).joined(separator: "\n"))")
+        // On an SE (327 pt wide) eight would be 9.2 pt apart: it draws five.
+        #expect(ExitPathRail.layout(CGSize(width: 327, height: 58), transactions: 8).nodes.count + 1 == 5)
     }
 
     @Test func aGutterCoinCarriesItsState() {

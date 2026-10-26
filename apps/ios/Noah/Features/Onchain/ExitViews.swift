@@ -204,25 +204,46 @@ struct ExitPathRail: View {
         .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : alignment == .center ? .center : .trailing)
     }
 
-    private func draw(_ context: GraphicsContext, _ size: CGSize) {
-        let colors = MotionColors.theme(colorScheme), width = size.width, y = size.height / 2 - 4, x0 = 10.0, x1 = width - 14, cx = width / 2
-        let canvas = MotionCanvas(context: context, size: size, viewBox: CGRect(origin: .zero, size: size), colors: colors)
-        canvas.fill(Path(roundedRect: CGRect(x: x0, y: y - 8, width: 16, height: 16), cornerRadius: 4), colors.foreground)
-        let k = max(1, min(8, transactions)), step = (width * 0.36 - x0 - 34) / Double(k)
-        var px = x0 + 16
-        for index in 0..<k {
-            let x = x0 + 30 + Double(index) * step
-            canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: x - 5.5, y: y)), colors.orange, 2)
-            if index == k - 1 {
-                canvas.mineCoin(x + 4, y, 9, ring: 1.8)
-                px = x + 13
-            } else {
-                canvas.fill(canvas.circle(x, y, 5), colors.background)
-                canvas.stroke(canvas.circle(x, y, 5), colors.orange, 1.6)
-                px = x + 5.5
-            }
+    /// Where the rail puts things in `size`: the round's block, the transactions (as many as fit 14 pt apart, a
+    /// 5 pt circle with its stroke and the clearance, 8 at most; the caption says how many there are), your coin
+    /// last, then the timelock's dial and the destination.
+    struct Layout: Equatable {
+        var y: Double
+        var block: CGRect
+        var nodes: [CGPoint]
+        var coin: CGPoint
+        var dial: CGPoint
+        var badge: CGPoint
+
+        /// Every element's outline, for keeping them apart.
+        var shapes: [ExitStageShape] {
+            [.box(.round, "round", block)] + nodes.enumerated().map { .circle(.node, "node\($0.offset)", $0.element, 5.8) }
+                + [.circle(.coin, "coin", coin, 9.9), .circle(.coin, "dial", dial, 19.5), .circle(.badge, "badge", badge, 14.75)]
         }
-        canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: cx - 17, y: y)), colors.hairline, 1.5, dash: [3, 3])
+    }
+
+    nonisolated static func layout(_ size: CGSize, transactions: Int) -> Layout {
+        let y = size.height / 2 - 4, x0 = 10.0, room = size.width * 0.36 - x0 - 34
+        let count = max(1, min(8, transactions, Int(room / 14))), step = room / Double(count)
+        let xs = (0..<count).map { x0 + 30 + Double($0) * step }
+        return Layout(y: y, block: CGRect(x: x0, y: y - 8, width: 16, height: 16), nodes: xs.dropLast().map { CGPoint(x: $0, y: y) },
+                      coin: CGPoint(x: xs[count - 1] + 4, y: y), dial: CGPoint(x: size.width / 2, y: y), badge: CGPoint(x: size.width - 34, y: y))
+    }
+
+    private func draw(_ context: GraphicsContext, _ size: CGSize) {
+        let colors = MotionColors.theme(colorScheme), layout = Self.layout(size, transactions: transactions), y = layout.y
+        let canvas = MotionCanvas(context: context, size: size, viewBox: CGRect(origin: .zero, size: size), colors: colors), cx = layout.dial.x
+        canvas.fill(Path(roundedRect: layout.block, cornerRadius: 4), colors.foreground)
+        var px = layout.block.maxX
+        for node in layout.nodes {
+            canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: node.x - 5.5, y: y)), colors.orange, 2)
+            canvas.fill(canvas.circle(node.x, y, 5), colors.background)
+            canvas.stroke(canvas.circle(node.x, y, 5), colors.orange, 1.6)
+            px = node.x + 5.5
+        }
+        canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: layout.coin.x - 9.5, y: y)), colors.orange, 2)
+        canvas.mineCoin(layout.coin.x, y, 9, ring: 1.8)
+        canvas.stroke(canvas.line(CGPoint(x: layout.coin.x + 9, y: y), CGPoint(x: cx - 17, y: y)), colors.hairline, 1.5, dash: [3, 3])
         canvas.stroke(canvas.circle(cx, y, 13), colors.hairline, 2)
         let ticks = ExitStagePainter.ticks(delta)
         for tick in 0..<ticks.count {
@@ -234,10 +255,10 @@ struct ExitPathRail: View {
             pad.padlockBody(cx, y - 1)
             pad.shackle(cx, y - 1, open: 0)
         }
-        canvas.stroke(canvas.line(CGPoint(x: cx + 21, y: y), CGPoint(x: x1 - 36, y: y)), colors.hairline, 1.5, dash: [3, 3])
-        canvas.fill(canvas.circle(x1 - 20, y, 14), colors.background)
-        canvas.stroke(canvas.circle(x1 - 20, y, 14), colors.hairline, 1.5)
-        canvas.symbol("wallet.bifold", x1 - 20, y, size: 14, color: colors.foreground)
+        canvas.stroke(canvas.line(CGPoint(x: cx + 21, y: y), CGPoint(x: layout.badge.x - 16, y: y)), colors.hairline, 1.5, dash: [3, 3])
+        canvas.fill(canvas.circle(layout.badge.x, y, 14), colors.background)
+        canvas.stroke(canvas.circle(layout.badge.x, y, 14), colors.hairline, 1.5)
+        canvas.symbol("wallet.bifold", layout.badge.x, y, size: 14, color: colors.foreground)
     }
 }
 

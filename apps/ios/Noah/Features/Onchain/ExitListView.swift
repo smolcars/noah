@@ -107,7 +107,10 @@ struct ExitListView: View {
         ["Ready to claim", "Exiting", "Finished"].compactMap { title in
             let rows = exits.filter { group($0) == title }
             guard !rows.isEmpty else { return nil }
-            let shared = title == "Finished" ? [] : ExitSharing.groups(rows)
+            // A group's rows go in path order, so the transactions they share are drawn between neighbouring rows.
+            let shared = title == "Finished" ? [] : ExitSharing.groups(rows).map {
+                $0.sorted { $0.path.map(\.txid).lexicographicallyPrecedes($1.path.map(\.txid)) }
+            }
             return (title, shared, rows.filter { exit in !shared.contains { $0.contains { $0.id == exit.id } } })
         }
     }
@@ -333,6 +336,49 @@ struct ExitGutterTree: View {
             self.coin = coin
         }
 
+        /// Where its current transaction is: the first not in a block.
+        var current: Int { statuses.firstIndex { $0 != .mined } ?? statuses.count }
+
+        /// The route along a group's `plan` (`ExitGutterTree.plan`): each place alone or each run of places as one
+        /// step, then the coin. A step's id names its column, so routes share it exactly where they share the transaction.
+        func drawn(plan: [ClosedRange<Int>]) -> [(id: String, status: Status, fold: ExitStageScene.Fold.Kind?)] {
+            let places = txids.count - 1
+            var steps: [(id: String, status: Status, fold: ExitStageScene.Fold.Kind?)] = []
+            for (column, run) in plan.enumerated() where run.lowerBound < places {
+                let first = run.lowerBound, status = statuses[safe: first] ?? .unsent
+                if run.count == 1 {
+                    steps.append(("\(column)/" + txids[first], status, nil))
+                } else {
+                    let kind: ExitStageScene.Fold.Kind = status == .mined ? .stack : .more
+                    steps.append(("\(column)/\(kind)/" + txids[first], status == .mined ? .mined : .unsent, kind))
+                }
+            }
+            return steps + [("coin/" + (txids.last ?? ""), statuses.last ?? .unsent, nil)]
+        }
+
+        /// The route on its own in at most `capacity` steps before its coin, folded as the exit's picture folds a long
+        /// path: the oldest blocks stacked, the one being sent and the next unsent on their own, the rest one "+N" node.
+        func drawn(capacity: Int) -> [(id: String, status: Status, fold: ExitStageScene.Fold.Kind?)] {
+            let scene = ExitStageScene(picture: .path, levels: statuses.map { status -> ExitStageScene.Level in
+                switch status {
+                case .mined: .mined(nil)
+                case .pending: .pending(theirs: false, bumped: false)
+                case .needsFunds: .needsFunds
+                case .unsent: .unsent
+                }
+            }).folded(nodes: capacity)
+            return scene.levels.indices.map { index in
+                let fold = scene.fold(at: index), txid = txids[safe: scene.real(index)] ?? ""
+                let status: Status = switch scene.levels[index] {
+                case .mined: .mined
+                case .pending: .pending
+                case .needsFunds: .needsFunds
+                default: .unsent
+                }
+                return ("\(index)/" + (fold.map { "\($0.kind)\($0.count)/" } ?? "") + txid, status, fold?.kind)
+            }
+        }
+
         init(_ exit: ExitModel, _ progress: ExitProgress, coin: ExitGutterCoin) {
             txids = exit.path.map(\.txid)
             statuses = exit.path.indices.map { index in
@@ -353,6 +399,8 @@ struct ExitGutterTree: View {
         var point: CGPoint
         var status: Status
         var alpha: Double
+        /// Stands for several transactions: the oldest blocks stacked, or unsent ones as "+N".
+        var fold: ExitStageScene.Fold.Kind?
     }
 
     struct Link: Equatable {
@@ -379,29 +427,70 @@ struct ExitGutterTree: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
-    /// Lays out the shared paths: each transaction drawn once, at the middle of the rows it leads to.
+    /// The least step between two transactions in a gutter: an 8 pt square beside one with a needs-funds ring
+    /// (6 pt radius), and the clearance.
+    static let minimumStep = 12.0
+
+    /// How many steps a route draws before its coin in a gutter `gutter` wide: each at least `minimumStep` apart, the
+    /// last clear of the coin's 14 pt ring.
+    nonisolated static func capacity(gutter: Double) -> Int { max(3, Int(((gutter + 14 - 30) - 36) / minimumStep)) }
+
+    /// One fold for a whole group, by place along the paths, so a place is drawn alike on every row and what rows share
+    /// stays drawn once: each row's current transaction gets a place of its own, then the next unsent ones, the latest
+    /// blocks and the rest while they fit; runs of places left over become one step each. nil when the rows' current
+    /// transactions are too far apart to fit.
+    nonisolated static func plan(_ routes: [Route], capacity: Int) -> [ClosedRange<Int>]? {
+        let lengths = routes.map { $0.txids.count - 1 }, places = lengths.max() ?? 0
+        guard places > capacity else { return (0..<places).map { $0...$0 } }
+        func runs(_ shown: Set<Int>) -> [ClosedRange<Int>] {
+            var runs: [ClosedRange<Int>] = [], start: Int?
+            for place in 0...places {
+                if place < places && !shown.contains(place) { start = start ?? place } else if let first = start { runs.append(first...(place - 1)); start = nil }
+            }
+            return runs
+        }
+        let currents = zip(routes, lengths).compactMap { $0.current < $1 ? $0.current : nil }
+        var shown = Set(currents)
+        guard shown.count + runs(shown).count <= capacity else { return nil }
+        var wanted: [Int] = []
+        for (route, length) in zip(routes, lengths) { wanted += [route.current + 1, route.current + 2].filter { $0 < length } }
+        for (route, length) in zip(routes, lengths) { wanted += Array(stride(from: min(route.current, length) - 1, through: 0, by: -1)) }
+        wanted += Array(0..<places)
+        for place in wanted where !shown.contains(place) {
+            let next = shown.union([place])
+            if next.count + runs(next).count <= capacity { shown = next }
+        }
+        return (shown.map { $0...$0 } + runs(shown)).sorted { $0.lowerBound < $1.lowerBound }
+    }
+
+    /// Lays out the shared paths: each step drawn once, at the middle of the rows it leads to. Long paths fold along one
+    /// plan for the group (`plan`), so steps stay `minimumStep` apart however long they are; where no plan fits, each
+    /// row draws its own folded path at its own height.
     nonisolated static func layout(_ paths: [Route], ys: [Double], gutter: Double, step: Double) -> Layout {
-        let width = gutter + 14, coinX = width - 30, x0 = 8.0
-        // Long paths (deep trees, arkoor hops) step closer so they end before the coins.
-        let longest = paths.map(\.txids.count).max() ?? 1, d = min(step, (coinX - 11 - 6 - x0 - 6) / Double(max(1, longest - 1)))
+        let width = gutter + 14, coinX = width - 30, x0 = 8.0, capacity = capacity(gutter: gutter)
+        let routes = plan(paths, capacity: capacity).map { plan in paths.map { $0.drawn(plan: plan) } }
+            ?? paths.enumerated().map { row, path in path.drawn(capacity: capacity).map { ("row\(row)/" + $0.id, $0.status, $0.fold) } }
+        let longest = routes.map(\.count).max() ?? 1, d = min(max(step, minimumStep), (coinX - 36) / Double(max(1, longest - 1)))
         var rows: [String: [Double]] = [:]
-        for (path, y) in zip(paths, ys) { for txid in path.txids.dropLast() { rows[txid, default: []].append(y) } }
-        func y(_ txid: String) -> Double { rows[txid].map { $0.reduce(0, +) / Double($0.count) } ?? 0 }
+        for (route, y) in zip(routes, ys) { for step in route.dropLast() { rows[step.id, default: []].append(y) } }
+        func y(_ id: String) -> Double { rows[id].map { $0.reduce(0, +) / Double($0.count) } ?? 0 }
         var layout = Layout(root: CGPoint(x: x0, y: ys.isEmpty ? 0 : ys.reduce(0, +) / Double(ys.count)))
         var drawn = Set<String>()
-        for (path, rowY) in zip(paths, ys) {
+        for ((path, route), rowY) in zip(zip(paths, routes), ys) {
             let ended = path.coin.finished
             var previous = CGPoint(x: x0 + 4, y: layout.root.y), key = "root"
-            for (index, txid) in path.txids.enumerated() {
-                let last = index == path.txids.count - 1, status = path.statuses[safe: index] ?? .unsent
-                let point = CGPoint(x: last ? coinX : x0 + Double(index + 1) * d + 6, y: last ? rowY : y(txid))
-                let ink = status == .mined, alpha = path.canceled && !ink ? 0.3 : ended ? 0.55 : 1
-                if drawn.insert(key + ">" + txid).inserted {
+            for (index, step) in route.enumerated() {
+                let last = index == route.count - 1
+                let point = CGPoint(x: last ? coinX : x0 + Double(index + 1) * d + 6, y: last ? rowY : y(step.id))
+                let ink = step.status == .mined, alpha = path.canceled && !ink ? 0.3 : ended ? 0.55 : 1
+                if drawn.insert(key + ">" + step.id).inserted {
                     layout.links.append(.init(from: previous, to: CGPoint(x: point.x - (last ? 11 : 4), y: point.y), ink: ink, alpha: alpha))
                 }
-                if !last, drawn.insert(txid).inserted { layout.nodes.append(.init(id: txid, point: point, status: status, alpha: alpha)) }
+                if !last, drawn.insert(step.id).inserted {
+                    layout.nodes.append(.init(id: step.id, point: point, status: step.status, alpha: alpha, fold: step.fold))
+                }
                 previous = CGPoint(x: point.x + 4, y: point.y)
-                key = txid
+                key = step.id
             }
             layout.coins.append(CGPoint(x: coinX, y: rowY))
         }
@@ -439,12 +528,26 @@ struct ExitGutterTree: View {
             switch node.status {
             case .mined:
                 c.fill(square, with: .color(colors.foreground))
+                if node.fold == .stack {
+                    // The oldest blocks stacked into one.
+                    for offset in [-4.0 / 3, 4.0 / 3] {
+                        var line = Path()
+                        line.move(to: CGPoint(x: p.x - 4, y: p.y + offset))
+                        line.addLine(to: CGPoint(x: p.x + 4, y: p.y + offset))
+                        c.stroke(line, with: .color(colors.background), lineWidth: 1)
+                    }
+                }
+            case .unsent where node.fold == .more:
+                // Unsent ones folded into one.
+                let ring = Path(ellipseIn: CGRect(x: p.x - 4, y: p.y - 4, width: 8, height: 8))
+                c.fill(ring, with: .color(colors.background))
+                c.stroke(ring, with: .color(colors.orange), style: StrokeStyle(lineWidth: 1.4, dash: [1.6, 1.6]))
             case .pending:
                 c.fill(square, with: .color(colors.background))
             case .needsFunds:
                 c.fill(square, with: .color(colors.background))
                 c.stroke(square, with: .color(colors.orange), lineWidth: 1.6)
-                c.stroke(Path(ellipseIn: CGRect(x: p.x - 7.6, y: p.y - 7.6, width: 15.2, height: 15.2)), with: .color(NoahTokens.Colors.failure.opacity(0.8)),
+                c.stroke(Path(ellipseIn: CGRect(x: p.x - 6, y: p.y - 6, width: 12, height: 12)), with: .color(NoahTokens.Colors.failure.opacity(0.8)),
                          style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
             case .unsent:
                 let dot = Path(ellipseIn: CGRect(x: p.x - 1.85, y: p.y - 1.85, width: 3.7, height: 3.7))
