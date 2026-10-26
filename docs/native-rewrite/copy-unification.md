@@ -249,7 +249,7 @@ Shown diagnostics that changed: Android recurring's storage and version errors (
 
 Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **platform** (a genuine platform difference), **spec** (a difference the exit spec chose), **shared** (both apps show it, but one app's copy sits where the extractor can't see it), **dead code**, **flagged** (left for a decision), **diagnostic** (shown, see above) and **parity-gap** (one app has it; "layout" when the other shows the same information differently, "accessibility" when only one labels it, "not localized" when one app builds it in English).
 
-### iOS (119)
+### iOS (124)
 
 - **platform: Settings naming and wording for the location permission**
   - "You can still browse the full map. Enable location in Settings to see nearby places."
@@ -265,6 +265,8 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Hide keyboard"
 - **dead code: PendingFeatureView (Features/Onboarding/OnboardingFlow.swift) has no callers**
   - "Coming soon in the native app."
+- **dead code: SendQuote.recipientDescription (Features/Send/SendPayment.swift) is read only by tests**
+  - "Recipient receives about {nativeValue1} sats"
 - **flagged: Android's launch gate reads hand-written English-only values/native.xml (outside the catalogs and the extractor) and groups secure storage, invalid seed and seed conflict under one message; unifying this safety copy needs your wording decision**
   - "Conflicting wallet data"
   - "Noah can't read its secure storage yet. Unlock your device to continue."
@@ -285,6 +287,8 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Bitcoin merchant map"
 - **parity-gap (accessibility): Android's on-chain progress bar has no label**
   - "Updating wallet"
+- **parity-gap (accessibility): iOS labels onboarding's email field "Email Address"; Android labels it with its prompt ("Add your email")**
+  - "Email Address"
 - **parity-gap (accessibility): iOS labels the hidden phrase grid; Android labels its Show button instead**
   - "Recovery phrase hidden"
 - **parity-gap (accessibility): iOS's end date picker has a label; Android's date row doesn't**
@@ -308,6 +312,8 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Number of payments"
   - "days"
   - "payments"
+- **parity-gap (layout): iOS titles a sent result without a receipt "Payment sent"; Android's says "Sent {amount}" with the reviewed amount**
+  - "Payment sent"
 - **parity-gap (layout): iOS titles its other Receive errors; Android titles only a failed Lightning receive**
   - "Couldn’t create a request"
 - **parity-gap (layout): iOS writes the count line as one template; Android joins its parts**
@@ -317,6 +323,8 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "QR mode"
   - "Scan a Bitcoin, Lightning, or Ark QR code and send from Noah."
   - "Scan to pay"
+- **parity-gap (layout): iOS's result line for a send whose amount bark hasn't recorded (a MAX offboard); Android shows "Actual fee pending" in the Fee row instead**
+  - "Recipient amount pending"
 - **parity-gap (layout): iOS's start review shows when the exit can be claimed; Android's summary says "about a day"**
   - "In {time}"
 - **parity-gap (layout): iOS's status word for the sending phases; Android shows "Sending {n} of {total}" there**
@@ -349,6 +357,8 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Enter an Ark address, Lightning address or BOLT12 offer."
   - "Enter how many payments should be made."
   - "The end date must be after the first payment."
+- **parity-gap (shown): iOS's Settings Email page reports a failed server registration on its own; Android's registers inside Send code and reports a failed send**
+  - "Failed to register with server. Please try again."
 - **parity-gap (shown): only iOS checks recurring consumption evidence with its own message**
   - "Recurring consumption evidence is incomplete. Sending remains stopped."
 - **parity-gap (shown): only iOS guards saving an identity while registration is running**
@@ -446,7 +456,7 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Claim transaction"
   - "Last checked"
 
-### Android (183)
+### Android (163)
 
 - **platform: Android battery optimisation**
   - "Battery"
@@ -529,7 +539,7 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Checking…"
   - "Creating invoice…"
   - "Preparing…"
-- **parity-gap (layout): Android relabels Run due payments now while it runs (and titles the legacy recurring review); iOS shows a spinner**
+- **parity-gap (layout): Android relabels Run due payments now while it runs; iOS shows a spinner**
   - "Sending…"
 - **parity-gap (layout): Android relabels the backup Retry button while it works; iOS disables it**
   - "Working"
@@ -601,21 +611,6 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
 - **parity-gap: Android names the bumped fee rate (prototype); iOS can't**
   - "Fees rose. Paying more"
   - "Paying {rate} sat/vB · waiting for block {height}"
-- **parity-gap: Android's Home email nudge still opens the pre-redesign email form (ui/Onboarding.kt EmergencyEmailScreen); iOS opens Settings → Email**
-  - "6-digit code"
-  - "Change email address"
-  - "Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them."
-  - "Emergency Email"
-  - "Please enter a valid email address."
-  - "Please wait…"
-  - "Resend Code"
-  - "Retry registration"
-  - "Send Verification Code"
-  - "The verification code will expire in 10 minutes."
-  - "Verify Email"
-  - "We sent a 6-digit verification code to {nativeValue1}"
-  - "Your current email will stay active until the new email is verified."
-  - "Your current email, {email}, will stay active until the new email is verified."
 - **parity-gap: Android's amount follows the BIP-177 unit; iOS's always says sats**
   - "each time"
 - **parity-gap: Android's exit Details list each transaction with its name, block and fee rate (prototype); iOS's don't**
@@ -631,13 +626,6 @@ Every entry of `apps/i18n/platform-only.json`, grouped by its reason. Kinds: **p
   - "Crop Screenshot"
   - "Right"
   - "Top"
-- **parity-gap: Android's recurring manual review still uses the pre-redesign Send review and result (ui/SendScreen.kt); iOS uses the redesigned Send**
-  - "Actual fee"
-  - "Confirm payment"
-  - "Paid via"
-  - "Payment confirmed"
-  - "The actual fee is not yet available. {nativeValue1}"
-  - "Transaction size"
 - **parity-gap: Android's stale warning names bark's last-checked block (prototype); iOS's can't**
   - "This exit is behind the current chain height: last checked at block {height}, {n} blocks ago. Checking the chain can also send exit transactions."
 - **parity-gap: Android's tappable exit-deposit QR has its own fallback (a tap copies the address)**
@@ -731,6 +719,7 @@ Features or details only one app has (the `parity-gap` entries above). Nothing w
 - Android's deposit QR is labelled with its tap action ("Show payment details") instead (accessibility, 1 string)
 - Android's map view has no accessibility label (accessibility, 1 string)
 - Android's on-chain progress bar has no label (accessibility, 1 string)
+- iOS labels onboarding's email field "Email Address"; Android labels it with its prompt ("Add your email") (accessibility, 1 string)
 - iOS labels the hidden phrase grid; Android labels its Show button instead (accessibility, 1 string)
 - iOS's end date picker has a label; Android's date row doesn't (accessibility, 1 string)
 - only iOS gives the hold-to-start pill a VoiceOver action with the amount (accessibility, 1 string)
@@ -741,9 +730,11 @@ Features or details only one app has (the `parity-gap` entries above). Nothing w
 - iOS relabels Debug's Run button while it runs; Android shows a spinner (layout, 1 string)
 - iOS states the existing payment's fee as a sentence; Android shows an Existing fee row (layout, 1 string)
 - iOS takes a custom interval and a payment count in text fields; Android uses steppers (layout, 4 strings)
+- iOS titles a sent result without a receipt "Payment sent"; Android's says "Sent {amount}" with the reviewed amount (layout, 1 string)
 - iOS titles its other Receive errors; Android titles only a failed Lightning receive (layout, 1 string)
 - iOS writes the count line as one template; Android joins its parts (layout, 1 string)
 - iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera (layout, 4 strings)
+- iOS's result line for a send whose amount bark hasn't recorded (a MAX offboard); Android shows "Actual fee pending" in the Fee row instead (layout, 1 string)
 - iOS's start review shows when the exit can be claimed; Android's summary says "about a day" (layout, 1 string)
 - iOS's status word for the sending phases; Android shows "Sending {n} of {total}" there (layout, 1 string)
 - iOS's ⋯ menu groups the filters under a Filter heading; Android uses a chip (layout, 1 string)
@@ -755,6 +746,7 @@ Features or details only one app has (the `parity-gap` entries above). Nothing w
 - iOS localizes this with L10n, as RN did; Android builds it by interpolation in the model and always writes English (CSV price header) (not localized, 1 string)
 - iOS localizes this with L10n, as RN did; Android builds it by interpolation in the model and always writes English (CSV type column; Android also uses it as a canceled Home row's title) (not localized, 1 string)
 - iOS names the invalid field; Android shows one combined message (shown, 4 strings)
+- iOS's Settings Email page reports a failed server registration on its own; Android's registers inside Send code and reports a failed send (shown, 1 string)
 - only iOS checks recurring consumption evidence with its own message (shown, 1 string)
 - only iOS guards saving an identity while registration is running (shown, 1 string)
 - only iOS names incomplete wallet data when creating; Android shows "Creation failed" (shown, 1 string)
@@ -802,7 +794,7 @@ Features or details only one app has (the `parity-gap` entries above). Nothing w
 - only Android names the version row's tap action (accessibility, 1 string)
 - Android joins these parts; iOS writes the count line as one template (layout, 3 strings)
 - Android labels busy buttons; iOS shows a spinner (layout, 3 strings)
-- Android relabels Run due payments now while it runs (and titles the legacy recurring review); iOS shows a spinner (layout, 1 string)
+- Android relabels Run due payments now while it runs; iOS shows a spinner (layout, 1 string)
 - Android relabels the backup Retry button while it works; iOS disables it (layout, 1 string)
 - Android shows 'Loading…' text on several screens where iOS shows a spinner (layout, 1 string)
 - Android shows an Existing fee row; iOS states the existing payment's fee as a sentence (layout, 1 string)
@@ -833,11 +825,9 @@ Features or details only one app has (the `parity-gap` entries above). Nothing w
 - Android copies a support message; iOS puts support codes in the launch gate text (1 string)
 - Android falls back to this when the exit delta is unknown; iOS assumes 144 blocks (1 string)
 - Android names the bumped fee rate (prototype); iOS can't (2 strings)
-- Android's Home email nudge still opens the pre-redesign email form (ui/Onboarding.kt EmergencyEmailScreen); iOS opens Settings → Email (14 strings)
 - Android's amount follows the BIP-177 unit; iOS's always says sats (1 string)
 - Android's exit Details list each transaction with its name, block and fee rate (prototype); iOS's don't (7 strings)
 - Android's feedback screenshot crop dialog, which the settings spec keeps Android-only (4 strings)
-- Android's recurring manual review still uses the pre-redesign Send review and result (ui/SendScreen.kt); iOS uses the redesigned Send (6 strings)
 - Android's stale warning names bark's last-checked block (prototype); iOS's can't (1 string)
 - Android's tappable exit-deposit QR has its own fallback (a tap copies the address) (1 string)
 - iOS formats the round interval with the system duration formatter ("1 hour", as the prototype); Android shows seconds (1 string)
@@ -924,7 +914,7 @@ A string one platform switched onto keeps its existing translations, so each was
 
 - **Interpolated copy never localizes.** Swift `Text("… \(x) …")` and Kotlin `tr("… $x …")` (or English built in a model) look up a key that doesn't exist, so they always show English, yet the extractor puts them in the catalogs as `{nativeValueN}`. The remaining ones are allowlisted ("not localized" or iOS's may-have-been-sent lines in `SendOutcomeView`); the rest were converted above.
 - **Android's recurring screens show raw `e.message`.** Any exception's text can reach the editor, the list or Run due payments now. The storage and version errors were reworded above; the rest are allowlisted as `diagnostic`.
-- **Android's legacy screens.** The recurring manual review still uses the pre-redesign Send review and result (`ui/SendScreen.kt`), and Home's email nudge opens the pre-redesign email form (`ui/Onboarding.kt`).
+- **Android's legacy screens** (fixed 2026-10-25): the recurring manual review now uses Send's redesigned review, Sending and result (`SendApproval`, Close on every unresolved result as iOS's `onLeave`), and Home's email nudge opens Settings → Email. The pre-redesign `SendConfirmation`, `SendOutcome` and `EmergencyEmailScreen` are deleted; their 20 Android-only strings left the allowlist, and 5 strings they shared with iOS are now listed for iOS.
 - **Dead code:** `onchain/VtxoSelectionRow.kt` (Android) and `PendingFeatureView` in `Features/Onboarding/OnboardingFlow.swift` (iOS) have no callers. Their strings are allowlisted as `dead code`.
 - **Rounding:** iOS truncates "Expires in {n} hours" (`blocks / 6`); Android rounds. Both use the same strings, so a VTXO near a boundary can read one hour apart.
 - **No singular for blocks:** "{n} blocks" isn't a plural on either platform, so both can say "1 blocks". Making it a plural means converting about 15 call sites to `trPlural` / `L10n.plural` and adding one-forms in four languages.
