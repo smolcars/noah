@@ -728,8 +728,8 @@ rule files. The native seed remains in `noBackupFilesDir`. The restore screen ca
 `seedRestored`, invalidates server authentication and opens the restored wallet.
 Failures after the engine commits require restart and cannot start another restore.
 Phrase entry uses `FLAG_SECURE`, local BIP39 suggestions/checksum validation and
-whole-phrase paste; input is cleared on submit, background and exit and never saved
-in instance state. Installed/suspended wallets and pending restore/deletion markers
+whole-phrase paste; input stays in memory while the app is in the background, is cleared
+on submit and exit, and is never saved in instance state. Installed/suspended wallets and pending restore/deletion markers
 are blocked from this onboarding flow.
 
 ### Backup verification (2026-10-19)

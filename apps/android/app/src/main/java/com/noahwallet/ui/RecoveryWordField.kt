@@ -19,7 +19,7 @@ import androidx.core.widget.doAfterTextChanged
  * keeps them out of keyboard learning and suggestions, autofill, content capture and saved state, and never
  * lets them leave: no Copy, Cut, Share or text-processing (Translate, Search…) from the toolbars, keyboard
  * shortcuts, the IME or accessibility, and no dragging a selection out. Paste keeps working, including a
- * whole phrase. The screen adds FLAG_SECURE and clears the words on background or leaving.
+ * whole phrase. The screen adds FLAG_SECURE and clears the words on leaving.
  */
 internal class RecoveryWordEditText(context: Context, private val index: Int) : EditText(context) {
     init {

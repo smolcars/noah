@@ -38,18 +38,17 @@ import com.noahwallet.ui.onboarding.*
 import kotlinx.coroutines.delay
 
 /**
- * FLAG_SECURE, clipboard clearing and clearing on background or removal; configuration changes keep the words in memory.
- * Onboarding holds one across the restore steps through Ready; screens with words add their own for [clear].
+ * FLAG_SECURE, clipboard clearing on background or removal, and [clear] on removal. The words stay in memory in the
+ * background (a phrase read from another app a few words at a time), where FLAG_SECURE keeps them out of Recents, and
+ * through configuration changes. Onboarding holds one across the restore steps through Ready; screens with words add
+ * their own for [clear].
  */
 @Composable
 internal fun RestoreShield(activity: Activity, lock: com.noahwallet.ui.settings.WalletLock, clipboard: RestoreClipboard, clear: () -> Unit) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(activity, lifecycle) {
         val release = lock.showSecret(activity.window)
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) {
-            clipboard.clearIfUnchanged()
-            if (!activity.isChangingConfigurations) clear()
-        } }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) clipboard.clearIfUnchanged() }
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)

@@ -182,7 +182,7 @@ class AdaptiveStateRestorationTest {
         // No screenshots or semantic dumps: the device may hold its disposable wallet phrase.
     }
 
-    @Test fun restoreInputSurvivesRecreationButStillClearsOnBackground() {
+    @Test fun restoreInputSurvivesRecreationAndBackground() {
         val app = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application)
         lateinit var presentation: RecoveryPhrasePresentation
         fun mount(activity: ComponentActivity) {
@@ -206,8 +206,9 @@ class AdaptiveStateRestorationTest {
         compose.waitForIdle()
         compose.runOnIdle { assertEquals("layout", presentation.input.words[0]) }
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
-        assertTrue(presentation.input.words.all { it.isEmpty() })
+        assertEquals("layout", presentation.input.words[0])
         compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        compose.runOnIdle { assertEquals("layout", presentation.input.words[0]) }
         // Only a public synthetic non-phrase input is used; never capture this surface.
     }
 

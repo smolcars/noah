@@ -185,7 +185,7 @@ class RestoreUIDeviceTest {
             assertEquals(0, activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
             clickText("I already have a wallet")
             waitFor("Phrase input returns") { wordField() != null }
-            stage = "clear phrase on background"
+            stage = "keep phrase through background"
             instrumentation.runOnMainSync {
                 (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
                     .setPrimaryClip(android.content.ClipData.newPlainText("test", phrase))
@@ -202,32 +202,36 @@ class RestoreUIDeviceTest {
                     firstField(view.getChildAt(i))?.let { return it }
                 return null
             }
-            var oldField: RecoveryWordEditText? = null
-            instrumentation.runOnMainSync { oldField = firstField(activity!!.window.decorView) }
-            assertNotNull(oldField)
+            fun firstWord(): String? {
+                var word: String? = null
+                instrumentation.runOnMainSync { word = firstField(activity!!.window.decorView)?.text?.toString() }
+                return word
+            }
+            val typedFirst = phrase.split(" ").first()
             automation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
             waitFor("Activity backgrounded") { !activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
             context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            fun firstWordEmpty(): Boolean {
-                var empty = false
-                instrumentation.runOnMainSync { empty = firstField(activity!!.window.decorView)?.text?.isEmpty() == true }
-                return empty
+            waitFor("Phrase kept through background") { activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && firstWord() == typedFirst }
+            assertTrue("Still secure after returning", activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+            instrumentation.runOnMainSync {
+                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                assertTrue("Background preserves replacement clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "unrelated replacement")
             }
-            waitFor("Phrase cleared on background") { firstWordEmpty() }
+            stage = "clear phrase on Back"
+            var oldField: RecoveryWordEditText? = null
+            instrumentation.runOnMainSync { oldField = firstField(activity!!.window.decorView) }
+            clickDescription("Back"); waitFor("Welcome returns") { text("I already have a wallet") != null }
+            clickText("I already have a wallet")
+            waitFor("Phrase input returns empty") { wordField() != null && firstWord()?.isEmpty() == true }
             instrumentation.runOnMainSync {
                 val fresh = checkNotNull(firstField(activity!!.window.decorView))
-                assertTrue("Security clear recreates native fields", fresh !== oldField)
+                assertTrue("Leaving recreates native fields", fresh !== oldField)
                 fresh.requestFocus()
                 fresh.onKeyShortcut(android.view.KeyEvent.KEYCODE_Z,
                     android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_Z).let {
                         android.view.KeyEvent(0, 0, it.action, it.keyCode, 0, android.view.KeyEvent.META_CTRL_ON)
                     })
                 assertTrue("Hardware Undo cannot restore cleared words", fresh.text.isEmpty())
-            }
-            assertTrue(firstWordEmpty())
-            instrumentation.runOnMainSync {
-                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                assertTrue("Background preserves replacement clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "unrelated replacement")
             }
             enterPhrase(phrase)
             // No screenshots, screen dumps, clipboard persistence, shell arguments or assertion diffs contain the phrase.
