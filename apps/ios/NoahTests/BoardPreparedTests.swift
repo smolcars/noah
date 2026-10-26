@@ -454,9 +454,11 @@ struct BoardPreparedTests {
         let session = WalletSession()
         let quote = Self.quote
         let calls = Calls()
+        // The journal keeps the review, never its process-local review-clock reading.
+        let persisted = { var saved = quote; saved.reviewedAt = nil; saved.prepared?.reviewedAt = nil; return saved }()
         await session.retainBoardReview(quote, discard: { try await calls.discard(quote) }, submit: {
             let saved = try #require(try await OnchainOperationJournal(file: file).load())
-            #expect(saved.txid == "exact" && saved.receipt == nil && saved.quote == quote)
+            #expect(saved.txid == "exact" && saved.receipt == nil && saved.quote == persisted)
             return await calls.submit(.init(txid: "exact", broadcast: broadcast, vtxoIds: ["vtxo"]))
         })
         if case .notAttempted = broadcast {
@@ -712,7 +714,7 @@ struct BoardPreparedTests {
         var edited = quote
         edited.chainFee! += 1
         var expired = quote
-        expired.prepared?.createdAt = Date().addingTimeInterval(-121)
+        expired.prepared?.reviewedAt = ContinuousClock.now - .seconds(121)
         for invalid in [edited, expired] {
             await #expect(throws: OnchainFailure.changed) {
                 try await session.submitBoard(invalid, walletID: "wallet", journal: journal, confirmed: { quote.confirmed })

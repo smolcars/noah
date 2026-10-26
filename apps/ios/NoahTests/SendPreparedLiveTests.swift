@@ -45,7 +45,7 @@ struct SendPreparedLiveTests {
         #expect(await session.sendPreparations.isEmpty)
         let staleReview = try await session.quoteSend(payment)
         var expiredReview = staleReview
-        expiredReview.prepared?.createdAt = Date().addingTimeInterval(-121)
+        expiredReview.prepared?.reviewedAt = ContinuousClock.now - .seconds(121)
         await #expect(throws: SendFailure.feeChanged) {
             _ = try await session.prepareSend(payment, quote: expiredReview)
         }

@@ -47,8 +47,9 @@ struct SendConfirmation: View {
         .task(id: quote.prepared?.id) {
             // A signed transaction expires; review again for a fresh fee rate.
             guard let prepared = quote.prepared else { return }
-            let remaining = max(0, SendPreparedTransaction.reviewLifetime - Date().timeIntervalSince(prepared.createdAt))
-            do { try await Task.sleep(for: .seconds(remaining)) } catch { return }
+            let remaining = Duration.seconds(SendPreparedTransaction.reviewLifetime)
+                - ReviewClock.elapsed(since: prepared.reviewedAt, createdAt: prepared.createdAt)
+            do { try await Task.sleep(for: max(.zero, remaining)) } catch { return }
             if !controller.locked { cancel() }
         }
     }

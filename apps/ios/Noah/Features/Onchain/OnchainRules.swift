@@ -14,8 +14,9 @@ enum ExitRules {
     static func settling(initialized: Bool, loaded: Bool, suspended: Bool, background: Bool) -> Bool {
         initialized && !suspended && (background || !loaded)
     }
-    static func current(reviewedAt: Date, now: Date = Date()) -> Bool {
-        now.timeIntervalSince(reviewedAt) >= 0 && now.timeIntervalSince(reviewedAt) < 30
+    /// An exit review is current for 30 seconds after it opened (`ReviewClock`).
+    static func current(elapsed: Duration) -> Bool {
+        elapsed >= .zero && elapsed < .seconds(30)
     }
     static func received(amount: UInt64, claimFee: UInt64) -> UInt64 {
         amount > claimFee ? amount - claimFee : 0

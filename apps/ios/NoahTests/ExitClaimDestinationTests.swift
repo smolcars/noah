@@ -253,7 +253,8 @@ struct ExitClaimExecutionTests {
         reviewed.unknownFeeConsent = reviewed.id
         for change in ["expired", "ids", "wallet", "ownership"] {
             var invalid = reviewed
-            if change == "expired" { invalid.createdAt = .distantPast }
+            // Opened 30 seconds ago, though the wall clock (set back) says just now.
+            if change == "expired" { invalid.reviewedAt = ContinuousClock.now - .seconds(30); invalid.createdAt = Date() }
             if change == "ids" { invalid.ids = ["missing"] }
             if change == "wallet" { invalid.walletID = "other" }
             if change == "ownership" { invalid.destinationIsMine = false }
@@ -323,15 +324,16 @@ struct ExitClaimExecutionTests {
         let journal = OnchainOperationJournal(file: file)
         let wallet = Wallet()
         var reviewed = try await WalletSession.claimQuote(ids: ["a"], destination: Self.externalAddress, access: wallet.access())
-        reviewed.createdAt = Date().addingTimeInterval(-29)
+        reviewed.reviewedAt = ContinuousClock.now - .seconds(29)
         await wallet.change("estimator")
         do {
             _ = try await WalletSession.executeClaim(reviewed, journal: journal, access: wallet.access())
             Issue.record("Estimator must fail")
         } catch let failure as ExitEstimateUnavailable {
             #expect(failure.review.id == reviewed.id && failure.review.createdAt == reviewed.createdAt)
+            #expect(failure.review.reviewedAt == reviewed.reviewedAt)
             #expect(failure.review.inputs.matches(reviewed.inputs))
-            #expect(!ExitRules.current(reviewedAt: failure.review.createdAt, now: reviewed.createdAt.addingTimeInterval(30)))
+            #expect(!ExitRules.current(elapsed: failure.review.elapsed(at: reviewed.reviewedAt! + .seconds(30))))
         }
         #expect(try await journal.loadAll().isEmpty)
         #expect(await wallet.drainDestinations.isEmpty)

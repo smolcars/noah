@@ -9,8 +9,12 @@ struct SendPreparedTransaction: Codable, Equatable, Sendable {
     var inputCount: Int
     var inputs: [SendTransaction.Input]?
     var createdAt: Date = Date()
+    /// When this review opened on `ReviewClock`. Never persisted, so nil once read back from storage.
+    var reviewedAt: ContinuousClock.Instant?
     static let reviewLifetime: TimeInterval = 120
-    var isCurrent: Bool { Date().timeIntervalSince(createdAt) < Self.reviewLifetime }
+    var isCurrent: Bool { ReviewClock.elapsed(since: reviewedAt, createdAt: createdAt) < .seconds(Self.reviewLifetime) }
+
+    private enum CodingKeys: String, CodingKey { case id, txid, vsize, inputCount, inputs, createdAt }
 
     init(_ transaction: PreparedTransaction) {
         id = transaction.id
@@ -18,6 +22,7 @@ struct SendPreparedTransaction: Codable, Equatable, Sendable {
         vsize = transaction.vsize
         inputCount = transaction.inputs.count
         inputs = transaction.inputs.map { .init(txid: $0.txid, vout: $0.vout) }
+        reviewedAt = .now
     }
 
     init(_ board: PreparedBoard) {
@@ -26,5 +31,6 @@ struct SendPreparedTransaction: Codable, Equatable, Sendable {
         vsize = board.vsize
         inputCount = board.inputs.count
         inputs = board.inputs.map { .init(txid: $0.txid, vout: $0.vout) }
+        reviewedAt = .now
     }
 }

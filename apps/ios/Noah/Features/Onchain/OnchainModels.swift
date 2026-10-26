@@ -106,14 +106,22 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var confirmed: UInt64
     var feeRate: UInt64?
     var createdAt = Date()
+    /// When this review opened on `ReviewClock`. Never persisted, so nil once read back from storage.
+    var reviewedAt: ContinuousClock.Instant?
     var automatic = false
     // Optional so journals written before MAX used boardAll remain readable.
     var boardAll: Bool?
     var unknownFeeConsent: UUID?
     var prepared: SendPreparedTransaction?
+    private enum CodingKeys: String, CodingKey {
+        case id, action, walletID, ids, destination, destinationIsMine, amount, fee, chainFee, confirmed, feeRate,
+             createdAt, automatic, boardAll, unknownFeeConsent, prepared
+    }
+    func elapsed(at now: ContinuousClock.Instant = .now) -> Duration {
+        ReviewClock.elapsed(since: reviewedAt, createdAt: createdAt, now: now)
+    }
     var isCurrent: Bool {
-        prepared.map { $0.isCurrent && Date().timeIntervalSince(createdAt) < 120 }
-            ?? ExitRules.current(reviewedAt: createdAt)
+        prepared.map { $0.isCurrent && elapsed() < .seconds(120) } ?? ExitRules.current(elapsed: elapsed())
     }
     var externalDestinationWarning: String? {
         action == .claim && destinationIsMine == false
@@ -233,13 +241,13 @@ struct ExitEstimateUnavailable: Error {
         return false
     }
 
-    func preserving(_ original: OnchainQuote, now: Date = Date()) throws -> Self {
+    func preserving(_ original: OnchainQuote, now: ContinuousClock.Instant = .now) throws -> Self {
         var scope = original
         scope.fee = nil; scope.chainFee = nil; scope.feeRate = nil
-        guard ExitRules.current(reviewedAt: original.createdAt, now: now), review.feesUnknown,
+        guard ExitRules.current(elapsed: original.elapsed(at: now)), review.feesUnknown,
               scope.matches(review) else { throw OnchainFailure.changed }
         var fallback = review
-        fallback.id = original.id; fallback.createdAt = original.createdAt
+        fallback.id = original.id; fallback.createdAt = original.createdAt; fallback.reviewedAt = original.reviewedAt
         fallback.unknownFeeConsent = nil
         return .init(review: fallback)
     }

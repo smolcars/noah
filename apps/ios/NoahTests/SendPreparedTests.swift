@@ -20,7 +20,7 @@ import Testing
         #expect(!quote.approximate && !quote.recipientIsEstimated)
         #expect(quote.prepared?.vsize == 143 && quote.prepared?.inputCount == 1)
         #expect(quote.prepared?.isCurrent == true)
-        quote.prepared?.createdAt = Date().addingTimeInterval(-121)
+        quote.prepared?.reviewedAt = ContinuousClock.now - .seconds(121)
         #expect(quote.prepared?.isCurrent == false)
     }
     @Test func broadcastOutcomes() throws {

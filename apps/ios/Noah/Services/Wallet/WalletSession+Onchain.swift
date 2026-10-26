@@ -210,7 +210,7 @@ extension WalletSession {
                 feeRateSatPerVb: rate, confirmedOnly: true, excludedOutpoints: excluding.map(Self.outpoints))
             let quote = OnchainQuote(action: .board, walletID: walletID, ids: [], amount: board.grossSats,
                 fee: board.arkFeeSats, chainFee: board.onchainFeeSats, confirmed: balance, feeRate: rate,
-                automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil, prepared: .init(board))
+                reviewedAt: .now, automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil, prepared: .init(board))
             await self.retainBoardReview(quote, wallet: handles.wallet)
             return quote
         }
@@ -343,20 +343,20 @@ extension WalletSession {
         guard selected.allSatisfy({ $0 >= ExitRules.dust }) else { throw OnchainFailure.invalid }
         let quote = OnchainQuote(
             action: .startExit, walletID: access.walletID, ids: ids.sorted(), amount: selected.reduce(0, +),
-            fee: 0, chainFee: 0, confirmed: balance, automatic: automatic)
+            fee: 0, chainFee: 0, confirmed: balance, reviewedAt: .now, automatic: automatic)
         return try await exitStartEstimate(quote, estimate: estimate) { try await access.estimate(ids) }
     }
 
     static func executeStart(
         _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainStartAccess
     ) async throws -> String {
-        guard quote.action == .startExit, ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        guard quote.action == .startExit, ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
         let fresh: OnchainQuote
         do {
             fresh = try await startQuote(ids: quote.ids, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent, access: access)
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
-        guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         return try await journal.perform(quote) {
             // The new run is recorded before bark starts, or bark isn't asked (nothing sent yet).
             do { try await access.began(quote.ids) } catch { throw OnchainFailure.constructionFailed }
@@ -379,7 +379,7 @@ extension WalletSession {
         var quote = OnchainQuote(
             action: .claim, walletID: access.walletID, ids: ids.sorted(), destination: destination,
             destinationIsMine: mine, amount: selected.reduce(0) { $0 + $1.amountSats },
-            fee: nil, chainFee: nil, confirmed: balance, automatic: automatic)
+            fee: nil, chainFee: nil, confirmed: balance, reviewedAt: .now, automatic: automatic)
         if estimate {
             do {
                 quote.fee = try await access.estimate(ids, destination).claimFeeSats
@@ -396,14 +396,14 @@ extension WalletSession {
     static func executeClaim(
         _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainClaimAccess
     ) async throws -> String {
-        guard quote.action == .claim, ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        guard quote.action == .claim, ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
         let fresh: OnchainQuote
         do {
             fresh = try await claimQuote(ids: quote.ids, destination: quote.destination, automatic: quote.automatic,
                 estimate: !quote.hasUnknownFeeConsent, access: access)
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
-        guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         return try await journal.perform(quote) {
             let claim = try await access.drain(quote.ids, quote.destination!)
             guard quote.hasUnknownFeeConsent || claim.feeSats == quote.fee else { throw OnchainFailure.claimFeeChanged }
@@ -441,7 +441,7 @@ extension WalletSession {
         var quote = OnchainQuote(
             action: action, walletID: handles.wallet.fingerprint(), ids: ids.sorted(),
             destination: destination,
-            amount: requested, fee: 0, chainFee: 0, confirmed: balance, automatic: automatic)
+            amount: requested, fee: 0, chainFee: 0, confirmed: balance, reviewedAt: .now, automatic: automatic)
         guard Set(ids).count == ids.count else { throw OnchainFailure.invalid }
         switch action {
         case .board:
@@ -535,7 +535,7 @@ extension WalletSession {
                 }
                 return try await Self.executeStart(quote, journal: journal, access: access)
             }
-            guard ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+            guard ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
             guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
             let fresh: OnchainQuote
             do {
@@ -543,7 +543,7 @@ extension WalletSession {
                     handles, action: quote.action, ids: quote.ids, amount: quote.boardAll == true ? 0 : quote.amount,
                     destination: quote.destination, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent)
             } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
-            guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else {
+            guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else {
                 throw OnchainFailure.changed
             }
             return try await journal.perform(quote) {
@@ -685,11 +685,11 @@ extension WalletSession {
         tip: @escaping @Sendable () async throws -> UInt32,
         refresh: @escaping @Sendable ([String]) async throws -> OnchainReceipt
     ) async throws -> String {
-        guard quote.action == .refresh, ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+        guard quote.action == .refresh, ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         let message = Mutex<String?>(nil)
         try await flight.serialized {
             let fresh = try await requote()
-            guard quote.matches(fresh), ExitRules.current(reviewedAt: quote.createdAt) else { throw OnchainFailure.changed }
+            guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
             let receipt = try await journal.perform(quote) {
                 // The expiring set first, then the tip it's judged against. Nothing has been submitted
                 // if either read fails, so that refuses like a changed set and the attempt is dropped;

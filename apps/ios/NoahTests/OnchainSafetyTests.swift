@@ -133,7 +133,7 @@ struct OnchainJournalTests {
         changed = original
         changed.automatic = true
         #expect(!original.matches(changed))
-        #expect(!ExitRules.current(reviewedAt: Date().addingTimeInterval(-30)))
+        #expect(!ExitRules.current(elapsed: .seconds(30)))
     }
 }
 
@@ -375,15 +375,19 @@ struct ExitFallbackDeadlineTests {
     @Test(arguments: [OnchainAction.startExit, .claim]) func conversionRetainsScopeAndOriginalDeadline(action: OnchainAction) throws {
         var original = OnchainJournalTests.quote
         original.action = action
+        // The wall clock is far from the review (1970): only the continuous clock times it.
         original.createdAt = Date(timeIntervalSince1970: 1000)
+        let opened = ContinuousClock.now
+        original.reviewedAt = opened
         var unknown = original
         unknown.id = UUID(); unknown.createdAt = original.createdAt.addingTimeInterval(29)
+        unknown.reviewedAt = opened + .seconds(29)
         unknown.fee = nil; unknown.chainFee = nil; unknown.feeRate = nil
         let failure = ExitEstimateUnavailable(review: unknown)
-        let converted = try failure.preserving(original, now: original.createdAt.addingTimeInterval(29)).review
-        #expect(converted.id == original.id && converted.createdAt == original.createdAt)
+        let converted = try failure.preserving(original, now: opened + .seconds(29)).review
+        #expect(converted.id == original.id && converted.createdAt == original.createdAt && converted.reviewedAt == opened)
         #expect(!converted.hasUnknownFeeConsent)
-        #expect(throws: OnchainFailure.self) { try failure.preserving(original, now: original.createdAt.addingTimeInterval(30)) }
+        #expect(throws: OnchainFailure.self) { try failure.preserving(original, now: opened + .seconds(30)) }
         for change in ["wallet", "ids", "amount", "destination", "action", "confirmed"] {
             var changed = unknown
             switch change {
@@ -395,7 +399,7 @@ struct ExitFallbackDeadlineTests {
             default: changed.confirmed += 1
             }
             #expect(throws: OnchainFailure.self) {
-                try ExitEstimateUnavailable(review: changed).preserving(original, now: original.createdAt.addingTimeInterval(29))
+                try ExitEstimateUnavailable(review: changed).preserving(original, now: opened + .seconds(29))
             }
         }
     }

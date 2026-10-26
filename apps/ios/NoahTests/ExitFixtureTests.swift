@@ -38,9 +38,7 @@ struct ExitFixtureTests {
             case "current":
                 let actual =
                     i.inputs!.matches(i.current!)
-                    && ExitRules.current(
-                        reviewedAt: Date(timeIntervalSince1970: i.reviewedAt! / 1000),
-                        now: Date(timeIntervalSince1970: i.now! / 1000))
+                    && ExitRules.current(elapsed: .milliseconds(i.now! - i.reviewedAt!))
                 #expect(try actual == test.expected.decode(Bool.self), "\(test.name)")
             default: Issue.record("Unknown exit fixture")
             }
