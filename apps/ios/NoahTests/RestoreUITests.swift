@@ -397,7 +397,7 @@ struct RestoreFieldPrivacyTests {
         let target = RestorePasteControl.Target()
         #expect(target.pasteConfiguration?.acceptableTypeIdentifiers.contains(UTType.rtf.identifier) == true)
         let pasted: String = await withCheckedContinuation { continuation in
-            target.onPaste = { continuation.resume(returning: $0) }
+            target.onPaste = { { continuation.resume(returning: $0) } }
             target.paste(itemProviders: [NSItemProvider(object: first as NSString), rtfOnly])
         }
         let filled = RecoveryPhraseInput.normalizedWords(pasted) == words
@@ -420,6 +420,77 @@ struct RestoreFieldPrivacyTests {
         board.strings = [line + " zoo"]
         RestorePasteboard(board).accepted(line)
         #expect(board.hasStrings)
+    }
+
+    /// A plain-text item whose data arrives only when `finish` is called.
+    final class DelayedText: @unchecked Sendable {
+        let provider = NSItemProvider()
+        private let lock = NSLock()
+        private var completion: ((Data?, (any Error)?) -> Void)?
+
+        init() {
+            provider.registerDataRepresentation(for: .utf8PlainText) { completion in
+                self.lock.withLock { self.completion = completion }
+                return nil
+            }
+        }
+
+        var loading: Bool { lock.withLock { completion != nil } }
+        func finish(_ text: String) { lock.withLock { completion }?(Data(text.utf8), nil) }
+    }
+
+    @MainActor final class DraftBox {
+        var draft = RestoreDraft()
+        var pasted: [String] = []
+    }
+
+    private static func pasteControl(in view: UIView) -> UIPasteControl? {
+        (view as? UIPasteControl) ?? view.subviews.lazy.compactMap(pasteControl(in:)).first
+    }
+
+    private func until(_ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        try #require(condition())
+    }
+
+    /// The items load after the tap. Text that arrives after Back (the flow's reset moves the generation, as the 12/24
+    /// switch and Restore do) or after a newer tap is dropped: it never refills the draft or reaches the clipboard.
+    @Test func aLatePasteIsDropped() async throws {
+        let scene = try #require(UIApplication.shared.connectedScenes.lazy.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 402, height: 874)
+        let box = DraftBox()
+        let host = UIHostingController(rootView: RestoreWalletScreen(
+            layout: OnboardingLayout(size: window.frame.size, insets: EdgeInsets()),
+            draft: Binding(get: { box.draft }, set: { box.draft = $0 }), issue: nil, haptics: OnboardingHaptics(),
+            onPaste: { box.pasted.append($0) }, onRestore: {}, onBack: {}))
+        window.rootViewController = host
+        window.isHidden = false
+        defer { window.isHidden = true }
+        try await until { Self.pasteControl(in: host.view) != nil }
+        let target = try #require(Self.pasteControl(in: host.view)?.target as? RestorePasteControl.Target)
+        let older = (Array(repeating: "zoo", count: 11) + ["wrong"]).joined(separator: " ")
+        let newer = (Array(repeating: "abandon", count: 11) + ["about"]).joined(separator: " ")
+
+        let afterBack = DelayedText()
+        target.paste(itemProviders: [afterBack.provider])
+        try await until { afterBack.loading }
+        box.draft = RestoreDraft(generation: box.draft.generation + 1)
+        afterBack.finish(newer)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(box.draft.input.wordCount == 0 && box.pasted.isEmpty)
+
+        let first = DelayedText(), second = DelayedText()
+        target.paste(itemProviders: [first.provider])
+        target.paste(itemProviders: [second.provider])
+        try await until { first.loading && second.loading }
+        second.finish(newer)
+        try await until { box.pasted.count == 1 }
+        first.finish(older)
+        try await Task.sleep(for: .milliseconds(300))
+        let newerKept = box.pasted.count == 1 && box.draft.input.phrase == newer
+        #expect(newerKept)
     }
 
     @Test func acceptedPasteClearsOnlyMatchingClipboardContent() {

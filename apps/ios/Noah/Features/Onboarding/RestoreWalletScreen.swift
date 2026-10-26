@@ -230,7 +230,12 @@ struct RestoreWalletScreen: View {
         return layout {
             // The system paste control: tapping it is consent, so it reads without asking. A plain button's
             // read returns nil unless pasting from other apps is allowed in Settings.
-            RestorePasteControl(onPaste: paste)
+            RestorePasteControl {
+                // The items load after the tap. Back, the 12/24 switch, Restore or a field paste meanwhile move the
+                // generation, and the late text is dropped.
+                let generation = draft.generation
+                return { text in if draft.generation == generation { paste(text) } }
+            }
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button, maxHeight: NoahTokens.Size.button)
                 .accessibilityIdentifier("restore-paste")
             Button("Restore", action: onRestore)
@@ -257,7 +262,9 @@ struct RestoreWalletScreen: View {
 /// `UIPasteControl` as the secondary capsule (the system draws it, so it can't be glass). Passes on
 /// every pasted string, one per line.
 struct RestorePasteControl: UIViewRepresentable {
-    let onPaste: (String) -> Void
+    /// Called as the control is tapped; what it returns gets the text once the items load, unless the control was
+    /// tapped again first.
+    let onPaste: () -> (String) -> Void
 
     func makeCoordinator() -> Target { Target() }
 
@@ -277,7 +284,8 @@ struct RestorePasteControl: UIViewRepresentable {
     }
 
     final class Target: UIResponder {
-        var onPaste: (String) -> Void = { _ in }
+        var onPaste: () -> (String) -> Void = { { _ in } }
+        private var latest = 0
 
         override init() {
             super.init()
@@ -288,12 +296,14 @@ struct RestorePasteControl: UIViewRepresentable {
         }
 
         override func paste(itemProviders: [NSItemProvider]) {
+            latest += 1
+            let request = latest, finish = onPaste()
             Task {
                 var strings: [String] = []
                 for provider in itemProviders {
                     if let text = await Self.text(provider) { strings.append(text) }
                 }
-                onPaste(strings.joined(separator: "\n"))
+                if request == latest { finish(strings.joined(separator: "\n")) }
             }
         }
 
