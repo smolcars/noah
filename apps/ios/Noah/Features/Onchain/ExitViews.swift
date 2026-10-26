@@ -165,6 +165,82 @@ struct ExitDetailRow: View {
     }
 }
 
+/// Review's one-line path (prototype `drawRail`): the round's block, your transactions and coin,
+/// then the timelock's dial and the claim's destination, with a caption under each third.
+struct ExitPathRail: View {
+    let transactions: Int
+    /// Several VTXOs: their shared transactions are sent once.
+    var several = false
+    var delta: UInt32 = 144
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.locale) private var locale
+
+    private var language: String { locale.identifier }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Canvas { context, size in draw(context, size) }
+                .frame(height: 58)
+                .accessibilityHidden(true)
+            HStack(alignment: .top, spacing: 10) {
+                caption(L10n.plural("{n} transactions", count: transactions, locale: language),
+                        several ? L10n.text("shared ones once", locale: language) : L10n.text("one block each", locale: language), .leading)
+                caption(L10n.plural("{n} blocks", count: Int(delta), locale: language),
+                        L10n.text("about {time}", VtxoList.timeLeft(Int64(delta), locale: language), locale: language), .center)
+                caption(L10n.text("Claim", locale: language), L10n.text("to another wallet", locale: language), .trailing)
+            }
+        }
+        .padding(.top, 18)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func caption(_ title: String, _ line: String, _ alignment: TextAlignment) -> some View {
+        VStack(alignment: alignment == .leading ? .leading : alignment == .center ? .center : .trailing, spacing: 0) {
+            Text(verbatim: title).noahText(HomeText.footnote).fontWeight(.medium).foregroundStyle(NoahTokens.Colors.foreground)
+            Text(verbatim: line).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+        }
+        .multilineTextAlignment(alignment)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : alignment == .center ? .center : .trailing)
+    }
+
+    private func draw(_ context: GraphicsContext, _ size: CGSize) {
+        let colors = MotionColors.theme(colorScheme), width = size.width, y = size.height / 2 - 4, x0 = 10.0, x1 = width - 14, cx = width / 2
+        let canvas = MotionCanvas(context: context, size: size, viewBox: CGRect(origin: .zero, size: size), colors: colors)
+        canvas.fill(Path(roundedRect: CGRect(x: x0, y: y - 8, width: 16, height: 16), cornerRadius: 4), colors.foreground)
+        let k = max(1, min(8, transactions)), step = (width * 0.36 - x0 - 34) / Double(k)
+        var px = x0 + 16
+        for index in 0..<k {
+            let x = x0 + 30 + Double(index) * step
+            canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: x - 5.5, y: y)), colors.orange, 2)
+            if index == k - 1 {
+                canvas.mineCoin(x + 4, y, 9, ring: 1.8)
+                px = x + 13
+            } else {
+                canvas.fill(canvas.circle(x, y, 5), colors.background)
+                canvas.stroke(canvas.circle(x, y, 5), colors.orange, 1.6)
+                px = x + 5.5
+            }
+        }
+        canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: cx - 17, y: y)), colors.hairline, 1.5, dash: [3, 3])
+        canvas.stroke(canvas.circle(cx, y, 13), colors.hairline, 2)
+        let ticks = ExitStagePainter.ticks(delta)
+        for tick in 0..<ticks.count {
+            let angle = -Double.pi / 2 + Double(tick) * 2 * .pi / Double(ticks.count), r1 = ticks.hours && tick % 6 == 0 ? 19.5 : 17.5
+            canvas.stroke(canvas.line(CGPoint(x: cx + cos(angle) * 16, y: y + sin(angle) * 16), CGPoint(x: cx + cos(angle) * r1, y: y + sin(angle) * r1)),
+                          colors.muted.opacity(0.5), 1)
+        }
+        canvas.layer(center: CGPoint(x: cx, y: y + 6), scale: 0.5, opacity: 1) { pad in
+            pad.padlockBody(cx, y - 1)
+            pad.shackle(cx, y - 1, open: 0)
+        }
+        canvas.stroke(canvas.line(CGPoint(x: cx + 21, y: y), CGPoint(x: x1 - 36, y: y)), colors.hairline, 1.5, dash: [3, 3])
+        canvas.fill(canvas.circle(x1 - 20, y, 14), colors.background)
+        canvas.stroke(canvas.circle(x1 - 20, y, 14), colors.hairline, 1.5)
+        canvas.symbol("wallet.bifold", x1 - 20, y, size: 14, color: colors.foreground)
+    }
+}
+
 /// All / Choose (Settings v1's segmented control).
 struct ExitSegment: View {
     @Binding var all: Bool
