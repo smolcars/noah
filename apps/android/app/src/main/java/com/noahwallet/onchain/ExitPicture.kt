@@ -107,7 +107,7 @@ internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifi
         val layout = TreeLayout.of(shown, w, h, scale, wide, words, measure, balance, received)
         val before = move.from?.takeIf { it != shown && !move.labels.isNaN() }?.let { TreeLayout.of(it, w, h, scale, wide, words, measure, balance, received) }
         val stay = before?.labels.orEmpty().filter { old -> layout.labels.any { it.key == old.key && kotlin.math.abs(it.top - old.top) < .5f } }.map { it.key }.toSet()
-        val frame = { TreeFrame(layout.geo, move, clock.value) }
+        val frame = { TreeFrame(layout.geo, move, clock.value, before?.ys) }
         Glows(frame, breath, palette, shown)
         Canvas(Modifier.fillMaxSize()) {
             val k = density.density
@@ -152,11 +152,11 @@ private class TreeStyles(density: androidx.compose.ui.unit.Density) {
         widths.getOrPut("$bold|$size|$text") { measurer.measure(text, style(size, bold)).size.width.toFloat() }
 }
 
-/** Every position and value at one moment of a move (prototype `drawHero`'s locals). */
-private class TreeFrame(val geo: TreeGeometry, val move: TreeMotion, val t: Float) {
+/** Every position and value at one moment of a move (prototype `drawHero`'s locals); [before] is the levels' rest before it. */
+private class TreeFrame(val geo: TreeGeometry, val move: TreeMotion, val t: Float, val before: FloatArray?) {
     val scene get() = move.to
     val n get() = move.n
-    val ys = geo.levels(move.lock(t) * (1 - move.stem(t)), move.to.docked, move.to.ringed) { move.mine(it, t) }
+    val ys = move.ys(geo, before, t)
     val cancel = move.cancel(t)
     val dim = move.dim(t)
     val tree = 1 - .6f * dim
@@ -303,32 +303,48 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
     text(measure(layout.words.tr("Bitcoin"), 10.5f * k), 14f, gY + 12 * k, palette.muted, 1f)
 
     // Everyone else's part of the round: short faint stubs, and one caption, where they're clear of everything else.
-    for (stub in layout.stubs) {
-        val y = f.ys[stub.level]; val a = treeA * m.pop(stub.level, t) * (1 - .6f * canU)
-        if (a <= .02f) continue
-        val tip = Offset(stub.x, y + stub.dy)
+    val slide = m.slide(t)
+    fun stub(x: Float, dy: Float, y: Float, a: Float) {
+        if (a <= .02f) return
+        val tip = Offset(x, y + dy)
         treeLink(Offset(tip.x, tip.y + 3), Offset(tx, y - 8), 0f, 1f, palette.foreground, 1f, .22f * a)
         drawCircle(palette.background, 2.6f, tip, alpha = .34f * a)
         drawCircle(palette.foreground, 2.6f, tip, alpha = .34f * a, style = Stroke(1f))
+    }
+    for (s0 in layout.stubs) stub(s0.x, s0.dy, f.ys[s0.level], treeA * m.pop(s0.level, t) * (1 - .6f * canU) * if (m.emerges(s0.level - 1)) slide else 1f)
+    // A level folding into the stack or "+N" takes its stubs with it as they fade.
+    if (before != null && slide < 1f) for ((level, into) in m.merging) for (s0 in before.stubs) if (s0.level == level + 1) {
+        stub(s0.x, s0.dy, lerp(before.ys[level + 1], f.ys[into + 1], slide), treeA * (1 - slide) * (1 - .6f * canU))
     }
     layout.caption?.let { lines ->
         val a = treeA * m.pop(1, t) * (1 - .6f * canU) * labA
         val y0 = f.ys[1] + layout.captionY; val right = tx - rS / 2 - 9
         lines.forEachIndexed { i, l -> text(measure(l, 10f * k), right, y0 + i * 12.5f * k, palette.muted, a * .9f, 1) }
     }
-    // Your other exits from this round: their branches leave yours where they stop sharing.
-    for (sibling in layout.siblings) {
-        val y = f.ys[sibling.level]; val at = Offset(sibling.x, y + sibling.dy)
-        val a = treeA * m.pop(sibling.level, t)
-        treeLink(Offset(at.x, at.y + 6), Offset(tx, y - 4), 0f, 1f, palette.orange, 1.4f, .7f * a, if (sibling.slot > 0) floatArrayOf(3f, 3f) else null)
+    // Your other exits from this round: their branches leave yours where they stop sharing. Each slides from where it was,
+    // matched by the exit; one that's new fades in, one left out fades where it was.
+    fun same(a: TreeLayout.Sibling, b: TreeLayout.Sibling, was: ExitScene) =
+        a.other == b.other && was.others.getOrNull(a.other)?.amount == s.others.getOrNull(b.other)?.amount
+    fun sibling(sibling: TreeLayout.Sibling, at: Offset, join: Float, a: Float, amount: Long, words: TreeStrings) {
+        if (a <= .01f) return
+        treeLink(Offset(at.x, at.y + 6), Offset(tx, join - 4), 0f, 1f, palette.orange, 1.4f, .7f * a, if (sibling.slot > 0) floatArrayOf(3f, 3f) else null)
         treeCoin(at, 6f, palette.soft, palette.orange, a)
         sibling.amount?.let { size ->
             // On a background halo, so the stubs behind it don't run through the amount.
-            val text = measure(layout.words.money(s.others[sibling.other].amount), size)
+            val text = measure(words.money(amount), size)
             drawRoundRect(palette.background, Offset(at.x - 12 - text.size.width, at.y - text.size.height / 2f), Size(text.size.width + 4f, text.size.height.toFloat()),
                 CornerRadius(3f), alpha = a * labA)
             text(text, at.x - 10, at.y, palette.muted, a * labA, 1)
         }
+    }
+    for (sib in layout.siblings) {
+        val old = before?.siblings?.firstOrNull { same(it, sib, before.scene) }
+        val (x, y) = m.sibling(sib, old, f.ys, before?.ys, t)
+        val fade = if (before != null && old == null) slide else 1f
+        sibling(sib, Offset(x, y), f.ys[sib.level], treeA * m.pop(sib.level, t) * fade, s.others[sib.other].amount, layout.words)
+    }
+    if (before != null && slide < 1f) for (old in before.siblings) if (layout.siblings.none { same(old, it, before.scene) }) {
+        sibling(old, Offset(old.x, before.ys[old.level] + old.dy), before.ys[old.level], treeA * (1 - slide), before.scene.others[old.other].amount, before.words)
     }
     // Before it's sent (Start), a ghost of the branch: what the exit will send.
     val ghost = m.ghost(t)
@@ -352,25 +368,34 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
     // The round's block on the ground, already on-chain.
     drawRoundRect(palette.foreground, Offset(tx - rS / 2, gY - rS), Size(rS, rS), CornerRadius(4.5f), alpha = treeA)
     // The transactions. A long path's folded levels: its oldest blocks as one stack, the rest to send as "+N".
+    fun more(at: Offset, z: Float, label: String, alpha: Float) {
+        val text = measure(label, TreeLayout.moreSize, true); val half = max(z / 2, (text.size.width + 6) / 2f)
+        drawRoundRect(palette.background, Offset(at.x - half, at.y - z / 2), Size(2 * half, z), CornerRadius(z / 2), alpha = alpha)
+        drawRoundRect(palette.orange, Offset(at.x - half, at.y - z / 2), Size(2 * half, z), CornerRadius(z / 2), alpha = alpha, style = Stroke(1.4f))
+        text(text, at.x, at.y, palette.orange, alpha, 0)
+    }
+    fun plates(at: Offset, z: Float, alpha: Float) {
+        for (plate in 1..2) drawLine(palette.background, Offset(at.x - z / 2 + 1.5f, at.y - z / 2 + z * plate / 3f), Offset(at.x + z / 2 - 1.5f, at.y - z / 2 + z * plate / 3f), 1.2f, alpha = alpha)
+    }
+    // A level folding into the stack or "+N" slides into it as it fades.
+    val was = m.from
+    if (before != null && was != null && slide < 1f) for ((level, into) in m.merging) {
+        val at = Offset(tx, lerp(before.ys[level + 1], f.ys[into + 1], slide)); val z = geo.node; val a = treeA * (1 - slide)
+        val mark = was.marks[level]; val mined = if (mark == ExitScene.Mark.mined) 1f else 0f
+        before.more[level + 1]?.let { more(at, z, it, a) } ?: txNode(at, z, mark, if (mark == ExitScene.Mark.waiting) 1f else 0f, mined, 1f, 0f, a, 1f, s.stale, true, palette)
+        if (was.folded(level) && mined >= 1f) plates(at, z, a)
+    }
     for (j in 1 until n) {
         val i = j - 1
         val pop = clamp(m.pop(j, t), 0f, 1.3f)
         if (pop <= 0f) continue
         val mU = m.mine(i, t); val z = geo.node; val at = f.node(j)
-        val alpha = treeA * if (mU < 1f) 1 - .65f * canU else 1f
-        layout.more[j]?.let { label ->
-            val text = measure(label, TreeLayout.moreSize, true); val half = max(z / 2, (text.size.width + 6) / 2f)
-            drawRoundRect(palette.background, Offset(at.x - half, at.y - z / 2), Size(2 * half, z), CornerRadius(z / 2), alpha = alpha)
-            drawRoundRect(palette.orange, Offset(at.x - half, at.y - z / 2), Size(2 * half, z), CornerRadius(z / 2), alpha = alpha, style = Stroke(1.4f))
-            text(text, at.x, at.y, palette.orange, alpha, 0)
-            continue
-        }
+        // One coming out of "+N" (or a stack forming) grows in as it slides.
+        val alpha = treeA * (if (mU < 1f) 1 - .65f * canU else 1f) * if (m.emerges(i)) slide else 1f
+        layout.more[j]?.let { label -> more(at, z, label, alpha); continue }
         txNode(at, z, if (f.cancel >= 1f) ExitScene.Mark.unsent else s.marks[i], f.send(i), mU, m.stamp(i, t), m.ripple(i, t),
-            alpha, pop, s.stale, outline = f.pulse != i, palette, ready = f.wasReady(i))
-        if (s.folded(i) && mU >= 1f) for (plate in 1..2) {
-            val y = at.y - z / 2 + z * plate / 3f
-            drawLine(palette.background, Offset(at.x - z / 2 + 1.5f, y), Offset(at.x + z / 2 - 1.5f, y), 1.2f, alpha = alpha)
-        }
+            alpha, pop * if (m.emerges(i)) .5f + .5f * slide else 1f, s.stale, outline = f.pulse != i, palette, ready = f.wasReady(i))
+        if (s.folded(i) && mU >= 1f) plates(at, z, alpha)
     }
     // Fee children: a dot from your on-chain wallet, docked on the waiting transaction's anchor (hollow when someone else
     // paid), riding with it into its block.

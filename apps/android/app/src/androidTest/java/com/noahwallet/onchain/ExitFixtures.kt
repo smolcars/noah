@@ -94,17 +94,21 @@ internal object ExitFixtures {
     }
 
     /** A 60-transaction path (a deep round and arkoor hops): 25 mined, the 26th waiting for the next block. */
-    val long: ExitModel = run {
+    val long: ExitModel get() = long(25)
+    /** The same path with [mined] in blocks and the next waiting. */
+    fun long(mined: Int): ExitModel {
         val names = List(60) { txid("long$it") }
         val statuses = names.mapIndexed { i, id -> when {
-            i < 25 -> ExitDetails.Transaction(id, ExitDetails.Status("confirmed", "lfee$i", ExitDetails.Block(tip + i), "wallet"))
-            i == 25 -> ExitDetails.Transaction(id, ExitDetails.Status("awaiting-confirmation", "lfee$i", null, "wallet"))
+            i < mined -> ExitDetails.Transaction(id, ExitDetails.Status("confirmed", "lfee$i", ExitDetails.Block(tip + i), "wallet"))
+            i == mined -> ExitDetails.Transaction(id, ExitDetails.Status("awaiting-confirmation", "lfee$i", null, "wallet"))
             else -> ExitDetails.Transaction(id, ExitDetails.Status("verify-inputs", null, null, null))
         } }
-        ExitModel(vtxos[0].id, 31_000, "Processing", processing(tip + 25, *statuses.toTypedArray()), listOf("processing"), emptyList(),
-            names.mapIndexed { i, id -> ExitPackage(id, 1_000, if (i < 40) 5 else 2, 1, if (i <= 25) "lfee$i" else null, 608, if (i <= 25) "wallet" else null) },
-            (0..25).associate { "lfee$it" to 1_215L })
+        return ExitModel(vtxos[0].id, 31_000, "Processing", processing(tip + mined, *statuses.toTypedArray()), listOf("processing"), emptyList(),
+            names.mapIndexed { i, id -> ExitPackage(id, 1_000, if (i < 40) 5 else 2, 1, if (i <= mined) "lfee$i" else null, 608, if (i <= mined) "wallet" else null) },
+            (0..mined).associate { "lfee$it" to 1_215L })
     }
+    /** Another exit from the long path's round, leaving it after its 22nd transaction. */
+    val longSibling: ExitModel get() = long(25).let { it.copy(id = vtxos[1].id, amount = 24_500, packages = it.packages.take(22) + List(38) { i -> ExitPackage(txid("longB$i")) }) }
 
     /** The list: exits in every group, three of them from one round sharing its root. */
     val list: List<ExitModel> = run {

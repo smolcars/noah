@@ -195,6 +195,37 @@ class ExitTreeSweepTest {
         }
     }
 
+    @Test fun aRefoldFollowsEachTransaction() {
+        // Twenty transactions in nine levels, the stack going from five mined to six, another exit leaving after the fourth:
+        // the levels shift by one, so the move must match each transaction, never the drawn level.
+        val w = words("en"); val others = listOf(ExitScene.Other(4, 24_500))
+        for (frame in listOf(phone, small)) {
+            val before = check(path(20, 5, others = others), frame, w, "five of twenty mined", levels = 9)
+            val after = check(path(20, 6, others = others), frame, w, "six of twenty mined", levels = 9)
+            val move = TreeMotion(before.scene, after.scene)
+            assertTrue(move.restructured)
+            // Only the sixth is mined and only the seventh sent.
+            assertEquals(listOf(5), (0 until move.n).filter { !move.mine[it].isNaN() }.map { after.scene.real(it) })
+            assertEquals(listOf(6), (0 until move.n).filter { !move.send[it].isNaN() }.map { after.scene.real(it) })
+            // Each level starts where its transaction was drawn and ends at its new place.
+            val start = move.ys(after.geo, before.ys, 0f); val end = move.ys(after.geo, before.ys, move.seconds)
+            for (j in 1 until move.n) {
+                val real = after.scene.real(j - 1); val was = checkNotNull(before.scene.spans).indexOfFirst { real in it }
+                assertEquals("${frame.name}: level $j starts at transaction $real's place", before.ys[was + 1], start[j], .01f)
+                assertEquals("${frame.name}: level $j ends at its place", after.ys[j], end[j], .01f)
+            }
+            // The third block loses its own level and slides into the stack; the ninth comes out of "+N".
+            assertEquals(listOf(1 to 0), move.merging)
+            assertTrue(move.emerges(checkNotNull(after.scene.spans).indexOfFirst { it == 8..8 }))
+            // Your other exit's coin starts where it was, though its level moved down one, and ends at its place.
+            val old = before.siblings.single(); val sibling = after.siblings.single()
+            assertEquals(old.level - 1, sibling.level)
+            val (x0, y0) = move.sibling(sibling, old, start, before.ys, 0f); val (x1, y1) = move.sibling(sibling, old, end, before.ys, move.seconds)
+            assertEquals(old.x, x0, .01f); assertEquals(before.ys[old.level] + old.dy, y0, .01f)
+            assertEquals(sibling.x, x1, .01f); assertEquals(after.ys[sibling.level] + sibling.dy, y1, .01f)
+        }
+    }
+
     @Test fun otherExitsStayInsideAndApart() {
         val w = words("en")
         // Three live exits sharing a two-transaction path: the others branch at the root.

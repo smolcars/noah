@@ -515,6 +515,22 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     }
     /** What level [i]'s transaction was before this move. */
     fun wasMark(i: Int) = was.marks.getOrNull(was(i))
+    /**
+     * The path folds differently after this move (a block joins the stack, one comes out of "+N"): every level slides from
+     * where its transaction was drawn, matched by the real transaction, never by the drawn level.
+     */
+    val restructured = from != null && from.spans != to.spans
+    /** Levels of [from] with no level of their own here, each with the level they fold into (a block into the stack). */
+    val merging: List<Pair<Int, Int>> = if (!restructured) emptyList() else {
+        val before = checkNotNull(from)
+        val kept = (0 until n - 1).mapNotNull { i -> was(i).takeIf { it >= 0 && before.folded(it) == to.folded(i) } }.toSet()
+        (0 until before.n - 1).filter { it !in kept }.map { level ->
+            val real = before.real(level)
+            level to (to.spans?.indexOfFirst { real in it }?.takeIf { it >= 0 } ?: real).coerceAtMost(n - 2)
+        }
+    }
+    /** Level [i] comes out of a folded level (one out of "+N"), or folds several that had levels of their own: it grows in. */
+    fun emerges(i: Int) = restructured && i < n - 1 && was(i).let { it >= 0 && checkNotNull(from).folded(it) != to.folded(i) }
     /** Start times in seconds; NaN where nothing moves. */
     val lift = if (from == null && to.lifting) .15f else none
     val grow = when {
@@ -530,6 +546,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     val claim: Float; val claimSend: Float; val claimMine: Float
     val cancel = if (was.canceled != to.canceled) 0f else none
     val wallet: Float; val ark: Float
+    /** When the levels and your other exits' coins slide to their new places: after a block's stamp when one came. */
+    val slide: Float
     /** The explainer's labels fade in once the branch has grown, by about 1.5 s. */
     val labels = when { from == null && to.explain && !grow.isNaN() -> growStep * n - .05f; from != null && from != to -> 0f; else -> none }
     /** How long the move runs; the picture is still after it. */
@@ -539,6 +557,7 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
         val newly = (0 until n).filter { to.mined(it) && wasMark(it) != ExitScene.Mark.mined }
         newly.forEachIndexed { k, i -> mine[i] = k * .3f }
         val afterMine = if (newly.isEmpty()) grown else newly.size * .3f + .2f
+        slide = when { restructured -> if (newly.isEmpty()) 0f else newly.size * .3f; from != null && from != to -> 0f; else -> none }
         for (i in 0 until n) if (to.marks[i] == ExitScene.Mark.waiting && wasMark(i) != ExitScene.Mark.waiting) send[i] = afterMine
         val w = to.waiting
         val docked = to.paid.getOrElse(w) { false } && was.paid.getOrElse(was(w)) { false } && wasMark(w) == ExitScene.Mark.waiting
@@ -561,7 +580,7 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
         end(fee, HouseSpring.soft.seconds); end(bump, .15f + HouseSpring.soft.seconds); end(flash, .5f)
         end(lock, maxOf(HouseSpring.soft.seconds, HouseSpring.bouncy.seconds)); end(dial, HouseSpring.snappy.seconds); end(open, HouseSpring.bouncy.seconds)
         end(claim, HouseSpring.calm.seconds); end(claimSend, HouseSpring.snappy.seconds); end(claimMine, 1.35f + HouseSpring.soft.seconds)
-        end(cancel, HouseSpring.soft.seconds); end(wallet, HouseSpring.soft.seconds); end(ark, .8f); end(labels, .5f)
+        end(cancel, HouseSpring.soft.seconds); end(wallet, HouseSpring.soft.seconds); end(ark, .8f); end(labels, .5f); end(slide, HouseSpring.soft.seconds)
         seconds = ends.max()
     }
 
@@ -614,6 +633,29 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     fun ring(t: Float) = if (claimMine.isNaN()) flag(to.claimed) else HouseSpring.soft(t - claimMine - 1.35f)
     /** The phone badge becomes the other wallet's as the claim goes there. */
     fun swap(t: Float) = if (to.destination == null || !to.claiming) 0f else dim(t)
+    fun slide(t: Float) = if (slide.isNaN()) 1f else HouseSpring.soft(t - slide)
+    /**
+     * Each level's y at t in [geo] (the drawn path's): as the move's springs set it and, when the path folds differently,
+     * from where its transaction was drawn in [before] (the levels' rest before this move).
+     */
+    fun ys(geo: TreeGeometry, before: FloatArray?, t: Float): FloatArray {
+        val ys = geo.levels(lock(t) * (1 - stem(t)), to.docked, to.ringed) { mine(it, t) }
+        if (restructured && before != null) slide(t).let { u ->
+            for (j in 1 until n) was(j - 1).takeIf { it >= 0 && it + 1 < before.size }?.let { ys[j] = lerp(before[it + 1], ys[j], u) }
+        }
+        return ys
+    }
+    /**
+     * Your other exit's coin [sibling] at t, riding its level ([ys] now): from where it was ([old], at [before]'s levels) to
+     * its place, matched by the exit rather than by the level it leaves from.
+     */
+    fun sibling(sibling: TreeLayout.Sibling, old: TreeLayout.Sibling?, ys: FloatArray, before: FloatArray?, t: Float): Pair<Float, Float> {
+        val y = ys[sibling.level]
+        if (old == null || before == null) return sibling.x to y + sibling.dy
+        val start = if (restructured) was(sibling.level - 1).takeIf { it >= 0 }?.let { before.getOrNull(it + 1) } else before.getOrNull(sibling.level)
+        val u = slide(t)
+        return lerp(old.x, sibling.x, u) to y + lerp(before[old.level] + old.dy - (start ?: y), sibling.dy, u)
+    }
     /** New labels fade in; the old ones out. */
     fun labels(t: Float) = when { labels.isNaN() -> 1f; to.explain -> ((t - labels) / .5f).coerceIn(0f, 1f); else -> HouseSpring.snappy(t - labels) }
 }
