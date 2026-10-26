@@ -77,6 +77,22 @@ internal object ExitFixtures {
     val canceled = exit("Canceled", ExitDetails(kind = "canceled", tip_height = tip + 1),
         history = listOf(processing(tip + 1, tx(0, "confirmed", "fee1", tip + 1), tx(1, "awaiting-cpfp-broadcast"), tx(2, "verify-inputs"), tx(3, "verify-inputs"))))
 
+    /** Your exit with two others from its round: its third transaction waits for the next block, its first three are shared. */
+    val sharing = exit("Processing", processing(tip + 2, tx(0, "confirmed", "fee1", tip + 1), tx(1, "confirmed", "fee2", tip + 2), tx(2, "awaiting-confirmation", "fee3"),
+        tx(3, "verify-inputs")), fees = mapOf("fee1" to 1_215, "fee2" to 1_215, "fee3" to 1_215), children = (0..2).associate { it to ("fee${it + 1}" to "wallet") })
+    /** A 4,096-leaf round and an arkoor hop: 9 transactions, six mined, the seventh waiting for the next block. */
+    val deepHero: ExitModel = run {
+        val names = listOf("root", "n5", "n4", "n3", "n2", "n1", "leaf", "ckpt", "arkoor").map(::txid)
+        val statuses = names.mapIndexed { i, id -> when {
+            i < 6 -> ExitDetails.Transaction(id, ExitDetails.Status("confirmed", "fee$i", ExitDetails.Block(tip - 5 + i), "wallet"))
+            i == 6 -> ExitDetails.Transaction(id, ExitDetails.Status("awaiting-confirmation", "fee$i", null, "wallet"))
+            else -> ExitDetails.Transaction(id, ExitDetails.Status("verify-inputs", null, null, null))
+        } }
+        ExitModel(vtxos[0].id, 31_000, "Processing", processing(tip, *statuses.toTypedArray()), listOf("processing"), emptyList(),
+            names.mapIndexed { i, id -> ExitPackage(id, 1_000, if (i < 6) 5 else 2, 1, if (i <= 6) "fee$i" else null, 608, if (i <= 6) "wallet" else null) },
+            (0..6).associate { "fee$it" to 1_215L })
+    }
+
     /** The list: exits in every group, three of them from one round sharing its root. */
     val list: List<ExitModel> = run {
         fun from(id: String, amount: Long, base: ExitModel, path: List<String>) = base.copy(id = vtxos.first { it.id.startsWith(id) }.id, amount = amount,

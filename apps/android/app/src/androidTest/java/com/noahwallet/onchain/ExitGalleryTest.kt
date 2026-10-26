@@ -52,7 +52,8 @@ class ExitGalleryTest {
                 confirmed = 18_400, feeRate = 3, transactions = 4L * ids.size)
         }
         show("warn") { ExitWarningContent(emptyList(), f.tip, 144, 5_533, false, f.money, {}, {}, {}, {}) }
-        show("warn-exits") { ExitWarningContent(f.list, f.tip, 144, 5_533, false, f.money, {}, {}, {}, {}) }
+        show("warn-one") { ExitWarningContent(listOf(f.bump), f.tip, 144, 5_533, false, f.money, {}, {}, {}, {}) }
+        show("warn-exits") { ExitWarningContent(f.list, f.tip + 2, 144, 5_533, false, f.money, {}, {}, {}, {}, needsFunds = setOf(f.list[5].id)) }
         show("choose-all") { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, f.money, {}, estimate, {}, {}) }
         show("choose-pick") { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, f.money, {}, estimate, {}, {}, initial = listOf(f.vtxos[0].id, f.vtxos[8].id)) }
         // bark's All estimate left c02 and dust c13 out; it refused c03. Picked ones that can't exit leave the total.
@@ -66,8 +67,8 @@ class ExitGalleryTest {
         show("start-unknown") { ExitStartContent(null, review.copy(fee = null, chainFee = null, feeRate = null, transactions = null), 18_400, false, false, 144, f.money, {}, {}, {}, {}) }
         show("start-expired") { ExitStartContent(review.copy(createdAt = System.currentTimeMillis() - 31_000), null, 18_400, false, false, 144, f.money, {}, {}, {}, {}) }
         fun progress(name: String, exit: ExitModel, tip: Long = exit.details.tip_height ?: f.tip, needsFunds: Boolean = false, confirmed: Long = 18_400,
-                     context: ExitContext = ExitContext(tip, confirmed, 144, cancelable = exit.cancelable, claimEstimate = 262)) =
-            show(name, 4_000) { ExitProgressContent(exit, f.stage(exit, tip, needsFunds), context, false, false, f.money, {}, {}, {}, {}, {}, {}) }
+                     context: ExitContext = ExitContext(tip, confirmed, 144, cancelable = exit.cancelable, claimEstimate = 262), others: List<ExitModel> = emptyList()) =
+            show(name, 4_000) { ExitProgressContent(exit, f.stage(exit, tip, needsFunds), context, false, false, f.money, {}, {}, {}, {}, {}, {}, others = others) }
         progress("progress-lift", f.start)
         progress("progress-publish", f.publish)
         progress("progress-mempool", f.mempool)
@@ -79,6 +80,12 @@ class ExitGalleryTest {
         progress("progress-claiming", f.claiming)
         progress("progress-claimed", f.claimed, context = ExitContext(f.tip + 149, 18_400, 144, claimFee = 262, claimIds = listOf(f.claimed.id),
             claimedTo = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg"))
+        progress("progress-claimed-phone", f.claimed, context = ExitContext(f.tip + 149, 18_400, 144, claimFee = 262, claimIds = listOf(f.claimed.id)))
+        progress("progress-claiming-other", f.claiming, context = ExitContext(f.tip + 148, 18_400, 144, claimFee = 262, claimIds = listOf(f.claiming.id),
+            claimedTo = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg"))
+        progress("progress-shared3", f.sharing, others = f.list.map { if (it.id == f.sharing.id) f.sharing else it },
+            context = ExitContext(f.tip + 2, 18_400, 144, cancelable = true, sharedFees = 2_430))
+        progress("progress-deep", f.deepHero)
         progress("state-nofunds", f.nofunds, needsFunds = true, confirmed = 310)
         progress("state-feesrose", f.feesrose)
         progress("state-stuck", f.stuck)
@@ -94,6 +101,40 @@ class ExitGalleryTest {
             "bcrt1qphonephonephone", false, false, false, f.money, {}, {}, {}, {}, {}, {}) }
         show("list") { ExitListContent(f.list, f.tip + 2, setOf(f.list[5].id), true, false, false, f.money, {}, {}, {}, {}) }
         show("list-deep") { ExitListContent(f.deep, f.tip + 2, emptySet(), true, false, false, f.money, {}, {}, {}, {}) }
+        show("list-one") { ExitListContent(listOf(f.bump), f.tip, emptySet(), true, false, false, f.money, {}, {}, {}, {}) }
         show("deposit") { ExitDepositContent("bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg", null, 4_533, f.money) {} }
+    }
+
+    /**
+     * Opt-in (`-e noahExitMovie pulse|claim|list`): plays an exit's moves on the real clock for a screen recording. "pulse"
+     * waits in the mempool, then its block comes and the next is sent; "claim" sends the claim and lands it; "list" holds the
+     * list, its glowing rows breathing.
+     */
+    @Test fun playExit() {
+        val movie = InstrumentationRegistry.getArguments().getString("noahExitMovie")
+        assumeTrue(movie != null)
+        val f = ExitFixtures
+        var step by mutableStateOf(0)
+        compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
+        val claimed = ExitContext(f.tip + 149, 18_400, 144, claimFee = 262, claimIds = listOf(f.claimed.id),
+            claimedTo = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg")
+        val frames: List<Pair<ExitModel, ExitContext>> = when (movie) {
+            "pulse" -> listOf(f.bump to ExitContext(f.tip, 18_400, 144, cancelable = true),
+                f.confirm.copy(details = ExitDetails(kind = "processing", tip_height = f.tip + 1, transactions = listOf(
+                    ExitDetails.Transaction(f.ids[0], ExitDetails.Status("confirmed", "fee1", ExitDetails.Block(f.tip + 1), "wallet")),
+                    ExitDetails.Transaction(f.ids[1], ExitDetails.Status("awaiting-confirmation", "fee2", null, "wallet")),
+                    ExitDetails.Transaction(f.ids[2], ExitDetails.Status("verify-inputs", null, null, null)),
+                    ExitDetails.Transaction(f.ids[3], ExitDetails.Status("verify-inputs", null, null, null))))) to ExitContext(f.tip + 1, 17_185, 144, cancelable = true),
+                f.confirm to ExitContext(f.tip + 2, 15_970, 144, cancelable = true))
+            "claim" -> listOf(f.claimable to ExitContext(f.tip + 148, 18_400, 144, claimEstimate = 262), f.claiming to claimed.copy(tip = f.tip + 148), f.claimed to claimed)
+            else -> emptyList()
+        }
+        compose.setContent { com.noahwallet.ui.NoahTheme { Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost {
+            if (movie == "list") ExitListContent(f.list, f.tip + 2, setOf(f.list[5].id), true, false, false, f.money, {}, {}, {}, {})
+            else frames.getOrNull(step)?.let { (exit, context) -> ExitProgressContent(exit, f.stage(exit, context.tip), context, false, false, f.money, {}, {}, {}, {}, {}, {}) }
+        } } } }
+        Thread.sleep(6_000)
+        for (i in 1 until frames.size) { compose.runOnUiThread { step = i }; Thread.sleep(6_000) }
+        Thread.sleep(2_000)
     }
 }
