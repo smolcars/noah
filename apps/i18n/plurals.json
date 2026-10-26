@@ -134,5 +134,17 @@
   "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions.": {
     "one": "This exit is behind the current chain height: last checked {n} block ago, at block {height}. Moving it forward can also send exit transactions.",
     "other": "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions."
+  },
+  "Locked · {n} blocks": {
+    "one": "Locked · {n} block",
+    "other": "Locked · {n} blocks"
+  },
+  "{n} blocks without it": {
+    "one": "{n} block without it",
+    "other": "{n} blocks without it"
+  },
+  "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.": {
+    "one": "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transaction on your branch goes to the chain.",
+    "other": "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first."
   }
 }

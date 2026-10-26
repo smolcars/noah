@@ -53,6 +53,7 @@
   <string name="gt_8074d363626518da">"결제 QR 코드를 스캔하려면 설정에서 카메라 접근을 허용하세요."</string>
   <string name="gt_a56781b3d9389819">"이미 온체인"</string>
   <string name="gt_f616c5c046b30446">"다른 출금이 이미 보냄 · %2$s개 중 %1$s"</string>
+  <string name="gt_0463c102e0af14e7">"다른 사람이 이미 보냄 · %2$s개 중 %1$s"</string>
   <string name="gt_35d9cc8868d28953">"이미 사용됨"</string>
   <string name="gt_49e96d7cdf58069c">"금액"</string>
   <string name="gt_e744c6ec0ad90fca">"금액(sats)"</string>
@@ -113,6 +114,7 @@
   <string name="gt_7ad0b90f9a8069c4">"BTC 가격 (%1$s)"</string>
   <string name="gt_7adadfe2ad44793b">"BTC 가격(%1$s)"</string>
   <string name="gt_76900f1bfd16c8d4">"뒤로"</string>
+  <string name="gt_db99836fa338e87b">"Ark로 돌아옴"</string>
   <string name="gt_ad5879b1f394ff83">"지갑으로 돌아왔어요"</string>
   <string name="gt_0054e707d5a94f9f">"백업"</string>
   <string name="gt_02a2840b598b6b1c">"지금 백업"</string>
@@ -565,6 +567,7 @@
   <string name="gt_14f23687c9fe3353">"약 20분 후"</string>
   <string name="gt_c1f88e9d6c4145cf">"진행 중"</string>
   <string name="gt_f868160d0a466230">"몇 초 안에"</string>
+  <string name="gt_8e1bd728747265aa">"멤풀에 있음"</string>
   <string name="gt_9fff0400bb9e73d5">"이 지갑의 잔액"</string>
   <string name="gt_13f9f26fa93bba36">"지금 사용 중"</string>
   <plurals name="gt_da31d49e931af4ab">
@@ -572,6 +575,7 @@
     <item quantity="other">"VTXO %1$s개"</item>
   </plurals>
   <string name="gt_0dc23ef619cceb30">"%1$s 남음"</string>
+  <string name="gt_f838192d56bc0cf9">"다른 출금과 공유하는 트랜잭션 비용 %1$s이 포함돼요. 각각 한 번만 지불해요."</string>
   <string name="gt_e301820ac8393100">"수신"</string>
   <string name="gt_544bf107f0c7d65e">"라이트닝으로 들어오는 중"</string>
   <string name="gt_ff67ecdfc6ccee10">"푸시 알림을 받으려면 F-Droid에서 \"ntfy\"와 같은 배포 앱을 설치하세요."</string>
@@ -656,6 +660,10 @@
   <string name="gt_95c61170318a2851">"위치"</string>
   <string name="gt_a424e33d90931d1e">"잠김"</string>
   <string name="gt_5535252d05473e91">"블록 %1$s까지 잠김"</string>
+  <plurals name="gt_388760a0e16051c3">
+    <item quantity="one">"잠김 · %1$s블록"</item>
+    <item quantity="other">"잠김 · %1$s블록"</item>
+  </plurals>
   <string name="gt_050a9630d2132c97">"%1$s 잠그는 중"</string>
   <string name="gt_ea2100dc89ae9fe2">"로그"</string>
   <string name="gt_2d9c014a222db12a">"최대"</string>
@@ -699,6 +707,7 @@
   <string name="gt_d0f6065e2fd9c18f">"이름, 제목, 메시지를 모두 입력하세요."</string>
   <string name="gt_db8cd782f1a84739">"네이티브 설정 저장 실패"</string>
   <string name="gt_d0bc73abc91ac5df">"갱신 필요"</string>
+  <string name="gt_2ad8b0d4eb2e71a8">"수수료 필요"</string>
   <string name="gt_db0e960b68b57894">"승인 필요"</string>
   <string name="gt_c1ebc7817870e5be">"확인 필요"</string>
   <string name="gt_cde0b6135fbd228f">"온체인 자금이 필요해요"</string>
@@ -715,6 +724,7 @@
   <string name="gt_0d25c8b1db6122fe">"새 이메일"</string>
   <string name="gt_b8f18b3a55f56c76">"새 결제"</string>
   <string name="gt_1ff57a29d7c9d11b">"다음"</string>
+  <string name="gt_8e0856e3b40da050">"다음 블록"</string>
   <string name="gt_bd26eee14731169d">"다음 만료까지 %1$s · 자동으로 갱신돼요"</string>
   <string name="gt_1ea442a134b2a184">"아니요"</string>
   <string name="gt_5d770afa42d9782f">"Ark 결제가 없습니다"</string>
@@ -860,6 +870,7 @@
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
   <string name="gt_a0348c11ea886849">"최적화됨"</string>
   <string name="gt_4c48892477df67f4">"선택 사항이에요. 비트코인에 조치가 필요할 때만 연락드려요."</string>
+  <string name="gt_329eddee92986d1b">"이 라운드에 있는 다른 사람들의 코인"</string>
   <string name="gt_f893fab7e39f5540">"그렇지 않으면 Android가 Noah를 일시 중지해 결제가 도착하지 않을 수 있습니다."</string>
   <string name="gt_3619cf0b90923a4b">"송신"</string>
   <string name="gt_84c9bc73297ace6e">"재정의된 시도"</string>
@@ -1039,6 +1050,7 @@
   <string name="gt_c9e91fec986cc876">"출금 검토"</string>
   <string name="gt_8b3426dcf53c3f35">"검토한 금액"</string>
   <string name="gt_883361d5d682a157">"오른쪽"</string>
+  <string name="gt_cd9558acfc386bd3">"라운드"</string>
   <string name="gt_90c56699eca1d0e9">"라운드 #%1$s"</string>
   <string name="gt_bd6121f9f5c36dec">"라운드 간격"</string>
   <string name="gt_f8c70589f402363d">"라운드 진행 중"</string>
@@ -1099,6 +1111,7 @@
   <string name="gt_6ae9defa2627d65e">"출금의 다음 단계를 보내거나, 멈춰 있는 단계의 수수료를 올려요. 수수료는 온체인 비트코인에서 나가요. Noah도 알아서 이 작업을 하며, 시스템이 허용하면 백그라운드에서도 해요."</string>
   <string name="gt_c16bc82bf1f04ede">"보냄"</string>
   <string name="gt_168d6498bc4dd449">"다른 출금이 보냄"</string>
+  <string name="gt_7d162c4a2f308b74">"다른 사람이 보냄"</string>
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s(으)로 보냄"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s 보냄"</string>
@@ -1110,7 +1123,6 @@
   <string name="gt_0682d833fd5c9126">"앱 로그 공유"</string>
   <string name="gt_483ffbdd70c9c49f">"장소 공유"</string>
   <string name="gt_959aab0a1caf37f5">"공유되는 로그에는 문구나 키가 포함되지 않습니다."</string>
-  <string name="gt_19942b3712d1c4f7">"공유된 트랜잭션은 한 번만 보내고 지불해요."</string>
   <string name="gt_331207ee9863d023">"받는 사람에게도 표시됩니다"</string>
   <string name="gt_ae71ba566c676006">"상점"</string>
   <string name="gt_c57d4ecc83b7a2c7">"간단한 요약"</string>
@@ -1127,6 +1139,7 @@
   <string name="gt_28d03596d24eeb4e">"건너뛰기"</string>
   <string name="gt_12698ce1ea5cd4ab">"건너뜀"</string>
   <string name="gt_44d27a286f01669e">"최소 이동 금액"</string>
+  <string name="gt_1babea06fa547caf">"같은 라운드에서 출금 중인 다른 사람이 자기 수수료로 이미 보냈어요. 지불하지 않아도 돼요."</string>
   <string name="gt_bf046c7395cb38ee">"소스 코드"</string>
   <string name="gt_83d21eddee267cd8">"근처에서 비트코인 쓰기"</string>
   <string name="gt_8e8252533cde7bc4">"사용 가능"</string>
@@ -1213,6 +1226,7 @@
   <string name="gt_bc71b743861782dc">"작업이 이미 제출되었을 수 있습니다. 다시 실행하기 전에 상태를 확인하세요. 다른 복구 작업은 계속 사용할 수 있습니다."</string>
   <string name="gt_b0186376f1dac3ea">"수신자가 더 이상 이 금액을 받지 않습니다. 정기 결제를 수정하거나 취소해 주세요."</string>
   <string name="gt_0d09cc372ee7f6aa">"기록된 거래를 찾았습니다. 해당 거래의 네트워크 상태를 확인하세요."</string>
+  <string name="gt_75b3d8381b514e22">"라운드는"</string>
   <string name="gt_a8e2a0913b846c88">"선택한 잔액으로는 결제 금액과 수수료를 충당할 수 없습니다."</string>
   <string name="gt_16bade73921c8987">"선택한 항목의 상태가 변경되어 이 시도가 종결되었습니다. 계속하기 전에 현재 상태와 내역을 확인하세요."</string>
   <string name="gt_b1b5c1f750db3d4a">"서버가 응답하지 않습니다. 이전 서버로 전환 중…"</string>
@@ -1231,6 +1245,7 @@
   <string name="gt_e05786d8bf8e865c">"이 코인은 사용할 수 없거나 검토 중인 다른 결제에 사용하도록 예약되어 있습니다. 해당 결제의 검토 화면을 닫고 다시 시도하세요."</string>
   <string name="gt_7689ea8bed273cfe">"이 정기 결제들은 이전 지갑에 속합니다. 내역은 보존되어 있지만 실행할 수는 없습니다. 해당 결제를 취소하고 이 지갑에서 새 일정을 만드세요."</string>
   <string name="gt_2f1c3676c41f927f">"이 단어들은 올바른 문구가 아닙니다."</string>
+  <string name="gt_c80b1131a4f333d0">"이 %1$s개는 경로 일부를 공유해요: 보낼 트랜잭션은 %3$s개가 아니라 %2$s개예요. 공유된 트랜잭션은 한 번만 보내고 지불해요."</string>
   <string name="gt_23333df084dfad80">"이 라이트닝 인보이스는 만료되었습니다. 새 결제 요청서를 요청해 주세요."</string>
   <string name="gt_74bb47afc8d3b8c4">"이 QR 코드에는 라이트닝 주소만 포함되어 있습니다."</string>
   <string name="gt_064ce079abb02910">"이 VTXO는 출금할 수 없어요."</string>
@@ -1324,6 +1339,7 @@
   <string name="gt_99e8588dce6a534a">"Noah 잠금 해제"</string>
   <string name="gt_b126042b7ef8a274">"VTXO 잠금 해제"</string>
   <string name="gt_3470a00c3bb2d5ca">"지갑을 보려면 잠금을 해제하세요."</string>
+  <string name="gt_531c7b28abf27600">"잠금 해제됨"</string>
   <string name="gt_38674ce943ca4bc9">"블록 %1$s에서 잠금 해제"</string>
   <string name="gt_c5b5f0e95343c511">"블록 %1$s에서 잠금 해제"</string>
   <string name="gt_ea72a231d1b8a76f">"제한 없음"</string>
@@ -1420,6 +1436,10 @@
   <string name="gt_723022dbd02fce20">"정기 결제를 최대 개수만큼 등록했습니다."</string>
   <string name="gt_3d26c2347422ac51">"Ark 잔액 전액을 이 지갑의 온체인 주소로 보낼 수 없습니다. 외부 Bitcoin 주소를 사용해 주세요."</string>
   <string name="gt_f9f55c49d8421334">"내 VTXO"</string>
+  <plurals name="gt_bd4a6db1a4abe642">
+    <item quantity="one">"내 VTXO는 라운드 트리의 잎이에요. 여기까지 가려면 내 가지에 있는 트랜잭션 %1$s개가 체인에 올라가요."</item>
+    <item quantity="other">"내 VTXO는 라운드 트리의 잎이에요. 여기까지 가려면 내 가지에 있는 트랜잭션 %1$s개가 루트부터 차례로 체인에 올라가요."</item>
+  </plurals>
   <string name="gt_7594ebdff7a25376">"VTXO가 Ark를 떠나요. 이제부터는 Ark 서버가 필요 없어요."</string>
   <string name="gt_e452c7da44fe3110">"VTXO는 Ark에 남습니다"</string>
   <string name="gt_113e303aa9642dc1">"VTXO가 체인에 이르는 경로"</string>
@@ -1445,20 +1465,36 @@
   <string name="gt_23a3ca761b70abf7">"지갑이 아직 준비되지 않았습니다. 다시 시도해 주세요."</string>
   <string name="gt_f195f8e226312c3a">"모든 준비가 끝났어요"</string>
   <string name="gt_bbeebd879e1dff69">"Z"</string>
+  <string name="gt_dd08cc2f66a96442">"이 트랜잭션 없이 블록이 나왔어요"</string>
   <string name="gt_fe453fd2b1186bf1">"약 하루"</string>
   <string name="gt_424efd5bb8022cc0">"약 %1$s"</string>
+  <string name="gt_be1b2b66aa641023">"온체인에 %1$s 추가"</string>
+  <string name="gt_fad1a84d93219308">"이미 비트코인에 있어요"</string>
+  <string name="gt_dd1b3c312cf7d816">"청구"</string>
+  <string name="gt_b62bbb7231699386">"청구 수수료 %1$s"</string>
   <string name="gt_ab51004e9d71a485">"일마다"</string>
   <string name="gt_0b8e9e995d8d77f1">"디버그"</string>
   <string name="gt_308e322df797ff25">"예: 월세"</string>
   <string name="gt_5092d17899730925">"매회"</string>
+  <string name="gt_76f0f6bea12ddbc7">"수수료 %1$s"</string>
   <string name="gt_ac13979d20e7673e">"보낸 사람: %1$s"</string>
+  <string name="gt_88aab6a015964484">"Ark 안"</string>
+  <string name="gt_76b36c61a2b3613c">"마지막 확인 %1$s"</string>
   <string name="gt_82a3537ff0dbce7e">"이름"</string>
   <string name="gt_c6c1c9a9c8543f1e">"다음"</string>
+  <string name="gt_47e267f62045f56a">"하나당 블록 하나"</string>
+  <string name="gt_578f5ad05b017779">"하나당 블록 하나,"</string>
+  <string name="gt_a243d97c7f2bce8f">"%1$s에서 열림"</string>
   <string name="gt_df384ae97c77ad30">"회"</string>
+  <string name="gt_0b3b5f22beeeb37c">"루트부터 차례로"</string>
   <string name="gt_a97b0931730e83fb">"라운드"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats씩"</string>
+  <string name="gt_8010319770964fc8">"다른 사람이 보냄"</string>
   <string name="gt_a4d26868017c0ccf">"공유됨"</string>
+  <string name="gt_00753235bdfc0786">"공유분은 한 번"</string>
+  <string name="gt_7ae572a2ca5e0ccf">"블록 %1$s부터"</string>
+  <string name="gt_580cc89a2c35db2c">"다른 지갑으로"</string>
   <string name="gt_43cfd880a046a5da">"%1$s에게"</string>
   <string name="gt_4e45ea730a8e0eba">"1시간 이내"</string>
   <string name="gt_3e4443e52275a9a0">"알 수 없는 오류"</string>
@@ -1490,6 +1526,7 @@
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. 다른 백업은 그대로 유지돼요."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
   <string name="gt_a705c5d94bd09fa0">"%1$s · 다음 %2$s"</string>
+  <string name="gt_a87487c5e983fe6e">"온체인에 %1$s 남았어요. 다음 수수료에는 약 %2$s이 필요해요."</string>
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"Ark 결제 %1$s건을 CSV 파일로 내보냅니다."</item>
@@ -1512,6 +1549,10 @@
     <item quantity="one">"%1$s블록"</item>
     <item quantity="other">"%1$s블록"</item>
   </plurals>
+  <plurals name="gt_ea278da1c77f8803">
+    <item quantity="one">"%1$s블록째 미포함"</item>
+    <item quantity="other">"%1$s블록째 미포함"</item>
+  </plurals>
   <plurals name="gt_bdf51ce532245aa7">
     <item quantity="one">"%1$s블록 · %2$s"</item>
     <item quantity="other">"%1$s블록 · %2$s"</item>
@@ -1532,7 +1573,7 @@
     <item quantity="other">"%1$s시간"</item>
   </plurals>
   <string name="gt_35fab73e01e36413">"%1$s건 진행 중"</string>
-  <string name="gt_d63d7964a22d1b92">"진행 중 %1$s개 · 청구 가능 %2$s개"</string>
+  <string name="gt_d51f3a84c3df479a">"보낼 것 %1$s개 더"</string>
   <string name="gt_76c569f37720fa3d">"%1$s번 더 누르면 디버그가 켜져요"</string>
   <string name="gt_3612e1cd7501afab">"%1$s/%2$s"</string>
   <string name="gt_9253a82d313a4ac7">"%2$s개 중 %1$s개 블록에 포함"</string>
@@ -1565,6 +1606,7 @@
   <string name="gt_379970e6b5d75158">"%1$s sat/vB, 수수료율이 오르면 인상"</string>
   <string name="gt_6267c8c9b8dd0055">"%1$s · 공유"</string>
   <string name="gt_e3ca394fe5cc723f">"· 지갑에서 빠져나간 금액 없음"</string>
+  <string name="gt_abd9fe6bb06913d5">"· 공유"</string>
   <string name="home">"홈"</string>
   <string name="receive">"받기"</string>
   <string name="send">"보내기"</string>
