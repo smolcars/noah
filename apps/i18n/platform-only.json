@@ -211,6 +211,7 @@
     "Open battery settings": "platform: Android battery optimisation",
     "Optimized": "platform: Android battery optimisation",
     "Otherwise Android may pause Noah, and payments could stop arriving.": "platform: Android battery optimisation",
+    "Paste": "platform: iOS's restore Paste is the system UIPasteControl, which draws its own localized label and reads the clipboard without a permission prompt",
     "Paying {rate} sat/vB · waiting for block {height}": "parity-gap: Android names the bumped fee rate (prototype); iOS can't",
     "Please open your device settings and allow Noah to run in the background, then continue.": "platform: Android battery optimisation",
     "Please try again": "parity-gap (layout): Android shows recovery failures in a retry dialog; iOS's launch gate asks you to restart",
