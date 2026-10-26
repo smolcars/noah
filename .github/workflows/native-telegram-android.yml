@@ -6,6 +6,9 @@ on:
     paths:
       - "apps/android/**"
       - "apps/fixtures/**"
+      # The Nix store it saves for PRs is keyed by these.
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/native-telegram-android.yml"
       - "!**/*.md"
   workflow_dispatch:
@@ -39,13 +42,14 @@ jobs:
         with:
           primary-key: nix-android-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
           restore-prefixes-first-match: nix-android-${{ runner.os }}-${{ runner.arch }}-
-          save: false
+          # Merges don't run Native Android CI, so master saves the store its PR runs restore.
+          save: ${{ github.ref == 'refs/heads/master' }}
 
-      # Restores what native-android.yml saved on master; release builds don't write it back.
+      # Master writes the Gradle cache that Native Android CI restores on PRs.
       - name: Cache Gradle
         uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
         with:
-          cache-read-only: true
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
 
       - name: Locate Android SDK
         id: sdk
@@ -98,15 +102,17 @@ jobs:
           PY
 
       # Same keystore as the RN signet and mainnet releases. Only phones install these, so arm64 only.
+      # On master it also downloads the test libraries (without compiling) so the Gradle cache it saves covers PRs.
       - name: Build signed signet and mainnet release APKs
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: dunder-rn
           SENTRY_PROJECT: react-native
           CI_DEBUG_SIGNING: "false"
+          TEST_LIBRARIES: ${{ github.ref == 'refs/heads/master' && '--init-script scripts/resolve-test-dependencies.init.gradle :app:resolveTestDependencies' || '' }}
         run: |
           nix shell --inputs-from . nixpkgs#sentry-cli --command nix develop .#android-ci --command sh -c \
-            'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleSignetRelease :app:assembleMainnetRelease'
+            'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a :app:assembleSignetRelease :app:assembleMainnetRelease $TEST_LIBRARIES'
 
       - name: Name APKs with commit
         env:

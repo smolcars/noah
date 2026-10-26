@@ -1,0 +1,26 @@
+// CI only: native-telegram-android.yml runs this on master so the Gradle cache it saves also holds the
+// libraries the unit and device tests need. Native Android CI restores that cache on PRs. It downloads
+// them without compiling anything.
+allprojects {
+    if (path == ':app') {
+        def all = configurations
+        tasks.register('resolveTestDependencies') {
+            doLast {
+                def count = 0
+                [
+                    'regtestDebugUnitTestCompileClasspath',
+                    'regtestDebugUnitTestRuntimeClasspath',
+                    'regtestDebugAndroidTestCompileClasspath',
+                    'regtestDebugAndroidTestRuntimeClasspath',
+                ].each { name ->
+                    // Only downloaded libraries: the app's own variants need AGP's attributes to resolve.
+                    all.getByName(name).incoming.artifactView {
+                        lenient(true)
+                        componentFilter { it instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+                    }.files.files.size().with { count += it }
+                }
+                logger.lifecycle("Resolved $count test library files")
+            }
+        }
+    }
+}
