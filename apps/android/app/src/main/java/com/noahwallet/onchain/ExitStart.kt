@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.noahwallet.localization.tr
@@ -128,19 +129,31 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
 @Composable
 private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?) {
     val palette = LocalPalette.current
-    val n = path.coerceIn(1, 8)
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val local = androidx.compose.ui.platform.LocalDensity.current
+    val styles = remember(local) { TreeStyles(local) }
+    val number = java.text.NumberFormat.getIntegerInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
     androidx.compose.foundation.Canvas(Modifier.padding(top = 18.dp).fillMaxWidth().height(58.dp).clearAndSetSemantics { }) {
         scale(density, density, Offset.Zero) {
             val w = size.width / density; val y = size.height / density / 2 - 4; val x0 = 10f; val x1 = w - 14; val cx = w / 2
             drawRoundRect(palette.foreground, Offset(x0, y - 8), Size(16f, 16f), CornerRadius(4f))
-            val step = (w * .36f - x0 - 34) / n
+            // A long path folds to the stops that keep their spacing ("+N" for the rest), as the picture's does.
+            val stops = ExitRail.stops(path, x0 + 30, w * .36f - x0 - 34, cx - 21, { "+" + number.format(it) }) { styles.width(measurer, it, ExitRail.moreSize, true) }
             var px = x0 + 16
-            for (i in 0 until n) {
-                val x = x0 + 30 + i * step
-                treeLink(Offset(px, y), Offset(x - 5.5f, y), 0f, 1f, palette.orange, 2f, 1f, horizontal = true)
-                px = x + 5.5f
-                if (i == n - 1) { treeCoin(Offset(x + 4, y), 9f, palette.soft, palette.orange); px = x + 13 }
-                else { drawCircle(palette.background, 5f, Offset(x, y)); drawCircle(palette.orange, 5f, Offset(x, y), style = Stroke(1.6f)) }
+            for (stop in stops) {
+                val x = stop.x
+                treeLink(Offset(px, y), Offset(x - stop.half + .3f, y), 0f, 1f, palette.orange, 2f, 1f, horizontal = true)
+                px = x + stop.half - .3f
+                when {
+                    stop.coin -> treeCoin(Offset(x, y), ExitRail.coinR, palette.soft, palette.orange)
+                    stop.more != null -> {
+                        val text = measurer.measure("+" + number.format(stop.more), styles.style(ExitRail.moreSize, true)); val half = stop.width / 2
+                        drawRoundRect(palette.background, Offset(x - half, y - 5), Size(2 * half, 10f), CornerRadius(5f))
+                        drawRoundRect(palette.orange, Offset(x - half, y - 5), Size(2 * half, 10f), CornerRadius(5f), style = Stroke(1.4f))
+                        drawText(text, color = palette.orange, topLeft = Offset(x - text.size.width / 2f, y - text.size.height / 2f))
+                    }
+                    else -> { drawCircle(palette.background, 5f, Offset(x, y)); drawCircle(palette.orange, 5f, Offset(x, y), style = Stroke(1.6f)) }
+                }
             }
             treeLink(Offset(px, y), Offset(cx - 17, y), 0f, 1f, palette.hairline, 1.5f, 1f, floatArrayOf(3f, 3f), horizontal = true)
             drawCircle(palette.hairline, 13f, Offset(cx, y), style = Stroke(2f))

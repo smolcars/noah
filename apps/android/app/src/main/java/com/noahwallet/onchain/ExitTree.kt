@@ -534,6 +534,46 @@ internal object ExitGutter {
     }
 }
 
+/**
+ * Review's one-line path on phones (ExitStart's `ExitPath`): your transactions and your coin, [room] dp of steps from the
+ * first at [start], or as far as your coin can reach ([end]) where even the fewest stops don't fit. A long path folds as the
+ * picture's does, to the stops that keep their spacing; the captions say the real count.
+ */
+internal object ExitRail {
+    /** A transaction's circle; [more] the "+N" of those folded, [width] its pill's; or your coin, drawn 4 dp past its place. */
+    data class Stop(val x: Float, val more: Int? = null, val width: Float = 0f, val coin: Boolean = false) {
+        /** Half its drawn width, stroke and all. */
+        val half get() = when { coin -> coinR + .8f; more != null -> width / 2 + .7f; else -> node }
+    }
+    /** A transaction's circle's radius, stroke and all, and your coin's. */
+    const val node = 5.8f
+    const val coinR = 9f
+    /** "+N" in its pill: 8 dp, semibold, as the picture's. */
+    const val moreSize = 8f
+
+    /** [label] writes "+N"; [measure] how wide it is at [moreSize]. */
+    fun stops(path: Int, start: Float, room: Float, end: Float, label: (Int) -> String, measure: (String) -> Float): List<Stop> {
+        if (path <= 1) return listOf(Stop(start + 4, coin = true))
+        fun stops(cap: Int, far: Boolean = false): List<Stop> {
+            val spans = ExitScene.sample(path).fold(cap).spans ?: (0 until path).map { it..it }
+            val step = if (far) (end - coinR - .8f - 4 - start) / (spans.size - 1) else room / spans.size
+            return spans.mapIndexed { i, span ->
+                val x = start + i * step
+                when {
+                    i == spans.lastIndex -> Stop(x + 4, coin = true)
+                    span.count() > 1 -> Stop(x, span.count(), max(2 * node, measure(label(span.count())) + 6))
+                    else -> Stop(x)
+                }
+            }
+        }
+        // As many as keep a clearance of 2 dp between neighbours, 8 at most; the transaction being sent first and your coin
+        // always stay.
+        fun fits(s: List<Stop>) = s.zipWithNext().all { (a, b) -> b.x - a.x >= a.half + b.half + 2 }
+        val caps = min(path, 8) downTo 3
+        return caps.map { stops(it) }.firstOrNull(::fits) ?: caps.map { stops(it, far = true) }.firstOrNull(::fits) ?: stops(2, far = true)
+    }
+}
+
 /** The Emergency exit page's Exits row and the list's line: the counts that aren't zero, in progress first. */
 internal object ExitCounts {
     data class Counts(val inProgress: Int, val ready: Int)

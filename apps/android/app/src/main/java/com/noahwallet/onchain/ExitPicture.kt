@@ -143,7 +143,7 @@ private val ExitScene.pulses get() = !explain && ((waiting >= 0 && !stale) || Ex
     (locked && !open && dial < 1f))
 
 /** Text in picture units: one unit is one dp, whatever the font scale (the layout scales labels itself, up to 1.25). */
-private class TreeStyles(density: androidx.compose.ui.unit.Density) {
+internal class TreeStyles(density: androidx.compose.ui.unit.Density) {
     private val unit = 1 / (density.density * density.fontScale)
     private val widths = HashMap<String, Float>()
     fun style(size: Float, bold: Boolean) = TextStyle(fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Medium, fontSize = (size * unit).sp)

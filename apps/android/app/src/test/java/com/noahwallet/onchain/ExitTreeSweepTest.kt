@@ -28,7 +28,7 @@ import kotlin.math.min
  * the canvas, required ones always show and keep their spacing, and a long path folds rather than squeezes. Paths of 1–20,
  * 50 and 100 transactions, the explainer, every mined count, your other exits at every pair of levels and every state, on a
  * phone at the default text size and a small phone at twice it, in English and in Swedish with sats, measured with the
- * picture's own text measurement. The Exits list's shared gutters fold the same paths the same way.
+ * picture's own text measurement. The Exits list's shared gutters and Review's rail fold the same paths the same way.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -151,8 +151,8 @@ class ExitTreeSweepTest {
         println("ExitTreeSweepTest: $layouts layouts checked")
     }
 
-    @Test fun theGutterFoldsRatherThanSqueezing() {
-        var gutters = 0
+    @Test fun theGutterAndReviewsRailFoldRatherThanSqueeze() {
+        var gutters = 0; var rails = 0
         val st = ExitGutter.St.entries
         for (n in (1..20) + listOf(50, 100)) {
             val sampled = n > 20
@@ -180,8 +180,20 @@ class ExitTreeSweepTest {
                     }
                     gutters++
                 }
+            // Review's rail at a 320, 360 and 412 dp phone's column: neighbours 2 dp apart at least, clear of the round's block
+            // and the dial, the first transaction and your coin always drawn, the real count in its stops.
+            for (width in listOf(272f, 312f, 364f)) {
+                val stops = ExitRail.stops(n, 40f, width * .36f - 44, width / 2 - 21, { "+$it" }) { measure.width(it, ExitRail.moreSize, true) }
+                val label = "rail: $n transactions, $width dp"
+                for ((a, b) in stops.zipWithNext()) assertTrue("$label: ${a.x} → ${b.x}", b.x - a.x >= a.half + b.half + 2 - .01f)
+                assertTrue(label, stops.first().x - stops.first().half >= 26f + 2)
+                assertTrue(label, stops.last().coin && stops.last().x + stops.last().half <= width / 2 - 17)
+                assertTrue(label, n == 1 || stops.first().more == null)
+                assertEquals(label, n, stops.sumOf { it.more ?: 1 })
+                rails++
+            }
         }
-        println("ExitTreeSweepTest: $gutters gutters checked")
+        println("ExitTreeSweepTest: $gutters gutters and $rails rails checked")
     }
 
     @Test fun anOrdinaryPictureKeepsEverything() {
