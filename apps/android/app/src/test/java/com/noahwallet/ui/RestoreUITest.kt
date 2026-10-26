@@ -297,6 +297,20 @@ class RestoreClipboardTest {
         content = "accepted phrase"
         clipboard.clearIfUnchanged(); assertNull(content); assertEquals(2, clears)
     }
+    /** A field's paste can differ from the clipboard in spacing and line breaks (HTML, several items): the same words clear. */
+    @Test fun clearsTheAcceptedWordsWhateverTheirSpacing() {
+        val words = List(11) { "abandon" } + "about"
+        val line = words.joinToString(" ")
+        for (copy in listOf("$line\n", words.joinToString("\r\n"), words.joinToString("\u00A0"),
+            words.take(6).joinToString(" ") + "\n" + words.drop(6).joinToString(" "))) {
+            var content: String? = copy
+            RestoreClipboard({ content }, { content = null }).accepted(line)
+            assertNull(content)
+        }
+        var content: String? = "$line zoo"
+        RestoreClipboard({ content }, { content = null }).accepted(line)
+        assertEquals("$line zoo", content)
+    }
     @Test fun clipboardReplacedBeforeAcceptanceIsPreserved() {
         var content: String? = "replacement"
         val clipboard = RestoreClipboard({ content }, { content = null })
