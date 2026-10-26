@@ -119,8 +119,9 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
 
 /**
  * Review's one-line path on phones (exit-v2-notes.md, Screens): the round's block and your transactions, your coin, the
- * timelock's dial, then the claim to its destination, with a caption under each third. [path] is one VTXO's transactions;
- * null for several, whose [count] shares transactions.
+ * timelock's dial, then the claim to its destination, with a caption under each third. [path] is one VTXO's transactions
+ * as drawn (a round's usual four until bark's estimate says); null for several. The captions give only what's known: the
+ * estimate's [count] and the server's [delta].
  */
 @Composable
 private fun ExitPath(path: Int?, count: Int?, delta: Long?) {
@@ -154,10 +155,10 @@ private fun ExitPath(path: Int?, count: Int?, delta: Long?) {
     }
     // Three columns, one per third of the path; at large text they stack, each caption whole.
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
-    val captions = listOf(trPlural("{n} transactions", count ?: n) to if (path == null) tr("shared ones once") else tr("one block each"),
-        trPlural("{n} blocks", delta ?: 144) to tr("about a day"), tr("Claim") to tr("to another wallet"))
-    @Composable fun caption(title: String, line: String, align: androidx.compose.ui.text.style.TextAlign, modifier: Modifier) = Column(modifier) {
-        Text(title, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground, textAlign = align)
+    val captions = listOf(count?.let { trPlural("{n} transactions", it) } to if (path == null) tr("shared ones once") else tr("one block each"),
+        delta?.let { trPlural("{n} blocks", it) } to tr("about a day"), tr("Claim") to tr("to another wallet"))
+    @Composable fun caption(title: String?, line: String, align: androidx.compose.ui.text.style.TextAlign, modifier: Modifier) = Column(modifier) {
+        title?.let { Text(it, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground, textAlign = align) }
         Text(line, Modifier.fillMaxWidth(), style = HomeType.small, color = palette.muted, textAlign = align)
     }
     if (stacked) Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
