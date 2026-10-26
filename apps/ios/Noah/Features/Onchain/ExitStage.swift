@@ -34,6 +34,8 @@ struct ExitStageScene: Equatable {
     var picture: ExitProgress.Picture
     /// The Emergency exit page's explainer: the tree before anything is sent.
     var explain = false
+    /// The explainer's real count, when it draws fewer levels.
+    var transactions: Int?
     /// The explainer grows once when the page opens.
     var grown = true
     /// The path's transactions, root first; the last one's output is your coin.
@@ -66,11 +68,13 @@ struct ExitStageScene: Equatable {
         self.levels = levels.isEmpty ? [.unsent] : levels
     }
 
-    /// The Emergency exit page's explainer.
+    /// The Emergency exit page's explainer: a branch of `count` transactions, drawn with 8 levels at most
+    /// (as Review's rail) and labelled with the real count.
     static func explainer(count: Int, grown: Bool = true) -> Self {
-        var scene = Self(picture: .path, levels: Array(repeating: .unsent, count: max(1, count)))
+        var scene = Self(picture: .path, levels: Array(repeating: .unsent, count: min(max(1, count), 8)))
         scene.explain = true
         scene.grown = grown
+        scene.transactions = max(1, count)
         return scene
     }
 
@@ -148,7 +152,7 @@ struct ExitStageFrame {
         func spring(_ delay: Double, _ kind: MotionTime.Spring) -> Double { MotionTime.spring(e - delay, kind) }
         func mix(_ from: Double, _ to: Double, _ u: Double) -> Double { from + (to - from) * u }
         let snappy = spring(0, .snappy), soft = spring(0, .soft)
-        let growing = x.grown < 0.5 && y.grown > 0.5, step = 0.26, grown = step * Double(n)
+        let growing = x.grown < 0.5 && y.grown > 0.5, step = Self.growStep(n), grown = step * Double(n)
         grow = (0...n).map { j in growing ? ((e - Double(j - 1) * step) / step).clamped(0, 1) : y.grown }
         pop = (0...n).map { j in growing ? spring(Double(j) * step - 0.05, .bouncy) : y.grown }
         ghost = growing ? 0.5 * x.ghost * (1 - (e / grown).clamped(0, 1)) : 0.5 * mix(x.ghost, y.ghost, soft)
@@ -194,12 +198,16 @@ struct ExitStageFrame {
         if a != b && !b.explain { fadeIn = (e / 0.25).clamped(0, 1) }
     }
 
+    /// Each link's share of the grow: 0.26 s, closer together on a long path, so any path grows in about
+    /// a second and its labels follow by about 1.5 s.
+    static func growStep(_ count: Int) -> Double { min(0.26, 1.05 / Double(max(1, count))) }
+
     /// When a move from `a` to `b` has settled and the picture can stand still.
     static func duration(_ a: ExitStageScene?, _ b: ExitStageScene, reduceMotion: Bool) -> Double {
         guard let a, !reduceMotion else { return reduceMotion ? 0.3 : 0 }
         let x = ExitStageStill(a), y = ExitStageStill(b)
         var duration = 1.4
-        if x.grown < 0.5 && y.grown > 0.5 { duration = max(duration, 0.26 * Double(b.levels.count) + 1.4) }
+        if x.grown < 0.5 && y.grown > 0.5 { duration = max(duration, growStep(b.levels.count) * Double(b.levels.count) + 1.4) }
         if x.claim < 0.5 && y.claim > 0.5 { duration = max(duration, 1.8) }
         if x.claimMined < 0.5 && y.claimMined > 0.5 { duration = max(duration, 2.6) }
         return duration
@@ -312,7 +320,7 @@ struct ExitStagePainter {
             items.append(.init(y: g.coinY, lines: [.init(text: tr("Your VTXO"), tone: .strong), .init(text: tr("in Ark"))], priority: 3))
             if n > 1 {
                 items.append(.init(y: (Y(1) + Y(n - 1)) / 2 - 7 * g.scale,
-                                   lines: [.init(text: L10n.plural("{n} transactions", count: n, locale: language), tone: .strong),
+                                   lines: [.init(text: L10n.plural("{n} transactions", count: scene.transactions ?? n, locale: language), tone: .strong),
                                            .init(text: tr("one block each,")), .init(text: tr("root first"))],
                                    priority: 2, brace: min(Y(n) + g.coinRadius + 5, Y(1) + 7)...(Y(1) + 7)))
             }

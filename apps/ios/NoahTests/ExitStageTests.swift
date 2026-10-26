@@ -344,6 +344,24 @@ struct ExitStageTests {
         #expect(ExitStageFrame(.explainer(count: 4, grown: false), .explainer(count: 4), elapsed: 2, reduceMotion: false).labels == 1)
     }
 
+    /// The intro is short whatever the path's length: about a second to grow, then the labels. The explainer draws 8
+    /// levels at most and still says how many transactions there are.
+    @Test func anyPathGrowsInAboutASecond() {
+        #expect(ExitStageFrame.growStep(4) == 0.26 && ExitStageFrame.growStep(100) * 100 <= 1.05 + 1e-9)
+        let big = ExitStageScene.explainer(count: 100)
+        #expect(big.levels.count == 8 && big.transactions == 100)
+        let seed = ExitStageScene.explainer(count: 100, grown: false)
+        #expect(ExitStageFrame(seed, big, elapsed: 1.1, reduceMotion: false).grow[1...].allSatisfy { $0 == 1 })
+        #expect(ExitStageFrame(seed, big, elapsed: 1.6, reduceMotion: false).labels == 1)
+        #expect(ExitStageFrame.duration(seed, big, reduceMotion: false) <= 2.5)
+        #expect(Self.texts(Self.painter(Self.iphone).labels(big, ys: ExitStageGeometry(size: CGSize(width: 393, height: 300), count: 8).levels(Array(repeating: 0, count: 8))))
+                    .contains("100 transactions"))
+        // A deep path on the progress page grows as fast once bark lists it.
+        let lift = ExitStageScene(picture: .lift, levels: Array(repeating: .unsent, count: 9))
+        let publish = ExitStageScene(picture: .path, levels: Array(repeating: .unsent, count: 9))
+        #expect(ExitStageFrame(lift, publish, elapsed: 1.1, reduceMotion: false).grow[1...].allSatisfy { $0 == 1 })
+    }
+
     @Test func theClaimDimsTheTreeAndTheCoinTravelsIntoItsDestination() {
         let claim = ExitStageScene(picture: .claim, levels: Array(repeating: .mined(1), count: 4))
         let claimed = ExitStageScene(picture: .claimed, levels: Array(repeating: .mined(1), count: 4))

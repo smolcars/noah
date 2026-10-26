@@ -307,7 +307,9 @@ struct ExitReviewView: View {
             ExitHeadline(amount: L10n.text("Exit {amount}", money(amount), locale: language),
                          line: estimate.map { ExitText.count(vtxos: ids.count, transactions: $0.txsToBroadcast, language) })
             if settings.wide {
-                ExitStageView(scene: .explainer(count: estimate.map { Int($0.txsToBroadcast) } ?? 4), wide: true)
+                // One branch: the deepest selected VTXO's, not the batch's total.
+                ExitStageView(scene: .explainer(count: UnilateralExitView.explained((model.overview?.vtxos ?? []).filter { ids.contains($0.id) }
+                                                                                       .max { $0.exitDepth < $1.exitDepth })), wide: true)
                     .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
             } else if let estimate {
                 // The progress picture, previewed as one line: round, transactions, coin, dial, destination.
