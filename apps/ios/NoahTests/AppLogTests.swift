@@ -4,6 +4,29 @@ import Testing
 
 @testable import Noah
 
+/// Holds one step of the logging pipeline until the test releases it. A caller that waited for that step could never
+/// return, so a watchdog releases it after ten seconds and the test fails rather than hangs.
+final class LogStall: @unchecked Sendable {
+    private let lock = NSLock()
+    private var released = false
+    private let onRelease: @Sendable () -> Void
+
+    init(onRelease: @escaping @Sendable () -> Void) {
+        self.onRelease = onRelease
+        DispatchQueue.global().asyncAfter(deadline: .now() + 10) { [self] in release() }
+    }
+
+    /// True for the call that released it: the test's own call is false only if the watchdog had to.
+    @discardableResult func release() -> Bool {
+        let first = lock.withLock { () -> Bool in
+            defer { released = true }
+            return !released
+        }
+        if first { onRelease() }
+        return first
+    }
+}
+
 struct AppLogTests {
     private let directory = FileManager.default.temporaryDirectory.appending(path: "logs-\(UUID().uuidString)")
 
@@ -48,11 +71,12 @@ struct AppLogTests {
         #expect(smalls[1] > 0 && larges[1] < smalls[1] * 4, "\(name) CPU scaling: 8 × 1 KiB \(smalls[1]) ns, 8 KiB \(larges[1]) ns")
     }
 
+    /// Redaction runs on the writer, never on the caller: every main-actor and SDK call returns while redaction is
+    /// held, and the records land, redacted, once it's released.
     @Test @MainActor func mainActorAndSDKCallbacksOnlyEnqueueRawText() async {
-        let queue = DispatchQueue(label: "test.deferred-redaction")
-        queue.suspend()
-        let file = LogFile(directory: directory, capacity: 100, queue: queue)
-        // Redaction and every sink must still be waiting on the suspended queue.
+        let held = DispatchSemaphore(value: 0)
+        let stall = LogStall { held.signal() }
+        let file = LogFile(directory: directory, capacity: 100, redact: { held.wait(); held.signal(); return LogFile.redact($0) })
         let sink = BarkLog(file: file)
         for unit in ["x.", #"\u0078\u002e"#] {
             let input = String(String(repeating: unit, count: (16384 + unit.count - 1) / unit.count).prefix(16384))
@@ -61,8 +85,7 @@ struct AppLogTests {
         }
         let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         AppLog(phrase, file: file).e(phrase)
-        #expect(!FileManager.default.fileExists(atPath: directory.path))
-        queue.resume()
+        #expect(stall.release(), "a caller waited for redaction")
         let lines = await file.linesForExport()
         #expect(lines.count == 5)
         #expect(lines.last?.hasSuffix(" E [[redacted]] [redacted]") == true)

@@ -56,6 +56,7 @@ final class LogFile: @unchecked Sendable {
     private let lock = NSLock()
     private let capacity: Int
     private let systemSink: @Sendable (AppLog.Level, String, String) -> Void
+    private let redactor: @Sendable (String) -> String
     private var pending = 0
     private var dropped = 0
     static let maxPendingRecords = 256
@@ -68,12 +69,14 @@ final class LogFile: @unchecked Sendable {
 
     init(directory: URL, capacity: Int = LogFile.maxPendingRecords,
          queue: DispatchQueue = DispatchQueue(label: "com.noahwallet.log-file"),
-         systemSink: @escaping @Sendable (AppLog.Level, String, String) -> Void = { LogFile.emitSystemLog($0, $1, $2) }) {
+         systemSink: @escaping @Sendable (AppLog.Level, String, String) -> Void = { LogFile.emitSystemLog($0, $1, $2) },
+         redact: @escaping @Sendable (String) -> String = { LogFile.redact($0) }) {
         precondition(capacity > 0)
         self.directory = directory
         self.capacity = capacity
         self.queue = queue
         self.systemSink = systemSink
+        self.redactor = redact
     }
 
     func append(level: AppLog.Level, tag: String, message: String, date: Date = Date(),
@@ -84,8 +87,8 @@ final class LogFile: @unchecked Sendable {
             enqueueDroppedMarker()
             pending += 1
             queue.async { [self] in
-                let cleaned = Self.redact(message)
-                let safeTag = Self.redact(tag)
+                let cleaned = redactor(message)
+                let safeTag = redactor(tag)
                 if systemLog {
                     let formatted = "[\(safeTag)] \(cleaned)"
                     let record = EndpointLogPrivacy.redactRecord(formatted)
