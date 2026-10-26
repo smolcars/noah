@@ -285,3 +285,425 @@ async fn rejected_expo_send_logs_the_error_not_missing_tokens() {
     assert!(!logs_contain("expo-access-secret"));
     assert!(!logs_contain("device-secret"));
 }
+
+mod expo_tickets {
+    use std::collections::HashMap;
+
+    use axum::{Json, Router, routing::post};
+    use expo_push_notification_client::Expo;
+    use serde_json::{Value, json};
+
+    use super::*;
+    use crate::{
+        AppState,
+        db::user_repo::UserRepository,
+        push::{PushNotificationData, send_batched_notifications, send_unique_k1_notifications},
+        types::{NotificationRequestData, RecurringPaymentDueNotification},
+    };
+
+    const EXPO_ACCESS_TOKEN: &str = "expo-access-secret";
+    const DEAD_TOKEN: &str = "ExpoPushToken[dead-device-secret]";
+    const LIVE_TOKEN: &str = "ExpoPushToken[live-device-secret]";
+
+    #[derive(Clone, Copy)]
+    enum SendPath {
+        UniqueK1,
+        Batched,
+    }
+
+    const SEND_PATHS: [SendPath; 2] = [SendPath::UniqueK1, SendPath::Batched];
+
+    /// Stands in for Expo's send endpoint: each push token in a request gets the ticket
+    /// `tickets` holds for it, or an ok ticket, in request order; `null` means no ticket.
+    /// Test messages stay under the 1 KiB above which the Expo client gzips the body.
+    async fn expo_answering_with(tickets: HashMap<&'static str, Value>) -> Expo {
+        let tickets = Arc::new(tickets);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let expo_url = format!("http://{}", listener.local_addr().unwrap());
+        let expo_api = Router::new().route(
+            "/--/api/v2/push/send",
+            post(move |Json(request): Json<Value>| {
+                let tickets = tickets.clone();
+                async move {
+                    // The client sends one message as an object, several as an array.
+                    let messages = match request {
+                        Value::Array(messages) => messages,
+                        message => vec![message],
+                    };
+                    let data: Vec<Value> = messages
+                        .iter()
+                        .flat_map(|message| message["to"].as_array().unwrap().clone())
+                        .filter_map(|token| match tickets.get(token.as_str().unwrap()) {
+                            Some(Value::Null) => None,
+                            Some(ticket) => Some(ticket.clone()),
+                            None => Some(json!({ "status": "ok", "id": "receipt-id" })),
+                        })
+                        .collect();
+                    Json(json!({ "data": data }))
+                }
+            }),
+        );
+        tokio::spawn(async move { axum::serve(listener, expo_api).await });
+        Expo::new_with_base_url(Some(EXPO_ACCESS_TOKEN.to_string()), &expo_url)
+    }
+
+    /// An error ticket shaped like Expo's, whose message and details quote the token.
+    fn error_ticket(token: &str, code: Option<&str>) -> Value {
+        let mut ticket = json!({
+            "status": "error",
+            "message": format!("\"{token}\" is not a registered push notification recipient"),
+        });
+        if let Some(code) = code {
+            ticket["details"] = json!({ "error": code, "expoPushToken": token });
+        }
+        ticket
+    }
+
+    /// Registers a user with one push token and returns its pubkey.
+    async fn user_with_push_token(state: &AppState, key: u8, push_token: &str) -> String {
+        let pubkey = TestUser::new_with_key(&[key; 32]).pubkey().to_string();
+        let mut tx = state.db_pool.begin().await.unwrap();
+        UserRepository::create(&mut tx, &pubkey, &format!("user{key}@localhost"), None)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+        PushTokenRepository::new(&state.db_pool)
+            .upsert(&pubkey, push_token)
+            .await
+            .unwrap();
+        pubkey
+    }
+
+    /// Sends one notification to `pubkey`'s device, or to every device. Returns how many
+    /// devices the per-device (unique k1) path reports as dispatched; the batched path
+    /// reports nothing.
+    async fn send(
+        path: SendPath,
+        expo: Expo,
+        state: &AppState,
+        pubkey: Option<&str>,
+    ) -> Option<usize> {
+        match path {
+            SendPath::UniqueK1 => Some(
+                send_unique_k1_notifications(
+                    expo,
+                    state.clone(),
+                    NotificationRequestData::RecurringPaymentDue(RecurringPaymentDueNotification {
+                        due_count: 1,
+                    }),
+                    pubkey.map(str::to_string),
+                )
+                .await
+                .unwrap()
+                .len(),
+            ),
+            SendPath::Batched => {
+                send_batched_notifications(
+                    expo,
+                    state.clone(),
+                    PushNotificationData {
+                        title: None,
+                        body: None,
+                        data: json!({ "notification_type": "maintenance" }).to_string(),
+                        priority: Priority::High,
+                        content_available: true,
+                    },
+                    pubkey.map(str::to_string),
+                    true,
+                )
+                .await
+                .unwrap();
+                None
+            }
+        }
+    }
+
+    fn count(lines: &[&str], parts: &[&str]) -> usize {
+        lines
+            .iter()
+            .filter(|line| parts.iter().all(|part| line.contains(part)))
+            .count()
+    }
+
+    fn assert_no_secrets_logged(lines: &[&str]) -> Result<(), String> {
+        for secret in [EXPO_ACCESS_TOKEN, "device-secret"] {
+            if count(lines, &[secret]) > 0 {
+                return Err(format!("logs contain {secret}"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Tokens are kept: a device that is gone misses its heartbeats and is deregistered.
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn device_not_registered_is_logged_and_keeps_the_token() {
+        let (_, state, _guard) = setup_test_app().await;
+        let dead = user_with_push_token(&state, 1, DEAD_TOKEN).await;
+        let live = user_with_push_token(&state, 2, LIVE_TOKEN).await;
+        let tokens = PushTokenRepository::new(&state.db_pool);
+
+        for path in SEND_PATHS {
+            let expo = expo_answering_with(HashMap::from([(
+                DEAD_TOKEN,
+                error_ticket(DEAD_TOKEN, Some("DeviceNotRegistered")),
+            )]))
+            .await;
+
+            // Expo accepted the request, so the device still counts as dispatched.
+            assert!(matches!(
+                send(path, expo, &state, Some(&dead)).await,
+                None | Some(1)
+            ));
+            assert_eq!(
+                tokens.find_by_pubkey(&dead).await.unwrap().as_deref(),
+                Some(DEAD_TOKEN)
+            );
+            assert_eq!(
+                tokens.find_by_pubkey(&live).await.unwrap().as_deref(),
+                Some(LIVE_TOKEN)
+            );
+        }
+
+        logs_assert(|lines| {
+            let warned = [
+                " WARN ",
+                "Expo returned an error ticket",
+                "error_code=\"DeviceNotRegistered\"",
+                &dead,
+            ];
+            if count(lines, &warned) != 2 {
+                return Err("expected one warning per send path".to_string());
+            }
+            if count(lines, &["ERROR"]) > 0 || count(lines, &[live.as_str()]) > 0 {
+                return Err("expected only the dead device's warnings".to_string());
+            }
+            assert_no_secrets_logged(lines)
+        });
+    }
+
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn invalid_credentials_is_logged_as_an_error_and_keeps_tokens() {
+        let (_, state, _guard) = setup_test_app().await;
+        let first = user_with_push_token(&state, 1, DEAD_TOKEN).await;
+        let second = user_with_push_token(&state, 2, LIVE_TOKEN).await;
+        let tokens = PushTokenRepository::new(&state.db_pool);
+
+        for path in SEND_PATHS {
+            let expo = expo_answering_with(HashMap::from([
+                (
+                    DEAD_TOKEN,
+                    error_ticket(DEAD_TOKEN, Some("InvalidCredentials")),
+                ),
+                (
+                    LIVE_TOKEN,
+                    error_ticket(LIVE_TOKEN, Some("InvalidCredentials")),
+                ),
+            ]))
+            .await;
+
+            assert!(matches!(
+                send(path, expo, &state, None).await,
+                None | Some(2)
+            ));
+            assert_eq!(
+                tokens.find_by_pubkey(&first).await.unwrap().as_deref(),
+                Some(DEAD_TOKEN)
+            );
+            assert_eq!(
+                tokens.find_by_pubkey(&second).await.unwrap().as_deref(),
+                Some(LIVE_TOKEN)
+            );
+        }
+
+        logs_assert(|lines| {
+            let rejected = [
+                "ERROR",
+                "Expo rejected the push credentials",
+                "InvalidCredentials",
+            ];
+            if count(lines, &rejected) != 4 {
+                return Err("expected one error per device and send path".to_string());
+            }
+            assert_no_secrets_logged(lines)
+        });
+    }
+
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn other_ticket_errors_only_warn() {
+        let (_, state, _guard) = setup_test_app().await;
+        let cases = [
+            (
+                "ExpoPushToken[too-big-device-secret]",
+                Some("MessageTooBig"),
+            ),
+            (
+                "ExpoPushToken[rate-device-secret]",
+                Some("MessageRateExceeded"),
+            ),
+            ("ExpoPushToken[no-code-device-secret]", None),
+        ];
+        let mut users = vec![];
+        for (key, (token, _)) in (1..).zip(cases) {
+            users.push((user_with_push_token(&state, key, token).await, token));
+        }
+        let tokens = PushTokenRepository::new(&state.db_pool);
+
+        for path in SEND_PATHS {
+            let expo = expo_answering_with(
+                cases
+                    .iter()
+                    .map(|(token, code)| (*token, error_ticket(token, *code)))
+                    .collect(),
+            )
+            .await;
+
+            assert!(matches!(
+                send(path, expo, &state, None).await,
+                None | Some(3)
+            ));
+            for (pubkey, token) in &users {
+                assert_eq!(
+                    tokens.find_by_pubkey(pubkey).await.unwrap().as_deref(),
+                    Some(*token)
+                );
+            }
+        }
+
+        logs_assert(|lines| {
+            for code in ["MessageTooBig", "MessageRateExceeded", "unknown"] {
+                let error_code = format!("error_code=\"{code}\"");
+                let warned = [" WARN ", "Expo returned an error ticket", &error_code];
+                if count(lines, &warned) != 2 {
+                    return Err(format!("expected one {code} warning per send path"));
+                }
+            }
+            // The per-device path logs each code with its device's pubkey.
+            for ((pubkey, _), (_, code)) in users.iter().zip(cases) {
+                let error_code = format!("error_code=\"{}\"", code.unwrap_or("unknown"));
+                if count(lines, &[&error_code, pubkey]) != 1 {
+                    return Err(format!("expected {error_code} for {pubkey}"));
+                }
+            }
+            if count(lines, &["ERROR"]) > 0 {
+                return Err("expected warnings only".to_string());
+            }
+            assert_no_secrets_logged(lines)
+        });
+    }
+
+    /// The client can't parse a response holding an error code it doesn't know, so the
+    /// send fails as a whole and is logged as such.
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn unrecognised_ticket_error_fails_the_send() {
+        let (_, state, _guard) = setup_test_app().await;
+        let first = user_with_push_token(&state, 1, DEAD_TOKEN).await;
+        let second = user_with_push_token(&state, 2, LIVE_TOKEN).await;
+        let tokens = PushTokenRepository::new(&state.db_pool);
+
+        for path in SEND_PATHS {
+            let expo = expo_answering_with(HashMap::from([(
+                DEAD_TOKEN,
+                error_ticket(DEAD_TOKEN, Some("SomeFutureError")),
+            )]))
+            .await;
+
+            // Only the per-device path sees the other device's send succeed.
+            assert!(matches!(
+                send(path, expo, &state, None).await,
+                None | Some(1)
+            ));
+            assert_eq!(
+                tokens.find_by_pubkey(&first).await.unwrap().as_deref(),
+                Some(DEAD_TOKEN)
+            );
+            assert_eq!(
+                tokens.find_by_pubkey(&second).await.unwrap().as_deref(),
+                Some(LIVE_TOKEN)
+            );
+        }
+
+        logs_assert(|lines| {
+            if count(lines, &["ERROR", "Failed to send push notification"]) != 2 {
+                return Err("expected one send failure per send path".to_string());
+            }
+            assert_no_secrets_logged(lines)
+        });
+    }
+
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn ok_tickets_change_nothing() {
+        let (_, state, _guard) = setup_test_app().await;
+        let first = user_with_push_token(&state, 1, DEAD_TOKEN).await;
+        let second = user_with_push_token(&state, 2, LIVE_TOKEN).await;
+        let tokens = PushTokenRepository::new(&state.db_pool);
+
+        for path in SEND_PATHS {
+            let expo = expo_answering_with(HashMap::new()).await;
+
+            assert!(matches!(
+                send(path, expo, &state, None).await,
+                None | Some(2)
+            ));
+            assert_eq!(
+                tokens.find_by_pubkey(&first).await.unwrap().as_deref(),
+                Some(DEAD_TOKEN)
+            );
+            assert_eq!(
+                tokens.find_by_pubkey(&second).await.unwrap().as_deref(),
+                Some(LIVE_TOKEN)
+            );
+        }
+
+        logs_assert(|lines| {
+            if count(lines, &["ERROR"]) > 0 || count(lines, &[" WARN "]) > 0 {
+                return Err("expected no warnings or errors".to_string());
+            }
+            assert_no_secrets_logged(lines)
+        });
+    }
+
+    /// Tickets that can't be matched to their tokens one by one are skipped.
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn tickets_that_do_not_match_the_tokens_are_skipped() {
+        let (_, state, _guard) = setup_test_app().await;
+        let first = user_with_push_token(&state, 1, DEAD_TOKEN).await;
+        let second = user_with_push_token(&state, 2, LIVE_TOKEN).await;
+        let tokens = PushTokenRepository::new(&state.db_pool);
+        // One ticket comes back for the batched send's two tokens.
+        let expo = expo_answering_with(HashMap::from([
+            (
+                DEAD_TOKEN,
+                error_ticket(DEAD_TOKEN, Some("DeviceNotRegistered")),
+            ),
+            (LIVE_TOKEN, Value::Null),
+        ]))
+        .await;
+
+        send(SendPath::Batched, expo, &state, None).await;
+        assert_eq!(
+            tokens.find_by_pubkey(&first).await.unwrap().as_deref(),
+            Some(DEAD_TOKEN)
+        );
+        assert_eq!(
+            tokens.find_by_pubkey(&second).await.unwrap().as_deref(),
+            Some(LIVE_TOKEN)
+        );
+
+        logs_assert(|lines| {
+            let mismatch = [" WARN ", "different number of tickets", "tickets=1"];
+            if count(lines, &mismatch) != 1 {
+                return Err("expected one ticket count warning".to_string());
+            }
+            if count(lines, &["Expo returned an error ticket"]) > 0 {
+                return Err("a ticket was logged".to_string());
+            }
+            assert_no_secrets_logged(lines)
+        });
+    }
+}
