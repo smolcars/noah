@@ -60,7 +60,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             self?.lifecycleDrain?.expire()
         }
         guard identifier != .invalid else { return }
-        lifecycleDrain = BackgroundExecution(timeout: .seconds(min(0.2, application.backgroundTimeRemaining)),
+        lifecycleDrain = BackgroundExecution(timeout: .seconds(min(logFile.drainLimit, application.backgroundTimeRemaining)),
             logFile: logFile, completion: { [weak self] _ in
                 application.endBackgroundTask(identifier)
                 self?.lifecycleDrain = nil

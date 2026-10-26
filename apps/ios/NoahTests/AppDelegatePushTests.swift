@@ -11,14 +11,17 @@ struct AppDelegatePushTests {
     @Test func foregroundNotificationPresentationIsInstalled() {
         #expect(AppDelegate().responds(to: #selector(UNUserNotificationCenterDelegate.userNotificationCenter(_:willPresent:withCompletionHandler:))))
     }
-    /// Each lifecycle callback returns while the writer is stalled, and the record accepted before it still lands.
+    /// Each lifecycle callback hands its drain to a background task. The writer is stalled and the drain has no limit
+    /// of its own, so a callback that waited for the drain couldn't return until the writer did: each returns while it's
+    /// held, and the record accepted before it lands once the writer resumes.
     @Test(arguments: ["resign", "background", "scene"])
     func lifecycleDrainMustNotBlockMainThread(callback: String) async {
         let queue = DispatchQueue(label: "regression.blocked-writer")
         queue.suspend()
+        let stall = LogStall { queue.resume() }
         let directory = FileManager.default.temporaryDirectory.appending(path: "r3-drain-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let file = LogFile(directory: directory, queue: queue)
+        let file = LogFile(directory: directory, queue: queue, drainLimit: 3_600)
         file.append(level: .info, tag: "r3", message: "accepted")
         let delegate = AppDelegate(logFile: file)
         switch callback {
@@ -26,7 +29,7 @@ struct AppDelegatePushTests {
         case "background": delegate.applicationDidEnterBackground(UIApplication.shared)
         default: delegate.drainLifecycleLogs()
         }
-        queue.resume()
+        #expect(stall.release(), "the \(callback) callback waited for the stalled writer")
         await file.flushAsync()
         #expect(file.lines().last?.hasSuffix("[r3] accepted") == true)
     }
