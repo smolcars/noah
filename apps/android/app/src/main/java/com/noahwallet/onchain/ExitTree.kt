@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -57,6 +58,12 @@ internal data class ExitScene(
     val need: Long? = null,
     /** The explainer: the same tree before anything is sent, with its three captions. */
     val explain: Boolean = false,
+    /** Once a long path is folded ([fold]): the real transactions each drawn level stands for, root first; null, one each. */
+    val spans: List<IntRange>? = null,
+    /** The real path's length, which the labels say even when fewer levels are drawn. */
+    val count: Int = n,
+    /** A folded stack's oldest block, beside [heights]' newest. */
+    val oldest: List<Long?>? = null,
 ) {
     /** [ready]: bark has it ready but hasn't sent it with its fee child yet; [waiting]: it's in the mempool. */
     enum class Mark { unsent, ready, needsFee, waiting, mined }
@@ -78,9 +85,57 @@ internal data class ExitScene(
         if (open) 1f else ((tip - start).toFloat() / (end - start).coerceAtLeast(1)).coerceIn(0f, 1f) } } ?: if (open) 1f else 0f
     /** Blocks left in the timelock. */
     val left get() = claimableHeight?.let { (it - tip).coerceAtLeast(0) } ?: 0
+    /** The level (1-based) whose fee child is docked below it: the waiting transaction's, when it has one and isn't your coin. */
+    val docked get() = waiting.takeIf { it in 0 until n - 1 && paid[it] }?.plus(1) ?: -1
+    /** The first real transaction drawn level [i] stands for. */
+    fun real(i: Int) = spans?.getOrNull(i)?.first ?: i
+    /** Level [i] stands for several transactions: a stack of mined ones, or "+N" not sent yet. */
+    fun folded(i: Int) = spans?.getOrNull(i)?.let { it.last > it.first } == true
+
+    /**
+     * The path drawn in at most [cap] levels (a long one folds rather than squeezes): the oldest mined transactions in one
+     * stack at the base, the one being sent, the next few to send and your coin each on their own, and the rest still to
+     * send in one "+N". Counts stay real ([count]).
+     */
+    fun fold(cap: Int): ExitScene {
+        if (n <= cap || spans != null) return this
+        val coin = n - 1
+        val first = marks.indexOfFirst { it != Mark.mined }.let { if (it < 0) n else it }
+        val current = first.takeIf { it < coin }
+        val mined = minOf(first, coin); val unsent = if (current != null) coin - current - 1 else 0
+        val required = 1 + if (current != null) 1 else 0
+        var minedOwn = mined; var unsentOwn = unsent
+        fun total() = required + minedOwn + (if (mined > minedOwn) 1 else 0) + unsentOwn + if (unsent > unsentOwn) 1 else 0
+        // The next two to send and the latest block keep their own levels longest.
+        while (total() > cap && unsentOwn > 2) unsentOwn--
+        while (total() > cap && minedOwn > 1) minedOwn--
+        while (total() > cap && unsentOwn > 1) unsentOwn--
+        while (total() > cap && minedOwn > 0) minedOwn--
+        while (total() > cap && unsentOwn > 0) unsentOwn--
+        // Folding one alone saves nothing.
+        if (unsent - unsentOwn == 1) unsentOwn = unsent
+        if (mined - minedOwn == 1) minedOwn = mined
+        val spans = buildList {
+            if (mined > minedOwn) add(0 until mined - minedOwn)
+            for (i in mined - minedOwn until mined) add(i..i)
+            current?.let { c ->
+                add(c..c)
+                for (i in c + 1..c + unsentOwn) add(i..i)
+                if (unsent > unsentOwn) add(c + 1 + unsentOwn until coin)
+            }
+            add(coin..coin)
+        }
+        val single = { r: IntRange -> r.first == r.last }
+        return copy(n = spans.size, marks = spans.map { if (single(it)) marks[it.first] else if (marks[it.first] == Mark.mined) Mark.mined else Mark.unsent },
+            heights = spans.map { heights[it.last] }, theirs = spans.map { single(it) && theirs[it.first] }, paid = spans.map { single(it) && paid[it.first] },
+            shared = spans.map { r -> r.any { shared[it] } }, nodes = spans.map { single(it) && nodes[it.first] },
+            others = others.map { other -> other.copy(level = spans.indexOfFirst { other.level - 1 in it } + 1) },
+            spans = spans, count = n, oldest = spans.map { heights[it.first] })
+    }
 
     companion object {
-        /** A round VTXO's branch before anything is sent (the explainer and review): radix 4, so a 64-leaf round's four. */
+        /** A round VTXO's branch before anything is sent (the explainer and review): radix 4, so a 64-leaf round's four. The
+         *  explainer draws 8 levels at most ([fold]) and says the real count. */
         fun sample(n: Int = 4) = n.coerceAtLeast(1).let { k -> ExitScene(k, ExitStage.Phase.publish, List(k) { Mark.unsent }, explain = true) }
 
         /**
@@ -129,9 +184,9 @@ internal data class ExitScene(
 
 /**
  * The picture's geometry in dp (prototype `heroGeo`): the ground line, the round's block on it, the trunk's x, the label
- * column, your coin's height and the wallet badge. [scale] is the label size: the font scale, up to 1.25.
+ * column, your coin's height and the wallet badge. [n] is the drawn levels; [scale] the labels' size, the font scale up to 1.25.
  */
-internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val scale: Float, wide: Boolean) {
+internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val scale: Float, val wide: Boolean) {
     val ground = (height - 24 - 13 * scale).roundToInt().toFloat()
     val block = 22f
     val roundY = ground - block / 2
@@ -143,25 +198,88 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
     val walletY = ground - 21
     val room = roundY - coinY
     val spread = min(26f, width * .068f)
-    /** Each transaction's square: smaller on long paths. */
-    val node = if (room / n.coerceAtLeast(1) < 22) 11f else 14f
     val lineHeight = 14 * scale
+    val fontSize = 11.5f * scale
+    val subSize = 10.5f * scale
+
+    /** The room your coin keeps: its dashed ring, or the timelock's dial (ticks and all) while it's locked ([lock], 0 → 1). */
+    fun coinReserve(lock: Float = 0f) = coinR + 5 + 13 * lock.coerceIn(0f, 1f)
 
     /**
-     * Level heights: 0 is the round's block, j the j-th transaction, [n] your coin. When a long path doesn't fit at 26 dp,
-     * mined transactions ([mined], 0 → 1 each) stack tighter, like a pile of blocks; the waiting one and your coin never do.
+     * The least gap below level [level] of [count]: half of each neighbour (the round's block, a transaction's square, or
+     * your coin with its [reserve]) and the clearance, so every link shows and nothing touches. A level with its fee child
+     * docked ([docked]) keeps the dot's room below it too.
      */
-    fun levels(mined: (Int) -> Float): FloatArray {
-        val tight = if (room / n.coerceAtLeast(1) >= 26) 1f else .42f
-        fun confirmed(j: Int) = if (j == 0) 1f else mined(j - 1)
-        val weights = FloatArray(n + 1) { j -> if (j == 0) 0f else 1 + (tight - 1) * min(confirmed(j - 1), confirmed(j)) }
-        val sum = weights.sum()
-        var acc = 0f
-        return FloatArray(n + 1) { j -> acc += weights[j]; roundY - room * acc / sum }
+    fun minimumGap(level: Int, side: Float, reserve: Float, count: Int = n, docked: Boolean = false) =
+        (if (level == 1) block / 2 else side / 2) + (if (level == count) reserve else if (docked) max(side / 2, feeDrop) else side / 2) + clearance
+
+    /** Each transaction's square: 14 dp where levels have 22 dp, else 11, smaller only if even that doesn't keep the spacing. */
+    val node: Float = run {
+        var side = if (room / n.coerceAtLeast(1) < 22) 11f else 14f
+        while (side > 7 && (1..n).sumOf { minimumGap(it, side, coinReserve(1f), docked = it == 2).toDouble() } > room) side -= 1
+        side
     }
 
-    /** Other people's branches are drawn only where a level has 20 dp to the next. */
-    fun stubs(levels: FloatArray, j: Int) = j in 1 until n && levels[j] - levels[j + 1] >= 20
+    /**
+     * Level heights: 0 is the round's block, j the j-th drawn level, [n] your coin. When the path doesn't fit at 26 dp,
+     * mined transactions ([mined], 0 → 1 each) stack tighter, like a pile of blocks; no gap goes below its minimum, and
+     * the waiting one and your coin never shrink.
+     */
+    fun levels(lock: Float = 0f, docked: Int = -1, mined: (Int) -> Float): FloatArray {
+        val tight = if (room / n.coerceAtLeast(1) >= 26) 1f else .42f
+        fun confirmed(j: Int) = if (j == 0) 1f else mined(j - 1)
+        val weights = FloatArray(n) { 1 + (tight - 1) * min(confirmed(it), confirmed(it + 1)) }
+        val gaps = share(room, weights, FloatArray(n) { minimumGap(it + 1, node, coinReserve(lock), docked = it + 1 == docked) })
+        val ys = FloatArray(n + 1); ys[0] = roundY
+        for (j in 1..n) ys[j] = ys[j - 1] - gaps[j - 1]
+        ys[n] = coinY
+        return ys
+    }
+
+    /** How many levels fit at their minimum spacing ([lock]: the dial's room around your coin; one fee child docked): a longer path folds. */
+    fun capacity(lock: Float = 0f): Int {
+        var k = 1
+        while (k < 200 && (1..k + 1).sumOf { minimumGap(it, 11f, coinReserve(lock), k + 1, docked = it == 2).toDouble() } <= room) k++
+        return k
+    }
+
+    /**
+     * The other people's stubs at level [level]: three short faint branches ending in rings, or none where levels have less
+     * than 20 dp. Each of your [others] branching here takes one's place.
+     */
+    fun stubs(levels: FloatArray, level: Int, others: Int = 0): List<Pair<Float, Float>> {
+        if (level !in 1 until n) return emptyList()
+        val y = levels[level]; val up = levels[level + 1]
+        if (y - up < 20) return emptyList()
+        val length = min((y - up).coerceAtLeast(10f) * .5f, 22f)
+        return listOf(-.75f to 1f, -1.35f to .8f, .7f to .85f).filterIndexed { i, _ -> i >= min(2, others) }
+            .map { (dx, l) -> trunk + dx * spread to y - length * l - 3 }
+    }
+
+    /** Where your [index]th other exit branching at [level] sits first; it can slide down its branch from there ([TreeLayout]). */
+    fun other(levels: FloatArray, level: Int, index: Int): Pair<Float, Float> {
+        val y = levels.getOrElse(level) { roundY }; val gap = (y - levels.getOrElse(level + 1) { coinY }).coerceAtLeast(12f)
+        val first = y - gap * .95f
+        return trunk + (if (index == 0) -1.15f else -2.2f) * spread to maxOf(otherTop, if (index == 0) first else min(y - gap * 1.5f, first - 14))
+    }
+    /** The highest another exit's coin goes: room above its 6 dp radius. */
+    val otherTop get() = 6 + 6 * scale
+
+    /**
+     * How wide a label in the right-hand column can be between [top] and [bottom]: to the canvas's edge, or short of the
+     * phone's badge (and, while the Ark line shows, the server's) where it would reach them, a pill's 8 dp and the clearance.
+     */
+    fun column(top: Float, bottom: Float, server: Boolean = false): Float {
+        var right = width - 12
+        if (bottom > walletY - 20 && top < walletY + 18) right = min(right, walletX - 15 - clearance - 9)
+        if (server && bottom > coinY - 16 && top < coinY + 16) right = min(right, width - 44 - clearance - 9)
+        return right - labels
+    }
+    /** How wide the claim's label can be, right-aligned at [x]: it stays right of your coin. */
+    fun claimColumn(x: Float) = x - (trunk + coinR + 8)
+    /** Where labels can go: inside the top (a pill's outline reaches 2.5 dp above its text) and above the ground line. */
+    val labelTop = 4f
+    val labelBottom get() = ground - 3
 
     /** The claim's stem, from your coin to the destination badge (prototype `cub`). */
     fun stem(u: Float): Pair<Float, Float> {
@@ -172,57 +290,100 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
             (a * a * a * y0 + 3 * a * a * u * y1 + 3 * a * u * u * y2 + u * u * u * y3)
     }
     val claimNode get() = stem(.42f)
+
+    companion object {
+        /** What every two drawn elements keep between them. */
+        const val clearance = 2f
+        /** How far a docked fee child's dot reaches below its transaction's centre: 7 dp down, 4.8 dp across. */
+        const val feeDrop = 11.8f
+
+        /** [total] shared by [weights], each share at least its minimum; when the minimums don't fit, in proportion to them. */
+        fun share(total: Float, weights: FloatArray, minimums: FloatArray): FloatArray {
+            val need = minimums.sum()
+            if (need >= total) return FloatArray(minimums.size) { minimums[it] * total / need.coerceAtLeast(1f) }
+            val fixed = mutableSetOf<Int>()
+            while (true) {
+                val free = weights.indices.filter { it !in fixed }
+                val left = total - fixed.sumOf { minimums[it].toDouble() }.toFloat(); val sum = free.sumOf { weights[it].toDouble() }.toFloat()
+                val short = free.filter { left * weights[it] / sum < minimums[it] }
+                if (short.isEmpty()) return FloatArray(weights.size) { if (it in fixed) minimums[it] else left * weights[it] / sum }
+                fixed += short
+            }
+        }
+    }
 }
 
 /**
- * The label column (prototype `heroLabels`): highest priority first, nothing overlaps. Mined transactions that don't fit
- * fold into one range, "Blocks 921,346–921,349"; the waiting transaction, the claim and your coin are never squeezed.
+ * The label column (prototype `heroLabels`): highest priority first, nothing overlaps, each wrapped to its room and placed at
+ * its wrapped height. Mined transactions that don't fit fold into one range, "Blocks 921,346–921,349"; the waiting
+ * transaction's pill and the claim always show.
  */
 internal object TreeLabels {
     enum class Tone { strong, muted, failure }
     enum class Pill { orange, grey, failure }
     data class Line(val text: String, val tone: Tone = Tone.muted, val bold: Boolean = false)
-    /** [x] for a label beside the claim, right-aligned; [height] a mined transaction's block, which may fold into a range. */
-    data class Item(val y: Float, val lines: List<Line>, val priority: Float, val pill: Pill? = null, val height: Long? = null,
-                    val x: Float? = null, val brace: Pair<Float, Float>? = null, val key: String = lines.joinToString("|") { it.text })
-    data class Placed(val item: Item, val top: Float, val bottom: Float) { val right get() = item.x != null }
+    /**
+     * [head]: how many lines the first line wrapped to (drawn larger, in the pill); [shrinks]: one line that shrinks to fit
+     * (to 75 % at most, [size]) rather than wrapping; [fallbacks]: where it goes instead when it doesn't fit here, in order;
+     * [blocks]: a mined transaction's block (or a stack's), which may fold into a range; [x]: right-aligned there (the
+     * claim's), else the column. [top] and [bottom] are set once placed.
+     */
+    data class Item(val y: Float, val lines: List<Line>, val priority: Float, val pill: Pill? = null, val head: Int = 1,
+                    val shrinks: Boolean = false, val size: Float = 1f, val fallbacks: List<Item> = emptyList(), val blocks: LongRange? = null,
+                    val x: Float? = null, val brace: Pair<Float, Float>? = null, val key: String = lines.joinToString("|") { it.text },
+                    val top: Float = 0f, val bottom: Float = 0f) {
+        val right get() = x != null
+    }
 
     fun height(item: Item, lineHeight: Float, scale: Float) = item.lines.size * lineHeight + if (item.pill != null) 5 * scale else 0f
 
-    /**
-     * [range] writes the folded heights' label. Mined transactions go in at the latest one's priority: if they don't all fit,
-     * the latest keeps its own label when it can and the others fold into one range, as near their middle as it fits.
-     */
-    fun place(items: List<Item>, lineHeight: Float, scale: Float, range: (Long, Long) -> String): List<Placed> {
-        val placed = mutableListOf<Placed>()
-        fun clash(top: Float, bottom: Float, right: Boolean, margin: Float) =
-            placed.any { p -> p.right == right && !(bottom + margin < p.top || top - margin > p.bottom) }
-        fun put(item: Item, lines: Int = item.lines.size, margin: Float = 3f): Boolean {
-            val top = item.y - lineHeight / 2
-            val bottom = top + if (lines == item.lines.size) height(item, lineHeight, scale) else lines * lineHeight
-            if (clash(top, bottom, item.x != null, margin)) return false
-            placed += Placed(item, top, bottom); return true
-        }
-        val blocks = items.filter { it.height != null }.sortedByDescending { it.priority }
-        val first = blocks.firstOrNull()?.priority ?: Float.NEGATIVE_INFINITY
-        val others = items.filter { it.height == null }.sortedByDescending { it.priority }
-        others.filter { it.priority > first }.forEach { put(it) }
-        if (blocks.isNotEmpty()) {
-            val before = placed.size
-            if (!blocks.all { put(it) }) {
-                while (placed.size > before) placed.removeAt(placed.lastIndex)
-                val rest = if (put(blocks.first())) blocks.drop(1) else blocks
-                if (rest.size == 1) put(rest.single(), margin = 1f)
-                else if (rest.size > 1) {
-                    val heights = rest.mapNotNull { it.height }.sorted()
-                    val middle = rest.map { it.y }.average().toFloat()
-                    val label = listOf(Line(range(heights.first(), heights.last()), Tone.strong))
-                    (listOf(middle) + rest.map { it.y }.sortedBy { kotlin.math.abs(it - middle) })
-                        .firstOrNull { y -> put(Item(y, label, 1f, key = "range")) }
-                }
+    /** [text] in lines no wider than [width], broken between words, and inside a word only when the word alone is too wide. */
+    fun wrap(text: String, width: Float, measure: (String) -> Float): List<String> {
+        val lines = mutableListOf<String>(); var line = ""
+        for (word in text.split(' ').filter { it.isNotEmpty() }) {
+            val next = if (line.isEmpty()) word else "$line $word"
+            if (measure(next) <= width) { line = next; continue }
+            if (line.isNotEmpty()) lines += line
+            line = ""
+            for (character in word) {
+                if (line.isNotEmpty() && measure(line + character) > width) { lines += line; line = "" }
+                line += character
             }
         }
-        others.filter { it.priority <= first }.forEach { put(it) }
+        if (line.isNotEmpty() || lines.isEmpty()) lines += line
+        return lines
+    }
+
+    /**
+     * [items] placed by priority between [top] and [bottom], none overlapping, each [fit] to its room first. Mined blocks
+     * that don't fit fold, with the older ones placed alone, into one range ([range]) where it fits; a lone one gets a second
+     * chance with a tighter margin.
+     */
+    fun place(items: List<Item>, lineHeight: Float, scale: Float, top: Float, bottom: Float, fit: (Item) -> Item, range: (Long, Long) -> String): List<Item> {
+        val placed = mutableListOf<Item>(); val skipped = mutableListOf<Item>()
+        fun clash(item: Item, margin: Float) = placed.any { it.right == item.right && !(item.bottom + margin < it.top || item.top - margin > it.bottom) }
+        fun span(item: Item): Item {
+            val height = height(item, lineHeight, scale)
+            val y = item.y.coerceAtMost(bottom - height + lineHeight / 2).coerceAtLeast(top + lineHeight / 2)
+            return item.copy(y = y, top = y - lineHeight / 2, bottom = y - lineHeight / 2 + height)
+        }
+        for (item in items.withIndex().sortedWith(compareBy({ -it.value.priority }, { it.index })).map { span(fit(it.value)) }) {
+            if (!clash(item, 3f)) { placed += item; continue }
+            val fallback = item.fallbacks.map { span(fit(it)) }.firstOrNull { !clash(it, 3f) }
+            if (fallback != null) placed += fallback else if (item.blocks != null) skipped += item
+        }
+        if (skipped.size > 1) {
+            // The older blocks fold together, those placed alone too; the latest keeps its own label.
+            val alone = placed.filter { it.blocks != null && it.priority < 2 }
+            placed.removeAll(alone)
+            val folded = skipped + alone
+            val from = folded.minOf { it.blocks!!.first }; val to = folded.maxOf { it.blocks!!.last }
+            val middle = folded.map { it.y }.average().toFloat()
+            val fold = (listOf(middle) + folded.map { it.y }.sortedBy { kotlin.math.abs(it - middle) }).map { y ->
+                span(fit(Item(y, listOf(Line(range(from, to), Tone.strong)), 0f, key = "range")))
+            }.firstOrNull { !clash(it, 3f) }
+            if (fold != null) placed += fold else placed += alone
+        } else skipped.singleOrNull()?.let { if (!clash(it, 1f)) placed += it }
         return placed
     }
 }
@@ -231,19 +392,6 @@ internal object TreeLabels {
 internal object ExitDial {
     fun ticks(delta: Long) = ((delta + 5) / 6).toInt().coerceIn(1, 48)
     fun major(delta: Long, tick: Int) = delta >= 72 && tick % 6 == 0
-}
-
-/** Greedy word wrap for a picture caption; text without spaces (Japanese) breaks between characters. */
-internal fun wrapWords(text: String, width: Float, measure: (String) -> Float): List<String> {
-    val words = if (' ' in text) text.split(' ') else text.map { it.toString() }
-    val glue = if (' ' in text) " " else ""
-    val lines = mutableListOf<String>(); var line = ""
-    for (word in words) {
-        val next = if (line.isEmpty()) word else line + glue + word
-        if (measure(next) <= width || line.isEmpty()) line = next else { lines += line; line = word }
-    }
-    if (line.isNotEmpty()) lines += line
-    return lines
 }
 
 /**
@@ -339,8 +487,18 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     private val was = from ?: to
     val n = to.n
     private val none = Float.NaN
-    val growStep = .26f
+    /** Each link's share of the grow: 0.26 s, closer on a long path, so any path grows in about a second. */
+    val growStep = min(.26f, 1.05f / n.coerceAtLeast(1))
     val growSeconds = growStep * n + .35f
+    /** The level [from] drew level [i]'s first transaction at (folded paths slide as blocks come). */
+    fun was(i: Int): Int {
+        val before = from ?: return i
+        if (before.spans == null && to.spans == null) return i
+        val real = to.real(i)
+        return before.spans?.indexOfFirst { real in it }?.takeIf { it >= 0 } ?: real.takeIf { it < before.n } ?: -1
+    }
+    /** What level [i]'s transaction was before this move. */
+    fun wasMark(i: Int) = was.marks.getOrNull(was(i))
     /** Start times in seconds; NaN where nothing moves. */
     val lift = if (from == null && to.lifting) .15f else none
     val grow = when {
@@ -356,19 +514,20 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     val claim: Float; val claimSend: Float; val claimMine: Float
     val cancel = if (was.canceled != to.canceled) 0f else none
     val wallet: Float; val ark: Float
-    val labels = when { from == null && to.explain && !grow.isNaN() -> growSeconds - .1f; from != null && from != to -> 0f; else -> none }
+    /** The explainer's labels fade in once the branch has grown, by about 1.5 s. */
+    val labels = when { from == null && to.explain && !grow.isNaN() -> growStep * n - .05f; from != null && from != to -> 0f; else -> none }
     /** How long the move runs; the picture is still after it. */
     val seconds: Float
 
     init {
-        val newly = (0 until n).filter { to.mined(it) && !was.mined(it) }
+        val newly = (0 until n).filter { to.mined(it) && wasMark(it) != ExitScene.Mark.mined }
         newly.forEachIndexed { k, i -> mine[i] = k * .3f }
         val afterMine = if (newly.isEmpty()) grown else newly.size * .3f + .2f
-        for (i in 0 until n) if (to.marks[i] == ExitScene.Mark.waiting && was.marks.getOrNull(i) != ExitScene.Mark.waiting) send[i] = afterMine
+        for (i in 0 until n) if (to.marks[i] == ExitScene.Mark.waiting && wasMark(i) != ExitScene.Mark.waiting) send[i] = afterMine
         val w = to.waiting
-        val docked = { s: ExitScene -> w >= 0 && s.marks.getOrNull(w) == ExitScene.Mark.waiting && s.paid.getOrElse(w) { false } }
-        fee = if (docked(to) && !docked(was)) (send.getOrNull(w)?.takeIf { !it.isNaN() }?.plus(.5f) ?: 0f) else none
-        val sameWait = w >= 0 && was.waiting == w
+        val docked = to.paid.getOrElse(w) { false } && was.paid.getOrElse(was(w)) { false } && wasMark(w) == ExitScene.Mark.waiting
+        fee = if (w >= 0 && to.paid[w] && !docked) (send.getOrNull(w)?.takeIf { !it.isNaN() }?.plus(.5f) ?: 0f) else none
+        val sameWait = w >= 0 && was.waiting >= 0 && was.waiting == was(w)
         bump = if (sameWait && to.attention == ExitStage.Attention.feesRose && was.attention != ExitStage.Attention.feesRose) 0f else none
         flash = if (sameWait && (to.waited > was.waited || !bump.isNaN())) 0f else none
         lock = if (to.locked && !was.locked) (mine[n - 1].takeIf { !it.isNaN() }?.plus(.55f) ?: 0f) else none
@@ -413,9 +572,9 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
         else -> arkTarget(to)
     }
     fun cancel(t: Float) = between(flag(was.canceled), flag(to.canceled), cancel, HouseSpring.soft, t)
-    private fun sent(s: ExitScene, i: Int) = flag(s.marks.getOrNull(i).let { it == ExitScene.Mark.waiting || it == ExitScene.Mark.mined })
-    fun send(i: Int, t: Float) = if (to.canceled && !was.canceled) sent(was, i) * (1 - cancel(t)) else between(sent(was, i), sent(to, i), send[i], HouseSpring.snappy, t)
-    fun mine(i: Int, t: Float) = between(flag(was.mined(i)), flag(to.mined(i)), mine[i], HouseSpring.snappy, t)
+    private fun sent(mark: ExitScene.Mark?) = flag(mark == ExitScene.Mark.waiting || mark == ExitScene.Mark.mined)
+    fun send(i: Int, t: Float) = if (to.canceled && !was.canceled) sent(wasMark(i)) * (1 - cancel(t)) else between(sent(wasMark(i)), sent(to.marks[i]), send[i], HouseSpring.snappy, t)
+    fun mine(i: Int, t: Float) = between(flag(wasMark(i) == ExitScene.Mark.mined), flag(to.mined(i)), mine[i], HouseSpring.snappy, t)
     fun stamp(i: Int, t: Float) = if (mine[i].isNaN()) 1f else HouseSpring.bouncy(t - mine[i])
     fun ripple(i: Int, t: Float) = if (mine[i].isNaN()) 0f else ((t - mine[i]) / .8f).coerceIn(0f, 1f)
     fun fee(t: Float) = if (fee.isNaN()) 1f else HouseSpring.soft(t - fee)

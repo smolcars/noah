@@ -10,7 +10,8 @@ class ExitTreeTest {
     private fun scene(vararg marks: ExitScene.Mark, heights: List<Long?> = marks.mapIndexed { i, mark -> if (mark == m.mined) 921_346L + i else null },
                       phase: ExitStage.Phase = ExitStage.Phase.bump) = ExitScene(marks.size, phase, marks.toList(), heights)
     private fun geometry(n: Int, width: Float = 412f, height: Float = 300f, scale: Float = 1f) = TreeGeometry(width, height, n, scale, wide = false)
-    private fun place(items: List<TreeLabels.Item>, scale: Float = 1f) = TreeLabels.place(items, 14 * scale, scale) { a, b -> "Blocks $a–$b" }
+    private fun place(items: List<TreeLabels.Item>, scale: Float = 1f) =
+        TreeLabels.place(items, 14 * scale, scale, 4f, 1_000f, { it.copy(top = 0f) }) { a, b -> "Blocks $a–$b" }
 
     @Test fun theTreeStandsOnTheGroundWithYourCoinAtTheTop() {
         val geo = geometry(4)
@@ -18,49 +19,90 @@ class ExitTreeTest {
         assertEquals("level 0 is the round's block", geo.roundY, ys[0], 0f)
         assertEquals("level n is your coin", geo.coinY, ys[4], .01f)
         assertTrue("levels climb from the ground", (1..4).all { ys[it] < ys[it - 1] })
-        assertEquals("a four-transaction branch spaces evenly", ys[0] - ys[1], ys[3] - ys[4], .01f)
+        assertEquals("a four-transaction branch spaces evenly between its transactions", ys[1] - ys[2], ys[2] - ys[3], .01f)
         assertTrue(geo.trunk < geo.labels && geo.labels < geo.walletX)
     }
 
-    @Test fun aLongBranchStacksItsMinedTransactionsLikeAPileOfBlocks() {
+    @Test fun aLongBranchStacksItsMinedTransactionsButNeverBelowTheMinimumSpacing() {
         val geo = geometry(9, width = 375f, height = 236f)
         val unsent = geo.levels { 0f }
         val mined = geo.levels { if (it < 6) 1f else 0f }
         assertTrue("mined levels sit closer", mined[0] - mined[6] < unsent[0] - unsent[6])
         assertTrue("the waiting one and your coin get the room", mined[6] - mined[7] > unsent[6] - unsent[7])
         assertEquals("the coin stays at the top", geo.coinY, mined[9], .01f)
+        for (lock in listOf(0f, 1f)) for (count in 0..9) {
+            val ys = geo.levels(lock) { if (it < count) 1f else 0f }
+            for (j in 1..9) assertTrue("gap $j with $count mined", ys[j - 1] - ys[j] >= geo.minimumGap(j, geo.node, geo.coinReserve(lock)) - .01f)
+        }
         // A short branch never squeezes: it has the room at 26 dp a level.
         val four = geometry(4)
         assertArrayEquals(four.levels { 0f }, four.levels { 1f }, .01f)
     }
 
-    @Test fun otherPeoplesBranchesHideWhereLevelsArePackedTight() {
-        val four = geometry(4); val ys = four.levels { 0f }
-        assertTrue((1 until 4).all { four.stubs(ys, it) })
-        assertFalse("never at the coin", four.stubs(ys, 4))
-        val deep = geometry(9, width = 375f, height = 236f); val packed = deep.levels { if (it < 7) 1f else 0f }
-        assertTrue("a 9-transaction branch on a small phone hides the packed ones", (1 until 9).any { !deep.stubs(packed, it) })
-        for (j in 1 until 9) assertEquals(packed[j] - packed[j + 1] >= 20, deep.stubs(packed, j))
+    @Test fun aPathLongerThanTheRoomFoldsInsteadOfSqueezing() {
+        val probe = geometry(1)
+        val cap = probe.capacity()
+        assertTrue("a phone's picture holds a round's path and more", cap in 8..30)
+        assertTrue("the dial's room leaves fewer", probe.capacity(1f) <= cap)
+        // 100 transactions, 40 in blocks, the 41st waiting.
+        val long = ExitScene(100, ExitStage.Phase.bump, List(100) { if (it < 40) m.mined else if (it == 40) m.waiting else m.unsent },
+            List(100) { if (it < 40) 921_000L + it else null })
+        val drawn = long.fold(cap)
+        assertEquals(cap, drawn.n); assertEquals("counts stay real", 100, drawn.count)
+        assertEquals("the oldest blocks are one stack at the base", 0 until 40 - (drawn.spans!!.count { it.first == it.last && it.first < 40 }), drawn.spans!!.first())
+        assertEquals(921_000L, drawn.oldest!!.first()); assertTrue(drawn.folded(0) && drawn.mined(0))
+        assertEquals("the waiting one is drawn on its own", 40, drawn.real(drawn.waiting)); assertFalse(drawn.folded(drawn.waiting))
+        assertEquals("the next two to send too", listOf(41..41, 42..42), drawn.spans!!.subList(drawn.waiting + 1, drawn.waiting + 3))
+        assertTrue("the rest to send is one +N", drawn.folded(drawn.n - 2) && !drawn.mined(drawn.n - 2) && drawn.spans!![drawn.n - 2].last == 98)
+        assertEquals("and your coin", 99..99, drawn.spans!!.last())
+        assertEquals("every transaction is in exactly one level", (0 until 100).toList(), drawn.spans!!.flatten())
+        // A path that fits isn't touched; the explainer draws 8 at most and says the real count.
+        val four = ExitScene.sample(4); assertSame(four, four.fold(cap))
+        ExitScene.sample(100).fold(8).let { assertEquals(8, it.n); assertEquals(100, it.count); assertTrue(it.folded(6)); assertEquals(0..0, it.spans!!.first()) }
+        // Mined to the coin: the stack and the latest blocks, then the coin.
+        val done = ExitScene(50, ExitStage.Phase.wait, List(50) { m.mined }, List(50) { 900L + it }).fold(10)
+        assertEquals(10, done.n); assertTrue(done.folded(0)); assertTrue((1 until 10).none { done.folded(it) }); assertEquals(49..49, done.spans!!.last())
+        // Your other exits keep their level: where their branch leaves yours, folded or not.
+        val shared = long.copy(others = listOf(ExitScene.Other(3, 1_000), ExitScene.Other(45, 2_000))).fold(cap)
+        assertEquals(1, shared.others[0].level); assertEquals(44 in shared.spans!![shared.others[1].level - 1], true)
     }
 
-    @Test fun theCaptionWrapsByWordsOrHides() {
+    @Test fun otherPeoplesBranchesHideWhereLevelsArePackedTight() {
+        val four = geometry(4); val ys = four.levels { 0f }
+        assertTrue((1 until 4).all { four.stubs(ys, it).size == 3 })
+        assertTrue("never at the coin", four.stubs(ys, 4).isEmpty())
+        assertEquals("your other exit takes a stub's place", 2, four.stubs(ys, 2, others = 1).size)
+        val deep = geometry(9, width = 375f, height = 236f); val packed = deep.levels { if (it < 7) 1f else 0f }
+        assertTrue("a 9-transaction branch on a small phone hides the packed ones", (1 until 9).any { deep.stubs(packed, it).isEmpty() })
+        for (j in 1 until 9) assertEquals(packed[j] - packed[j + 1] >= 20, deep.stubs(packed, j).isNotEmpty())
+    }
+
+    @Test fun labelsWrapBetweenWordsAndInsideOneOnlyWhenItIsTooWide() {
         val width = { s: String -> s.length * 5f }
-        assertEquals(listOf("Other people's coins", "in this round"), wrapWords("Other people's coins in this round", 100f, width))
-        assertEquals("a word wider than the room stays whole, so the picture can hide it", listOf("Unbreakable", "word"), wrapWords("Unbreakable word", 20f, width))
-        assertEquals("text without spaces breaks between characters", listOf("このラウ", "ンドの他"), wrapWords("このラウンドの他", 20f, width))
+        assertEquals(listOf("Other people's coins", "in this round"), TreeLabels.wrap("Other people's coins in this round", 100f, width))
+        assertEquals(listOf("lägg till 3 765", "sats på", "blockkedjan"), TreeLabels.wrap("lägg till 3 765 sats på blockkedjan", 75f, width))
+        assertEquals("a word wider than the room breaks inside", listOf("Unbr", "eaka", "ble", "word"), TreeLabels.wrap("Unbreakable word", 20f, width))
+        assertEquals("text without spaces breaks between characters", listOf("このラウ", "ンドの他"), TreeLabels.wrap("このラウンドの他", 20f, width))
     }
 
     @Test fun labelsGoByPriorityAndNeverOverlap() {
         val line = { s: String -> listOf(TreeLabels.Line(s)) }
         val waiting = TreeLabels.Item(100f, listOf(TreeLabels.Line("Next block"), TreeLabels.Line("fee ₿1,215")), 4f, TreeLabels.Pill.orange)
         val coin = TreeLabels.Item(40f, line("Your VTXO"), 3.5f)
-        val block = TreeLabels.Item(110f, line("Block 921,346"), 2.2f, height = 921_346)
+        val block = TreeLabels.Item(110f, line("Block 921,346"), 2.2f, blocks = 921_346L..921_346L)
         val placed = place(listOf(block, coin, waiting))
-        assertEquals(listOf("Next block|fee ₿1,215", "Your VTXO"), placed.map { it.item.key })
-        for (a in placed) for (b in placed) if (a !== b) assertTrue("${a.item.key} overlaps ${b.item.key}", a.bottom < b.top || b.bottom < a.top)
+        assertEquals(listOf("Next block|fee ₿1,215", "Your VTXO"), placed.map { it.key })
+        for (a in placed) for (b in placed) if (a !== b) assertTrue("${a.key} overlaps ${b.key}", a.bottom < b.top || b.bottom < a.top)
         // The claim's label is right-aligned beside the stem: it never pushes the column's out.
         val claim = TreeLabels.Item(100f, line("Next block"), 4f, TreeLabels.Pill.orange, x = 300f)
         assertEquals(2, place(listOf(waiting, claim)).size)
+        // A label that doesn't fit takes its first fallback that does: the round's caption on one line.
+        val round = TreeLabels.Item(108f, line("The round,") + line("already on Bitcoin"), 2f,
+            fallbacks = listOf(TreeLabels.Item(140f, line("The round, already on Bitcoin"), 2f, shrinks = true)))
+        assertEquals("The round, already on Bitcoin", place(listOf(waiting, round)).single { it.priority == 2f }.lines.single().text)
+        // Placed between the bounds, at its whole height.
+        val low = TreeLabels.place(listOf(waiting.copy(y = 990f)), 14f, 1f, 4f, 1_000f, { it }) { _, _ -> "" }.single()
+        assertTrue(low.bottom <= 1_000f && low.top >= 4f)
     }
 
     @Test fun minedTransactionsThatDontFitFoldIntoARange() {
@@ -68,18 +110,19 @@ class ExitTreeTest {
         val geo = geometry(9, width = 375f, height = 236f)
         val s = scene(m.mined, m.mined, m.mined, m.mined, m.mined, m.mined, m.waiting, m.unsent, m.unsent)
         val ys = geo.levels { if (s.mined(it)) 1f else 0f }
-        val items = (1..6).map { j -> TreeLabels.Item(ys[j], listOf(TreeLabels.Line("Block ${s.heights[j - 1]}")), if (j == 6) 2.2f else 1f, height = s.heights[j - 1]) } +
+        val items = (1..6).map { j -> TreeLabels.Item(ys[j], listOf(TreeLabels.Line("Block ${s.heights[j - 1]}")), if (j == 6) 2.2f else 1f,
+            blocks = s.heights[j - 1]!!..s.heights[j - 1]!!) } +
             TreeLabels.Item(ys[7], listOf(TreeLabels.Line("Next block"), TreeLabels.Line("fee")), 4f, TreeLabels.Pill.orange) +
             TreeLabels.Item(geo.coinY, listOf(TreeLabels.Line("Your VTXO")), 3.5f)
         val placed = place(items)
-        val keys = placed.map { it.item.key }
+        val keys = placed.map { it.key }
         assertTrue("the waiting one is never squeezed", "Next block|fee" in keys)
         assertTrue("nor your coin", "Your VTXO" in keys)
-        val range = placed.single { it.item.key == "range" }.item.lines.single().text
+        val range = placed.single { it.key == "range" }.lines.single().text
         val (from, to) = range.removePrefix("Blocks ").split("–").map { it.toLong() }
         assertEquals(921_346L, from)
         for (height in s.heights.filterNotNull()) assertTrue("block $height is neither labelled nor in $range", "Block $height" in keys || height in from..to)
-        for (a in placed) for (b in placed) if (a !== b && a.right == b.right) assertTrue("${a.item.key} overlaps ${b.item.key}", a.bottom + 3 < b.top || b.bottom + 3 < a.top)
+        for (a in placed) for (b in placed) if (a !== b && a.right == b.right) assertTrue("${a.key} overlaps ${b.key}", a.bottom + 3 < b.top || b.bottom + 3 < a.top)
     }
 
     @Test fun labelsScaleWithTheFontUpToAQuarter() {
@@ -209,9 +252,11 @@ class ExitTreeTest {
         val explainer = ExitScene.sample()
         val open = TreeMotion(null, explainer)
         assertEquals("1.4 s for four transactions", 1.39f, open.growSeconds, .001f)
+        assertTrue("any path grows in about a second", TreeMotion(null, ExitScene.sample(8)).growSeconds < 1.45f)
+        TreeMotion(null, ExitScene.sample(100).fold(8)).let { assertEquals(1.05f + .35f, it.growSeconds, .01f); assertTrue("labels by about 1.5 s", it.seconds <= 2.4f && it.labels + .5f <= 1.55f) }
         assertEquals(0f, open.grow(1, 0f), 0f); assertEquals(1f, open.grow(4, open.growSeconds), 0f)
         assertTrue("root first", open.grow(1, .2f) > open.grow(3, .2f))
-        assertEquals(0f, open.labels(1f), 0f); assertEquals(1f, open.labels(open.seconds), 0f)
+        assertEquals("labels wait for the branch", 0f, open.labels(.9f), 0f); assertEquals("and are in by about 1.5 s", 1f, open.labels(1.5f), 0f)
         assertEquals("seen again, it's grown", 1f, TreeMotion(explainer, explainer).grow(1, 0f), 0f)
         val start = ExitScene(4, ExitStage.Phase.lift, List(4) { m.unsent })
         assertEquals("before it's sent, only the ghost shows", 0f, TreeMotion(start, start).pop(1, 0f), 0f)
