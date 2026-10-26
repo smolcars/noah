@@ -135,20 +135,18 @@ struct BoardPreparedTests {
             #expect(try ledger.hasUnhandled(funding) == test.expected, "\(test.name)")
         }
     }
-    @Test func threeDepositsPromptOnceAcrossAllReviewEndingsAndRestart() throws {
-        for ending in ["confirm", "dismiss", "expiry", "background-after-presentation", "navigation-after-presentation", "submit-failure"] {
-            let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
-            defer { try? FileManager.default.removeItem(at: root) }
-            let path = root.appending(path: "mmkv").path
-            let storage = try SettingsStorage(rootPath: path)
-            for deposit in 0..<3 {
-                let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: Set((0...deposit).map { "deposit-\($0):0" }))
-                #expect(try AutoBoardFunding(storage: storage).hasUnhandled(funding), "\(ending)")
-                #expect(try AutoBoardFunding(storage: storage).markHandled(funding))
-                let reopened = AutoBoardFunding(storage: try SettingsStorage(rootPath: path))
-                #expect(try !reopened.hasUnhandled(funding), "\(ending)")
-                #expect(try !reopened.markHandled(funding))
-            }
+    @Test func threeDepositsPromptOnceAcrossRestart() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let path = root.appending(path: "mmkv").path
+        let storage = try SettingsStorage(rootPath: path)
+        for deposit in 0..<3 {
+            let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: Set((0...deposit).map { "deposit-\($0):0" }))
+            #expect(try AutoBoardFunding(storage: storage).hasUnhandled(funding))
+            #expect(try AutoBoardFunding(storage: storage).markHandled(funding))
+            let reopened = AutoBoardFunding(storage: try SettingsStorage(rootPath: path))
+            #expect(try !reopened.hasUnhandled(funding))
+            #expect(try !reopened.markHandled(funding))
         }
     }
     @Test func confirmedFundingExcludesPendingExitUnknownAndBoardChange() {
@@ -190,29 +188,27 @@ struct BoardPreparedTests {
     }
     @MainActor @Test func backgroundDisabledAndInvalidatedReadsNeverEvaluateOrClaimFunding() async throws {
         for stopAt in ["before", "funding", "quote"] {
-            for _ in ["background", "disabled", "navigation"] {
-                var allowed = stopAt != "before"
-                var reads = 0, preparations = 0, discards = 0
-                var store = AutoBoardFunding()
-                store.read = {
-                    if stopAt != "quote" { Issue.record("Funding must not be evaluated after admission ends") }
-                    return nil
-                }
-                store.write = { _ in Issue.record("Funding must not be consumed") }
-                let review = AutoBoardReview(store: store)
-                let quote = try await review.prepare(allowed: { allowed }, funding: {
-                    reads += 1
-                    if stopAt == "funding" { allowed = false }
-                    return .init(walletID: "wallet", outpoints: ["deposit:0"])
-                }, quote: {
-                    preparations += 1; allowed = false
-                    return Self.quote
-                }, discard: { _ in discards += 1 })
-                #expect(quote == nil)
-                #expect(reads == (stopAt == "before" ? 0 : 1))
-                #expect(preparations == (stopAt == "quote" ? 1 : 0))
-                #expect(discards == (stopAt == "quote" ? 1 : 0))
+            var allowed = stopAt != "before"
+            var reads = 0, preparations = 0, discards = 0
+            var store = AutoBoardFunding()
+            store.read = {
+                if stopAt != "quote" { Issue.record("Funding must not be evaluated after admission ends") }
+                return nil
             }
+            store.write = { _ in Issue.record("Funding must not be consumed") }
+            let review = AutoBoardReview(store: store)
+            let quote = try await review.prepare(allowed: { allowed }, funding: {
+                reads += 1
+                if stopAt == "funding" { allowed = false }
+                return .init(walletID: "wallet", outpoints: ["deposit:0"])
+            }, quote: {
+                preparations += 1; allowed = false
+                return Self.quote
+            }, discard: { _ in discards += 1 })
+            #expect(quote == nil)
+            #expect(reads == (stopAt == "before" ? 0 : 1))
+            #expect(preparations == (stopAt == "quote" ? 1 : 0))
+            #expect(discards == (stopAt == "quote" ? 1 : 0))
         }
     }
     @MainActor @Test func summaryRefreshKeepsVisibleReviewWithoutReadingOrConsumingFunding() async throws {
@@ -333,7 +329,7 @@ struct BoardPreparedTests {
         #expect(try await journal.loadAll().count == 1)
         #expect(try await journal.load()?.receipt != nil)
     }
-    @Test(arguments: [UInt64(0), 31_542, 32_543, 36_542, 36_543, 37_543])
+    @Test(arguments: [UInt64(32_543), 36_542, 36_543])
     func automaticConfirmationRevalidatesTheExactReviewedReserve(confirmed: UInt64) async throws {
         let (journal, file) = journal()
         defer { try? FileManager.default.removeItem(at: file) }

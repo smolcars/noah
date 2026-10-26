@@ -99,10 +99,12 @@ struct OnchainChangesTests {
         let observer = Task { await model.observeChanges { true } }
         defer { observer.cancel() }
         await model.load()
-        try await Task.sleep(for: .milliseconds(500))
+        // Wait for the one real change, then give a reload loop time to show itself.
+        while try await journal.load()?.receipt?.chainStatus != .confirmed(123) { try await Task.sleep(for: .milliseconds(10)) }
+        try await Task.sleep(for: .milliseconds(200))
         let settled = await calls.reads
         #expect(settled <= 3)
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(200))
         #expect(await calls.reads == settled)
         #expect(try await journal.load()?.receipt?.chainStatus == .confirmed(123))
     }

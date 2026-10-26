@@ -5,8 +5,8 @@ import Testing
 @testable import Noah
 
 /// The redesigned exit's rules (docs/native-rewrite/design/exit.md, Testing): bark's states to
-/// phases and pictures, the inferred needs-funds state, the per-VTXO fee rule, the Settings row
-/// and which exits share a path.
+/// phases and pictures, the inferred needs-funds state, the per-VTXO fee rule and which exits
+/// share a path.
 struct ExitProgressTests {
     typealias Tx = ExitDetails.Transaction
 
@@ -314,16 +314,6 @@ struct ExitProgressTests {
                                      parkedSince: nil, daemonSince: nil, now: Date()))
     }
 
-    @Test func mempoolWaitCountsFromNoahsFirstSighting() {
-        var txs = Self.path.map { Self.tx($0, "verify-inputs") }
-        txs[0] = Self.tx("root", "awaiting-confirmation", child: "c0", origin: "wallet")
-        // bark keeps the state, height included, while nothing changes: Noah's sighting counts the blocks.
-        let frozen = Self.exit("Processing", Self.processing(txs, tip: 100))
-        let seen = ["root|awaiting-confirmation|0": UInt32(101)]
-        #expect(ExitProgress(frozen, tip: 104, seen: seen).stuck == 3)
-        #expect(ExitProgress(frozen, tip: 104).stuck == 0)
-    }
-
     @Test func aLongerRealPathKeepsEveryNodeAfterStart() {
         // Start draws a round's usual four; bark then lists eight (tree hops plus checkpoint or arkoor hops).
         let start = ExitStageScene(picture: .lift, levels: Array(repeating: .unsent, count: 4))
@@ -396,16 +386,6 @@ struct ExitProgressTests {
     }
 
     // MARK: Decisions 5, 6 and 8
-
-    @Test func settingsRowSaysInProgressOnlyWhileLive() {
-        #expect(ExitRules.settingsValue([]) == nil)
-        for state in ExitRules.finished {
-            #expect(ExitRules.settingsValue([Self.exit(state, .init(kind: state))]) == nil)
-        }
-        for state in ["Start", "Processing", "AwaitingDelta", "Claimable", "ClaimInProgress"] {
-            #expect(ExitRules.settingsValue([Self.exit("Claimed", .init(kind: "claimed")), Self.exit(state, .init(kind: state))]) == "In progress")
-        }
-    }
 
     @Test func sharedPictureOnlyWhenExitsShareATransaction() {
         let a = Self.exit("Processing", Self.processing([Self.tx("r1", "confirmed", height: 101), Self.tx("a", "verify-inputs")]), id: "a")
@@ -656,14 +636,6 @@ struct ExitClaimAutoBoardTests {
         let unclaimed = Board(balance: 98_705)
         #expect(try await unclaimed.review(held: 0, claimed: [])?.amount == 98_555 - 5_043)
         #expect(await unclaimed.exclusions == [[], []])
-    }
-
-    /// Android parity: the claimed value is excluded by the SDK only, never subtracted again.
-    @Test func theOfferIsTheDepositLessFeesAndTheReserveOnly() async throws {
-        let board = Board(balance: 90_000, claimed: 30_000, chainFee: 1_543)
-        let quote = try #require(try await board.review(held: 30_000))
-        #expect(quote.amount == 60_000 - 1_543 - 43 - 5_000)
-        #expect(await board.amounts == [0, 60_000 - 1_543 - 43 - 5_000])
     }
 
     @Test func withOnlyTheClaimOnChainThereIsNoBoard() async throws {

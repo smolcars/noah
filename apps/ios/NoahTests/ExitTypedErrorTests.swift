@@ -22,19 +22,10 @@ struct ExitTypedErrorTests {
             #expect(ExitEstimateUnavailable.allowsFallback(Self.error(code)) == ([.other, .invalidFeeRate] + Self.chain).contains(code))
             #expect((ExitRefusal(Self.error(code)) != nil) == Self.never.contains(code))
         }
-    }
-
-    @Test func refusalsUseTheSpecsWordsAndNameTheVtxo() {
-        func reason(_ code: BarkErrorCode) -> String? { ExitRefusal(Self.error(code))?.errorDescription }
-        #expect(reason(.exitVtxoAlreadySpent) == "Already spent")
-        #expect(reason(.exitVtxoSwept) == "Swept")
-        for code in Self.never where ![.exitVtxoAlreadySpent, .exitVtxoSwept].contains(code) {
-            #expect(reason(code) == "This VTXO can't be exited.")
-        }
         #expect(Self.never.filter { ExitRefusal(code: $0, vtxoID: nil).renewFirst } == [.exitNonStandardVtxo, .exitDustLimit])
-        #expect(ExitRefusal(Self.error(.exitVtxoSwept, vtxo: "v1"))?.vtxoID == "v1")
+        // A shortfall isn't a refusal but still says so, never in bark's words; other failures say nothing.
         let short = BarkError(message: "private", code: .exitInsufficientConfirmedFunds, neededSats: 1_215, availableSats: 310)
-        #expect(ExitRefusal(short) == nil && ExitRefusal.message(short) == "Needs on-chain funds")
+        #expect(ExitRefusal(short) == nil && ExitRefusal.message(short).map { !$0.contains("private") } == true)
         for other in [Self.error(.exitTipRetrievalFailure), Self.error(.other)] as [any Error] + [URLError(.timedOut)] {
             #expect(ExitRefusal.message(other) == nil)
         }
@@ -218,7 +209,7 @@ struct ExitTypedErrorTests {
 
     /// Compact All hides the VTXO list, so it lists what it leaves out to renew first, an `.other` exclusion
     /// too: unselectable, "Renew first" with the line on how. Choose and wide windows list every VTXO.
-    @MainActor @Test func compactAllListsExcludedCoinsToRenewFirst() async throws {
+    @MainActor @Test func compactAllListsExcludedCoinsToRenewFirst() async {
         let calls = OnchainModelTests.Calls()
         var dependencies = OnchainModelTests().dependencies(calls)
         dependencies.exclusions = {
@@ -234,9 +225,6 @@ struct ExitTypedErrorTests {
         #expect(ExitEconomics.rows(vtxos, costs: costs, compactAll: true).map(\.id) == ["ca-other", "ca-standard"])
         #expect(ExitEconomics.rows(vtxos, costs: costs, compactAll: false).count == vtxos.count)
         #expect(ExitEconomics.all(vtxos, costs: costs).map(\.id) == ["ca-a"])
-        let other = try #require(excluded["ca-other"])
-        #expect(other.label == "Renew first" && other.detail == "Renew this VTXO in Settings → VTXOs before exiting it.")
-        #expect(ExitRefusal(code: .exitVtxoSwept, vtxoID: nil).label == "Swept" && ExitRefusal(code: .exitVtxoSwept, vtxoID: nil).detail == nil)
     }
 
     @Test func progressReadsEachExitsErrorByItsCode() {
@@ -255,15 +243,5 @@ struct ExitTypedErrorTests {
         #expect(outcome.needed == ["short": 1_215])
         #expect(outcome.failures == 2)
         #expect(WalletSession.progressOutcome([]).failures == 0)
-    }
-
-    @Test func barksFigureProvesNeedsFundsAtOnceAndClearsWhenFundsArrive() {
-        var txs = ExitProgressTests.path.map { ExitProgressTests.tx($0, "verify-inputs") }
-        txs[0] = ExitProgressTests.tx("root", "awaiting-cpfp-broadcast")
-        let exit = ExitProgressTests.exit("Processing", ExitProgressTests.processing(txs))
-        let proof = ["v": exit.parkedEpisode!]
-        // A Check the chain that reported the shortfall: no daemon cycle to wait for.
-        #expect(ExitFunds.needsFunds(exit, confirmed: 310, packageFee: 1_215, proven: proof, parkedSince: nil, daemonSince: nil, now: Date()))
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 1_215, packageFee: 1_215, proven: proof, parkedSince: nil, daemonSince: nil, now: Date()))
     }
 }

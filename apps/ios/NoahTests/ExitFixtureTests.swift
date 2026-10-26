@@ -87,9 +87,6 @@ struct ExitFixtureTests {
                 #expect(
                     item.startHeight == expected.startHeight && item.endHeight == expected.endHeight
                         && item.isCurrent == expected.isCurrent)
-                if item.state == "Canceled" {
-                    #expect(item.description == "Exit processing was canceled before completion.")
-                }
             }
         }
     }

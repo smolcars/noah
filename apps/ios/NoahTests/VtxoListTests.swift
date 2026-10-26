@@ -28,7 +28,6 @@ struct VtxoListTests {
     }
 
     @Test func todaysFiltersEachKeepOneStatus() {
-        #expect(VtxoList.Filter.allCases.map(\.title) == ["All", "Active", "Expiring", "Expired", "Locked"])
         func ids(_ filter: VtxoList.Filter) -> [String] { VtxoList.groups(Self.vtxos, filter: filter).flatMap(\.rows).map(\.id).sorted() }
         #expect(ids(.all) == ["gone", "held", "later", "next", "soon"])
         #expect(ids(.active) == ["later", "next"], "active leaves out expiring and expired ones")

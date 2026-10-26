@@ -280,7 +280,9 @@ struct ExitClaimExecutionTests {
         #expect(await wallet.estimateCalls == 0)
     }
 
-    @Test(arguments: BarkErrorCode.allCases) func estimatorCallClassifiesTypedErrorsAfterPrechecks(code: BarkErrorCode) async throws {
+    // Every code's classification is ExitTypedErrorTests.onlyRetryableFailuresOfferContinueWithoutEstimate; here, one of each kind.
+    @Test(arguments: [BarkErrorCode.other, .exitTipRetrievalFailure, .exitVtxoSwept, .insufficientFunds])
+    func estimatorCallClassifiesTypedErrorsAfterPrechecks(code: BarkErrorCode) async throws {
         let wallet = Wallet()
         var access = wallet.access()
         access.estimate = { _, _ in throw BarkError(message: "untrusted diagnostic", code: code) }
