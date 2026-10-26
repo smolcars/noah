@@ -78,9 +78,10 @@ impl NotificationCoordinator {
         )
         .await?;
 
+        // The push module logs why: no push token, or the send failed.
         if dispatches.is_empty() {
             debug!(
-                "No push tokens found for {} notification to {}",
+                "No {} notification dispatched to {}",
                 request.data.notification_type(),
                 pubkey
             );
@@ -160,7 +161,7 @@ impl NotificationCoordinator {
 
                 if dispatches.is_empty() {
                     debug!(
-                        "No push tokens found for {} notification to {}",
+                        "No {} notification dispatched to {}",
                         request.data.notification_type(),
                         pubkey
                     );

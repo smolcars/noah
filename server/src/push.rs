@@ -223,7 +223,16 @@ pub async fn send_push_notification_with_unique_k1(
     let expo = Expo::new(ExpoClientOptions {
         access_token: Some(app_state.config.expo_access_token.clone()),
     });
+    send_unique_k1_notifications(expo, app_state, base_notification_data, pubkey).await
+}
 
+pub(crate) async fn send_unique_k1_notifications(
+    expo: Expo,
+    app_state: AppState,
+    base_notification_data: NotificationRequestData,
+    pubkey: Option<String>,
+) -> anyhow::Result<Vec<PushDispatchReceipt>, ApiError> {
+    let notification_type = base_notification_data.notification_type();
     let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
 
     let push_targets = if let Some(pubkey) = pubkey {
@@ -241,6 +250,10 @@ pub async fn send_push_notification_with_unique_k1(
     };
 
     if push_targets.is_empty() {
+        tracing::debug!(
+            notification_type,
+            "send_push_notification_with_unique_k1: no push tokens found"
+        );
         return Ok(vec![]);
     }
 
@@ -267,15 +280,14 @@ pub async fn send_push_notification_with_unique_k1(
                     None
                 };
 
-                let notification_data = match base_data_clone
-                    .into_notification_data(notification_k1.clone())
-                {
-                    Ok(notification_data) => notification_data,
-                    Err(e) => {
-                        tracing::error!("Failed to build notification payload: {}", e);
-                        return None;
-                    }
-                };
+                let notification_data =
+                    match base_data_clone.into_notification_data(notification_k1.clone()) {
+                        Ok(notification_data) => notification_data,
+                        Err(e) => {
+                            tracing::error!("Failed to build notification payload: {}", e);
+                            return None;
+                        }
+                    };
 
                 let data_string = match serde_json::to_string(&notification_data) {
                     Ok(s) => s,
@@ -320,8 +332,15 @@ pub async fn send_push_notification_with_unique_k1(
                         .map_err(|e| e.to_string())
                 };
 
+                // Expo errors carry the HTTP status (e.g. "401 Unauthorized"), never the
+                // access token or the push token.
                 if let Err(e) = send_result {
-                    tracing::error!(pubkey = %target.pubkey, "Failed to send push notification: {}", e);
+                    tracing::error!(
+                        notification_type,
+                        pubkey = %target.pubkey,
+                        error = %e,
+                        "Failed to send push notification"
+                    );
                     return None;
                 }
 

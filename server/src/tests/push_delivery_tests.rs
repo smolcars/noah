@@ -236,3 +236,52 @@ async fn push_transport_policy_and_registration_replacement_are_preserved() {
         }
     }
 }
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn rejected_expo_send_logs_the_error_not_missing_tokens() {
+    use axum::{Router, http::StatusCode, routing::post};
+    use expo_push_notification_client::Expo;
+
+    use crate::{
+        push::send_unique_k1_notifications,
+        types::{NotificationRequestData, RecurringPaymentDueNotification},
+    };
+
+    let (_, state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&state, &user, None).await;
+    let pubkey = user.pubkey().to_string();
+    PushTokenRepository::new(&state.db_pool)
+        .upsert(&pubkey, "ExpoPushToken[device-secret]")
+        .await
+        .unwrap();
+
+    // Stands in for Expo rejecting the access token.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let expo_url = format!("http://{}", listener.local_addr().unwrap());
+    let expo_api = Router::new().route(
+        "/--/api/v2/push/send",
+        post(|| async { StatusCode::UNAUTHORIZED }),
+    );
+    tokio::spawn(async move { axum::serve(listener, expo_api).await });
+
+    let receipts = send_unique_k1_notifications(
+        Expo::new_with_base_url(Some("expo-access-secret".to_string()), &expo_url),
+        state.clone(),
+        NotificationRequestData::RecurringPaymentDue(RecurringPaymentDueNotification {
+            due_count: 1,
+        }),
+        Some(pubkey),
+    )
+    .await
+    .unwrap();
+
+    assert!(receipts.is_empty());
+    assert!(logs_contain("Failed to send push notification"));
+    assert!(logs_contain("recurring_payment_due"));
+    assert!(logs_contain("401 Unauthorized"));
+    assert!(!logs_contain("no push tokens found"));
+    assert!(!logs_contain("expo-access-secret"));
+    assert!(!logs_contain("device-secret"));
+}
