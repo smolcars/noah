@@ -6,13 +6,8 @@
     "ko",
     "sv"
   ],
-<<<<<<< HEAD
-  "catalogEntries": 1474,
-  "sourceKeys": 1506,
-=======
-  "catalogEntries": 1461,
-  "sourceKeys": 1492,
->>>>>>> 4adf2d275 (Android: recurring Review and pay on the redesigned Send)
+  "catalogEntries": 1468,
+  "sourceKeys": 1500,
   "coverage": {
     "ios": {
       "used": [
