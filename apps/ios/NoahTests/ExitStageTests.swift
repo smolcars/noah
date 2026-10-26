@@ -219,6 +219,12 @@ struct ExitStageTests {
         // One-line texts (other exits' amounts, the destination) shrink to fit, to 60 % at most.
         let size = 11.0, shrunk = ExitStagePainter.shrunk("21 000 sats", size, room: 40)
         #expect(shrunk < size && shrunk >= size * 0.6 && ExitStagePainter.shrunk("₿21", size, room: 40) == size)
+        // Your other exits' amounts that don't fit left of their coin even at 60 % are left out (the list carries the
+        // numbers): two siblings of 1 BTC or more, in sats, at AX1 on an SE.
+        let second = g.other(g.levels([1, 1, 0, 0]), level: 1, index: 1), amountSize = 9.5 * g.scale
+        #expect(ExitStagePainter.fitted("100,000,000 sats", amountSize, room: second.x - 14) == nil)
+        #expect(ExitStagePainter.fitted("24,500 sats", amountSize, room: second.x - 14).map { $0 <= amountSize && $0 >= amountSize * 0.6 } == true)
+        #expect(ExitStagePainter.fitted("₿21", size, room: 40) == size)
     }
 
     /// The root waiting on the SE's 236 pt picture: "Next block" takes the room above the round's block, so the round's

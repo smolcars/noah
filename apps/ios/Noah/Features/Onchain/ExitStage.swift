@@ -528,8 +528,10 @@ struct ExitStagePainter {
                                       with: .color(c.orange.opacity(0.7 * alpha)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: other.sent ? [] : [3, 3]))
                 canvas.fill(canvas.circle(p.x, p.y, 6), c.soft.opacity(alpha))
                 canvas.stroke(canvas.circle(p.x, p.y, 6), c.orange.opacity(alpha), 1.6)
-                text(other.amount, p.x - 10, p.y, size: Self.shrunk(other.amount, 9.5 * L, room: p.x - 14), color: c.muted, anchor: .trailing,
-                     opacity: alpha * f.labels)
+                // An amount that can't fit left of its coin is left out: the list carries the numbers.
+                if let size = Self.fitted(other.amount, 9.5 * L, room: p.x - 14) {
+                    text(other.amount, p.x - 10, p.y, size: size, color: c.muted, anchor: .trailing, opacity: alpha * f.labels)
+                }
             }
         }
         // Before bark lists the path (Start): a ghost of the branch, what the exit will send.
@@ -760,10 +762,16 @@ struct ExitStagePainter {
         }
     }
 
-    /// A one-line text's size, smaller (down to 60 %) when it would be wider than `room`.
-    static func shrunk(_ text: String, _ size: Double, room: Double, strong: Bool = false) -> Double {
+    /// A one-line text's size, smaller (down to 60 %) when it would be wider than `room`; nil when even that is too wide.
+    static func fitted(_ text: String, _ size: Double, room: Double, strong: Bool = false) -> Double? {
         let width = ExitStageText.width(text, size: size, strong: strong)
-        return width <= room ? size : max(size * 0.6, size * room / width)
+        if width <= room { return size }
+        return room / width >= 0.6 ? size * room / width : nil
+    }
+
+    /// As `fitted`, for text that must show: never below 60 %.
+    static func shrunk(_ text: String, _ size: Double, room: Double, strong: Bool = false) -> Double {
+        fitted(text, size, room: room, strong: strong) ?? size * 0.6
     }
 
     /// One tick per 6 blocks, 12 to 48 of them; below 72 blocks there's no hour reading.
