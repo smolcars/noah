@@ -22,9 +22,6 @@ struct RNStoreTests {
         let cases = try Fixtures.load("rn-store-compatibility", input: Input.self, expected: Expected.self)
         #expect(cases.count == 196)
         for item in cases {
-            // Each raw RN vector is independent; a corrupt store blocks later native writes.
-            let path = root.appending(path: UUID().uuidString).path
-            let storage = try SettingsStorage(rootPath: path)
             let key = item.input.key
             let raw = item.input.raw
             let imported = SettingsStorage.importValues([key: raw])
@@ -33,10 +30,14 @@ struct RNStoreTests {
                 #expect(imported.values[key] == nil || imported.values[key] == SettingsStorage.emptyRecurring, "\(item.name)")
             } else if item.expected.available { #expect(imported.values[key] == raw, "\(item.name)") }
             else { #expect(imported.values[key] == nil && imported.settingsNoticePending, "\(item.name)") }
-            storage.set(raw, forKey: key)
-            let recurring = RecurringStore(settings: storage)
+            // The codecs are pure; only recurring rows and consumed preferences are read through a store. Each vector gets
+            // its own, as a corrupt store blocks later native writes.
+            let storage = key == RecurringStore.key || item.expected.consumed != nil
+                ? try SettingsStorage(rootPath: root.appending(path: UUID().uuidString).path) : nil
+            storage?.set(raw, forKey: key)
+            let recurring = storage.map { RecurringStore(settings: $0) }
             if !item.expected.available {
-                if key == RecurringStore.key {
+                if let recurring, key == RecurringStore.key {
                     #expect(throws: (any Error).self) { try recurring.load() }
                     #expect(throws: (any Error).self) { try recurring.setPending(false) }
                 } else {
@@ -45,29 +46,36 @@ struct RNStoreTests {
                         try RNStoreCodec.merging(#"{"state":{},"version":0}"#, into: raw, key: key)
                     }
                 }
-                #expect(storage.string(forKey: key) == raw, "\(item.name)")
+                if let storage { #expect(storage.string(forKey: key) == raw, "\(item.name)") }
                 continue
             }
             let decoded: RawObject
-            if key == RecurringStore.key { _ = try recurring.load(); decoded = try RawObject(raw) }
+            if let recurring, key == RecurringStore.key { _ = try recurring.load(); decoded = try RawObject(raw) }
             else { decoded = try RNStoreCodec.decode(raw, key: key) }
             let state = try RawObject(decoded.fields["state"]!)
             let wanted = try RawObject(try #require(item.expected.stateRaw))
             for (field, token) in wanted.fields {
                 #expect(state.fields[field]?.trimmingCharacters(in: .whitespacesAndNewlines) == token, "\(item.name): \(field)")
             }
-            #expect(storage.string(forKey: key) == raw, "Reads must not migrate bytes: \(item.name)")
+            if let storage { #expect(storage.string(forKey: key) == raw, "Reads must not migrate bytes: \(item.name)") }
             if let consumed = item.expected.consumed {
-                let profile = try #require(storage.persistedState(PersistedProfileState.self, key: key))
+                let profile = try #require(storage?.persistedState(PersistedProfileState.self, key: key))
                 #expect(profile.currency == consumed["preferredCurrency"])
                 #expect(profile.amountUnit.rawValue == consumed["bitcoinAmountUnit"])
             }
-            if key == RecurringStore.key { try recurring.setPending(false) }
-            else {
+            let saved: RawObject
+            if let recurring, key == RecurringStore.key {
+                try recurring.setPending(false)
+                saved = try RawObject(try #require(storage?.string(forKey: key)))
+            } else {
                 let incoming = "{\"state\":\(item.expected.stateRaw!),\"version\":\(item.expected.version!)}"
-                try storage.setDurably(RNStoreCodec.merging(incoming, into: raw, key: key), forKey: key)
+                let merged = try RNStoreCodec.merging(incoming, into: raw, key: key)
+                if let storage {
+                    try storage.setDurably(merged, forKey: key)
+                    #expect(storage.string(forKey: key) == merged, "\(item.name)")
+                }
+                saved = try RawObject(merged)
             }
-            let saved = try RawObject(try #require(storage.string(forKey: key)))
             let savedState = try RawObject(saved.fields["state"]!)
             for (path, token) in item.expected.preservedTokens ?? [:] {
                 let parts = path.split(separator: ".")

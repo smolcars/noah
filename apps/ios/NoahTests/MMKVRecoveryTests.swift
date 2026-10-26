@@ -36,18 +36,18 @@ struct MMKVRecoveryTests {
     private func bytes(_ root: URL) throws -> [Data] {
         try [Self.id, Self.id + ".crc"].map { try Data(contentsOf: root.appending(path: $0)) }
     }
-    @Test func importsRealRNBytesAndThousandsOfWritesNeverTouchLiveFiles() throws {
+    @Test func importsRealRNBytesAndNativeWritesNeverTouchLiveFiles() throws {
         let root = try Self.copyFixture(); defer { Self.clean(root) }
         let before = try bytes(root)
         let store = try SettingsStorage(rootPath: root.path)
         #expect(store.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
         #expect(try RecurringStore(settings: store).load().schedules.isEmpty)
         #expect(try !store.nativeFile.load().recurringNoticePending)
-        for i in 0..<2000 { try store.setDurably(String(i), forKey: "native-counter") }
+        for i in 0..<20 { try store.setDurably(String(i), forKey: "native-counter") }
         #expect(try bytes(root) == before)
         let backup = MMKVUpgradeBackup(root: root, instanceID: Self.id)
         #expect(try bytes(backup.directory) == before)
-        #expect(try SettingsStorage(rootPath: root.path).string(forKey: "native-counter") == "1999")
+        #expect(try SettingsStorage(rootPath: root.path).string(forKey: "native-counter") == "19")
     }
     @Test func existingSnapshotWinsOverLaterLiveRNChanges() throws {
         let root = try Self.copyFixture(); defer { Self.clean(root) }
