@@ -111,8 +111,8 @@ final class SceneCapture {
     }
 }
 
-/// Hands the shield its window scene's capture once it is in a window, and nil when it leaves.
-private struct CaptureStateReader: UIViewRepresentable {
+/// Hands the shield its window scene's capture once it is in a window.
+struct CaptureStateReader: UIViewRepresentable {
     @Binding var capture: SceneCapture?
 
     func makeUIView(context: Context) -> CaptureView {
@@ -126,7 +126,7 @@ private struct CaptureStateReader: UIViewRepresentable {
     func updateUIView(_ uiView: CaptureView, context: Context) {}
 
     final class CaptureView: UIView {
-        var onScene: ((SceneCapture?) -> Void)?
+        var onScene: ((SceneCapture) -> Void)?
 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -135,9 +135,11 @@ private struct CaptureStateReader: UIViewRepresentable {
 
         required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+        /// Arrivals only. When the content's identity changes (Restore's fields restart on a paste), SwiftUI makes a new
+        /// reader and removes the old one after the new one arrives; clearing on that removal left the shield hidden for good.
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            onScene?(window?.windowScene.map(SceneCapture.of))
+            if let scene = window?.windowScene { onScene?(SceneCapture.of(scene)) }
         }
     }
 }

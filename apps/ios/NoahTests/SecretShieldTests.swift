@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 import UIKit
 @testable import Noah
@@ -89,6 +90,29 @@ import UIKit
         scene.traitOverrides.sceneCaptureState = .inactive
         try await waitUntil { capture.holding }
         #expect(SceneCapture.of(scene) === capture && hidden(SceneCapture.of(scene)))
+    }
+
+    @Test func returningToActiveRevealsAgain() {
+        let clear = capture(Sleeps())
+        clear.report(.inactive)
+        for phase in [ScenePhase.inactive, .background, .inactive] { #expect(SecretShield.hidden(phase: phase, capture: clear)) }
+        #expect(!SecretShield.hidden(phase: .active, capture: clear))
+    }
+
+    /// SwiftUI replaces the reader when the content restarts (Restore's paste) and removes the old one after the new
+    /// one arrives. Only arrivals report, so the shield keeps its scene; a nil capture hid the words for good.
+    @Test func aReplacedReaderLeavingKeepsTheScene() throws {
+        let scene = try #require(UIApplication.shared.connectedScenes.lazy.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        var reports: [SceneCapture] = []
+        let old = CaptureStateReader.CaptureView(), new = CaptureStateReader.CaptureView()
+        for reader in [old, new] { reader.onScene = { reports.append($0) } }
+        window.addSubview(old)
+        window.addSubview(new)
+        old.removeFromSuperview()
+        new.removeFromSuperview()
+        #expect(reports.count == 2)
+        #expect(reports.allSatisfy { $0 === SceneCapture.of(scene) })
     }
 
     private func waitUntil(_ condition: () -> Bool) async throws {
