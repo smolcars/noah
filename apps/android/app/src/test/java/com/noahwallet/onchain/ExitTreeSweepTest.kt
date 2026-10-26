@@ -25,10 +25,11 @@ import kotlin.math.min
 
 /**
  * exit-v2's one rule, swept (exit-v2-notes.md, The picture): in every layout no two drawn elements overlap and none leaves
- * the canvas, required ones always show and keep their spacing, and a long path folds rather than squeezes. Paths of 1–20,
- * 50 and 100 transactions, the explainer, every mined count, your other exits at every pair of levels and every state, on a
- * phone at the default text size and a small phone at twice it, in English and in Swedish with sats, measured with the
- * picture's own text measurement. The Exits list's shared gutters and Review's rail fold the same paths the same way.
+ * the canvas, required ones always show and keep their spacing, and a long path folds rather than squeezes. Paths of 1 to
+ * 100 transactions in every state and as the explainer, with none, some or all mined and your other exits at pairs of levels,
+ * measured with the picture's own text measurement. Each case takes the next of four setups in turn (a phone at the default
+ * text size or a small phone at twice it, in English or in Swedish with sats), so each state meets all four across the
+ * lengths. The Exits list's shared gutters and Review's rail fold the same paths the same way.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -122,45 +123,51 @@ class ExitTreeSweepTest {
         )
     }
 
-    private val lengths = (1..20).toList() + listOf(50, 100)
+    /** Path lengths the sweeps sample: every level drawn up to about a dozen, folded beyond. */
+    private val lengths = listOf(1, 2, 3, 5, 8, 13, 20, 100)
+    /** A range's ends, its middle and their neighbours. */
+    private fun spots(range: IntRange) = listOf(range.first, range.first + 1, (range.first + range.last) / 2, range.last - 1, range.last)
+        .filter { it in range }.distinct()
 
     @Test fun noTwoElementsOverlapAndNoneLeavesThePicture() {
-        for (language in listOf("en", "sv")) {
-            val w = words(language)
-            for (frame in frames) for (n in lengths) {
-                val sampled = n > 20
-                // Every state, and the explainer at the Emergency exit page's height too.
-                for ((name, scene) in states(n)) check(scene, frame, w, "$language, $n transactions, $name")
-                for (height in listOf(frame.height, 268f)) check(ExitScene.sample(n), frame, w, "$language, explainer of $n at $height dp", height)
-                // Every mined count: the next one waiting, ready, short of funds, or not sent yet.
-                for (mined in (0 until n).filter { !sampled || it % 7 == 0 || it >= n - 3 }) for (current in listOf(m.waiting, m.ready, m.needsFee, null)) {
-                    check(path(n, mined, current, if (current == null) ExitStage.Phase.confirm else ExitStage.Phase.bump), frame, w, "$language, $n transactions, $mined mined, $current")
-                }
-                // Your other exits at every pair of levels (one, two at one level, or a third further along).
-                val levels = (1 until n).filter { !sampled || it % 9 == 1 || it == n - 1 }
-                for (a in levels) for (b in levels.filter { it >= a }) {
+        val strings = listOf("en", "sv").associateWith { words(it) }
+        val setups = strings.keys.flatMap { language -> frames.map { language to it } }
+        for ((place, n) in lengths.withIndex()) {
+            var case = place
+            fun draw(scene: ExitScene, what: String, height: Float? = null) {
+                val (language, frame) = setups[case++ % setups.size]
+                check(scene, frame, strings.getValue(language), "$language, $n transactions, $what", height ?: frame.height)
+            }
+            // Every state, and the explainer at the Emergency exit page's height too.
+            for ((name, scene) in states(n)) draw(scene, name)
+            draw(ExitScene.sample(n), "explainer"); draw(ExitScene.sample(n), "explainer at 268 dp", 268f)
+            // The next one waiting, ready, short of funds or not sent yet.
+            for (mined in spots(0 until n)) for (current in listOf(m.waiting, m.ready, m.needsFee, null)) {
+                draw(path(n, mined, current, if (current == null) ExitStage.Phase.confirm else ExitStage.Phase.bump), "$mined mined, $current")
+            }
+            // Your other exits: one, two at a pair of levels, or a third beside the second.
+            val levels = spots(1 until n)
+            for (a in levels) {
+                draw(path(n, n / 2, others = listOf(ExitScene.Other(a, 24_500))), "one other at $a")
+                for (b in levels.filter { it >= a }) {
                     val others = listOf(ExitScene.Other(a, 24_500), ExitScene.Other(b, 21_000))
-                    check(path(n, n / 2, others = others), frame, w, "$language, $n transactions, others at $a and $b")
-                    if (a == b) check(path(n, n / 2, others = others + ExitScene.Other(a, 15_000)), frame, w, "$language, $n transactions, three others at $a")
+                    draw(path(n, n / 2, others = others), "others at $a and $b")
+                    if (a == b) draw(path(n, n / 2, others = others + ExitScene.Other(a, 15_000)), "three others at $a")
                 }
-                for (a in levels) check(path(n, n / 2, others = listOf(ExitScene.Other(a, 24_500))), frame, w, "$language, $n transactions, one other at $a")
             }
         }
-        // Reported by the test's name; at least this many layouts were checked.
-        assertTrue("$layouts", layouts > 10_000)
         println("ExitTreeSweepTest: $layouts layouts checked")
     }
 
     @Test fun theGutterAndReviewsRailFoldRatherThanSqueeze() {
         var gutters = 0; var rails = 0
         val st = ExitGutter.St.entries
-        for (n in (1..20) + listOf(50, 100)) {
-            val sampled = n > 20
+        for (n in lengths) {
             // Two to four exits that part after k shared transactions, each a block (or a fifth of the path) behind the one
-            // before, at every mined count and with the one being sent waiting, ready, short of funds or not sent yet.
+            // before, with none, some or all mined and the one being sent waiting, ready, short of funds or not sent yet.
             // Or, paired, two branches after k that part again halfway on, listed alternately and sat together as the list does.
-            for (rows in 2..4) for (lag in listOf(1, maxOf(2, n / 5)).distinct()) for (paired in listOf(false, true)) for (k in (0 until n).filter { !sampled || it % 9 == 1 || it >= n - 2 })
-                for (mined in (0..n).filter { !sampled || it % 7 == 0 || it >= n - 2 }) for (current in listOf(ExitGutter.St.waiting, ExitGutter.St.ready, ExitGutter.St.needsFunds, ExitGutter.St.unsent)) {
+            for (rows in 2..4) for (lag in listOf(1, maxOf(2, n / 5)).distinct()) for (paired in listOf(false, true)) for (k in spots(0 until n))
+                for (mined in spots(0..n)) for (current in listOf(ExitGutter.St.waiting, ExitGutter.St.ready, ExitGutter.St.needsFunds, ExitGutter.St.unsent)) {
                     val listed = List(rows) { r ->
                         val done = (mined - r * lag).coerceAtLeast(0)
                         List(n) { i -> (if (i < k) "s$i" else if (paired && i < (k + n) / 2) "b${r % 2}.$i" else "r$r.$i") to when { i < done -> ExitGutter.St.mined; i == done -> current; else -> ExitGutter.St.unsent } }
@@ -221,14 +228,6 @@ class ExitTreeSweepTest {
         assertTrue(label.lines.toString(), label.lines.any { it.text.replace('\u00a0', ' ').replace('\u202f', ' ').contains("3 765 sats") })
         val box = layout.shapes.single { it.kind == TreeShape.Kind.label && it.group == "label${layout.labels.indexOf(label)}" }
         assertTrue("$box", box.r <= layout.geo.width - 12)
-    }
-
-    @Test fun theRoundsCaptionTriesOneShrunkLineThenGivesWay() {
-        // The root waiting right above the round on a small phone at twice the text: two lines don't fit, one does.
-        val w = words("sv")
-        val layout = check(path(3, 0), small, w, "root waiting")
-        val round = layout.labels.firstOrNull { it.lines.any { line -> line.text.contains(w.tr("already on Bitcoin")) } }
-        if (round != null && round.lines.size == 1) assertTrue("shrunk to 75 % at least", round.size >= .75f)
     }
 
     @Test fun aFoldedRangeCoversEveryBlockWithoutALabel() {

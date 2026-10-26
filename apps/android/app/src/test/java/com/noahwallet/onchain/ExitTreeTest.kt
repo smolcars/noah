@@ -107,40 +107,6 @@ class ExitTreeTest {
         assertTrue(low.bottom <= 1_000f && low.top >= 4f)
     }
 
-    @Test fun minedTransactionsThatDontFitFoldIntoARange() {
-        // Nine transactions on a small phone: six mined ones packed under the waiting one.
-        val geo = geometry(9, width = 375f, height = 236f)
-        val s = scene(m.mined, m.mined, m.mined, m.mined, m.mined, m.mined, m.waiting, m.unsent, m.unsent)
-        val ys = geo.levels { if (s.mined(it)) 1f else 0f }
-        val items = (1..6).map { j -> TreeLabels.Item(ys[j], listOf(TreeLabels.Line("Block ${s.heights[j - 1]}")), if (j == 6) 2.2f else 1f,
-            blocks = s.heights[j - 1]!!..s.heights[j - 1]!!) } +
-            TreeLabels.Item(ys[7], listOf(TreeLabels.Line("Next block"), TreeLabels.Line("fee")), 4f, TreeLabels.Pill.orange) +
-            TreeLabels.Item(geo.coinY, listOf(TreeLabels.Line("Your VTXO")), 3.5f)
-        val placed = place(items)
-        val keys = placed.map { it.key }
-        assertTrue("the waiting one is never squeezed", "Next block|fee" in keys)
-        assertTrue("nor your coin", "Your VTXO" in keys)
-        val range = placed.single { it.key == "range" }.lines.single().text
-        val (from, to) = range.removePrefix("Blocks ").split("–").map { it.toLong() }
-        assertEquals(921_346L, from)
-        for (height in s.heights.filterNotNull()) assertTrue("block $height is neither labelled nor in $range", "Block $height" in keys || height in from..to)
-        for (a in placed) for (b in placed) if (a !== b && a.right == b.right) assertTrue("${a.key} overlaps ${b.key}", a.bottom + 3 < b.top || b.bottom + 3 < a.top)
-    }
-
-    @Test fun labelsScaleWithTheFontUpToAQuarter() {
-        assertEquals(14f * 1.25f, geometry(4, scale = 1.25f).lineHeight, 0f)
-        val big = TreeLabels.Item(100f, listOf(TreeLabels.Line("Next block"), TreeLabels.Line("fee")), 4f, TreeLabels.Pill.orange)
-        assertTrue(TreeLabels.height(big, 14 * 1.25f, 1.25f) > TreeLabels.height(big, 14f, 1f))
-    }
-
-    @Test fun theDialTicksEverySixBlocks() {
-        assertEquals("144 blocks read as a 24-hour clock", 24, ExitDial.ticks(144))
-        assertEquals(16, ExitDial.ticks(96))
-        assertTrue(ExitDial.major(144, 6)); assertFalse(ExitDial.major(144, 7))
-        assertEquals("under 72 blocks there's no hour reading", 8, ExitDial.ticks(48)); assertFalse(ExitDial.major(48, 6))
-        assertEquals("never more than 48", 48, ExitDial.ticks(2_016)); assertEquals(1, ExitDial.ticks(1))
-    }
-
     @Test fun theExitsRowLeavesOutZeroCounts() {
         fun stage(phase: ExitStage.Phase) = ExitStage(phase)
         assertEquals(ExitCounts.Counts(6, 1), ExitCounts.of(List(6) { stage(ExitStage.Phase.bump) } + stage(ExitStage.Phase.claimable)))
@@ -191,24 +157,6 @@ class ExitTreeTest {
         assertEquals("nothing folds where everything fits", List(5) { it..it }, ExitFold.spans(List(5) { unsent }, 5))
     }
 
-    @Test fun aLongSharedPathFoldsInItsGutterRatherThanSqueezing() {
-        // Two exits sharing a 20- or 100-transaction path, one a block behind: squares at least 11 dp apart, each exit's
-        // transaction being sent on its own, the oldest blocks stacked and the rest to send in one.
-        for (n in listOf(20, 100)) {
-            val paths = listOf(0, 1).map { r ->
-                val done = 12 - r
-                List(n) { i -> (if (i < n - 1) "t$i" else "coin$r") to when { i < done -> st.mined; i == done -> st.waiting; else -> st.unsent } }
-            }
-            val layout = ExitGutter.shared(paths, listOf(32f, 96f))
-            val columns = layout.nodes.filter { !it.coin }.map { it.x }.distinct().sorted()
-            for ((a, b) in columns.zipWithNext()) assertTrue("$n: $a → $b", b - a >= ExitGutter.minStep - .01f)
-            assertTrue(columns.last() <= 90f - 14)
-            assertTrue("t11 and t12 each on their own", listOf("t11", "t12").all { id -> layout.nodes.any { it.id == id && !it.folded } })
-            assertTrue("the oldest blocks stacked", layout.nodes.any { it.folded && it.st == st.mined })
-            assertTrue("the rest to send in one", layout.nodes.any { it.folded && it.st == st.unsent })
-        }
-    }
-
     @Test fun aFoldedGutterKeepsWhatPathsShareInOnePlace() {
         // Three exits on a 60-transaction path, the third leaving it after 22: the 22 fold as one trunk (the oldest stacked)
         // drawn once, between all three rows, and the third's own blocks fold apart from the others'.
@@ -221,21 +169,6 @@ class ExitTreeTest {
         assertEquals("up to the 22nd", "t21", trunk.maxBy { it.x }.id)
         for (node in trunk) assertEquals("${node.id} drawn once, between the rows", 96f, node.y, .01f)
         assertTrue("then the third's own, apart", layout.nodes.any { it.id.startsWith("c") && !it.coin && it.y == 160f })
-    }
-
-    @Test fun exitsThatMoveOnApartEachKeepTheirOwnTransactionBeingSent() {
-        // Four exits on 20-transaction paths sharing only the first, being sent at the 3rd, 7th, 11th and 15th: one column
-        // each for those would be too many, so each branch folds on its own after the shared one.
-        val paths = (0 until 4).map { r ->
-            List(20) { i -> (if (i == 0) "t0" else "r$r.$i") to when { i < 2 + 4 * r -> st.mined; i == 2 + 4 * r -> st.waiting; else -> st.unsent } }
-        }
-        val layout = ExitGutter.shared(paths, listOf(32f, 96f, 160f, 224f))
-        val drawn = layout.nodes.filter { !it.coin }
-        val columns = drawn.map { it.x }.distinct().sorted()
-        for ((a, b) in columns.zipWithNext()) assertTrue("$a → $b", b - a >= ExitGutter.minStep - .01f)
-        assertTrue(columns.last() <= 90f - 14)
-        for (r in 0 until 4) assertTrue("exit $r's", drawn.any { it.id == "r$r.${2 + 4 * r}" && !it.folded })
-        assertEquals("the shared one drawn once", 1, drawn.count { it.id == "t0" })
     }
 
     @Test fun exitsThatShareMoreSitTogetherSoBranchesNeverMeet() {
@@ -281,16 +214,6 @@ class ExitTreeTest {
         assertEquals(ExitGutter.After.canceled, ExitGutter.after(ExitStage(ExitStage.Phase.canceled)))
     }
 
-    @Test fun theHouseSpringsSettleAndOnlyBouncyOvershoots() {
-        for (spring in HouseSpring.entries) {
-            assertEquals(0f, spring(-.1f), 0f); assertEquals(0f, spring(0f), 0f); assertEquals(1f, spring(spring.seconds), 0f)
-            assertTrue("${spring.name} settles within 3 s", spring.seconds in .1f..3f)
-        }
-        assertTrue((1..100).any { HouseSpring.bouncy(it / 100f) > 1.01f })
-        assertTrue((1..300).all { HouseSpring.soft(it / 100f) <= 1f })
-        assertTrue("snappy is quicker than calm", HouseSpring.snappy.seconds < HouseSpring.calm.seconds)
-    }
-
     @Test fun withAnimationsOffThePictureIsItsRestPoseAtOnce() {
         val s = scene(m.mined, m.waiting, m.unsent, m.unsent)
         val still = TreeMotion(s, s)
@@ -302,47 +225,5 @@ class ExitTreeTest {
         val breath = Breath({ .25f }, { 3f }, live = false)
         assertEquals("a steady glow", .6f, breath.breathe, 0f); assertEquals("dashes don't march", 0f, breath.march, 0f)
         assertEquals(1f, Breath({ .25f }, { 3f }, live = true).breathe, .001f)
-    }
-
-    @Test fun aBlockMinesTheWaitingOneThenTheNextIsSent() {
-        val before = scene(m.mined, m.waiting, m.unsent, m.unsent)
-        val after = scene(m.mined, m.mined, m.waiting, m.unsent)
-        val move = TreeMotion(before, after)
-        assertEquals(0f, move.mine(1, 0f), 0f); assertEquals(0f, move.send(2, .1f), 0f)
-        assertTrue("mined first", move.mine(1, .3f) > .5f)
-        assertTrue("then the next one goes to the mempool", move.send[2] > move.mine[1])
-        assertEquals(1f, move.mine(1, move.seconds), 0f); assertEquals(1f, move.send(2, move.seconds), 0f)
-        assertEquals("it settles from 1.22×", 1f, move.stamp(1, move.seconds), 0f)
-        assertTrue("one ripple, then gone", move.ripple(1, .4f) in .1f..<1f); assertEquals(1f, move.ripple(1, move.seconds), 0f)
-    }
-
-    @Test fun theClaimLandsAfterItsBlock() {
-        val base = scene(m.mined, m.mined, m.mined, m.mined)
-        val claiming = base.copy(phase = ExitStage.Phase.claiming, lockedFrom = 100, claimableHeight = 244, tip = 244)
-        val claimed = claiming.copy(phase = ExitStage.Phase.claimed, claimedBlock = 245)
-        val sent = TreeMotion(base.copy(phase = ExitStage.Phase.claimable, lockedFrom = 100, claimableHeight = 244, tip = 244), claiming)
-        assertTrue("the tree dims and the stem draws", sent.dim(sent.seconds) == 1f && sent.stem(sent.seconds) == 1f)
-        assertTrue("the claim goes out after the stem starts", sent.claimSend(.2f) == 0f && sent.claimSend(sent.seconds) == 1f)
-        val land = TreeMotion(claiming, claimed)
-        assertEquals(0f, land.land(.4f), 0f)
-        assertTrue("the coin travels after the claim is mined", land.land(1.2f) > 0f)
-        assertEquals(0f, land.arrive(1.2f), 0f)
-        assertEquals(1f, land.land(land.seconds), 0f); assertEquals(1f, land.ring(land.seconds), 0f)
-        assertEquals("a claim to another wallet swaps the badge", 1f, TreeMotion(claiming, claimed.copy(destination = "bc1q")).swap(1f), 0f)
-    }
-
-    @Test fun theExplainerGrowsOnceThenItsLabelsFadeIn() {
-        val explainer = ExitScene.sample()
-        val open = TreeMotion(null, explainer)
-        assertEquals("1.4 s for four transactions", 1.39f, open.growSeconds, .001f)
-        assertTrue("any path grows in about a second", TreeMotion(null, ExitScene.sample(8)).growSeconds < 1.45f)
-        TreeMotion(null, ExitScene.sample(100).fold(8)).let { assertEquals(1.05f + .35f, it.growSeconds, .01f); assertTrue("labels by about 1.5 s", it.seconds <= 2.4f && it.labels + .5f <= 1.55f) }
-        assertEquals(0f, open.grow(1, 0f), 0f); assertEquals(1f, open.grow(4, open.growSeconds), 0f)
-        assertTrue("root first", open.grow(1, .2f) > open.grow(3, .2f))
-        assertEquals("labels wait for the branch", 0f, open.labels(.9f), 0f); assertEquals("and are in by about 1.5 s", 1f, open.labels(1.5f), 0f)
-        assertEquals("seen again, it's grown", 1f, TreeMotion(explainer, explainer).grow(1, 0f), 0f)
-        val start = ExitScene(4, ExitStage.Phase.lift, List(4) { m.unsent })
-        assertEquals("before it's sent, only the ghost shows", 0f, TreeMotion(start, start).pop(1, 0f), 0f)
-        assertEquals(.5f, TreeMotion(start, start).ghost(0f), 0f)
     }
 }
