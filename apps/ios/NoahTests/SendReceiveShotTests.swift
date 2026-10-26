@@ -8,12 +8,12 @@ import UIKit
 /// payment controller, a fake receive model and stand-ins for wallet reads (no wallet,
 /// server writes or recovery phrase). Write a state name to Documents/sr-shot; "stop" ends
 /// the session. Send: amount, amount-typed, amount-over, amount-recipient, to, to-typing, to-error, to-nomatch,
-/// method, source, review-ark, review-lightning, review-onchain, sending-ark, sent-ark,
+/// method, source, review-ark, review-lightning, review-onchain, review-note, review-max, sending-ark, sent-ark,
 /// sent-lightning, slow-lightning, pending-lightning, refunded, failed, sent-swap,
 /// confirm-swap, sent-wallet, uncertain, already-paid, unavailable, broadcast-pending.
 /// Receive: receive, receive-noaddress, receive-amount, receive-invoice, receive-ark,
 /// receive-bitcoin, receive-formats, receive-amount-sheet, receive-error, arrive-ark,
-/// arrive-lightning, arrive-onchain, arrive-failed.
+/// arrive-lightning, arrive-onchain, arrive-failed. A "-down" suffix scrolls the screen down a page.
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_SR_SHOTS"] == "1"))
 struct SendReceiveShotTests {
@@ -46,16 +46,28 @@ struct SendReceiveShotTests {
             if !state.isEmpty && state != current {
                 host.rootView = AnyView(Color.clear)
                 try await Task.sleep(for: .milliseconds(150))
-                let (view, root, after) = try await fixture(state)
+                let down = state.hasSuffix("-down")
+                let (view, root, after) = try await fixture(down ? String(state.dropLast("-down".count)) : state)
                 roots.append(root)
                 host.rootView = view
                 try await Task.sleep(for: .milliseconds(700))
                 await after()
+                if down { Self.pageDown(host.view) }
                 try state.write(to: ready, atomically: true, encoding: .utf8)
                 current = state
             }
             try await Task.sleep(for: .milliseconds(150))
         }
+    }
+
+    /// Scrolls every scroll view under `view` down a page (at most to its end), for rows below the fold at large text sizes.
+    static func pageDown(_ view: UIView) {
+        if let scroll = view as? UIScrollView {
+            let end = scroll.contentSize.height + scroll.adjustedContentInset.bottom - scroll.bounds.height
+            let page = scroll.contentOffset.y + scroll.bounds.height * 0.8
+            scroll.setContentOffset(CGPoint(x: scroll.contentOffset.x, y: max(scroll.contentOffset.y, min(page, end))), animated: false)
+        }
+        view.subviews.forEach(pageDown)
     }
 
     /// Plays one payment: waits, then returns its receipt or throws.
@@ -226,6 +238,14 @@ struct SendReceiveShotTests {
                 await script.configure(delay: 0.6, result: .success(receipt), resolution: .paid(receipt))
                 after = submit()
             }
+        case "review-note":
+            // A Lightning-address send with a note: Via, Arrives, Fee, Total and Note.
+            review(SendPayment(destination: "maya@localhost.com", method: "lightning", amount: 1_500, comment: "Coffee and a croissant, thanks!"),
+                   SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: "maya@localhost.com")
+        case "review-max":
+            // An Ark-funded on-chain Max send: the longest labels (From, Estimated fee, Total (reviewed coins)).
+            review(SendPayment(destination: Self.bitcoin, method: "onchain", amount: 152_100, source: .offchain, max: true),
+                   SendQuote(amount: 152_100, fee: 642, total: 152_742, vtxoIDs: ["fixture:0"]), destination: Self.bitcoin)
         case "sent-swap", "confirm-swap":
             review(swapPayment, SendQuote(amount: 50_000, fee: 420, total: 50_420), destination: Self.bitcoin)
             var confirmed = swapReceipt
