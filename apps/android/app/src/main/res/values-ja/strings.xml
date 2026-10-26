@@ -51,7 +51,6 @@
   <string name="gt_e18835ef2f6c8558">"カメラの使用を許可"</string>
   <string name="gt_8074d363626518da">"支払い用QRコードを読み取るには、設定でカメラへのアクセスを許可してください。"</string>
   <string name="gt_a56781b3d9389819">"オンチェーン済み"</string>
-  <string name="gt_f616c5c046b30446">"別の出金で送信済み · %1$s/%2$s"</string>
   <string name="gt_0463c102e0af14e7">"別の人が送信済み · %1$s/%2$s"</string>
   <string name="gt_35d9cc8868d28953">"使用済み"</string>
   <string name="gt_49e96d7cdf58069c">"金額"</string>
@@ -70,7 +69,6 @@
   <string name="gt_a4ae750b610e875e">"アンカー"</string>
   <string name="gt_94c45bc285c9613e">"アンカー + 手数料 %1$s · %2$s/%3$s"</string>
   <string name="gt_15ea390b9d935697">"別のライトニング支払いがまだ処理中です。完了してからもう一度お試しください。"</string>
-  <string name="gt_aa8f23bda4bd9ea8">"同じラウンドの別の出金が、独自の手数料でこれをすでに送信しました。あなたの支払いはありません。"</string>
   <string name="gt_c4e9b3d10877c72c">"別のウォレット"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"このスマートフォンを手にした人なら誰でもフレーズを見られます。保護するには、設定で画面ロックを設定してください。"</string>
   <string name="gt_0d04bfeb7d64b71c">"アプリ"</string>
@@ -869,6 +867,7 @@
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
   <string name="gt_a0348c11ea886849">"最適化"</string>
   <string name="gt_4c48892477df67f4">"任意です。ビットコインに関して対応が必要なときだけご連絡します。"</string>
+  <string name="gt_329eddee92986d1b">"このラウンドの他の人のコイン"</string>
   <string name="gt_6201f81787adfaf8">"このラウンドの他の人のコイン"</string>
   <string name="gt_f893fab7e39f5540">"そうしないと Android が Noah を一時停止し、支払いが届かなくなることがあります。"</string>
   <string name="gt_3619cf0b90923a4b">"出金"</string>
@@ -1108,7 +1107,6 @@
   <string name="gt_b8ed5279e897be5d">"送信中…"</string>
   <string name="gt_6ae9defa2627d65e">"出金の次のステップを送信するか、止まっているステップの手数料を引き上げます。手数料はオンチェーンのビットコインから支払われます。Noahもこれを自動で行い、システムが許可すればバックグラウンドでも行います。"</string>
   <string name="gt_c16bc82bf1f04ede">"送金済み"</string>
-  <string name="gt_168d6498bc4dd449">"別の出金で送信済み"</string>
   <string name="gt_7d162c4a2f308b74">"別の人が送信済み"</string>
   <string name="gt_4e7201c7b8985a98">"送金先"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s に送金済み"</string>
@@ -1121,7 +1119,6 @@
   <string name="gt_0682d833fd5c9126">"アプリのログを共有"</string>
   <string name="gt_483ffbdd70c9c49f">"場所を共有"</string>
   <string name="gt_959aab0a1caf37f5">"共有するログに復元フレーズや鍵が含まれることはありません。"</string>
-  <string name="gt_19942b3712d1c4f7">"共有トランザクションの送信と支払いは1回だけです。"</string>
   <string name="gt_331207ee9863d023">"受取人に共有されます"</string>
   <string name="gt_ae71ba566c676006">"店舗"</string>
   <string name="gt_c57d4ecc83b7a2c7">"簡単な要約"</string>
@@ -1385,7 +1382,6 @@
   <string name="gt_0c6da2b7449f5e54">"現在のウォレット操作が完了してからエンドポイントを変更してください。"</string>
   <string name="gt_99c1ee35d68e7feb">"ウォレットの準備ができるまで待ってから更新してください。"</string>
   <string name="gt_6e293a8c009e0011">"待機中"</string>
-  <string name="gt_788630716af6ccc2">"ブロック待ち"</string>
   <string name="gt_7d231cd69ef53307">"空きのあるブロックを待っています"</string>
   <string name="gt_2571c46e541d8f87">"ブロック %1$s を待機中"</string>
   <string name="gt_13f480745fda01b8">"ブロック %1$s を待機中 · %2$s/%3$s"</string>
@@ -1436,8 +1432,8 @@
   <string name="gt_3d26c2347422ac51">"Ark残高をこのウォレット自身のオンチェーンアドレスに全額送金することはできません。外部のBitcoinアドレスを使用してください。"</string>
   <string name="gt_f9f55c49d8421334">"あなたのVTXO"</string>
   <plurals name="gt_bd4a6db1a4abe642">
-    <item quantity="one">"あなたのVTXOはラウンドのツリーの葉です。そこに至るため、あなたの枝の%1$s件のトランザクションがルートから順にチェーンに送られます。"</item>
-    <item quantity="other">"あなたのVTXOはラウンドのツリーの葉です。そこに至るため、あなたの枝の%1$s件のトランザクションがルートから順にチェーンに送られます。"</item>
+    <item quantity="one">"あなたのVTXOはラウンドのツリーの葉です。そこに届くまで、あなたの枝の%1$s件のトランザクションがチェーンへ送られます。"</item>
+    <item quantity="other">"あなたのVTXOはラウンドのツリーの葉です。そこに届くまで、あなたの枝の%1$s件のトランザクションがルートから順にチェーンへ送られます。"</item>
   </plurals>
   <string name="gt_7594ebdff7a25376">"VTXOがArkから出ます。ここから先はArkのサーバーを必要としません。"</string>
   <string name="gt_e452c7da44fe3110">"VTXOはArkに残ります"</string>
@@ -1449,10 +1445,6 @@
   <plurals name="gt_8d95f0972bf7b0f6">
     <item quantity="one">"ビットコインはオンチェーンにあり、%1$sブロックの間ロックされています。このロックにより、すでに使用されたVTXOをArkが止める時間が確保されます。"</item>
     <item quantity="other">"ビットコインはオンチェーンにあり、%1$sブロックの間ロックされています。このロックにより、すでに使用されたVTXOをArkが止める時間が確保されます。"</item>
-  </plurals>
-  <plurals name="gt_b5ead457183af288">
-    <item quantity="one">"ビットコインは、ラウンドのツリー内の%1$s個のトランザクションからなる経路の先にあります。ラウンド自体のトランザクションはすでにオンチェーンです。"</item>
-    <item quantity="other">"ビットコインは、ラウンドのツリー内の%1$s個のトランザクションからなる経路の先にあります。ラウンド自体のトランザクションはすでにオンチェーンです。"</item>
   </plurals>
   <string name="gt_8074a7762dd1f578">"新しいメールアドレスが確認されるまでは、現在のアドレスが使われます。"</string>
   <string name="gt_886bc67a71fe0f83">"メールアドレスはウォレットに関する緊急の通知にのみ使います。"</string>
@@ -1482,12 +1474,11 @@
   <string name="gt_76b36c61a2b3613c">"最終確認 %1$s"</string>
   <string name="gt_82a3537ff0dbce7e">"名前"</string>
   <string name="gt_c6c1c9a9c8543f1e">"次"</string>
-  <string name="gt_47e267f62045f56a">"1件ずつ1ブロック"</string>
-  <string name="gt_578f5ad05b017779">"1件ずつ1ブロック、"</string>
-  <string name="gt_a243d97c7f2bce8f">"%1$sで解除"</string>
+  <string name="gt_47e267f62045f56a">"1件につき1ブロック"</string>
+  <string name="gt_578f5ad05b017779">"1件につき1ブロック、"</string>
+  <string name="gt_a243d97c7f2bce8f">"%1$s で解除"</string>
   <string name="gt_df384ae97c77ad30">"回"</string>
   <string name="gt_0b3b5f22beeeb37c">"ルートから順に"</string>
-  <string name="gt_a97b0931730e83fb">"ラウンド"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"satsずつ"</string>
   <string name="gt_8010319770964fc8">"別の人が送信"</string>
@@ -1519,8 +1510,6 @@
   <string name="gt_643409a7df643204">"%1$s · 手数料 ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · Ark内"</string>
   <string name="gt_59d264482aee8976">"%1$s · %3$s件の出金で%2$sを分担"</string>
-  <string name="gt_59b0959cf216d9ed">"%1$s · 残り%2$s"</string>
-  <string name="gt_2a17da5ea4c34a20">"%1$s · うち%2$sは他の出金と共有"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$sの為替レートを取得できません"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s。ほかのバックアップは残ります。"</string>
   <string name="gt_d10a2288d770c6b9">"%1$s %2$s"</string>
@@ -1565,7 +1554,6 @@
     <item quantity="one">"1件の出金が現在のチェーンの高さより遅れています。その出金を進めて追いつかせてください。出金トランザクションが送信される場合もあります。"</item>
     <item quantity="other">"%1$s件の出金が現在のチェーンの高さより遅れています。いずれかの出金を進めて追いつかせてください。出金トランザクションが送信される場合もあります。"</item>
   </plurals>
-  <string name="gt_8338b13e065297c7">"1つのラウンドからの%1$s件の出金: トランザクションは%3$s件ではなく%2$s件。共有分の送信と支払いは1回だけです。"</string>
   <string name="gt_068deca46a360c34">"%1$s時間"</string>
   <plurals name="gt_e2f49aad27ca4b0f">
     <item quantity="one">"%1$s時間"</item>
@@ -1575,7 +1563,6 @@
     <item quantity="one">"%1$s件進行中"</item>
     <item quantity="other">"%1$s件進行中"</item>
   </plurals>
-  <string name="gt_d63d7964a22d1b92">"進行中 %1$s件 · 受け取り可能 %2$s件"</string>
   <plurals name="gt_d51f3a84c3df479a">
     <item quantity="one">"あと%1$s件送信"</item>
     <item quantity="other">"あと%1$s件送信"</item>

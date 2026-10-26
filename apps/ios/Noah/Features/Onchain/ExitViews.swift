@@ -91,7 +91,9 @@ struct ExitHeadline: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(verbatim: amount).noahText(SettingsText.big).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
+            Text(verbatim: amount).noahText(SettingsText.big).monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.numericText())
             if let line {
                 Text(verbatim: line).noahText(NoahTokens.Typography.sub).monospacedDigit()
                     .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
@@ -100,6 +102,163 @@ struct ExitHeadline: View {
         }
         .padding(.top, 6)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A row on the exit pages that never truncates (exit-v2-notes.md, "Layout"): when the label and
+/// value don't fit on one line the value moves under the label, right-aligned; at accessibility
+/// sizes they stack, left-aligned. A note (the fee split, needs funds) is its own wrapping line.
+struct ExitDetailRow: View {
+    let label: String
+    let value: String
+    var note: String?
+    var numeric = false
+    var failure = false
+    var hairline = true
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
+            if stacked {
+                VStack(alignment: .leading, spacing: 2) {
+                    labelText
+                    valueText.multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 18) {
+                        labelText.fixedSize()
+                        Spacer(minLength: 0)
+                        valueText.fixedSize()
+                    }
+                    VStack(alignment: .trailing, spacing: 2) {
+                        labelText.frame(maxWidth: .infinity, alignment: .leading)
+                        valueText.multilineTextAlignment(.trailing)
+                    }
+                }
+            }
+            if let note {
+                Text(verbatim: note).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                    .multilineTextAlignment(stacked ? .leading : .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: stacked ? .leading : .trailing)
+            }
+        }
+        .padding(.vertical, 10)
+        .frame(minHeight: 48)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) { if hairline { HomeHairline() } }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var labelText: some View {
+        Text(verbatim: label).noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var valueText: some View {
+        Text(verbatim: value).noahText(numeric ? HomeText.amount : NoahTokens.Typography.label).monospacedDigit()
+            .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Review's one-line path (prototype `drawRail`): the round's block, your transactions and coin,
+/// then the timelock's dial and the claim's destination, with a caption under each third.
+struct ExitPathRail: View {
+    let transactions: Int
+    /// Several VTXOs: their shared transactions are sent once.
+    var several = false
+    var delta: UInt32 = 144
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.locale) private var locale
+
+    private var language: String { locale.identifier }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Canvas { context, size in draw(context, size) }
+                .frame(height: 58)
+                .accessibilityHidden(true)
+            HStack(alignment: .top, spacing: 10) {
+                caption(L10n.plural("{n} transactions", count: transactions, locale: language),
+                        several ? L10n.text("shared ones once", locale: language) : L10n.text("one block each", locale: language), .leading)
+                caption(L10n.plural("{n} blocks", count: Int(delta), locale: language),
+                        L10n.text("about {time}", VtxoList.timeLeft(Int64(delta), locale: language), locale: language), .center)
+                caption(L10n.text("Claim", locale: language), L10n.text("to another wallet", locale: language), .trailing)
+            }
+        }
+        .padding(.top, 18)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func caption(_ title: String, _ line: String, _ alignment: TextAlignment) -> some View {
+        VStack(alignment: alignment == .leading ? .leading : alignment == .center ? .center : .trailing, spacing: 0) {
+            Text(verbatim: title).noahText(HomeText.footnote).fontWeight(.medium).foregroundStyle(NoahTokens.Colors.foreground)
+            Text(verbatim: line).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+        }
+        .multilineTextAlignment(alignment)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : alignment == .center ? .center : .trailing)
+    }
+
+    /// Where the rail puts things in `size`: the round's block, the transactions (as many as fit 14 pt apart, a
+    /// 5 pt circle with its stroke and the clearance, 8 at most; the caption says how many there are), your coin
+    /// last, then the timelock's dial and the destination.
+    struct Layout: Equatable {
+        var y: Double
+        var block: CGRect
+        var nodes: [CGPoint]
+        var coin: CGPoint
+        var dial: CGPoint
+        var badge: CGPoint
+
+        /// Every element's outline, for keeping them apart.
+        var shapes: [ExitStageShape] {
+            [.box(.round, "round", block)] + nodes.enumerated().map { .circle(.node, "node\($0.offset)", $0.element, 5.8) }
+                + [.circle(.coin, "coin", coin, 9.9), .circle(.coin, "dial", dial, 19.5), .circle(.badge, "badge", badge, 14.75)]
+        }
+    }
+
+    nonisolated static func layout(_ size: CGSize, transactions: Int) -> Layout {
+        let y = size.height / 2 - 4, x0 = 10.0, room = size.width * 0.36 - x0 - 34
+        let count = max(1, min(8, transactions, Int(room / 14))), step = room / Double(count)
+        let xs = (0..<count).map { x0 + 30 + Double($0) * step }
+        return Layout(y: y, block: CGRect(x: x0, y: y - 8, width: 16, height: 16), nodes: xs.dropLast().map { CGPoint(x: $0, y: y) },
+                      coin: CGPoint(x: xs[count - 1] + 4, y: y), dial: CGPoint(x: size.width / 2, y: y), badge: CGPoint(x: size.width - 34, y: y))
+    }
+
+    private func draw(_ context: GraphicsContext, _ size: CGSize) {
+        let colors = MotionColors.theme(colorScheme), layout = Self.layout(size, transactions: transactions), y = layout.y
+        let canvas = MotionCanvas(context: context, size: size, viewBox: CGRect(origin: .zero, size: size), colors: colors), cx = layout.dial.x
+        canvas.fill(Path(roundedRect: layout.block, cornerRadius: 4), colors.foreground)
+        var px = layout.block.maxX
+        for node in layout.nodes {
+            canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: node.x - 5.5, y: y)), colors.orange, 2)
+            canvas.fill(canvas.circle(node.x, y, 5), colors.background)
+            canvas.stroke(canvas.circle(node.x, y, 5), colors.orange, 1.6)
+            px = node.x + 5.5
+        }
+        canvas.stroke(canvas.line(CGPoint(x: px, y: y), CGPoint(x: layout.coin.x - 9.5, y: y)), colors.orange, 2)
+        canvas.mineCoin(layout.coin.x, y, 9, ring: 1.8)
+        canvas.stroke(canvas.line(CGPoint(x: layout.coin.x + 9, y: y), CGPoint(x: cx - 17, y: y)), colors.hairline, 1.5, dash: [3, 3])
+        canvas.stroke(canvas.circle(cx, y, 13), colors.hairline, 2)
+        let ticks = ExitStagePainter.ticks(delta)
+        for tick in 0..<ticks.count {
+            let angle = -Double.pi / 2 + Double(tick) * 2 * .pi / Double(ticks.count), r1 = ticks.hours && tick % 6 == 0 ? 19.5 : 17.5
+            canvas.stroke(canvas.line(CGPoint(x: cx + cos(angle) * 16, y: y + sin(angle) * 16), CGPoint(x: cx + cos(angle) * r1, y: y + sin(angle) * r1)),
+                          colors.muted.opacity(0.5), 1)
+        }
+        canvas.layer(center: CGPoint(x: cx, y: y + 6), scale: 0.5, opacity: 1) { pad in
+            pad.padlockBody(cx, y - 1)
+            pad.shackle(cx, y - 1, open: 0)
+        }
+        canvas.stroke(canvas.line(CGPoint(x: cx + 21, y: y), CGPoint(x: layout.badge.x - 16, y: y)), colors.hairline, 1.5, dash: [3, 3])
+        canvas.fill(canvas.circle(layout.badge.x, y, 14), colors.background)
+        canvas.stroke(canvas.circle(layout.badge.x, y, 14), colors.hairline, 1.5)
+        canvas.symbol("wallet.bifold", layout.badge.x, y, size: 14, color: colors.foreground)
     }
 }
 
@@ -232,10 +391,11 @@ struct ExitVtxoRow: View {
                         .foregroundStyle(selectable && uneconomic ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
                     if vtxo.eligible, let detail = refusal?.detail {
                         Text(verbatim: L10n.text(detail, locale: language))
-                            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).lineLimit(2)
+                            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                     }
                 }
-                .lineLimit(1)
+                // The row grows rather than cutting a line short.
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(minHeight: 62)
@@ -298,9 +458,9 @@ struct ExitDepositSheet: View {
                 } label: { Label(L10n.text("Copy", locale: language), systemImage: "doc.on.doc") }
                     .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
                 ShareLink(item: address) { Label(L10n.text("Share", locale: language), systemImage: "square.and.arrow.up") }
-                    .buttonStyle(SettingsActionStyle())
+                    .buttonStyle(SettingsActionStyle(wrap: true))
             } else {
-                Button(L10n.text("Done", locale: language), action: close).buttonStyle(SettingsActionStyle())
+                Button(L10n.text("Done", locale: language), action: close).buttonStyle(SettingsActionStyle(wrap: true))
             }
         }
         .task {

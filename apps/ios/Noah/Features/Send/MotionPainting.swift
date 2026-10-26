@@ -5,9 +5,9 @@ import SwiftUI
 /// lands on the same frame.
 struct MotionTime {
     enum Spring {
-        case snappy, soft, bouncy, tap
-        var response: Double { switch self { case .snappy: 0.30; case .soft: 0.50; case .bouncy: 0.40; case .tap: 0.12 } }
-        var damping: Double { switch self { case .snappy: 0.85; case .soft: 1; case .bouncy: 0.60; case .tap: 0.80 } }
+        case snappy, soft, bouncy, tap, calm
+        var response: Double { switch self { case .snappy: 0.30; case .soft: 0.50; case .bouncy: 0.40; case .tap: 0.12; case .calm: 0.70 } }
+        var damping: Double { switch self { case .snappy: 0.85; case .soft: 1; case .bouncy: 0.60; case .tap: 0.80; case .calm: 1 } }
     }
 
     /// Seconds since the scene started.

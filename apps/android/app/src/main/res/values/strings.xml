@@ -51,7 +51,6 @@
   <string name="gt_e18835ef2f6c8558">"Allow camera"</string>
   <string name="gt_8074d363626518da">"Allow camera access in Settings to scan a payment QR code."</string>
   <string name="gt_a56781b3d9389819">"Already on-chain"</string>
-  <string name="gt_f616c5c046b30446">"Already sent by another exit · %1$s of %2$s"</string>
   <string name="gt_0463c102e0af14e7">"Already sent by someone else · %1$s of %2$s"</string>
   <string name="gt_35d9cc8868d28953">"Already spent"</string>
   <string name="gt_49e96d7cdf58069c">"Amount"</string>
@@ -70,7 +69,6 @@
   <string name="gt_a4ae750b610e875e">"Anchor"</string>
   <string name="gt_94c45bc285c9613e">"Anchor + %1$s fee · %2$s of %3$s"</string>
   <string name="gt_15ea390b9d935697">"Another Lightning payment is still in progress. Try again once it completes."</string>
-  <string name="gt_aa8f23bda4bd9ea8">"Another exit from your round already sent this one, with its own fee. You don’t pay for it."</string>
   <string name="gt_c4e9b3d10877c72c">"Another wallet"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
   <string name="gt_0d04bfeb7d64b71c">"App"</string>
@@ -869,6 +867,7 @@
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
   <string name="gt_a0348c11ea886849">"Optimized"</string>
   <string name="gt_4c48892477df67f4">"Optional. We only write when your bitcoin needs you."</string>
+  <string name="gt_329eddee92986d1b">"Other people\'s coins in this round"</string>
   <string name="gt_6201f81787adfaf8">"Other people’s coins in this round"</string>
   <string name="gt_f893fab7e39f5540">"Otherwise Android may pause Noah, and payments could stop arriving."</string>
   <string name="gt_3619cf0b90923a4b">"Outgoing"</string>
@@ -1108,7 +1107,6 @@
   <string name="gt_b8ed5279e897be5d">"Sending…"</string>
   <string name="gt_6ae9defa2627d65e">"Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it."</string>
   <string name="gt_c16bc82bf1f04ede">"Sent"</string>
-  <string name="gt_168d6498bc4dd449">"Sent by another exit"</string>
   <string name="gt_7d162c4a2f308b74">"Sent by someone else"</string>
   <string name="gt_4e7201c7b8985a98">"Sent to"</string>
   <string name="gt_21cfd8fdcf01d5a0">"Sent to %1$s"</string>
@@ -1121,7 +1119,6 @@
   <string name="gt_0682d833fd5c9126">"Share app logs"</string>
   <string name="gt_483ffbdd70c9c49f">"Share place"</string>
   <string name="gt_959aab0a1caf37f5">"Shared logs never include your phrase or keys."</string>
-  <string name="gt_19942b3712d1c4f7">"Shared transactions are sent and paid once."</string>
   <string name="gt_331207ee9863d023">"Shared with the recipient"</string>
   <string name="gt_ae71ba566c676006">"Shops"</string>
   <string name="gt_c57d4ecc83b7a2c7">"Short summary"</string>
@@ -1385,7 +1382,6 @@
   <string name="gt_0c6da2b7449f5e54">"Wait for the current wallet operation to finish before changing the endpoint."</string>
   <string name="gt_99c1ee35d68e7feb">"Wait for the wallet to be ready, then refresh."</string>
   <string name="gt_6e293a8c009e0011">"Waiting"</string>
-  <string name="gt_788630716af6ccc2">"Waiting for a block"</string>
   <string name="gt_7d231cd69ef53307">"Waiting for a block with room"</string>
   <string name="gt_2571c46e541d8f87">"Waiting for block %1$s"</string>
   <string name="gt_13f480745fda01b8">"Waiting for block %1$s · %2$s of %3$s"</string>
@@ -1450,10 +1446,6 @@
     <item quantity="one">"Your bitcoin is on-chain, locked for %1$s block. The lock gives Ark time to stop a VTXO that was already spent."</item>
     <item quantity="other">"Your bitcoin is on-chain, locked for %1$s blocks. The lock gives Ark time to stop a VTXO that was already spent."</item>
   </plurals>
-  <plurals name="gt_b5ead457183af288">
-    <item quantity="one">"Your bitcoin sits at the end of a path of %1$s transaction in the round’s tree. The round’s own transaction is already on-chain."</item>
-    <item quantity="other">"Your bitcoin sits at the end of a path of %1$s transactions in the round’s tree. The round’s own transaction is already on-chain."</item>
-  </plurals>
   <string name="gt_8074a7762dd1f578">"Your current email stays until the new one is verified."</string>
   <string name="gt_886bc67a71fe0f83">"Your email is only for urgent alerts about your wallet."</string>
   <string name="gt_2c6b2e253c01fb2e">"Your name"</string>
@@ -1487,7 +1479,6 @@
   <string name="gt_a243d97c7f2bce8f">"opens at %1$s"</string>
   <string name="gt_df384ae97c77ad30">"payments"</string>
   <string name="gt_0b3b5f22beeeb37c">"root first"</string>
-  <string name="gt_a97b0931730e83fb">"round"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats each time"</string>
   <string name="gt_8010319770964fc8">"sent by someone else"</string>
@@ -1519,8 +1510,6 @@
   <string name="gt_643409a7df643204">"%1$s · fees ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · in Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · share of %2$s for %3$s exits"</string>
-  <string name="gt_59b0959cf216d9ed">"%1$s · %2$s left"</string>
-  <string name="gt_2a17da5ea4c34a20">"%1$s · %2$s shared with your other exits"</string>
   <string name="gt_d8c81b717fe6d90e">"%1$s rate unavailable"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Your other backups stay."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s at %2$s"</string>
@@ -1565,7 +1554,6 @@
     <item quantity="one">"One exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions."</item>
     <item quantity="other">"%1$s exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions."</item>
   </plurals>
-  <string name="gt_8338b13e065297c7">"%1$s exits from one round: %2$s transactions, not %3$s. Shared ones are sent and paid once."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>
   <plurals name="gt_e2f49aad27ca4b0f">
     <item quantity="one">"%1$s hour"</item>
@@ -1575,7 +1563,6 @@
     <item quantity="one">"%1$s in progress"</item>
     <item quantity="other">"%1$s in progress"</item>
   </plurals>
-  <string name="gt_d63d7964a22d1b92">"%1$s in progress · %2$s ready to claim"</string>
   <plurals name="gt_d51f3a84c3df479a">
     <item quantity="one">"%1$s more to send"</item>
     <item quantity="other">"%1$s more to send"</item>

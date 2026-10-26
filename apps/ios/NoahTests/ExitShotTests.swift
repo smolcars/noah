@@ -9,10 +9,13 @@ import UIKit
 /// pages in Settings' stack with fake wallet data shaped like the prototype's (tip 921,345; the
 /// exit followed is ₿31,000, four transactions). Write a state to Documents/exit-shot; "stop" ends
 /// the session. Light and dark follow the simulator; a wide window (the Duo open) shows the panes.
-/// States: warn, warn-live, choose, choose-all, choose-unfunded, review, review-unfunded,
-/// progress-<lift|publish|sending|mempool|confirm|onchain|wait|claimable|claiming|claimed>,
-/// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, review-again, claim-other, claim-phone, claim-again, list,
-/// list-plain.
+/// States: warn, warn-live, warn-many, choose, choose-all, choose-unfunded, review, review-unfunded,
+/// progress-<lift|publish|sending|mempool|confirm|mempool3|onchain|wait|claimable|claiming|claimed>,
+/// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, progress-shared3 (three exits sharing a path),
+/// progress-deep (nine transactions), progress-deep20 and progress-deep20-6 (twenty, folded to fit),
+/// progress-<claiming|claimed>-other (to another wallet), review-again, claim-other, claim-phone, claim-again, list,
+/// list-plain. "step <progress state>" moves the page on screen to that state, as a new
+/// read would, so the picture's motion can be recorded.
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_EXIT_SHOTS"] == "1"))
 struct ExitShotTests {
@@ -38,16 +41,25 @@ struct ExitShotTests {
             try? FileManager.default.removeItem(at: request)
             for root in roots { try? FileManager.default.removeItem(at: root) }
         }
-        var current = ""
+        var current = "", live: Live?
         let deadline = ContinuousClock.now.advanced(by: .seconds(3500))
         while ContinuousClock.now < deadline {
             let state = (try? String(contentsOf: request, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if state == "stop" { return }
-            if !state.isEmpty && state != current {
+            if state.hasPrefix("step "), state != current, let live {
+                // The same page reads the wallet again and finds it moved on.
+                let name = String(state.dropFirst("step progress-".count))
+                (live.overview, live.detail) = Self.progress(name)
+                await live.model?.load()
+                try await Task.sleep(for: .milliseconds(300))
+                try state.write(to: ready, atomically: true, encoding: .utf8)
+                current = state
+            } else if !state.isEmpty && state != current {
                 host.rootView = AnyView(Color.clear)
                 try await Task.sleep(for: .milliseconds(150))
-                let (view, root) = try fixture(state)
+                let (view, root, page) = try fixture(state)
                 roots.append(root)
+                live = page
                 host.rootView = view
                 try await Task.sleep(for: .milliseconds(2_200))
                 try state.write(to: ready, atomically: true, encoding: .utf8)
@@ -67,7 +79,10 @@ struct ExitShotTests {
 
     /// The exit followed through the states: tip at start 921,345; blocks 921,346–349 for its path.
     nonisolated static func followed(_ state: String) -> ExitModel {
-        let id = vtxos[0].id, names = ["root", "l2", "l1", "leaf"]
+        let id = vtxos[0].id
+        // A 4,096-leaf round plus an arkoor hop: nine transactions.
+        let names = state == "deep" ? ["root", "l5", "l4", "l3", "l2", "l1", "leaf", "ckpt", "ark"]
+            : state.hasPrefix("deep20") ? ["root"] + (1...13).map { "n\($0)" } + ["leaf"] + (1...5).map { "hop\($0)" } : ["root", "l2", "l1", "leaf"]
         func path(_ confirmed: Int, next: String? = nil, child: String = "c", origin: String = "wallet") -> [Tx] {
             names.enumerated().map { index, name in
                 if index < confirmed { return tx(name, "confirmed", height: tip + 1 + UInt32(index), child: "\(child)\(index)") }
@@ -91,6 +106,9 @@ struct ExitShotTests {
         case "sending": return model("Processing", processing(path(1, next: "awaiting-cpfp-broadcast"), tip: tip + 1))
         case "mempool": return model("Processing", processing(path(1, next: "awaiting-confirmation"), tip: tip + 1))
         case "confirm": return model("Processing", processing(path(2), tip: tip + 2))
+        case "mempool3", "shared3": return model("Processing", processing(path(2, next: "awaiting-confirmation"), tip: tip + 2))
+        case "deep", "deep20": return model("Processing", processing(path(5, next: "awaiting-confirmation"), tip: tip + 5))
+        case "deep20-6": return model("Processing", processing(path(6, next: "awaiting-confirmation"), tip: tip + 6))
         case "onchain": return model("Processing", mined)
         case "nofunds":
             let parked = processing(path(1, next: "awaiting-cpfp-broadcast"), tip: tip + 1)
@@ -107,14 +125,28 @@ struct ExitShotTests {
                                   confirmed_block: .init(height: leaf, hash: "h"), claimable_height: claimable), [mined])
         case "claimable": return model("Claimable", .init(kind: "claimable", tip_height: claimable,
                                        claimable_since: .init(height: claimable, hash: "h")), [mined, locked])
-        case "claiming": return model("ClaimInProgress", .init(kind: "claim-in-progress", tip_height: claimable,
+        case "claiming", "claiming-other": return model("ClaimInProgress", .init(kind: "claim-in-progress", tip_height: claimable,
                                       claimable_since: .init(height: claimable, hash: "h"), claim_txid: ActivityShotTests.hex("claim")), [mined, locked])
-        case "claimed": return model("Claimed", .init(kind: "claimed", tip_height: claimable + 1, block: .init(height: claimable + 1, hash: "h"),
+        case "claimed", "claimed-other": return model("Claimed", .init(kind: "claimed", tip_height: claimable + 1, block: .init(height: claimable + 1, hash: "h"),
                                      txid: ActivityShotTests.hex("claim")), [.init(kind: "start", tip_height: tip), mined, locked])
         case "canceled": return model("Canceled", .init(kind: "canceled", tip_height: tip + 2), [processing(path(1), tip: tip + 1)])
         case "spent": return model("VtxoAlreadySpent", .init(kind: "vtxo-already-spent", tip_height: tip + 1))
         default: return model("Processing", processing(path(1, next: "awaiting-confirmation"), tip: tip + 1))
         }
+    }
+
+    /// Your other two exits from the followed one's round (prototype c02 and c03): one shares its first three
+    /// transactions, the other only the root and has sent its own next one.
+    nonisolated static func siblings() -> [ExitModel] {
+        let shared = [tx("root", "confirmed", height: tip + 1, child: "c0"), tx("l2", "confirmed", height: tip + 2, child: "c1"),
+                      tx("l1", "awaiting-confirmation", child: "c2")]
+        let cousin = [tx("root", "confirmed", height: tip + 1, child: "c0"), tx("l2c", "awaiting-confirmation", child: "cc"),
+                      tx("l1c", "verify-inputs"), tx("leafc", "verify-inputs"), tx("ckptc", "verify-inputs"), tx("arkc", "verify-inputs")]
+        return [ExitModel(id: vtxos[1].id, amount: 24_500, state: "Processing",
+                          details: .init(kind: "processing", tip_height: tip + 2, transactions: shared + [tx("leafb", "verify-inputs")]),
+                          history: [], historyDetails: [], claimable: false),
+                ExitModel(id: vtxos[2].id, amount: 21_000, state: "Processing", details: .init(kind: "processing", tip_height: tip + 2, transactions: cousin),
+                          history: [], historyDetails: [], claimable: false)]
     }
 
     /// The list's exits: three from one round (shared root), one ready, one waiting, finished ones.
@@ -161,7 +193,7 @@ struct ExitShotTests {
     }
 
     nonisolated static func overview(exits: [ExitModel], confirmed: UInt64 = 18_400, tip at: UInt32 = tip, packageFees: [String: UInt64] = [:],
-                                     progressing: Bool = true) -> OnchainOverview {
+                                     progressing: Bool = true, toPhone: Bool = true) -> OnchainOverview {
         var overview = OnchainOverview(walletID: "fixture", vtxos: vtxos.filter { !Set(exits.map(\.id)).contains($0.id) }
                                         + [VtxoModel(id: "dust", amount: 290, expiry: tip + 2_000, state: "Spendable", kind: "arkoor", exitDepth: 2,
                                                      exitWeight: 900, registered: true, serverPubkey: "02", exitDelta: 144, anchorPoint: "a:0",
@@ -172,10 +204,13 @@ struct ExitShotTests {
         overview.daemonSince = progressing ? .distantPast : nil
         // A completed Check the chain left these waiting for a fee child.
         overview.provenParked = [vtxos[0].id: episode("l2", "awaiting-cpfp-broadcast"), vtxos[4].id: episode("r3-l2", "awaiting-cpfp-broadcast")]
-        overview.childFees = Dictionary(uniqueKeysWithValues: ["c0", "c1", "c2", "c3", "rbf0", "rbf1"].map { (ActivityShotTests.hex($0), $0.hasPrefix("rbf") ? 2_916 : 1_215) })
-        overview.received = [ActivityShotTests.hex("claim"): 30_738]
-        // What Noah recorded when it built that claim, to this phone.
-        overview.claimRecords = [ActivityShotTests.hex("claim"): .init(ids: [vtxos[0].id], fee: 262, toPhone: true)]
+        overview.childFees = Dictionary(uniqueKeysWithValues: (["rbf0", "rbf1", "cc"] + (0...8).map { "c\($0)" }).map {
+            (ActivityShotTests.hex($0), $0.hasPrefix("rbf") ? 2_916 : 1_215)
+        })
+        overview.received = toPhone ? [ActivityShotTests.hex("claim"): 30_738] : [:]
+        // What Noah recorded when it built that claim: to this phone, or to another wallet's address.
+        overview.claimRecords = [ActivityShotTests.hex("claim"): .init(ids: [vtxos[0].id], fee: 262, toPhone: toPhone,
+                                                                      destination: toPhone ? nil : "bcrt1qx7k2r9d0l3m8p5q2t4w6y8z0a2c4e6g8m4k2")]
         return overview
     }
 
@@ -185,8 +220,36 @@ struct ExitShotTests {
     /// The fixtures' episodes all began at bark's first record (`ExitModel.episode`).
     nonisolated static func episode(_ name: String, _ kind: String) -> String { "\(ActivityShotTests.hex(name))|\(kind)|0" }
 
-    static func model(_ overview: OnchainOverview, detail: ExitModel? = nil, quote: Bool = true, reviewFails: Bool = false) -> OnchainModel {
-        OnchainModel(dependencies: .init(ready: { true }, overview: { overview },
+    /// A page's wallet data that a "step" replaces while the page stays on screen.
+    final class Live: @unchecked Sendable {
+        var overview: OnchainOverview
+        var detail: ExitModel?
+        weak var model: OnchainModel?
+        init(_ overview: OnchainOverview, detail: ExitModel?) {
+            self.overview = overview
+            self.detail = detail
+        }
+    }
+
+    /// A progress state's wallet: the followed exit (and, for shared3, your other two from its round) at that state's tip.
+    nonisolated static func progress(_ name: String) -> (OnchainOverview, ExitModel) {
+        let exit = Self.followed(name)
+        let at: UInt32 = switch name {
+        case "stale": Self.tip + 2
+        case "wait": Self.tip + 4 + 45
+        case "claimable", "claiming", "claiming-other": Self.tip + 4 + 144
+        case "claimed", "claimed-other": Self.tip + 4 + 145
+        default: exit.details.tip_height ?? Self.tip
+        }
+        var overview = Self.overview(exits: [exit] + (name == "shared3" ? Self.siblings() : []), confirmed: name == "nofunds" ? 310 : 18_400, tip: at,
+                                     packageFees: [exit.id: 1_215], progressing: name != "stale", toPhone: !name.hasSuffix("-other"))
+        // The stale exit's last completed Move exit forward.
+        if name == "stale" { overview.checkedTip = Self.tip + 1 }
+        return (overview, exit)
+    }
+
+    static func model(_ overview: OnchainOverview, detail: ExitModel? = nil, quote: Bool = true, reviewFails: Bool = false, live: Live? = nil) -> OnchainModel {
+        OnchainModel(dependencies: .init(ready: { true }, overview: { live?.overview ?? overview },
             quote: { action, ids, _, destination in
                 if reviewFails { throw OnchainFailure.changed }
                 guard quote else { throw ExitEstimateUnavailable(review: .init(action: action, walletID: "fixture", ids: ids, amount: 0, confirmed: overview.confirmed)) }
@@ -198,7 +261,7 @@ struct ExitShotTests {
                              confirmed: overview.confirmed, feeRate: fee.feeRateSatPerVb)
             },
             execute: { _ in throw OnchainFailure.unavailable }, attempt: { [] }, acknowledge: { _ in },
-            detail: { _ in detail },
+            detail: { _ in live?.detail ?? detail },
             claimAddress: { "bcrt1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297" },
             claimOwnership: { $0.hasPrefix("bcrt1p") },
             estimate: { estimate($0) },
@@ -206,7 +269,7 @@ struct ExitShotTests {
             detailID: detail?.id)
     }
 
-    private func fixture(_ state: String) throws -> (AnyView, URL) {
+    private func fixture(_ state: String) throws -> (AnyView, URL, Live?) {
         let root = FileManager.default.temporaryDirectory.appending(path: "exit-shot-\(UUID())")
         let storage = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
         try storage.setPersistedState(PersistedWalletState(isInitialized: true, isWalletLoaded: true), key: PersistedWalletState.key,
@@ -214,9 +277,10 @@ struct ExitShotTests {
         let app = AppModel(settings: storage)
         let page: SettingsPage
         let onchain: @MainActor () -> OnchainModel
+        var live: Live?
         switch state {
-        case "warn", "warn-live":
-            let exits = state == "warn" ? [] : [Self.followed("mempool")]
+        case "warn", "warn-live", "warn-many":
+            let exits = state == "warn" ? [] : state == "warn-many" ? Self.listed() : [Self.followed("mempool")]
             page = .exit; onchain = { Self.model(Self.overview(exits: exits)) }
         case "choose", "choose-all", "choose-unfunded":
             page = .exitChoose; onchain = { Self.model(Self.overview(exits: [], confirmed: state == "choose-unfunded" ? 310 : 18_400)) }
@@ -230,20 +294,17 @@ struct ExitShotTests {
         case "list", "list-plain":
             page = .exitList
             let exits = state == "list" ? Self.listed() : Array(Self.listed().prefix(2))
-            onchain = { Self.model(Self.overview(exits: exits, packageFees: [Self.vtxos[4].id: 1_215])) }
+            // Too little on-chain for one exit's next fee, so its row shows the red "!".
+            onchain = { Self.model(Self.overview(exits: exits, confirmed: state == "list" ? 310 : 18_400, packageFees: [Self.vtxos[4].id: 1_215])) }
         default:
-            let name = String(state.dropFirst("progress-".count))
-            let exit = Self.followed(name)
-            let tip: UInt32 = switch name {
-            case "stale": Self.tip + 2
-            case "wait": Self.tip + 4 + 45
-            case "claimable", "claiming": Self.tip + 4 + 144
-            case "claimed": Self.tip + 4 + 145
-            default: exit.details.tip_height ?? Self.tip
-            }
+            let (overview, exit) = Self.progress(String(state.dropFirst("progress-".count)))
             page = .exitProgress(exit.id)
-            onchain = { Self.model(Self.overview(exits: [exit], confirmed: name == "nofunds" ? 310 : 18_400, tip: tip,
-                                                 packageFees: [exit.id: 1_215], progressing: name != "stale"), detail: exit) }
+            // One model the page keeps, so a later "step" reads the wallet again on screen.
+            let data = Live(overview, detail: exit)
+            let model = Self.model(overview, detail: exit, live: data)
+            data.model = model
+            live = data
+            onchain = { model }
         }
         let summary = SettingsSummary(dependencies: .init(overview: { Self.overview(exits: []) }, notificationsOn: { true }, storage: storage))
         let recurring = try RecurringExecutorTests.Harness()
@@ -259,7 +320,7 @@ struct ExitShotTests {
             .environment(\.settingsFixture, fixture)
             .environment(\.locale, Locale(identifier: app.localeIdentifier))
             .environment(\.scenePhase, .active)
-        return (AnyView(view), root)
+        return (AnyView(view), root, live)
     }
 }
 

@@ -252,6 +252,8 @@ struct ExitClaimRecord: Codable, Equatable, Sendable {
     var ids: [String]
     var fee: UInt64
     var toPhone: Bool
+    /// Another wallet's address, for the Claimed picture once the journal entry is gone.
+    var destination: String? = nil
 
     static let key = "native-exit-claim-records-v1"
     typealias Store = ExitWalletStore<[String: ExitClaimRecord]>

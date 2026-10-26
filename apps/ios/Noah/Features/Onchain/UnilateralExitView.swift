@@ -1,12 +1,13 @@
 import BarkBoltFFI
 import SwiftUI
 
-/// Settings → Emergency exit: the warning (docs/native-rewrite/design/exit.md). One line, four
-/// facts with the real timelock and fee estimate, and the exits already running. Reading it and
-/// estimating never sends anything.
+/// Settings → Emergency exit: the warning (docs/native-rewrite/design/exit.md). One line, then the
+/// explainer tree while there are no exits (or the exits already running), four facts with the real
+/// timelock and fee estimate. Reading it and estimating never sends anything.
 struct UnilateralExitView: View {
     @State private var model: OnchainModel
     @State private var perVtxo: UInt64?
+    @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
@@ -27,21 +28,24 @@ struct UnilateralExitView: View {
                 .fixedSize(horizontal: false, vertical: true)
             // The exits already running, or ended: one opens directly, several open the list.
             if exits.count == 1, let exit = exits.first {
-                ExitListRow(exit: exit, progress: model.progress(exit), text: ExitText(progress: model.progress(exit), exit: exit,
-                            tip: model.overview?.tip ?? 0, overview: model.overview, attempts: model.attempts, money: money, language: language),
-                            hairline: false) { settings.open(.exitProgress(exit.id)) }
+                let progress = model.progress(exit), tip = model.overview?.tip ?? 0
+                ExitListRow(exit: exit, progress: progress, text: ExitText(progress: progress, exit: exit, tip: tip, overview: model.overview,
+                                                                           attempts: model.attempts, money: money, language: language),
+                            coin: ExitGutterCoin(progress, tip: tip, delta: model.overview?.exitDelta ?? 144), hairline: false) { settings.open(.exitProgress(exit.id)) }
                     .padding(.top, 14)
             } else if !exits.isEmpty {
-                SettingsRow(icon: "list.bullet", title: L10n.text("Exits", locale: language),
-                            value: L10n.text("{n} in progress · {count} ready to claim", exits.filter { ExitRules.live($0.state) && !$0.claimable }.count.formatted(),
-                                             exits.filter(\.claimable).count.formatted(), locale: language),
+                SettingsRow(icon: "list.bullet", title: L10n.text("Exits", locale: language), sub: ExitListView.subtitle(exits, language: language),
                             hairline: false, id: "exit-entry") { settings.open(.exitList) }
                     .padding(.top, 14)
+            } else {
+                // Where an exit goes: your branch of the round's tree, standing on Bitcoin. Only while there are no exits.
+                ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
+                              accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
+                                                             count: Self.explained(sample), locale: language))
+                    .frame(height: settings.wide ? max(240, paneHeight - 200) : window.size.height > 0 && window.size.height < 700 ? 236 : 268)
+                    .padding(.top, 14)
+                    .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
             }
-            // Where an exit goes: your path down to the round's block.
-            ExitStageView(scene: ExitStageScene(path: model.overview?.tip))
-                .frame(height: settings.wide ? max(240, paneHeight - 200) : 236).padding(.top, 14)
-                .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
         } trailing: {
             VStack(spacing: 0) {
                 fact("clock", "Takes a day or more", model.overview?.exitDelta.map {
@@ -58,15 +62,21 @@ struct UnilateralExitView: View {
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         } footer: {
             Button(L10n.text("Choose VTXOs", locale: language)) { settings.open(.exitChoose) }
-                .buttonStyle(SettingsActionStyle())
+                .buttonStyle(SettingsActionStyle(wrap: true))
                 .accessibilityIdentifier("exit-choose")
         }
         .settingsChrome("Emergency exit")
+        .onboardingWindow($window)
         .modifier(OnchainScreen(model: model))
         .task(id: sample?.id) {
             guard let sample else { return }
             perVtxo = await model.exitEstimate([sample.id])?.exitBroadcastFeeSats
         }
+    }
+
+    /// The explainer's transactions: your biggest VTXO's path, else a round's usual four.
+    nonisolated static func explained(_ sample: VtxoModel?) -> Int {
+        sample.map { Int($0.exitDepth) }.flatMap { $0 > 0 ? $0 : nil } ?? 4
     }
 
     private func fact(_ icon: String, _ title: String, _ line: String, last: Bool = false) -> some View {
@@ -136,7 +146,7 @@ struct ExitChooseView: View {
                 haptics.play(.light)
                 settings.open(.exitReview(selection.map(\.id)))
             }
-            .buttonStyle(SettingsActionStyle())
+            .buttonStyle(SettingsActionStyle(wrap: true))
             // All waits for every VTXO's classification, so it never freezes one it would leave out.
             .disabled(selection.isEmpty || model.locked || all && !ExitEconomics.classified(vtxos, costs: costs))
             .accessibilityIdentifier("exit-review")
@@ -203,12 +213,12 @@ struct ExitChooseView: View {
     /// The total, the fee estimate and what it means for your on-chain funds.
     @ViewBuilder private func summary(_ money: ExitMoney) -> some View {
             VStack(spacing: 0) {
-                SettingsDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
+                ExitDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
                     selection.count.formatted() + " · " + L10n.plural("{n} transactions", count: Int($0.txsToBroadcast), locale: language)
                 } ?? selection.count.formatted(), numeric: true)
-                SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
-                SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
-                SettingsDetailRow(label: L10n.text("You get", locale: language),
+                ExitDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
+                ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
+                ExitDetailRow(label: L10n.text("You get", locale: language),
                                   value: estimate.map { money.about(ExitRules.received(amount: value, claimFee: $0.claimFeeSats)) } ?? money(value),
                                   numeric: true, hairline: false)
             }
@@ -297,29 +307,34 @@ struct ExitReviewView: View {
             ExitHeadline(amount: L10n.text("Exit {amount}", money(amount), locale: language),
                          line: estimate.map { ExitText.count(vtxos: ids.count, transactions: $0.txsToBroadcast, language) })
             if settings.wide {
-                ExitStageView(scene: ExitStageScene(path: model.overview?.tip, server: false))
+                // One branch: the deepest selected VTXO's, not the batch's total.
+                ExitStageView(scene: .explainer(count: UnilateralExitView.explained((model.overview?.vtxos ?? []).filter { ids.contains($0.id) }
+                                                                                       .max { $0.exitDepth < $1.exitDepth })), wide: true)
                     .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
+            } else if let estimate {
+                // The progress picture, previewed as one line: round, transactions, coin, dial, destination.
+                ExitPathRail(transactions: Int(estimate.txsToBroadcast), several: ids.count > 1, delta: model.overview?.exitDelta ?? 144)
             }
         } trailing: {
             if let quote {
                 VStack(spacing: 0) {
                     if let fee = quote.fee, let chainFee = quote.chainFee {
-                        SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
-                        SettingsDetailRow(label: L10n.text("Paid from", locale: language),
+                        ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
+                        ExitDetailRow(label: L10n.text("Paid from", locale: language),
                                           value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language))
-                        SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
+                        ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
                         if let delta = model.overview?.exitDelta, let estimate {
                             // One block per transaction along a path at most, then the timelock.
-                            SettingsDetailRow(label: L10n.text("Claimable", locale: language),
+                            ExitDetailRow(label: L10n.text("Claimable", locale: language),
                                               value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language))
                         }
                         if let rate = quote.feeRate {
-                            SettingsDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
+                            ExitDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
                         }
-                        SettingsDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false)
+                        ExitDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false)
                     } else {
-                        SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language))
-                        SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
+                        ExitDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language))
+                        ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
                     }
                 }
                 .padding(.top, 22)
@@ -343,7 +358,7 @@ struct ExitReviewView: View {
         } footer: {
             if quote == nil && model.estimateFallback == nil && !model.busy && !model.loading && reviewed {
                 Button(L10n.text("Review again", locale: language)) { Task { await review() } }
-                    .buttonStyle(SettingsActionStyle())
+                    .buttonStyle(SettingsActionStyle(wrap: true))
                     .accessibilityIdentifier("exit-review-again")
             } else {
                 SendHoldButton(amount: money(amount), enabled: quote != nil && !model.busy, title: "Hold to start exit",

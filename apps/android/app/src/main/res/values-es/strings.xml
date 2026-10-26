@@ -51,7 +51,6 @@
   <string name="gt_e18835ef2f6c8558">"Permitir acceso a la cámara"</string>
   <string name="gt_8074d363626518da">"Permite el acceso a la cámara en Ajustes para escanear un código QR de pago."</string>
   <string name="gt_a56781b3d9389819">"Ya en cadena"</string>
-  <string name="gt_f616c5c046b30446">"Ya enviada por otra salida · %1$s de %2$s"</string>
   <string name="gt_0463c102e0af14e7">"Ya enviada por otra persona · %1$s de %2$s"</string>
   <string name="gt_35d9cc8868d28953">"Ya gastado"</string>
   <string name="gt_49e96d7cdf58069c">"Importe"</string>
@@ -70,7 +69,6 @@
   <string name="gt_a4ae750b610e875e">"Anclaje"</string>
   <string name="gt_94c45bc285c9613e">"Ancla + comisión de %1$s · %2$s de %3$s"</string>
   <string name="gt_15ea390b9d935697">"Hay otro pago de Lightning en curso. Inténtalo de nuevo cuando termine."</string>
-  <string name="gt_aa8f23bda4bd9ea8">"Otra salida de tu ronda ya envió esta, con su propia comisión. Tú no la pagas."</string>
   <string name="gt_c4e9b3d10877c72c">"Otra billetera"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Cualquiera con este teléfono podría ver tu frase. Configura un bloqueo de pantalla en Ajustes para protegerla."</string>
   <string name="gt_0d04bfeb7d64b71c">"Aplicación"</string>
@@ -869,6 +867,7 @@
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
   <string name="gt_a0348c11ea886849">"Optimizada"</string>
   <string name="gt_4c48892477df67f4">"Opcional. Solo te escribimos cuando tu bitcoin te necesita."</string>
+  <string name="gt_329eddee92986d1b">"Monedas de otras personas en esta ronda"</string>
   <string name="gt_6201f81787adfaf8">"Monedas de otras personas en esta ronda"</string>
   <string name="gt_f893fab7e39f5540">"Si no, Android puede pausar Noah y los pagos podrían dejar de llegar."</string>
   <string name="gt_3619cf0b90923a4b">"Saliente"</string>
@@ -1108,7 +1107,6 @@
   <string name="gt_b8ed5279e897be5d">"Enviando…"</string>
   <string name="gt_6ae9defa2627d65e">"Envía el siguiente paso de tu salida o sube la comisión de un paso que se ha atascado. Las comisiones salen de tus bitcoins en cadena. Noah también lo hace por su cuenta, incluso en segundo plano cuando el sistema lo permite."</string>
   <string name="gt_c16bc82bf1f04ede">"Enviado"</string>
-  <string name="gt_168d6498bc4dd449">"Enviada por otra salida"</string>
   <string name="gt_7d162c4a2f308b74">"Enviada por otra persona"</string>
   <string name="gt_4e7201c7b8985a98">"Enviado a"</string>
   <string name="gt_21cfd8fdcf01d5a0">"Enviado a %1$s"</string>
@@ -1121,7 +1119,6 @@
   <string name="gt_0682d833fd5c9126">"Compartir registros de la aplicación"</string>
   <string name="gt_483ffbdd70c9c49f">"Compartir lugar"</string>
   <string name="gt_959aab0a1caf37f5">"Los registros compartidos nunca incluyen tu frase ni tus claves."</string>
-  <string name="gt_19942b3712d1c4f7">"Las transacciones compartidas se envían y pagan una vez."</string>
   <string name="gt_331207ee9863d023">"Se comparte con el destinatario"</string>
   <string name="gt_ae71ba566c676006">"Tiendas"</string>
   <string name="gt_c57d4ecc83b7a2c7">"Resumen breve"</string>
@@ -1385,7 +1382,6 @@
   <string name="gt_0c6da2b7449f5e54">"Espera a que termine la operación actual de la billetera antes de cambiar el punto de acceso."</string>
   <string name="gt_99c1ee35d68e7feb">"Espera a que la billetera esté lista y luego actualiza."</string>
   <string name="gt_6e293a8c009e0011">"En espera"</string>
-  <string name="gt_788630716af6ccc2">"Esperando un bloque"</string>
   <string name="gt_7d231cd69ef53307">"Esperando un bloque con espacio"</string>
   <string name="gt_2571c46e541d8f87">"Esperando el bloque %1$s"</string>
   <string name="gt_13f480745fda01b8">"Esperando el bloque %1$s · %2$s de %3$s"</string>
@@ -1450,10 +1446,6 @@
     <item quantity="one">"Tus bitcoins están en cadena, bloqueados durante %1$s bloque. El bloqueo da tiempo a Ark para detener un VTXO que ya se gastó."</item>
     <item quantity="other">"Tus bitcoins están en cadena, bloqueados durante %1$s bloques. El bloqueo da tiempo a Ark para detener un VTXO que ya se gastó."</item>
   </plurals>
-  <plurals name="gt_b5ead457183af288">
-    <item quantity="one">"Tus bitcoins están al final de un camino de %1$s transacción en el árbol de la ronda. La transacción de la ronda ya está en cadena."</item>
-    <item quantity="other">"Tus bitcoins están al final de un camino de %1$s transacciones en el árbol de la ronda. La transacción de la ronda ya está en cadena."</item>
-  </plurals>
   <string name="gt_8074a7762dd1f578">"Tu correo actual se mantiene hasta que se verifique el nuevo."</string>
   <string name="gt_886bc67a71fe0f83">"Tu correo es solo para alertas urgentes sobre tu billetera."</string>
   <string name="gt_2c6b2e253c01fb2e">"Tu nombre"</string>
@@ -1487,7 +1479,6 @@
   <string name="gt_a243d97c7f2bce8f">"se abre en %1$s"</string>
   <string name="gt_df384ae97c77ad30">"pagos"</string>
   <string name="gt_0b3b5f22beeeb37c">"empezando por la raíz"</string>
-  <string name="gt_a97b0931730e83fb">"ronda"</string>
   <string name="gt_aba77215629ab11a">"sats"</string>
   <string name="gt_8df031c0c5f7d4a1">"sats cada vez"</string>
   <string name="gt_8010319770964fc8">"enviada por otra persona"</string>
@@ -1519,8 +1510,6 @@
   <string name="gt_643409a7df643204">"%1$s · comisiones ~%2$s"</string>
   <string name="gt_ac5913769f9a4809">"%1$s · en Ark"</string>
   <string name="gt_59d264482aee8976">"%1$s · parte de %2$s para %3$s salidas"</string>
-  <string name="gt_59b0959cf216d9ed">"%1$s · quedan %2$s"</string>
-  <string name="gt_2a17da5ea4c34a20">"%1$s · %2$s compartidos con tus otras salidas"</string>
   <string name="gt_d8c81b717fe6d90e">"Tipo de cambio de %1$s no disponible"</string>
   <string name="gt_d4f415cb72b11142">"%1$s · %2$s. Tus otras copias de seguridad se conservan."</string>
   <string name="gt_d10a2288d770c6b9">"%1$s a las %2$s"</string>
@@ -1565,7 +1554,6 @@
     <item quantity="one">"Una salida está por detrás de la altura actual de la cadena. Avánzala para ponerla al día; esto también puede enviar transacciones de salida."</item>
     <item quantity="other">"%1$s salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida."</item>
   </plurals>
-  <string name="gt_8338b13e065297c7">"%1$s salidas de una ronda: %2$s transacciones, no %3$s. Las compartidas se envían y pagan una vez."</string>
   <string name="gt_068deca46a360c34">"%1$s h"</string>
   <plurals name="gt_e2f49aad27ca4b0f">
     <item quantity="one">"%1$s hora"</item>
@@ -1575,7 +1563,6 @@
     <item quantity="one">"%1$s en curso"</item>
     <item quantity="other">"%1$s en curso"</item>
   </plurals>
-  <string name="gt_d63d7964a22d1b92">"%1$s en curso · %2$s listas para reclamar"</string>
   <plurals name="gt_d51f3a84c3df479a">
     <item quantity="one">"%1$s más por enviar"</item>
     <item quantity="other">"%1$s más por enviar"</item>
