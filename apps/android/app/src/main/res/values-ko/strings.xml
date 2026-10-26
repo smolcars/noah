@@ -20,7 +20,6 @@
   <string name="gt_aa21f22bf633b009">"작업에 실패했습니다. 입력 내용과 연결 상태를 확인한 후 다시 시도하세요."</string>
   <string name="gt_92340695899bd2d8">"활성"</string>
   <string name="gt_38da1505ca837328">"활동"</string>
-  <string name="gt_c0a85ce487304e8b">"실제 수수료"</string>
   <string name="gt_f7c8b432caa9e1b4">"실제 수수료 확정 대기 중"</string>
   <string name="gt_a301e27dce0ce4cd">"실제 온체인 수수료"</string>
   <string name="gt_9fd728c66c9a256b">"추가"</string>
@@ -249,7 +248,6 @@
   <string name="gt_bc1dbb36faac6cf7">"곧 네이티브 앱에서 제공됩니다."</string>
   <string name="gt_22a970d2e5b1cc23">"완료"</string>
   <string name="gt_eebdd24a77d9ad32">"확인"</string>
-  <string name="gt_a55c4ed2db28a403">"결제 확인"</string>
   <string name="gt_5dfa99a6fa762317">"확인 수"</string>
   <string name="gt_fe00b67b6dd1143f">"확정됨"</string>
   <string name="gt_617a8f15d57215f3">"블록 %1$s에서 확정됨"</string>
@@ -873,7 +871,6 @@
   <string name="gt_a0145d18401ff94f">"Ark 잔액에서 결제돼요."</string>
   <string name="gt_5dc01c1c6bc76383">"온체인 비트코인에서 지불해요."</string>
   <string name="gt_17cceb4191297e74">"라이트닝으로 결제했어요. 상대의 비밀값이 결제 증명이에요."</string>
-  <string name="gt_aa7a72fd611ec542">"결제 방식"</string>
   <string name="gt_f3380f7b44bd70af">"붙여넣기"</string>
   <string name="gt_2b0c0a6b85adb58c">"정확히 12개 또는 24개의 단어를 붙여 넣으세요. 기존 입력 내용은 그대로 유지됩니다."</string>
   <string name="gt_f012547b9f87dbeb">"결제 요청 붙여넣기"</string>
@@ -885,7 +882,6 @@
   <string name="gt_046aa79048e8f8a5">"라이트닝으로 결제 중"</string>
   <string name="gt_fef5813efef1e50a">"%1$s sat/vB 지불 중 · 블록 %2$s 대기 중"</string>
   <string name="gt_d9c9afd836811e5a">"결제 ID"</string>
-  <string name="gt_3450b635b99ae5ff">"결제 확정됨"</string>
   <string name="gt_17aadc092fe66088">"결제 실패"</string>
   <string name="gt_096045f8f17f3bad">"결제 해시"</string>
   <string name="gt_21e360b26e1793bf">"결제 진행 중"</string>
@@ -1189,7 +1185,6 @@
   <string name="gt_0ac08a81559f95ee">"Esplora 엔드포인트에는 인증 정보를 포함할 수 없습니다."</string>
   <string name="gt_96100ca2d23b8821">"Esplora 엔드포인트가 다른 Bitcoin 네트워크용입니다."</string>
   <string name="gt_9dc2f0b60de257af">"Lightning 결제를 받지 못했습니다. 새 결제 요청을 만들고 다시 시도해 주세요."</string>
-  <string name="gt_c58153172e51db2e">"실제 수수료는 아직 확인할 수 없습니다. %1$s"</string>
   <string name="gt_f663d0d5c263a46c">"Ark에 입금되는 금액이 최소 금액보다 적습니다. 입금 금액을 늘리세요."</string>
   <string name="gt_1f7124b49af4bb0c">"금액 또는 수수료가 변경되었습니다. 결제 내용을 다시 확인하세요."</string>
   <string name="gt_d99fbad70ce6933e">"필요한 금액은 달라질 수 있습니다."</string>
@@ -1293,7 +1288,6 @@
   <string name="gt_857d95d67fba62e3">"온체인 지갑에서 출금되는 총액"</string>
   <string name="gt_34c9675f6162513f">"Touch ID"</string>
   <string name="gt_be8c6227042336e7">"거래 ID"</string>
-  <string name="gt_321e1df45aa6a9a3">"거래 크기"</string>
   <string name="gt_3e5136fd4b11c0dd">"거래"</string>
   <string name="gt_1caf0748e40a818e">"이미 온체인에 있는 트랜잭션은 그대로 남아요. VTXO는 지갑에 남아 있고 다시 출금할 수 있어요."</string>
   <string name="gt_a6cab9282f16f215">"트랜잭션 (루트부터)"</string>

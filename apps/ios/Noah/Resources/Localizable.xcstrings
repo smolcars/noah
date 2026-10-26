@@ -685,42 +685,6 @@
         }
       }
     },
-    "Actual fee": {
-      "comment": "GT gt_c0a85ce487304e8b; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actual fee"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comisión real"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実際の手数料"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실제 수수료"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Faktisk avgift"
-          }
-        }
-      }
-    },
     "Actual fee pending": {
       "comment": "GT gt_f7c8b432caa9e1b4; arguments: none",
       "extractionState": "manual",
@@ -8829,42 +8793,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bekräfta"
-          }
-        }
-      }
-    },
-    "Confirm payment": {
-      "comment": "GT gt_a55c4ed2db28a403; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirm payment"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmar pago"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払いを確定"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결제 확인"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bekräfta betalning"
           }
         }
       }
@@ -30913,42 +30841,6 @@
         }
       }
     },
-    "Paid via": {
-      "comment": "GT gt_aa7a72fd611ec542; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paid via"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pagado mediante"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払い方法"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결제 방식"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Betald via"
-          }
-        }
-      }
-    },
     "Paste": {
       "comment": "GT gt_f3380f7b44bd70af; arguments: none",
       "extractionState": "manual",
@@ -31341,42 +31233,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Betalnings-ID"
-          }
-        }
-      }
-    },
-    "Payment confirmed": {
-      "comment": "GT gt_3450b635b99ae5ff; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Payment confirmed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pago confirmado"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支払い確認済み"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결제 확정됨"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Betalning bekräftad"
           }
         }
       }
@@ -42193,42 +42049,6 @@
         }
       }
     },
-    "The actual fee is not yet available. {nativeValue1}": {
-      "comment": "GT gt_c58153172e51db2e; arguments: nativeValue1",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The actual fee is not yet available. %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La comisión real aún no está disponible. %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実際の手数料はまだ確認できません。%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실제 수수료는 아직 확인할 수 없습니다. %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den faktiska avgiften är inte tillgänglig än. %1$@"
-          }
-        }
-      }
-    },
     "The amount Ark receives is below its minimum. Increase the boarding amount.": {
       "comment": "GT gt_f663d0d5c263a46c; arguments: none",
       "extractionState": "manual",
@@ -45885,42 +45705,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transaktions-ID"
-          }
-        }
-      }
-    },
-    "Transaction size": {
-      "comment": "GT gt_321e1df45aa6a9a3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transaction size"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tamaño de la transacción"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "トランザクションのサイズ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "거래 크기"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transaktionsstorlek"
           }
         }
       }

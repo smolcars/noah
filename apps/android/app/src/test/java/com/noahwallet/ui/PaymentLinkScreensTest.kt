@@ -130,10 +130,10 @@ class PaymentLinkScreensTest {
         }
         fun open() {
             compose.onNodeWithTag("recurring-review-pay").performClick()
-            compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("send-confirm")).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("send-hold")).fetchSemanticsNodes().isNotEmpty() }
         }
         fun closed() = compose.waitUntil(5_000) {
-            compose.onAllNodes(androidx.compose.ui.test.hasTestTag("send-confirm")).fetchSemanticsNodes().isEmpty() && app.openReviews.intValue == 0
+            compose.onAllNodes(androidx.compose.ui.test.hasTestTag("send-hold")).fetchSemanticsNodes().isEmpty() && app.openReviews.intValue == 0
         }
         mount()
         assertTrue("before review", accepts(send))
@@ -143,13 +143,13 @@ class PaymentLinkScreensTest {
         compose.waitUntil(5_000) { app.openReviews.intValue == 1 }
         assertFalse(accepts(send))
         held.complete(Unit)
-        compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("send-confirm")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("send-hold")).fetchSemanticsNodes().isNotEmpty() }
         world.beforeQuote = {}
         // Open: two links in a row leave the sheet as it is.
         assertFalse(accepts(send)); assertFalse(accepts(send, "lightning:lnurlp://example.com/two"))
-        compose.onNodeWithText("Confirm payment").assertIsDisplayed()
+        compose.onNodeWithTag("send-review-title").assertIsDisplayed()
         // The sheet's own Back.
-        compose.onNodeWithTag("send-review-back").performClick(); closed()
+        compose.onNodeWithTag("send-back").performClick(); closed()
         assertTrue(accepts(send))
         // The system dismissing the sheet: back, a cancelled predictive back that keeps it, then a completed one.
         open()

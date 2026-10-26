@@ -121,9 +121,10 @@ class AdaptiveLayoutDeviceTest {
             show("recurring-editor") { com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, null) {} }
             val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(
                 read = { null }, write = {}, reservation = { error("Gallery never submits payments") }))
-            show("send-confirm") { SendConfirmation(
-                com.noahwallet.send.SendPayment("ark1" + "q".repeat(180), "ark", 12345),
-                com.noahwallet.send.SendQuote(12345, 5, 12350), controller, {}, {}) }
+            show("send-approval") { com.noahwallet.ui.onboarding.OnboardingFrame(null) { com.noahwallet.ui.send.SendApproval(
+                SendPresentation(com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") }, { error("Gallery never quotes") }, {})),
+                com.noahwallet.send.SendPayment("ark1" + "q".repeat(180), "ark", 12345), com.noahwallet.send.SendQuote(12345, 5, 12350),
+                com.noahwallet.ui.send.SendFixtures.env(), com.noahwallet.ui.send.SendActions(), paying = false, cancel = {}) {} } }
             show("dialog") { WalletAlertDialog({}, { TextButton({}) { Text("Confirm") } },
                 title = { Text("Confirm payment") }, text = { Text("Layout verification ".repeat(60)) }) }
             show("debug-tools", chrome = false) { com.noahwallet.ui.onboarding.OnboardingFrame(null) { DebugPage(model, SettingsNav(null, {}, {}, {}, {})) } }

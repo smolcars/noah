@@ -20,7 +20,6 @@
   <string name="gt_aa21f22bf633b009">"La acción falló. Revisa los datos y la conexión antes de volver a intentarlo."</string>
   <string name="gt_92340695899bd2d8">"Activo"</string>
   <string name="gt_38da1505ca837328">"Actividad"</string>
-  <string name="gt_c0a85ce487304e8b">"Comisión real"</string>
   <string name="gt_f7c8b432caa9e1b4">"Comisión real pendiente de determinar"</string>
   <string name="gt_a301e27dce0ce4cd">"Comisión real en cadena"</string>
   <string name="gt_9fd728c66c9a256b">"Añadir"</string>
@@ -249,7 +248,6 @@
   <string name="gt_bc1dbb36faac6cf7">"Próximamente en la aplicación nativa."</string>
   <string name="gt_22a970d2e5b1cc23">"Completado"</string>
   <string name="gt_eebdd24a77d9ad32">"Confirmar"</string>
-  <string name="gt_a55c4ed2db28a403">"Confirmar pago"</string>
   <string name="gt_5dfa99a6fa762317">"Confirmaciones"</string>
   <string name="gt_fe00b67b6dd1143f">"Confirmado"</string>
   <string name="gt_617a8f15d57215f3">"Confirmada en el bloque %1$s"</string>
@@ -873,7 +871,6 @@
   <string name="gt_a0145d18401ff94f">"Se paga con tu saldo de Ark."</string>
   <string name="gt_5dc01c1c6bc76383">"Pagadas con tus bitcoins en cadena."</string>
   <string name="gt_17cceb4191297e74">"Pagado por Lightning. Su secreto es tu prueba de pago."</string>
-  <string name="gt_aa7a72fd611ec542">"Pagado mediante"</string>
   <string name="gt_f3380f7b44bd70af">"Pegar"</string>
   <string name="gt_2b0c0a6b85adb58c">"Pega exactamente 12 o 24 palabras. No se ha sustituido el texto que has introducido."</string>
   <string name="gt_f012547b9f87dbeb">"Pegar solicitud de pago"</string>
@@ -885,7 +882,6 @@
   <string name="gt_046aa79048e8f8a5">"Pagando por Lightning"</string>
   <string name="gt_fef5813efef1e50a">"Pagando %1$s sat/vB · esperando el bloque %2$s"</string>
   <string name="gt_d9c9afd836811e5a">"ID del pago"</string>
-  <string name="gt_3450b635b99ae5ff">"Pago confirmado"</string>
   <string name="gt_17aadc092fe66088">"El pago falló"</string>
   <string name="gt_096045f8f17f3bad">"Hash del pago"</string>
   <string name="gt_21e360b26e1793bf">"Pago en curso"</string>
@@ -1189,7 +1185,6 @@
   <string name="gt_0ac08a81559f95ee">"El punto de acceso de Esplora no puede incluir credenciales."</string>
   <string name="gt_96100ca2d23b8821">"El punto de acceso de Esplora corresponde a otra red Bitcoin."</string>
   <string name="gt_9dc2f0b60de257af">"No se pudo recibir el pago Lightning. Genera una nueva solicitud de pago e inténtalo de nuevo."</string>
-  <string name="gt_c58153172e51db2e">"La comisión real aún no está disponible. %1$s"</string>
   <string name="gt_f663d0d5c263a46c">"El importe que recibe Ark es inferior al mínimo requerido. Aumenta el importe del depósito."</string>
   <string name="gt_1f7124b49af4bb0c">"El importe o la comisión han cambiado. Revisa el pago de nuevo."</string>
   <string name="gt_d99fbad70ce6933e">"El importe necesario puede variar."</string>
@@ -1293,7 +1288,6 @@
   <string name="gt_857d95d67fba62e3">"Total que sale de la billetera en cadena"</string>
   <string name="gt_34c9675f6162513f">"Touch ID"</string>
   <string name="gt_be8c6227042336e7">"ID de transacción"</string>
-  <string name="gt_321e1df45aa6a9a3">"Tamaño de la transacción"</string>
   <string name="gt_3e5136fd4b11c0dd">"Transacciones"</string>
   <string name="gt_1caf0748e40a818e">"Las transacciones que ya están en cadena se quedan ahí. Tu VTXO sigue en tu billetera y puede salir de nuevo."</string>
   <string name="gt_a6cab9282f16f215">"Transacciones, desde la raíz"</string>

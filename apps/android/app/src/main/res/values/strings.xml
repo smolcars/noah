@@ -20,7 +20,6 @@
   <string name="gt_aa21f22bf633b009">"Action failed. Check your input and connection before trying again."</string>
   <string name="gt_92340695899bd2d8">"Active"</string>
   <string name="gt_38da1505ca837328">"Activity"</string>
-  <string name="gt_c0a85ce487304e8b">"Actual fee"</string>
   <string name="gt_f7c8b432caa9e1b4">"Actual fee pending"</string>
   <string name="gt_a301e27dce0ce4cd">"Actual onchain fee"</string>
   <string name="gt_9fd728c66c9a256b">"Add"</string>
@@ -249,7 +248,6 @@
   <string name="gt_bc1dbb36faac6cf7">"Coming soon in the native app."</string>
   <string name="gt_22a970d2e5b1cc23">"Completed"</string>
   <string name="gt_eebdd24a77d9ad32">"Confirm"</string>
-  <string name="gt_a55c4ed2db28a403">"Confirm payment"</string>
   <string name="gt_5dfa99a6fa762317">"Confirmations"</string>
   <string name="gt_fe00b67b6dd1143f">"Confirmed"</string>
   <string name="gt_617a8f15d57215f3">"Confirmed at block %1$s"</string>
@@ -873,7 +871,6 @@
   <string name="gt_a0145d18401ff94f">"Paid from your Ark balance."</string>
   <string name="gt_5dc01c1c6bc76383">"Paid from your on-chain bitcoin."</string>
   <string name="gt_17cceb4191297e74">"Paid over Lightning. Their secret is your proof of payment."</string>
-  <string name="gt_aa7a72fd611ec542">"Paid via"</string>
   <string name="gt_f3380f7b44bd70af">"Paste"</string>
   <string name="gt_2b0c0a6b85adb58c">"Paste exactly 12 or 24 words. Your entries haven\'t been replaced."</string>
   <string name="gt_f012547b9f87dbeb">"Paste payment request"</string>
@@ -885,7 +882,6 @@
   <string name="gt_046aa79048e8f8a5">"Paying over Lightning"</string>
   <string name="gt_fef5813efef1e50a">"Paying %1$s sat/vB · waiting for block %2$s"</string>
   <string name="gt_d9c9afd836811e5a">"Payment ID"</string>
-  <string name="gt_3450b635b99ae5ff">"Payment confirmed"</string>
   <string name="gt_17aadc092fe66088">"Payment failed"</string>
   <string name="gt_096045f8f17f3bad">"Payment hash"</string>
   <string name="gt_21e360b26e1793bf">"Payment in progress"</string>
@@ -1189,7 +1185,6 @@
   <string name="gt_0ac08a81559f95ee">"The Esplora endpoint cannot include credentials."</string>
   <string name="gt_96100ca2d23b8821">"The Esplora endpoint is for a different Bitcoin network."</string>
   <string name="gt_9dc2f0b60de257af">"The Lightning payment could not be received. Generate a new payment request and try again."</string>
-  <string name="gt_c58153172e51db2e">"The actual fee is not yet available. %1$s"</string>
   <string name="gt_f663d0d5c263a46c">"The amount Ark receives is below its minimum. Increase the boarding amount."</string>
   <string name="gt_1f7124b49af4bb0c">"The amount or fee changed. Review the payment again."</string>
   <string name="gt_d99fbad70ce6933e">"The amount required may vary."</string>
@@ -1293,7 +1288,6 @@
   <string name="gt_857d95d67fba62e3">"Total leaving onchain wallet"</string>
   <string name="gt_34c9675f6162513f">"Touch ID"</string>
   <string name="gt_be8c6227042336e7">"Transaction ID"</string>
-  <string name="gt_321e1df45aa6a9a3">"Transaction size"</string>
   <string name="gt_3e5136fd4b11c0dd">"Transactions"</string>
   <string name="gt_1caf0748e40a818e">"Transactions already on-chain stay there. Your VTXO stays in your wallet and can exit again."</string>
   <string name="gt_a6cab9282f16f215">"Transactions, root first"</string>

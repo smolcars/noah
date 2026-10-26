@@ -6,8 +6,13 @@
     "ko",
     "sv"
   ],
+<<<<<<< HEAD
   "catalogEntries": 1474,
   "sourceKeys": 1506,
+=======
+  "catalogEntries": 1461,
+  "sourceKeys": 1492,
+>>>>>>> 4adf2d275 (Android: recurring Review and pay on the redesigned Send)
   "coverage": {
     "ios": {
       "used": [
@@ -1382,7 +1387,6 @@
         "Action failed. Check your input and connection before trying again.",
         "Active",
         "Activity",
-        "Actual fee",
         "Actual fee pending",
         "Actual onchain fee",
         "Add",
@@ -1591,7 +1595,6 @@
         "Collapsed",
         "Completed",
         "Confirm",
-        "Confirm payment",
         "Confirmations",
         "Confirmed",
         "Confirmed at block {nativeValue1}",
@@ -2139,7 +2142,6 @@
         "Paid from your Ark balance.",
         "Paid from your on-chain bitcoin.",
         "Paid over Lightning. Their secret is your proof of payment.",
-        "Paid via",
         "Paste",
         "Paste exactly 12 or 24 words. Your entries haven't been replaced.",
         "Pause",
@@ -2150,7 +2152,6 @@
         "Paying over Lightning",
         "Paying {rate} sat/vB · waiting for block {height}",
         "Payment ID",
-        "Payment confirmed",
         "Payment failed",
         "Payment hash",
         "Payment in progress",
@@ -2158,7 +2159,6 @@
         "Payment not sent",
         "Payment preimage",
         "Payment request",
-        "Payment sent",
         "Payment status could not be saved. Check status again after restarting Noah.",
         "Payment status unavailable",
         "Payment submitted",
@@ -2203,8 +2203,6 @@
         "Received",
         "Received on",
         "Recent",
-        "Recipient amount pending",
-        "Recipient receives about {nativeValue1} sats",
         "Recipient verified",
         "Recorded",
         "Recorded at",
@@ -2422,7 +2420,6 @@
         "The Esplora endpoint cannot include credentials.",
         "The Esplora endpoint is for a different Bitcoin network.",
         "The Lightning payment could not be received. Generate a new payment request and try again.",
-        "The actual fee is not yet available. {nativeValue1}",
         "The amount Ark receives is below its minimum. Increase the boarding amount.",
         "The amount or fee changed. Review the payment again.",
         "The amount required may vary.",
@@ -2512,7 +2509,6 @@
         "Total (reviewed coins)",
         "Total leaving onchain wallet",
         "Transaction ID",
-        "Transaction size",
         "Transactions",
         "Transactions already on-chain stay there. Your VTXO stays in your wallet and can exit again.",
         "Transactions, root first",

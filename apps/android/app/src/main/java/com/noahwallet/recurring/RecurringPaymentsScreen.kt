@@ -1,5 +1,6 @@
 package com.noahwallet.recurring
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,8 +24,11 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.noahwallet.BuildConfig
 import com.noahwallet.localization.tr
 import com.noahwallet.localization.trPlural
+import com.noahwallet.send.SendController
+import com.noahwallet.send.SendModel
 import com.noahwallet.ui.*
 import com.noahwallet.ui.activity.ActivityType
 import com.noahwallet.ui.activity.DetailRow
@@ -32,7 +36,14 @@ import com.noahwallet.ui.activity.ValueKind
 import com.noahwallet.ui.activity.short
 import com.noahwallet.ui.home.HomeType
 import com.noahwallet.ui.onboarding.LocalPalette
+import com.noahwallet.ui.onboarding.OnboardingFrame
+import com.noahwallet.ui.onboarding.OnboardingSheet
 import com.noahwallet.ui.onboarding.rememberHaptics
+import com.noahwallet.ui.send.SendActions
+import com.noahwallet.ui.send.SendApproval
+import com.noahwallet.ui.send.SendEnv
+import com.noahwallet.ui.send.SendMotion
+import com.noahwallet.ui.send.SendRoute
 import com.noahwallet.ui.settings.*
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -160,7 +171,8 @@ private fun EmptyRecurring(enabled: Boolean, create: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executor: RecurringExecutor = RecurringRuntime.shared(LocalContext.current).executor) {
+internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executor: RecurringExecutor = RecurringRuntime.shared(LocalContext.current).executor,
+                            approve: suspend (RecurringExecutor.Review) -> Unit = RecurringRuntime.shared(LocalContext.current).let { runtime -> { runtime.executeInForeground(manual = true, approval = it) } }) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val haptics = rememberHaptics()
@@ -252,16 +264,51 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executo
             onConfirm = { close(); act(resumed) { executor.overrideAndResume(s.id, true) } })
     }
     review?.let { item ->
-        // Today's manual approval: Send's confirmation and outcome, unchanged.
-        WalletModalBottomSheet(onDismissRequest = { if (!executor.controller.locked) review = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-            if (executor.controller.locked) SendOutcome(executor.controller, app) { act {
+        // A run that returns after this sheet was replaced never closes the new one.
+        ApprovalSheet(app, item, executor.controller, close = { if (review === item) review = null }, reload = { act { executor.reload() } },
+            pay = { finished -> act { try { approve(item) } finally { finished() } } },
+            done = { act {
                 executor.controller.acknowledge()
                 if (!executor.controller.locked) { review = null; executor.reload() }
-            } }
-            else SendConfirmation(item.payment, item.quote, executor.controller, confirm = { act {
-                RecurringRuntime.shared(context).executeInForeground(manual = true, approval = item)
-                if (!executor.controller.locked) review = null
-            } }, cancel = { review = null })
+            } })
+    }
+}
+
+/**
+ * The manual approval (iOS `RecurringPaymentsView.approval`): Send's review, then Sending and the result. Holding to send
+ * runs [pay] (today's foreground run with this approval), which calls back once that run returns; a run that leaves no
+ * payment in the controller closes the sheet. While paying or holding a payment only Done or Close leaves, and leaving an
+ * unresolved result only closes the sheet: the attempt and the send lock stay as they are.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ApprovalSheet(app: AppModel, item: RecurringExecutor.Review, controller: SendController, close: () -> Unit, reload: () -> Unit,
+                          pay: (finished: () -> Unit) -> Unit, done: () -> Unit) {
+    val presentation = remember(item) { SendPresentation(SendModel(controller, BuildConfig.APP_VARIANT,
+        app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend)) }
+    val refund = rememberSendProgress(presentation, app.session::movements)
+    val scope = rememberCoroutineScope()
+    val locked = controller.locked || presentation.submitting
+    val currentLocked by rememberUpdatedState(locked)
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { !currentLocked || it != SheetValue.Hidden })
+    val env = SendEnv(app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier), BuildConfig.APP_VARIANT,
+        app.server.state.lightningAddress?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }, history = app.history.transactions, refund = refund,
+        variant = BuildConfig.APP_VARIANT)
+    val actions = SendActions(done = done, leave = close, checkStatus = { scope.launch { controller.checkStatus() } },
+        startOver = { close(); reload() }, leaveUnresolved = true)
+    // The review's own colour edge to edge, as Home's payment sheet does.
+    MaterialTheme(MaterialTheme.colorScheme.copy(surfaceContainerLow = LocalPalette.current.background)) {
+        OnboardingSheet({ if (!locked) close() }, sheet, padded = false) {
+            OnboardingFrame(null) {
+                SendApproval(presentation, item.payment, item.quote, env, actions, paying = presentation.submitting, cancel = close) {
+                    if (!controller.locked && !presentation.submitting) {
+                        presentation.motion = SendMotion(SendRoute.of(item.payment), SystemClock.elapsedRealtime())
+                        presentation.hapticsAt = 0L
+                        presentation.submitting = true
+                        pay { presentation.submitting = false; if (!controller.locked) close() }
+                    }
+                }
+            }
         }
     }
 }

@@ -83,6 +83,8 @@ class SendActions(
     val leave: () -> Unit = {},
     val checkStatus: () -> Unit = {},
     val startOver: () -> Unit = {},
+    /** The host has no tab bar to leave by (the recurring approval sheet): unresolved results offer Close ([leave]) too. */
+    val leaveUnresolved: Boolean = false,
 )
 
 /** One screen of the flow. Sending covers the motion and every ending. */
@@ -191,6 +193,35 @@ internal fun SendContent(presentation: SendPresentation, env: SendEnv, actions: 
         }
     }
 }
+
+/**
+ * A recurring payment's manual approval (iOS `RecurringPaymentsView.approval`): the executor's reviewed [payment] and
+ * [quote] on Send's review, then Sending and the result once the controller holds the payment. [confirm] hands the
+ * hold to the recurring executor, which submits through the same controller; [paying] is true until that run returns.
+ * Back is [cancel]. Must sit inside [OnboardingFrame].
+ */
+@Composable
+internal fun SendApproval(presentation: SendPresentation, payment: SendPayment, quote: SendQuote, env: SendEnv, actions: SendActions,
+                          paying: Boolean, cancel: () -> Unit, confirm: () -> Unit) {
+    val controller = presentation.model.controller
+    val reduceMotion = LocalReduceMotion.current
+    val shift = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.roundToPx() }
+    AnimatedContent(controller.locked, Modifier.fillMaxSize(), label = "send-approval", transitionSpec = {
+        if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+        else (fadeIn(NoahTokens.Motion.snappy()) + slideInHorizontally(NoahTokens.Motion.snappy()) { shift }) togetherWith fadeOut(tween(120))
+    }) { sending ->
+        if (sending) SendingStep(presentation, env, actions, reviewed = payment)
+        else ReviewPanes(quote.amount, SendWhoRules.of(payment.destination, payment.method, env.ownDomain), payment.rail(), payment.source, quote, payment, env,
+            backEnabled = !paying, back = cancel, notes = {
+                reviewNote(null, quote, env, null)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = LocalPalette.current.muted) }
+                controller.message?.let { ErrorLine(it) }
+            }) {
+            HoldToSend(formatted(quote.amount, env), enabled = !paying, sending = paying, modifier = Modifier.padding(bottom = 6.dp), onConfirm = confirm)
+        }
+    }
+}
+
+private fun SendPayment.rail() = when (SendRoute.of(this)) { SendRoute.ark -> SendRail.ark; SendRoute.lightning -> SendRail.lightning; else -> SendRail.onchain }
 
 private fun formatted(sats: Long, env: SendEnv) = BitcoinAmount.format(sats, env.unit, env.locale)
 
@@ -567,18 +598,34 @@ private fun SourceStep(presentation: SendPresentation, env: SendEnv) {
 private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
     val model = presentation.model
     val controller = model.controller
-    val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scope = presentation.viewModelScope
     val quote = model.quote
     val payment = model.payment
     val ready = (model.showReview || controller.locked) && quote != null && payment != null
-    val rail = model.progress.selectedRail
     val amount = quote?.amount ?: model.sats
-    val who = SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain)
+    ReviewPanes(amount, SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain), model.progress.selectedRail, model.source,
+        quote, payment, env, backEnabled = !model.busy, back = model::back, notes = {
+            reviewNote(model, quote, env, presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = LocalPalette.current.muted) }
+            model.error?.let { ErrorLine(it, model) }
+            controller.message?.let { ErrorLine(it) }
+        }) {
+        if (ready) HoldToSend(formatted(amount, env), enabled = !controller.locked, sending = controller.locked, modifier = Modifier.padding(bottom = 6.dp)) {
+            presentation.confirm(payment!!, quote!!)
+        } else SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-continue"), enabled = !model.busy) {
+            haptics.light(); scope.launch { model.continueStage() }
+        }
+    }
+}
+
+/** The review's layout: "Send ₿X", who it goes to, the rows, then [notes] and [action] (Hold to send) at the foot. */
+@Composable
+private fun ReviewPanes(amount: Long, who: SendWho, rail: SendRail?, source: SendSource?, quote: SendQuote?, payment: SendPayment?, env: SendEnv,
+                        backEnabled: Boolean, back: () -> Unit, notes: @Composable ColumnScope.() -> Unit, action: @Composable ColumnScope.() -> Unit) {
+    val palette = LocalPalette.current
     val tabletop = LocalPose.current is OnboardingPose.Tabletop
-    val rows = @Composable { ReviewRows(model, quote, payment, rail, env, if (tabletop) 16.dp else 24.dp) }
-    StepPanes(nav = { Back(!model.busy) { model.back() }; Spacer(Modifier.weight(1f)) }, leadingCentred = false, trailingAt = Alignment.Bottom, leading = {
+    val rows = @Composable { ReviewRows(source, quote, payment, rail, env, if (tabletop) 16.dp else 24.dp) }
+    StepPanes(nav = { Back(backEnabled, back); Spacer(Modifier.weight(1f)) }, leadingCentred = false, trailingAt = Alignment.Bottom, leading = {
         Text(tr("Send {amount}", formatted(amount, env)), Modifier.padding(top = 18.dp).semantics { heading() }.testTag("send-review-title"), style = SendType.big, color = palette.foreground)
         Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             WhoAvatar(who, 36.dp, SendType.initial.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)))
@@ -587,25 +634,19 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
         if (tabletop) rows()
     }, trailing = {
         if (!tabletop) rows()
-        reviewNote(model, quote, env, presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = palette.muted) }
-        model.error?.let { ErrorLine(it, model) }
-        controller.message?.let { ErrorLine(it) }
+        notes()
     }, bottom = {
         Spacer(Modifier.height(24.dp))
-        if (ready) HoldToSend(formatted(amount, env), enabled = !controller.locked, sending = controller.locked, modifier = Modifier.padding(bottom = 6.dp)) {
-            presentation.confirm(payment!!, quote!!)
-        } else SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-continue"), enabled = !model.busy) {
-            haptics.light(); scope.launch { model.continueStage() }
-        }
+        action()
     })
 }
 
 @Composable
-private fun ReviewRows(model: SendModel, quote: SendQuote?, payment: SendPayment?, rail: SendRail?, env: SendEnv, top: Dp) {
+private fun ReviewRows(source: SendSource?, quote: SendQuote?, payment: SendPayment?, rail: SendRail?, env: SendEnv, top: Dp) {
         // Every row puts its label above its value at large text sizes rather than cutting either off.
         Column(Modifier.padding(top = top)) {
             if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), wraps = true)
-            if (rail != null) ValueRow(tr("Arrives"), arrives(rail, model.source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
+            if (rail != null) ValueRow(tr("Arrives"), arrives(rail, source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
             if (quote != null) {
                 ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark, wraps = true)
                 payment?.source?.let { ValueRow(tr("From"), tr(it.label), wraps = true) }
@@ -626,11 +667,11 @@ internal fun arrives(rail: SendRail, source: SendSource?, needed: Long): Pair<St
     }
 }
 
-/** At most one line of fine print, today's notes first: checkpoint, invoice amount, sweep, estimate. */
+/** At most one line of fine print, today's notes first: checkpoint, invoice amount, sweep, estimate. [model] is null for a recurring approval (no typed amount). */
 @Composable
-private fun reviewNote(model: SendModel, quote: SendQuote?, env: SendEnv, typedBefore: Long?): String? = when {
+private fun reviewNote(model: SendModel?, quote: SendQuote?, env: SendEnv, typedBefore: Long?): String? = when {
     quote?.checkpoint != null -> tr("An existing Lightning payment will be checked. No new payment will be created.")
-    model.parsed.amount != null && typedBefore != null && typedBefore > 0 && typedBefore != quote?.amount ->
+    model?.parsed?.amount != null && typedBefore != null && typedBefore > 0 && typedBefore != quote?.amount ->
         tr("The invoice sets the amount to {amount}", formatted(model.parsed.amount!!.toLong(), env))
     !quote?.vtxoIDs.isNullOrEmpty() -> tr("The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.")
     quote?.approximate == true -> tr("The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed.")
@@ -639,8 +680,9 @@ private fun reviewNote(model: SendModel, quote: SendQuote?, env: SendEnv, typedB
 
 // Sending and results
 
+/** [reviewed]: the payment just confirmed, until the controller has saved its attempt. */
 @Composable
-private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: SendActions) {
+private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: SendActions, reviewed: SendPayment? = presentation.model.payment) {
     val model = presentation.model
     val controller = model.controller
     val palette = LocalPalette.current
@@ -649,7 +691,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val pose = LocalPose.current
     val attempt = controller.attempt
     val receipt = attempt?.alreadyPaid ?: attempt?.receipt
-    val payment = attempt?.payment ?: model.payment
+    val payment = attempt?.payment ?: reviewed
     val route = payment?.let(SendRoute::of) ?: presentation.motion?.route ?: SendRoute.ark
     // A live motion runs on the wall clock (so pose changes resume it); otherwise show the ending's last frame.
     val live = presentation.motion?.takeIf { it.route == route }
@@ -714,8 +756,9 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         val doneShown = resultShown && ending in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent, SendEnding.refunded,
             SendEnding.failed, SendEnding.notSent, SendEnding.alreadyPaid, SendEnding.pending)
         // Today's broadcast retry can't be acknowledged, and the phone hides the tab bar: Leave goes back with the
-        // attempt and the send lock exactly as they are.
-        if (doneShown && receipt?.broadcastRetryPending == true) SendPill(tr("Close"),
+        // attempt and the send lock exactly as they are. A host without a tab bar offers the same on every unresolved result.
+        val unresolved = resultShown && actions.leaveUnresolved && ending in setOf(SendEnding.unknown, SendEnding.unavailable)
+        if (doneShown && receipt?.broadcastRetryPending == true || unresolved) SendPill(tr("Close"),
             Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }) {
             haptics.light(); actions.leave()
         } else if (doneShown) SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) },
@@ -766,7 +809,7 @@ internal fun ResultArea(ending: SendEnding, controller: SendController, attempt:
     val scope = rememberCoroutineScope()
     var overrideStep by remember { mutableIntStateOf(0) }
     val payment = attempt?.payment
-    val rail = payment?.let { when (SendRoute.of(it)) { SendRoute.ark -> SendRail.ark; SendRoute.lightning -> SendRail.lightning; else -> SendRail.onchain } }
+    val rail = payment?.rail()
     fun copy(label: String, value: String) {
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value)); haptics.success()
     }

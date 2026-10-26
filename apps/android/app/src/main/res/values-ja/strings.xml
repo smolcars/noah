@@ -20,7 +20,6 @@
   <string name="gt_aa21f22bf633b009">"操作に失敗しました。入力内容と接続状況を確認してから再試行してください。"</string>
   <string name="gt_92340695899bd2d8">"有効"</string>
   <string name="gt_38da1505ca837328">"アクティビティ"</string>
-  <string name="gt_c0a85ce487304e8b">"実際の手数料"</string>
   <string name="gt_f7c8b432caa9e1b4">"実際の手数料は未確定"</string>
   <string name="gt_a301e27dce0ce4cd">"実際のオンチェーン手数料"</string>
   <string name="gt_9fd728c66c9a256b">"追加"</string>
@@ -249,7 +248,6 @@
   <string name="gt_bc1dbb36faac6cf7">"ネイティブアプリで近日公開予定。"</string>
   <string name="gt_22a970d2e5b1cc23">"完了"</string>
   <string name="gt_eebdd24a77d9ad32">"確定"</string>
-  <string name="gt_a55c4ed2db28a403">"支払いを確定"</string>
   <string name="gt_5dfa99a6fa762317">"承認数"</string>
   <string name="gt_fe00b67b6dd1143f">"確認済み"</string>
   <string name="gt_617a8f15d57215f3">"ブロック%1$sで確認済み"</string>
@@ -873,7 +871,6 @@
   <string name="gt_a0145d18401ff94f">"Ark残高から支払われます。"</string>
   <string name="gt_5dc01c1c6bc76383">"オンチェーンのビットコインから支払います。"</string>
   <string name="gt_17cceb4191297e74">"Lightningで支払いました。相手のシークレットが支払いの証明になります。"</string>
-  <string name="gt_aa7a72fd611ec542">"支払い方法"</string>
   <string name="gt_f3380f7b44bd70af">"貼り付け"</string>
   <string name="gt_2b0c0a6b85adb58c">"12語または24語ちょうどを貼り付けてください。入力内容は変更されていません。"</string>
   <string name="gt_f012547b9f87dbeb">"支払いリクエストを貼り付け"</string>
@@ -885,7 +882,6 @@
   <string name="gt_046aa79048e8f8a5">"Lightningで支払い中"</string>
   <string name="gt_fef5813efef1e50a">"%1$s sat/vBで支払い中 · ブロック %2$s を待っています"</string>
   <string name="gt_d9c9afd836811e5a">"支払いID"</string>
-  <string name="gt_3450b635b99ae5ff">"支払い確認済み"</string>
   <string name="gt_17aadc092fe66088">"支払いに失敗しました"</string>
   <string name="gt_096045f8f17f3bad">"支払いハッシュ"</string>
   <string name="gt_21e360b26e1793bf">"支払い処理中"</string>
@@ -1189,7 +1185,6 @@
   <string name="gt_0ac08a81559f95ee">"Esploraエンドポイントに認証情報は含められません。"</string>
   <string name="gt_96100ca2d23b8821">"Esploraエンドポイントが別のBitcoinネットワーク用です。"</string>
   <string name="gt_9dc2f0b60de257af">"Lightning支払いを受け取れませんでした。新しい支払いリクエストを作成して再試行してください。"</string>
-  <string name="gt_c58153172e51db2e">"実際の手数料はまだ確認できません。%1$s"</string>
   <string name="gt_f663d0d5c263a46c">"Arkが受け取る金額が最低額を下回っています。Arkへの入金額を増やしてください。"</string>
   <string name="gt_1f7124b49af4bb0c">"金額または手数料が変更されました。支払い内容を再確認してください。"</string>
   <string name="gt_d99fbad70ce6933e">"必要額は変動する場合があります。"</string>
@@ -1293,7 +1288,6 @@
   <string name="gt_857d95d67fba62e3">"オンチェーンウォレットからの出金合計"</string>
   <string name="gt_34c9675f6162513f">"Touch ID"</string>
   <string name="gt_be8c6227042336e7">"取引ID"</string>
-  <string name="gt_321e1df45aa6a9a3">"トランザクションのサイズ"</string>
   <string name="gt_3e5136fd4b11c0dd">"トランザクション"</string>
   <string name="gt_1caf0748e40a818e">"すでにオンチェーンにあるトランザクションはそのまま残ります。VTXOはウォレットに残り、再び出金できます。"</string>
   <string name="gt_a6cab9282f16f215">"トランザクション (ルートから)"</string>
