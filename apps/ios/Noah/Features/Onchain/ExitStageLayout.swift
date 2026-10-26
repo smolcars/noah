@@ -205,8 +205,8 @@ enum ExitStageLabels {
             } else {
                 placed += alone
             }
-        } else if var single = skipped.first, !clash(single.top, single.top + lineHeight, trailing: false, margin: 1) {
-            single.bottom = single.top + lineHeight
+        } else if let single = skipped.first, !clash(single.top, single.bottom, trailing: false, margin: 1) {
+            // A lone block gets a second chance with a tighter margin, at its whole wrapped height.
             placed.append(single)
         }
         return placed

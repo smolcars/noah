@@ -127,6 +127,18 @@ struct ExitStageTests {
                                             .init(y: 112, lines: [.init(text: "2")], priority: 1, block: 2),
                                             .init(y: 140, lines: [.init(text: "3")], priority: 1, block: 3)], lineHeight: 14, scale: 1) { "\($0)–\($1)" }
         #expect(Self.texts(folded).contains("1–3") && !Self.overlapping(folded))
+        // A lone block that wrapped to two lines gets its second chance at its whole height, so its second
+        // line never lands on the label below it.
+        let lone = ExitStageLabels.place([.init(y: 100, lines: [.init(text: "next")], priority: 4),
+                                          .init(y: 150, lines: [.init(text: "The round,"), .init(text: "already on Bitcoin")], priority: 2),
+                                          .init(y: 125, lines: [.init(text: "Block 921 346"), .init(text: "· delad")], priority: 1, block: 1)],
+                                         lineHeight: 14, scale: 1) { "\($0)–\($1)" }
+        #expect(!Self.texts(lone).contains("Block 921 346") && !Self.overlapping(lone))
+        // With room, it's placed whole.
+        let room = ExitStageLabels.place([.init(y: 100, lines: [.init(text: "next")], priority: 4),
+                                          .init(y: 125, lines: [.init(text: "Block 921 346"), .init(text: "· delad")], priority: 1, block: 1)],
+                                         lineHeight: 14, scale: 1) { "\($0)–\($1)" }
+        #expect(room.first { $0.block == 1 }.map { $0.bottom - $0.top } == 28 && !Self.overlapping(room))
     }
 
     @Test func eachStateSaysWhatItWaitsFor() {
