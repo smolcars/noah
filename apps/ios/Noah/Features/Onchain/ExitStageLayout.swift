@@ -195,8 +195,6 @@ struct ExitPulse: Equatable, Identifiable {
     var id: String
     var kind: Kind
     var center: CGPoint
-    /// Stale: no glow, a grey outline.
-    var grey = false
 
     /// The overlay's side, room for the rings at their widest.
     var extent: CGSize {
