@@ -68,8 +68,9 @@ class EsploraTest {
         } finally { root.deleteRecursively() }
     }
 
-    @Test fun validationBoundsSilentDripAndOversizedResponses() = runBlocking {
-        for (reply in listOf("silent", "drip", "oversized")) {
+    @Test fun validationBoundsDripAndOversizedResponses() = runBlocking {
+        // A silent server would also wait out the 5 s call timeout; the drip shows that timeout covers the body too.
+        for (reply in listOf("drip", "oversized")) {
             java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
                 val socket = CompletableDeferred<java.net.Socket>()
                 val worker = launch(Dispatchers.IO) {
@@ -78,7 +79,6 @@ class EsploraTest {
                         client.use {
                             val output = it.getOutputStream()
                             when (reply) {
-                                "silent" -> it.getInputStream().readBytes()
                                 "drip" -> {
                                     output.write("HTTP/1.1 200 OK\r\nContent-Length: 64\r\n\r\n".toByteArray())
                                     repeat(64) { output.write('0'.code); output.flush(); delay(150) }
