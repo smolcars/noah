@@ -70,15 +70,15 @@ class BtcMapRepositoryTest {
         assertEquals(1, requests); assertFalse(file.exists())
     }
 
-    @Test fun ordinaryFailureWaitsOneSecondBeforeItsOnlyRetry() = runBlocking {
+    @Test fun ordinaryFailureWaitsBeforeItsOnlyRetry() = runBlocking {
         val times = mutableListOf<Long>()
         val repository = BtcMapRepository(File(folder.root, "cache"), { bundle }, { "" }, {
             times += System.nanoTime()
             throw IOException("offline")
-        })
+        }, retryDelay = 50)
         assertTrue(runCatching { repository.sync() }.isFailure)
         assertEquals(2, times.size)
-        assertTrue(times[1] - times[0] >= 1_000_000_000L)
+        assertTrue(times[1] - times[0] >= 50_000_000L)
         assertEquals(BtcMapSnapshot.parse(bundle), repository.load())
     }
 
