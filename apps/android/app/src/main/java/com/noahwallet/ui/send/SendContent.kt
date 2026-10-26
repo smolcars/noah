@@ -249,8 +249,20 @@ private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Bool
     when (pose) {
         OnboardingPose.Compact -> Column(Modifier.fillMaxSize().imePadding().padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 16.dp)) {
             navRow()
-            Column(Modifier.fillMaxWidth().widthIn(max = 520.dp).align(Alignment.CenterHorizontally), content = leading)
-            stacked(Modifier.fillMaxWidth().widthIn(max = 520.dp).weight(1f).align(Alignment.CenterHorizontally))
+            val column = Modifier.fillMaxWidth().widthIn(max = 520.dp).align(Alignment.CenterHorizontally)
+            // A step with an action at the foot (Hold to send, Done, Close) scrolls as one page when it doesn't fit, so a
+            // short window or large text can never squeeze the action out under [leading]; when it fits, nothing moves.
+            if (bottom != null) BoxWithConstraints(column.weight(1f)) {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight)) {
+                    Column(Modifier.fillMaxWidth(), content = leading)
+                    Column(Modifier.fillMaxWidth(), content = trailing)
+                    Spacer(Modifier.weight(1f))
+                    Column(Modifier.fillMaxWidth(), content = bottom)
+                }
+            } else {
+                Column(column, content = leading)
+                stacked(column.weight(1f))
+            }
         }
         is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
             Box(Modifier.width(pose.start).fillMaxHeight().padding(start = 34.dp, end = 34.dp, top = 14.dp, bottom = 24.dp), contentAlignment = Alignment.TopCenter) {
