@@ -329,8 +329,8 @@ internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modi
     HoldToConfirm(tr("Hold to send"), tr("Sending"), tr("Send {amount}", amount), tr("Send"), enabled, sending, modifier, "send-hold", onConfirm)
 
 /**
- * A pill's label that wraps between words: shrunk (to half its size at most) only as far as its longest word needs to fit
- * a line, so no word breaks in two ("blockkedj-an").
+ * A label (a pill's, an amount) that wraps between words: shrunk (to half its size at most) only as far as its longest word
+ * needs to fit a line, so no word breaks in two ("blockkedj-an").
  */
 @Composable
 internal fun WrappingLabel(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier = Modifier) {

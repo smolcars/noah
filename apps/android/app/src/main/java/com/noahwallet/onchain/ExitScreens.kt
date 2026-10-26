@@ -36,6 +36,7 @@ import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.OnboardingPose
 import com.noahwallet.ui.onboarding.rememberHaptics
 import com.noahwallet.ui.send.SendPill
+import com.noahwallet.ui.send.WrappingLabel
 import com.noahwallet.ui.settings.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -380,14 +381,16 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     }
 }
 
-/** A total row (prototype `.br.tot`): a line above, the label in the foreground. */
+/** A total row (prototype `.br.tot`): a line above, the label in the foreground; the value goes under it when both don't fit. */
 @Composable
 internal fun TotalRow(label: String, value: String) {
     val palette = LocalPalette.current
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind { drawRect(palette.foreground, Offset.Zero, Size(size.width, 1.dp.toPx())) }
-        .semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), style = ActivityType.value, color = palette.foreground)
-        Text(value, style = ActivityType.number, color = palette.foreground, maxLines = 1)
+    Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind { drawRect(palette.foreground, Offset.Zero, Size(size.width, 1.dp.toPx())) }
+        .semantics(mergeDescendants = true) {}, contentAlignment = Alignment.CenterStart) {
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, Modifier.padding(end = 12.dp), style = ActivityType.value, color = palette.foreground)
+            Text(value, style = ActivityType.number, color = palette.foreground)
+        }
     }
 }
 
@@ -428,7 +431,7 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
             } else Box(Modifier.size(14.dp, 2.dp).background(palette.muted, RoundedCornerShape(1.dp)))
         }
         Column(Modifier.weight(1f)) {
-            Text(money(vtxo.amount), style = HomeType.amount, color = palette.foreground, maxLines = 1)
+            WrappingLabel(money(vtxo.amount), HomeType.amount.copy(color = palette.foreground))
             Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted)
             if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.small, color = palette.muted)
         }
