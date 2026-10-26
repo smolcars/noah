@@ -58,7 +58,9 @@ import Foundation
     nonisolated static func report(_ body: () async -> Void) async {
         guard let execution = BackgroundReport.execution else { return await body() }
         guard await execution.admitReport() else { return }
-        await body()
+        // Expiry can land after admission; it cancels the work before completing, so a cancelled
+        // report never starts. Later awaits in the report path stop on cancellation themselves.
+        if !Task.isCancelled { await body() }
         await execution.reportEnded()
     }
 

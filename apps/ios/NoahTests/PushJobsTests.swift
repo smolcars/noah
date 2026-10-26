@@ -244,6 +244,20 @@ struct PushJobsTests {
         #expect(recorder.all == ["open", "backup", "completed", "handled"])
     }
 
+    @MainActor @Test func admittedReportDoesNotStartOnceThePushIsCancelled() async throws {
+        let recorder = Recorder()
+        var dependencies = jobs(recorder).dependencies
+        // Expiry cancels the work after the backup settled, before the report's body starts.
+        dependencies.backup = { recorder.add("backup"); withUnsafeCurrentTask { $0?.cancel() } }
+        var completed: [Bool] = []
+        _ = try execute(PushJobs(dependencies: dependencies), allowance: .seconds(60), then: { recorder.add("handled") }) {
+            completed.append($0)
+        }
+        try await waitUntil { !completed.isEmpty }
+        #expect(recorder.all == ["open", "backup", "handled"])
+        #expect(completed == [false])
+    }
+
     actor ReportTransport: ClientTransport {
         var operations: [String] = []
         func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
