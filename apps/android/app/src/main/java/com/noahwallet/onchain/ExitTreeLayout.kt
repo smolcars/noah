@@ -100,7 +100,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             val server = scene.explain || scene.lifting || scene.canceled
             val fit = { item: TreeLabels.Item -> fit(item, geo, measure, server) }
             val labels = TreeLabels.place(items(scene, geo, ys, words), geo.lineHeight, scale, geo.labelTop, geo.labelBottom, fit) { a, b ->
-                words.tr("Blocks {from}–{to}", words.number(a), words.number(b))
+                if (a == b) words.tr("Block {height}", words.number(a)) else words.tr("Blocks {from}–{to}", words.number(a), words.number(b))
             }
             return arrange(scene, geo, ys, lock, labels, server, words, measure, balance, received)
         }

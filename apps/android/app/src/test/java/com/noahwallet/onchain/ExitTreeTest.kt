@@ -11,7 +11,7 @@ class ExitTreeTest {
                       phase: ExitStage.Phase = ExitStage.Phase.bump) = ExitScene(marks.size, phase, marks.toList(), heights)
     private fun geometry(n: Int, width: Float = 412f, height: Float = 300f, scale: Float = 1f) = TreeGeometry(width, height, n, scale, wide = false)
     private fun place(items: List<TreeLabels.Item>, scale: Float = 1f) =
-        TreeLabels.place(items, 14 * scale, scale, 4f, 1_000f, { it.copy(top = 0f) }) { a, b -> "Blocks $a–$b" }
+        TreeLabels.place(items, 14 * scale, scale, 4f, 1_000f, { it.copy(top = 0f) }) { a, b -> if (a == b) "Block $a" else "Blocks $a–$b" }
 
     @Test fun theTreeStandsOnTheGroundWithYourCoinAtTheTop() {
         val geo = geometry(4)
@@ -91,7 +91,9 @@ class ExitTreeTest {
         val coin = TreeLabels.Item(40f, line("Your VTXO"), 3.5f)
         val block = TreeLabels.Item(110f, line("Block 921,346"), 2.2f, blocks = 921_346L..921_346L)
         val placed = place(listOf(block, coin, waiting))
-        assertEquals(listOf("Next block|fee ₿1,215", "Your VTXO"), placed.map { it.key })
+        // The block doesn't fit beside its square under the pill, so it says its height where there's room.
+        assertEquals(listOf("Next block|fee ₿1,215", "Your VTXO", "range"), placed.map { it.key })
+        assertEquals("Block 921346", placed.last().lines.single().text)
         for (a in placed) for (b in placed) if (a !== b) assertTrue("${a.key} overlaps ${b.key}", a.bottom < b.top || b.bottom < a.top)
         // The claim's label is right-aligned beside the stem: it never pushes the column's out.
         val claim = TreeLabels.Item(100f, line("Next block"), 4f, TreeLabels.Pill.orange, x = 300f)

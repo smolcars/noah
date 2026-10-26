@@ -367,9 +367,10 @@ internal object TreeLabels {
     }
 
     /**
-     * [items] placed by priority between [top] and [bottom], none overlapping, each [fit] to its room first. Mined blocks
-     * that don't fit fold, with the older ones placed alone, into one range ([range]) where it fits; a lone one gets a second
-     * chance with a tighter margin.
+     * [items] placed by priority between [top] and [bottom], none overlapping, each [fit] to its room first. A lone mined
+     * block that doesn't fit gets a second chance with a tighter margin; otherwise the blocks that don't fit fold, with every
+     * older one placed alone, into one range ([range]) wherever it fits, the latest too if need be, so every mined block is
+     * in a label and no range leaves one out.
      */
     fun place(items: List<Item>, lineHeight: Float, scale: Float, top: Float, bottom: Float, fit: (Item) -> Item, range: (Long, Long) -> String): List<Item> {
         val placed = mutableListOf<Item>(); val skipped = mutableListOf<Item>()
@@ -384,18 +385,21 @@ internal object TreeLabels {
             val fallback = item.fallbacks.map { span(fit(it)) }.firstOrNull { !clash(it, 3f) }
             if (fallback != null) placed += fallback else if (item.blocks != null) skipped += item
         }
-        if (skipped.size > 1) {
-            // The older blocks fold together, those placed alone too; the latest keeps its own label.
-            val alone = placed.filter { it.blocks != null && it.priority < 2 }
-            placed.removeAll(alone)
-            val folded = skipped + alone
+        if (skipped.size == 1 && !clash(skipped[0], 1f)) placed += skipped.removeAt(0)
+        if (skipped.isEmpty()) return placed
+        // The older blocks fold together, those placed alone too; the latest keeps its own label while the range fits.
+        fun fold(folded: List<Item>): Item? {
             val from = folded.minOf { it.blocks!!.first }; val to = folded.maxOf { it.blocks!!.last }
             val middle = folded.map { it.y }.average().toFloat()
-            val fold = (listOf(middle) + folded.map { it.y }.sortedBy { kotlin.math.abs(it - middle) }).map { y ->
-                span(fit(Item(y, listOf(Line(range(from, to), Tone.strong)), 0f, key = "range")))
-            }.firstOrNull { !clash(it, 3f) }
-            if (fold != null) placed += fold else placed += alone
-        } else skipped.singleOrNull()?.let { if (!clash(it, 1f)) placed += it }
+            val ys = listOf(middle) + (folded.map { it.y } + generateSequence(top) { it + 2 }.takeWhile { it <= bottom }).sortedBy { kotlin.math.abs(it - middle) }
+            val spots = ys.map { y -> span(fit(Item(y, listOf(Line(range(from, to), Tone.strong)), 0f, blocks = from..to, key = "range"))) }
+            return spots.firstOrNull { !clash(it, 3f) } ?: spots.firstOrNull { !clash(it, 1f) }
+        }
+        val alone = placed.filter { it.blocks != null && it.priority < 2 }
+        val latest = placed.filter { it.blocks != null && it.priority >= 2 }
+        placed.removeAll(alone)
+        val range = fold(skipped + alone) ?: run { placed.removeAll(latest); fold(skipped + alone + latest) }
+        if (range != null) placed += range else placed += latest
         return placed
     }
 }

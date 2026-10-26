@@ -57,10 +57,10 @@ class ExitTreeSweepTest {
 
     private var layouts = 0
 
-    /** Lays [scene] out as the picture does (folded to fit) and checks the rule. */
-    private fun check(scene: ExitScene, frame: Frame, words: TreeStrings, what: String, height: Float = frame.height): TreeLayout {
+    /** Lays [scene] out as the picture does (folded to fit, or to [levels] when that's fewer) and checks the rule. */
+    private fun check(scene: ExitScene, frame: Frame, words: TreeStrings, what: String, height: Float = frame.height, levels: Int? = null): TreeLayout {
         val label = "${frame.name}, $what"
-        val cap = TreeGeometry(frame.width, height, 1, frame.scale, false).capacity(if (scene.locked) 1f else 0f)
+        val cap = TreeGeometry(frame.width, height, 1, frame.scale, false).capacity(if (scene.locked) 1f else 0f).let { min(it, levels ?: it) }
         val drawn = scene.fold(if (scene.explain) min(cap, 8) else cap)
         val layout = TreeLayout.of(drawn, frame.width, height, frame.scale, false, words, measure, balance = 18_400, received = 30_738)
         val shapes = layout.shapes
@@ -81,6 +81,11 @@ class ExitTreeSweepTest {
         val geo = layout.geo; val lock = if (drawn.locked && !drawn.claiming) 1f else 0f
         for (j in 1..drawn.n) assertTrue("$label: gap $j", layout.ys[j - 1] - layout.ys[j] >= geo.minimumGap(j, geo.node, geo.coinReserve(lock), docked = drawn.docked, ringed = drawn.ringed) - .01f)
         assertEquals("$label: the real count", scene.n, drawn.count)
+        // Every mined block is in a label: its own, or a range with the others that have none.
+        if (!drawn.explain && !drawn.claiming) for (i in 0 until scene.n) {
+            val height = scene.heights[i]?.takeIf { scene.mined(i) && !(i == scene.n - 1 && scene.locked) } ?: continue
+            assertTrue("$label: block $height has no label (${layout.labels.mapNotNull { it.blocks }})", layout.labels.any { it.blocks?.contains(height) == true })
+        }
         // Every other exit finds a spot here, so none is left out without the overlap check seeing it.
         assertEquals("$label: your other exits", drawn.others.count { it.level in 1 until drawn.n }, layout.siblings.size)
         layouts++
@@ -177,6 +182,17 @@ class ExitTreeSweepTest {
         val layout = check(path(3, 0), small, w, "root waiting")
         val round = layout.labels.firstOrNull { it.lines.any { line -> line.text.contains(w.tr("already on Bitcoin")) } }
         if (round != null && round.lines.size == 1) assertTrue("shrunk to 75 % at least", round.size >= .75f)
+    }
+
+    @Test fun aFoldedRangeCoversEveryBlockWithoutALabel() {
+        // Five of twenty mined in nine levels, two of them stacked: whichever blocks have no label of their own, one range
+        // covers them all, never just the stack's two.
+        for (language in listOf("en", "sv")) for (frame in listOf(phone, small)) for (current in listOf(m.waiting, m.needsFee)) {
+            val w = words(language); val scene = path(20, 5, current)
+            val layout = check(scene, frame, w, "$language, twenty transactions, five mined, $current", levels = 9)
+            assertEquals("${frame.name}: ${layout.scene.spans}", 0..1, layout.scene.spans?.first())
+            for (height in scene.heights.filterNotNull()) assertTrue("${frame.name}, $language: block $height", layout.labels.any { it.blocks?.contains(height) == true })
+        }
     }
 
     @Test fun otherExitsStayInsideAndApart() {
