@@ -3,7 +3,6 @@
 <resources>
   <string name="gt_8a6fa5252a4b7e05">"12 words"</string>
   <string name="gt_fae43771b7367b9c">"24 words"</string>
-  <string name="gt_0d1fa0dfcc9e3821">"6-digit code"</string>
   <string name="gt_93308a413f52ce7d">"A block came without it. Noah pays more when the fee rate rises, so it gets into the next one."</string>
   <string name="gt_1ef4529eb54eae53">"A custom server can see your addresses. Use one you trust."</string>
   <string name="gt_51eedf36dc1a1749">"A payment of %1$s sats for this invoice is already in progress. Do not pay again."</string>
@@ -194,7 +193,6 @@
   <string name="gt_70cc1886428b724b">"Chain status"</string>
   <string name="gt_028afe3eebb92266">"Change amount"</string>
   <string name="gt_ff2ec2618b91b367">"Change email"</string>
-  <string name="gt_dd16e499335d3a53">"Change email address"</string>
   <string name="gt_77a94e1521d6a8e8">"Chat on Telegram"</string>
   <string name="gt_d0e3a822635c961f">"Check Activity for this payment\'s last attempt and ask the recipient whether it arrived."</string>
   <string name="gt_fb7099ad8e818d42">"Check again"</string>
@@ -378,9 +376,7 @@
   <string name="gt_6eea8608c452711b">"Email (optional)"</string>
   <string name="gt_09bf25ef30833633">"Email Address"</string>
   <string name="gt_de101ec2a9081a8b">"Email added"</string>
-  <string name="gt_50d8230c905d564f">"Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them."</string>
   <string name="gt_bdfb1e4f00c73e98">"Email verified"</string>
-  <string name="gt_3a9f176a663d540d">"Emergency Email"</string>
   <string name="gt_b8eea92a324ae5b4">"Emergency exit"</string>
   <string name="gt_4f5556b1b428d358">"Emergency use only. It takes your bitcoin out of Ark without Ark’s server."</string>
   <string name="gt_1cd009ba27e712a8">"Enable wallet authentication"</string>
@@ -916,10 +912,8 @@
   <string name="gt_46d931c1d03b0781">"Places in view"</string>
   <string name="gt_436e61016e26fcb7">"Play"</string>
   <string name="gt_c12ff673ae9836ca">"Playback position"</string>
-  <string name="gt_958e4ccf2953d747">"Please enter a valid email address."</string>
   <string name="gt_813f0164d8d31cd2">"Please open your device settings and allow Noah to run in the background, then continue."</string>
   <string name="gt_de5aa7c10f561635">"Please try again"</string>
-  <string name="gt_4660a983366f7101">"Please wait…"</string>
   <string name="gt_2fc0c524431a9236">"Point"</string>
   <string name="gt_89ff281050e4797e">"Point your camera at a payment QR code."</string>
   <string name="gt_5e4e164840885a18">"Possible related payment in History"</string>
@@ -1025,7 +1019,6 @@
   <string name="gt_fae09a4a2a5c48bb">"Requesting camera access…"</string>
   <string name="gt_4850b174b713d88c">"Required"</string>
   <string name="gt_1f94843777aed851">"Resend"</string>
-  <string name="gt_8bbbb0b609c07e3f">"Resend Code"</string>
   <string name="gt_538931fb28538397">"Resend code in %1$s"</string>
   <string name="gt_daee7606b339f3c3">"Reset"</string>
   <string name="gt_55d67318211dbda2">"Reset registration"</string>
@@ -1044,7 +1037,6 @@
   <string name="gt_a97d32ddb6baca01">"Resumed"</string>
   <string name="gt_942087cc2d41e013">"Retry"</string>
   <string name="gt_ffcac3158ccc4063">"Retry details"</string>
-  <string name="gt_04048ff7f2687457">"Retry registration"</string>
   <string name="gt_aff0766a5290e117">"Review"</string>
   <string name="gt_d4ea61c79c9b77d6">"Review again"</string>
   <string name="gt_25aa0f37b47607b3">"Review and pay"</string>
@@ -1097,7 +1089,6 @@
   <string name="gt_70f58736b63e2c9e">"Select visible"</string>
   <string name="gt_3b18955703b2ebc3">"Selected screenshot"</string>
   <string name="gt_f6f4688ff23d50c6">"Send"</string>
-  <string name="gt_2bd7bfd7b3314b9b">"Send Verification Code"</string>
   <string name="gt_b3080e138c3a73a8">"Send about %1$s here. Exits use it once it confirms."</string>
   <string name="gt_66a5b4090d14cb41">"Send code"</string>
   <string name="gt_dad3741faaf71ced">"Send %1$s"</string>
@@ -1235,7 +1226,6 @@
   <string name="gt_c6e0499eb3d93af4">"The transaction could not be built. No payment was submitted. Review the amount and fee."</string>
   <string name="gt_3fb33246ab2afa02">"The transaction could not be constructed. Nothing was broadcast. Review again."</string>
   <string name="gt_c6dfefbf1de6c02f">"The transactions already on-chain stay there. Your VTXO stays in your wallet and can exit again."</string>
-  <string name="gt_78ddf8691d4b4f75">"The verification code will expire in 10 minutes."</string>
   <string name="gt_fd04d8103140aa83">"The wallet or fees changed, or the quote expired. Review again before confirming."</string>
   <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
   <string name="gt_d05e4b12e63fdf63">"Their receipt unlocks it"</string>
@@ -1375,7 +1365,6 @@
   <string name="gt_3ee75029c70e284c">"Verification code"</string>
   <string name="gt_4f7838402f37674e">"Verified"</string>
   <string name="gt_87672f62ea3f7a51">"Verified %1$s"</string>
-  <string name="gt_9ae9fbbcb1c80ca9">"Verify Email"</string>
   <string name="gt_dd167905de0defca">"Version"</string>
   <string name="gt_a18745121bb8af6d">"Version %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"Via"</string>
@@ -1416,7 +1405,6 @@
   <string name="gt_d761927c2b2aeaf0">"Wallet suspended or replacement pending. Sending is stopped."</string>
   <string name="gt_795e0058d0191f98">"Wallet suspended. Resume your wallet in Settings."</string>
   <string name="gt_6fb08948581619e7">"Ways to pay you"</string>
-  <string name="gt_ebeb067bb53b2c70">"We sent a 6-digit verification code to %1$s"</string>
   <string name="gt_b5a229ac8becc603">"Website"</string>
   <string name="gt_2975132481a7a695">"Weekly"</string>
   <string name="gt_6621249514b7887c">"Welcome back"</string>
@@ -1454,8 +1442,6 @@
     <item quantity="other">"Your bitcoin sits at the end of a path of %1$s transactions in the round’s tree. The round’s own transaction is already on-chain."</item>
   </plurals>
   <string name="gt_8074a7762dd1f578">"Your current email stays until the new one is verified."</string>
-  <string name="gt_7f359127750635a9">"Your current email will stay active until the new email is verified."</string>
-  <string name="gt_28b86cda15decf55">"Your current email, %1$s, will stay active until the new email is verified."</string>
   <string name="gt_886bc67a71fe0f83">"Your email is only for urgent alerts about your wallet."</string>
   <string name="gt_2c6b2e253c01fb2e">"Your name"</string>
   <string name="gt_d9a846242ed7a22f">"Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."</string>

@@ -101,13 +101,12 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     // A payment's VTXO, exit and recurring links, from Activity and Home alike.
     val openPage: (NavKey) -> Unit = { openSettings(it) }
     // Home, Settings, Send, Receive and Activity split the whole window at a fold themselves; every other screen (the
-    // map among them), and Home's email flow, keep one pane.
-    var homeOverlay by rememberSaveable { mutableStateOf<String?>(null) }
+    // map among them) keeps one pane.
     var sendBarHidden by remember { mutableStateOf(false) }
     var activityBarHidden by remember { mutableStateOf(false) }
     val homeVisible = backStack.last() == Destination.Home && (selectedTab == Destination.Home || model.isWalletSuspended)
     val settingsVisible = backStack.last() == SettingsDestination.Settings && selectedTab == Destination.Home
-    val homeOwnsWindow = homeVisible && homeOverlay == null || settingsVisible ||
+    val homeOwnsWindow = homeVisible || settingsVisible ||
         !model.isWalletSuspended && selectedTab in listOf(Destination.Send, Destination.Receive, Destination.History)
     val chrome = LocalWindowChrome.current
     val palette = com.noahwallet.ui.onboarding.noahPalette()
@@ -144,7 +143,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
                     }
                     entry<Destination> { destination ->
                         if (destination == Destination.Home || model.isWalletSuspended) CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
-                            HomeScreen(model, homeOverlay, { homeOverlay = it }, onViewAll = {
+                            HomeScreen(model, onViewAll = {
                                 selectedTab = Destination.History
                             }, onRepeatPayment = repeat, onSettings = openPage, onScan = { backStack.add(QRDestination(true)) },
                                 onBackup = { openSettings(SettingsDestination.Seed) },

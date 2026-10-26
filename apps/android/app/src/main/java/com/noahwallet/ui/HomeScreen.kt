@@ -3,7 +3,6 @@ package com.noahwallet.ui
 import android.app.Activity
 import android.os.SystemClock
 import com.noahwallet.localization.tr
-import androidx.activity.compose.BackHandler
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,11 +28,11 @@ import java.util.Locale
 
 /**
  * Home (docs/native-rewrite/design/home.md): live wallet state into [HomeContent]. Every action links to an
- * existing flow; [overlay] is today's in-place emergency email flow ("email").
+ * existing flow.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, onViewAll: () -> Unit,
+fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
                onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (androidx.navigation3.runtime.NavKey) -> Unit, onScan: () -> Unit, onBackup: () -> Unit = {},
                onProfile: () -> Unit = {}, onRenew: (List<String>) -> Unit = {}, settings: () -> Unit) {
     val appColors = MaterialTheme.colorScheme
@@ -60,11 +59,6 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
                 kotlinx.coroutines.delay(300_000)
             }
         }
-    }
-    if (overlay == "email") {
-        BackHandler { if (!model.busy) onOverlay(null) }
-        EmergencyEmailScreen(model) { onOverlay(null) }
-        return
     }
     val memory = model.homeMemory
     // The first payment's baseline, once per foreground visit: after a refresh that landed since the visit began
@@ -175,7 +169,7 @@ fun HomeScreen(model: AppModel, overlay: String?, onOverlay: (String?) -> Unit, 
                 is HomeRules.Nudge.Renewal -> onRenew(nudge.renew.ids)
                 is HomeRules.Nudge.BackupFailed -> signals.retry()
                 HomeRules.Nudge.BackUp -> onBackup()
-                HomeRules.Nudge.Email -> onOverlay("email")
+                HomeRules.Nudge.Email -> onSettings(SettingsDestination.Email)
                 HomeRules.Nudge.Update -> uri.openUri(HomeRules.updateURL(BuildConfig.APP_VARIANT))
             }
         },

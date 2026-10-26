@@ -2,19 +2,10 @@ package com.noahwallet.ui
 
 import com.noahwallet.ui.WalletAlertDialog
 
-import com.noahwallet.localization.tr
-import android.content.Context
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.togetherWith
 
@@ -90,66 +81,4 @@ private fun onboardingTransition(target: String, back: Boolean, reduceMotion: Bo
     val fadeSpring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<Float>()
     return (androidx.compose.animation.slideInHorizontally(spring) { if (back) -it / 10 else it / 9 } + androidx.compose.animation.fadeIn(fadeSpring)) togetherWith
         (androidx.compose.animation.slideOutHorizontally(spring) { if (back) it / 9 else -it / 12 } + androidx.compose.animation.fadeOut(fadeSpring))
-}
-
-@Composable
-fun EmergencyEmailScreen(model: AppModel, onContinue: () -> Unit) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var code by rememberSaveable { mutableStateOf("") }
-    var sent by rememberSaveable { mutableStateOf(false) }
-    var registered by remember { mutableStateOf(false) }
-    val focus = LocalFocusManager.current
-    val presentation = EmergencyEmailPresentation(model.server.state.isEmailVerified == true, model.server.state.emailAddress)
-    val context = LocalContext.current
-    fun register() = model.action("Failed to register with server. Please try again.") {
-        model.server.ensureRegistered(); registered = true
-    }
-    LaunchedEffect(Unit) { register() }
-    fun send() {
-        if (!email.trim().matches(Regex("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))) {
-            model.error = "Please enter a valid email address."; return
-        }
-        focus.clearFocus()
-        model.action("Failed to send verification code. Please try again.", useServerMessage = true) {
-            email = email.trim(); code = ""
-            if (model.server.sendEmail(email)) onContinue() else sent = true
-        }
-    }
-    NoahForm("Emergency Email") {
-        if (sent) {
-            Text(tr("We sent a 6-digit verification code to $email"))
-            OutlinedTextField(code, { code = it.filter { c -> c in '0'..'9' }.take(6) },
-                label = { Text(tr("6-digit code")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                modifier = Modifier.fillMaxWidth().testTag("verification-code-input"), enabled = !model.busy, singleLine = true)
-            NoahButton("Verify Email", code.length == 6 && !model.busy) {
-                focus.clearFocus()
-                model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
-                    try { model.server.verifyEmail(code, email); onContinue() } finally { code = "" }
-                }
-            }
-            NoahButton("Resend Code", !model.busy, secondary = true) { send() }
-            TextButton({ sent = false; code = "" }, enabled = !model.busy) { Text(tr("Change email address")) }
-            Text(tr("The verification code will expire in 10 minutes."), style = MaterialTheme.typography.bodySmall)
-        } else {
-            Text(presentation.explanation(context))
-            OutlinedTextField(email, { email = it }, label = { Text(tr("Email Address")) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth().testTag("email-address-input"),
-                enabled = !model.busy, singleLine = true)
-            if (!registered) NoahButton("Retry registration", !model.busy, secondary = true) { register() }
-            NoahButton(if (model.busy) "Please wait…" else "Send Verification Code", registered && email.isNotBlank() && !model.busy) { send() }
-        }
-    }
-}
-
-internal data class EmergencyEmailPresentation(val verified: Boolean, val email: String?) {
-    fun explanation(context: Context): String {
-        if (verified) {
-            if (!email.isNullOrEmpty()) return com.noahwallet.localization.L10n.text(context,
-                "Your current email, {email}, will stay active until the new email is verified.", email)
-            return com.noahwallet.localization.L10n.text(context,
-                "Your current email will stay active until the new email is verified.")
-        }
-        return com.noahwallet.localization.L10n.text(context,
-            "Email is optional. Noah uses it only for urgent wallet safety messages, such as when your VTXOs are close to expiring and you need to come online to refresh them.")
-    }
 }

@@ -1,6 +1,5 @@
 package com.noahwallet.ui
 
-import com.noahwallet.localization.L10n
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.ui.settings.limitedProfileName
 import com.noahwallet.ui.settings.preferenceName
@@ -38,15 +37,5 @@ class AccountParityTest {
             assertEquals("Español", preferenceName(Preference.language, "es", Locale.US))
             assertEquals("Satoshis", preferenceName(Preference.unit, "sats", Locale.US))
         } finally { Locale.setDefault(previous) }
-    }
-
-    @Test fun replacementKeepsOldAddress() {
-        // Settings only: onboarding has its own optional email step.
-        val replacement = EmergencyEmailPresentation(true, "old@example.com")
-        assertEquals("Your current email, old@example.com, will stay active until the new email is verified.", replacement.explanation(context))
-        assertEquals("Your current email will stay active until the new email is verified.", replacement.copy(email = null).explanation(context))
-        assertTrue(replacement.copy(verified = false).explanation(context).startsWith("Email is optional."))
-        context.getSharedPreferences("gt_store", 0).edit().putString(LegacyLocale.key, "es").commit()
-        assertEquals(L10n.text(context, "Your current email, {email}, will stay active until the new email is verified.", "old@example.com"), replacement.explanation(context))
     }
 }

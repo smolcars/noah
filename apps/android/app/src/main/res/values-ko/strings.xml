@@ -3,7 +3,6 @@
 <resources>
   <string name="gt_8a6fa5252a4b7e05">"12개 단어"</string>
   <string name="gt_fae43771b7367b9c">"24개 단어"</string>
-  <string name="gt_0d1fa0dfcc9e3821">"6자리 코드"</string>
   <string name="gt_93308a413f52ce7d">"이 트랜잭션 없이 블록이 생성됐어요. 수수료율이 오르면 Noah가 더 지불해서 다음 블록에 들어가게 해요."</string>
   <string name="gt_1ef4529eb54eae53">"사용자 지정 서버는 내 주소를 볼 수 있어요. 신뢰할 수 있는 서버를 사용하세요."</string>
   <string name="gt_51eedf36dc1a1749">"이 결제 요청서에 대한 %1$s sats 결제가 이미 진행 중입니다. 다시 결제하지 마세요."</string>
@@ -194,7 +193,6 @@
   <string name="gt_70cc1886428b724b">"체인 상태"</string>
   <string name="gt_028afe3eebb92266">"금액 변경"</string>
   <string name="gt_ff2ec2618b91b367">"이메일 변경"</string>
-  <string name="gt_dd16e499335d3a53">"이메일 주소 변경"</string>
   <string name="gt_77a94e1521d6a8e8">"Telegram에서 채팅"</string>
   <string name="gt_d0e3a822635c961f">"활동에서 이 결제의 마지막 시도를 확인하고 받는 사람에게 도착했는지 물어보세요."</string>
   <string name="gt_fb7099ad8e818d42">"다시 확인"</string>
@@ -378,9 +376,7 @@
   <string name="gt_6eea8608c452711b">"이메일(선택 사항)"</string>
   <string name="gt_09bf25ef30833633">"이메일 주소"</string>
   <string name="gt_de101ec2a9081a8b">"이메일 추가됨"</string>
-  <string name="gt_50d8230c905d564f">"이메일 등록은 선택 사항입니다. Noah는 VTXO가 만료 임박 상태여서 온라인에 접속해 갱신해야 하는 경우 등 지갑 안전과 관련된 긴급 안내에만 이메일을 사용합니다."</string>
   <string name="gt_bdfb1e4f00c73e98">"이메일 인증 완료"</string>
-  <string name="gt_3a9f176a663d540d">"긴급 연락용 이메일"</string>
   <string name="gt_b8eea92a324ae5b4">"긴급 출금"</string>
   <string name="gt_4f5556b1b428d358">"긴급 상황에만 쓰세요. Ark 서버 없이 비트코인을 Ark에서 꺼내요."</string>
   <string name="gt_1cd009ba27e712a8">"지갑 인증 활성화"</string>
@@ -916,10 +912,8 @@
   <string name="gt_46d931c1d03b0781">"현재 지도에 표시된 장소"</string>
   <string name="gt_436e61016e26fcb7">"재생"</string>
   <string name="gt_c12ff673ae9836ca">"재생 위치"</string>
-  <string name="gt_958e4ccf2953d747">"유효한 이메일 주소를 입력해 주세요."</string>
   <string name="gt_813f0164d8d31cd2">"기기 설정에서 Noah의 백그라운드 실행을 허용한 후 계속하세요."</string>
   <string name="gt_de5aa7c10f561635">"다시 시도해 주세요"</string>
-  <string name="gt_4660a983366f7101">"잠시 기다려 주세요…"</string>
   <string name="gt_2fc0c524431a9236">"지점"</string>
   <string name="gt_89ff281050e4797e">"카메라를 결제 QR 코드에 맞추세요."</string>
   <string name="gt_5e4e164840885a18">"내역에 관련된 것으로 보이는 결제가 있습니다"</string>
@@ -1025,7 +1019,6 @@
   <string name="gt_fae09a4a2a5c48bb">"카메라 접근 권한 요청 중…"</string>
   <string name="gt_4850b174b713d88c">"필요"</string>
   <string name="gt_1f94843777aed851">"다시 보내기"</string>
-  <string name="gt_8bbbb0b609c07e3f">"코드 다시 보내기"</string>
   <string name="gt_538931fb28538397">"%1$s 후 코드 다시 보내기"</string>
   <string name="gt_daee7606b339f3c3">"초기화"</string>
   <string name="gt_55d67318211dbda2">"등록 초기화"</string>
@@ -1044,7 +1037,6 @@
   <string name="gt_a97d32ddb6baca01">"재개됨"</string>
   <string name="gt_942087cc2d41e013">"다시 시도"</string>
   <string name="gt_ffcac3158ccc4063">"재시도 세부 정보"</string>
-  <string name="gt_04048ff7f2687457">"등록 재시도"</string>
   <string name="gt_aff0766a5290e117">"검토"</string>
   <string name="gt_d4ea61c79c9b77d6">"다시 검토"</string>
   <string name="gt_25aa0f37b47607b3">"확인하고 결제"</string>
@@ -1097,7 +1089,6 @@
   <string name="gt_70f58736b63e2c9e">"표시된 항목 선택"</string>
   <string name="gt_3b18955703b2ebc3">"선택한 화면 캡처"</string>
   <string name="gt_f6f4688ff23d50c6">"보내기"</string>
-  <string name="gt_2bd7bfd7b3314b9b">"인증 코드 보내기"</string>
   <string name="gt_b3080e138c3a73a8">"여기로 약 %1$s을 보내세요. 확정되면 출금에 사용돼요."</string>
   <string name="gt_66a5b4090d14cb41">"코드 보내기"</string>
   <string name="gt_dad3741faaf71ced">"%1$s 보내기"</string>
@@ -1235,7 +1226,6 @@
   <string name="gt_c6e0499eb3d93af4">"거래를 생성하지 못했습니다. 결제는 제출되지 않았습니다. 금액과 수수료를 확인하세요."</string>
   <string name="gt_3fb33246ab2afa02">"거래를 구성하지 못했습니다. 아무것도 전파되지 않았습니다. 다시 검토해 주세요."</string>
   <string name="gt_c6dfefbf1de6c02f">"이미 온체인에 있는 트랜잭션은 그대로 남아요. VTXO는 지갑에 남아 있고 다시 출금할 수 있어요."</string>
-  <string name="gt_78ddf8691d4b4f75">"인증 코드는 10분 후에 만료됩니다."</string>
   <string name="gt_fd04d8103140aa83">"지갑 상태나 수수료가 변경되었거나 견적이 만료되었습니다. 확정하기 전에 다시 검토하세요."</string>
   <string name="gt_be11c0d9d86f778e">"지갑을 복원하는 단어예요."</string>
   <string name="gt_d05e4b12e63fdf63">"상대의 영수증으로 잠금 해제"</string>
@@ -1375,7 +1365,6 @@
   <string name="gt_3ee75029c70e284c">"인증 코드"</string>
   <string name="gt_4f7838402f37674e">"검증됨"</string>
   <string name="gt_87672f62ea3f7a51">"확인일: %1$s"</string>
-  <string name="gt_9ae9fbbcb1c80ca9">"이메일 인증"</string>
   <string name="gt_dd167905de0defca">"버전"</string>
   <string name="gt_a18745121bb8af6d">"버전 %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"경로"</string>
@@ -1416,7 +1405,6 @@
   <string name="gt_d761927c2b2aeaf0">"지갑이 일시 중지되었거나 교체 대기 중입니다. 전송이 중지되었습니다."</string>
   <string name="gt_795e0058d0191f98">"지갑이 일시 중지되었습니다. 설정에서 지갑을 다시 활성화하세요."</string>
   <string name="gt_6fb08948581619e7">"나에게 결제하는 방법"</string>
-  <string name="gt_ebeb067bb53b2c70">"%1$s 주소로 6자리 인증 코드를 보냈습니다"</string>
   <string name="gt_b5a229ac8becc603">"웹사이트"</string>
   <string name="gt_2975132481a7a695">"매주"</string>
   <string name="gt_6621249514b7887c">"다시 오신 것을 환영합니다"</string>
@@ -1454,8 +1442,6 @@
     <item quantity="other">"비트코인은 라운드 트리에서 트랜잭션 %1$s개로 이어진 경로 끝에 있어요. 라운드 자체의 트랜잭션은 이미 온체인이에요."</item>
   </plurals>
   <string name="gt_8074a7762dd1f578">"새 이메일이 인증될 때까지 현재 이메일이 유지돼요."</string>
-  <string name="gt_7f359127750635a9">"새 이메일 인증이 완료될 때까지 기존 이메일이 계속 사용됩니다."</string>
-  <string name="gt_28b86cda15decf55">"새 이메일 인증이 완료될 때까지 기존 이메일(%1$s)이 계속 사용됩니다."</string>
   <string name="gt_886bc67a71fe0f83">"이메일은 지갑에 관한 긴급 알림에만 사용해요."</string>
   <string name="gt_2c6b2e253c01fb2e">"내 이름"</string>
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
