@@ -11,12 +11,13 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [25, 35])
+@Config(sdk = [35])
 class PushNotificationsTest {
     @org.junit.Before fun allowNotifications() {
         org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
     }
-    @Test fun receiptHasSoundLocalizedAmountAndAnAppTapDestination() {
+    // Only the receipt's sound differs before notification channels (API 26).
+    @Test @Config(sdk = [25, 35]) fun receiptHasSoundLocalizedAmountAndAnAppTapDestination() {
         val context = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("gt_store", Context.MODE_PRIVATE).edit()
             .putString(com.noahwallet.services.storage.LegacyLocale.key, "es").commit()

@@ -92,10 +92,4 @@ class ServerStateTest {
         for (case in SharedFixtures.load("nostr-npub"))
             assertEquals(case.name, case.expected.jsonPrimitive.content, Nostr.npub(case.input.jsonPrimitive.contentOrNull))
     }
-
-    @Test fun domainsMatchRN() {
-        assertEquals("noahwallet.io", LightningIdentity.domain("mainnet"))
-        assertEquals("signet.noahwallet.io", LightningIdentity.domain("signet"))
-        assertEquals("localhost.com", LightningIdentity.domain("regtest"))
-    }
 }

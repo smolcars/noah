@@ -59,14 +59,12 @@ class HeadlessEntryPointsTest {
         assertTrue(source("recurring/RecurringRuntime").contains("wallet?.isInitialized != false"))
         assertFalse(code.contains("ensureWalletOpen")); assertFalse(code.contains("ensureOpen"))
     }
-    private fun cachedWidget(path: String? = null) {
+    @Test fun everyWidgetRendersCachedDataWithoutOpeningWallets() {
         val code = source("widgets/NoahWidgetProvider")
         assertTrue(code.contains("WidgetSnapshot.read(prefs)"))
         assertFalse(code.contains("AppServices")); assertFalse(code.contains("WalletSession"))
-        if (path != null) assertTrue(source("widgets/$path").contains("NoahWidgetProvider()"))
+        for (path in listOf("NoahWidgetMainnetProvider", "NoahWidgetSignetProvider", "NoahWidgetRegtestProvider")) {
+            assertTrue(path, source("widgets/$path").contains("NoahWidgetProvider()"))
+        }
     }
-    @Test fun widgetBaseRendersCachedDataWithoutOpeningWallets() = cachedWidget()
-    @Test fun mainnetWidgetOnlyUsesCachedData() = cachedWidget("NoahWidgetMainnetProvider")
-    @Test fun signetWidgetOnlyUsesCachedData() = cachedWidget("NoahWidgetSignetProvider")
-    @Test fun regtestWidgetOnlyUsesCachedData() = cachedWidget("NoahWidgetRegtestProvider")
 }
