@@ -91,6 +91,9 @@ class ExitGalleryTest {
             claimedTo = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg"))
         progress("progress-shared3", f.sharing, others = f.list.map { if (it.id == f.sharing.id) f.sharing else it },
             context = ExitContext(f.tip + 2, 18_400, 144, cancelable = true, sharedFees = 2_430))
+        // Three of your other exits leave yours at one transaction: the third steps further out, like the second.
+        val mine = f.list.first { it.amount == 31_000L }; val twin = f.list.first { it.amount == 24_500L }
+        progress("progress-siblings3", mine, others = listOf(mine, twin, twin.copy(id = twin.id + "b", amount = 15_000), twin.copy(id = twin.id + "c", amount = 12_000)))
         progress("progress-deep", f.deepHero)
         // A 60-transaction path, folded to the levels that fit: the oldest blocks stacked, the rest to send as +N.
         progress("progress-long", f.long, context = ExitContext(f.tip + 25, 18_400, 144, cancelable = true))

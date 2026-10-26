@@ -287,7 +287,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             }
             // Your other exits' coins: at their place, else slid down their branch toward it, else further out.
             val siblings = mutableListOf<Sibling>()
-            for (level in othersAt.keys.sorted()) for ((index, other) in othersAt.getValue(level).take(2).withIndex()) {
+            for (level in othersAt.keys.sorted()) for ((index, other) in othersAt.getValue(level).withIndex()) {
                 val (bx, by) = geo.other(ys, level, index); val group = "sibling$level.$index"
                 val spots = listOf(0f, .45f, .9f).flatMap { shift ->
                     generateSequence(by) { it + 3 }.takeWhile { it <= max(by, ys[level] - 10) }.map { bx - shift * geo.spread to it }.toList()

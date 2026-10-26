@@ -179,6 +179,11 @@ class ExitTreeSweepTest {
         val two = check(path(2, 0, others = listOf(ExitScene.Other(1, 24_500), ExitScene.Other(1, 21_000))), phone, w, "two transactions, two others")
         assertEquals(2, two.siblings.size)
         for (sibling in two.siblings) assertTrue("$sibling", sibling.x - 6 >= 0 && two.ys[sibling.level] + sibling.dy - 6 >= 0)
+        // A third at the same level isn't left out while there's room: it steps further out, like the second.
+        for (frame in listOf(phone, small)) {
+            val others = listOf(ExitScene.Other(1, 24_500), ExitScene.Other(1, 21_000), ExitScene.Other(1, 15_000))
+            assertEquals("three others on ${frame.name}", 3, check(path(2, 0, others = others), frame, w, "two transactions, three others").siblings.size)
+        }
         // At packed levels on a long path, they slide or step out, never onto each other.
         val deep = check(path(20, 12, others = listOf(ExitScene.Other(3, 24_500), ExitScene.Other(4, 21_000))), small, w, "packed others")
         val coins = deep.shapes.filter { it.kind == TreeShape.Kind.sibling }

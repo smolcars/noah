@@ -265,11 +265,14 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
             .map { (dx, l) -> trunk + dx * spread to y - length * l - 3 }
     }
 
-    /** Where your [index]th other exit branching at [level] sits first; it can slide down its branch from there ([TreeLayout]). */
+    /**
+     * Where your [index]th other exit branching at [level] sits first, each further out and higher than the one before; it
+     * can slide down its branch from there ([TreeLayout]).
+     */
     fun other(levels: FloatArray, level: Int, index: Int): Pair<Float, Float> {
         val y = levels.getOrElse(level) { roundY }; val gap = (y - levels.getOrElse(level + 1) { coinY }).coerceAtLeast(12f)
         val first = y - gap * .95f
-        return trunk + (if (index == 0) -1.15f else -2.2f) * spread to maxOf(otherTop, if (index == 0) first else min(y - gap * 1.5f, first - 14))
+        return trunk - (1.15f + 1.05f * index) * spread to maxOf(otherTop, if (index == 0) first else min(y - gap * (1.5f + .55f * (index - 1)), first - 14 * index))
     }
     /** The highest another exit's coin goes: room above its 6 dp radius. */
     val otherTop get() = 6 + 6 * scale
