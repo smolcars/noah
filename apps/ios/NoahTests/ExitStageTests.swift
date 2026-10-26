@@ -158,7 +158,7 @@ struct ExitStageTests {
                     let (g, scene) = ExitStageGeometry.fitting(real, size: size, scale: scale)
                     let painter = ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: Locale(identifier: locale))
                     let still = ExitStageStill(scene), ys = g.levels(still.mined, lock: still.lock)
-                    let shapes = painter.arrange(scene, ys: ys, lock: still.lock, labels: painter.labels(scene, ys: ys)).shapes
+                    let labels = painter.labels(scene, ys: ys), shapes = painter.arrange(scene, ys: ys, lock: still.lock, labels: labels).shapes
                     checked += 1
                     if scene.realCount != real.levels.count || scene.levels.count - 1 > max(g.foldCapacity, real.explain ? 7 : 0) {
                         problems.append("\(device) \(locale) \(note()): drew \(scene.levels.count) of \(scene.realCount)")
@@ -166,6 +166,7 @@ struct ExitStageTests {
                     for level in 1..<ys.count where ys[level - 1] - ys[level] < g.minimumGap(level, side: g.side, reserve: g.coinReserve(still.lock)) - 0.001 {
                         problems.append("\(device) \(locale) \(note()): gap \(level) below its minimum")
                     }
+                    if !Self.coversEveryBlock(labels, real) { problems.append("\(device) \(locale) \(note()): a range undercounts") }
                     for (index, a) in shapes.enumerated() {
                         if !CGRect(origin: .zero, size: size).contains(a.frame) { problems.append("\(device) \(locale) \(note()): \(a.kind) \(a.group) leaves the canvas") }
                         for b in shapes[(index + 1)...] where a.group != b.group && a.overlaps(b) {
@@ -270,6 +271,38 @@ struct ExitStageTests {
         #expect(lockLabels.contains { $0.lines.map(\.text).joined(separator: " ").hasPrefix("Blocks 921,000–") })
         // Paths that fit are drawn as they are.
         #expect(ExitStageGeometry.fitting(Self.mempool(heights: [1, 2, 3, 4], pending: 4, count: 9), size: size, scale: 1.65).scene.folds.isEmpty)
+    }
+
+    /// When a range shows, every block without its own label is in it: the heights shown account for every mined
+    /// transaction (your coin's own, while locked, is the dial's).
+    static func coversEveryBlock(_ labels: [ExitStageLabel], _ real: ExitStageScene) -> Bool {
+        let ranges = labels.compactMap { label in label.first.flatMap { first in label.block.map { first...$0 } } }
+        guard !ranges.isEmpty else { return true }
+        let own = Set(labels.filter { $0.first == nil }.compactMap(\.block))
+        let mined = real.levels.enumerated().compactMap { index, level -> UInt32? in
+            guard case .mined(let height?) = level, !(index == real.levels.count - 1 && (real.locked || real.claiming)) else { return nil }
+            return height
+        }
+        return mined.allSatisfy { height in own.contains(height) || ranges.contains { $0.contains(height) } }
+    }
+
+    /// The folded stack's range covers every block without its own label: on the SE, 20 transactions with 5 in blocks
+    /// read "Blocks 921,346–921,350" (it read 921,346–921,347, the stack alone).
+    @Test func theFoldedRangeCountsEveryBlock() {
+        for scale in [1.0, 1.65] {
+            let scene = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 20)
+            let (g, drawn) = ExitStageGeometry.fitting(scene, size: CGSize(width: 375, height: 236), scale: scale)
+            let labels = Self.painter(g).labels(drawn, ys: g.levels(ExitStageStill(drawn).mined))
+            #expect(Self.coversEveryBlock(labels, scene), "\(scale)")
+            if scale == 1 { #expect(Self.texts(labels).contains("Blocks 921,346–921,350")) }
+        }
+        // Placement on its own: a stack's range takes in the blocks that lost their labels, or no range shows.
+        let placed = ExitStageLabels.place([.init(y: 100, lines: [.init(text: "next")], priority: 4),
+                                            .init(y: 106, lines: [.init(text: "4")], priority: 1, block: 4),
+                                            .init(y: 112, lines: [.init(text: "3")], priority: 1, block: 3),
+                                            .init(y: 150, lines: [.init(text: "1–2")], priority: 2.1, block: 2, first: 1)],
+                                           lineHeight: 14, scale: 1) { "\($0)–\($1)" }
+        #expect(Self.texts(placed).contains("1–4") && !Self.texts(placed).contains("1–2"))
     }
 
     /// Optional elements give way to everything required, in order: amounts first, then your other exits' coins (moved

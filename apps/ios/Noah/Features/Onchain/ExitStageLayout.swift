@@ -45,6 +45,7 @@ struct ExitStageGeometry: Equatable {
     /// What every two drawn elements keep between them.
     static let clearance = 2.0
 
+
     /// The most transactions that can be drawn below your coin with every level at full spacing: 7 pt nodes,
     /// the timelock's dial reserved. A longer path is folded to fit (`ExitStageScene.folded`).
     var nodeCapacity: Int {
@@ -309,26 +310,33 @@ enum ExitStageLabels {
             }
             placed.append(item)
         }
-        if skipped.count > 1 {
-            // The older blocks fold together, those placed on their own too; the latest keeps its own label.
-            let alone = placed.filter { $0.block != nil && $0.priority < 2 }
-            placed.removeAll { $0.block != nil && $0.priority < 2 }
-            let folded = skipped + alone, heights = (folded.compactMap(\.block) + folded.compactMap(\.first)).sorted()
-            let middle = folded.map(\.y).reduce(0, +) / Double(folded.count)
-            let candidates = [middle] + folded.map(\.y).sorted { abs($0 - middle) < abs($1 - middle) }
-            let folds = candidates.map { y in
-                var fold = fit(ExitStageLabel(y: y, lines: [.init(text: range(heights[0], heights[heights.count - 1]), tone: .ink)], priority: 0))
-                span(&fold)
-                return fold
-            }
-            if let fold = folds.first(where: { !clash($0.top, $0.bottom, trailing: false, margin: 3) }) {
-                placed.append(fold)
-            } else {
-                placed += alone
-            }
-        } else if let single = skipped.first, !clash(single.top, single.bottom, trailing: false, margin: 1) {
-            // A lone block gets a second chance with a tighter margin, at its whole wrapped height.
+        // A lone block that didn't fit gets a second chance with a tighter margin, at its whole wrapped height.
+        if skipped.count == 1, let single = skipped.first, !clash(single.top, single.bottom, trailing: false, margin: 1) {
             placed.append(single)
+            skipped = []
+        }
+        if !skipped.isEmpty {
+            // Blocks without a label of their own fold into one range with the older ones that kept theirs and with a
+            // stack's range, so a range always covers every block not labelled on its own; the latest keeps its label.
+            // Where no such range fits, no range shows (a stack's alone would undercount).
+            let before = placed
+            let stack = placed.first { $0.first != nil }
+            let alone = placed.filter { $0.block != nil && $0.first == nil && $0.priority < 2 }
+            placed.removeAll { $0.first != nil || ($0.block != nil && $0.priority < 2) }
+            let folded = skipped + alone + (stack.map { [$0] } ?? [])
+            let heights = (folded.compactMap(\.block) + folded.compactMap(\.first)).sorted()
+            let middle = folded.map(\.y).reduce(0, +) / Double(folded.count)
+            let candidates = (stack.map { [$0.y] } ?? []) + [middle] + folded.map(\.y).sorted { abs($0 - middle) < abs($1 - middle) }
+            var found: ExitStageLabel?
+            if heights.count > 1, heights[0] != heights[heights.count - 1] {
+                let text = range(heights[0], heights[heights.count - 1])
+                for y in candidates {
+                    var fold = fit(ExitStageLabel(y: y, lines: [.init(text: text, tone: .ink)], priority: 0, block: heights[heights.count - 1], first: heights[0]))
+                    span(&fold)
+                    if !clash(fold.top, fold.bottom, trailing: false, margin: 3) { found = fold; break }
+                }
+            }
+            if let found { placed.append(found) } else { placed = before.filter { $0.first == nil } }
         }
         return placed
     }
