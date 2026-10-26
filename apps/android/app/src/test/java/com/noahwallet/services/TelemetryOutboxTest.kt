@@ -53,7 +53,7 @@ class TelemetryOutboxTest {
                 assertEquals(type, pending.envelope.items.single().header.type)
                 assertTrue("Cached submissions must retain the Cached marker", HintUtils.hasType(pending.hint, Cached::class.java))
                 assertFalse("A previous item must not complete this upload", pending.result.isSuccess)
-                assertFalse("Replay must wait for the pending upload", replay.finished.await(150, TimeUnit.MILLISECONDS))
+                assertFalse("Replay must wait for the pending upload", replay.finished.await(50, TimeUnit.MILLISECONDS))
                 assertTrue("The outbox file must survive while upload is pending", replay.cached.exists())
                 if (processDeath && index == dieAt) {
                     // Interrupt replay and discard its transport without delivering an upload result.
