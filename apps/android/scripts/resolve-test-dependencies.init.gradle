@@ -13,8 +13,14 @@ allprojects {
                     'regtestDebugAndroidTestCompileClasspath',
                     'regtestDebugAndroidTestRuntimeClasspath',
                 ].each { name ->
+                    // A renamed or missing classpath is skipped: this must never fail the release build.
+                    def classpath = all.findByName(name)
+                    if (classpath == null) {
+                        logger.warn("resolveTestDependencies: no $name configuration")
+                        return
+                    }
                     // Only downloaded libraries: the app's own variants need AGP's attributes to resolve.
-                    all.getByName(name).incoming.artifactView {
+                    classpath.incoming.artifactView {
                         lenient(true)
                         componentFilter { it instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
                     }.files.files.size().with { count += it }
