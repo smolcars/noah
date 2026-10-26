@@ -370,10 +370,11 @@ struct ExitVtxoRow: View {
                         .foregroundStyle(selectable && uneconomic ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
                     if vtxo.eligible, let detail = refusal?.detail {
                         Text(verbatim: L10n.text(detail, locale: language))
-                            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).lineLimit(2)
+                            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                     }
                 }
-                .lineLimit(1)
+                // The row grows rather than cutting a line short.
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(minHeight: 62)
