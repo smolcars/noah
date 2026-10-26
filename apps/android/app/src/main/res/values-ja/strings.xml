@@ -762,8 +762,8 @@
   <string name="gt_c638d16576dfe156">"有効な支払い方法が見つかりません"</string>
   <string name="gt_57c8529db3e2719a">"いいえ、無効にする"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
-  <string name="gt_b5bdadc7e5c0579d">"Noah Balance"</string>
-  <string name="gt_2910b8ef5d4d95af">"Noah Wallet"</string>
+  <string name="gt_b5bdadc7e5c0579d">"Noah残高"</string>
+  <string name="gt_2910b8ef5d4d95af">"Noahウォレット"</string>
   <string name="gt_51bf7dd8c85b84da">"Noahウォレットの取引エクスポート"</string>
   <string name="gt_518f6fc1d2bea961">"Noahを閉じていても受け取りと更新ができます。"</string>
   <string name="gt_966bc2f318542271">"Noahはまだセキュアストレージを読み取れません。続行するには端末のロックを解除してください。"</string>
@@ -910,7 +910,7 @@
   <string name="gt_21682e0a58f5581b">"オフボード待ち"</string>
   <string name="gt_779dd1993ab4b13c">"保留中のラウンド"</string>
   <string name="gt_5fb55a3f477aee2b">"送金待ち"</string>
-  <string name="gt_f41dbd7482670f0c">"Pending: %1$s"</string>
+  <string name="gt_f41dbd7482670f0c">"保留中：%1$s"</string>
   <string name="gt_dbb6cf817820de0b">"権限が必要です"</string>
   <string name="gt_cbf613fce96573ac">"名前を決める"</string>
   <string name="gt_46d931c1d03b0781">"表示範囲内の場所"</string>
@@ -1357,8 +1357,8 @@
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO ID"</string>
   <plurals name="gt_1c5b6b6468f0c580">
-    <item quantity="one">"VTXO expires: %1$s block"</item>
-    <item quantity="other">"VTXO expires: %1$s blocks"</item>
+    <item quantity="one">"VTXOの有効期限：あと%1$sブロック"</item>
+    <item quantity="other">"VTXOの有効期限：あと%1$sブロック"</item>
   </plurals>
   <string name="gt_a3d44a4fe18f60fb">"VTXOの16進数表記またはID"</string>
   <string name="gt_3e552e392aa7a2c8">"VTXOの有効期間"</string>
@@ -1374,9 +1374,9 @@
   <string name="gt_a18745121bb8af6d">"バージョン %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"方法"</string>
   <string name="gt_970b300397b08223">"エクスプローラーで確認"</string>
-  <string name="gt_1275d2b1abd166af">"View your Bitcoin balance"</string>
-  <string name="gt_5c5fe5dc2e3dc1d5">"View your Bitcoin balance on regtest"</string>
-  <string name="gt_b39c9deaef6ea38e">"View your Bitcoin balance on signet"</string>
+  <string name="gt_1275d2b1abd166af">"Bitcoin残高を確認"</string>
+  <string name="gt_5c5fe5dc2e3dc1d5">"regtestのBitcoin残高を確認"</string>
+  <string name="gt_b39c9deaef6ea38e">"signetのBitcoin残高を確認"</string>
   <string name="gt_26407c9ad240b551">"シードフレーズを表示"</string>
   <string name="gt_0c6da2b7449f5e54">"現在のウォレット操作が完了してからエンドポイントを変更してください。"</string>
   <string name="gt_99c1ee35d68e7feb">"ウォレットの準備ができるまで待ってから更新してください。"</string>
@@ -1605,10 +1605,10 @@
   <string name="home">"ホーム"</string>
   <string name="receive">"受け取る"</string>
   <string name="send">"送る"</string>
-  <string name="widget_title">"Noah Wallet"</string>
+  <string name="widget_title">"Noahウォレット"</string>
   <string name="widget_onchain">"オンチェーン"</string>
   <string name="widget_offchain">"オフチェーン"</string>
-  <string name="widget_mainnet_description">"View your Bitcoin balance"</string>
-  <string name="widget_signet_description">"View your Bitcoin balance on signet"</string>
-  <string name="widget_regtest_description">"View your Bitcoin balance on regtest"</string>
+  <string name="widget_mainnet_description">"Bitcoin残高を確認"</string>
+  <string name="widget_signet_description">"signetのBitcoin残高を確認"</string>
+  <string name="widget_regtest_description">"regtestのBitcoin残高を確認"</string>
 </resources>

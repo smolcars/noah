@@ -762,8 +762,8 @@
   <string name="gt_c638d16576dfe156">"유효한 결제 수단을 찾을 수 없습니다"</string>
   <string name="gt_57c8529db3e2719a">"아니요, 끄기"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
-  <string name="gt_b5bdadc7e5c0579d">"Noah Balance"</string>
-  <string name="gt_2910b8ef5d4d95af">"Noah Wallet"</string>
+  <string name="gt_b5bdadc7e5c0579d">"Noah 잔액"</string>
+  <string name="gt_2910b8ef5d4d95af">"Noah 지갑"</string>
   <string name="gt_51bf7dd8c85b84da">"Noah 지갑 거래 내보내기"</string>
   <string name="gt_518f6fc1d2bea961">"Noah가 닫혀 있어도 받기와 갱신을 할 수 있어요."</string>
   <string name="gt_966bc2f318542271">"Noah가 아직 보안 저장소를 읽을 수 없습니다. 계속하려면 기기 잠금을 해제하세요."</string>
@@ -910,7 +910,7 @@
   <string name="gt_21682e0a58f5581b">"오프보딩 대기 중"</string>
   <string name="gt_779dd1993ab4b13c">"대기 중인 라운드"</string>
   <string name="gt_5fb55a3f477aee2b">"전송 대기 중"</string>
-  <string name="gt_f41dbd7482670f0c">"Pending: %1$s"</string>
+  <string name="gt_f41dbd7482670f0c">"대기 중: %1$s"</string>
   <string name="gt_dbb6cf817820de0b">"권한 필요"</string>
   <string name="gt_cbf613fce96573ac">"이름 정하기"</string>
   <string name="gt_46d931c1d03b0781">"현재 지도에 표시된 장소"</string>
@@ -1357,8 +1357,8 @@
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"VTXO ID"</string>
   <plurals name="gt_1c5b6b6468f0c580">
-    <item quantity="one">"VTXO expires: %1$s block"</item>
-    <item quantity="other">"VTXO expires: %1$s blocks"</item>
+    <item quantity="one">"VTXO 만료까지: %1$s블록"</item>
+    <item quantity="other">"VTXO 만료까지: %1$s블록"</item>
   </plurals>
   <string name="gt_a3d44a4fe18f60fb">"VTXO 16진수 또는 ID"</string>
   <string name="gt_3e552e392aa7a2c8">"VTXO 유효 기간"</string>
@@ -1374,9 +1374,9 @@
   <string name="gt_a18745121bb8af6d">"버전 %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"경로"</string>
   <string name="gt_970b300397b08223">"탐색기에서 보기"</string>
-  <string name="gt_1275d2b1abd166af">"View your Bitcoin balance"</string>
-  <string name="gt_5c5fe5dc2e3dc1d5">"View your Bitcoin balance on regtest"</string>
-  <string name="gt_b39c9deaef6ea38e">"View your Bitcoin balance on signet"</string>
+  <string name="gt_1275d2b1abd166af">"Bitcoin 잔액 확인"</string>
+  <string name="gt_5c5fe5dc2e3dc1d5">"regtest에서 Bitcoin 잔액 확인"</string>
+  <string name="gt_b39c9deaef6ea38e">"signet에서 Bitcoin 잔액 확인"</string>
   <string name="gt_26407c9ad240b551">"시드 문구 보기"</string>
   <string name="gt_0c6da2b7449f5e54">"현재 지갑 작업이 완료된 후 엔드포인트를 변경하세요."</string>
   <string name="gt_99c1ee35d68e7feb">"지갑이 준비될 때까지 기다린 후 새로고침하세요."</string>
@@ -1605,10 +1605,10 @@
   <string name="home">"홈"</string>
   <string name="receive">"받기"</string>
   <string name="send">"보내기"</string>
-  <string name="widget_title">"Noah Wallet"</string>
+  <string name="widget_title">"Noah 지갑"</string>
   <string name="widget_onchain">"온체인"</string>
   <string name="widget_offchain">"오프체인"</string>
-  <string name="widget_mainnet_description">"View your Bitcoin balance"</string>
-  <string name="widget_signet_description">"View your Bitcoin balance on signet"</string>
-  <string name="widget_regtest_description">"View your Bitcoin balance on regtest"</string>
+  <string name="widget_mainnet_description">"Bitcoin 잔액 확인"</string>
+  <string name="widget_signet_description">"signet에서 Bitcoin 잔액 확인"</string>
+  <string name="widget_regtest_description">"regtest에서 Bitcoin 잔액 확인"</string>
 </resources>

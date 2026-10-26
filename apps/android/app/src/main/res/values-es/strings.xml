@@ -762,8 +762,8 @@
   <string name="gt_c638d16576dfe156">"No se encontraron métodos de pago válidos"</string>
   <string name="gt_57c8529db3e2719a">"No, desactivar"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
-  <string name="gt_b5bdadc7e5c0579d">"Noah Balance"</string>
-  <string name="gt_2910b8ef5d4d95af">"Noah Wallet"</string>
+  <string name="gt_b5bdadc7e5c0579d">"Saldo de Noah"</string>
+  <string name="gt_2910b8ef5d4d95af">"Billetera Noah"</string>
   <string name="gt_51bf7dd8c85b84da">"Exportación de transacciones de la billetera Noah"</string>
   <string name="gt_518f6fc1d2bea961">"Noah puede recibir y renovar aunque esté cerrado."</string>
   <string name="gt_966bc2f318542271">"Noah aún no puede leer su almacenamiento seguro. Desbloquea tu dispositivo para continuar."</string>
@@ -910,7 +910,7 @@
   <string name="gt_21682e0a58f5581b">"Retiro pendiente"</string>
   <string name="gt_779dd1993ab4b13c">"Rondas pendientes"</string>
   <string name="gt_5fb55a3f477aee2b">"Envío pendiente"</string>
-  <string name="gt_f41dbd7482670f0c">"Pending: %1$s"</string>
+  <string name="gt_f41dbd7482670f0c">"Pendiente: %1$s"</string>
   <string name="gt_dbb6cf817820de0b">"Permiso necesario"</string>
   <string name="gt_cbf613fce96573ac">"Elige un nombre"</string>
   <string name="gt_46d931c1d03b0781">"Lugares visibles"</string>
@@ -1357,8 +1357,8 @@
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"ID de VTXO"</string>
   <plurals name="gt_1c5b6b6468f0c580">
-    <item quantity="one">"VTXO expires: %1$s block"</item>
-    <item quantity="other">"VTXO expires: %1$s blocks"</item>
+    <item quantity="one">"VTXO vence en %1$s bloque"</item>
+    <item quantity="other">"VTXO vence en %1$s bloques"</item>
   </plurals>
   <string name="gt_a3d44a4fe18f60fb">"Valor hexadecimal o ID del VTXO"</string>
   <string name="gt_3e552e392aa7a2c8">"Vida útil de VTXO"</string>
@@ -1374,9 +1374,9 @@
   <string name="gt_a18745121bb8af6d">"Versión %1$s"</string>
   <string name="gt_2ed8b8066255f7d2">"Vía"</string>
   <string name="gt_970b300397b08223">"Ver en el explorador"</string>
-  <string name="gt_1275d2b1abd166af">"View your Bitcoin balance"</string>
-  <string name="gt_5c5fe5dc2e3dc1d5">"View your Bitcoin balance on regtest"</string>
-  <string name="gt_b39c9deaef6ea38e">"View your Bitcoin balance on signet"</string>
+  <string name="gt_1275d2b1abd166af">"Consulta tu saldo de Bitcoin"</string>
+  <string name="gt_5c5fe5dc2e3dc1d5">"Consulta tu saldo de Bitcoin en regtest"</string>
+  <string name="gt_b39c9deaef6ea38e">"Consulta tu saldo de Bitcoin en signet"</string>
   <string name="gt_26407c9ad240b551">"Ver tu frase de recuperación"</string>
   <string name="gt_0c6da2b7449f5e54">"Espera a que termine la operación actual de la billetera antes de cambiar el punto de acceso."</string>
   <string name="gt_99c1ee35d68e7feb">"Espera a que la billetera esté lista y luego actualiza."</string>
@@ -1605,10 +1605,10 @@
   <string name="home">"Inicio"</string>
   <string name="receive">"Recibir"</string>
   <string name="send">"Enviar"</string>
-  <string name="widget_title">"Noah Wallet"</string>
+  <string name="widget_title">"Billetera Noah"</string>
   <string name="widget_onchain">"En la cadena"</string>
   <string name="widget_offchain">"Fuera de la cadena"</string>
-  <string name="widget_mainnet_description">"View your Bitcoin balance"</string>
-  <string name="widget_signet_description">"View your Bitcoin balance on signet"</string>
-  <string name="widget_regtest_description">"View your Bitcoin balance on regtest"</string>
+  <string name="widget_mainnet_description">"Consulta tu saldo de Bitcoin"</string>
+  <string name="widget_signet_description">"Consulta tu saldo de Bitcoin en signet"</string>
+  <string name="widget_regtest_description">"Consulta tu saldo de Bitcoin en regtest"</string>
 </resources>

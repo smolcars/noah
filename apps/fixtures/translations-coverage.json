@@ -1345,46 +1345,10 @@
         "· shared"
       ],
       "untranslated": {
-        "es": [
-          "gt_1275d2b1abd166af",
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_5c5fe5dc2e3dc1d5",
-          "gt_b39c9deaef6ea38e",
-          "gt_b5bdadc7e5c0579d",
-          "gt_f41dbd7482670f0c"
-        ],
-        "ja": [
-          "gt_1275d2b1abd166af",
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_5c5fe5dc2e3dc1d5",
-          "gt_b39c9deaef6ea38e",
-          "gt_b5bdadc7e5c0579d",
-          "gt_f41dbd7482670f0c"
-        ],
-        "ko": [
-          "gt_1275d2b1abd166af",
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_5c5fe5dc2e3dc1d5",
-          "gt_b39c9deaef6ea38e",
-          "gt_b5bdadc7e5c0579d",
-          "gt_f41dbd7482670f0c"
-        ],
-        "sv": [
-          "gt_1275d2b1abd166af",
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_5c5fe5dc2e3dc1d5",
-          "gt_b39c9deaef6ea38e",
-          "gt_b5bdadc7e5c0579d",
-          "gt_f41dbd7482670f0c"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     },
     "android": {
@@ -2759,30 +2723,10 @@
         "· shared"
       ],
       "untranslated": {
-        "es": [
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_f41dbd7482670f0c"
-        ],
-        "ja": [
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_f41dbd7482670f0c"
-        ],
-        "ko": [
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_f41dbd7482670f0c"
-        ],
-        "sv": [
-          "gt_1c5b6b6468f0c580_one",
-          "gt_1c5b6b6468f0c580_other",
-          "gt_2910b8ef5d4d95af",
-          "gt_f41dbd7482670f0c"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     }
   }

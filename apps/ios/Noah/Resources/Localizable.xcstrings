@@ -26978,25 +26978,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Balance"
+            "value": "Saldo de Noah"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Balance"
+            "value": "Noah残高"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Balance"
+            "value": "Noah 잔액"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Balance"
+            "value": "Noah-saldo"
           }
         }
       }
@@ -27014,25 +27014,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Wallet"
+            "value": "Billetera Noah"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Wallet"
+            "value": "Noahウォレット"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Wallet"
+            "value": "Noah 지갑"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah Wallet"
+            "value": "Noah-plånbok"
           }
         }
       }
@@ -32210,25 +32210,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pending: %1$@"
+            "value": "Pendiente: %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pending: %1$@"
+            "value": "保留中：%1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pending: %1$@"
+            "value": "대기 중: %1$@"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pending: %1$@"
+            "value": "Väntande: %1$@"
           }
         }
       }
@@ -48137,13 +48137,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld block"
+                  "value": "VTXO vence en %1$lld bloque"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld blocks"
+                  "value": "VTXO vence en %1$lld bloques"
                 }
               }
             }
@@ -48155,13 +48155,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld block"
+                  "value": "VTXOの有効期限：あと%1$lldブロック"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld blocks"
+                  "value": "VTXOの有効期限：あと%1$lldブロック"
                 }
               }
             }
@@ -48173,13 +48173,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld block"
+                  "value": "VTXO 만료까지: %1$lld블록"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld blocks"
+                  "value": "VTXO 만료까지: %1$lld블록"
                 }
               }
             }
@@ -48191,13 +48191,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld block"
+                  "value": "VTXO löper ut om %1$lld block"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "VTXO expires: %1$lld blocks"
+                  "value": "VTXO löper ut om %1$lld block"
                 }
               }
             }
@@ -48722,25 +48722,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance"
+            "value": "Consulta tu saldo de Bitcoin"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance"
+            "value": "Bitcoin残高を確認"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance"
+            "value": "Bitcoin 잔액 확인"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance"
+            "value": "Visa ditt Bitcoin-saldo"
           }
         }
       }
@@ -48758,25 +48758,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on regtest"
+            "value": "Consulta tu saldo de Bitcoin en regtest"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on regtest"
+            "value": "regtestのBitcoin残高を確認"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on regtest"
+            "value": "regtest에서 Bitcoin 잔액 확인"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on regtest"
+            "value": "Visa ditt Bitcoin-saldo på regtest"
           }
         }
       }
@@ -48794,25 +48794,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on signet"
+            "value": "Consulta tu saldo de Bitcoin en signet"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on signet"
+            "value": "signetのBitcoin残高を確認"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on signet"
+            "value": "signet에서 Bitcoin 잔액 확인"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "View your Bitcoin balance on signet"
+            "value": "Visa ditt Bitcoin-saldo på signet"
           }
         }
       }
