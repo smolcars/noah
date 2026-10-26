@@ -273,7 +273,9 @@ private fun exitSubLine(stage: ExitStage, context: ExitContext, money: (Long) ->
         stage.attention == ExitStage.Attention.feesRose -> tr("Fees rose, so Noah paid more")
         else -> when (stage.phase) {
             ExitStage.Phase.lift, ExitStage.Phase.publish -> trPlural("{n} transactions", stage.total)
-            ExitStage.Phase.mempool, ExitStage.Phase.bump, ExitStage.Phase.claiming -> tr("Waiting for block {height}", next)
+            // Ready, not yet sent with its fee child: it isn't waiting for a block yet (the picture says the same).
+            ExitStage.Phase.mempool -> tr("Ready to send")
+            ExitStage.Phase.bump, ExitStage.Phase.claiming -> tr("Waiting for block {height}", next)
             ExitStage.Phase.confirm -> tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString())
             ExitStage.Phase.onchain -> context.delta?.let { tr("Locked until block {height}", number((stage.lastBlock ?: context.tip) + it)) }
             ExitStage.Phase.wait -> tr("Claimable in about {time}", timeLeft(stage.left(context.tip) ?: 0))

@@ -263,6 +263,8 @@ private class TreeFrame(val geo: TreeGeometry, val move: TreeMotion, val t: Floa
     /** The transaction (or claim) the overlays pulse, and its morph into the mempool. */
     val pulse = scene.waiting.takeIf { it >= 0 && !scene.stale }
     fun send(i: Int) = move.send(i, t)
+    /** It was ready (an outlined square) before this move: it's sent from that square, not from a hollow circle. */
+    fun wasReady(i: Int) = move.from?.marks?.getOrNull(i).let { it == ExitScene.Mark.ready || it == ExitScene.Mark.needsFee }
 }
 
 private fun lerp(a: Float, b: Float, u: Float) = a + (b - a) * u
@@ -349,7 +351,7 @@ private fun DrawScope.text(layout: TextLayoutResult, x: Float, y: Float, color: 
  * Ink square: in a block, filled from the bottom as it's mined, settling from 1.22×, with one ripple.
  */
 private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: Float, mine: Float, stamp: Float, ripple: Float, alpha: Float,
-                             pop: Float, grey: Boolean, outline: Boolean, palette: NoahTokens.Palette) {
+                             pop: Float, grey: Boolean, outline: Boolean, palette: NoahTokens.Palette, ready: Boolean = false) {
     if (alpha <= 0f) return
     val a = clamp(alpha)
     if (mine > 0f) {
@@ -361,10 +363,12 @@ private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: F
         if (mine < 1f) drawRoundRect(palette.foreground, box, Size(h, h), CornerRadius(3.5f), alpha = a, style = Stroke(1.6f))
         if (ripple > 0f && ripple < 1f) drawRoundRect(palette.foreground, Offset(box.x - 10 * ripple, box.y - 10 * ripple), Size(h + 20 * ripple, h + 20 * ripple),
             CornerRadius(4 + 6 * ripple), alpha = a * .4f * (1 - ripple), style = Stroke(1.2f))
-    } else if (send > 0f) {
-        if (send < 1f) drawCircle(palette.orange, 5.5f * (1 - send), at, alpha = a, style = Stroke(1.6f))
-        val h = z * (.6f + .4f * send)
+    } else if (send > 0f || (ready && mark == ExitScene.Mark.waiting)) {
+        // From a hollow circle; or, sent once it was ready, from its outlined square, whose solid outline fades into the dashes.
+        if (send < 1f && !ready) drawCircle(palette.orange, 5.5f * (1 - send), at, alpha = a, style = Stroke(1.6f))
+        val h = if (ready) z else z * (.6f + .4f * send)
         drawRoundRect(palette.background, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f), alpha = a)
+        if (ready && send < 1f) drawRoundRect(palette.orange, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f), alpha = a * (1 - send), style = Stroke(1.6f))
         if (outline) drawRoundRect(if (grey) palette.muted else palette.orange, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f),
             alpha = a * send * if (grey) .8f else .88f, style = Stroke(1.8f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2.4f))))
     } else if (mark == ExitScene.Mark.needsFee || mark == ExitScene.Mark.ready) {
@@ -467,7 +471,7 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
         if (pop <= 0f) continue
         val mU = m.mine(i, t)
         txNode(f.node(j), geo.node, if (f.cancel >= 1f) ExitScene.Mark.unsent else s.marks[i], f.send(i), mU, m.stamp(i, t), m.ripple(i, t),
-            treeA * if (mU < 1f) 1 - .65f * canU else 1f, pop, s.stale, outline = f.pulse != i, palette)
+            treeA * if (mU < 1f) 1 - .65f * canU else 1f, pop, s.stale, outline = f.pulse != i, palette, ready = f.wasReady(i))
     }
     // Fee children: a dot from your on-chain wallet, docked on the waiting transaction's anchor (hollow when someone else
     // paid), riding with it into its block.
@@ -644,7 +648,7 @@ private fun Pulses(frame: () -> TreeFrame, breath: Breath, palette: NoahTokens.P
         val f = frame(); val c = Offset(half, half)
         val z = if (claimWaits) 13f else f.geo.node
         val u = if (claimWaits) f.move.claimSend(f.t) else f.send(checkNotNull(pulse))
-        val h = z * (.6f + .4f * u)
+        val h = if (!claimWaits && f.wasReady(checkNotNull(pulse))) z else z * (.6f + .4f * u)
         drawRoundRect(palette.orange, Offset(c.x - h / 2, c.y - h / 2), Size(h, h), CornerRadius(3.5f), alpha = u * (.7f + .3f * breath.breathe),
             style = Stroke(1.8f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2.4f), -breath.march)))
     }
