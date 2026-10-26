@@ -7,6 +7,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BackupCryptoTest {
+    /** RN's real rounds: Node made these envelopes, so every backup already written still opens. */
     @Test fun sharedVectorsInBothDirections() {
         for (case in SharedFixtures.load("backup-crypto") + SharedFixtures.load("backup-crypto-unicode")) {
             val input = case.input.jsonObject
@@ -26,13 +27,13 @@ class BackupCryptoTest {
     }
 
     @Test fun rejectsWrongMnemonicTamperingVersionAndTruncation() {
-        val case = SharedFixtures.load("backup-crypto").first()
-        val input = case.input.jsonObject
-        val envelope = case.expected.jsonObject.bytes("envelopeHex")
-        val mnemonic = input.getValue("mnemonic").jsonPrimitive.content
+        val mnemonic = "test phrase"
+        val plaintext = "backup".toByteArray()
+        val envelope = BackupCrypto.encrypt(plaintext, mnemonic, BackupCrypto.Version.legacyDirectory, testRounds)
+        assertArrayEquals(plaintext, BackupCrypto.decrypt(envelope, mnemonic, BackupCrypto.Version.legacyDirectory, testRounds))
         fun fails(bytes: ByteArray, password: String, reason: BackupCrypto.Reason) {
             val failure = assertThrows(BackupCrypto.Failure::class.java) {
-                BackupCrypto.decrypt(bytes, password, BackupCrypto.Version.legacyDirectory)
+                BackupCrypto.decrypt(bytes, password, BackupCrypto.Version.legacyDirectory, testRounds)
             }
             assertEquals(reason, failure.reason)
         }
@@ -47,12 +48,15 @@ class BackupCryptoTest {
     @Test fun randomWritesAndUnicodePasswordRoundTrip() {
         val plaintext = "backup".toByteArray()
         val password = "あいこくしん café 🪙"
-        val a = BackupCrypto.encrypt(plaintext, password, BackupCrypto.Version.snapshot)
-        val b = BackupCrypto.encrypt(plaintext, password, BackupCrypto.Version.snapshot)
+        val a = BackupCrypto.encrypt(plaintext, password, BackupCrypto.Version.snapshot, testRounds)
+        val b = BackupCrypto.encrypt(plaintext, password, BackupCrypto.Version.snapshot, testRounds)
         assertFalse(a.contentEquals(b))
-        assertArrayEquals(plaintext, BackupCrypto.decrypt(a, password, BackupCrypto.Version.snapshot))
+        assertArrayEquals(plaintext, BackupCrypto.decrypt(a, password, BackupCrypto.Version.snapshot, testRounds))
     }
 }
+
+/** PBKDF2 rounds for tests that seal and open their own backups; fixtures made elsewhere keep [BackupCrypto.pbkdf2Rounds]. */
+internal const val testRounds = 1
 
 internal fun JsonObject.bytes(key: String): ByteArray = getValue(key).jsonPrimitive.content
     .chunked(2).map { it.toInt(16).toByte() }.toByteArray()

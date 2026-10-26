@@ -24,11 +24,13 @@ class BackupArchiveTest {
         } }
     }.toByteArray()
     private fun publish(from: File, to: File) { Files.createLink(to.toPath(), from.toPath()) }
+    /** The archive's own reason: a key derived with other rounds would fail authentication instead. */
+    private fun failure(open: () -> Unit) = (runCatching(open).exceptionOrNull() as? BackupArchive.Failure)?.reason
     @Test fun publicationRefusesATargetCreatedWhileSealing() = temp { root ->
         val snapshot = File(root, "snapshot").apply { writeText("wallet") }
         val destination = File(root, "backup")
         assertTrue(runCatching {
-            BackupArchive.seal(snapshot, manifest, phrase, destination, root) { complete, target ->
+            BackupArchive.seal(snapshot, manifest, phrase, destination, root, testRounds) { complete, target ->
                 target.writeText("someone else's export")
                 publish(complete, target)
             }
@@ -36,6 +38,7 @@ class BackupArchiveTest {
         assertEquals("someone else's export", destination.readText())
         assertFalse(root.listFiles()!!.any { it.name.endsWith(".partial") || it.name.endsWith(".zip") })
     }
+    /** RN's real rounds: Node and Info-ZIP built these files, as an RN wallet's backups were. */
     @Test fun independentlyBuiltNodeAndInfoZipFixtures() = temp { root ->
         val cases = Json.parseToJsonElement(javaClass.classLoader!!.getResource("backup-archives.json")!!.readText())
             .jsonObject["cases"]!!.jsonArray
@@ -60,10 +63,10 @@ class BackupArchiveTest {
     }
     @Test fun roundTripAndNoOverwrite() = temp { root ->
         val snapshot = File(root, "snapshot").apply { writeBytes(ByteArray(4096) { (it % 251).toByte() }) }
-        val encrypted = BackupArchive.seal(snapshot, manifest, phrase, File(root, "sealed"), root, publish = ::publish)
-        val opened = BackupArchive.open(encrypted.file, phrase, File(root, "open"))
+        val encrypted = BackupArchive.seal(snapshot, manifest, phrase, File(root, "sealed"), root, testRounds, ::publish)
+        val opened = BackupArchive.open(encrypted.file, phrase, File(root, "open"), testRounds)
         assertEquals(manifest, opened.manifest); assertArrayEquals(snapshot.readBytes(), opened.snapshot.readBytes())
-        assertTrue(runCatching { BackupArchive.seal(snapshot, manifest, phrase, encrypted.file, root, publish = ::publish) }.isFailure)
+        assertTrue(runCatching { BackupArchive.seal(snapshot, manifest, phrase, encrypted.file, root, testRounds, ::publish) }.isFailure)
     }
     @Test fun strictManifest() {
         val valid = BackupArchive.encode(manifest).toString(Charsets.UTF_8)
@@ -77,9 +80,9 @@ class BackupArchiveTest {
     @Test fun rejectsUnexpectedPathsAndCleansPartialExtraction() = temp { root ->
         for (name in listOf("notes.txt", "../escape", "./db.sqlite")) {
             val data = zip("manifest.json" to BackupArchive.encode(manifest), "db.sqlite" to byteArrayOf(1), name to byteArrayOf(2))
-            val file = File(root, "encrypted").apply { writeBytes(BackupCrypto.encrypt(data, phrase, BackupCrypto.Version.snapshot)) }
+            val file = File(root, "encrypted").apply { writeBytes(BackupCrypto.encrypt(data, phrase, BackupCrypto.Version.snapshot, testRounds)) }
             val out = File(root, "out")
-            assertTrue(runCatching { BackupArchive.open(file, phrase, out) }.isFailure)
+            assertEquals(name, BackupArchive.Reason.unexpectedEntry, failure { BackupArchive.open(file, phrase, out, testRounds) })
             assertFalse(out.exists())
         }
     }
@@ -108,8 +111,8 @@ class BackupArchiveTest {
             }
             return bytes
         }
-        val corrupt = File(root, "corrupt").apply { writeBytes(BackupCrypto.encrypt(patch(true), phrase, BackupCrypto.Version.snapshot)) }
-        assertTrue(runCatching { BackupArchive.open(corrupt, phrase, File(root, "bad")) }.isFailure)
+        val corrupt = File(root, "corrupt").apply { writeBytes(BackupCrypto.encrypt(patch(true), phrase, BackupCrypto.Version.snapshot, testRounds)) }
+        assertEquals(BackupArchive.Reason.checksumMismatch, failure { BackupArchive.open(corrupt, phrase, File(root, "bad"), testRounds) })
         assertFalse(File(root, "bad").exists())
         org.apache.commons.compress.utils.SeekableInMemoryByteChannel(patch(false)).use { channel ->
             org.apache.commons.compress.archivers.zip.ZipFile.builder().setSeekableByteChannel(channel).get().use { archive ->
@@ -128,18 +131,19 @@ class BackupArchiveTest {
             val entry = org.apache.commons.compress.archivers.zip.ZipArchiveEntry("db.sqlite").apply { unixMode = 0xa1ff }
             zip.putArchiveEntry(entry); zip.write("/other/wallet".toByteArray()); zip.closeArchiveEntry()
         }
-        val encrypted = File(root, "encrypted").apply { writeBytes(BackupCrypto.encrypt(bytes.toByteArray(), phrase, BackupCrypto.Version.snapshot)) }
-        assertTrue(runCatching { BackupArchive.open(encrypted, phrase, File(root, "out")) }.isFailure)
+        val encrypted = File(root, "encrypted").apply { writeBytes(BackupCrypto.encrypt(bytes.toByteArray(), phrase, BackupCrypto.Version.snapshot, testRounds)) }
+        assertEquals(BackupArchive.Reason.unexpectedEntry, failure { BackupArchive.open(encrypted, phrase, File(root, "out"), testRounds) })
         assertFalse(File(root, "out").exists())
     }
     @Test fun legacyPathsAndEntryLimit() = temp { root ->
         val prefix = "backup_staging/noah-data-regtest/"
-        for (entries in listOf(listOf(prefix + "db.sqlite", prefix + "../escape"),
-            listOf(prefix + "db.sqlite", prefix + "a//b"), listOf(prefix + "other.sqlite"),
-            listOf(prefix + "db.sqlite") + (0..255).map { prefix + "f$it" })) {
-            val sealed = BackupCrypto.encrypt(zip(*entries.map { it to byteArrayOf(1) }.toTypedArray()), phrase, BackupCrypto.Version.legacyDirectory)
+        for ((entries, reason) in listOf(listOf(prefix + "db.sqlite", prefix + "../escape") to BackupArchive.Reason.unexpectedEntry,
+            listOf(prefix + "db.sqlite", prefix + "a//b") to BackupArchive.Reason.unexpectedEntry,
+            listOf(prefix + "other.sqlite") to BackupArchive.Reason.snapshotMissing,
+            listOf(prefix + "db.sqlite") + (0..255).map { prefix + "f$it" } to BackupArchive.Reason.tooLarge)) {
+            val sealed = BackupCrypto.encrypt(zip(*entries.map { it to byteArrayOf(1) }.toTypedArray()), phrase, BackupCrypto.Version.legacyDirectory, testRounds)
             val out = File(root, "legacy")
-            assertTrue(runCatching { BackupArchive.openLegacy(Base64.getEncoder().encode(sealed), phrase, "regtest", out) }.isFailure)
+            assertEquals(reason, failure { BackupArchive.openLegacy(Base64.getEncoder().encode(sealed), phrase, "regtest", out, testRounds) })
             assertFalse(out.exists())
         }
     }
