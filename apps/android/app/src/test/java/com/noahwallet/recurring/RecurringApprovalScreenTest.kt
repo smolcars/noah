@@ -3,6 +3,7 @@ package com.noahwallet.recurring
 import android.app.Application
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentDialog
 import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -15,6 +16,7 @@ import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.NoahTheme
 import com.noahwallet.ui.settings.SettingsNav
 import kotlinx.coroutines.*
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -23,6 +25,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 import java.time.Duration
 
 /**
@@ -30,13 +33,19 @@ import java.time.Duration
  * reviewed occurrence to the executor, which pays it once through the shared controller; every result has a way out.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = Application::class, qualifiers = "w411dp-h891dp")
+@Config(sdk = [35], application = Application::class)
 class RecurringApprovalScreenTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val app by lazy { AppModel(RuntimeEnvironment.getApplication()) }
     private val nav = SettingsNav(back = {}, open = {}, pop = {}, myCode = {}, home = {})
 
     private var world: RecurringWorld? = null
+
+    /** Leaves nothing running for the next test in this JVM: the frame clock advances again and the executor's scope ends. */
+    @After fun release() {
+        compose.mainClock.autoAdvance = true
+        world?.scope?.cancel()
+    }
 
     private fun has(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
     /** Steps the wall clock (the motion and storage) and the frame clock together until [done]. */
@@ -84,6 +93,11 @@ class RecurringApprovalScreenTest {
         until { !world.executor.running }
         assertEquals("active", world.schedule!!.status)
         assertEquals(1, world.schedule!!.occurrencesPaid)
+        // Back can't close the sheet while the controller holds the result.
+        val sheet = ShadowDialog.getShownDialogs().single { it.isShowing } as ComponentDialog
+        compose.runOnIdle { sheet.onBackPressedDispatcher.onBackPressed() }
+        repeat(10) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(50)); compose.mainClock.advanceTimeBy(50) }
+        assertTrue(sheet.isShowing && has("send-success-done"))
         // Done acknowledges the retained receipt and closes the sheet; nothing is paid again.
         compose.onNodeWithTag("send-success-done").performSemanticsAction(SemanticsActions.OnClick)
         until { !has("send-success-done") && !has("send-stage") }
