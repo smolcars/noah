@@ -69,13 +69,18 @@ struct ExitStageGeometry: Equatable {
         return tips.indices.filter { $0 >= min(2, others) }.map { CGPoint(x: trunk + tips[$0].dx * spread, y: y - length * tips[$0].length - 3) }
     }
 
-    /// Where your `index`th other exit branching at `level` sits (up to two per level).
+    /// Where your `index`th other exit branching at `level` sits (up to two per level). The second keeps a
+    /// line clear of the first, for the first's amount; on a short path a branch would reach above the
+    /// picture, so it stops at `otherTop`.
     func other(_ ys: [Double], level: Int, index: Int) -> CGPoint {
-        let y = ys[safe: level] ?? roundY, up = ys[safe: level + 1] ?? coinY
-        let slots: [(dx: Double, length: Double)] = [(-1.15, 0.95), (-2.2, 1.5)]
-        let slot = slots[min(index, slots.count - 1)]
-        return CGPoint(x: trunk + slot.dx * spread, y: y - max(12, y - up) * slot.length)
+        let y = ys[safe: level] ?? roundY, up = ys[safe: level + 1] ?? coinY, gap = max(12, y - up)
+        let first = y - gap * 0.95
+        let height = index == 0 ? first : min(y - gap * 1.5, first - 14)
+        return CGPoint(x: trunk + (index == 0 ? -1.15 : -2.2) * spread, y: max(otherTop, height))
     }
+
+    /// The highest another exit's coin goes: room above for its 6 pt radius and its amount beside it.
+    var otherTop: Double { 6 + 6 * scale }
 
     /// The caption under the lowest stubs, left of the trunk: its lines, or nil when it doesn't fit.
     func caption(_ words: String, _ ys: [Double], width measure: (String) -> Double) -> [String]? {

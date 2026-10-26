@@ -75,6 +75,30 @@ struct ExitStageTests {
         #expect(!Self.se.stubs(deep, level: 6).isEmpty)
     }
 
+    /// Your other exits' coins stay inside the picture, with room for their amount, however short the path; the second
+    /// one at a level never lands on the first.
+    @Test func otherExitsCoinsStayInsideThePicture() {
+        // Three live exits sharing a two-transaction path: the second sibling's branch would reach y = -11.75.
+        let short = ExitStageGeometry(size: CGSize(width: 393, height: 300), count: 2)
+        #expect(short.other(short.levels([1, 0]), level: 1, index: 1).y == short.otherTop && short.otherTop >= 12)
+        for (size, scale) in [(CGSize(width: 393, height: 300), 1.0), (CGSize(width: 375, height: 236), 1.25)] {
+            for count in 2...9 {
+                let g = ExitStageGeometry(size: size, scale: scale, count: count)
+                for mined in 0...count {
+                    let ys = g.levels((0..<count).map { $0 < mined ? 1 : 0 })
+                    for level in 1..<count {
+                        let first = g.other(ys, level: level, index: 0), second = g.other(ys, level: level, index: 1)
+                        for p in [first, second] {
+                            #expect(p.y - 6 >= 0 && p.y >= 6 + 6 * g.scale && p.y <= g.roundY && p.x - 6 >= 0, "\(count) \(level)")
+                        }
+                        // Their amounts sit beside them, one line tall: the second stays clear of the first.
+                        #expect(first.y - second.y >= 12, "\(count) \(level)")
+                    }
+                }
+            }
+        }
+    }
+
     @Test func theCaptionShowsOnlyWhereItFits() {
         let words = "Other people's coins in this round"
         let lines = Self.iphone.caption(words, Self.iphone.levels([0, 0, 0, 0])) { Double($0.count) * 4.6 }
