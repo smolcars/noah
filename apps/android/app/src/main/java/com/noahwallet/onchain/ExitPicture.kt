@@ -80,35 +80,36 @@ internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifi
     val move = remember(scene, reduceMotion) { TreeMotion(if (reduceMotion) scene else last[0], scene).also { last[0] = scene } }
     val clock = remember(move) { Animatable(0f) }
     LaunchedEffect(move) { if (move.seconds > 0f) clock.animateTo(move.seconds, tween((move.seconds * 1000).roundToInt(), easing = LinearEasing)) }
+    val shown = scene
     val resumed = LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(Lifecycle.State.RESUMED)
     var visible by remember { mutableStateOf(true) }
-    val breath = rememberBreath(resumed && visible && !reduceMotion && scene.pulses)
+    val breath = rememberBreath(resumed && visible && !reduceMotion && shown.pulses)
     val measurer = rememberTextMeasurer(64)
-    val words = treeWords(scene, money, balance, received)
+    val words = treeWords(shown, money, balance, received)
     BoxWithConstraints(modifier.onGloballyPositioned { visible = it.boundsInWindow().let { b -> b.width > 0f && b.height > 0f } }
         .clearAndSetSemantics { contentDescription = description }) {
         val w = maxWidth.value; val h = maxHeight.value
         // Too small to hold the tree and its labels (a pane mid-resize): draw nothing rather than overlap.
         if (w < 200f || h < 160f) return@BoxWithConstraints
-        val geo = remember(w, h, scene.n, scale, wide) { TreeGeometry(w, h, scene.n, scale, wide) }
+        val geo = remember(w, h, shown.n, scale, wide) { TreeGeometry(w, h, shown.n, scale, wide) }
         val styles = remember(density, scale) { TreeStyles(density, scale) }
         val range = rangeLabel()
-        val placed = TreeLabels.place(labelItems(scene, geo, money), geo.lineHeight, scale, range)
-        val before = move.from?.takeIf { it != scene && !move.labels.isNaN() }?.let { TreeLabels.place(labelItems(it, geo, money), geo.lineHeight, scale, range) }
+        val placed = TreeLabels.place(labelItems(shown, geo, money), geo.lineHeight, scale, range)
+        val before = move.from?.takeIf { it != shown && !move.labels.isNaN() }?.let { TreeLabels.place(labelItems(it, geo, money), geo.lineHeight, scale, range) }
         val stay = before.orEmpty().filter { old -> placed.any { it.item.key == old.item.key && kotlin.math.abs(it.top - old.top) < .5f } }.map { it.item.key }.toSet()
         val pills = placed.filter { it.item.pill != null }.map { it to measurer.measure(it.item.lines[0].text, styles.line(0, it.item.lines[0])) }
         val caption = remember(words.caption, styles, geo) {
             wrapWords(words.caption, geo.trunk - geo.block / 2 - 9 - 14) { measurer.measure(it, styles.caption).size.width.toFloat() }
         }
         val frame = { TreeFrame(geo, move, clock.value) }
-        Glows(frame, breath, palette, scene)
+        Glows(frame, breath, palette, shown)
         Canvas(Modifier.fillMaxSize()) {
             val k = density.density
             scale(k, k, Offset.Zero) {
                 drawTree(frame(), palette, measurer, styles, words, caption, placed, before, stay)
             }
         }
-        Pulses(frame, breath, palette, scene)
+        Pulses(frame, breath, palette, shown)
         for ((item, text) in pills) Pill(item, text, frame, breath, palette, geo, if (item.item.key in stay) 1f else null, move)
     }
 }
@@ -188,6 +189,7 @@ private fun labelItems(s: ExitScene, geo: TreeGeometry, money: (Long) -> String)
                 ExitScene.Mark.mined -> if (!(j == n && s.locked)) s.heights[i]?.let { height ->
                     items += TreeLabels.Item(y, listOf(line(tr("Block {height}", number(height)) + shared, strong)), if (i == latest) 2.2f else 1f, height = height)
                 }
+                ExitScene.Mark.ready -> items += TreeLabels.Item(y, listOf(line(tr("Ready to send"), strong, true)), 4f)
                 ExitScene.Mark.needsFee -> items += TreeLabels.Item(y, listOfNotNull(line(tr("Needs a fee"), TreeLabels.Tone.failure, true),
                     s.need?.let { line(tr("add {amount} on-chain", money(it)), TreeLabels.Tone.failure) }), 4f, TreeLabels.Pill.failure)
                 ExitScene.Mark.waiting -> {
@@ -333,7 +335,8 @@ private fun DrawScope.text(layout: TextLayoutResult, x: Float, y: Float, color: 
 
 /**
  * A transaction on your branch (prototype `txNode`). Hollow circle: not sent. Dashed square: waiting for the next block (its
- * glow, rings and marching outline are the overlays' while it pulses). Solid outlined square: ready but short of funds.
+ * glow, rings and marching outline are the overlays' while it pulses). Solid outlined square: ready to send, not sent yet
+ * (ringed red when it's short of funds).
  * Ink square: in a block, filled from the bottom as it's mined, settling from 1.22×, with one ripple.
  */
 private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: Float, mine: Float, stamp: Float, ripple: Float, alpha: Float,
@@ -355,7 +358,7 @@ private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: F
         drawRoundRect(palette.background, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f), alpha = a)
         if (outline) drawRoundRect(if (grey) palette.muted else palette.orange, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f),
             alpha = a * send * if (grey) .8f else .88f, style = Stroke(1.8f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2.4f))))
-    } else if (mark == ExitScene.Mark.needsFee) {
+    } else if (mark == ExitScene.Mark.needsFee || mark == ExitScene.Mark.ready) {
         drawRoundRect(palette.background, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(3.5f), alpha = a)
         drawRoundRect(palette.orange, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(3.5f), alpha = a, style = Stroke(1.6f))
     } else {

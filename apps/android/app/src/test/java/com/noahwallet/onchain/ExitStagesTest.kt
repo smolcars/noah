@@ -79,7 +79,8 @@ class ExitStagesTest {
         assertFalse("nothing is sent: no phone badge yet", lift.wallet)
         val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs")),
             packages = packages, next = 1_200)
-        scene(parked).let { assertEquals(listOf(m.mined, m.waiting, m.unsent, m.unsent), it.marks); assertEquals(listOf(99L, null, null, null), it.heights); assertEquals(1, it.waiting) }
+        scene(parked).let { assertEquals("ready, not in the mempool: no glow, no Next block", listOf(m.mined, m.ready, m.unsent, m.unsent), it.marks)
+            assertEquals(listOf(99L, null, null, null), it.heights); assertEquals(-1, it.waiting); assertTrue("fees leave the wallet now", it.wallet) }
         scene(parked, needsFunds = true).let { assertEquals("it waits on the branch, ringed red", m.needsFee, it.marks[1]); assertEquals(-1, it.waiting)
             assertEquals("the fee needs 1,200 and 300 is left", 900L, it.need) }
         val paying = exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c", origin = "mempool"), tx("leaf", "verify-inputs")))

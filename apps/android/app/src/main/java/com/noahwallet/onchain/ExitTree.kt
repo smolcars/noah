@@ -58,7 +58,8 @@ internal data class ExitScene(
     /** The explainer: the same tree before anything is sent, with its three captions. */
     val explain: Boolean = false,
 ) {
-    enum class Mark { unsent, needsFee, waiting, mined }
+    /** [ready]: bark has it ready but hasn't sent it with its fee child yet; [waiting]: it's in the mempool. */
+    enum class Mark { unsent, ready, needsFee, waiting, mined }
     data class Other(val level: Int, val amount: Long)
 
     val waiting get() = marks.indexOf(Mark.waiting)
@@ -99,7 +100,7 @@ internal data class ExitScene(
                     status?.block != null || status?.kind == "confirmed" || done -> Mark.mined
                     stage.phase == ExitStage.Phase.canceled -> Mark.unsent
                     status?.kind == "awaiting-confirmation" -> Mark.waiting
-                    status?.kind == "awaiting-cpfp-broadcast" -> if (needsFunds) Mark.needsFee else Mark.waiting
+                    status?.kind == "awaiting-cpfp-broadcast" -> if (needsFunds) Mark.needsFee else Mark.ready
                     else -> Mark.unsent
                 }
             }
@@ -250,7 +251,7 @@ internal fun wrapWords(text: String, width: Float, measure: (String) -> Float): 
  * paths drawn once, lying on their side; every other row has only its coin and its state.
  */
 internal object ExitGutter {
-    enum class St { mined, waiting, unsent, needsFunds }
+    enum class St { mined, waiting, ready, unsent, needsFunds }
     /** What the coin shows beside its path. */
     enum class After { none, ready, lock, claimed, canceled }
 
@@ -265,7 +266,8 @@ internal object ExitGutter {
                 kind == "confirmed" || txs.getOrNull(i)?.status?.block != null || done -> St.mined
                 stage.phase == ExitStage.Phase.canceled -> St.unsent
                 i == stage.current && stage.attention == ExitStage.Attention.needsFunds -> St.needsFunds
-                kind == "awaiting-confirmation" || kind == "awaiting-cpfp-broadcast" -> St.waiting
+                kind == "awaiting-confirmation" -> St.waiting
+                kind == "awaiting-cpfp-broadcast" -> St.ready
                 else -> St.unsent
             }
         }
@@ -277,6 +279,14 @@ internal object ExitGutter {
         ExitStage.Phase.claimed -> After.claimed
         ExitStage.Phase.canceled, ExitStage.Phase.spent, ExitStage.Phase.swept -> After.canceled
         else -> After.none
+    }
+
+    /**
+     * Each shared transaction's furthest state among the exits that have it, so a restarted exit's placeholders never
+     * hide a sibling's progress: in a block, then in the mempool, then short of funds, then ready.
+     */
+    fun states(paths: List<List<Pair<String, St>>>): Map<String, St> = paths.flatten().groupBy({ it.first }, { it.second }).mapValues { (_, seen) ->
+        seen.maxBy { listOf(St.unsent, St.ready, St.needsFunds, St.waiting, St.mined).indexOf(it) }
     }
 
     /** A drawn transaction: its place in the gutter (dp) and its state; [coin] is an exit's own output, at the right. */
@@ -294,11 +304,13 @@ internal object ExitGutter {
         val rows = mutableMapOf<String, MutableList<Float>>()
         paths.forEachIndexed { r, path -> path.dropLast(1).forEach { (id, _) -> rows.getOrPut(id) { mutableListOf() } += ys[r] } }
         val root = x0 to ys.average().toFloat()
+        val states = states(paths)
         val nodes = linkedMapOf<String, Node>(); val links = linkedMapOf<String, Link>()
         paths.forEachIndexed { r, path ->
             var from = root; var previous = "root"
-            path.forEachIndexed { i, (id, st) ->
+            path.forEachIndexed { i, (id, own) ->
                 val coin = i == path.lastIndex
+                val st = if (coin) own else states.getValue(id)
                 val at = if (coin) coinX to ys[r] else x0 + (i + 1) * d + 6 to rows.getValue(id).average().toFloat()
                 val key = if (coin) "$id@$r" else id
                 nodes.putIfAbsent(key, Node(id, at.first, at.second, st, coin))

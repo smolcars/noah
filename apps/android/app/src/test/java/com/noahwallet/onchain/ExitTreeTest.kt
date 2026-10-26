@@ -133,9 +133,20 @@ class ExitTreeTest {
         assertTrue(long.nodes.filter { !it.coin }.all { it.x <= 90f - 14 })
     }
 
+    @Test fun aRestartedExitNeverHidesASiblingsProgress() {
+        // The first row restarted (Start: nothing listed yet); its sibling has the shared root in a block and the next one waiting.
+        val paths = listOf(listOf("root" to st.unsent, "x" to st.unsent, "leafA" to st.unsent), listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))
+        assertEquals(mapOf("root" to st.mined, "x" to st.waiting, "leafA" to st.unsent, "leafB" to st.unsent), ExitGutter.states(paths))
+        val layout = ExitGutter.shared(paths, listOf(30f, 94f))
+        assertEquals(st.mined, layout.nodes.single { it.id == "root" }.st); assertEquals(st.waiting, layout.nodes.single { it.id == "x" }.st)
+        assertTrue("the root's link is ink", layout.links.first().ink)
+    }
+
     @Test fun theGutterReadsEachTransactionsState() {
         val e = exit("a", "Processing", listOf("root", "x", "y", "leaf"), listOf("confirmed", "awaiting-confirmation", "verify-inputs", "verify-inputs"))
         assertEquals(listOf(st.mined, st.waiting, st.unsent, st.unsent), ExitGutter.path(e, ExitStages.of(e, 100)).map { it.second })
+        val ready = exit("a", "Processing", listOf("root", "x"), listOf("confirmed", "awaiting-cpfp-broadcast"))
+        assertEquals("ready to send isn't in the mempool", st.ready, ExitGutter.path(ready, ExitStages.of(ready, 100)).last().second)
         val parked = exit("a", "Processing", listOf("root", "x"), listOf("confirmed", "awaiting-cpfp-broadcast"))
         assertEquals(st.needsFunds, ExitGutter.path(parked, ExitStages.of(parked, 100, needsFunds = true)).last().second)
         assertEquals(ExitGutter.After.lock, ExitGutter.after(ExitStage(ExitStage.Phase.wait)))

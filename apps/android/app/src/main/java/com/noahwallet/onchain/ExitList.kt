@@ -194,8 +194,9 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
     val coins = rows.mapIndexed { i, (_, stage) -> GutterCoin(paths[i], stage, tip) }
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     val centers = remember(rows.size) { mutableStateListOf(*Array(rows.size) { Float.NaN }) }
-    // Each transaction is drawn once, in the first path's state (as the gutter's layout places it).
-    val waiting = paths.flatMap { it.dropLast(1) }.distinctBy { it.first }.filter { it.second == ExitGutter.St.waiting }.map { it.first }
+    // Each transaction is drawn once, in its furthest state among the exits that share it (as the gutter's layout draws it).
+    val states = ExitGutter.states(paths)
+    val waiting = paths.flatMap { it.dropLast(1) }.map { it.first }.distinct().filter { states[it] == ExitGutter.St.waiting }
     var visible by remember { mutableStateOf(true) }
     val breath = rememberBreath((waiting.isNotEmpty() || coins.any { it.pulses }) && visible && rememberResumed() && !LocalReduceMotion.current)
     val layout = { if (centers.any { it.isNaN() }) null else ExitGutter.shared(paths, centers.toList()) }
@@ -237,12 +238,19 @@ private fun GutterSpot(side: Float, center: () -> Offset?, draw: DrawScope.(Offs
     }.size(side.dp).drawBehind { scale(density, density, Offset.Zero) { draw(Offset(side / 2, side / 2)) } })
 }
 
-/** A transaction in a gutter (prototype `txNode` at 8 dp): ink when mined, a filled square while it waits, hollow when not sent. */
+/**
+ * A transaction in a gutter (prototype `txNode` at 8 dp): ink when mined, a filled square while it waits in the mempool, an
+ * outlined square when it's ready to send (ringed red when short of funds), hollow when not sent.
+ */
 private fun DrawScope.gutterNode(at: Offset, st: ExitGutter.St, palette: NoahTokens.Palette) {
     val z = 8f
     when (st) {
         ExitGutter.St.mined -> drawRoundRect(palette.foreground, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f))
         ExitGutter.St.waiting -> drawRoundRect(palette.background, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f))
+        ExitGutter.St.ready -> {
+            drawRoundRect(palette.background, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f))
+            drawRoundRect(palette.orange, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f), style = Stroke(1.6f))
+        }
         ExitGutter.St.needsFunds -> {
             drawRoundRect(palette.background, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f))
             drawRoundRect(palette.orange, Offset(at.x - z / 2, at.y - z / 2), Size(z, z), CornerRadius(2.5f), style = Stroke(1.6f))
