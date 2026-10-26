@@ -59,6 +59,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlinx.coroutines.flow.first
 
 /**
  * The exit picture (exit-v2-notes.md, The picture): your branch of the round's tree standing on a "Bitcoin" ground line,
@@ -76,11 +77,19 @@ internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifi
     val density = LocalDensity.current
     val wide = LocalPose.current !is OnboardingPose.Compact
     val scale = min(density.fontScale, 1.25f)
-    val last = remember { arrayOfNulls<ExitScene>(1) }
-    val move = remember(scene, reduceMotion) { TreeMotion(if (reduceMotion) scene else last[0], scene).also { last[0] = scene } }
-    val clock = remember(move) { Animatable(0f) }
-    LaunchedEffect(move) { if (move.seconds > 0f) clock.animateTo(move.seconds, tween((move.seconds * 1000).roundToInt(), easing = LinearEasing)) }
-    val shown = scene
+    // Each move plays to its end; a state that arrives meanwhile moves next, from where this one ends, so nothing jumps.
+    var move by remember { mutableStateOf(TreeMotion(if (reduceMotion) scene else null, scene)) }
+    val clock = remember { Animatable(0f) }
+    val latest by rememberUpdatedState(scene)
+    LaunchedEffect(reduceMotion) {
+        while (true) {
+            if (clock.value < move.seconds) clock.animateTo(move.seconds, tween(((move.seconds - clock.value) * 1000).roundToInt(), easing = LinearEasing))
+            val next = snapshotFlow { latest }.first { it != move.to }
+            move = TreeMotion(if (reduceMotion) next else move.to, next)
+            clock.snapTo(0f)
+        }
+    }
+    val shown = move.to
     val resumed = LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(Lifecycle.State.RESUMED)
     var visible by remember { mutableStateOf(true) }
     val breath = rememberBreath(resumed && visible && !reduceMotion && shown.pulses)
