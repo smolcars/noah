@@ -68,8 +68,8 @@ struct ExitVtxoDetailView: View {
                     }
                     VStack(spacing: 0) {
                         ForEach(Array(text.rows.enumerated()), id: \.offset) { index, row in
-                            SettingsDetailRow(label: row.label, value: row.value, numeric: row.numeric, failure: row.failure,
-                                              hairline: index < text.rows.count - 1)
+                            ExitDetailRow(label: row.label, value: row.value, note: row.note, numeric: row.numeric, failure: row.failure,
+                                          hairline: index < text.rows.count - 1)
                         }
                     }
                     .padding(.top, 22)
@@ -290,7 +290,7 @@ struct ExitStatusLine: View {
 
 /// Everything the progress page says about one exit, from the same state the picture uses.
 @MainActor struct ExitText {
-    struct Row { var label: String; var value: String; var numeric = false; var failure = false }
+    struct Row { var label: String; var value: String; var numeric = false; var failure = false; var note: String? = nil }
 
     let progress: ExitProgress
     let exit: ExitModel
@@ -340,10 +340,11 @@ struct ExitStatusLine: View {
 
     /// What this exit's whole path cost in this wallet's fee children, and the part shared with its other exits.
     var fees: (total: UInt64, shared: UInt64) { ExitFees.paid(exit, among: overview?.exits ?? [], childFees: overview?.childFees ?? [:]) }
-    /// "₿961 · ₿933 shared with your other exits", or the total alone.
-    private var feesLine: String {
+    /// The Network fees row: the amount, and a note when your other exits share part of it.
+    private var feesRow: Row {
         let fees = fees
-        return fees.shared > 0 ? tr("{amount} · {shared} shared with your other exits", money(fees.total), money(fees.shared)) : money(fees.total)
+        return Row(label: tr("Network fees"), value: money(fees.total), numeric: true,
+                   note: fees.shared > 0 ? tr("Includes {shared} for transactions your other exits share. Each is paid once.", money(fees.shared)) : nil)
     }
     /// What's missing for the parked package.
     var need: UInt64? {
@@ -390,7 +391,7 @@ struct ExitStatusLine: View {
                 return tr("Anchor + {fee} fee · {n} of {total}", money(fee), n, total)
             }
             return tr("Waiting for block {height} · {n} of {total}", block(tip + 1), n, total)
-        case .shared: return tr("Already sent by another exit · {n} of {total}", n, total)
+        case .shared: return tr("Already sent by someone else · {n} of {total}", n, total)
         case .confirmed:
             let last = progress.heights.prefix(progress.confirmed).compactMap { $0 }.last ?? tip
             return tr("Confirmed in block {height} · {n} of {total}", block(last), progress.confirmed, total)
@@ -413,7 +414,7 @@ struct ExitStatusLine: View {
         if progress.stale { return tr("Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.") }
         switch progress.phase {
         case .starting: return tr("Your VTXO leaves Ark. Nothing from here on needs Ark’s server.")
-        case .publishing: return L10n.plural("Your bitcoin sits at the end of a path of {n} transactions in the round’s tree. The round’s own transaction is already on-chain.",
+        case .publishing: return L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
                                              count: max(progress.total, 1), locale: language)
         case .sending: return tr("Each one is sent only after the one before it is in a block.")
         case .needsFunds: return tr("Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms.")
@@ -421,7 +422,7 @@ struct ExitStatusLine: View {
             if progress.bumped { return tr("A block came without it. Noah pays more when the fee rate rises, so it gets into the next one.") }
             if progress.stuck > 0 { return tr("Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now.") }
             return tr("Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin.")
-        case .shared: return tr("Another exit from your round already sent this one, with its own fee. You don’t pay for it.")
+        case .shared: return tr("Someone else exiting from your round already sent this one, with their own fee. You don’t pay for it.")
         case .confirmed: return tr("One transaction per block: about ten minutes each.")
         case .onchain, .waiting:
             return L10n.plural("Your bitcoin is on-chain, locked for {n} blocks. The lock gives Ark time to stop a VTXO that was already spent.",
@@ -440,7 +441,7 @@ struct ExitStatusLine: View {
         switch progress.phase {
         case .claimed:
             var rows = [Row(label: tr("Claimed in"), value: tr("Block {height}", block(progress.claimedHeight ?? tip)))]
-            rows.append(.init(label: tr("Network fees"), value: feesLine, numeric: true))
+            rows.append(feesRow)
             if let fee = claimFee { rows.append(.init(label: tr("Claim fee"), value: money(fee), numeric: true)) }
             if let took {
                 rows.append(.init(label: tr("Took"), value: L10n.plural("{n} blocks · {time}", count: Int(took), ExitText.about(took, language), locale: language)))
@@ -454,9 +455,13 @@ struct ExitStatusLine: View {
         default:
             var rows: [Row] = []
             if total > 0 { rows.append(.init(label: tr("Transactions"), value: tr("{n} of {total} in blocks", progress.confirmed, total))) }
-            rows.append(progress.phase == .needsFunds
-                        ? .init(label: tr("Network fees"), value: tr("{amount} · {left} left", money(fees.total), money(overview?.confirmed ?? 0)), numeric: true, failure: true)
-                        : .init(label: tr("Network fees"), value: feesLine, numeric: true))
+            if progress.phase == .needsFunds {
+                let left = money(overview?.confirmed ?? 0), package = overview?.packageFees[exit.id]
+                rows.append(.init(label: tr("Network fees"), value: money(fees.total), numeric: true, failure: true,
+                                  note: package.map { tr("{left} left on-chain. The next fee needs about {need}.", left, money($0)) }))
+            } else {
+                rows.append(feesRow)
+            }
             if let height = progress.claimableHeight {
                 rows.append(.init(label: tr("Claimable"), value: tr("Block {height}", block(height))))
             } else if let delta = overview?.exitDelta {
@@ -491,7 +496,7 @@ struct ExitStatusLine: View {
         // Later states don't list transactions: the last list bark recorded can predate the last one's block (as Android).
         if [.onchain, .waiting, .claimable, .claiming, .claimed].contains(progress.phase) { return tr("In a block") }
         switch tx.status.kind {
-        case "awaiting-confirmation": return tx.status.origin == "wallet" || tx.status.origin == nil ? tr("Waiting for a block") : tr("Sent by another exit")
+        case "awaiting-confirmation": return tx.status.origin == "wallet" || tx.status.origin == nil ? tr("In the mempool") : tr("Sent by someone else")
         case "awaiting-cpfp-broadcast": return progress.phase == .needsFunds ? tr("Needs on-chain funds") : tr("Ready to send")
         default: return tr("Not sent yet")
         }

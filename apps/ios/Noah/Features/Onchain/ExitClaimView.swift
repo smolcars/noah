@@ -13,6 +13,7 @@ struct ExitClaimView: View {
     /// The review key (`reviewKey`) whose review last finished: after that, a missing quote offers Review again.
     @State private var reviewed: String?
     @State private var haptics = OnboardingHaptics()
+    @FocusState private var editing: Bool
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
@@ -71,9 +72,9 @@ struct ExitClaimView: View {
                 .disabled(model.busy)
                 .padding(.top, toPhone ? 0 : 8)
             VStack(spacing: 0) {
-                SettingsDetailRow(label: L10n.text("Claim fee", locale: language),
+                ExitDetailRow(label: L10n.text("Claim fee", locale: language),
                                   value: quote.map { $0.fee.map(money.about) ?? L10n.text("Unknown", locale: language) } ?? "—", numeric: true)
-                SettingsDetailRow(label: L10n.text("You get", locale: language), value: receive.map(money.about) ?? "—", numeric: true, hairline: false)
+                ExitDetailRow(label: L10n.text("You get", locale: language), value: receive.map(money.about) ?? "—", numeric: true, hairline: false)
             }
             .padding(.top, 18)
             if quote?.feesUnknown == true {
@@ -133,13 +134,17 @@ struct ExitClaimView: View {
 
     private var field: some View {
         HStack(spacing: 8) {
-            TextField(text: $typed, prompt: Text(verbatim: L10n.text("Bitcoin address", locale: language)).foregroundStyle(NoahTokens.Colors.muted)) {
+            // The whole address, wrapping: the line under it says to check it.
+            TextField(text: $typed, prompt: Text(verbatim: L10n.text("Bitcoin address", locale: language)).foregroundStyle(NoahTokens.Colors.muted),
+                      axis: .vertical) {
                 Text(verbatim: L10n.text("Bitcoin address", locale: language))
             }
+            .lineLimit(1...4)
             .font(SettingsText.mono)
             .tint(NoahTokens.Colors.orange)
             .textInputAutocapitalization(.never).autocorrectionDisabled()
             .submitLabel(.done)
+            .focused($editing)
             .accessibilityIdentifier("exit-claim-address")
             PasteButton(payloadType: String.self) { values in
                 Task { @MainActor in typed = values.first.map(Self.address(fromScan:)) ?? typed }
@@ -150,7 +155,7 @@ struct ExitClaimView: View {
                 .accessibilityLabel(Text(L10n.text("Scan", locale: language)))
                 .accessibilityIdentifier("exit-claim-scan")
         }
-        .padding(.leading, 16).padding(.trailing, 6)
+        .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
         .frame(minHeight: 54)
         .glassCompat(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
@@ -159,7 +164,14 @@ struct ExitClaimView: View {
                 .opacity(!address.isEmpty && !valid ? 1 : 0)
         }
         .padding(.top, 6).padding(.bottom, 4)
-        .onChange(of: typed) { _, _ in if !toPhone { model.editClaimDestination(address) } }
+        .onChange(of: typed) { _, _ in
+            // Return ends editing rather than starting a line.
+            if typed.contains("\n") {
+                typed = typed.replacingOccurrences(of: "\n", with: "")
+                editing = false
+            }
+            if !toPhone { model.editClaimDestination(address) }
+        }
     }
 
     private func option(_ title: String, sub: String? = nil, selected: Bool, id: String, action: @escaping () -> Void) -> some View {

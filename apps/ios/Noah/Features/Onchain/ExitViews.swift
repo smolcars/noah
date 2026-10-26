@@ -91,7 +91,9 @@ struct ExitHeadline: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(verbatim: amount).noahText(SettingsText.big).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
+            Text(verbatim: amount).noahText(SettingsText.big).monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.numericText())
             if let line {
                 Text(verbatim: line).noahText(NoahTokens.Typography.sub).monospacedDigit()
                     .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
@@ -100,6 +102,66 @@ struct ExitHeadline: View {
         }
         .padding(.top, 6)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A row on the exit pages that never truncates (exit-v2-notes.md, "Layout"): when the label and
+/// value don't fit on one line the value moves under the label, right-aligned; at accessibility
+/// sizes they stack, left-aligned. A note (the fee split, needs funds) is its own wrapping line.
+struct ExitDetailRow: View {
+    let label: String
+    let value: String
+    var note: String?
+    var numeric = false
+    var failure = false
+    var hairline = true
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
+            if stacked {
+                VStack(alignment: .leading, spacing: 2) {
+                    labelText
+                    valueText.multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 18) {
+                        labelText.fixedSize()
+                        Spacer(minLength: 0)
+                        valueText.fixedSize()
+                    }
+                    VStack(alignment: .trailing, spacing: 2) {
+                        labelText.frame(maxWidth: .infinity, alignment: .leading)
+                        valueText.multilineTextAlignment(.trailing)
+                    }
+                }
+            }
+            if let note {
+                Text(verbatim: note).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                    .multilineTextAlignment(stacked ? .leading : .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: stacked ? .leading : .trailing)
+            }
+        }
+        .padding(.vertical, 10)
+        .frame(minHeight: 48)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) { if hairline { HomeHairline() } }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var labelText: some View {
+        Text(verbatim: label).noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var valueText: some View {
+        Text(verbatim: value).noahText(numeric ? HomeText.amount : NoahTokens.Typography.label).monospacedDigit()
+            .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 

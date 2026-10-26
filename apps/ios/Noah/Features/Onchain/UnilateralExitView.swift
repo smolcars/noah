@@ -203,12 +203,12 @@ struct ExitChooseView: View {
     /// The total, the fee estimate and what it means for your on-chain funds.
     @ViewBuilder private func summary(_ money: ExitMoney) -> some View {
             VStack(spacing: 0) {
-                SettingsDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
+                ExitDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
                     selection.count.formatted() + " · " + L10n.plural("{n} transactions", count: Int($0.txsToBroadcast), locale: language)
                 } ?? selection.count.formatted(), numeric: true)
-                SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
-                SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
-                SettingsDetailRow(label: L10n.text("You get", locale: language),
+                ExitDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
+                ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
+                ExitDetailRow(label: L10n.text("You get", locale: language),
                                   value: estimate.map { money.about(ExitRules.received(amount: value, claimFee: $0.claimFeeSats)) } ?? money(value),
                                   numeric: true, hairline: false)
             }
@@ -304,22 +304,22 @@ struct ExitReviewView: View {
             if let quote {
                 VStack(spacing: 0) {
                     if let fee = quote.fee, let chainFee = quote.chainFee {
-                        SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
-                        SettingsDetailRow(label: L10n.text("Paid from", locale: language),
+                        ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
+                        ExitDetailRow(label: L10n.text("Paid from", locale: language),
                                           value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language))
-                        SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
+                        ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
                         if let delta = model.overview?.exitDelta, let estimate {
                             // One block per transaction along a path at most, then the timelock.
-                            SettingsDetailRow(label: L10n.text("Claimable", locale: language),
+                            ExitDetailRow(label: L10n.text("Claimable", locale: language),
                                               value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language))
                         }
                         if let rate = quote.feeRate {
-                            SettingsDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
+                            ExitDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
                         }
-                        SettingsDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false)
+                        ExitDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false)
                     } else {
-                        SettingsDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language))
-                        SettingsDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
+                        ExitDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language))
+                        ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
                     }
                 }
                 .padding(.top, 22)

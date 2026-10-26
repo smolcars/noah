@@ -113,6 +113,7 @@ struct ExitListRow: View {
                     Text(verbatim: ExitMoney(app: app, locale: locale)(exit.amount)).noahText(HomeText.amount).monospacedDigit()
                     Text(verbatim: text.listLine).noahText(HomeText.footnote).monospacedDigit()
                         .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .ready ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 3) {
                         ForEach(Array(progress.rail.enumerated()), id: \.offset) { _, step in
                             Capsule().fill(step == .done ? NoahTokens.Colors.foreground : step == .now ? NoahTokens.Colors.orange
@@ -123,7 +124,6 @@ struct ExitListRow: View {
                     .padding(.top, 5)
                     .accessibilityHidden(true)
                 }
-                .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
             }
