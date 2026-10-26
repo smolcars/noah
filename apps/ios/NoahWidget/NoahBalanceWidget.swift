@@ -78,6 +78,7 @@ class BalanceProvider: TimelineProvider {
 
 struct NoahBalanceWidgetView: View {
     var entry: BalanceEntry
+    var language: String
     var variantName: String?
     var variantColor: Color?
     @Environment(\.widgetFamily) var family
@@ -129,7 +130,7 @@ struct NoahBalanceWidgetView: View {
     private var smallWidgetLayout: some View {
         VStack(alignment: .leading, spacing: shouldUseCompactSmallLayout ? 4 : 6) {
             HStack(alignment: .top) {
-                Text("Noah Wallet")
+                Text(L10n.text("Noah Wallet", locale: language))
                     .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
@@ -157,7 +158,7 @@ struct NoahBalanceWidgetView: View {
                     .lineLimit(1)
 
                 if entry.pendingBalance > 0 {
-                    Text("Pending: ₿\u{00A0}\(formatSatsCompact(entry.pendingBalance))")
+                    Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSatsCompact(entry.pendingBalance))", locale: language))
                         .font(.caption2)
                         .foregroundColor(.yellow)
                         .lineLimit(1)
@@ -171,7 +172,7 @@ struct NoahBalanceWidgetView: View {
                         Image(systemName: expiryStatus.icon)
                             .font(.system(size: 10))
                             .foregroundColor(expiryStatus.color)
-                        Text("Expires: \(Int(entry.closestExpiryBlocks))b")
+                        Text(L10n.plural("{n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
                             .font(.caption2)
                             .foregroundColor(expiryStatus.color)
                             .lineLimit(1)
@@ -184,9 +185,11 @@ struct NoahBalanceWidgetView: View {
 
             HStack(spacing: shouldUseCompactSmallLayout ? 6 : 8) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("On")
+                    Text(L10n.text("Onchain", locale: language))
                         .font(.caption2)
                         .foregroundColor(.gray)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("\(formatSatsCompact(entry.onchainBalance))")
                         .font(.caption)
                         .fontWeight(.medium)
@@ -198,9 +201,11 @@ struct NoahBalanceWidgetView: View {
                 Spacer(minLength: 4)
 
                 VStack(alignment: .trailing, spacing: 1) {
-                    Text("Off")
+                    Text(L10n.text("Offchain", locale: language))
                         .font(.caption2)
                         .foregroundColor(.gray)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("\(formatSatsCompact(entry.offchainBalance))")
                         .font(.caption)
                         .fontWeight(.medium)
@@ -217,7 +222,7 @@ struct NoahBalanceWidgetView: View {
     private var mediumWidgetLayout: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Noah Wallet")
+                Text(L10n.text("Noah Wallet", locale: language))
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
@@ -243,7 +248,7 @@ struct NoahBalanceWidgetView: View {
                     .foregroundColor(.white)
 
                 if entry.pendingBalance > 0 {
-                    Text("Pending: ₿\u{00A0}\(formatSats(entry.pendingBalance))")
+                    Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSats(entry.pendingBalance))", locale: language))
                         .font(.caption2)
                         .foregroundColor(.yellow)
                         .lineLimit(1)
@@ -257,7 +262,7 @@ struct NoahBalanceWidgetView: View {
                         Image(systemName: expiryStatus.icon)
                             .font(.system(size: 12))
                             .foregroundColor(expiryStatus.color)
-                        Text("VTXO expires: \(Int(entry.closestExpiryBlocks)) blocks")
+                        Text(L10n.plural("VTXO expires: {n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
                             .font(.caption)
                             .foregroundColor(expiryStatus.color)
                     }
@@ -268,7 +273,7 @@ struct NoahBalanceWidgetView: View {
 
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Onchain")
+                    Text(L10n.text("Onchain", locale: language))
                         .font(.caption2)
                         .foregroundColor(.gray)
                     Text("\(formatSats(entry.onchainBalance))")
@@ -279,7 +284,7 @@ struct NoahBalanceWidgetView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("Offchain")
+                    Text(L10n.text("Offchain", locale: language))
                         .font(.caption2)
                         .foregroundColor(.gray)
                     Text("\(formatSats(entry.offchainBalance))")

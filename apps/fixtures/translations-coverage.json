@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1481,
-  "sourceKeys": 1512,
+  "catalogEntries": 1488,
+  "sourceKeys": 1520,
   "coverage": {
     "ios": {
       "used": [
@@ -667,6 +667,8 @@
         "No valid payment methods found",
         "No, turn off",
         "Noah",
+        "Noah Balance",
+        "Noah Wallet",
         "Noah can receive and renew while closed.",
         "Noah can't read its secure storage yet. Unlock your device to continue.",
         "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment.",
@@ -795,6 +797,7 @@
         "Pending Offboard",
         "Pending Rounds",
         "Pending Send",
+        "Pending: {amount}",
         "Permission required",
         "Pick a name",
         "Places in view",
@@ -1180,6 +1183,7 @@
         "Using the default",
         "VTXO",
         "VTXO ID",
+        "VTXO expires: {n} blocks",
         "VTXO hex or ID",
         "VTXO lifetime",
         "VTXO removed",
@@ -1192,6 +1196,9 @@
         "Version {version}",
         "Via",
         "View in explorer",
+        "View your Bitcoin balance",
+        "View your Bitcoin balance on regtest",
+        "View your Bitcoin balance on signet",
         "View your seed phrase",
         "Wait for the current wallet operation to finish before changing the endpoint.",
         "Wait for the wallet to be ready, then refresh.",
@@ -1312,10 +1319,46 @@
         "· nothing left your wallet"
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_1275d2b1abd166af",
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_5c5fe5dc2e3dc1d5",
+          "gt_b39c9deaef6ea38e",
+          "gt_b5bdadc7e5c0579d",
+          "gt_f41dbd7482670f0c"
+        ],
+        "ja": [
+          "gt_1275d2b1abd166af",
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_5c5fe5dc2e3dc1d5",
+          "gt_b39c9deaef6ea38e",
+          "gt_b5bdadc7e5c0579d",
+          "gt_f41dbd7482670f0c"
+        ],
+        "ko": [
+          "gt_1275d2b1abd166af",
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_5c5fe5dc2e3dc1d5",
+          "gt_b39c9deaef6ea38e",
+          "gt_b5bdadc7e5c0579d",
+          "gt_f41dbd7482670f0c"
+        ],
+        "sv": [
+          "gt_1275d2b1abd166af",
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_5c5fe5dc2e3dc1d5",
+          "gt_b39c9deaef6ea38e",
+          "gt_b5bdadc7e5c0579d",
+          "gt_f41dbd7482670f0c"
+        ]
       }
     },
     "android": {
@@ -2005,6 +2048,7 @@
         "No valid payment methods found",
         "No, turn off",
         "Noah",
+        "Noah Wallet",
         "Noah Wallet Transaction Export",
         "Noah can receive and renew while closed.",
         "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment.",
@@ -2133,6 +2177,7 @@
         "Pending Offboard",
         "Pending Rounds",
         "Pending Send",
+        "Pending: {amount}",
         "Permission required",
         "Pick a name",
         "Places in view",
@@ -2532,6 +2577,7 @@
         "Using the default",
         "VTXO",
         "VTXO ID",
+        "VTXO expires: {n} blocks",
         "VTXO hex or ID",
         "VTXO lifetime",
         "VTXO removed",
@@ -2687,10 +2733,30 @@
         "· nothing left your wallet"
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_f41dbd7482670f0c"
+        ],
+        "ja": [
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_f41dbd7482670f0c"
+        ],
+        "ko": [
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_f41dbd7482670f0c"
+        ],
+        "sv": [
+          "gt_1c5b6b6468f0c580_one",
+          "gt_1c5b6b6468f0c580_other",
+          "gt_2910b8ef5d4d95af",
+          "gt_f41dbd7482670f0c"
+        ]
       }
     }
   }

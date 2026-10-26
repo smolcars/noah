@@ -20,7 +20,16 @@ struct NoahWidget: Widget {
     }
 
     private static var description: String {
-        variant == "mainnet" ? "View your Bitcoin balance" : "View your Bitcoin balance on \(variant)"
+        switch variant {
+        case "signet": L10n.text("View your Bitcoin balance on signet", locale: language)
+        case "regtest": L10n.text("View your Bitcoin balance on regtest", locale: language)
+        default: L10n.text("View your Bitcoin balance", locale: language)
+        }
+    }
+
+    /// The app's language: Settings' choice (mirrored by `WidgetDataWriter`), else the device's.
+    private static var language: String {
+        LegacyLocale.resolved(from: UserDefaults(suiteName: appGroup) ?? .standard)
     }
 
     var body: some WidgetConfiguration {
@@ -29,11 +38,12 @@ struct NoahWidget: Widget {
             provider: BalanceProvider(appGroup: Self.appGroup)
         ) { entry in
             NoahBalanceWidgetView(
-                entry: entry, variantName: Self.badge?.name, variantColor: Self.badge?.color
+                entry: entry, language: Self.language, variantName: Self.badge?.name,
+                variantColor: Self.badge?.color
             )
             .containerBackground(Color(red: 0.05, green: 0.05, blue: 0.05), for: .widget)
         }
-        .configurationDisplayName("Noah Balance")
+        .configurationDisplayName(L10n.text("Noah Balance", locale: Self.language))
         .description(Self.description)
         .supportedFamilies([.systemSmall, .systemMedium])
     }

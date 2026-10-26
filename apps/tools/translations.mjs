@@ -193,8 +193,10 @@ export function androidCatalog(all, locale) {
       lines.push('  </plurals>');
     } else lines.push(`  <string name="${name}">"${xml(format(entry.translations[locale].other, entry.names, 'android'))}"</string>`);
   }
-  // Existing static resource callers (tabs/launch gate) retain their IDs.
-  if (locale !== 'en') for (const [name, source] of Object.entries({ home: 'Home', receive: 'Receive', send: 'Send', history: 'History', launch_welcome: 'Welcome to Noah' })) {
+  // Existing static resource callers (tabs/launch gate, the widget's layout and picker descriptions) retain their IDs.
+  if (locale !== 'en') for (const [name, source] of Object.entries({ home: 'Home', receive: 'Receive', send: 'Send', history: 'History', launch_welcome: 'Welcome to Noah',
+    widget_title: 'Noah Wallet', widget_onchain: 'Onchain', widget_offchain: 'Offchain', widget_mainnet_description: 'View your Bitcoin balance',
+    widget_signet_description: 'View your Bitcoin balance on signet', widget_regtest_description: 'View your Bitcoin balance on regtest' })) {
     const entry = all.find(entry => entry.source === source);
     if (entry) lines.push(`  <string name="${name}">"${xml(entry.translations[locale].other)}"</string>`);
   }

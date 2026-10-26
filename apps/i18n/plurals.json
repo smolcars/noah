@@ -127,6 +127,10 @@
     "one": "{n} block",
     "other": "{n} blocks"
   },
+  "VTXO expires: {n} blocks": {
+    "one": "VTXO expires: {n} block",
+    "other": "VTXO expires: {n} blocks"
+  },
   "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions.": {
     "one": "This exit is behind the current chain height: last checked {n} block ago, at block {height}. Moving it forward can also send exit transactions.",
     "other": "This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions."

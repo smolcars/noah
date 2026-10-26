@@ -22,7 +22,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Noah Wallet"
+            android:text="@string/widget_title"
             android:textColor="@color/widgetTextSecondary"
             android:textSize="9sp" />
 
@@ -76,19 +76,22 @@
             android:gravity="center_vertical"
             android:layout_marginTop="2dp">
 
+            <!-- Shown only with an expiry, so the picker preview has no untranslated count -->
             <ImageView
                 android:id="@+id/expiry_icon"
                 android:layout_width="10dp"
                 android:layout_height="10dp"
                 android:src="@android:drawable/checkbox_on_background"
-                android:layout_marginEnd="3dp" />
+                android:layout_marginEnd="3dp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/expiry_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 blocks"
-                android:textSize="8sp" />
+                android:textSize="8sp"
+                android:visibility="gone" />
 
         </LinearLayout>
 
@@ -107,9 +110,11 @@
             android:orientation="horizontal">
 
             <TextView
+                android:id="@+id/onchain_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Onchain: "
+                android:layout_marginEnd="3dp"
+                android:text="@string/widget_onchain"
                 android:textColor="@color/widgetTextSecondary"
                 android:textSize="9sp" />
 
@@ -130,9 +135,11 @@
             android:layout_marginTop="1dp">
 
             <TextView
+                android:id="@+id/offchain_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Offchain: "
+                android:layout_marginEnd="3dp"
+                android:text="@string/widget_offchain"
                 android:textColor="@color/widgetTextSecondary"
                 android:textSize="9sp" />
 

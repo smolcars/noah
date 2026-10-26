@@ -3,6 +3,9 @@
   <string name="widget_regtest_description">View your Bitcoin balance on regtest</string>
   <string name="widget_signet_description">View your Bitcoin balance on signet</string>
   <string name="widget_mainnet_description">View your Bitcoin balance</string>
+  <string name="widget_title">Noah Wallet</string>
+  <string name="widget_onchain">Onchain</string>
+  <string name="widget_offchain">Offchain</string>
   <string name="home">Home</string>
   <string name="receive">Receive</string>
   <string name="send">Send</string>

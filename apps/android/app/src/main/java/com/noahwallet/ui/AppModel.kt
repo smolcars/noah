@@ -162,6 +162,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         check(getApplication<Application>().getSharedPreferences("gt_store", android.content.Context.MODE_PRIVATE).edit()
             .putString(com.noahwallet.services.storage.LegacyLocale.key, code).commit())
         localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication())
+        com.noahwallet.services.push.WidgetDataWriter.broadcast(getApplication(), BuildConfig.APP_VARIANT)
     }
 
     suspend fun suspendWallet() {

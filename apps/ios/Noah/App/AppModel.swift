@@ -78,6 +78,7 @@ final class AppModel {
     func setLanguage(_ code: String) {
         UserDefaults.standard.set(code, forKey: LegacyLocale.key)
         localeIdentifier = LegacyLocale.resolved()
+        WidgetDataWriter.publishLanguage(variant: variant)
     }
 
     /// Closing a session ends its streams, even when its wallet identity stays the same.

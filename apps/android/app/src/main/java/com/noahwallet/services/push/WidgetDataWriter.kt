@@ -26,7 +26,8 @@ object WidgetDataWriter {
         broadcast(context, variant)
     }
 
-    private fun broadcast(context: Context, variant: String) {
+    /** Redraws the variant's widget, which also picks up a newly chosen language. */
+    fun broadcast(context: Context, variant: String) {
         val name = variant.replaceFirstChar { it.uppercase() }
         context.sendBroadcast(Intent(NoahWidgetProvider.ACTION_WIDGET_DATA_CHANGED).setComponent(
             ComponentName(context.packageName, "com.noahwallet.widgets.NoahWidget${name}Provider")))

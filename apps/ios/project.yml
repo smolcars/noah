@@ -159,6 +159,11 @@ targets:
       - path: NoahWidget
         excludes:
           - Entitlements
+      # The app's catalog and lookup, so the widget shows the app's language.
+      - path: Noah/Resources/Localizable.xcstrings
+        buildPhase: resources
+      - path: Noah/Localization/L10n.swift
+      - path: Noah/Services/Storage/LegacyLocale.swift
     settings:
       base:
         PRODUCT_NAME: NoahWidget

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.widget.RemoteViews
 import com.noahwallet.MainActivity
 import com.noahwallet.R
+import com.noahwallet.localization.L10n
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.logging.SafeErrorDescription
 import java.text.NumberFormat
@@ -89,6 +90,11 @@ open class NoahWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
 
+            // Labels follow the app's language, which the layout's resources can't know
+            views.setTextViewText(R.id.wallet_title, L10n.text(context, "Noah Wallet"))
+            views.setTextViewText(R.id.onchain_label, L10n.text(context, "Onchain"))
+            views.setTextViewText(R.id.offchain_label, L10n.text(context, "Offchain"))
+
             // Set balance text
             views.setTextViewText(R.id.balance_text, "₿\u00A0${formatSats(totalBalance)}")
 
@@ -98,7 +104,7 @@ open class NoahWidgetProvider : AppWidgetProvider() {
 
             // Show/hide pending balance
             if (pendingBalance > 0) {
-                views.setTextViewText(R.id.pending_balance, "Pending: ₿\u00A0${formatSats(pendingBalance)}")
+                views.setTextViewText(R.id.pending_balance, L10n.text(context, "Pending: {amount}", "₿\u00A0${formatSats(pendingBalance)}"))
                 views.setViewVisibility(R.id.pending_balance, android.view.View.VISIBLE)
             } else {
                 views.setViewVisibility(R.id.pending_balance, android.view.View.GONE)
@@ -116,7 +122,7 @@ open class NoahWidgetProvider : AppWidgetProvider() {
             // Set expiry status - only show if VTXOs exist (not -999 sentinel)
             if (closestExpiryBlocks != -999L) {
                 val expiryStatus = getExpiryStatus(closestExpiryBlocks, expiryThreshold)
-                views.setTextViewText(R.id.expiry_text, "VTXO expires: $closestExpiryBlocks blocks")
+                views.setTextViewText(R.id.expiry_text, L10n.plural(context, "VTXO expires: {n} blocks", closestExpiryBlocks.toInt()))
                 views.setTextColor(R.id.expiry_text, expiryStatus.color)
                 views.setInt(R.id.expiry_icon, "setColorFilter", expiryStatus.color)
                 views.setImageViewResource(R.id.expiry_icon, expiryStatus.icon)
