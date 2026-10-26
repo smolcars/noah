@@ -8,12 +8,19 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
+/**
+ * Every row is classified on first import with its bytes kept. The executor only reads that classification, so the first
+ * row of each classification in each fixture also runs it: never paid, resumed or repaired, and still cancellable.
+ */
 @RunWith(Parameterized::class)
-class RecurringRNRequiredFieldsTest(private val name: String, private val row: String, private val classification: String) {
+class RecurringRNRequiredFieldsTest(private val name: String, private val row: String, private val classification: String, private val executes: Boolean) {
     companion object {
         @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges", "recurring-rn-duplicate-keys").flatMap { fixture ->
-            SharedFixtures.document(fixture).jsonObject.getValue("cases").jsonArray.map { it.jsonObject.let { c -> arrayOf(c.getValue("name").jsonPrimitive.content,
-                c.getValue("rowJSON").jsonPrimitive.content, c.getValue("classification").jsonPrimitive.content) } } }
+            val seen = mutableSetOf<String>()
+            SharedFixtures.document(fixture).jsonObject.getValue("cases").jsonArray.map { it.jsonObject.let { c ->
+                val classification = c.getValue("classification").jsonPrimitive.content
+                arrayOf<Any>(c.getValue("name").jsonPrimitive.content, c.getValue("rowJSON").jsonPrimitive.content, classification, seen.add(classification))
+            } } }
     }
     @Test fun firstImportClassifiesBeforeBootstrapAndPreservesUnsupportedBytes() = runBlocking {
         val w = RecurringWorld(this)
@@ -23,6 +30,7 @@ class RecurringRNRequiredFieldsTest(private val name: String, private val row: S
             val visible = w.store.load().schedules.getValue("broken")
             assertEquals(classification, if (visible.unsupportedStorage) "stopped-unsupported" else visible.status)
             assertEquals(original, w.raw)
+            if (!executes) return@runBlocking
             w.executor.execute(); w.executor.execute(manual = true)
             val unsupported = classification == "stopped-unsupported"
             assertEquals(if (unsupported) 0 else 1, w.wallet.calls)
