@@ -361,14 +361,41 @@ struct ExitStagePainter {
     }
 
     private func place(_ items: [ExitStageLabel]) -> [ExitStageLabel] {
-        ExitStageLabels.place(items, lineHeight: geometry.lineHeight, scale: geometry.scale) { tr("Blocks {from}–{to}", height($0), height($1)) }
+        ExitStageLabels.place(items.map(fit), lineHeight: geometry.lineHeight, scale: geometry.scale, bounds: geometry.labelBounds, fit: fit) {
+            tr("Blocks {from}–{to}", height($0), height($1))
+        }
     }
 
-    /// A pill's frame around a label's first line.
+    /// A label wrapped to the room it has (translations and large text run long): its column, narrower
+    /// beside the phone's badge, or for the claim, right of your coin. A pill's text keeps 8 pt inside it.
+    func fit(_ label: ExitStageLabel) -> ExitStageLabel {
+        let g = geometry
+        func wrapped(_ width: Double) -> ExitStageLabel {
+            var out = label
+            out.lines = []
+            for (index, line) in label.lines.enumerated() {
+                let size = index == 0 ? g.fontSize : g.subSize, strong = [.strong, .failureStrong].contains(line.tone)
+                let parts = ExitStageLabels.wrap(line.text, width: width - (index == 0 && label.pill != nil ? 8 : 0)) {
+                    ExitStageText.width($0, size: size, strong: strong)
+                }
+                out.lines += parts.map { .init(text: $0, tone: line.tone) }
+                if index == 0 { out.head = parts.count }
+            }
+            return out
+        }
+        if let x = label.trailing { return wrapped(g.claimColumn(x)) }
+        let full = wrapped(g.width - 12 - g.labelX), top = full.y - g.lineHeight / 2
+        let bottom = top + Double(full.lines.count) * g.lineHeight + (full.pill == nil ? 0 : 5 * g.scale)
+        return g.column(top: top, bottom: bottom) < g.width - 12 - g.labelX ? wrapped(g.column(top: top, bottom: bottom)) : full
+    }
+
+    /// A pill's frame around a label's first line, however many lines it wrapped to.
     func pill(_ label: ExitStageLabel) -> CGRect {
-        let g = geometry, width = ExitStageText.width(label.lines[0].text, size: g.fontSize, strong: true), height = g.lineHeight + 5
+        let g = geometry, head = max(1, label.head)
+        let width = label.lines.prefix(head).map { ExitStageText.width($0.text, size: g.fontSize, strong: true) }.max() ?? 0
+        let height = Double(head - 1) * g.lineHeight + g.lineHeight + 5
         let x = label.trailing.map { $0 - width - 8 } ?? g.labelX - 8
-        return CGRect(x: x, y: label.y - height / 2, width: width + 16, height: height)
+        return CGRect(x: x, y: label.y - (g.lineHeight + 5) / 2, width: width + 16, height: height)
     }
 
     // MARK: Pulses
@@ -485,7 +512,8 @@ struct ExitStagePainter {
                                       with: .color(c.orange.opacity(0.7 * alpha)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: other.sent ? [] : [3, 3]))
                 canvas.fill(canvas.circle(p.x, p.y, 6), c.soft.opacity(alpha))
                 canvas.stroke(canvas.circle(p.x, p.y, 6), c.orange.opacity(alpha), 1.6)
-                text(other.amount, p.x - 10, p.y, size: 9.5 * L, color: c.muted, anchor: .trailing, opacity: alpha * f.labels)
+                text(other.amount, p.x - 10, p.y, size: Self.shrunk(other.amount, 9.5 * L, room: p.x - 14), color: c.muted, anchor: .trailing,
+                     opacity: alpha * f.labels)
             }
         }
         // Before bark lists the path (Start): a ghost of the branch, what the exit will send.
@@ -585,13 +613,13 @@ struct ExitStagePainter {
                 }
             }
             for (index, line) in label.lines.enumerated() {
-                let y = label.y + Double(index) * g.lineHeight + (index > 0 && label.pill != nil ? 4 * g.scale : 0)
+                let y = label.y + Double(index) * g.lineHeight + (index >= label.head && label.pill != nil ? 4 * g.scale : 0)
                 let color: Color = switch line.tone {
                 case .strong, .ink: c.foreground
                 case .muted: c.muted
                 case .failure, .failureStrong: NoahTokens.Colors.failure
                 }
-                layer.draw(Text(verbatim: line.text).font(ExitStageText.font(index == 0 ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone)))
+                layer.draw(Text(verbatim: line.text).font(ExitStageText.font(index < label.head ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone)))
                             .foregroundColor(color), at: CGPoint(x: x, y: y), anchor: label.trailing == nil ? .leading : .trailing)
             }
             if let brace = label.brace {
@@ -715,6 +743,12 @@ struct ExitStagePainter {
         }
     }
 
+    /// A one-line text's size, smaller (down to 60 %) when it would be wider than `room`.
+    static func shrunk(_ text: String, _ size: Double, room: Double, strong: Bool = false) -> Double {
+        let width = ExitStageText.width(text, size: size, strong: strong)
+        return width <= room ? size : max(size * 0.6, size * room / width)
+    }
+
     /// One tick per 6 blocks, 12 to 48 of them; below 72 blocks there's no hour reading.
     static func ticks(_ delta: UInt32) -> (count: Int, hours: Bool) {
         let perSix = Int((Double(delta) / 6).rounded())
@@ -757,12 +791,15 @@ struct ExitStagePainter {
         let first = !claiming ? tr("On-chain") : s.destination == .phone ? tr("This phone") : tr("Another wallet")
         let second = claiming ? (s.destination != .phone ? other : f.land > 0.9 ? s.received ?? s.balance : s.balance) : s.balance
         let size = claiming ? 1.1 : 1.0
+        // Right of the "Bitcoin" label, however long the translation.
+        let room = g.width - 12 - (14 + ExitStageText.width(tr("Bitcoin"), size: 10.5 * L) + 12)
         var layer = canvas.context
         layer.opacity *= alpha
-        layer.draw(Text(verbatim: first).font(ExitStageText.font(10.5 * L * size, strong: claiming)).foregroundColor(claiming ? colors.foreground : colors.muted),
+        layer.draw(Text(verbatim: first).font(ExitStageText.font(Self.shrunk(first, 10.5 * L * size, room: room, strong: claiming), strong: claiming))
+                    .foregroundColor(claiming ? colors.foreground : colors.muted),
                    at: CGPoint(x: g.width - 12, y: g.ground + 11 * L), anchor: .trailing)
         if let second {
-            layer.draw(Text(verbatim: second).font(ExitStageText.font(11 * L * size, strong: true))
+            layer.draw(Text(verbatim: second).font(ExitStageText.font(Self.shrunk(second, 11 * L * size, room: room, strong: true), strong: true))
                         .foregroundColor(alarm ? NoahTokens.Colors.failure : claiming ? colors.muted : colors.foreground),
                        at: CGPoint(x: g.width - 12, y: g.ground + 24 * L * size), anchor: .trailing)
         }

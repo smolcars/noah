@@ -160,6 +160,51 @@ struct ExitStageTests {
         #expect(explainer == ["Your VTXO", "in Ark", "4 transactions", "one block each,", "root first", "The round,", "already on Bitcoin"])
     }
 
+    @Test func wrappingBreaksBetweenWordsAndOnlyBreaksAWordThatCantFit() {
+        let measure = { (text: String) in Double(text.count) * 6 }
+        #expect(ExitStageLabels.wrap("add 3 765 sats on-chain", width: 60, measure: measure) == ["add 3 765", "sats", "on-chain"])
+        #expect(ExitStageLabels.wrap("Next block", width: 200, measure: measure) == ["Next block"])
+        #expect(ExitStageLabels.wrap("bcrt1qqqqqqqqqqq", width: 36, measure: measure) == ["bcrt1q", "qqqqqq", "qqqq"])
+        #expect(ExitStageLabels.wrap("", width: 36, measure: measure) == [""])
+    }
+
+    /// Translations and large text run long (Swedish, AX1, sats on an iPhone SE): every label wraps to the room it
+    /// has, beside the phone's badge too, stays between the top and the ground, and none overlap.
+    @Test func longTranslationsWrapInsideTheirColumn() {
+        let g = ExitStageGeometry(size: CGSize(width: 375, height: 236), scale: 1.65, count: 4)
+        let painter = ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: Locale(identifier: "sv"))
+        var needs = ExitStageScene(picture: .path, levels: [.mined(921_346), .needsFunds, .unsent, .unsent])
+        needs.need = "3 765 sats"
+        var stuck = Self.mempool(heights: [921_346, 921_347], pending: 2, count: 4, fee: "1 215 sats")
+        stuck.stuck = 12
+        stuck.shared = [true, true, true, false]
+        var lock = ExitStageScene(picture: .lock, levels: Array(repeating: .mined(921_349), count: 4))
+        (lock.tip, lock.leaf, lock.unlock) = (921_394, 921_349, 921_493)
+        var claim = ExitStageScene(picture: .claim, levels: Array(repeating: .mined(921_349), count: 4))
+        claim.claimFee = "262 sats"
+        for scene in [needs, stuck, lock, claim, .explainer(count: 4)] {
+            let labels = painter.labels(scene, ys: g.levels(ExitStageStill(scene).mined))
+            #expect(!Self.overlapping(labels), "\(scene.picture)")
+            for label in labels {
+                #expect(label.top >= 2 && label.bottom <= g.ground - 3, "\(label.lines)")
+                let room = label.trailing.map(g.claimColumn) ?? g.column(top: label.top, bottom: label.bottom)
+                for (index, line) in label.lines.enumerated() {
+                    let head = index < label.head
+                    let width = ExitStageText.width(line.text, size: head ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone))
+                    #expect(width + (head && label.pill != nil ? 8 : 0) <= room + 0.5, "\(line.text)")
+                }
+            }
+        }
+        // "lägg till 3 765 sats på blockkedjan" wraps under its pill rather than leaving the canvas.
+        let alarm = painter.labels(needs, ys: g.levels([1, 0, 0, 0])).first { $0.pill == .failure }
+        #expect((alarm?.lines.count ?? 0) > 2 && alarm?.lines.map(\.text).joined(separator: " ") == "Behöver en avgift lägg till 3 765 sats på blockkedjan")
+        // The pill wraps around every line of its heading.
+        if let alarm { #expect(painter.pill(alarm).height >= Double(alarm.head - 1) * g.lineHeight + g.lineHeight) }
+        // One-line texts (other exits' amounts, the destination) shrink to fit, to 60 % at most.
+        let size = 11.0, shrunk = ExitStagePainter.shrunk("21 000 sats", size, room: 40)
+        #expect(shrunk < size && shrunk >= size * 0.6 && ExitStagePainter.shrunk("₿21", size, room: 40) == size)
+    }
+
     // MARK: Motion
 
     @Test func onlyWhatWaitsForABlockMoves() {

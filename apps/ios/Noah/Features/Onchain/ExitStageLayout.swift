@@ -103,6 +103,18 @@ struct ExitStageGeometry: Equatable {
 
     /// The claim transaction's node on the stem.
     var claimNode: CGPoint { stem(0.42) }
+
+    /// How wide a label in the right-hand column can be between `top` and `bottom`: to the canvas's
+    /// edge, or to the phone's badge where it would run into it.
+    func column(top: Double, bottom: Double) -> Double {
+        (bottom > walletY - 18 && top < walletY + 18 ? walletX - 22 : width - 12) - labelX
+    }
+
+    /// How wide the claim's label can be, right-aligned at `x`: it stays right of your coin.
+    func claimColumn(_ x: Double) -> Double { x - (trunk + coinRadius + 8) }
+
+    /// Where labels can go: below the top and above the ground line.
+    var labelBounds: ClosedRange<Double> { 2...(ground - 3) }
 }
 
 /// One label in the picture's right-hand column (or, for the claim, beside its node).
@@ -118,6 +130,8 @@ struct ExitStageLabel: Equatable {
     var lines: [Line]
     var priority: Double
     var pill: Pill?
+    /// The first line's share of `lines` once wrapped: drawn larger, inside the pill.
+    var head = 1
     /// A confirmed transaction's block: labels that don't fit fold into one range.
     var block: UInt32?
     /// Right-aligned at this x; nil for the label column.
@@ -130,20 +144,44 @@ struct ExitStageLabel: Equatable {
 }
 
 enum ExitStageLabels {
+    /// `text` in lines no wider than `width`, broken between words, and inside a word only when the
+    /// word alone is too wide.
+    static func wrap(_ text: String, width: Double, measure: (String) -> Double) -> [String] {
+        var lines: [String] = [], current = ""
+        for word in text.split(separator: " ").map(String.init) {
+            let next = current.isEmpty ? word : current + " " + word
+            if measure(next) <= width { current = next; continue }
+            if !current.isEmpty { lines.append(current) }
+            current = ""
+            for character in word {
+                if !current.isEmpty, measure(current + String(character)) > width { lines.append(current); current = "" }
+                current.append(character)
+            }
+        }
+        if !current.isEmpty || lines.isEmpty { lines.append(current) }
+        return lines
+    }
+
     /// Lays the labels out by priority so none overlap: the waiting transaction and the claim first,
-    /// then your coin, the round and the latest block. Confirmed blocks that don't fit fold into one
-    /// range ("Blocks 921,346–921,349") where it fits.
-    static func place(_ items: [ExitStageLabel], lineHeight: Double, scale: Double,
-                      range: (UInt32, UInt32) -> String) -> [ExitStageLabel] {
+    /// then your coin, the round and the latest block. Each stays within `bounds`, at its wrapped
+    /// height. Confirmed blocks that don't fit fold into one range ("Blocks 921,346–921,349") where it
+    /// fits; `fit` wraps that range like the rest.
+    static func place(_ items: [ExitStageLabel], lineHeight: Double, scale: Double, bounds: ClosedRange<Double> = -.infinity ... .infinity,
+                      fit: (ExitStageLabel) -> ExitStageLabel = { $0 }, range: (UInt32, UInt32) -> String) -> [ExitStageLabel] {
         let order = items.indices.sorted { items[$0].priority != items[$1].priority ? items[$0].priority > items[$1].priority : $0 < $1 }
         var placed: [ExitStageLabel] = [], skipped: [ExitStageLabel] = []
         func clash(_ top: Double, _ bottom: Double, trailing: Bool, margin: Double) -> Bool {
             placed.contains { ($0.trailing != nil) == trailing && !(bottom + margin < $0.top || top - margin > $0.bottom) }
         }
+        func span(_ item: inout ExitStageLabel) {
+            let height = Double(item.lines.count) * lineHeight + (item.pill == nil ? 0 : 5 * scale)
+            item.y = min(max(item.y, bounds.lowerBound + lineHeight / 2), bounds.upperBound - height + lineHeight / 2)
+            item.top = item.y - lineHeight / 2
+            item.bottom = item.top + height
+        }
         for index in order {
             var item = items[index]
-            item.top = item.y - lineHeight / 2
-            item.bottom = item.top + Double(item.lines.count) * lineHeight + (item.pill == nil ? 0 : 5 * scale)
+            span(&item)
             if clash(item.top, item.bottom, trailing: item.trailing != nil, margin: 3) {
                 if item.block != nil { skipped.append(item) }
                 continue
@@ -157,10 +195,12 @@ enum ExitStageLabels {
             let folded = skipped + alone, heights = folded.compactMap(\.block).sorted()
             let middle = folded.map(\.y).reduce(0, +) / Double(folded.count)
             let candidates = [middle] + folded.map(\.y).sorted { abs($0 - middle) < abs($1 - middle) }
-            if let y = candidates.first(where: { !clash($0 - lineHeight / 2, $0 + lineHeight / 2, trailing: false, margin: 3) }) {
-                var fold = ExitStageLabel(y: y, lines: [.init(text: range(heights[0], heights[heights.count - 1]), tone: .ink)], priority: 0)
-                fold.top = y - lineHeight / 2
-                fold.bottom = fold.top + lineHeight
+            let folds = candidates.map { y in
+                var fold = fit(ExitStageLabel(y: y, lines: [.init(text: range(heights[0], heights[heights.count - 1]), tone: .ink)], priority: 0))
+                span(&fold)
+                return fold
+            }
+            if let fold = folds.first(where: { !clash($0.top, $0.bottom, trailing: false, margin: 3) }) {
                 placed.append(fold)
             } else {
                 placed += alone
