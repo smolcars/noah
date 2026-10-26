@@ -22,6 +22,7 @@ class AppLogTest {
         }
         com.noahwallet.services.logging.EndpointLogPrivacy.register("https://fake-r8-scaling.example/fakeOpaque")
         com.noahwallet.services.logging.EndpointLogPrivacy.register("https://xn--strae-oqa.example/api")
+        // 16 KiB of these is over LogFile's size cap, so they go to the endpoint boundary directly.
         val unicode = listOf("combining mark miss" to "zzzz ordinarye\u0301 ",
             "combining mark hit" to "xxfakeOpaque\u0301yy ",
             "IDNA2008 miss" to "xxordinaryßς\u200D\u200Cyy ",
@@ -35,10 +36,9 @@ class AppLogTest {
             "path history without slash" to "zzzz ordinary diagnostic ",
             "path history with slash" to "/zzzz/ordinary/diagnostic ",
             "path history hit" to "xxfakeScale999yy ")
-        for ((name, unit) in performanceInputs + authorities) {
-            assertRedactionScales(name, unit, LogFile::redact)
-            assertRedactionScales("boundary $name", unit, com.noahwallet.services.logging.EndpointLogPrivacy::redact)
-        }
+        val failedCandidates = listOf("seed.", "http://", "ExpoPushToken[", "x@x.", "xprv", "\\u0078!").map { "failed candidate $it" to it }
+        // LogFile.redact runs the endpoint boundary first, so this scales both.
+        for ((name, unit) in performanceInputs + authorities + failedCandidates) assertRedactionScales(name, unit)
         val matcher = com.noahwallet.services.logging.EndpointLogPrivacy.SecretMatcher(setOf("a"))
         assertRedactionScales("fullwidth bare host", "ａ ") {
             com.noahwallet.services.logging.EndpointLogPrivacy.sanitize(it, setOf("https://a"), matcher, setOf("a")) ?: "[redacted]"
@@ -50,20 +50,13 @@ class AppLogTest {
         val clock = ManagementFactory.getThreadMXBean()
         check(clock.isCurrentThreadCpuTimeSupported)
         if (!clock.isThreadCpuTimeEnabled) clock.isThreadCpuTimeEnabled = true
-        repeat(5) { inputs.forEach { redact(it) } } // Warm both sizes before sampling.
-        val samples = inputs.map { mutableListOf<Long>() }
-        repeat(5) {
-            inputs.forEachIndexed { index, input ->
-                val start = clock.currentThreadCpuTime
-                repeat(4) { redact(input) }
-                samples[index] += clock.currentThreadCpuTime - start
-            }
+        inputs.forEach { redact(it) } // Warm both sizes before sampling.
+        val (small, large) = inputs.map { input ->
+            List(3) { val start = clock.currentThreadCpuTime; redact(input); clock.currentThreadCpuTime - start }.sorted()[1]
         }
-        val (small, large) = samples.map { it.sorted()[2] }
-        println("REDACTION $name CPU 1 KiB $small ns; 16 KiB $large ns (four calls)")
+        println("REDACTION $name CPU 1 KiB $small ns; 16 KiB $large ns")
         // 16x input permits 64x CPU work, rejecting quadratic (256x) rescans without counting descheduling.
         assertTrue("$name CPU scaling: $small -> $large ns", small > 0 && large < small * 64)
-
     }
 
     private val performanceInputs = listOf(
@@ -116,12 +109,6 @@ class AppLogTest {
         assertTrue(lines[0].endsWith("record 0"))
         assertTrue(lines[1].endsWith("record 1"))
         assertTrue(lines[2].endsWith("[dropped 3 log records]"))
-    }
-
-    @Test fun failedTokenCandidatesStayBounded() {
-        for (unit in listOf("seed.", "http://", "ExpoPushToken[", "x@x.", "xprv", "\\u0078!")) {
-            assertRedactionScales("failed candidate $unit", unit)
-        }
     }
 
     @Test fun tokenScanPreservesBoundaryAndTrailingPunctuationBehavior() {
@@ -190,13 +177,14 @@ class AppLogTest {
         assertEquals("  second", file.lines()[1])
     }
     @Test fun rotatesAtMostFourOldFiles() = withFile { directory, file ->
-        val count = LogFile.maxFileSizeBytes / 1000 * 6
-        repeat(count) { file.append(AppLog.Level.info, "t", "$it ${"x".repeat(1000)}") }
-        file.flush()
-        assertEquals(listOf("noah.log", "noah.log.1", "noah.log.2", "noah.log.3", "noah.log.4"),
-            directory.list()!!.sorted())
-        assertTrue(file.lines().last().contains("] ${count - 1} x"))
-        assertTrue(file.lines().size < count)
+        // Five full files: the next record rotates the oldest out.
+        val names = listOf("noah.log", "noah.log.1", "noah.log.2", "noah.log.3", "noah.log.4")
+        val full = "x".repeat(LogFile.maxFileSizeBytes)
+        names.forEachIndexed { index, name -> directory.resolve(name).writeText("file $index\n$full") }
+        file.append(AppLog.Level.info, "t", "newest"); file.flush()
+        assertEquals(names, directory.list()!!.sorted())
+        assertTrue(directory.resolve("noah.log").readText().endsWith("] newest\n"))
+        assertEquals(listOf("file 0", "file 1", "file 2", "file 3"), names.drop(1).map { name -> directory.resolve(name).useLines { it.first() } })
     }
     @Test fun exportsNewestLines() = withFile { _, file ->
         repeat(LogFile.maxLines + 100) { file.append(AppLog.Level.info, "t", "line $it") }

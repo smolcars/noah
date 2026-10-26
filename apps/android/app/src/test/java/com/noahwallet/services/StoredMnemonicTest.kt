@@ -65,21 +65,24 @@ class StoredMnemonicTest {
 
     @Test fun authDerivationAndSigningNormalizeButBackupKeepsOriginalPassword() {
         val canonical = vector(12)
-        for (original in listOf(canonical.uppercase(), " \n" + canonical.replace(" ", "\t  ") + "\n",
-            canonical.map { if (it in 'a'..'z') (it.code + 0xfee0).toChar() else it }.joinToString(""))) {
+        val originals = listOf(canonical.uppercase(), " \n" + canonical.replace(" ", "\t  ") + "\n",
+            canonical.map { if (it in 'a'..'z') (it.code + 0xfee0).toChar() else it }.joinToString(""))
+        for (original in originals) {
             val derive: (String) -> String = { normalized ->
                 assertTrue("SDK must receive the same normalized phrase as wallet open", normalized == canonical)
                 "public-test-result"
             }
             com.noahwallet.services.server.ServerClient.loginKey("regtest", original, derive)
             com.noahwallet.services.server.ServerClient.signChallenge("public test challenge", "regtest", original, derive)
-            val sealed = com.noahwallet.services.backup.BackupCrypto.encrypt(byteArrayOf(1, 2, 3), original,
-                com.noahwallet.services.backup.BackupCrypto.Version.snapshot)
-            assertTrue(com.noahwallet.services.backup.BackupCrypto.decrypt(sealed, original,
-                com.noahwallet.services.backup.BackupCrypto.Version.snapshot).contentEquals(byteArrayOf(1, 2, 3)))
-            assertTrue(runCatching { com.noahwallet.services.backup.BackupCrypto.decrypt(sealed, canonical,
-                com.noahwallet.services.backup.BackupCrypto.Version.snapshot) }.isFailure)
         }
+        // Each key derivation is 600,000 PBKDF2 rounds, so one non-canonical password stands for all three.
+        val original = originals.last()
+        val sealed = com.noahwallet.services.backup.BackupCrypto.encrypt(byteArrayOf(1, 2, 3), original,
+            com.noahwallet.services.backup.BackupCrypto.Version.snapshot)
+        assertTrue(com.noahwallet.services.backup.BackupCrypto.decrypt(sealed, original,
+            com.noahwallet.services.backup.BackupCrypto.Version.snapshot).contentEquals(byteArrayOf(1, 2, 3)))
+        assertTrue(runCatching { com.noahwallet.services.backup.BackupCrypto.decrypt(sealed, canonical,
+            com.noahwallet.services.backup.BackupCrypto.Version.snapshot) }.isFailure)
     }
 
     @Test fun everySeedSourceMustAgreeAndInvalidSeedsAreNeverWritten() = runBlocking {

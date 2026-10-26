@@ -18,6 +18,7 @@ class EndpointPrivacyTest {
         val received = mutableListOf<String>()
         val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, _, text -> received += text })
         try {
+            val persisted = mutableListOf<String>()
             for (test in cases) {
                 val input = test.getValue("input").jsonPrimitive.content
                 val safe = LogFile.redact(input)
@@ -33,8 +34,12 @@ class EndpointPrivacyTest {
                 assertEquals(safe, requireNotNull(AppTelemetry.scrub(Breadcrumb().apply { message = input })).message)
                 AppLog("authority", file).e(input)
                 assertEquals(safe, received.last())
-                assertTrue(file.lines().last().endsWith(safe.trim()))
+                persisted += safe.trim()
             }
+            // One export for all of them: each read redacts every line again.
+            val lines = file.lines()
+            assertEquals(persisted.size, lines.size)
+            for ((line, safe) in lines.zip(persisted)) assertTrue(line, line.endsWith(safe))
             directory.resolve("noah.log.1").writeText(cases.filter { it.getValue("redacted").jsonPrimitive.boolean }.joinToString("\n") { it.getValue("input").jsonPrimitive.content })
             assertFalse(file.lines().joinToString().contains("bücher.example)"))
             assertFalse(file.lines().joinToString().contains("[0:0::1]"))
