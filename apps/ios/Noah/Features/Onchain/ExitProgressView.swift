@@ -15,6 +15,7 @@ struct ExitVtxoDetailView: View {
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.exitPaneHeight) private var paneHeight
+    @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
     init(id: String, model: OnchainModel? = nil) {
         self.id = id
@@ -40,8 +41,10 @@ struct ExitVtxoDetailView: View {
                         ExitStatusLine(text: text.status, kind: text.statusKind)
                     }
                     if progress.picture != .none {
-                        ExitStageView(scene: text.scene)
-                            .frame(height: settings.wide ? max(280, paneHeight - 110) : 300).padding(.top, 8)
+                        // 300 pt; 236 on the iPhone SE.
+                        ExitStageView(scene: text.scene, wide: settings.wide, accessibilityText: text.pictureLabel)
+                            .frame(height: settings.wide ? max(280, paneHeight - 110) : window.size.height > 0 && window.size.height < 700 ? 236 : 300)
+                            .padding(.top, 8)
                             .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
                     }
                     Text(verbatim: text.phase).noahText(NoahTokens.Typography.control).monospacedDigit()
@@ -104,6 +107,7 @@ struct ExitVtxoDetailView: View {
         }
         .settingsChrome(nil)
         .onboardingHaptics(haptics)
+        .onboardingWindow($window)
         .modifier(OnchainScreen(model: model, presentsReview: false))
         .onChange(of: model.quote?.id) { _, _ in
             if model.quote?.action == .progress { sheet = .check }
@@ -502,12 +506,55 @@ struct ExitStatusLine: View {
         }
     }
 
+    /// The picture as one VoiceOver element: the phase line and how many transactions are in blocks.
+    var pictureLabel: String {
+        progress.total > 0 ? phase + ", " + tr("{n} of {total} in blocks", progress.confirmed, progress.total) : phase
+    }
+
+    /// The picture's still for this state: each transaction's status, what's shared, the waiting fee and the claim.
     var scene: ExitStageScene {
-        var wallet: String? = overview.map { money($0.confirmed) }
-        if [.claiming, .claimed].contains(progress.phase), claim != nil || record != nil {
-            wallet = (record?.toPhone ?? claim?.destinationIsMine) == true ? tr("This phone")
-                : claim?.destination.map { $0.prefix(6) + "…" + $0.suffix(4) } ?? tr("Another wallet")
+        let path = exit.path
+        // Before bark lists the path (Start), a round's usual four; past Processing they're all in blocks.
+        let settled = [.lock, .unlocked, .claim, .claimed].contains(progress.picture)
+        let levels: [ExitStageScene.Level] = progress.total == 0 ? Array(repeating: settled ? .mined(nil) : .unsent, count: 4) : (0..<progress.total).map { index in
+            if index < progress.confirmed { return .mined(progress.heights[safe: index] ?? nil) }
+            guard index == progress.confirmed else { return .unsent }
+            switch progress.phase {
+            case .sending: return .ready
+            case .needsFunds: return .needsFunds
+            case .mempool: return .pending(theirs: false, bumped: progress.bumped)
+            case .shared: return .pending(theirs: true, bumped: false)
+            default: return .unsent
+            }
         }
-        return ExitStageScene(progress, tip: tip, wallet: wallet, delta: overview?.exitDelta, txids: exit.path.map(\.txid))
+        var scene = ExitStageScene(picture: progress.picture, levels: levels)
+        // Your other live exits: what they share with this one, and where their branches leave it.
+        let others = (overview?.exits ?? []).filter { $0.id != exit.id && ExitRules.live($0.state) }.sorted { $0.amount > $1.amount }
+        let shared = Set(others.flatMap { $0.path.map(\.txid) })
+        scene.shared = path.map { shared.contains($0.txid) }
+        for other in others {
+            let common = zip(path, other.path).prefix { $0.txid == $1.txid }.count
+            guard common > 0, common < path.count, let next = other.path[safe: common] else { continue }
+            scene.others.append(.init(level: common, amount: money(other.amount),
+                                      sent: next.status.block != nil || next.status.kind == "awaiting-confirmation"))
+        }
+        scene.tip = tip
+        scene.stale = progress.stale
+        scene.checked = progress.checked
+        scene.stuck = progress.stuck
+        scene.fee = current?.status.child_txid.flatMap { overview?.childFees[$0] }.map(money.callAsFunction)
+        scene.need = need.map(money.callAsFunction)
+        scene.balance = overview.map { money($0.confirmed) }
+        scene.delta = overview?.exitDelta ?? 144
+        scene.unlock = progress.claimableHeight
+        scene.leaf = progress.heights.last.flatMap { $0 } ?? progress.claimableHeight.map { $0 - min($0, scene.delta) }
+        scene.claimFee = batchFee.map(money.callAsFunction)
+        scene.claimHeight = progress.claimedHeight
+        // Where the claim went: this phone, or another wallet and its address.
+        let toPhone = record?.toPhone ?? claim?.destinationIsMine ?? (received != nil)
+        let address = claim?.destination ?? record?.destination
+        scene.destination = toPhone ? .phone : .other(address.map { $0.count > 14 ? $0.prefix(6) + "…" + $0.suffix(4) : $0 })
+        if toPhone, progress.phase == .claimed { scene.received = "+" + money(amount) }
+        return scene
     }
 }

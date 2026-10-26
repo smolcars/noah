@@ -415,7 +415,8 @@ extension WalletSession {
                 do { try await access.claimedToPhone(expected) } catch { throw OnchainFailure.constructionFailed }
             }
             // Its fee for the screens, before it's sent, so an uncertain broadcast still shows it. Never blocks.
-            let record = ExitClaimRecord(ids: quote.ids, fee: claim.feeSats, toPhone: quote.destinationIsMine == true)
+            let record = ExitClaimRecord(ids: quote.ids, fee: claim.feeSats, toPhone: quote.destinationIsMine == true,
+                                         destination: quote.destinationIsMine == true ? nil : quote.destination)
             if let expected { try? await access.recorded(expected, record) }
             let txid: String
             do { txid = try await access.broadcast(tx) }

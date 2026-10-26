@@ -1,12 +1,13 @@
 import BarkBoltFFI
 import SwiftUI
 
-/// Settings → Emergency exit: the warning (docs/native-rewrite/design/exit.md). One line, four
-/// facts with the real timelock and fee estimate, and the exits already running. Reading it and
-/// estimating never sends anything.
+/// Settings → Emergency exit: the warning (docs/native-rewrite/design/exit.md). One line, then the
+/// explainer tree while there are no exits (or the exits already running), four facts with the real
+/// timelock and fee estimate. Reading it and estimating never sends anything.
 struct UnilateralExitView: View {
     @State private var model: OnchainModel
     @State private var perVtxo: UInt64?
+    @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
@@ -37,11 +38,15 @@ struct UnilateralExitView: View {
                                              exits.filter(\.claimable).count.formatted(), locale: language),
                             hairline: false, id: "exit-entry") { settings.open(.exitList) }
                     .padding(.top, 14)
+            } else {
+                // Where an exit goes: your branch of the round's tree, standing on Bitcoin. Only while there are no exits.
+                ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
+                              accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
+                                                             count: Self.explained(sample), locale: language))
+                    .frame(height: settings.wide ? max(240, paneHeight - 200) : window.size.height > 0 && window.size.height < 700 ? 236 : 268)
+                    .padding(.top, 14)
+                    .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
             }
-            // Where an exit goes: your path down to the round's block.
-            ExitStageView(scene: ExitStageScene(path: model.overview?.tip))
-                .frame(height: settings.wide ? max(240, paneHeight - 200) : 236).padding(.top, 14)
-                .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
         } trailing: {
             VStack(spacing: 0) {
                 fact("clock", "Takes a day or more", model.overview?.exitDelta.map {
@@ -62,11 +67,17 @@ struct UnilateralExitView: View {
                 .accessibilityIdentifier("exit-choose")
         }
         .settingsChrome("Emergency exit")
+        .onboardingWindow($window)
         .modifier(OnchainScreen(model: model))
         .task(id: sample?.id) {
             guard let sample else { return }
             perVtxo = await model.exitEstimate([sample.id])?.exitBroadcastFeeSats
         }
+    }
+
+    /// The explainer's transactions: your biggest VTXO's path, else a round's usual four.
+    nonisolated static func explained(_ sample: VtxoModel?) -> Int {
+        sample.map { Int($0.exitDepth) }.flatMap { $0 > 0 ? $0 : nil } ?? 4
     }
 
     private func fact(_ icon: String, _ title: String, _ line: String, last: Bool = false) -> some View {
@@ -297,7 +308,7 @@ struct ExitReviewView: View {
             ExitHeadline(amount: L10n.text("Exit {amount}", money(amount), locale: language),
                          line: estimate.map { ExitText.count(vtxos: ids.count, transactions: $0.txsToBroadcast, language) })
             if settings.wide {
-                ExitStageView(scene: ExitStageScene(path: model.overview?.tip, server: false))
+                ExitStageView(scene: .explainer(count: estimate.map { Int($0.txsToBroadcast) } ?? 4), wide: true)
                     .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
             }
         } trailing: {

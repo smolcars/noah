@@ -51,9 +51,10 @@ struct ExitClaimView: View {
                          line: ready.compactMap(\.details.claimable_since?.height).max().map {
                              L10n.text("Unlocked at block {height}", $0.formatted(.number.locale(locale)), locale: language)
                          })
-            if settings.wide, let unlock = ready.compactMap(\.details.claimable_since?.height).max() {
-                ExitStageView(scene: { var scene = ExitStageScene(picture: .unlocked); scene.leaf = unlock - min(unlock, model.overview?.exitDelta ?? 144)
-                                       scene.unlock = unlock; scene.tip = model.overview?.tip ?? unlock; return scene }())
+            if settings.wide, let exit = ready.first {
+                // Your coin, unlocked at the top of its branch.
+                ExitStageView(scene: ExitText(progress: model.progress(exit), exit: exit, tip: model.overview?.tip ?? 0, overview: model.overview,
+                                              attempts: model.attempts, money: money, language: language).scene, wide: true)
                     .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
             }
         } trailing: {

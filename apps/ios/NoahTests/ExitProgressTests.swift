@@ -325,21 +325,16 @@ struct ExitProgressTests {
     }
 
     @Test func aLongerRealPathKeepsEveryNodeAfterStart() {
-        let painter = ExitStagePainter(size: CGSize(width: 390, height: 430), colors: .theme(.light), reduceMotion: false, now: 0,
-                                       next: "next", round: "round", locale: Locale(identifier: "en"))
         // Start draws a round's usual four; bark then lists eight (tree hops plus checkpoint or arkoor hops).
-        let start = ExitStageScene(ExitProgress(Self.exit("Start", .init(kind: "start", tip_height: 100)), tip: 100), tip: 100, wallet: nil, delta: nil, txids: [])
-        let names = (1...8).map { "t\($0)" }
-        let eight = Self.exit("Processing", Self.processing(names.map { Self.tx($0, "verify-inputs") }))
-        let path = ExitStageScene(ExitProgress(eight, tip: 100), tip: 100, wallet: nil, delta: nil, txids: names)
-        let a = painter.layout(start), b = painter.layout(path)
-        #expect(a.nodes.count == 3 && b.nodes.count == 7)
-        // Every destination node is drawn from the first frame, and lands where the path puts it.
-        #expect(painter.nodes(a, b, 0, 0).count == 7)
-        let landed = painter.nodes(a, b, 1, 1)
-        #expect(landed.map(\.x) == b.nodes.map(\.x) && landed.map(\.y) == b.nodes.map(\.y) && landed.map(\.alpha) == b.nodes.map(\.alpha))
-        // The new ones fade in where they land.
-        #expect(painter.nodes(a, b, 0, 0)[3...].allSatisfy { $0.alpha == 0 })
+        let start = ExitStageScene(picture: .lift, levels: Array(repeating: .unsent, count: 4))
+        let path = ExitStageScene(picture: .path, levels: Array(repeating: .unsent, count: 8))
+        let first = ExitStageFrame(start, path, elapsed: 0, reduceMotion: false)
+        #expect(first.mined.count == 8 && first.pending.count == 8 && first.grow.count == 9 && first.pop.count == 9)
+        // The branch grows from the ground, root first; once it has, every node is there.
+        let grown = ExitStageFrame(start, path, elapsed: 4, reduceMotion: false)
+        #expect(grown.grow[1...].allSatisfy { $0 == 1 } && grown.pop[1..<8].allSatisfy { $0 > 0.9 })
+        let ys = ExitStageGeometry(size: CGSize(width: 390, height: 300), count: 8).levels(grown.mined)
+        #expect(ys.count == 9 && zip(ys, ys.dropFirst()).allSatisfy { $0 > $1 })
     }
 
     @Test func aBatchedClaimsFeeIsSplitSoThePartsAddUp() {
