@@ -75,6 +75,10 @@ class SendReceiveGalleryTest {
             it.model.amount = "2500"; it.model.continueStage(); it.model.setRecipient("maya@localhost.com"); it.model.continueStage()
             it.model.progress = it.model.progress.copy(selectedRail = SendRail.lightning, railConfirmed = true); it.model.continueStage()
         }
+        send("send-review-note", SendFixtures.Wallet(quote = SendQuote(2_500, 12, 2_512, walletIdentity = SendFixtures.owner))) {
+            it.model.amount = "2500"; it.model.continueStage(); it.model.setRecipient("lucas@localhost.com"); it.model.previewRecipient()
+            it.model.comment = "Coffee and a croissant, thanks!"; it.model.continueStage()
+        }
         send("send-review-onchain", SendFixtures.Wallet(quote = SendQuote(50_000, 420, 50_420, approximate = true, walletIdentity = SendFixtures.owner))) {
             it.model.amount = "50000"; it.model.continueStage(); it.model.setRecipient(SendFixtures.onchain); it.model.continueStage()
             it.model.source = SendSource.offchain; it.model.continueStage()
