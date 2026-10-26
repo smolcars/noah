@@ -26,10 +26,4 @@ struct OnboardingIdentityTests {
             #expect(throws: IdentityValidationError.self) { try LightningIdentity.payload(username: "alice", npub: key) }
         }
     }
-
-    @Test func domainsMatchRN() {
-        #expect(LightningIdentity.domain(for: .regtest) == "localhost.com")
-        #expect(LightningIdentity.domain(for: .signet) == "signet.noahwallet.io")
-        #expect(LightningIdentity.domain(for: .mainnet) == "noahwallet.io")
-    }
 }

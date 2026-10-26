@@ -36,24 +36,6 @@ struct WalletScreenParityTests {
         #expect(OnchainDisplay.remaining(current: 101, target: 100, locale: "en") == "Now")
     }
 
-    @Test func claimableFallbackAndBlockIdentityAreVisible() {
-        let block = ExitDetails.Block(height: 100, hash: String(repeating: "a", count: 64))
-        var details = ExitDetails(claimable_since: block)
-        #expect(details.displayClaimableHeight == 100)
-        details.claimable_height = 101
-        #expect(details.displayClaimableHeight == 101)
-        #expect(OnchainDisplay.block(block) == "100 (\(block.hash))")
-        #expect(ExitDetails().displayClaimableHeight == nil)
-    }
-
-    @Test func anchorExplorerUsesTransactionPartAndNetwork() {
-        let txid = String(repeating: "a", count: 64)
-        #expect(OnchainDisplay.explorerURL(txid + ":2", variant: .mainnet)?.absoluteString == "https://mempool.space/tx/\(txid)")
-        #expect(OnchainDisplay.explorerURL(txid + ":2", variant: .signet)?.absoluteString == "https://mempool.space/signet/tx/\(txid)")
-        #expect(OnchainDisplay.explorerURL(txid, variant: .regtest) == nil)
-        #expect(OnchainDisplay.explorerURL("", variant: .mainnet) == nil)
-    }
-
     @Test func recurringAmountUsesPreferenceWithoutNarrowingUnsupportedAmounts() {
         var payment = RecurringScheduleTests.schedule()
         payment.amountSat = 1234

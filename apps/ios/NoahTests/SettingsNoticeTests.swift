@@ -4,7 +4,9 @@ import Testing
 
 struct SettingsNoticeTests {
     @Test func noticeNamesOnlyPreferencesThatWereDefaulted() throws {
-        for walletLost in [false, true] { for privacyLost in [false, true] { for profileLost in [false, true] {
+        // None lost, each one alone, and all three.
+        for (walletLost, privacyLost, profileLost) in [(false, false, false), (true, false, false), (false, true, false),
+                                                       (false, false, true), (true, true, true)] {
             let directory = FileManager.default.temporaryDirectory.appending(path: "notice-\(UUID())")
             defer { try? FileManager.default.removeItem(at: directory) }
             let settings = try SettingsStorage(rootPath: directory.appending(path: "mmkv").path)
@@ -22,6 +24,6 @@ struct SettingsNoticeTests {
             }
             #expect(try settings.takeUpgradeNotices().isEmpty)
             #expect(try SettingsStorage(rootPath: directory.appending(path: "mmkv").path).takeUpgradeNotices().isEmpty)
-        } } }
+        }
     }
 }

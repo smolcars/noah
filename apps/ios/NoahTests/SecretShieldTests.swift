@@ -32,6 +32,7 @@ import UIKit
         #expect(hidden(nil))
         #expect(SecretShield.hidden(phase: .inactive, capture: clear))
         #expect(SecretShield.hidden(phase: .background, capture: clear))
+        #expect(!SecretShield.hidden(phase: .active, capture: clear))
     }
 
     @Test func aFirstReadingThatIsNotCapturedRevealsAtOnce() async {
@@ -90,13 +91,6 @@ import UIKit
         scene.traitOverrides.sceneCaptureState = .inactive
         try await waitUntil { capture.holding }
         #expect(SceneCapture.of(scene) === capture && hidden(SceneCapture.of(scene)))
-    }
-
-    @Test func returningToActiveRevealsAgain() {
-        let clear = capture(Sleeps())
-        clear.report(.inactive)
-        for phase in [ScenePhase.inactive, .background, .inactive] { #expect(SecretShield.hidden(phase: phase, capture: clear)) }
-        #expect(!SecretShield.hidden(phase: .active, capture: clear))
     }
 
     /// SwiftUI replaces the reader when the content restarts (Restore's paste) and removes the old one after the new

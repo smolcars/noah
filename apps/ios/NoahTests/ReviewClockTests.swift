@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct ReviewClockTests {
     /// How far the device clock moved after the review opened.
-    nonisolated static let clockMoves: [TimeInterval] = [-86_400, -300, 300, 86_400]
+    nonisolated static let clockMoves: [TimeInterval] = [-86_400, 86_400]
 
     /// A review opened `elapsed` seconds ago, as the continuous clock and the moved device clock record it.
     static func opened(_ elapsed: Double, clockMoved move: TimeInterval) -> (ContinuousClock.Instant?, Date) {

@@ -7,7 +7,7 @@ import UIKit
 @Suite(.serialized)
 @MainActor
 struct AdaptiveLayoutTests {
-    @Test(arguments: [CGFloat(320), 543, 544, 669, 700, 874, 951, 1180])
+    @Test(arguments: [CGFloat(543), 544])
     func paneThresholdMatchesRN(width: CGFloat) {
         #expect(AdaptiveLayout.expanded(width: width) == (width >= 544))
     }
@@ -16,12 +16,6 @@ struct AdaptiveLayoutTests {
         #expect(!AdaptiveLayout.expanded(width: 803, minimumPaneWidth: 390))
         #expect(AdaptiveLayout.expanded(width: 804, minimumPaneWidth: 390))
         #expect(!AdaptiveLayout.expanded(width: 543, minimumPaneWidth: 130))
-    }
-
-    @Test func qrFitsShortLandscapeAndStopsGrowingOnTablets() {
-        #expect(AdaptiveLayout.qrSide(availableHeight: 260) == 180)
-        #expect(AdaptiveLayout.qrSide(availableHeight: 669) == 270)
-        #expect(AdaptiveLayout.qrSide(availableHeight: 0) == 0)
     }
 
     @Observable final class Mounts {

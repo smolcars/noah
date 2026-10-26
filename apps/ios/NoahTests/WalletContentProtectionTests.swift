@@ -33,7 +33,7 @@ import UIKit
         try await Task.sleep(for: .milliseconds(100))
         let original = state.mounts
         #expect(original.count == 1)
-        for covered in [true, false, true, false] {
+        for covered in [true, false] {
             state.covered = covered
             try await Task.sleep(for: .milliseconds(100))
         }

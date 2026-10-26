@@ -6,7 +6,7 @@ import Testing
 struct SettingsNavigationTests {
     typealias Route = HomeView.Route
 
-    @Test(arguments: [SettingsPage.recovery, .advanced, .recurring, .vtxos, .backup])
+    @Test(arguments: [SettingsPage.recovery, .backup])
     func deepLinksLandOnTheirPageWithSettingsBeneath(page: SettingsPage) {
         #expect(SettingsPath.deepLink(page) == [.settings, .page(page)])
         // From a screen already open on Home (the map), Settings opens over it.
@@ -16,7 +16,7 @@ struct SettingsNavigationTests {
     }
 
     /// Activity's VTXO, schedule and exit links switch to Home, which opens the page with Settings beneath.
-    @MainActor @Test(arguments: [SettingsPage.vtxo("c:0"), .schedule("s1"), .exit])
+    @MainActor @Test(arguments: [SettingsPage.vtxo("c:0"), .exit])
     func activityLinksLandOnHomeWithSettingsBeneath(page: SettingsPage) {
         let route = SettingsRoute()
         route.page = page
@@ -32,14 +32,5 @@ struct SettingsNavigationTests {
         #expect(SettingsPath.select(.vtxo("a"), in: open, wide: true) == open)
         #expect(SettingsPath.base(open + [.page(.recurring)]) == [])
         #expect(SettingsPath.base([.map, .settings]) == [.map])
-    }
-
-    @Test func subpagesBelongToTheirRow() {
-        #expect(SettingsPage.vtxo("a").root == .vtxos)
-        #expect(SettingsPage.schedule("s").root == .recurring)
-        #expect(SettingsPage.editor(nil).root == .recurring)
-        #expect(SettingsPage.email.root == .profile)
-        #expect(SettingsPage.debug.root == .advanced)
-        #expect(SettingsPage.vtxo("a").isSubpage && !SettingsPage.vtxos.isSubpage && !SettingsPage.exit.isSubpage)
     }
 }

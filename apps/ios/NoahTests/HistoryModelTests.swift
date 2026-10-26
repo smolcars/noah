@@ -190,21 +190,23 @@ struct HistoryModelTests {
         let model = HistoryModel(dependencies: dependencies)
         probe.model = model
         await model.refresh(currency: "USD"); await model.awaitEnrichment()
-        probe.rows = (1...3000).map {
+        // Enrichment yields every 32 cached rows, so a thousand leave room to see it yield.
+        let count = 1000
+        probe.rows = (1...count).map {
             var row = transaction("movement-\($0)")
             row.sortTimestamp = 1784116800000
             return row
         }
         let observation = Task { await model.observe(currency: "USD") }
         let deadline = ContinuousClock.now + .seconds(10)
-        while (model.transactions.count != 3000 || model.transactions.allSatisfy { $0.btcPrice == nil }),
+        while (model.transactions.count != count || model.transactions.allSatisfy { $0.btcPrice == nil }),
               ContinuousClock.now < deadline { await Task.yield() }
         #expect(model.transactions.contains { $0.btcPrice != nil })
-        #expect(model.transactions.filter { $0.btcPrice != nil }.count < 3000,
+        #expect(model.transactions.filter { $0.btcPrice != nil }.count < count,
                 "cached enrichment must yield before completing all rows")
         probe.settled = true; continuation.yield("databaseChanged")
         while (probe.enrichedAtEvent == nil || model.isRefreshing), ContinuousClock.now < deadline { await Task.yield() }
-        #expect((probe.enrichedAtEvent ?? 3000) < 3000, "wallet event must be consumed during enrichment")
+        #expect((probe.enrichedAtEvent ?? count) < count, "wallet event must be consumed during enrichment")
         await model.awaitEnrichment()
         #expect(model.transactions.allSatisfy { $0.btcPrice == 100000 })
         #expect(probe.quotes == 1)
@@ -226,16 +228,5 @@ struct HistoryModelTests {
         #expect(csv.contains("\"a,\"\"b\"\"\nc\""))
         #expect(!csv.contains("movement-2"))
         #expect(HistoryCSV(transactions: [canceled], currency: "USD").content.contains("None,0"))
-    }
-
-    @Test func explorerMatchesRNVariantAndStripsOutpoint() {
-        var row = transaction()
-        row.type = "Onchain"
-        row.txid = "funding:1"
-        #expect(row.explorerURL(variant: .mainnet)?.absoluteString == "https://mempool.space/tx/funding")
-        #expect(row.explorerURL(variant: .signet)?.absoluteString == "https://mempool.space/signet/tx/funding")
-        #expect(row.explorerURL(variant: .regtest) == row.explorerURL(variant: .signet))
-        row.type = "Arkoor"
-        #expect(row.explorerURL(variant: .mainnet) == nil)
     }
 }

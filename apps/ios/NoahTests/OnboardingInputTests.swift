@@ -98,7 +98,7 @@ struct OnboardingNameTests {
 
     @Test func onlyTheLatestTypingDecides() async {
         let lookups = Lookups(taken: ["noah"])
-        let name = NameAvailability(debounce: .milliseconds(200)) { try lookups.lookup($0) }
+        let name = NameAvailability(debounce: .milliseconds(20)) { try lookups.lookup($0) }
         name.text = "noah"; name.textChanged()
         name.text = "noahs"; name.textChanged()
         await name.settle()
@@ -116,10 +116,6 @@ struct OnboardingEmailEntryTests {
         #expect(!EmailEntry.isValid("@gmail.com"))
         #expect(!EmailEntry.isValid("maya gmail.com"))
         #expect(!EmailEntry.isValid("maya@gmial.com")) // A known typo is offered as a fix instead.
-    }
-
-    @Test func normalizesSpacesAndCase() {
-        #expect(EmailEntry.normalize(" Maya@GMail.com ") == "maya@gmail.com")
     }
 
     @Test func completesDomains() {

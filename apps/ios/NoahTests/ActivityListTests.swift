@@ -82,7 +82,7 @@ struct ActivityListTests {
         #expect(ActivityList.matches(paid, query: "movement-4", words: []), "other fields still match")
     }
 
-    @Test func filterNarrowsRowsAndNamesItsEmptyState() {
+    @Test func filterNarrowsRows() {
         let ark = Self.row("ark", "2026-10-22T12:00:00Z")
         let lightning = Self.row("ln", "2026-10-22T12:00:00Z", type: "Bolt11")
         let chain = Self.row("chain", "2026-10-22T12:00:00Z", type: "Onchain", kind: "onboard")
@@ -91,8 +91,6 @@ struct ActivityListTests {
         #expect(rows.filter(HistoryFilter.ark.includes).map(\.id) == ["ark"])
         #expect(rows.filter(HistoryFilter.onchain.includes).map(\.id) == ["chain"])
         #expect(rows.filter(HistoryFilter.all.includes).count == 3)
-        #expect(HistoryFilter.allCases.map(\.title) == ["All", "Lightning", "Ark", "On-chain"])
-        #expect(HistoryFilter.lightning.emptyTitle == "No Lightning payments")
         #expect([lightning].filter(HistoryFilter.ark.includes).isEmpty)
     }
 

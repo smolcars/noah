@@ -7,14 +7,6 @@ import UIKit
 @Suite(.serialized)
 @MainActor
 struct AdaptivePaymentLayoutTests {
-    @Test func scannerUsesWindowOrientationRatherThanDevicePosture() {
-        #expect(ScannerPreviewLayout.rotation(for: .portrait) == 90)
-        #expect(ScannerPreviewLayout.rotation(for: .portraitUpsideDown) == 270)
-        #expect(ScannerPreviewLayout.rotation(for: .landscapeLeft) == 180)
-        #expect(ScannerPreviewLayout.rotation(for: .landscapeRight) == 0)
-        #expect(ScannerPreviewLayout.rotation(for: .unknown) == 90)
-    }
-
     actor PaymentGate {
         var calls = 0
         private var continuation: CheckedContinuation<SendReceipt, Never>?

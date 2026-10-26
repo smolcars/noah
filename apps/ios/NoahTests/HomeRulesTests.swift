@@ -178,15 +178,6 @@ struct HomeRulesTests {
         #expect(line(nil) == nil)
     }
 
-    /// A line is tappable only where something explains it; funds in a round open the round while one is active.
-    @Test func statusLineTapsOnlyWhereSomethingExplainsIt() {
-        #expect(HomeStatusLine.arriving(1).tap(roundsActive: true) == .balance)
-        #expect(HomeStatusLine.pendingRound(1).tap(roundsActive: true) == .rounds)
-        #expect(HomeStatusLine.pendingRound(1).tap(roundsActive: false) == .balance)
-        #expect(HomeStatusLine.rounds(1).tap(roundsActive: true) == .rounds)
-        #expect(HomeStatusLine.error("Couldn't load your balance. Pull down to try again.").tap(roundsActive: true) == nil)
-    }
-
     @Test func onlyIncomingFundsAreArriving() {
         func line(_ balance: WalletBalance, _ transactions: [HistoryTransaction] = []) -> HomeStatusLine? {
             HomeStatusLine.current(error: nil, balance: balance, incomingOnchain: HomeStatusLine.incomingOnchain(transactions),

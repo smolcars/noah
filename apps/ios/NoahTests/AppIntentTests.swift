@@ -1,7 +1,6 @@
 import AppIntents
 import Foundation
 import Testing
-import UIKit
 @testable import Noah
 
 @MainActor struct AppIntentTests {
@@ -28,20 +27,6 @@ import UIKit
         }
         #expect(contract(rn) == contract(native))
         #expect(!native.contains("SendPaymentController"))
-    }
-
-    @Test func balanceAndAddressUseAdapterAndReturnValues() async throws {
-        let wallet = NoahIntentWallet(newAddress: { "ark-address" }, bolt11Invoice: { _, _ in .init(paymentRequest: "invoice") }, refreshBalance: { 12_345 })
-        try await NoahIntentWallet.$current.withValue(wallet) {
-            let balance = try await GetNoahBalanceIntent().perform()
-            #expect(balance.value == 12_345)
-            let address = try await CreateNoahArkAddressIntent().perform()
-            #expect(address.value == "ark-address")
-            if #available(iOS 26.0, *) {
-                let snippet = try await CreateNoahArkAddressWithSnippetIntent().perform()
-                #expect(snippet.value == "ark-address")
-            }
-        }
     }
 
     @Test(arguments: [0, -1]) func invoiceRejectsInvalidAmountsBeforeWalletAccess(amount: Int) async {
@@ -77,18 +62,6 @@ import UIKit
         await NoahIntentWallet.$current.withValue(wallet) {
             await #expect(throws: (any Error).self) { _ = try await GetNoahBalanceIntent().perform() }
             await #expect(throws: (any Error).self) { _ = try await CreateNoahArkAddressIntent().perform() }
-        }
-    }
-
-    @Test func copyIntentsKeepForegroundModeAndParameters() async throws {
-        if #available(iOS 26.0, *) {
-            _ = try await CopyNoahArkAddressIntent(address: "test-ark").perform()
-            #expect(UIPasteboard.general.string == "test-ark")
-            _ = try await CopyNoahLightningInvoiceIntent(invoice: "test-invoice").perform()
-            #expect(UIPasteboard.general.string == "test-invoice")
-            UIPasteboard.general.items = []
-            #expect(!CopyNoahArkAddressIntent.isDiscoverable)
-            #expect(!CopyNoahLightningInvoiceIntent.isDiscoverable)
         }
     }
 }

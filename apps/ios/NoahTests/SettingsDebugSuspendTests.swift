@@ -4,7 +4,7 @@ import Testing
 
 /// Advanced: five taps unlock debug mode, its switch turns it off again, and Suspend asks first.
 @MainActor struct SettingsDebugSuspendTests {
-    @Test func fiveTapsWithinTwoSecondsEachUnlockDebug() {
+    @Test func fiveTapsWithinTwoSecondsEachUnlockDebugAndAPauseStartsOver() {
         var unlock = DebugUnlock()
         let start = Date(timeIntervalSince1970: 1_000)
         for tap in 0..<4 {
@@ -15,15 +15,12 @@ import Testing
         let fifth = unlock.tap(at: start.addingTimeInterval(6))
         #expect(fifth)
         #expect(unlock.count == 0)
-    }
 
-    @Test func aPauseLongerThanTwoSecondsStartsOver() {
-        var unlock = DebugUnlock()
-        let start = Date(timeIntervalSince1970: 1_000)
-        for tap in 0..<4 { _ = unlock.tap(at: start.addingTimeInterval(Double(tap))) }
-        let late = unlock.tap(at: start.addingTimeInterval(3 + 2.5))
+        var paused = DebugUnlock()
+        for tap in 0..<4 { _ = paused.tap(at: start.addingTimeInterval(Double(tap))) }
+        let late = paused.tap(at: start.addingTimeInterval(3 + 2.5))
         #expect(!late)
-        #expect(unlock.count == 1)
+        #expect(paused.count == 1)
     }
 
     @Test func debugModeTurnsOffAndOnInTodaysFlag() throws {
