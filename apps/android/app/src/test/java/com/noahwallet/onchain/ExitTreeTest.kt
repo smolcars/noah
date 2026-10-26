@@ -178,6 +178,19 @@ class ExitTreeTest {
         assertTrue(long.nodes.filter { !it.coin }.all { it.x <= 90f - 14 })
     }
 
+    @Test fun aFoldCoversEveryTransactionOnceAndKeepsEachOneBeingSent() {
+        val (mined, current, unsent) = ExitFold.Kind.entries
+        // Two exits sharing a long path, one a block behind the other: both transactions being sent keep their own places.
+        val kinds = List(30) { mined } + listOf(current, current) + List(40) { unsent }
+        for (cap in 4..12) {
+            val spans = ExitFold.spans(kinds, cap)
+            assertEquals("cap $cap", kinds.indices.toList(), spans.flatMap { it.toList() })
+            assertTrue("cap $cap: ${spans.size}", spans.size <= cap)
+            assertTrue(30..30 in spans && 31..31 in spans)
+        }
+        assertEquals("nothing folds where everything fits", List(5) { it..it }, ExitFold.spans(List(5) { unsent }, 5))
+    }
+
     @Test fun aRestartedExitNeverHidesASiblingsProgress() {
         // The first row restarted (Start: nothing listed yet); its sibling has the shared root in a block and the next one waiting.
         val paths = listOf(listOf("root" to st.unsent, "x" to st.unsent, "leafA" to st.unsent), listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))

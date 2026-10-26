@@ -103,30 +103,8 @@ internal data class ExitScene(
         if (n <= cap || spans != null) return this
         val coin = n - 1
         val first = marks.indexOfFirst { it != Mark.mined }.let { if (it < 0) n else it }
-        val current = first.takeIf { it < coin }
-        val mined = minOf(first, coin); val unsent = if (current != null) coin - current - 1 else 0
-        val required = 1 + if (current != null) 1 else 0
-        var minedOwn = mined; var unsentOwn = unsent
-        fun total() = required + minedOwn + (if (mined > minedOwn) 1 else 0) + unsentOwn + if (unsent > unsentOwn) 1 else 0
-        // The next two to send and the latest block keep their own levels longest.
-        while (total() > cap && unsentOwn > 2) unsentOwn--
-        while (total() > cap && minedOwn > 1) minedOwn--
-        while (total() > cap && unsentOwn > 1) unsentOwn--
-        while (total() > cap && minedOwn > 0) minedOwn--
-        while (total() > cap && unsentOwn > 0) unsentOwn--
-        // Folding one alone saves nothing.
-        if (unsent - unsentOwn == 1) unsentOwn = unsent
-        if (mined - minedOwn == 1) minedOwn = mined
-        val spans = buildList {
-            if (mined > minedOwn) add(0 until mined - minedOwn)
-            for (i in mined - minedOwn until mined) add(i..i)
-            current?.let { c ->
-                add(c..c)
-                for (i in c + 1..c + unsentOwn) add(i..i)
-                if (unsent > unsentOwn) add(c + 1 + unsentOwn until coin)
-            }
-            add(coin..coin)
-        }
+        val kinds = List(coin) { i -> when { i < first -> ExitFold.Kind.mined; i == first -> ExitFold.Kind.current; else -> ExitFold.Kind.unsent } }
+        val spans = ExitFold.spans(kinds, cap - 1) + listOf(coin..coin)
         val single = { r: IntRange -> r.first == r.last }
         return copy(n = spans.size, marks = spans.map { if (single(it)) marks[it.first] else if (marks[it.first] == Mark.mined) Mark.mined else Mark.unsent },
             heights = spans.map { heights[it.last] }, theirs = spans.map { single(it) && theirs[it.first] }, paid = spans.map { single(it) && paid[it.first] },
@@ -180,6 +158,50 @@ internal data class ExitScene(
                 lockedFrom = stage.lockedFrom, claimableHeight = stage.claimableHeight, unlockedAt = stage.unlockedAt,
                 claimedBlock = stage.claimedBlock, claimFee = claimFee, destination = destination, others = coins,
                 need = if (needsFunds) exit.nextPackageFee?.let { fee -> confirmed?.let { (fee - it).coerceAtLeast(0) } } else null)
+        }
+    }
+}
+
+/**
+ * How a path too long for its room folds (exit-v2-notes.md): the picture's levels, the Exits list's gutter and Review's
+ * rail all draw a long path the same way rather than squeezing it.
+ */
+internal object ExitFold {
+    /** A transaction as the fold sees it: in a block, being sent (the first not in a block on some path), or still to send. */
+    enum class Kind { mined, current, unsent }
+
+    /**
+     * The places [kinds] (root first, your coin left out) get when only [cap] fit: each one being sent on its own, and between
+     * them runs that fold. A run of blocks keeps its latest on their own and stacks the oldest in one place; a run still to
+     * send keeps its next ones and folds the rest in one "+N". The next two to send and the latest block keep their own
+     * places longest; folding one alone saves nothing. No run folds across a break ([breaks]: where paths part). Returns
+     * the transactions each place stands for, in order.
+     */
+    fun spans(kinds: List<Kind>, cap: Int, breaks: Set<Int> = emptySet()): List<IntRange> {
+        if (kinds.size <= cap) return kinds.indices.map { it..it }
+        class Run(val range: IntRange, val old: Boolean) { var own = range.count() }
+        val runs = mutableListOf<Run>(); var start = 0
+        for (i in 0..kinds.size) if (i == kinds.size || kinds[i] == Kind.current || i in breaks) {
+            if (i > start) runs += Run(start until i, (start until i).all { kinds[it] == Kind.mined })
+            start = if (i < kinds.size && kinds[i] != Kind.current) i else i + 1
+        }
+        val required = kinds.count { it == Kind.current }
+        fun total() = required + runs.sumOf { it.own + if (it.own < it.range.count()) 1 else 0 }
+        fun shrink(old: Boolean, floor: Int) {
+            while (total() > cap) (runs.filter { it.old == old && it.own > floor }.maxByOrNull { it.own } ?: return).own--
+        }
+        shrink(false, 2); shrink(true, 1); shrink(false, 1); shrink(true, 0); shrink(false, 0)
+        for (run in runs) if (run.range.count() - run.own == 1) run.own = run.range.count()
+        return buildList {
+            var i = 0
+            while (i < kinds.size) {
+                val run = runs.firstOrNull { i in it.range }
+                if (run == null) { add(i..i); i++; continue }
+                val r = run.range; val folded = r.count() - run.own
+                if (run.old) { if (folded > 0) add(r.first until r.first + folded); for (k in r.first + folded..r.last) add(k..k) }
+                else { for (k in r.first until r.first + run.own) add(k..k); if (folded > 0) add(r.first + run.own..r.last) }
+                i = r.last + 1
+            }
         }
     }
 }
