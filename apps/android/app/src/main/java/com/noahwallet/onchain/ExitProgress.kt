@@ -443,7 +443,7 @@ private fun CheckSheet(quote: OnchainQuote, busy: Boolean, money: (Long) -> Stri
             quote.chainFee?.let { ExitValueRow(tr("Estimated fees"), "~" + money(it), ValueKind.number, last = true) }
         }
         if (!current) Warning(tr(OnchainFailure.changed.text), failed = true)
-        SheetActions(tr("Cancel"), tr("Move forward"), onCancel = close, onConfirm = check, enabled = current && !busy, loading = busy, confirmTag = "exit-check-confirm")
+        SheetActions(tr("Cancel"), tr("Move forward"), onCancel = close, onConfirm = check, enabled = current && !busy, loading = busy, confirmTag = "exit-check-confirm", wrap = true)
     }
 }
 

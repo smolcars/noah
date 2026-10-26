@@ -328,12 +328,12 @@ internal fun SettingsSheet(onDismiss: () -> Unit, title: String, line: String? =
 /** A sheet's two actions (prototype `.shact`): Cancel and the action, sharing the width. */
 @Composable
 internal fun SheetActions(cancel: String, confirm: String, onCancel: () -> Unit, onConfirm: () -> Unit, enabled: Boolean = true, danger: Boolean = false,
-                          loading: Boolean = false, cancelEnabled: Boolean = !loading, confirmTag: String? = null) {
+                          loading: Boolean = false, cancelEnabled: Boolean = !loading, confirmTag: String? = null, wrap: Boolean = false) {
     val haptics = rememberHaptics()
-    Row(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SendPill(cancel, Modifier.weight(1f), enabled = cancelEnabled, outlined = true) { haptics.light(); onCancel() }
+    Row(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        SendPill(cancel, Modifier.weight(1f), enabled = cancelEnabled, outlined = true, wrap = wrap) { haptics.light(); onCancel() }
         SendPill(confirm, Modifier.weight(1f).then(if (confirmTag != null) Modifier.testTag(confirmTag) else Modifier), enabled = enabled,
-            danger = danger, loading = loading) { if (danger) haptics.warning() else haptics.light(); onConfirm() }
+            danger = danger, loading = loading, wrap = wrap) { if (danger) haptics.warning() else haptics.light(); onConfirm() }
     }
 }
 

@@ -328,10 +328,28 @@ internal const val HoldMillis = 800L
 internal fun HoldToSend(amount: String, enabled: Boolean, sending: Boolean, modifier: Modifier = Modifier, onConfirm: () -> Unit) =
     HoldToConfirm(tr("Hold to send"), tr("Sending"), tr("Send {amount}", amount), tr("Send"), enabled, sending, modifier, "send-hold", onConfirm)
 
+/**
+ * A pill's label that wraps between words: shrunk (to half its size at most) only as far as its longest word needs to fit
+ * a line, so no word breaks in two ("blockkedj-an").
+ */
+@Composable
+internal fun WrappingLabel(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier = Modifier) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    BoxWithConstraints(modifier) {
+        fun sized(ratio: Float) = if (ratio >= 1f) style else style.copy(fontSize = style.fontSize * ratio,
+            lineHeight = if (style.lineHeight.type == androidx.compose.ui.unit.TextUnitType.Sp) style.lineHeight * ratio else style.lineHeight)
+        val word = text.split(' ').maxBy { measurer.measure(it, style).size.width }
+        // Measured at each size tried: text doesn't scale exactly with its size.
+        var ratio = 1f
+        while (constraints.hasBoundedWidth && ratio > .5f && measurer.measure(word, sized(ratio)).size.width > constraints.maxWidth) ratio -= .03f
+        androidx.compose.foundation.text.BasicText(text, style = sized(ratio.coerceAtLeast(.5f)))
+    }
+}
+
 /** Send's hold with other words ([hold], [busyLabel]); [action] names the accessibility action and its confirmation, [confirm] its button. */
 @Composable
 internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, confirm: String, enabled: Boolean, sending: Boolean,
-                           modifier: Modifier = Modifier, tag: String, onConfirm: () -> Unit) {
+                           modifier: Modifier = Modifier, tag: String, onConfirm: () -> Unit, wrap: Boolean = false) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
@@ -342,7 +360,8 @@ internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, conf
     val currentConfirm by rememberUpdatedState(onConfirm)
     val currentEnabled by rememberUpdatedState(enabled)
     val label = if (sending) busyLabel else hold
-    Box(modifier.fillMaxWidth().height(58.dp)
+    // [wrap]: a long label takes a second line and the pill grows (exit pages at large text), rather than shrinking.
+    Box(modifier.fillMaxWidth().then(if (wrap) Modifier.heightIn(min = 58.dp) else Modifier.height(58.dp))
         .graphicsLayer { scaleX = press.value; scaleY = press.value; alpha = if (enabled || sending) 1f else .4f }
         .drawWithContent {
             drawContent()
@@ -395,7 +414,8 @@ internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, conf
             onClick(label = action) { if (currentEnabled) confirming = true; currentEnabled }
             customActions = listOf(CustomAccessibilityAction(action) { if (currentEnabled) confirming = true; currentEnabled })
         }, contentAlignment = Alignment.Center) {
-        androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = palette.background),
+        if (wrap) WrappingLabel(label, SendType.pill.copy(color = palette.background, textAlign = TextAlign.Center), Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+        else androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = palette.background),
             maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = SendType.pill.fontSize))
     }
     LaunchedEffect(sending) { if (!sending && progress.value >= 1f) progress.snapTo(0f) }
@@ -495,7 +515,7 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = ink, strokeWidth = 2.dp)
             else icon?.let { Icon(painterResource(it), null, Modifier.size(20.dp), tint = ink) }
-            if (wrap) androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center))
+            if (wrap) WrappingLabel(title, style.copy(color = ink, textAlign = TextAlign.Center))
             else androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center),
                 maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
         }

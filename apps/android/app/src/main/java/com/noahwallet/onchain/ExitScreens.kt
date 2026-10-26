@@ -331,7 +331,7 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             if (!everything) Text(if (chosen.isEmpty()) tr("Choose the VTXOs to exit") else fees?.chainFee?.let { tr("{amount} · fees ~{fee}", money(value), money(it)) }
                 ?: money(value), Modifier.padding(bottom = 8.dp), style = HomeType.amount.copy(fontSize = 15.sp), color = palette.foreground)
-            SendPill(tr("Review exit"), Modifier.fillMaxWidth().testTag("exit-review"), height = 56.dp,
+            SendPill(tr("Review exit"), Modifier.fillMaxWidth().testTag("exit-review"), height = 56.dp, wrap = true,
                 enabled = chosen.isNotEmpty() && !busy && !suspended && (!everything || classified)) { haptics.light(); review(ids) }
         }
     }, leading = {
@@ -462,15 +462,15 @@ internal fun ExitDepositContent(address: String?, error: String?, need: Long, mo
             Box(Modifier.fillMaxWidth().padding(top = 16.dp), contentAlignment = Alignment.Center) {
                 com.noahwallet.ui.ReceiveQR(value, maximumSide = 220.dp) { copy(context, value); toasts.show(copied) }
             }
-            DetailRow(tr("Bitcoin address"), short(value, 10, 8), ValueKind.mono, copy = value, toasts = toasts, last = true)
+            ExitValueRow(tr("Bitcoin address"), short(value, 10, 8), ValueKind.mono, last = true) { CopyIcon("Bitcoin address", value, toasts) }
             FinePrint(tr("The amount required may vary."))
             Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SendPill(tr("Copy"), Modifier.weight(1f), outlined = true, icon = SettingsIcons.copy) { copy(context, value); toasts.show(copied) }
-                SendPill(tr("Share"), Modifier.weight(1f), icon = SettingsIcons.share) {
+                SendPill(tr("Copy"), Modifier.weight(1f), outlined = true, icon = SettingsIcons.copy, wrap = true) { copy(context, value); toasts.show(copied) }
+                SendPill(tr("Share"), Modifier.weight(1f), icon = SettingsIcons.share, wrap = true) {
                     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, value), null))
                 }
             }
         } ?: FinePrint(tr(error ?: "Loading address…"), failed = error != null)
-        SendPill(tr("Done"), Modifier.fillMaxWidth().padding(top = 10.dp), outlined = true) { close() }
+        SendPill(tr("Done"), Modifier.fillMaxWidth().padding(top = 10.dp), outlined = true, wrap = true) { close() }
     }
 }

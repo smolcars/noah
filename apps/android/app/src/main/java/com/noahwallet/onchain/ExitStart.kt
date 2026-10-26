@@ -82,7 +82,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
     ExitFrame(tr("Review"), back, hero = true, pictureLeads = true, foot = {
         when {
             quote != null && current -> HoldToConfirm(tr("Hold to start exit"), tr("Starting"), tr("Start exit"), tr("Start exit"),
-                enabled = !busy && !suspended, sending = busy, modifier = Modifier.weight(1f), tag = "exit-hold-start", onConfirm = start)
+                enabled = !busy && !suspended, sending = busy, modifier = Modifier.weight(1f), tag = "exit-hold-start", wrap = true, onConfirm = start)
             fallback != null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), wrap = true, enabled = !busy, onClick = withoutEstimate)
             else -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), wrap = true, enabled = !busy && !suspended, loading = busy, onClick = reviewAgain)
         }

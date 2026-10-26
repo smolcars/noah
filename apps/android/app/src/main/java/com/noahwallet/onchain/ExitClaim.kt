@@ -115,7 +115,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
             else -> HoldToConfirm(known?.let { tr("Hold to claim {amount}", money(it.net)) } ?: tr("Hold to claim"), tr("Claiming"),
                 known?.let { tr("Claim {amount}", money(it.net)) } ?: tr("Claim"), tr("Claim"),
                 enabled = current && ExitClaim.ready(destination, quote) && !busy && !suspended, sending = busy, modifier = Modifier.weight(1f),
-                tag = "exit-hold-claim", onConfirm = claim)
+                tag = "exit-hold-claim", wrap = true, onConfirm = claim)
         }
     }, leading = {
         ExitBig(tr("Claim {amount}", money(total)), Modifier.padding(top = 6.dp).testTag("exit-claim-amount"))
