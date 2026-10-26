@@ -32,6 +32,8 @@ enum BackupCrypto {
     static let nonceLength = 12
     static let tagLength = 16
     static let pbkdf2Rounds: UInt32 = 600_000
+    /// Tests that only open envelopes they sealed themselves may derive with fewer rounds. The app never sets it.
+    @TaskLocal static var testRounds: UInt32?
     private static let headerLength = 1 + saltLength + nonceLength
 
     static func encrypt(_ plaintext: Data, mnemonic: String, version: Version) throws -> Data {
@@ -88,7 +90,7 @@ enum BackupCrypto {
                         passwordBytes.baseAddress, password.count,
                         saltBytes.baseAddress, salt.count,
                         CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                        pbkdf2Rounds,
+                        testRounds ?? pbkdf2Rounds,
                         keyBytes.baseAddress, 32)
                 }
             }

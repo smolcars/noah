@@ -3,6 +3,18 @@ import Testing
 
 @testable import Noah
 
+/// Derives backup keys with 1,000 PBKDF2 rounds instead of 600,000, for tests that only open envelopes they sealed
+/// themselves. The shared vectors and other platforms' backups keep the real rounds.
+struct FastBackupKeys: TestTrait, TestScoping {
+    func provideScope(for test: Test, testCase: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
+        try await BackupCrypto.$testRounds.withValue(1_000) { try await function() }
+    }
+}
+
+extension Trait where Self == FastBackupKeys {
+    static var fastBackupKeys: Self { .init() }
+}
+
 struct BackupCryptoTests {
     struct Input: Decodable {
         let version: UInt8
@@ -38,7 +50,7 @@ struct BackupCryptoTests {
         }
     }
 
-    @Test func randomSaltAndNonceRoundTrip() throws {
+    @Test(.fastBackupKeys) func randomSaltAndNonceRoundTrip() throws {
         let plaintext = Data("snapshot".utf8)
         let first = try BackupCrypto.encrypt(plaintext, mnemonic: Self.mnemonic, version: .snapshot)
         let second = try BackupCrypto.encrypt(plaintext, mnemonic: Self.mnemonic, version: .snapshot)
@@ -47,7 +59,7 @@ struct BackupCryptoTests {
         #expect(try BackupCrypto.decrypt(first, mnemonic: Self.mnemonic, expecting: .snapshot) == plaintext)
     }
 
-    @Test func rejectsWrongMnemonicTamperingVersionAndShortInput() throws {
+    @Test(.fastBackupKeys) func rejectsWrongMnemonicTamperingVersionAndShortInput() throws {
         let envelope = try BackupCrypto.encrypt(Data("x".utf8), mnemonic: Self.mnemonic, version: .snapshot)
 
         #expect(throws: BackupCrypto.Failure.authenticationFailed) {
@@ -69,7 +81,7 @@ struct BackupCryptoTests {
         }
     }
 
-    @Test func decryptsSlicedData() throws {
+    @Test(.fastBackupKeys) func decryptsSlicedData() throws {
         let envelope = try BackupCrypto.encrypt(Data("slice".utf8), mnemonic: Self.mnemonic, version: .snapshot)
         let padded = Data([0xff]) + envelope
         #expect(try BackupCrypto.decrypt(padded.dropFirst(), mnemonic: Self.mnemonic, expecting: .snapshot) == Data("slice".utf8))

@@ -25,7 +25,7 @@ struct SeedSafetyTests {
         }
     }
 
-    @Test func formattedSeedsUseTheSameWalletAndAuthenticationIdentityButOriginalBackupPassword() throws {
+    @Test(.fastBackupKeys) func formattedSeedsUseTheSameWalletAndAuthenticationIdentityButOriginalBackupPassword() throws {
         struct Input: Decodable { let raw: String; let exerciseCrypto: Bool }
         struct Expected: Decodable { let normalized: String? }
         let cases = try Fixtures.load("stored-mnemonic", input: Input.self, expected: Expected.self)

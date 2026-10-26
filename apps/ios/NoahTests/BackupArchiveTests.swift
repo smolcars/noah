@@ -22,7 +22,7 @@ struct BackupArchiveTests {
             barkSchemaVersion: 42)
     }
 
-    @Test func sealsAndOpensRoundTrip() throws {
+    @Test(.fastBackupKeys) func sealsAndOpensRoundTrip() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let snapshot = try makeSnapshot()
         let sealed = try BackupArchive.seal(
@@ -43,7 +43,7 @@ struct BackupArchiveTests {
     /// Exactly how the RN app's encryptWalletSnapshot builds the file:
     /// JSON.stringify'd manifest + snapshot in a folder, zipped without the
     /// parent folder, BackupCrypto v2.
-    @Test func opensArchiveBuiltLikeReactNative() throws {
+    @Test(.fastBackupKeys) func opensArchiveBuiltLikeReactNative() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let snapshot = try makeSnapshot()
         let staging = root.appending(path: "staging")
@@ -74,7 +74,7 @@ struct BackupArchiveTests {
         }
     }
 
-    @Test func rejectsArchivesWithOtherEntries() throws {
+    @Test(.fastBackupKeys) func rejectsArchivesWithOtherEntries() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         for extra in ["notes.txt", "../escape.sqlite"] {
             let zip = root.appending(path: "\(UUID().uuidString).zip")
@@ -171,7 +171,7 @@ struct BackupArchiveTests {
         }
     }
 
-    @Test func openRejectsACorruptedSnapshot() throws {
+    @Test(.fastBackupKeys) func openRejectsACorruptedSnapshot() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let manifestJSON = try BackupArchive.encode(manifest)
         let corrupted = patch(try zip([("manifest.json", manifestJSON), ("db.sqlite", Data("wallet".utf8))]), crc: 0x0BAD_F00D)
@@ -191,7 +191,7 @@ struct BackupArchiveTests {
         return Data(envelope.base64EncodedString().utf8)
     }
 
-    @Test func legacyBackupUnpacksOnlyThisVariantsFolder() throws {
+    @Test(.fastBackupKeys) func legacyBackupUnpacksOnlyThisVariantsFolder() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let base64 = try legacyBackup([
             ("backup_staging/noah-data-regtest/db.sqlite", Data("db".utf8)),
@@ -208,7 +208,7 @@ struct BackupArchiveTests {
         #expect(names == ["db.sqlite", "db.sqlite-wal", "nested"])
     }
 
-    @Test func legacyBackupRejectsUnsafeOrIncompleteArchives() throws {
+    @Test(.fastBackupKeys) func legacyBackupRejectsUnsafeOrIncompleteArchives() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let prefix = "backup_staging/noah-data-regtest/"
         let cases: [([(String, Data)], BackupArchive.Failure)] = [
