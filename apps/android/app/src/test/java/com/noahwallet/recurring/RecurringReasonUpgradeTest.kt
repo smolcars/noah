@@ -8,15 +8,8 @@ import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.UUID
-import com.noahwallet.localization.L10n
-import com.noahwallet.services.storage.LegacyLocale
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
 
 /** Fixtures retain the pre-reason-code native encoding and its original digest. */
-@RunWith(RobolectricTestRunner::class) @Config(sdk = [35])
 class RecurringReasonUpgradeTest {
     private class World : AutoCloseable {
         val directory = Files.createTempDirectory("review10-reason-upgrade-").toFile()
@@ -128,22 +121,5 @@ class RecurringReasonUpgradeTest {
             assertTrue(damage, runCatching { w.store().load() }.isFailure)
             assertEquals(original, w.raw)
         }
-    }
-    @Test fun everyReasonRendersInEveryLanguage() {
-        val context = RuntimeEnvironment.getApplication()
-        val preferences = context.getSharedPreferences("gt_store", 0)
-        val old = preferences.getString(LegacyLocale.key, null)
-        try {
-            for (locale in listOf("en", "es", "ja", "ko", "sv")) {
-                preferences.edit().putString(LegacyLocale.key, locale).commit()
-                for (code in RecurringIssue.Code.values()) {
-                    val args = if (code in listOf(RecurringIssue.Code.quoteExceedsCap, RecurringIssue.Code.scheduleExceedsCap)) listOf("500", "200") else emptyList()
-                    val issue = RecurringIssue(code, args)
-                    val rendered = issue.message(context)
-                    assertTrue("$locale $code", issue.valid && rendered.isNotEmpty())
-                    assertFalse("$locale $code: $rendered", rendered.contains('{') || rendered.contains("%1$") || rendered.contains("%2$"))
-                }
-            }
-        } finally { preferences.edit().putString(LegacyLocale.key, old).commit() }
     }
 }

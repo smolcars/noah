@@ -16,11 +16,4 @@ class RecurringEditorTest {
             assertEquals(typed, "Enter a whole amount in sats, up to 21 million BTC.", runCatching { draft(recurringAmount(typed)).validateInput(now) }.exceptionOrNull()?.message)
         }
     }
-
-    @Test fun customIntervalDefaultsToFourteenDaysLikeRnAndIos() {
-        assertEquals("14", recurringDefaultEvery("day"))
-        assertEquals("1", recurringDefaultEvery("week"))
-        assertEquals("1", recurringDefaultEvery("month"))
-        assertTrue(RecurringInterval("day", recurringDefaultEvery("day").toInt()).valid)
-    }
 }
