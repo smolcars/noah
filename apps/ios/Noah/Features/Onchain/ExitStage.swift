@@ -302,8 +302,12 @@ struct ExitStagePainter {
         func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
         var items: [ExitStageLabel] = []
         // The round's block, on the ground: bark gives no round height, so it says what it is (as Android).
-        let round = ExitStageLabel(y: g.roundY - lh + 3, lines: [.init(text: tr("The round,"), tone: .strong), .init(text: tr("already on Bitcoin"))],
+        // Where two lines don't fit (the root waiting on a small picture), one.
+        var round = ExitStageLabel(y: g.roundY - lh + 3, lines: [.init(text: tr("The round,"), tone: .strong), .init(text: tr("already on Bitcoin"))],
                                    priority: 2)
+        round.fallbacks = [ExitStageLabel(y: g.roundY, lines: [.init(text: [tr("The round,"), tr("already on Bitcoin")]
+                                                                        .joined(separator: language.hasPrefix("ja") ? "" : " "))],
+                                          priority: 2, shrinks: true)]
         if scene.explain {
             items.append(.init(y: g.coinY, lines: [.init(text: tr("Your VTXO"), tone: .strong), .init(text: tr("in Ark"))], priority: 3))
             if n > 1 {
@@ -373,6 +377,15 @@ struct ExitStagePainter {
     /// beside the phone's badge, or for the claim, right of your coin. A pill's text keeps 8 pt inside it.
     func fit(_ label: ExitStageLabel) -> ExitStageLabel {
         let g = geometry
+        var label = label
+        // Fallbacks that can't fit are no help.
+        label.fallbacks = label.fallbacks.map(fit).filter { !$0.shrinks || $0.size >= 0.75 }
+        if label.shrinks, let line = label.lines.first {
+            let width = ExitStageText.width(line.text, size: g.fontSize, strong: [.strong, .failureStrong].contains(line.tone))
+            let top = label.y - g.lineHeight / 2, room = label.trailing.map(g.claimColumn) ?? g.column(top: top, bottom: top + g.lineHeight)
+            label.size = min(1, room / max(1, width))
+            return label
+        }
         func wrapped(_ width: Double) -> ExitStageLabel {
             var out = label
             out.lines = []
@@ -622,7 +635,8 @@ struct ExitStagePainter {
                 case .muted: c.muted
                 case .failure, .failureStrong: NoahTokens.Colors.failure
                 }
-                layer.draw(Text(verbatim: line.text).font(ExitStageText.font(index < label.head ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone)))
+                layer.draw(Text(verbatim: line.text).font(ExitStageText.font((index < label.head ? g.fontSize : g.subSize) * label.size,
+                                                                              strong: [.strong, .failureStrong].contains(line.tone)))
                             .foregroundColor(color), at: CGPoint(x: x, y: y), anchor: label.trailing == nil ? .leading : .trailing)
             }
             if let brace = label.brace {

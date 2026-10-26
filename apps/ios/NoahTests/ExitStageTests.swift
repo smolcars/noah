@@ -206,7 +206,7 @@ struct ExitStageTests {
                 let room = label.trailing.map(g.claimColumn) ?? g.column(top: label.top, bottom: label.bottom)
                 for (index, line) in label.lines.enumerated() {
                     let head = index < label.head
-                    let width = ExitStageText.width(line.text, size: head ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone))
+                    let width = ExitStageText.width(line.text, size: head ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone)) * label.size
                     #expect(width + (head && label.pill != nil ? 8 : 0) <= room + 0.5, "\(line.text)")
                 }
             }
@@ -219,6 +219,29 @@ struct ExitStageTests {
         // One-line texts (other exits' amounts, the destination) shrink to fit, to 60 % at most.
         let size = 11.0, shrunk = ExitStagePainter.shrunk("21 000 sats", size, room: 40)
         #expect(shrunk < size && shrunk >= size * 0.6 && ExitStagePainter.shrunk("₿21", size, room: 40) == size)
+    }
+
+    /// The root waiting on the SE's 236 pt picture: "Next block" takes the room above the round's block, so the round's
+    /// caption goes on one line rather than disappearing. At AX1, with no room for either, it may give way; nothing overlaps.
+    @Test func theRoundsCaptionStaysWhileTheRootWaitsOnASmallPicture() {
+        for (scale, locale) in [(1.0, "en"), (1.0, "sv"), (1.0, "ja"), (1.65, "en"), (1.65, "sv")] {
+            let g = ExitStageGeometry(size: CGSize(width: 375, height: 236), scale: scale, count: 4)
+            let painter = ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: Locale(identifier: locale))
+            let caption = L10n.text("already on Bitcoin", locale: locale)
+            for scene in [Self.mempool(heights: [], pending: 0, count: 4), Self.mempool(heights: [921_346], pending: 1, count: 4)] {
+                let labels = painter.labels(scene, ys: g.levels(ExitStageStill(scene).mined))
+                #expect(!Self.overlapping(labels), "\(locale) \(scale)")
+                #expect(labels.contains { $0.lines.first?.text == L10n.text("Next block", locale: locale) })
+                if scale == 1 { #expect(labels.contains { $0.lines.contains { $0.text.contains(caption) } }, "\(locale) \(scene.levels)") }
+                for label in labels where label.shrinks {
+                    let room = g.column(top: label.top, bottom: label.bottom)
+                    #expect(label.size >= 0.75 && ExitStageText.width(label.lines[0].text, size: g.fontSize) * label.size <= room + 0.5)
+                }
+            }
+        }
+        // The iPhone's 300 pt picture has room for both lines.
+        let labels = Self.painter(Self.iphone).labels(Self.mempool(heights: [], pending: 0, count: 4), ys: Self.iphone.levels([0, 0, 0, 0]))
+        #expect(labels.contains { $0.lines.map(\.text) == ["The round,", "already on Bitcoin"] })
     }
 
     /// The exit pages' buttons wrap at accessibility sizes inside a taller pill; the rest of Settings keeps one line.

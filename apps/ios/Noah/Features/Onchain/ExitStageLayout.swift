@@ -132,6 +132,11 @@ struct ExitStageLabel: Equatable {
     var pill: Pill?
     /// The first line's share of `lines` once wrapped: drawn larger, inside the pill.
     var head = 1
+    /// One line that shrinks to fit (to 75 % at most) rather than wrapping; `size` is how much.
+    var shrinks = false
+    var size = 1.0
+    /// Where this label can go instead when it doesn't fit here, in order.
+    var fallbacks: [ExitStageLabel] = []
     /// A confirmed transaction's block: labels that don't fit fold into one range.
     var block: UInt32?
     /// Right-aligned at this x; nil for the label column.
@@ -183,7 +188,9 @@ enum ExitStageLabels {
             var item = items[index]
             span(&item)
             if clash(item.top, item.bottom, trailing: item.trailing != nil, margin: 3) {
-                if item.block != nil { skipped.append(item) }
+                let fallback = item.fallbacks.map { var label = $0; span(&label); return label }
+                    .first { !clash($0.top, $0.bottom, trailing: $0.trailing != nil, margin: 3) }
+                if let fallback { placed.append(fallback) } else if item.block != nil { skipped.append(item) }
                 continue
             }
             placed.append(item)
