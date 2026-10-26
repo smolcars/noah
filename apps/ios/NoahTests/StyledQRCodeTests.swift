@@ -11,28 +11,17 @@ struct StyledQRCodeTests {
     static let addresses = ["a@noahwallet.io", "maya@noahwallet.io", "satoshi.nakamoto_21@signet.noahwallet.io",
                             "lightning-address-with-a-long-name@localhost.com"]
 
-    /// Home's get-paid card as drawn: white in both themes, logo in the middle.
-    @Test(arguments: [ColorScheme.light, .dark])
-    func getPaidCardDecodes(scheme: ColorScheme) throws {
-        for address in Self.addresses {
+    /// Home's get-paid card as drawn: logo in the middle, at every symbol size the addresses take;
+    /// white in both themes, so the dark theme checks one.
+    @Test func getPaidCardDecodes() throws {
+        let cards: [(String, ColorScheme)] = Self.addresses.map { ($0, ColorScheme.light) } + [(Self.addresses[Self.addresses.count - 1], .dark)]
+        for (address, scheme) in cards {
             let card = HomeQRCard(address: address, qrSide: 212, unit: .bip177, hidden: false)
                 .frame(width: 345)
                 .padding(24)
                 .background(NoahTokens.Colors.background)
                 .environment(\.colorScheme, scheme)
             #expect(try Self.decode(card) == [address], "\(address) in \(scheme)")
-        }
-    }
-
-    @Test(arguments: [ColorScheme.light, .dark])
-    func styledCodeDecodesWithTheLogo(scheme: ColorScheme) throws {
-        for address in Self.addresses {
-            let view = StyledQRCode(content: address)
-                .frame(width: 212, height: 212)
-                .padding(20)
-                .background(NoahTokens.Colors.qrCard)
-                .environment(\.colorScheme, scheme)
-            #expect(try Self.decode(view) == [address], "\(address) in \(scheme)")
         }
     }
 

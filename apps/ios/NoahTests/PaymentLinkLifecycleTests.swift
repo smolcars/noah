@@ -67,6 +67,9 @@ struct PaymentLinkLifecycleTests {
 
     private func unlock(_ app: AppModel) { app.walletLock.policy.authenticated(generation: app.walletLock.policy.generation) }
 
+    /// Long enough for the mounted views to act on a link they shouldn't have; the gate itself is checked directly.
+    private func settle() async throws { try await Task.sleep(for: .milliseconds(100)) }
+
     private func send(_ controller: SendPaymentController? = nil) -> SendModel {
         SendModel(controller: controller ?? SendPaymentTests().make(SendPaymentTests.Backend(), SendPaymentTests.Storage()),
                   resolveRecipient: { .init(destination: $0, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 0) },
@@ -113,7 +116,7 @@ struct PaymentLinkLifecycleTests {
         // The wallet's tabs are up but the permission read hasn't answered: hold, don't hand Send the link.
         #expect(app.paymentLinkGate == .hold)
         app.paymentLink.receive(try #require(URL(string: Self.link)), gate: app.paymentLinkGate)
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLink.pending == Self.link) // WalletTabs never took it.
         late.answer(.denied)
         await finishing.value
@@ -131,7 +134,7 @@ struct PaymentLinkLifecycleTests {
         let window = try mount(tabs(app, send: model))
         defer { window.isHidden = true; window.rootViewController = nil; app.appBecameInactive(); try? FileManager.default.removeItem(at: root) }
         app.paymentLink.receive(try #require(URL(string: Self.link)), gate: app.paymentLinkGate)
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLink.pending == Self.link && model.destination.isEmpty)
         late.answer(.granted)
         await finishing.value
@@ -140,7 +143,7 @@ struct PaymentLinkLifecycleTests {
         // Once: after the user moves on, another permission read brings nothing back.
         model.destination = "alice@example.com"
         await app.pushPermission.refresh()
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(model.destination == "alice@example.com" && app.paymentLinkGate == .open)
     }
 
@@ -155,7 +158,7 @@ struct PaymentLinkLifecycleTests {
         // Back in Noah, RootView unlocks before it reads the permission again: the old grant releases nothing.
         unlock(app)
         #expect(app.paymentLinkGate == .hold)
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLink.pending == Self.link) // WalletTabs never took it.
         await app.pushPermission.refresh()
         #expect(app.paymentLinkGate == .ignore)
@@ -171,7 +174,7 @@ struct PaymentLinkLifecycleTests {
         try await background(app, center)
         app.paymentLink.receive(try #require(URL(string: Self.link)), gate: app.paymentLinkGate)
         unlock(app)
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLinkGate == .hold && model.destination.isEmpty)
         await app.pushPermission.refresh()
         try await SendPaymentTests.waitUntil { model.destination == Self.link && !model.busy }
@@ -180,7 +183,7 @@ struct PaymentLinkLifecycleTests {
         try await background(app, center)
         unlock(app)
         await app.pushPermission.refresh()
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLinkGate == .open && model.destination == "alice@example.com")
     }
 
@@ -196,7 +199,7 @@ struct PaymentLinkLifecycleTests {
         app.paymentLink.receive(try #require(URL(string: Self.link)), gate: app.paymentLinkGate)
         late.fail()
         for _ in 0..<3 { await app.pushPermission.refresh() }
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLinkGate == .hold && app.paymentLink.pending == Self.link && model.destination.isEmpty)
         late.answer(.granted)
         await app.pushPermission.refresh()
@@ -215,18 +218,18 @@ struct PaymentLinkLifecycleTests {
         late.pend()
         let check = Task { await app.pushPermission.refresh() }
         unlock(app) // Unlocked, but the check is still out.
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLinkGate == .hold && model.destination.isEmpty)
         // A check that started before the next background doesn't count after it.
         try await background(app, center)
         late.answer(.granted)
         await check.value
         unlock(app)
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLinkGate == .hold && model.destination.isEmpty)
         app.walletLock.background() // Locked again, then a fresh check answers: the lock still holds it.
         await app.pushPermission.refresh()
-        try await Task.sleep(for: .milliseconds(300))
+        try await settle()
         #expect(app.paymentLinkGate == .hold && model.destination.isEmpty)
         unlock(app)
         try await SendPaymentTests.waitUntil { model.destination == Self.link }

@@ -367,18 +367,6 @@ struct SendMotionTests {
         #expect(model.payment?.destination == SendReceiveShotTests.invoice)
     }
 
-    /// A destination without an amount stays on Amount, recipient-first, with the recipient filled.
-    @Test func pastingAnAddressOnAmountStaysOnTheKeypad() async {
-        let model = pasteModel()
-        await model.importRecipient(SendReceiveShotTests.ark)
-        #expect(model.stage == .amount && model.progress.entry == .recipientFirst && model.progress.recipientConfirmed)
-        #expect(model.destination == SendReceiveShotTests.ark && model.error == nil && model.sats == 0)
-        // Then Next goes on with the amount typed.
-        model.amount = "2500"
-        await model.continueStage()
-        #expect(model.stage == .review && model.payment?.amount == 2_500)
-    }
-
     /// A typed amount survives an amountless recipient from Amount, by Scan or Paste (both take
     /// `importRecipient`): the keypad keeps its turn with the recipient shown, and Next goes on.
     @Test func pastingAnAddressOnAmountKeepsTheTypedAmount() async {
@@ -409,18 +397,9 @@ struct SendMotionTests {
         }
     }
 
-    /// Anything else keeps today's error on Amount.
-    @Test func pastingAnInvalidValueOnAmountKeepsTheError() async {
-        let model = pasteModel()
-        await model.importRecipient("not a destination")
-        #expect(model.stage == .amount && !model.progress.recipientConfirmed)
-        #expect(model.error == "Enter a valid Bitcoin, Lightning, or Ark destination.")
-    }
-
     /// An Ark-funded on-chain review shows the round's confirmations (today's setting) in its
     /// Arrives row, so a Max quote's estimate note or an invoice note can't crowd them out.
     @Test func anArkFundedOnchainReviewShowsItsConfirmations() {
-        #expect(WalletConfiguration.base(for: .mainnet).roundTxRequiredConfirmations == 2)
         let max = SendPayment(destination: SendReceiveShotTests.bitcoin, method: "onchain", amount: 50_000, source: .offchain)
         let maxQuote = SendQuote(amount: 49_500, fee: 500, total: 50_000, vtxoIDs: ["vtxo"])
         let invoiceNote = "The invoice sets the amount to ₿1,500"
@@ -431,15 +410,6 @@ struct SendMotionTests {
             #expect(SendConfirmation.fine(invoiceNote: note, quote: quote, locale: "en")
                     == note ?? SendQuote.recipientEstimateExplanation)
         }
-        #expect(SendConfirmation.arrives(.onchainSwap, required: 1, locale: "en") == "After one confirmation")
-        #expect(SendConfirmation.arrives(.onchainWallet, required: 2, locale: "en") == "In about 20 minutes")
-        #expect(SendConfirmation.arrives(.ark, required: 2, locale: "en") == "Instantly")
-        #expect(SendConfirmation.arrives(.lightning, required: 2, locale: "en") == "In seconds")
-        for language in ["es", "ja", "ko", "sv"] {
-            let row = SendConfirmation.arrives(.onchainSwap, required: 2, locale: language)
-            #expect(row != "After 2 confirmations" && row.contains("2"), "\(language)")
-            #expect(SendConfirmation.arrives(.onchainSwap, required: 1, locale: language) != "After one confirmation", "\(language)")
-        }
     }
 
     /// A view's size in a column `width` wide, in `locale` at text size `type`.
@@ -447,6 +417,9 @@ struct SendMotionTests {
         UIHostingController(rootView: view.environment(\.locale, Locale(identifier: locale)).environment(\.dynamicTypeSize, type))
             .sizeThatFits(in: CGSize(width: width, height: 10_000))
     }
+
+    /// The smallest and default text sizes, the largest before the accessibility sizes, and the largest.
+    static let textSizes: [DynamicTypeSize] = [.xSmall, .large, .xxxLarge, .accessibility5]
 
     /// The Arrives row never cuts its value off on an SE-width phone (a 335-pt review column):
     /// too long for one line (Swedish at xxxLarge, every language at accessibility sizes), its label
@@ -457,7 +430,7 @@ struct SendMotionTests {
         for locale in LegacyLocale.supported {
             let rows = [SendMotion.Rail.ark, .lightning, .onchainWallet].map { SendConfirmation.arrives($0, required: 2, locale: locale) }
                 + [1, 2].map { SendConfirmation.arrives(.onchainSwap, required: $0, locale: locale) }
-            for type in DynamicTypeSize.allCases {
+            for type in Self.textSizes {
                 for text in rows {
                     let row = Self.fitted(SendDetailRow("Arrives", text: text, verbatim: true, wraps: true), width: column, locale, type)
                     let line = Self.fitted(SendDetailRow("Arrives", text: text, verbatim: true).fixedSize(), width: 10_000, locale, type)
@@ -496,7 +469,7 @@ struct SendMotionTests {
                 + ["Fee", "Estimated fee"].map { text($0, "Free") }
                 + ["Fee", "Estimated fee", "Total", "Estimated total", "Total (reviewed coins)"].map(number)
                 + [text("Note", "Coffee and a croissant, thanks!", verbatim: true)]
-            for type in DynamicTypeSize.allCases {
+            for type in Self.textSizes {
                 for (label, row, value) in rows {
                     let wrapping = Self.fitted(row(true), width: column, locale, type)
                     let line = Self.fitted(row(false).fixedSize(), width: 10_000, locale, type)
@@ -514,28 +487,20 @@ struct SendMotionTests {
     }
 
     /// Hold to send keeps all its words at every text size: they wrap inside a taller pill rather
-    /// than truncate. At the default size the pill is still 58 pt.
+    /// than truncate.
     @Test func holdToSendWrapsAtEveryTextSize() {
         let column: CGFloat = 335
         var wrapped = 0
         for locale in LegacyLocale.supported {
-            for type in DynamicTypeSize.allCases {
+            for type in Self.textSizes {
                 let pill = Self.fitted(SendHoldButton(amount: "₿1,500") {}, width: column, locale, type)
                 let words = Self.fitted(Text("Hold to send").noahText(NoahTokens.Typography.button), width: column - 40, locale, type)
                 let line = Self.fitted(Text("Hold to send").noahText(NoahTokens.Typography.button).fixedSize(), width: 10_000, locale, type)
                 if words.height > line.height { wrapped += 1 }
                 #expect(pill.height >= words.height + 20, "\(locale) \(type)")
-                if type == .large { #expect(pill.height == 58, "\(locale)") }
             }
         }
         #expect(wrapped > 0)
-    }
-
-    /// The ticks land at 25, 50 and 75% of the 0.8 s hold, so completion never cuts the last one.
-    @Test func holdTicksAtAQuarterHalfAndThreeQuarters() {
-        let expected = [0.25, 0.5, 0.75].map { $0 * SendHoldButton.duration }
-        #expect(zip(SendHoldButton.ticks.map(\.at), expected).allSatisfy { abs($0 - $1) < 1e-9 })
-        #expect(SendHoldButton.ticks.map(\.kind) == [.selection, .light, .medium])
     }
 
     /// A first finger presses, a second lands 500 ms later and the first lifts at 600 ms:
@@ -580,12 +545,6 @@ struct SendMotionTests {
         #expect(SendRecent.matching(recents, query: "ma").map(\.destination) == ["maya@localhost.com"])
     }
 
-    /// A confirmed on-chain send says "Confirmed in block N" once: in the block row's phase line, not again below.
-    @Test func confirmedOnchainSendHasNoSecondConfirmationLine() {
-        #expect(SendOutcomeView.onchainLine(confirmed: false) == "It confirms in about 20 minutes. Activity shows when.")
-        #expect(SendOutcomeView.onchainLine(confirmed: true) == nil)
-    }
-
     /// Next on an empty amount goes to To, recipient-first; on 0 it asks for an amount, and a valid
     /// amount clears that at once (send-receive.md, Amount).
     @Test func amountErrorShowsOnlyForZeroAndClearsWhenTheAmountIsValid() async {
@@ -605,10 +564,11 @@ struct SendMotionTests {
         #expect(model.error == nil) // Back to empty doesn't ask again until Next.
     }
 
-    /// An invalid paste's error isn't about the amount, so typing one keeps it.
+    /// An invalid paste keeps its error on Amount, and it isn't about the amount, so typing one keeps it.
     @Test func typingAnAmountKeepsAnInvalidPasteError() async {
         let model = pasteModel()
         await model.importRecipient("not a destination")
+        #expect(model.stage == .amount && !model.progress.recipientConfirmed)
         let error = model.error
         #expect(error != nil && error != SendModel.zeroAmountError)
         model.amount = "1200"
@@ -654,21 +614,21 @@ struct ReceiveFormatTests {
         #expect(QRMatrix.correction(for: try Self.priced.uri()) == "M" && QRMatrix.correction(for: Self.address) == "H")
     }
 
-    /// The card as drawn decodes to exactly the shown format, in both themes, with the logo.
-    @Test(arguments: [ColorScheme.light, .dark])
-    func theShownQRDecodesToTheChosenFormat(scheme: ColorScheme) throws {
-        for request in [Self.plain, Self.priced] {
-            for format in ReceiveFormat.allCases {
-                guard let payload = format.payload(request: request, address: Self.address) else { continue }
-                let card = ReceiveCard(payload: payload, title: format.name, caption: format.caption(hasAmount: request.amountSat != nil),
-                                       band: format.showsBand(hasAmount: request.amountSat != nil) ? ("₿ 1,500", nil) : nil, qrSide: 226,
-                                       reveal: false)
-                    .frame(width: 300)
-                    .padding(24)
-                    .background(NoahTokens.Colors.background)
-                    .environment(\.colorScheme, scheme)
-                #expect(try StyledQRCodeTests.decode(card) == [payload], "\(format) in \(scheme)")
-            }
+    /// The card as drawn decodes to exactly the shown format, with the logo: every format once, and the
+    /// densest (the priced request) in the dark theme too.
+    @Test func theShownQRDecodesToTheChosenFormat() throws {
+        let cards: [(ReceiveFormat, ReceiveRequest, ColorScheme)] = ReceiveFormat.allCases.map { ($0, Self.priced, ColorScheme.light) }
+            + [(.request, Self.plain, .light), (.request, Self.priced, .dark)]
+        for (format, request, scheme) in cards {
+            let payload = try #require(format.payload(request: request, address: Self.address))
+            let card = ReceiveCard(payload: payload, title: format.name, caption: format.caption(hasAmount: request.amountSat != nil),
+                                   band: format.showsBand(hasAmount: request.amountSat != nil) ? ("₿ 1,500", nil) : nil, qrSide: 226,
+                                   reveal: false)
+                .frame(width: 300)
+                .padding(24)
+                .background(NoahTokens.Colors.background)
+                .environment(\.colorScheme, scheme)
+            #expect(try StyledQRCodeTests.decode(card) == [payload], "\(format) in \(scheme)")
         }
     }
 

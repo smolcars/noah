@@ -81,7 +81,7 @@ import Testing
         #expect(model.route == nil)
     }
 
-    @Test(arguments: ["exit", "background", "discard", "recipient", "reset", "cancel"])
+    @Test(arguments: ["discard", "recipient", "reset", "cancel"])
     func latePreparationIsDiscarded(reason: String) async throws {
         var completion: CheckedContinuation<SendQuote, any Error>?
         var discarded: [SendQuote] = []

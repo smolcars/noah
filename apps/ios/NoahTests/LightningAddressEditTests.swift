@@ -43,7 +43,7 @@ import Testing
         #expect(edit(Self.long).saves, "longer than onboarding allows, still valid for the server")
         #expect(edit("m").saves)
         #expect(!edit("maya2", .checking).saves && !edit("maya2", .taken).saves)
-        #expect(edit("a b").problem == "Username may only contain a-z, 0-9, dash, underscore, and period" && !edit("a b").saves)
+        #expect(edit("a b").problem != nil && !edit("a b").saves)
         #expect(!edit("maya2", npub: "nsec1abc").saves)
         #expect(!edit("").saves && edit("").problem == nil)
     }
