@@ -45,6 +45,8 @@ struct ExitStageGeometry: Equatable {
     /// What every two drawn elements keep between them.
     static let clearance = 2.0
 
+    /// The same picture for a path of `count` transactions.
+    func with(count: Int) -> Self { Self(size: CGSize(width: width, height: height), scale: scale, wide: wide, count: count) }
 
     /// The most transactions that can be drawn below your coin with every level at full spacing: 7 pt nodes,
     /// the timelock's dial reserved. A longer path is folded to fit (`ExitStageScene.folded`).

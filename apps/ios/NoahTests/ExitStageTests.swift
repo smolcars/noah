@@ -305,6 +305,36 @@ struct ExitStageTests {
         #expect(Self.texts(placed).contains("1–4") && !Self.texts(placed).contains("1–2"))
     }
 
+    /// On a folded path a move matches transactions, not drawn places: 20 transactions going from 5 to 6 in blocks on an
+    /// SE at AX1 grows the stack, so every transaction shifts a place.
+    @Test func aFoldedPathMovesEachTransaction() {
+        let size = CGSize(width: 375, height: 236)
+        var five = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 20)
+        var six = Self.mempool(heights: (921_346...921_351).map { $0 }, pending: 6, count: 20)
+        five.others = [.init(level: 8, amount: "₿21,000", sent: false)]
+        six.others = five.others
+        let (g, b) = ExitStageGeometry.fitting(six, size: size, scale: 1.65)
+        let a = five.folded(nodes: g.foldCapacity)
+        #expect(a.folds != b.folds && a.levels.count == b.levels.count)
+        let f = ExitStageFrame(a, b, elapsed: 0.05, reduceMotion: false)
+        for j in b.levels.indices.dropLast() { #expect(f.origin[j] == a.level(holding: b.real(j))) }
+        // Transaction 6 just got into a block: it fills and settles. Transaction 7 starts waiting. Nothing else changes.
+        let mined = b.level(holding: 5)!, sending = b.level(holding: 6)!
+        #expect(f.stamp[mined] < 1 && f.mined[mined] < 1 && f.pending[mined] > 0)
+        #expect(f.pending[sending] < 0.5 && f.mined[sending] == 0)
+        #expect(f.stamp.indices.allSatisfy { $0 == mined || f.stamp[$0] == 1 })
+        // The block joining the stack sinks into it; the unsent one leaving the "+N" node splits out of it.
+        #expect(f.merging == [.init(from: a.level(holding: 2)!, into: 0, mined: true)])
+        #expect(f.origin[b.level(holding: 8)!] == a.folds.first { $0.kind == .more }?.index)
+        // Each transaction starts where it was drawn and ends where it's drawn now; your other exit's branch follows it.
+        let painter = ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: Self.english)
+        let start = painter.positions(ExitStageFrame(a, b, elapsed: 0, reduceMotion: false), from: a, to: b)
+        for j in b.levels.indices.dropLast() { if let o = f.origin[j] { #expect(abs(start.ys[j + 1] - start.before[o + 1]) < 0.001) } }
+        #expect(abs(start.ys[b.others[0].level] - start.before[a.others[0].level]) < 0.001)
+        let end = painter.positions(ExitStageFrame(a, b, elapsed: 60, reduceMotion: false), from: a, to: b)
+        #expect(zip(end.ys, g.levels(ExitStageStill(b).mined)).allSatisfy { abs($0 - $1) < 0.01 })
+    }
+
     /// Optional elements give way to everything required, in order: amounts first, then your other exits' coins (moved
     /// down their branch before they're left out), then stubs. Nine transactions, five mined, others at levels 1 and 2 on
     /// an SE at AX1: their coins no longer share a spot 9.98 pt apart.

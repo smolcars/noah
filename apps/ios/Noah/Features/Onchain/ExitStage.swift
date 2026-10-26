@@ -103,6 +103,11 @@ struct ExitStageScene: Equatable {
     /// The real index of the first transaction drawn at `index`.
     func real(_ index: Int) -> Int { index + folds.filter { $0.index < index }.reduce(0) { $0 + $1.count - 1 } }
 
+    /// The drawn level holding real transaction `real`.
+    func level(holding real: Int) -> Int? {
+        levels.indices.first { real >= self.real($0) && real < self.real($0) + (fold(at: $0)?.count ?? 1) }
+    }
+
     /// The scene with at most `capacity` transactions drawn below your coin, so every level keeps its full
     /// spacing however long the path. The one being sent (or waiting, or needing funds) and the next two are
     /// always drawn on their own, and the coin; then as many of the latest confirmed ones as fit, the oldest
@@ -220,6 +225,19 @@ struct ExitStageFrame {
     /// Per transaction 1…n-1 (index 0 unused): the pop as the stroke reaches it.
     var pop: [Double] = []
     var mined: [Double] = [], stamp: [Double] = [], ripple: [Double] = [], pending: [Double] = []
+    /// For each of `b`'s drawn levels, `a`'s level holding the same transaction, matched by its real index: on a
+    /// folded path each transaction moves, not each slot.
+    var origin: [Int?] = []
+    /// Transactions drawn on their own in `a` that fold into a stack or a "+N" node in `b`: they sink into it.
+    var merging: [Merge] = []
+    /// How far each transaction has moved from where `a` drew it.
+    var travel = 1.0
+
+    struct Merge: Equatable {
+        var from: Int
+        var into: Int
+        var mined: Bool
+    }
 
     /// `a` moving to `b`. Growth staggers 0.26 s a link; a block fills, settles from 1.22× and
     /// ripples once; the claim's stem draws (calm), then its coin travels into the destination.
@@ -235,13 +253,27 @@ struct ExitStageFrame {
         ark = growing && y.ark < x.ark ? x.ark * (1 - ((e - grown) / 0.7).clamped(0, 1)) : mix(x.ark, y.ark, soft)
         lift = mix(x.lift, y.lift, snappy)
         if b.explain { labels = growing ? ((e - grown + 0.1) / 0.5).clamped(0, 1) : y.grown }
+        // The same path: match by real transaction. Otherwise (Start's usual four, then bark's real path) by place.
+        let same = a.realCount == b.realCount, coin = a.levels.count - 1
+        origin = (0..<n).map { j -> Int? in
+            if j == n - 1 { return coin }
+            guard same else { return j < coin ? j : nil }
+            return a.level(holding: b.real(j)).flatMap { $0 < coin ? $0 : nil }
+        }
+        if same {
+            for i in 0..<coin where a.fold(at: i) == nil {
+                guard let j = b.level(holding: a.real(i)), b.fold(at: j) != nil, b.real(j) != a.real(i) else { continue }
+                merging.append(.init(from: i, into: j, mined: (x.mined[safe: i] ?? 0) > 0.5))
+            }
+        }
+        travel = snappy
         for j in 0..<n {
-            let was = x.mined[safe: j] ?? 0, now = y.mined[j]
+            let was = origin[j].flatMap { x.mined[safe: $0] } ?? 0, now = y.mined[j]
             mined.append(mix(was, now, snappy))
             let fresh = was < 0.5 && now > 0.5
             stamp.append(fresh ? spring(0, .bouncy) : 1)
             ripple.append(fresh && !reduceMotion ? (e / 0.8).clamped(0, 1) : 0)
-            pending.append(mix(x.pending[safe: j] ?? 0, y.pending[j], snappy))
+            pending.append(mix(origin[j].flatMap { x.pending[safe: $0] } ?? 0, y.pending[j], snappy))
         }
         dim = mix(x.claim, y.claim, soft)
         tree = 1 - 0.6 * dim
@@ -266,9 +298,10 @@ struct ExitStageFrame {
         flash = b.stuck > a.stuck && e < 0.5 ? 1 : 0
         // The fee child flies from the phone once its transaction is in the mempool; a raised fee replaces it.
         if let j = b.levels.firstIndex(where: \.isPending) {
-            let bumped = { (s: ExitStageScene) in if case .pending(_, true) = s.levels[safe: j] { true } else { false } }
-            if !(a.levels[safe: j]?.isPending ?? false) { fly = spring(0.35, .soft) }
-            else if bumped(b) && !bumped(a) { fly = spring(0.15, .soft); oldFee = 1 - soft }
+            let before = origin[j].flatMap { a.levels[safe: $0] }
+            let bumped = { (level: ExitStageScene.Level?) in if case .pending(_, true)? = level { true } else { false } }
+            if !(before?.isPending ?? false) { fly = spring(0.35, .soft) }
+            else if bumped(b.levels[j]) && !bumped(before) { fly = spring(0.15, .soft); oldFee = 1 - soft }
         }
         // Labels that change cross-fade.
         if a != b && !b.explain { fadeIn = (e / 0.25).clamped(0, 1) }
@@ -526,6 +559,21 @@ struct ExitStagePainter {
         return label.pill == nil ? box : box.union(pill(label))
     }
 
+    // MARK: Positions
+
+    /// Each level's y at this moment, every transaction moving from where `a` drew it (matched by `f.origin`) to
+    /// where `b` draws it; and `a`'s own levels, for what folds away and for `a`'s labels.
+    func positions(_ f: ExitStageFrame, from a: ExitStageScene, to b: ExitStageScene) -> (ys: [Double], before: [Double]) {
+        let x = ExitStageStill(a), y = ExitStageStill(b), to = geometry.levels(y.mined, lock: y.lock)
+        let before = geometry.with(count: a.levels.count).levels(x.mined, lock: x.lock)
+        guard f.travel < 1 else { return (to, before) }
+        let ys = to.indices.map { level -> Double in
+            guard level > 0, let origin = f.origin[safe: level - 1] ?? nil, let from = before[safe: origin + 1] else { return to[level] }
+            return from + (to[level] - from) * f.travel
+        }
+        return (ys, before)
+    }
+
     // MARK: Arrangement
 
     /// Every drawn element's outline, the required ones first (the round's block, your path, your coin, the
@@ -687,7 +735,7 @@ struct ExitStagePainter {
         let canvas = MotionCanvas(context: context, size: CGSize(width: g.width, height: g.height),
                                   viewBox: CGRect(x: 0, y: 0, width: g.width, height: g.height), colors: c)
         let breathe = ExitPulse.breathe(now, animating: animating && inline)
-        let ys = g.levels(f.mined, lock: f.lock), TX = g.trunk, yC = g.coinY
+        let (ys, before) = positions(f, from: a, to: s), TX = g.trunk, yC = g.coinY
         let target = ExitStageStill(s), new = labels(s, ys: g.levels(target.mined, lock: target.lock))
         let arrangement = arrange(s, ys: ys, lock: f.lock, labels: new)
         func Y(_ level: Int) -> Double { ys[safe: level] ?? yC }
@@ -793,6 +841,18 @@ struct ExitStagePainter {
                 }
             }
         }
+        // Transactions folding into a stack or a "+N" node sink into it.
+        for merge in f.merging where f.travel < 1 {
+            let y0 = before[safe: merge.from + 1] ?? yC, y1 = Y(merge.into + 1), p = CGPoint(x: TX, y: y0 + (y1 - y0) * f.travel)
+            var ghost = canvas
+            ghost.context.opacity *= f.tree * (1 - f.travel.clamped(0, 1))
+            if merge.mined {
+                ghost.fill(Path(roundedRect: CGRect(x: p.x - g.side / 2, y: p.y - g.side / 2, width: g.side, height: g.side), cornerRadius: 3.5), c.foreground)
+            } else {
+                ghost.fill(ghost.circle(p.x, p.y, g.side * 0.42), c.background)
+                ghost.stroke(ghost.circle(p.x, p.y, g.side * 0.42), c.orange, 1.6)
+            }
+        }
         // Needs funds: a dashed red line from the phone to the transaction it can't pay for.
         if let index = s.levels.firstIndex(of: .needsFunds), f.wallet > 0.01 {
             var path = Path()
@@ -817,7 +877,7 @@ struct ExitStagePainter {
         dial(canvas, f, s, inline: inline, breathe: breathe)
         destination(canvas, f, s)
         // Labels: the right-hand column says which block each transaction is in, and what's waiting.
-        let old = f.fadeIn < 1 ? labels(a, ys: g.levels(ExitStageStill(a).mined, lock: ExitStageStill(a).lock)) : []
+        let old = f.fadeIn < 1 ? labels(a, ys: before) : []
         func same(_ x: ExitStageLabel, _ y: ExitStageLabel) -> Bool { x.lines == y.lines && x.y == y.y && x.pill == y.pill }
         drawLabels(context, old.filter { label in !new.contains { same($0, label) } }, tree: 1 - f.fadeIn, trailing: 1 - f.fadeIn,
                    inline: true, breathe: breathe, flash: 0)
@@ -1075,7 +1135,7 @@ struct ExitStagePainter {
             }
         }
         for (index, level) in s.levels.enumerated() {
-            let old = a.levels[safe: index]
+            let old = f.origin[safe: index].flatMap { $0 }.flatMap { a.levels[safe: $0] }
             switch (old, level) {
             case (_, .pending(let theirs, let bumped)):
                 if bumped, case .pending(_, false)? = old { fly(index + 1, u: 1, radius: 3.4, hollow: false, alpha: f.oldFee * f.tree) }
