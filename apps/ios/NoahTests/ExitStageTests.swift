@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Testing
+import UIKit
 
 @testable import Noah
 
@@ -203,6 +204,17 @@ struct ExitStageTests {
         // One-line texts (other exits' amounts, the destination) shrink to fit, to 60 % at most.
         let size = 11.0, shrunk = ExitStagePainter.shrunk("21 000 sats", size, room: 40)
         #expect(shrunk < size && shrunk >= size * 0.6 && ExitStagePainter.shrunk("₿21", size, room: 40) == size)
+    }
+
+    /// The exit pages' buttons wrap at accessibility sizes inside a taller pill; the rest of Settings keeps one line.
+    @MainActor @Test func exitButtonsWrapAndOtherSettingsButtonsKeepOneLine() {
+        func height(wrap: Bool) -> CGFloat {
+            let button = Button("Lägg till pengar på blockkedjan") {}.buttonStyle(SettingsActionStyle(wrap: wrap))
+                .environment(\.dynamicTypeSize, .accessibility1)
+            return UIHostingController(rootView: button).sizeThatFits(in: CGSize(width: 327, height: CGFloat.greatestFiniteMagnitude)).height
+        }
+        #expect(height(wrap: false) == NoahTokens.Size.button)
+        #expect(height(wrap: true) > NoahTokens.Size.button + 20)
     }
 
     // MARK: Motion

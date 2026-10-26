@@ -62,7 +62,7 @@ struct UnilateralExitView: View {
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         } footer: {
             Button(L10n.text("Choose VTXOs", locale: language)) { settings.open(.exitChoose) }
-                .buttonStyle(SettingsActionStyle())
+                .buttonStyle(SettingsActionStyle(wrap: true))
                 .accessibilityIdentifier("exit-choose")
         }
         .settingsChrome("Emergency exit")
@@ -146,7 +146,7 @@ struct ExitChooseView: View {
                 haptics.play(.light)
                 settings.open(.exitReview(selection.map(\.id)))
             }
-            .buttonStyle(SettingsActionStyle())
+            .buttonStyle(SettingsActionStyle(wrap: true))
             // All waits for every VTXO's classification, so it never freezes one it would leave out.
             .disabled(selection.isEmpty || model.locked || all && !ExitEconomics.classified(vtxos, costs: costs))
             .accessibilityIdentifier("exit-review")
@@ -356,7 +356,7 @@ struct ExitReviewView: View {
         } footer: {
             if quote == nil && model.estimateFallback == nil && !model.busy && !model.loading && reviewed {
                 Button(L10n.text("Review again", locale: language)) { Task { await review() } }
-                    .buttonStyle(SettingsActionStyle())
+                    .buttonStyle(SettingsActionStyle(wrap: true))
                     .accessibilityIdentifier("exit-review-again")
             } else {
                 SendHoldButton(amount: money(amount), enabled: quote != nil && !model.busy, title: "Hold to start exit",

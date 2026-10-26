@@ -65,7 +65,7 @@ struct ExitListView: View {
                     haptics.play(.light)
                     settings.open(.exitClaim)
                 }
-                .buttonStyle(SettingsActionStyle())
+                .buttonStyle(SettingsActionStyle(wrap: true))
                 .accessibilityIdentifier("exit-list-claim")
             }
             Button(L10n.text("Exit more VTXOs", locale: language)) { settings.open(.exitChoose) }

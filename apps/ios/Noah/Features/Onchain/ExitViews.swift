@@ -437,9 +437,9 @@ struct ExitDepositSheet: View {
                 } label: { Label(L10n.text("Copy", locale: language), systemImage: "doc.on.doc") }
                     .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
                 ShareLink(item: address) { Label(L10n.text("Share", locale: language), systemImage: "square.and.arrow.up") }
-                    .buttonStyle(SettingsActionStyle())
+                    .buttonStyle(SettingsActionStyle(wrap: true))
             } else {
-                Button(L10n.text("Done", locale: language), action: close).buttonStyle(SettingsActionStyle())
+                Button(L10n.text("Done", locale: language), action: close).buttonStyle(SettingsActionStyle(wrap: true))
             }
         }
         .task {

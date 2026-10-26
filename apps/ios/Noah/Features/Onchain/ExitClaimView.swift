@@ -89,7 +89,7 @@ struct ExitClaimView: View {
         } footer: {
             if reviewAgain, let destination {
                 Button(L10n.text("Review again", locale: language)) { Task { await review(destination) } }
-                    .buttonStyle(SettingsActionStyle())
+                    .buttonStyle(SettingsActionStyle(wrap: true))
                     .accessibilityIdentifier("exit-claim-review")
             } else {
                 SendHoldButton(amount: money(receive ?? amount), enabled: quote != nil && !model.busy && !ready.isEmpty,

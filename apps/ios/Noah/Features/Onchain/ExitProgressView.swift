@@ -150,18 +150,18 @@ struct ExitVtxoDetailView: View {
                 haptics.play(.light)
                 settings.open(.exitClaim)
             }
-            .buttonStyle(SettingsActionStyle())
+            .buttonStyle(SettingsActionStyle(wrap: true))
             .accessibilityIdentifier("exit-claim")
             // If the daemon stops, this is how bark notices the claim confirming or being evicted.
             checkAndCancel(progress, primary: false)
         case .needsFunds:
             Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(text.need) }
-                .buttonStyle(SettingsActionStyle())
+                .buttonStyle(SettingsActionStyle(wrap: true))
                 .accessibilityIdentifier("exit-add-funds")
             checkAndCancel(progress, primary: false)
         case .claimed, .canceled, .alreadySpent, .swept:
             Button(L10n.text("Done", locale: language)) { settings.back() }
-                .buttonStyle(SettingsActionStyle())
+                .buttonStyle(SettingsActionStyle(wrap: true))
                 .accessibilityIdentifier("exit-done")
         default:
             checkAndCancel(progress, primary: progress.stale)
@@ -172,7 +172,7 @@ struct ExitVtxoDetailView: View {
     @ViewBuilder private func checkAndCancel(_ progress: ExitProgress, primary: Bool) -> some View {
         Group {
             if primary {
-                Button(L10n.text("Move exit forward", locale: language)) { check() }.buttonStyle(SettingsActionStyle())
+                Button(L10n.text("Move exit forward", locale: language)) { check() }.buttonStyle(SettingsActionStyle(wrap: true))
             } else {
                 Button(L10n.text("Move exit forward", locale: language)) { check() }
                     .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))

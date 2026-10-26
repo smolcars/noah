@@ -506,14 +506,18 @@ struct SettingsSheetButtons: View {
 /// The black pill, or red for destructive actions once they're enabled (prototype `.pill.bad`).
 struct SettingsActionStyle: ButtonStyle {
     var destructive = false
+    /// Large text wraps the words inside a taller pill rather than cutting them off (the exit pages, as
+    /// their hold buttons do). Off by default: the rest of Settings keeps one line.
+    var wrap = false
 
     func makeBody(configuration: Configuration) -> some View {
-        Styled(configuration: configuration, destructive: destructive)
+        Styled(configuration: configuration, destructive: destructive, wrap: wrap)
     }
 
     private struct Styled: View {
         let configuration: Configuration
         let destructive: Bool
+        let wrap: Bool
         @Environment(\.isEnabled) private var isEnabled
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -522,8 +526,10 @@ struct SettingsActionStyle: ButtonStyle {
             configuration.label
                 .noahText(NoahTokens.Typography.button)
                 .foregroundStyle(red ? Color.white : NoahTokens.Colors.background)
-                .lineLimit(1)
+                .lineLimit(wrap ? nil : 1)
+                .multilineTextAlignment(.center)
                 .padding(.horizontal, NoahTokens.Space.xl)
+                .padding(.vertical, wrap ? 10 : 0)
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button)
                 .contentShape(Capsule())
                 .glassCompat(in: Capsule(), interactive: isEnabled,
