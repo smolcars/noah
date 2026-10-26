@@ -1,6 +1,6 @@
 # Emergency exit redesign: build spec
 
-**v2 (approved 2026-10-26):** the pictures, motion and layout are replaced by [`exit-v2-notes.md`](exit-v2-notes.md) and its prototype [`exit-v2.html`](exit-v2.html); its "Approved" list wins over everything else. The flow, logic and decisions below are unchanged.
+**v2 (approved 2026-10-26):** the pictures, motion and layout are replaced by [`exit-v2-notes.md`](exit-v2-notes.md) and its prototype `exit-v2.html` (removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/exit-v2.html` finds it); its "Approved" list wins over everything else. The flow, logic and decisions below are unchanged.
 
 The user approved this on 2026-10-24, with the decisions below. The interactive prototype, `exit-v1.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/exit-v1.html` finds it. [`exit-v1-notes.md`](exit-v1-notes.md) covers how bark 0.8.0 exits work (with file:line references), the mapping from bark states to the screen, today's features per platform and the presets. Where this spec, the notes and the prototype differ, this spec wins, then the notes.
 

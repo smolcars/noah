@@ -2,7 +2,7 @@
 
 A visual and motion refresh of the approved v1 flow (`docs/native-rewrite/design/exit.md` and `exit-v1-notes.md`). The logic, screens, decisions 1–8 and accepted deviations are unchanged. What changed: the pictures, the motion, and the layout rules that caused truncation.
 
-- Prototype: [`exit-v2.html`](exit-v2.html). Self-contained, no network.
+- Prototype: `exit-v2.html`, removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/exit-v2.html` finds it. Self-contained, no network.
 - Screenshots and recordings were sent to the user and are not committed.
 
 ## Approved (2026-10-26): what overrides the rest of this file
