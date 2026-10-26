@@ -15,7 +15,7 @@ struct AppLogTests {
         }
         EndpointLogPrivacy.register("https://fake-r8-scaling.example/fakeOpaque")
         EndpointLogPrivacy.register("https://xn--strae-oqa.example/api")
-        for (name, unit) in [("mixed", "wallet sync completed xyzzy "), ("escaped", #"x."#), ("entities", "&#x78;&#46;"),
+        for (name, unit) in [("mixed", "wallet sync completed xyzzy "), ("escaped", #"\u0078\u002e"#), ("entities", "&#x78;&#46;"),
                              ("registered authorities", "https://scaling-privacy-999.example/other "),
                              ("path history hit", "xxfakeScale999yy "),
                              ("failed seed", "seed."), ("failed URL", "http://"), ("failed push token", "ExpoPushToken["),
@@ -54,7 +54,7 @@ struct AppLogTests {
         let file = LogFile(directory: directory, capacity: 100, queue: queue)
         // Redaction and every sink must still be waiting on the suspended queue.
         let sink = BarkLog(file: file)
-        for unit in ["x.", #"x."#] {
+        for unit in ["x.", #"\u0078\u002e"#] {
             let input = String(String(repeating: unit, count: (16384 + unit.count - 1) / unit.count).prefix(16384))
             AppLog(input, file: file).e(input)
             sink.log(level: .error, target: input, message: input)
