@@ -21,7 +21,8 @@ on:
       - "scripts/postgres-initdb/**"
       - "scripts/test-maestro-native.sh"
       - "!**/*.md"
-  # Merges run the same checks; native-telegram-android.yml builds signet and mainnet.
+  # Merges only build and compile the tests, to save the Gradle cache PRs restore; they run no tests or Maestro.
+  # native-telegram-android.yml builds signet and mainnet and sends them to Telegram.
   push:
     branches: [master]
     paths:
@@ -85,6 +86,7 @@ jobs:
 
       # Robolectric downloads its Android jars (~380 MB) into ~/.m2, outside the Gradle home.
       - name: Cache Robolectric jars
+        if: github.event_name != 'push'
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.m2/repository/org/robolectric
@@ -116,13 +118,16 @@ jobs:
       # installs it; nothing rebuilds it. CI runs no instrumentation, so the device tests are only compiled.
       # --build-cache reuses master's task outputs. The configuration cache stays off: it needs a secret
       # to persist across runs, and the release builds' Sentry upload task doesn't support it.
+      # Merges compile the unit tests instead of running them.
       - name: Assemble minified regtest APK, compile device tests and run unit tests
         env:
           CI_DEBUG_SIGNING: "true"
-        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestRelease -x lintVitalRegtestRelease :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest'
+          UNIT_TESTS: ${{ github.event_name == 'push' && ':app:compileRegtestDebugUnitTestKotlin' || ':app:testRegtestDebugUnitTest' }}
+        run: nix develop .#android-ci --command bash -c 'cd apps/android && ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestRelease -x lintVitalRegtestRelease :app:compileRegtestDebugAndroidTestSources "$UNIT_TESTS"'
 
       # Default compression: the APK stores its native libraries uncompressed, and zipping takes 65 MB to 31 MB.
       - name: Upload regtest APK
+        if: github.event_name != 'push'
         uses: actions/upload-artifact@v7
         with:
           name: native-regtest-apks
@@ -131,7 +136,7 @@ jobs:
           retention-days: 7
 
       - name: Upload JUnit results
-        if: always()
+        if: always() && github.event_name != 'push'
         uses: actions/upload-artifact@v7
         with:
           name: native-android-junit
@@ -143,6 +148,7 @@ jobs:
   maestro:
     name: Maestro (${{ matrix.suite }})
     needs: build-and-test
+    if: github.event_name != 'push'
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 25
     strategy:

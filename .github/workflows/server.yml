@@ -80,6 +80,7 @@ jobs:
           components: rustfmt
           cache: false
       # Merges save the cache and PRs restore it, so a PR doesn't evict master's entry.
+      # Merges only compile, to keep that cache warm; formatting and tests run on PRs.
       # The key follows rustc, rust-toolchain.toml and every Cargo.toml/Cargo.lock.
       - name: 📦 Cache Rust build
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
@@ -87,12 +88,17 @@ jobs:
           shared-key: server
           save-if: ${{ github.event_name != 'pull_request' }}
       - name: ✨ Check formatting
+        if: github.event_name == 'pull_request'
         run: cargo fmt --check
       - name: 🧪 Run tests
+        if: github.event_name == 'pull_request'
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/noah_test
           TEST_REDIS_URL: redis://127.0.0.1:6379
         run: cargo test
+      - name: 🔨 Compile tests
+        if: github.event_name != 'pull_request'
+        run: cargo test --no-run
       # Debug only; the Dockerfile builds the release binaries on master and tags (server-push.yml).
       - name: 🔨 Build noah-cli
         run: cargo build --bin noah-cli

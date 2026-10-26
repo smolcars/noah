@@ -97,6 +97,7 @@ jobs:
           echo "count=$(jq '[.missing[]] | add' "$RUNNER_TEMP/missing.json")" >> "$GITHUB_OUTPUT"
 
       # The GT CLI reads GT_API_KEY from the environment. GT_PROJECT_ID must match gt.config.json, or GT exits.
+      # The key needs GT's project file permissions (project:files:read included): the CLI reads branch data first.
       # GT requests time out after 60 s and each GT job wait after 15 min; the job timeout bounds the whole run.
       - name: Translate missing keys with GT
         if: steps.missing.outputs.count != '0'

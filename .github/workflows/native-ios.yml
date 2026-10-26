@@ -11,7 +11,8 @@ on:
       - "client/ios/SharedAppIntents/NoahAppIntents.swift" # AppIntentTests compares against it
       - ".github/workflows/native-ios.yml"
       - "!**/*.md"
-  # Merges run the same checks; native-telegram-ios.yml builds signet and mainnet.
+  # Merges only compile the tests, to save the compilation cache PRs restore; they don't run them.
+  # native-telegram-ios.yml builds signet and mainnet and sends them to Telegram.
   push:
     branches: [master]
     paths:
@@ -102,8 +103,11 @@ jobs:
           xcrun simctl boot "$(cat "$NATIVE_IOS_TEMP/simulator-id")"
 
       # PRs build only Noah-Regtest; a concrete simulator destination builds arm64 only.
+      # Merges stop after build-for-testing: the same compile, so the saved cache matches what PRs build.
       - name: Build and run NoahTests
         working-directory: apps/ios
+        env:
+          XCODE_ACTION: ${{ github.event_name == 'push' && 'build-for-testing' || 'test' }}
         run: |
           simulator_id=$(cat "$NATIVE_IOS_TEMP/simulator-id")
           # Ad hoc simulator signing gives keychain tests their entitlements without secrets.
@@ -114,7 +118,7 @@ jobs:
             -parallel-testing-enabled NO -only-testing:NoahTests \
             -resultBundlePath "$NATIVE_IOS_TEMP/NoahTests.xcresult" \
             COMPILATION_CACHE_ENABLE_CACHING=YES "COMPILATION_CACHE_CAS_PATH=$NATIVE_IOS_TEMP/CompilationCache.noindex" \
-            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES test
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES "$XCODE_ACTION"
 
       - name: Save Xcode compilation cache
         if: env.SAVE_CACHE == 'true'
@@ -124,14 +128,14 @@ jobs:
           key: native-ios-cas-v1-${{ steps.toolchain.outputs.xcode }}-${{ github.sha }}
 
       - name: Summarize test results
-        if: always()
+        if: always() && github.event_name != 'push'
         run: |
           if [[ -d "$NATIVE_IOS_TEMP/NoahTests.xcresult" ]]; then
             xcrun xcresulttool get test-results summary --path "$NATIVE_IOS_TEMP/NoahTests.xcresult" > "$NATIVE_IOS_TEMP/NoahTests-summary.json"
           fi
 
       - name: Upload XCTest results
-        if: always()
+        if: always() && github.event_name != 'push'
         uses: actions/upload-artifact@v7
         with:
           name: native-ios-xcresult

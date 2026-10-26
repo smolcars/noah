@@ -82,10 +82,11 @@ jobs:
             echo "client_changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+  # PRs only: merges (client-telegram.yml) just build and send to Telegram.
   lint:
     runs-on: self-hosted
     needs: changes
-    if: needs.changes.outputs.client_changed == 'true'
+    if: needs.changes.outputs.client_changed == 'true' && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     steps:
       - name: 🏗 Checkout code
         uses: actions/checkout@v6
@@ -109,7 +110,7 @@ jobs:
     runs-on: ${{ (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && 'blacksmith-8vcpu-ubuntu-2404' || 'self-hosted' }}
     timeout-minutes: 60
     needs: [changes, lint]
-    if: needs.changes.outputs.client_changed == 'true'
+    if: ${{ !cancelled() && needs.changes.outputs.client_changed == 'true' && (needs.lint.result == 'success' || needs.lint.result == 'skipped') }}
     outputs:
       apk_filename: ${{ steps.rename_apk.outputs.apk_filename }}
       apk_artifact_name: ${{ steps.rename_apk.outputs.artifact_name }}
@@ -292,7 +293,11 @@ jobs:
             fi
           fi
 
-          if [[ "${{ needs.lint.result }}" == "success" ]] && \
+          lint="${{ needs.lint.result }}"
+          if [[ "${{ github.event_name }}" != "pull_request" && "${{ github.event_name }}" != "workflow_dispatch" && "$lint" == "skipped" ]]; then
+            lint=success
+          fi
+          if [[ "$lint" == "success" ]] && \
              [[ "${{ needs.android_build.result }}" == "success" ]]; then
             echo "Client checks passed"
             exit 0
