@@ -3,6 +3,7 @@ package com.noahwallet.ui.activity
 import android.app.Application
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.noahwallet.ui.NoahTheme
@@ -23,9 +24,16 @@ class ActivitySearchTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private lateinit var state: ActivityState
 
-    /** Robolectric's SystemClock stands still, and the list's entrance and the detail's opening tick on it: move it with the frames. */
+    /**
+     * Robolectric's SystemClock stands still, and the list's entrance and the detail's opening tick on it: move it with the frames.
+     * Each frame sends the state changes itself: Compose sends them from AndroidUiDispatcher.Main, which an earlier test in the
+     * fork can leave stuck (Robolectric drops the main looper's messages between tests, and the dispatcher never posts again).
+     */
     private fun settle(ms: Long = 1_500) {
-        repeat((ms / 16).toInt()) { compose.mainClock.advanceTimeByFrame(); ShadowLooper.idleMainLooper(16, TimeUnit.MILLISECONDS) }
+        repeat((ms / 16).toInt()) {
+            Snapshot.sendApplyNotifications()
+            compose.mainClock.advanceTimeByFrame(); ShadowLooper.idleMainLooper(16, TimeUnit.MILLISECONDS)
+        }
         compose.waitForIdle()
     }
     private fun show() {
