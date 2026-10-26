@@ -82,8 +82,8 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
     ExitFrame(tr("Exits"), back, chip = filter?.let { key -> { com.noahwallet.ui.settings.FilterChip(tr(ExitTimeline.labels[key] ?: key)) { filter = null } } }, actions = {
         StateMenu(filter, exits.map { it.state }.distinct()) { if (it != filter) haptics.selection(); filter = it }
     }, foot = {
-        FootPill(tr("Exit more VTXOs"), Modifier.testTag("exit-more"), outlined = claimable.isNotEmpty(), enabled = !suspended, onClick = more)
-        if (claimable.isNotEmpty()) FootPill(tr("Claim {amount}", money(claimable.sumOf { it.amount })), Modifier.testTag("exit-list-claim"), enabled = !suspended, onClick = claim)
+        FootPill(tr("Exit more VTXOs"), Modifier.testTag("exit-more"), wrap = true, outlined = claimable.isNotEmpty(), enabled = !suspended, onClick = more)
+        if (claimable.isNotEmpty()) FootPill(tr("Claim {amount}", money(claimable.sumOf { it.amount })), Modifier.testTag("exit-list-claim"), wrap = true, enabled = !suspended, onClick = claim)
     }, leading = {
         Text(exitCounts(stages.values) ?: tr("No exits in progress"), Modifier.padding(top = 8.dp), style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp),
             color = palette.muted)

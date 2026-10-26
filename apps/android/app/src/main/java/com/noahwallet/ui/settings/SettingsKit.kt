@@ -177,7 +177,8 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { footHeight = it.height }
                 .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), footFade to palette.background))
                 .padding(start = start, end = if (wide) 24.dp else end, top = 48.dp, bottom = if (wide) 24.dp else 28.dp)) {
-                Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp), content = actionsRow)
+                Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically, content = actionsRow)
             }
         }
         HomeToast(LocalSettingsToasts.current.current, Modifier.align(Alignment.TopCenter).padding(top = 64.dp))
@@ -187,9 +188,9 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
 /** A bottom action (56 dp, prototype `.foot .pill`). */
 @Composable
 internal fun RowScope.FootPill(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, outlined: Boolean = false,
-                               danger: Boolean = false, loading: Boolean = false, icon: Int? = null, weight: Float = 1f, onClick: () -> Unit) {
+                               danger: Boolean = false, loading: Boolean = false, icon: Int? = null, weight: Float = 1f, wrap: Boolean = false, onClick: () -> Unit) {
     val haptics = rememberHaptics()
-    SendPill(title, modifier.weight(weight), enabled = enabled, outlined = outlined, height = 56.dp, danger = danger, loading = loading, icon = icon) {
+    SendPill(title, modifier.weight(weight), enabled = enabled, outlined = outlined, height = 56.dp, danger = danger, loading = loading, icon = icon, wrap = wrap) {
         haptics.light(); onClick()
     }
 }

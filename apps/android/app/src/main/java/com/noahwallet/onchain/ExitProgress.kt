@@ -159,13 +159,13 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
     val need = exit.nextPackageFee?.let { fee -> context.confirmed?.let { fee - it } }?.coerceAtLeast(0) ?: 0
     ExitFrame(tr("Exit"), back, hero = true, scroll = scroll, pictureLeads = true, foot = if (actions.isEmpty()) null else ({
         for (action in actions) when (action) {
-            ExitActions.Action.done -> FootPill(tr("Done"), Modifier.testTag("exit-done"), onClick = done)
+            ExitActions.Action.done -> FootPill(tr("Done"), Modifier.testTag("exit-done"), wrap = true, onClick = done)
             ExitActions.Action.claim -> FootPill(context.claimEstimate?.let { tr("Claim {amount}", money(ExitRules.received(exit.amount, it))) } ?: tr("Claim"),
-                Modifier.testTag("exit-claim"), enabled = !suspended, onClick = claim)
-            ExitActions.Action.addFunds -> FootPill(tr("Add on-chain funds"), Modifier.testTag("exit-add-funds"), enabled = !suspended) { addFunds(need) }
-            ExitActions.Action.cancel -> FootPill(tr("Cancel exit"), Modifier.testTag("exit-cancel"), outlined = true, weight = .8f,
+                Modifier.testTag("exit-claim"), wrap = true, enabled = !suspended, onClick = claim)
+            ExitActions.Action.addFunds -> FootPill(tr("Add on-chain funds"), Modifier.testTag("exit-add-funds"), wrap = true, enabled = !suspended) { addFunds(need) }
+            ExitActions.Action.cancel -> FootPill(tr("Cancel exit"), Modifier.testTag("exit-cancel"), wrap = true, outlined = true, weight = .8f,
                 enabled = !busy && !suspended, onClick = cancel)
-            ExitActions.Action.check -> if (!checkLink) FootPill(tr("Move exit forward"), Modifier.testTag("exit-check"),
+            ExitActions.Action.check -> if (!checkLink) FootPill(tr("Move exit forward"), Modifier.testTag("exit-check"), wrap = true,
                 outlined = !stage.stale, enabled = !busy && !suspended, loading = busy, onClick = check)
         }
     }), leading = {
@@ -429,14 +429,13 @@ private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitConte
 /** "Move exit forward" (today's review): what it does, its estimated fees, and an explicit Move forward. */
 @Composable
 private fun CheckSheet(quote: OnchainQuote, busy: Boolean, money: (Long) -> String, dismiss: () -> Unit, check: () -> Unit) {
-    val toasts = LocalSettingsToasts.current
     var current by remember(quote) { mutableStateOf(quote.current()) }
     LaunchedEffect(quote) { while (current) { kotlinx.coroutines.delay(250); current = quote.current() } }
     SettingsSheet(dismiss, tr("Move your exit forward?"), tr("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it."),
         modifier = Modifier.testTag("exit-check-sheet")) { close ->
         Column(Modifier.padding(top = 8.dp)) {
-            DetailRow(tr("Exits"), quote.ids.size.toString(), ValueKind.number, toasts = toasts)
-            quote.chainFee?.let { DetailRow(tr("Estimated fees"), "~" + money(it), ValueKind.number, toasts = toasts, last = true) }
+            ExitValueRow(tr("Exits"), quote.ids.size.toString(), ValueKind.number)
+            quote.chainFee?.let { ExitValueRow(tr("Estimated fees"), "~" + money(it), ValueKind.number, last = true) }
         }
         if (!current) Warning(tr(OnchainFailure.changed.text), failed = true)
         SheetActions(tr("Cancel"), tr("Move forward"), onCancel = close, onConfirm = check, enabled = current && !busy, loading = busy, confirmTag = "exit-check-confirm")

@@ -473,11 +473,12 @@ internal fun PhaseText(text: String?, done: Boolean, modifier: Modifier = Modifi
 
 /**
  * A black pill (prototype `.pill`: 52 dp, 17 sp; 48 dp and 16 sp under the Receive card) or the outlined
- * variant. Long labels (and longer languages) shrink to fit rather than clip.
+ * variant. Long labels (and longer languages) shrink to fit rather than clip; with [wrap] they take a second line instead
+ * and the pill grows (exit pages at large text).
  */
 @Composable
 internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, outlined: Boolean = false, height: Dp = 52.dp,
-                       danger: Boolean = false, loading: Boolean = false, icon: Int? = null, onClick: () -> Unit) {
+                       danger: Boolean = false, loading: Boolean = false, icon: Int? = null, wrap: Boolean = false, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -487,14 +488,15 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
     // Red only while it can act (prototype `.pill.bad:disabled`): a disabled destructive pill looks like any other.
     val red = danger && enabled
     val ink = if (outlined) palette.foreground else if (red) Color.White else palette.background
-    Box(modifier.height(height).graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled || loading) 1f else .28f }
+    Box(modifier.then(if (wrap) Modifier.heightIn(min = height) else Modifier.height(height)).graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled || loading) 1f else .28f }
         .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape, if (red) palette.failure else palette.foreground))
         .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled && !loading, role = Role.Button, onClick = onClick)
-        .padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+        .padding(horizontal = 14.dp, vertical = if (wrap) 6.dp else 0.dp), contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = ink, strokeWidth = 2.dp)
             else icon?.let { Icon(painterResource(it), null, Modifier.size(20.dp), tint = ink) }
-            androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center),
+            if (wrap) androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center))
+            else androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center),
                 maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
         }
     }

@@ -73,7 +73,6 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
                               money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
                               status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
-    val toasts = LocalSettingsToasts.current
     val review = quote ?: fallback
     var current by remember(quote) { mutableStateOf(quote?.current() ?: false) }
     LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote?.current() ?: false } }
@@ -83,8 +82,8 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
         when {
             quote != null && current -> HoldToConfirm(tr("Hold to start exit"), tr("Starting"), tr("Start exit"), tr("Start exit"),
                 enabled = !busy && !suspended, sending = busy, modifier = Modifier.weight(1f), tag = "exit-hold-start", onConfirm = start)
-            fallback != null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), enabled = !busy, onClick = withoutEstimate)
-            else -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), enabled = !busy && !suspended, loading = busy, onClick = reviewAgain)
+            fallback != null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), wrap = true, enabled = !busy, onClick = withoutEstimate)
+            else -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), wrap = true, enabled = !busy && !suspended, loading = busy, onClick = reviewAgain)
         }
     }, leading = {
         ExitBig(review?.let { tr("Exit {amount}", money(it.amount)) } ?: tr("Exit"), Modifier.padding(top = 6.dp).testTag("exit-start-amount"))
@@ -98,11 +97,11 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
         else if (review != null) ExitPath(if (review.ids.size == 1) path else null, known?.transactions?.toInt(), delta)
     }) {
         Column(Modifier.padding(top = 18.dp)) {
-            DetailRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number, toasts = toasts)
-            confirmed?.let { DetailRow(tr("Paid from"), tr("On-chain · {amount}", money(it)), toasts = toasts) }
-            DetailRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number, toasts = toasts)
-            known?.feeRate?.let { DetailRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString()), toasts = toasts) }
-            DetailRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), toasts = toasts, last = true)
+            ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number)
+            confirmed?.let { ExitValueRow(tr("Paid from"), tr("On-chain · {amount}", money(it))) }
+            ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number)
+            known?.feeRate?.let { ExitValueRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString())) }
+            ExitValueRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), last = true)
             TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
         }
         if (known != null && !known.fundable) Warning(tr("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
@@ -153,13 +152,18 @@ private fun ExitPath(path: Int?, count: Int?, delta: Long?) {
             exitWalletBadge(Offset(x1 - 20, y), palette)
         }
     }
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        @Composable fun caption(title: String, line: String, align: androidx.compose.ui.text.style.TextAlign) = Column(Modifier.weight(1f)) {
-            Text(title, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground, textAlign = align)
-            Text(line, Modifier.fillMaxWidth(), style = HomeType.small, color = palette.muted, textAlign = align)
-        }
-        caption(trPlural("{n} transactions", count ?: n), if (path == null) tr("shared ones once") else tr("one block each"), androidx.compose.ui.text.style.TextAlign.Start)
-        caption(trPlural("{n} blocks", delta ?: 144), tr("about a day"), androidx.compose.ui.text.style.TextAlign.Center)
-        caption(tr("Claim"), tr("to another wallet"), androidx.compose.ui.text.style.TextAlign.End)
+    // Three columns, one per third of the path; at large text they stack, each caption whole.
+    val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
+    val captions = listOf(trPlural("{n} transactions", count ?: n) to if (path == null) tr("shared ones once") else tr("one block each"),
+        trPlural("{n} blocks", delta ?: 144) to tr("about a day"), tr("Claim") to tr("to another wallet"))
+    @Composable fun caption(title: String, line: String, align: androidx.compose.ui.text.style.TextAlign, modifier: Modifier) = Column(modifier) {
+        Text(title, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground, textAlign = align)
+        Text(line, Modifier.fillMaxWidth(), style = HomeType.small, color = palette.muted, textAlign = align)
+    }
+    if (stacked) Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((title, line) in captions) caption(title, line, androidx.compose.ui.text.style.TextAlign.Start, Modifier.fillMaxWidth())
+    } else Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        val aligns = listOf(androidx.compose.ui.text.style.TextAlign.Start, androidx.compose.ui.text.style.TextAlign.Center, androidx.compose.ui.text.style.TextAlign.End)
+        captions.forEachIndexed { i, (title, line) -> caption(title, line, aligns[i], Modifier.weight(1f)) }
     }
 }

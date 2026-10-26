@@ -187,7 +187,7 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
                                 status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     ExitFrame(tr("Emergency exit"), back, foot = {
-        FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), enabled = !suspended, onClick = choose)
+        FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), wrap = true, enabled = !suspended, onClick = choose)
     }, leading = {
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
@@ -306,7 +306,6 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
                                excluded: Set<String> = emptySet(), status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
-    val toasts = LocalSettingsToasts.current
     var everything by rememberSaveable { mutableStateOf(initial == null) }
     var picked by rememberSaveable { mutableStateOf(initial.orEmpty()) }
     val vtxos = all.sortedByDescending { it.amount }
@@ -353,10 +352,10 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     }) {
         if (vtxos.isEmpty()) { status(); return@ExitFrame }
         Column(Modifier.padding(top = 18.dp)) {
-            DetailRow(tr("VTXOs"), fees?.transactions?.let { "${chosen.size} · " + trPlural("{n} transactions", it) } ?: chosen.size.toString(),
-                ValueKind.number, toasts = toasts)
-            DetailRow(tr("Network fees"), fees?.chainFee?.let { "~" + money(it) } ?: "—", ValueKind.number, toasts = toasts)
-            DetailRow(tr("Claim fee"), fees?.fee?.let { "~" + money(it) } ?: "—", ValueKind.number, toasts = toasts, last = true)
+            ExitValueRow(tr("VTXOs"), fees?.transactions?.let { "${chosen.size} · " + trPlural("{n} transactions", it) } ?: chosen.size.toString(),
+                ValueKind.number)
+            ExitValueRow(tr("Network fees"), fees?.chainFee?.let { "~" + money(it) } ?: "—", ValueKind.number)
+            ExitValueRow(tr("Claim fee"), fees?.fee?.let { "~" + money(it) } ?: "—", ValueKind.number, last = true)
             TotalRow(tr("You get"), fees?.fee?.let { "~" + money(ExitRules.received(value, it)) } ?: money(value))
         }
         if (short > 0) {
