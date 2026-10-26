@@ -47,15 +47,12 @@ import Testing
         #expect(h.calls.withLock { $0 } == 1)
         #expect(try h.store.load().schedules[a.id]?.status == "needs_attention")
     }
-    @Test(arguments: ["negative", "duplicate", "unsorted", "empty", "scope", "wallet", "instance", "revision", "attemptID", "attemptKind", "attemptIndex", "attemptDate", "unresolvedConsumed", "missingIndices", "missingWatermark", "missingField", "legacy"])
-    func malformedEvidenceIsQuarantinedBeforeReadsOrWrites(kind: String) async throws {
-        let h = try RecurringExecutorTests.Harness(); let schedule = try h.add()
-        defer { try? FileManager.default.removeItem(at: h.directory) }
-        await h.executor.execute()
-        var raw = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: h.journal.file)) as? [String: Any])
+    static let malformedKinds = ["negative", "duplicate", "unsorted", "empty", "scope", "wallet", "instance", "revision", "attemptID", "attemptKind", "attemptIndex", "attemptDate", "unresolvedConsumed", "missingIndices", "missingWatermark", "missingField", "legacy"]
+    static func malformed(_ kind: String, _ journal: Data, scheduleID: String) throws -> Data {
+        var raw = try #require(JSONSerialization.jsonObject(with: journal) as? [String: Any])
         var indices = try #require(raw["consumedIndices"] as? [[String: Any]])
         var attempts = try #require(raw["attempts"] as? [String: [String: Any]])
-        var entry = try #require(attempts[schedule.id])
+        var entry = try #require(attempts[scheduleID])
         switch kind {
         case "negative": indices[0]["indices"] = [-1]
         case "duplicate": indices[0]["indices"] = [4, 4]
@@ -82,9 +79,35 @@ import Testing
         case "missingWatermark": raw["consumed"] = []
         default: break
         }
-        attempts[schedule.id] = entry; raw["attempts"] = attempts; raw["consumedIndices"] = indices
+        attempts[scheduleID] = entry; raw["attempts"] = attempts; raw["consumedIndices"] = indices
         if kind == "missingField" { raw.removeValue(forKey: "consumedIndices") }
-        let bytes = try JSONSerialization.data(withJSONObject: kind == "legacy" ? attempts : raw)
+        return try JSONSerialization.data(withJSONObject: kind == "legacy" ? attempts : raw)
+    }
+    // Validation is byte-only, so every malformed shape is checked against one paid journal; the executor flow samples them.
+    @Test func everyMalformedEvidenceKindIsQuarantinedOnFirstRead() async throws {
+        let h = try RecurringExecutorTests.Harness(); let schedule = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        await h.executor.execute()
+        let valid = try Data(contentsOf: h.journal.file)
+        for kind in Self.malformedKinds {
+            let bytes = try Self.malformed(kind, valid, scheduleID: schedule.id)
+            let journal = RecurringJournal(file: h.directory.appending(path: "journal-\(kind).json"))
+            try bytes.write(to: journal.file)
+            #expect(throws: (any Error).self, "\(kind)") { try journal.load() }
+            #expect(throws: (any Error).self, "\(kind)") {
+                try journal.save(.init(binding: h.owner.withLock { $0 }, scheduleID: schedule.id,
+                                       plan: schedule.plan(now: h.now), markedAt: h.now))
+            }
+            #expect(try Data(contentsOf: journal.file) == bytes, "\(kind)")
+            #expect(try Data(contentsOf: journal.quarantineFile) == bytes, "\(kind)")
+        }
+    }
+    @Test(arguments: ["negative", "attemptKind", "missingField", "legacy"])
+    func malformedEvidenceIsQuarantinedBeforeReadsOrWrites(kind: String) async throws {
+        let h = try RecurringExecutorTests.Harness(); let schedule = try h.add()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        await h.executor.execute()
+        let bytes = try Self.malformed(kind, Data(contentsOf: h.journal.file), scheduleID: schedule.id)
         try bytes.write(to: h.journal.file)
         try h.store.upsert(schedule)
         await h.executor.execute()

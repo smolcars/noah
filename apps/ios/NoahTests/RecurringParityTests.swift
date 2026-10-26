@@ -85,15 +85,16 @@ import Testing
         #expect(try h.store.load().schedules[invalid.id] == nil)
     }
 
-    @Test(arguments: [#""0""#, "false", "true", "null", "{}", "[]", "1", "0.5"])
-    func malformedEnvelopeVersionPreservesBytes(version: String) throws {
+    @Test func malformedEnvelopeVersionPreservesBytes() throws {
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
-        let raw = "{\"version\":\(version),\"state\":{\"schedules\":{}}}"
-        h.settings.set(raw, forKey: RecurringStore.key)
-        #expect(throws: (any Error).self) { try h.store.load() }
-        #expect(throws: (any Error).self) { try h.store.upsert(RecurringScheduleTests.schedule()) }
-        #expect(h.settings.string(forKey: RecurringStore.key) == raw)
+        for version in [#""0""#, "false", "true", "null", "{}", "[]", "1", "0.5"] {
+            let raw = "{\"version\":\(version),\"state\":{\"schedules\":{}}}"
+            h.settings.set(raw, forKey: RecurringStore.key)
+            #expect(throws: (any Error).self, "\(version)") { try h.store.load() }
+            #expect(throws: (any Error).self, "\(version)") { try h.store.upsert(RecurringScheduleTests.schedule()) }
+            #expect(h.settings.string(forKey: RecurringStore.key) == raw, "\(version)")
+        }
     }
 
     @Test(arguments: ["recurring_payment_reminder", "recurring_payment_result", "recurring_payment_due"])

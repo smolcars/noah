@@ -691,7 +691,8 @@ import Testing
             await gate.wait()
         }
         if duringPreparation { h.beforePay = hold } else { h.preflight = hold }
-        let result = await AppDelegate.completeWithin(.seconds(2)) { await h.executor.execute() }
+        // The budget only has to outlast reaching the gate (about 0.1 s on CI); it then expires while held.
+        let result = await AppDelegate.completeWithin(.seconds(1)) { await h.executor.execute() }
         #expect(result == .failed)
         #expect(h.calls.withLock { $0 } == 0)
         try #require(await gate.entered)
@@ -708,7 +709,7 @@ import Testing
         let h = try Harness(); let schedule = try h.add()
         let gate = RecurringReservationTests.Gate()
         h.afterPay = { await gate.wait() }
-        let result = await AppDelegate.completeWithin(.seconds(2)) { await h.executor.execute() }
+        let result = await AppDelegate.completeWithin(.seconds(1)) { await h.executor.execute() }
         #expect(result == .failed)
         #expect(h.calls.withLock { $0 } == 1)
         try #require(await gate.entered)

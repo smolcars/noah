@@ -199,7 +199,8 @@ import UIKit
         runner.stop()
         try await waitUntil { !minutes.waiting }
     }
-    @Test(arguments: ["marker", "budget", "stopGeneration", "suspend", "pause", "cancel", "wallet"])
+    // RecurringExecutorTests.finalGuardAfterPreparationStopsPayment covers every user and wallet change; "pause" samples them here.
+    @Test(arguments: ["marker", "budget", "stopGeneration", "pause"])
     func timerReusesExecutorSafetyGuards(guardKind: String) async throws {
         let h = try RecurringExecutorTests.Harness(); let schedule = try h.add()
         defer { try? FileManager.default.removeItem(at: h.directory) }

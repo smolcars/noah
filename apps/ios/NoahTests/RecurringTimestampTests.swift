@@ -3,12 +3,10 @@ import Testing
 @testable import Noah
 
 @MainActor struct RecurringTimestampTests {
-    @Test(arguments: ["startAt", "endAt", "nextRunAt", "createdAt", "updatedAt", "retryNotBefore",
-                      "inFlight.startedAt", "runs.scheduledFor", "runs.attemptedAt"])
-    func fractionalTimeStaysVisibleStoppedLosslessAndCancellable(field: String) async throws {
-        let h = try RecurringExecutorTests.Harness()
-        defer { try? FileManager.default.removeItem(at: h.directory) }
-        h.clock.withLock { $0 = 1001 }
+    static let fields = ["startAt", "endAt", "nextRunAt", "createdAt", "updatedAt", "retryNotBefore",
+                         "inFlight.startedAt", "runs.scheduledFor", "runs.attemptedAt"]
+    /// A store holding one schedule with a fractional `field` beside a healthy one, and that schedule's raw row.
+    static func store(fractional field: String) throws -> (raw: String, unsupported: String, original: RecurringPayment) {
         let original = RecurringScheduleTests.schedule(start: 1000)
         var row = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
         // RN's factory writes nullable keys; JSONEncoder omits nil properties.
@@ -24,7 +22,30 @@ import Testing
         default: row[field] = 1000.5
         }
         let unsupported = String(decoding: try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]), as: UTF8.self)
-        let raw = "{\"version\":0,\"state\":{\"schedules\":{\"rent\":\(unsupported),\"healthy\":\(healthyJSON)}}}"
+        return ("{\"version\":0,\"state\":{\"schedules\":{\"rent\":\(unsupported),\"healthy\":\(healthyJSON)}}}", unsupported, original)
+    }
+
+    // Classification is parsing only, so every field is checked here; the executor flow below samples them.
+    @Test func fractionalTimeInEveryFieldStaysVisibleStoppedAndLossless() throws {
+        let h = try RecurringExecutorTests.Harness()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        for field in Self.fields {
+            let (raw, _, original) = try Self.store(fractional: field)
+            h.settings.set(raw, forKey: RecurringStore.key)
+            let visible = try #require(RecurringStore(settings: h.settings).load().schedules[original.id], "\(field)")
+            #expect(visible.unsupportedStorage && visible.status == "needs_attention", "\(field)")
+            #expect(visible.lastError == RecurringPayment.unsupportedMessage, "\(field)")
+            #expect(visible.plan(now: 1001).kind == "idle", "\(field)")
+            #expect(h.settings.string(forKey: RecurringStore.key) == raw, "\(field)")
+        }
+    }
+
+    @Test(arguments: ["startAt", "inFlight.startedAt", "runs.attemptedAt"])
+    func fractionalTimeStaysVisibleStoppedLosslessAndCancellable(field: String) async throws {
+        let h = try RecurringExecutorTests.Harness()
+        defer { try? FileManager.default.removeItem(at: h.directory) }
+        h.clock.withLock { $0 = 1001 }
+        let (raw, unsupported, original) = try Self.store(fractional: field)
         h.settings.set(raw, forKey: RecurringStore.key)
         let visible = try #require(h.store.load().schedules[original.id])
         #expect(h.settings.string(forKey: RecurringStore.key) == raw)

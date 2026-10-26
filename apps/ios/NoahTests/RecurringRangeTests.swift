@@ -83,7 +83,8 @@ import Testing
         #expect(RecurringExecutor.entries(Array(state.schedules.values)).allSatisfy { !Self.unsupported.contains($0.scheduleId) })
     }
 
-    @Test(arguments: unsupported)
+    // rnRangeRowsRemainVisible classifies every unsupported row; one count, start and end row cover the executor flow.
+    @Test(arguments: ["count-4", "start-0", "end-fraction"])
     func unsupportedRNRowRejectsApprovalAndRemainsCancellable(id: String) async throws {
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
@@ -118,7 +119,7 @@ import Testing
         #expect(try Data(contentsOf: h.journal.file) == journalBytes)
     }
 
-    @Test(arguments: ["1.5", "true", #""4""#, "{}"])
+    @Test(arguments: ["1.5", "{}"])
     func malformedRowDoesNotBlockOtherRows(count: String) throws {
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }

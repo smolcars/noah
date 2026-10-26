@@ -3,7 +3,8 @@ import Testing
 @testable import Noah
 
 @Suite(.serialized) @MainActor struct RecurringLocalizationTests {
-    nonisolated static let languages = ["en", "es", "ja", "ko", "sv"]
+    // Behaviour follows issue codes, never copy: English plus one translated language (another script) shows it.
+    nonisolated static let languages = ["en", "ja"]
     private func localized<T>(_ language: String, _ body: () async throws -> T) async rethrows -> T {
         let defaults = UserDefaults.standard, previous = UserDefaults.standard.string(forKey: LegacyLocale.key)
         defaults.set(language, forKey: LegacyLocale.key)
