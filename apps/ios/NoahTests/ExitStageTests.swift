@@ -99,7 +99,10 @@ struct ExitStageTests {
     @Test func labelsSayWhichBlockEachIsInAndWhatsWaiting() {
         let painter = Self.painter(Self.iphone), scene = Self.mempool(heights: [921_346], pending: 1, count: 4)
         let labels = painter.labels(scene, ys: Self.iphone.levels([1, 0, 0, 0]))
-        #expect(Self.texts(labels).sorted() == ["2 more to send", "Block 921,346", "Next block", "Round", "Your VTXO", "fee ₿1,215"].sorted())
+        #expect(Self.texts(labels).sorted() == ["2 more to send", "Block 921,346", "Next block", "The round,", "Your VTXO", "already on Bitcoin",
+                                                "fee ₿1,215"].sorted())
+        // No round height from bark: the round's block says what it is, as the explainer's does.
+        #expect(labels.contains { $0.lines.map(\.text) == ["The round,", "already on Bitcoin"] && $0.lines[0].tone == .strong })
         #expect(!Self.overlapping(labels))
         #expect(labels.first { $0.lines[0].text == "Next block" }?.pill == .orange)
     }

@@ -90,7 +90,6 @@
     "Registration is in progress.": "parity-gap (shown): only iOS guards saving an identity while registration is running",
     "Requesting camera access…": "parity-gap: Android's scanner shows nothing while it asks for camera access",
     "Restore didn't finish": "flagged: Android's launch gate reads hand-written English-only values/native.xml (outside the catalogs and the extractor) and groups secure storage, invalid seed and seed conflict under one message; unifying this safety copy needs your wording decision",
-    "Round": "pending: emergency exit v2 (exit-v2-notes.md); Android's v2 is built in parallel with the same English, so drop this entry once it lands",
     "Running": "parity-gap (layout): iOS relabels Debug's Run button while it runs; Android shows a spinner",
     "Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.": "parity-gap (layout): iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera",
     "Scan to pay": "parity-gap (layout): iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera",

@@ -1217,7 +1217,6 @@
   "gt_cd0b2d8136476cb0": "Then a wait of about a day before you can claim.",
   "gt_cd65f6dcab984750": "I wrote it down",
   "gt_cd815000e69f78a3": "Unsupported recipient",
-  "gt_cd9558acfc386bd3": "Round",
   "gt_cdd784f04a3d1825": "On a date",
   "gt_cde0b6135fbd228f": "Needs on-chain funds",
   "gt_cea13885ad32653d_one": "One exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.",

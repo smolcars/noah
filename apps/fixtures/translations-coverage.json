@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1501,
-  "sourceKeys": 1536,
+  "catalogEntries": 1500,
+  "sourceKeys": 1535,
   "coverage": {
     "ios": {
       "used": [
@@ -913,7 +913,6 @@
         "Review and pay",
         "Review exit",
         "Reviewed amount",
-        "Round",
         "Round #{_gt_value_2}",
         "Round every",
         "Round in progress",

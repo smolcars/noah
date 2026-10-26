@@ -2131,7 +2131,6 @@
   "gt_bd4a6db1a4abe642_other": "Tu VTXO es una hoja del árbol de la ronda. Para llegar a ella, las {{n}} transacciones de tu rama van a la cadena, empezando por la raíz.",
   "gt_be1b2b66aa641023": "añade {{amount}} en cadena",
   "gt_c80b1131a4f333d0": "Estas {{n}} comparten parte de su camino: {{count}} transacciones por enviar, no {{total}}. Las compartidas se envían y pagan una vez.",
-  "gt_cd9558acfc386bd3": "Ronda",
   "gt_d51f3a84c3df479a": "{{n}} más por enviar",
   "gt_db99836fa338e87b": "De vuelta en Ark",
   "gt_dd08cc2f66a96442": "llegó un bloque sin ella",

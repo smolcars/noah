@@ -2131,7 +2131,6 @@
   "gt_bd4a6db1a4abe642_other": "Din VTXO är ett löv i rundans träd. För att nå den skickas de {{n}} transaktionerna på din gren till blockkedjan, roten först.",
   "gt_be1b2b66aa641023": "lägg till {{amount}} på blockkedjan",
   "gt_c80b1131a4f333d0": "Dessa {{n}} delar en del av sin väg: {{count}} transaktioner att skicka, inte {{total}}. Delade skickas och betalas en gång.",
-  "gt_cd9558acfc386bd3": "Runda",
   "gt_d51f3a84c3df479a": "{{n}} kvar att skicka",
   "gt_db99836fa338e87b": "Tillbaka i Ark",
   "gt_dd08cc2f66a96442": "ett block kom utan den",

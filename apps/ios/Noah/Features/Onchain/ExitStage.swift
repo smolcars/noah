@@ -301,6 +301,9 @@ struct ExitStagePainter {
         let g = geometry, n = scene.levels.count, lh = g.lineHeight
         func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
         var items: [ExitStageLabel] = []
+        // The round's block, on the ground: bark gives no round height, so it says what it is (as Android).
+        let round = ExitStageLabel(y: g.roundY - lh + 3, lines: [.init(text: tr("The round,"), tone: .strong), .init(text: tr("already on Bitcoin"))],
+                                   priority: 2)
         if scene.explain {
             items.append(.init(y: g.coinY, lines: [.init(text: tr("Your VTXO"), tone: .strong), .init(text: tr("in Ark"))], priority: 3))
             if n > 1 {
@@ -309,11 +312,11 @@ struct ExitStagePainter {
                                            .init(text: tr("one block each,")), .init(text: tr("root first"))],
                                    priority: 2, brace: min(Y(n) + g.coinRadius + 5, Y(1) + 7)...(Y(1) + 7)))
             }
-            items.append(.init(y: g.roundY - lh + 3, lines: [.init(text: tr("The round,"), tone: .strong), .init(text: tr("already on Bitcoin"))], priority: 2))
+            items.append(round)
             return place(items)
         }
         if !scene.claiming {
-            items.append(.init(y: g.roundY, lines: [.init(text: tr("Round"))], priority: 2))
+            items.append(round)
             let minedCount = scene.levels.prefix { $0.isMined }.count
             var firstUnsent: Int?
             for j in 1...n {

@@ -37141,42 +37141,6 @@
         }
       }
     },
-    "Round": {
-      "comment": "GT gt_cd9558acfc386bd3; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Round"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ronda"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ラウンド"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라운드"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Runda"
-          }
-        }
-      }
-    },
     "Round #{_gt_value_2}": {
       "comment": "GT gt_90c56699eca1d0e9; arguments: _gt_value_2",
       "extractionState": "manual",
