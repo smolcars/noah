@@ -18,6 +18,7 @@ Tests:
 - `testToggleBalanceWhileRunning` (MMKV writes; `TEST_RUNNER_NOAH_DRIVER_SECONDS`)
 - `testStayForeground`
 - `testNativeLandsOnHome`
+- `testRestoreKeepsWordsAndPastes` (fresh install on Welcome; a simulator works too)
 - `testRunScript`: steps from `TEST_RUNNER_NOAH_SCRIPT`, one per line (`tap:Label`, `tapid:identifier`, `wait:Label@60`, `field:0:text`, `home`, `dump`, …)
 
 Requirements:

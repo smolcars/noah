@@ -2,8 +2,8 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// The words being entered. Memory only: the flow clears it when the app
-/// leaves the foreground, when Restore leaves the screen, and before restoring.
+/// The words being entered. Memory only; they stay while the app is in the
+/// background, and the flow clears them when Restore leaves the screen and before restoring.
 struct RestoreDraft {
     var input = RecoveryPhraseInput()
     var focusedWord: Int?

@@ -87,6 +87,41 @@ final class RegtestDriverTests: XCTestCase {
         XCTFail("Native did not reach Home")
     }
 
+    /// Restore from Welcome on a fresh install (a simulator works too): typed words survive leaving the app and the
+    /// shield clears on return; Back clears them; Paste fills every word from a one-line copy and takes it off the
+    /// clipboard. Public BIP39 test words only.
+    func testRestoreKeepsWordsAndPastes() {
+        let words = Array(repeating: "abandon", count: 11) + ["about"]
+        func field(_ number: Int) -> XCUIElement { app.textFields["restore-word-\(number)"] }
+        func value(_ number: Int) -> String {
+            let value = field(number).value as? String ?? ""
+            return value == field(number).placeholderValue ? "" : value
+        }
+        app.terminate()
+        app.activate()
+        step("I already have a wallet")
+        XCTAssertTrue(field(1).waitForExistence(timeout: 15))
+        field(1).tap()
+        for word in words.prefix(3) { app.typeText(word + " ") }
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.activate()
+        // The shield takes the words out of accessibility until the app is active again.
+        XCTAssertTrue(field(3).waitForExistence(timeout: 5), "The shield didn't clear")
+        XCTAssertEqual((1...3).map(value), Array(words.prefix(3)))
+        step("Back")
+        step("I already have a wallet")
+        XCTAssertTrue(field(1).waitForExistence(timeout: 15))
+        XCTAssertEqual(value(1), "")
+        UIPasteboard.general.string = words.joined(separator: " ") + "\n"
+        app.descendants(matching: .any)["restore-paste"].tap()
+        XCTAssertTrue(field(12).waitForExistence(timeout: 5))
+        let deadline = Date().addingTimeInterval(5)
+        while value(12).isEmpty && Date() < deadline { usleep(200_000) }
+        XCTAssertEqual((1...12).map(value), words)
+        XCTAssertFalse(UIPasteboard.general.hasStrings, "The accepted phrase is still on the clipboard")
+    }
+
     /// Runs `TEST_RUNNER_NOAH_SCRIPT`: one step per line, `command:argument`.
     /// tap, tapid, wait, gone, scrollto (label); type (text into focus);
     /// field (`index:text`); swipeup, swipedown, home, activate, dump; sleep (seconds).

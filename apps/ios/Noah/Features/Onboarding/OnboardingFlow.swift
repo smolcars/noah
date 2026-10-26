@@ -315,8 +315,9 @@ struct OnboardingFlow: View {
     }
 
     private func sceneChanged(_ phase: ScenePhase) {
-        // Recovery words never outlive the foreground, as before.
-        if phase != .active && step == .restore { clearDraft() }
+        // The words stay while the app is in the background (a phrase read from Notes a few words at a time);
+        // the shield hides them meanwhile. Leaving Restore or restoring clears them.
+        if phase != .active && step == .restore { clipboard.clearIfUnchanged() }
         guard phase == .active, step == .notifications, notificationsRequired else { return }
         Task {
             await model.pushPermission.refresh()
