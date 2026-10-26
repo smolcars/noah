@@ -153,6 +153,9 @@ class ExitTreeTest {
             assertEquals(1f, still.mine(0, t), 0f); assertEquals(1f, still.send(1, t), 0f); assertEquals(0f, still.send(2, t), 0f)
             assertEquals(1f, still.grow(4, t), 0f); assertEquals(1f, still.labels(t), 0f); assertFalse(still.flash(t))
         }
+        val breath = Breath({ .25f }, { 3f }, live = false)
+        assertEquals("a steady glow", .6f, breath.breathe, 0f); assertEquals("dashes don't march", 0f, breath.march, 0f)
+        assertEquals(1f, Breath({ .25f }, { 3f }, live = true).breathe, .001f)
     }
 
     @Test fun aBlockMinesTheWaitingOneThenTheNextIsSent() {

@@ -95,7 +95,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     var deposit by remember { mutableStateOf<Long?>(null) }
     val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claimEstimate = claimEstimate,
         cancelable = exit?.cancelable == true, sharedFees = exit?.let { ExitFees.paid(it, exits).second } ?: 0).claimed(record, claim)
-    ExitProgressContent(exit, stage, context, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back, loaded = model.revision > 0,
+    ExitProgressContent(exit, stage, context, model.busy, app.isWalletSuspended, { money(app, it) }, nav.back, loaded = model.revision > 0, others = exits,
         check = { scope.launch { model.review(OnchainAction.progress, overview?.exits.orEmpty().filter { it.state !in ExitTimeline.terminal }.map { it.id }) } },
         cancel = { scope.launch { model.review(OnchainAction.cancel, listOf(id)) } },
         claim = { nav.open(ExitClaimPage) }, addFunds = { deposit = it }, done = { nav.back?.invoke() }) { OnchainStatus(app, model) }
@@ -126,7 +126,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
 @Composable
 internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: ExitContext, busy: Boolean, suspended: Boolean, money: (Long) -> String,
                                  back: (() -> Unit)?, check: () -> Unit, cancel: () -> Unit, claim: () -> Unit, addFunds: (Long) -> Unit, done: () -> Unit,
-                                 loaded: Boolean = true, status: @Composable () -> Unit = {}) {
+                                 loaded: Boolean = true, others: List<ExitModel> = emptyList(), status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scroll = rememberScrollState()
@@ -136,7 +136,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         ExitFrame(tr("Exit"), back, hero = true, leading = {}) { FinePrint(if (loaded) tr("Exit status is unavailable. Pull to refresh.") else tr("Loading…")); status() }
         return
     }
-    val pose = ExitPose.of(exit, stage, context.tip)
+    val scene = ExitScene.of(exit, stage, context.tip, others, context.confirmed, context.claimShare(exit.id), context.claimedTo)
     val phase = exitPhaseLine(stage, context.tip, money)
     val failed = stage.attention == ExitStage.Attention.needsFunds
     // Haptics as Send's: light on each block, success when claimed, error when it needs you.
@@ -145,7 +145,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         val was = previous; previous = stage
         when {
             was == stage -> {}
-            stage.phase == ExitStage.Phase.claimed && was.phase != stage.phase -> haptics.success()
+            (stage.phase == ExitStage.Phase.claimed || stage.phase == ExitStage.Phase.claimable) && was.phase != stage.phase -> haptics.success()
             failed && was.attention != stage.attention -> haptics.error()
             stage.inBlocks > was.inBlocks || stage.phase != was.phase -> haptics.light()
         }
@@ -168,7 +168,8 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         }
     }), leading = {
         if (!wide) ExitHeader(exit, stage, received, money, null)
-        ExitPicture(pose, phase.first, exitPicture().testTag("exit-picture"), balance = context.confirmed?.let(money), destination = context.claimedTo)
+        ExitPicture(scene, phase.first + ". " + tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString()),
+            exitPicture().testTag("exit-picture"), money, balance = context.confirmed, received = received)
         ExitPhaseLine(phase.first, if (failed) palette.failure else if (phase.second) palette.foreground else palette.muted, Modifier.testTag("exit-phase"))
         if (wide) Text(exitExplanation(stage, context.delta), Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 40.dp),
             style = HomeType.line, color = palette.muted, textAlign = TextAlign.Center)

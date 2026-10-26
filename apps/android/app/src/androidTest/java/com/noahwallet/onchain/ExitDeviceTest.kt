@@ -253,11 +253,11 @@ class ExitDeviceTest {
             var drawn = 0
             for (x in 0 until image.width step 4) for (y in 0 until image.height step 4) if (image.getPixel(x, y) != background) drawn++
             assertTrue("${phase.state} draws nothing under Reduce Motion", drawn > 50)
-            // Once on-chain, the picture is the locked coin and its bar: the fixture carries what bark recorded while it waited.
+            // Once on-chain, the picture is the locked coin and its dial: the fixture carries what bark recorded while it waited.
             if (phase.state in setOf("AwaitingDelta", "Claimable", "ClaimInProgress", "Claimed")) {
                 val tip = phase.details.tip_height ?: f.tip
-                val pose = ExitPose.of(phase, f.stage(phase, tip), tip)
-                assertTrue("${phase.state} has its timelock to draw", pose.lockedFrom != null && pose.claimableHeight != null)
+                val scene = ExitScene.of(phase, f.stage(phase, tip), tip)
+                assertTrue("${phase.state} has its timelock to draw", scene.lockedFrom != null && scene.claimableHeight != null)
             }
         }
     }

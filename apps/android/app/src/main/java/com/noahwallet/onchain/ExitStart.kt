@@ -46,7 +46,7 @@ internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<St
         if (!started && !model.busy && live.size == ids.size) nav.replace(if (ids.size == 1) ExitPage(ids.single()) else ExitsPage)
     }
     ExitStartContent(model.quote, model.estimateFallback, model.overview?.confirmed, model.busy, suspended, delta,
-        money, nav.back, tip = model.overview?.tip ?: 0, reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
+        money, nav.back, reviewAgain = { scope.launch { model.review(OnchainAction.startExit, ids) } },
         withoutEstimate = model::continueWithoutEstimate,
         start = {
             if (!model.busy && model.quote != null) {
@@ -65,7 +65,7 @@ internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<St
 @Composable
 internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, confirmed: Long?, busy: Boolean, suspended: Boolean, delta: Long?,
                               money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
-                              tip: Long = 0, status: @Composable () -> Unit = {}) {
+                              status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val toasts = LocalSettingsToasts.current
     val review = quote ?: fallback
@@ -87,7 +87,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
                 Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
-        if (wide) ExitPicture(ExitPose.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4, tip), tr("Your VTXO’s path to the chain"),
+        if (wide) ExitPicture(ExitScene.sample(known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4), tr("Your VTXO’s path to the chain"),
             exitPicture().padding(top = 14.dp))
     }) {
         Column(Modifier.padding(top = 18.dp)) {

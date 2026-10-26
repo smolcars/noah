@@ -152,7 +152,7 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
             SettingsRow(tr("All exits"), SettingsIcons.exit, value = if (live.isEmpty()) null else tr("{n} in progress", live.size.toString()),
                 divider = false, modifier = Modifier.testTag("exit-all"), onClick = all)
         }
-        ExitPicture(ExitPose.sample(tip = tip), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
+        ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
     }) {
         if (suspended) FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
         Column(Modifier.padding(top = 20.dp)) {

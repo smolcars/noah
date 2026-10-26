@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import org.junit.Assert.*
 import org.junit.Test
 import com.noahwallet.onchain.ExitActions.Action as a
+import com.noahwallet.onchain.ExitScene.Mark as m
 import com.noahwallet.onchain.ExitList.Step as s
 
 /** exit.md, Testing: bark's states map to phases, the inferred rules, and what the list and Settings show. */
@@ -70,27 +71,32 @@ class ExitStagesTest {
     }
 
     @Test fun thePictureFollowsEachState() {
-        fun pose(e: ExitModel, tip: Long = 100, needsFunds: Boolean = false) = ExitPose.of(e, ExitStages.of(e, tip, needsFunds), tip)
+        fun scene(e: ExitModel, tip: Long = 100, needsFunds: Boolean = false) = ExitScene.of(e, ExitStages.of(e, tip, needsFunds), tip, confirmed = 300)
         val packages = listOf(ExitPackage("root", outputs = 5), ExitPackage("l2", outputs = 5, spends = 2), ExitPackage("l1", outputs = 5, spends = 2),
             ExitPackage("leaf", outputs = 2, spends = 1))
-        val lift = pose(exit("Start", ExitDetails(tip_height = 100), packages = packages))
-        assertEquals(4, lift.n); assertEquals(listOf(3, 3, 3, 0), lift.branches); assertEquals(listOf(2, 2, 1, 0), lift.ours)
-        assertEquals(0f, PictureMotion.rest(lift).unroll)
-        val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs")), packages = packages)
-        pose(parked).let { assertTrue(it.dropped); assertFalse(it.fee); assertEquals(listOf(99L, null, null, null), it.mined); assertEquals(1, it.current) }
-        pose(parked, needsFunds = true).let { assertFalse("it waits in the branch, ringed", it.dropped); assertEquals(ExitStage.Attention.needsFunds, it.attention) }
+        val lift = scene(exit("Start", ExitDetails(tip_height = 100), packages = packages))
+        assertEquals(4, lift.n); assertTrue(lift.lifting); assertEquals(List(4) { m.unsent }, lift.marks)
+        assertEquals("tree nodes have other people's branches; the leaf doesn't", listOf(true, true, true, false), lift.nodes)
+        assertFalse("nothing is sent: no phone badge yet", lift.wallet)
+        val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs")),
+            packages = packages, next = 1_200)
+        scene(parked).let { assertEquals(listOf(m.mined, m.waiting, m.unsent, m.unsent), it.marks); assertEquals(listOf(99L, null, null, null), it.heights); assertEquals(1, it.waiting) }
+        scene(parked, needsFunds = true).let { assertEquals("it waits on the branch, ringed red", m.needsFee, it.marks[1]); assertEquals(-1, it.waiting)
+            assertEquals("the fee needs 1,200 and 300 is left", 900L, it.need) }
         val paying = exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c", origin = "mempool"), tx("leaf", "verify-inputs")))
-        pose(paying).let { assertTrue(it.dropped && it.fee); assertEquals(listOf(true, false), it.theirs); assertEquals(listOf(true, false), it.paid) }
+        scene(paying).let { assertEquals(listOf(m.waiting, m.unsent), it.marks); assertEquals(listOf(true, false), it.theirs); assertEquals(listOf(true, false), it.paid)
+            assertNull("another wallet's fee costs nothing", it.fee) }
         val wait = exit("AwaitingDelta", ExitDetails(tip_height = 150, confirmed_block = ExitDetails.Block(104), claimable_height = 248),
             history = listOf(processing(104, *four.mapIndexed { i, id -> tx(id, "confirmed", block = 101L + i) }.toTypedArray())))
-        pose(wait, 150).let { assertTrue(it.zoomed); assertFalse(it.claiming); assertEquals(104L, it.lockedFrom); assertEquals(248L, it.claimableHeight)
-            assertEquals(listOf(101L, 102, 103, 104), it.mined); assertEquals(1f, PictureMotion.rest(it).zoom); assertEquals(0f, PictureMotion.rest(it).open) }
+        scene(wait, 150).let { assertTrue(it.locked); assertFalse(it.open); assertFalse(it.claiming); assertEquals(listOf(101L, 102, 103, 104), it.heights)
+            assertEquals(98L, it.left); assertEquals(46f / 144, it.dial, .001f) }
         val claimable = wait.copy(state = "Claimable", details = ExitDetails(tip_height = 248, claimable_since = ExitDetails.Block(248)))
-        assertEquals(1f, PictureMotion.rest(pose(claimable, 248)).open)
+        scene(claimable, 248).let { assertTrue(it.open); assertEquals(1f, it.dial); assertFalse(it.claiming) }
         val claimed = wait.copy(state = "Claimed", details = ExitDetails(tip_height = 249, block = ExitDetails.Block(249), txid = "claim"))
-        PictureMotion.rest(pose(claimed, 249)).let { assertEquals(1f, it.claim); assertEquals(1f, it.fin) }
+        scene(claimed, 249).let { assertTrue(it.claiming && it.claimed); assertEquals(249L, it.claimedBlock); assertNull("this phone", it.destination) }
+        assertEquals("bc1qx", ExitScene.of(claimed, ExitStages.of(claimed, 249), 249, destination = "bc1qx").destination)
         val canceled = exit("Canceled", ExitDetails(tip_height = 101), history = listOf(processing(101, tx("root", "confirmed", block = 101), tx("leaf", "awaiting-cpfp-broadcast"))))
-        pose(canceled, 101).let { assertEquals(listOf(101L, null), it.mined); assertEquals(1f, PictureMotion.rest(it).cancel) }
+        scene(canceled, 101).let { assertEquals(listOf(m.mined, m.unsent), it.marks); assertEquals(listOf(101L, null), it.heights); assertTrue(it.canceled); assertFalse(it.wallet) }
     }
 
     /**

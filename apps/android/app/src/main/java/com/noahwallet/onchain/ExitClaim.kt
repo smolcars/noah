@@ -124,7 +124,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
             Text(tr("Unlocked at block {height}", number(it)), Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
         val first = exits.firstOrNull()
-        if (wide && first != null) ExitPicture(ExitPose.of(first, ExitStages.of(first, tip), tip), tr("Ready to claim"), exitPicture().padding(top = 14.dp))
+        if (wide && first != null) ExitPicture(ExitScene.of(first, ExitStages.of(first, tip), tip), tr("Ready to claim"), exitPicture().padding(top = 14.dp), money)
     }) {
         if (exits.isEmpty()) { FinePrint(tr("No exits are ready to claim.")); status(); return@ExitFrame }
         SectionLabel(tr("To"))
