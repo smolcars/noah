@@ -99,6 +99,51 @@ internal fun ExitBig(text: String, modifier: Modifier = Modifier) {
         autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = ActivityType.big.fontSize))
 }
 
+/**
+ * A row that never truncates (exit-v2-notes.md, Layout): the value beside its label when both fit, else under it,
+ * right-aligned; at accessibility sizes the two stack, left-aligned. A [note] is a separate wrapping line under the value
+ * (the fee split, what's short). [trailing] holds Details' copy and explorer buttons.
+ */
+@Composable
+internal fun ExitValueRow(label: String, value: String, kind: ValueKind = ValueKind.text, note: String? = null, failed: Boolean = false,
+                          small: Boolean = false, last: Boolean = false, modifier: Modifier = Modifier, trailing: (@Composable RowScope.() -> Unit)? = null) {
+    val palette = LocalPalette.current
+    val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
+    val style = when (kind) { ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono }
+        .let { if (small) it.copy(fontSize = if (kind == ValueKind.mono) 13.5.sp else 15.sp) else it }
+    val end = if (stacked) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End
+    Column(modifier.fillMaxWidth().heightIn(min = if (small) 44.dp else 48.dp).drawBehind {
+        if (!last) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
+    }.padding(vertical = 10.dp).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.Center) {
+        androidx.compose.ui.layout.Layout({
+            Text(label, style = ActivityType.label.let { if (small) it.copy(fontSize = 15.sp) else it }, color = palette.muted)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(value, Modifier.weight(1f, fill = false), style = style, color = if (failed) palette.failure else palette.foreground, textAlign = end)
+                trailing?.invoke(this)
+            }
+        }) { measurables, constraints ->
+            val gap = 18.dp.roundToPx()
+            val loose = constraints.copy(minWidth = 0, minHeight = 0)
+            val title = measurables[0]; val content = measurables[1]
+            val labelWidth = title.maxIntrinsicWidth(Int.MAX_VALUE); val valueWidth = content.maxIntrinsicWidth(Int.MAX_VALUE)
+            val beside = !stacked && labelWidth + gap + valueWidth <= constraints.maxWidth
+            if (beside) {
+                val a = title.measure(loose); val b = content.measure(loose)
+                val height = maxOf(a.height, b.height)
+                layout(constraints.maxWidth, height) {
+                    a.place(0, (height - a.height) / 2); b.place(constraints.maxWidth - b.width, (height - b.height) / 2)
+                }
+            } else {
+                val a = title.measure(loose); val b = content.measure(loose)
+                layout(constraints.maxWidth, a.height + b.height + 2.dp.roundToPx()) {
+                    a.place(0, 0); b.place(if (stacked) 0 else constraints.maxWidth - b.width, a.height + 2.dp.roundToPx())
+                }
+            }
+        }
+        note?.let { Text(it, Modifier.fillMaxWidth().padding(top = 2.dp), style = HomeType.small, color = palette.muted, textAlign = end) }
+    }
+}
+
 /** The picture's size: 300 dp in a column (prototype `.stage`), the rest of the leading pane when split. */
 @Composable
 internal fun ColumnScope.exitPicture(): Modifier =
@@ -401,7 +446,7 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
         }
         Column(Modifier.weight(1f)) {
             Text(money(vtxo.amount), style = HomeType.amount, color = palette.foreground, maxLines = 1)
-            Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted)
             if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.small, color = palette.muted)
         }
     }
