@@ -1,4 +1,6 @@
 import Foundation
+import HTTPTypes
+import OpenAPIRuntime
 import Testing
 import UserNotifications
 
@@ -240,6 +242,47 @@ struct PushJobsTests {
         await gate.release()
         try await waitUntil { recorder.all.contains("handled") }
         #expect(recorder.all == ["open", "backup", "completed", "handled"])
+    }
+
+    actor ReportTransport: ClientTransport {
+        var operations: [String] = []
+        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+            operations.append(operationID)
+            return (.init(status: .ok), HTTPBody(#"{"success":true}"#))
+        }
+    }
+
+    @MainActor @Test func expiredReportReleasesWalletAccessWhileLoginIsStillRunning() async throws {
+        let recorder = Recorder()
+        let now = Date()
+        let fake = ServerAuthTests.Fake(nextToken: ServerAuthTests.token(expiresIn: 72 * 3600, now: now))
+        fake.holdLogin = true
+        let transport = ReportTransport()
+        let client = Client(serverURL: URL(string: "https://noah.invalid")!, transport: transport,
+            middlewares: [ServerFailureMiddleware(), BearerAuthMiddleware(tokens: AuthTokenProvider(dependencies: fake.dependencies(now: now)))])
+        var dependencies = jobs(recorder).dependencies
+        // The live report: the bearer middleware has to log in first.
+        dependencies.reportJob = { _, _, k1 in
+            recorder.add("report")
+            _ = try? await client.reportJobStatus(body: .json(.init(
+                errorMessage: nil, notificationK1: k1, reportType: .backup, status: .success))).ok
+        }
+        // Like the live session, wallet access is held until the job returns.
+        dependencies.withWalletAccess = { operation in
+            defer { recorder.add("access released") }
+            try await operation()
+        }
+        var completed: [Bool] = []
+        let execution = try execute(PushJobs(dependencies: dependencies), allowance: .seconds(60)) { completed.append($0) }
+        try await waitUntil { fake.sync { fake.gate != nil } }
+        execution.systemExpired()
+        try await waitUntil { recorder.all.contains("access released") }
+        #expect(completed == [false])
+        #expect(fake.sync { fake.logins } == 0)
+        #expect(await transport.operations.isEmpty)
+        // The shared login still finishes and is kept for later callers.
+        fake.sync { fake.gate?.resume(); fake.gate = nil }
+        try await waitUntil { fake.sync { fake.stored } != nil }
     }
 
     @MainActor @Test func systemExpiryCancelsAReportUnderWay() async throws {

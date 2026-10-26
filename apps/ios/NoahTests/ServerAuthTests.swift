@@ -120,6 +120,39 @@ struct ServerAuthTests {
         #expect(fake.logins == 1)
     }
 
+    @Test(.timeLimit(.minutes(1))) func cancelledCallerStopsWaitingWhileTheSharedLoginCarriesOn() async throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let fake = Fake(nextToken: Self.token(expiresIn: 72 * 3600, now: now))
+        fake.holdLogin = true
+        let provider = AuthTokenProvider(dependencies: fake.dependencies(now: now))
+        let first = Task { try await provider.token() }
+        while fake.sync({ fake.gate == nil }) { await Task.yield() }
+        first.cancel()
+        await #expect(throws: CancellationError.self) { try await first.value }
+        // Its login is still the shared one: a later caller joins it instead of starting another.
+        let second = Task { try await provider.token() }
+        for _ in 0..<50 { await Task.yield() }
+        fake.sync { fake.gate?.resume(); fake.gate = nil }
+        #expect(try await second.value == fake.nextToken)
+        #expect(fake.sync { fake.logins } == 1)
+        #expect(fake.sync { fake.stored } == fake.nextToken)
+    }
+
+    @Test(.timeLimit(.minutes(1))) func cancelledCallerStartsNoLogin() async throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let fake = Fake(nextToken: Self.token(expiresIn: 72 * 3600, now: now))
+        fake.holdLogin = true
+        let provider = AuthTokenProvider(dependencies: fake.dependencies(now: now))
+        let cancelled = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await provider.token()
+        }
+        await #expect(throws: CancellationError.self) { try await cancelled.value }
+        for _ in 0..<50 { await Task.yield() }
+        #expect(fake.sync { fake.gate == nil })
+        fake.sync { fake.gate?.resume(); fake.gate = nil }
+    }
+
     /// The public set must match operations without `security` in the spec,
     /// so a new gated endpoint can never be sent without a token.
     @Test func publicOperationsMatchTheSpec() throws {

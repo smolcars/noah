@@ -1,12 +1,15 @@
 import CryptoKit
 import Foundation
+import Synchronization
 
 /// Server JWT, ported from `getAccessToken` in `client/src/lib/api.ts`:
 /// reuse the stored token until it is within the refresh window, otherwise
 /// log in again with the wallet's offline key (`m/350/0`). Concurrent
-/// callers share one login. A stored token is only reused if it was issued
-/// to the current wallet (its `sub` is the login key of the seed in the
-/// Keychain), so a new, restored or replaced wallet never acts as the old one.
+/// callers share one login; a cancelled caller stops waiting for it at once
+/// while it carries on for the others. A stored token is only reused if it
+/// was issued to the current wallet (its `sub` is the login key of the seed
+/// in the Keychain), so a new, restored or replaced wallet never acts as the
+/// old one.
 actor AuthTokenProvider {
     struct Dependencies: Sendable {
         var readToken: @Sendable () -> String?
@@ -33,6 +36,8 @@ actor AuthTokenProvider {
     }
 
     func token(forceRefresh: Bool = false) async throws -> String {
+        // A cancelled caller (a background job past its budget) starts no auth work.
+        try Task.checkCancellation()
         let mnemonic = try dependencies.readMnemonic()
         let expectedSubject = try loginKey(for: mnemonic)
         if forceRefresh {
@@ -56,24 +61,62 @@ actor AuthTokenProvider {
             }
         }
 
-        if let loginInFlight {
-            return try await loginInFlight.value
-        }
+        let token = try await Self.value(of: loginInFlight ?? startLogin(mnemonic))
+        cached = token
+        return token
+    }
+
+    private func startLogin(_ mnemonic: String) -> Task<String, Error> {
         let attempt = Task { [dependencies] in
             let token = try await dependencies.login(mnemonic)
             try dependencies.saveToken(token)
             return token
         }
         loginInFlight = attempt
-        defer { loginInFlight = nil }
-        let token = try await attempt.value
-        cached = token
-        return token
+        // Cleared when the login ends, not when its first caller stops waiting.
+        Task {
+            _ = await attempt.result
+            if loginInFlight == attempt { loginInFlight = nil }
+        }
+        return attempt
     }
 
     func invalidate() {
         cached = nil
         dependencies.clearToken()
+    }
+
+    /// The login's token, or `CancellationError` as soon as this caller is cancelled;
+    /// the login itself keeps running.
+    private static func value(of login: Task<String, Error>) async throws -> String {
+        let waiter = Mutex<(continuation: CheckedContinuation<String, Error>?, early: Result<String, Error>?)>((nil, nil))
+        @Sendable func finish(_ result: Result<String, Error>) {
+            let continuation = waiter.withLock { state -> CheckedContinuation<String, Error>? in
+                if let continuation = state.continuation {
+                    state.continuation = nil
+                    return continuation
+                }
+                if state.early == nil { state.early = result }
+                return nil
+            }
+            continuation?.resume(with: result)
+        }
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let early = waiter.withLock { state -> Result<String, Error>? in
+                    if let early = state.early { return early }
+                    state.continuation = continuation
+                    return nil
+                }
+                if let early {
+                    continuation.resume(with: early)
+                    return
+                }
+                Task { finish(await login.result) }
+            }
+        } onCancel: {
+            finish(.failure(CancellationError()))
+        }
     }
 
     private func loginKey(for mnemonic: String) throws -> String? {
