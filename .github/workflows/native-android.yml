@@ -109,18 +109,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Two emulators in parallel; each job onboards one wallet and reuses it across its flows.
+  # One emulator: the flows take about 2 minutes per suite, while setting up a job takes about 5, so the smoke
+  # chain and then the funded flows run on one onboarded wallet.
   maestro:
-    name: Maestro (${{ matrix.suite }})
+    name: Maestro
     needs: build-and-test
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [smoke, funded]
     env:
-      COMPOSE_PROJECT_NAME: noah-native-maestro-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.suite }}
+      COMPOSE_PROJECT_NAME: noah-native-maestro-${{ github.run_id }}-${{ github.run_attempt }}
       ANDROID_SERIAL: emulator-5554
       MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
       MAESTRO_EMULATOR_GRPC_PORT: "8592"
@@ -225,7 +222,7 @@ jobs:
           # The runner executes each line separately; the first waits for the regtest setup and prints its log.
           script: |
             timeout 300 sh -c 'until [ -s regtest-setup.status ]; do sleep 1; done'; cat regtest-setup.log; [ "$(cat regtest-setup.status)" = 0 ]
-            scripts/test-maestro-native.sh android android-release-build/app-regtest-release.apk emulator-5554 ${{ matrix.suite }}
+            scripts/test-maestro-native.sh android android-release-build/app-regtest-release.apk emulator-5554 all
 
       - name: Collect regtest logs
         if: failure()
@@ -235,7 +232,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: native-maestro-android-${{ matrix.suite }}
+          name: native-maestro-android
           include-hidden-files: true
           path: |
             native-maestro-output
