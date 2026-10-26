@@ -63,7 +63,8 @@ internal fun RestoreShield(activity: Activity, lock: com.noahwallet.ui.settings.
 internal fun rememberRestoreClipboard(activity: Activity) = remember {
     val manager = activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     RestoreClipboard(
-        read = { manager.primaryClip?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.text?.toString() },
+        // Every item's text, one per line: a phrase split across items is never cut short.
+        read = { manager.primaryClip?.let { clip -> (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).text?.toString() }.joinToString("\n") } },
         clear = {
             if (android.os.Build.VERSION.SDK_INT >= 28) manager.clearPrimaryClip()
             else manager.setPrimaryClip(android.content.ClipData.newPlainText("", ""))
@@ -138,6 +139,8 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
     // Only plain remember: Android saved-instance state must never contain recovery words.
     var focused by remember { mutableStateOf<Int?>(null) }
     var checksumFailed by remember { mutableStateOf(false) }
+    /** Paste found no text, or not 12 or 24 words. */
+    var pasteRejected by remember { mutableStateOf(false) }
     var leftBad by remember { mutableStateOf(setOf<Int>()) }
     val requesters = remember { List(24) { FocusRequester() } }
     val shake = remember { Animatable(0f) }
@@ -151,7 +154,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
         ?.hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
     fun clear() {
         clipboard.clearIfUnchanged(); focus.clearFocus(); hideKeyboard(); input.clear(); focused = null
-        leftBad = emptySet(); checksumFailed = false; revision++; clearGeneration++
+        leftBad = emptySet(); checksumFailed = false; pasteRejected = false; revision++; clearGeneration++
     }
     fun leave() { clear(); flow.clearIssue(); model.step = "welcome" }
     BackHandler { if (!blocked) leave() }
@@ -159,7 +162,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
     // Read the revision so changes to the non-saveable, redacted input redraw the fields.
     val words = remember(revision) { input.words }
     val wordList = RecoveryPhraseInput.wordList
-    fun changed() { revision++; checksumFailed = false; flow.clearIssue() }
+    fun changed() { revision++; checksumFailed = false; pasteRejected = false; flow.clearIssue() }
     fun moveOn(index: Int) { if (index < words.size - 1) requesters[index + 1].requestFocus() else { focus.clearFocus(); hideKeyboard() } }
     fun accept(word: String, index: Int) {
         input.update(word, index); changed(); haptics.selection(); moveOn(index)
@@ -220,7 +223,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
             }
         }
         val message = when {
-            input.wrongWordCount -> tr("Paste exactly 12 or 24 words. Your entries haven't been replaced.")
+            input.wrongWordCount || pasteRejected -> tr("Paste exactly 12 or 24 words. Your entries haven't been replaced.")
             checksumFailed -> tr("These words don’t form a valid phrase.")
             firstBad != null -> tr("Check word {number}", firstBad + 1)
             else -> flow.issue?.message?.let { tr(it) }
@@ -238,7 +241,10 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
             }
         } else Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.s), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PillButton(tr("Paste"), Modifier.weight(1f), enabled = !blocked, outlined = true, icon = { PasteIcon(palette.foreground) }) {
-                clipboard.text()?.let { fill(it) }
+                val text = clipboard.text()
+                if (text == null || RecoveryPhraseInput.normalizedWords(text).size !in listOf(12, 24)) {
+                    pasteRejected = true; haptics.warning()
+                } else fill(text)
             }
             PillButton(tr("Restore"), Modifier.weight(1f).testTag("restore-submit"), enabled = complete && model.canRestoreWallet) {
                 focus.clearFocus(); hideKeyboard()
