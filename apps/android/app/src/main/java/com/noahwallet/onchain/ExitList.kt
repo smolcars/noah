@@ -107,15 +107,18 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
             tr("Finished") to visible.filter { !stages.getValue(it.id).live })
         for ((name, list) in sections) if (list.isNotEmpty()) {
             Text(name, Modifier.padding(top = 18.dp, bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
-            for (block in ExitList.blocks(list, shared)) {
+            val blocks = ExitList.blocks(list, shared)
+            for ((index, block) in blocks.withIndex()) {
                 val rows = block.map { it to stages.getValue(it.id) }
+                // A line under every row but the section's last, as the rows are shown.
+                val divider = index < blocks.lastIndex
                 if (rows.size > 1) {
-                    SharedRows(rows, tip, money, open, divider = block.last() != list.last())
+                    SharedRows(rows, tip, money, open, divider = divider)
                     val group = ExitList.Shared(block, block.flatMap { exit -> exit.packages.map { it.txid } }.distinct().size, block.sumOf { it.packages.size })
                     Text(tr("These {n} share part of their path: {count} transactions to send, not {total}. Shared ones are sent and paid once.",
                         group.exits.size.toString(), group.transactions.toString(), group.separately.toString()),
                         Modifier.padding(start = ExitGutter.sharedWidth.dp, top = 4.dp, bottom = 6.dp).testTag("exit-shared"), style = HomeType.small, color = palette.muted)
-                } else ExitListRow(rows[0].first, rows[0].second, tip, money, divider = block.last() != list.last()) { open(block[0].id) }
+                } else ExitListRow(rows[0].first, rows[0].second, tip, money, divider = divider) { open(block[0].id) }
             }
         }
         status()
@@ -199,15 +202,16 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
     val waiting = paths.flatMap { it.dropLast(1) }.map { it.first }.distinct().filter { states[it] == ExitGutter.St.waiting }
     var visible by remember { mutableStateOf(true) }
     val breath = rememberBreath((waiting.isNotEmpty() || coins.any { it.pulses }) && visible && rememberResumed() && !LocalReduceMotion.current)
-    val layout = { if (centers.any { it.isNaN() }) null else ExitGutter.shared(paths, centers.toList()) }
+    // The gutter once its rows are measured, worked out again only when they move.
+    val layout by remember(paths) { derivedStateOf { if (centers.any { it.isNaN() }) null else ExitGutter.shared(paths, centers.toList()) } }
+    // The waiting transactions as drawn: each once, or once per exit where a path too long folds each exit alone.
+    val waits = layout?.nodes?.filter { !it.coin && it.id in waiting }.orEmpty()
     Box(Modifier.onGloballyPositioned { visible = it.boundsInWindow().height > 0f }) {
-        // Under the gutter: the waiting transactions' glow and rings (on each copy, where a path too long folds each exit
-        // alone), and the coins' own.
-        fun waitingAt(id: String, copy: Int) = layout()?.nodes?.filter { it.id == id && !it.coin }?.getOrNull(copy)?.let { Offset(it.x, it.y) }
-        for (id in waiting) for (copy in rows.indices) GutterSpot(60f, { waitingAt(id, copy) }) { c -> gutterPulse(c, 8f, breath, palette) }
-        coins.forEachIndexed { i, coin -> if (coin.pulses) GutterSpot(80f, { layout()?.let { Offset(90f, centers[i]) } }) { c -> coin.pulse(this, c, breath, palette) } }
+        // Under the gutter: the waiting transactions' glow and rings, and the coins' own.
+        for (node in waits) GutterSpot(60f, { Offset(node.x, node.y) }) { c -> gutterPulse(c, 8f, breath, palette) }
+        coins.forEachIndexed { i, coin -> if (coin.pulses) GutterSpot(80f, { layout?.let { Offset(90f, centers[i]) } }) { c -> coin.pulse(this, c, breath, palette) } }
         Column(Modifier.drawBehind {
-            val l = layout() ?: return@drawBehind
+            val l = layout ?: return@drawBehind
             scale(density, density, Offset.Zero) {
                 for (link in l.links) treeLink(Offset(link.from.first, link.from.second), Offset(link.to.first, link.to.second), 0f, 1f,
                     if (link.ink) palette.foreground else palette.orange, if (link.ink) 2f else 1.6f, 1f, horizontal = true)
@@ -222,7 +226,7 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
             }
         }
         // Above it: the waiting transactions' dashed outline, marching.
-        for (id in waiting) for (copy in rows.indices) GutterSpot(14f, { waitingAt(id, copy) }) { c ->
+        for (node in waits) GutterSpot(14f, { Offset(node.x, node.y) }) { c ->
             drawRoundRect(palette.orange, Offset(c.x - 4, c.y - 4), Size(8f, 8f), CornerRadius(2.5f), alpha = .7f + .3f * breath.breathe,
                 style = Stroke(1.4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 1.6f), -breath.march * 3.6f / 5.4f)))
         }
