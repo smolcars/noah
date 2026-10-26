@@ -141,7 +141,7 @@ export function nativeLiterals(code, swift) {
 // localized at call sites; identifiers, URLs, SF Symbols and persistence keys are not copy.
 export async function inventory(base = root) {
   const result = { ios: new Map(), android: new Map() };
-  for (const [platform, directory, ext] of [['ios', 'apps/ios/Noah', '.swift'], ['android', 'apps/android/app/src/main/java/com/noahwallet', '.kt']]) {
+  for (const [platform, directory, ext] of [['ios', 'apps/ios/Noah', '.swift'], ['ios', 'apps/ios/NoahWidget', '.swift'], ['android', 'apps/android/app/src/main/java/com/noahwallet', '.kt']]) {
     for (const file of await filesBelow(resolve(base, directory), ext)) {
       if (file.includes('/API/') || file.includes('/api/')) continue;
       const code = await readFile(file, 'utf8');

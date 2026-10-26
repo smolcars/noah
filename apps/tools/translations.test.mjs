@@ -100,12 +100,20 @@ async function fixture(run) {
   const put = async (path, content) => { await mkdir(dirname(resolve(base, path)), { recursive: true }); await writeFile(resolve(base, path), content); };
   try {
     await put('apps/ios/Noah/Features/Example.swift', 'Text("Hello {name}")\nText("Native only")');
+    await put('apps/ios/NoahWidget/Example.swift', '');
     await put('apps/android/app/src/main/java/com/noahwallet/ui/Example.kt', 'Text(tr("Send"))');
     await put('apps/i18n/plurals.json', '{}');
     await put('apps/i18n/platform-only.json', JSON.stringify({ ios: { 'Hello {name}': 'fixture', 'Native only': 'fixture' }, android: { Send: 'fixture' } }));
     await run(base, put);
   } finally { await rm(base, { recursive: true, force: true }); }
 }
+
+test('the iOS widget extension is inventoried with the app', async () => {
+  await fixture(async (base, put) => {
+    await put('apps/ios/NoahWidget/Example.swift', 'Text(L10n.text("Native only", locale: language))');
+    expect([...(await extract(base)).used.ios.get('Native only')]).toEqual(['apps/ios/Noah/Features/Example.swift', 'apps/ios/NoahWidget/Example.swift']);
+  });
+});
 
 test('stale checks detect English edits, code additions/removals, locale edits and compiled resource drift', async () => {
   await fixture(async (base, put) => {
