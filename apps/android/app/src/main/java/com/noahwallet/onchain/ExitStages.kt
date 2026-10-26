@@ -333,7 +333,7 @@ internal object ExitList {
 
     /**
      * A list section's rows as the list draws them (option B): the exits of one shared group that are in this section, at the
-     * first one's place, share a gutter; every other exit is a row of its own.
+     * first one's place, share a gutter, those that share more next to each other; every other exit is a row of its own.
      */
     fun blocks(section: List<ExitModel>, shared: List<Shared>): List<List<ExitModel>> {
         val ids = section.map { it.id }.toSet()
@@ -341,7 +341,9 @@ internal object ExitList {
         val done = mutableSetOf<String>()
         return section.mapNotNull { exit ->
             if (exit.id in done) return@mapNotNull null
-            val block = groups.firstOrNull { group -> group.any { it.id == exit.id } }?.let { group -> section.filter { e -> group.any { it.id == e.id } } } ?: listOf(exit)
+            val block = groups.firstOrNull { group -> group.any { it.id == exit.id } }?.let { group ->
+                ExitGutter.tree(section.filter { e -> group.any { it.id == e.id } }, { e -> e.packages.map { it.txid } })
+            } ?: listOf(exit)
             done += block.map { it.id }; block
         }
     }

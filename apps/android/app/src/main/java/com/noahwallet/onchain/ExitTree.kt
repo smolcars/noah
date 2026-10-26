@@ -482,6 +482,13 @@ internal object ExitGutter {
     data class Link(val from: Pair<Float, Float>, val to: Pair<Float, Float>, val ink: Boolean)
     data class Layout(val root: Pair<Float, Float>, val nodes: List<Node>, val links: List<Link>)
 
+    /**
+     * [rows] in the order a shared gutter draws them: those that share more sit together, so each branch has its own band
+     * of rows and no two branches' transactions land on each other; otherwise as they came. [ids]: a row's transactions.
+     */
+    fun <T> tree(rows: List<T>, ids: (T) -> List<String>, depth: Int = 0): List<T> =
+        if (rows.size < 2) rows else rows.groupBy { ids(it).getOrNull(depth) }.flatMap { (id, group) -> if (id != null && group.size > 1) tree(group, ids, depth + 1) else group }
+
     /** The gutter for a shared group: the round's block at [x0], each transaction [step] further, every coin at [coinX]. */
     const val sharedWidth = 112f
     const val coinWidth = 44f

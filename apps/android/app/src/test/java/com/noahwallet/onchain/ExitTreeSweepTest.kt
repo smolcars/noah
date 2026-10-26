@@ -158,13 +158,15 @@ class ExitTreeSweepTest {
             val sampled = n > 20
             // Two to four exits that part after k shared transactions, each a block (or a fifth of the path) behind the one
             // before, at every mined count and with the one being sent waiting, ready, short of funds or not sent yet.
-            for (rows in 2..4) for (lag in listOf(1, maxOf(2, n / 5)).distinct()) for (k in (0 until n).filter { !sampled || it % 9 == 1 || it >= n - 2 })
+            // Or, paired, two branches after k that part again halfway on, listed alternately and sat together as the list does.
+            for (rows in 2..4) for (lag in listOf(1, maxOf(2, n / 5)).distinct()) for (paired in listOf(false, true)) for (k in (0 until n).filter { !sampled || it % 9 == 1 || it >= n - 2 })
                 for (mined in (0..n).filter { !sampled || it % 7 == 0 || it >= n - 2 }) for (current in listOf(ExitGutter.St.waiting, ExitGutter.St.ready, ExitGutter.St.needsFunds, ExitGutter.St.unsent)) {
-                    val paths = List(rows) { r ->
+                    val listed = List(rows) { r ->
                         val done = (mined - r * lag).coerceAtLeast(0)
-                        List(n) { i -> (if (i < k) "s$i" else "r$r.$i") to when { i < done -> ExitGutter.St.mined; i == done -> current; else -> ExitGutter.St.unsent } }
+                        List(n) { i -> (if (i < k) "s$i" else if (paired && i < (k + n) / 2) "b${r % 2}.$i" else "r$r.$i") to when { i < done -> ExitGutter.St.mined; i == done -> current; else -> ExitGutter.St.unsent } }
                     }
-                    val label = "gutter: $rows exits, $n transactions, parting after $k, $mined mined, $lag behind, $current"
+                    val paths = ExitGutter.tree(listed, { path -> path.dropLast(1).map { it.first } })
+                    val label = "gutter: $rows exits${if (paired) " paired" else ""}, $n transactions, parting after $k, $mined mined, $lag behind, $current"
                     val layout = ExitGutter.shared(paths, List(rows) { 32f + 64f * it })
                     val drawn = layout.nodes.filter { !it.coin }
                     val columns = drawn.map { it.x }.distinct().sorted()

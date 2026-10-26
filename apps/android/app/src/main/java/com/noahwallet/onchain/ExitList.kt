@@ -201,10 +201,10 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
     val breath = rememberBreath((waiting.isNotEmpty() || coins.any { it.pulses }) && visible && rememberResumed() && !LocalReduceMotion.current)
     val layout = { if (centers.any { it.isNaN() }) null else ExitGutter.shared(paths, centers.toList()) }
     Box(Modifier.onGloballyPositioned { visible = it.boundsInWindow().height > 0f }) {
-        // Under the gutter: the waiting transactions' glow and rings, and the coins' own.
-        for (id in waiting) GutterSpot(60f, { layout()?.nodes?.firstOrNull { it.id == id && !it.coin }?.let { Offset(it.x, it.y) } }) { c ->
-            gutterPulse(c, 8f, breath, palette)
-        }
+        // Under the gutter: the waiting transactions' glow and rings (on each copy, where a path too long folds each exit
+        // alone), and the coins' own.
+        fun waitingAt(id: String, copy: Int) = layout()?.nodes?.filter { it.id == id && !it.coin }?.getOrNull(copy)?.let { Offset(it.x, it.y) }
+        for (id in waiting) for (copy in rows.indices) GutterSpot(60f, { waitingAt(id, copy) }) { c -> gutterPulse(c, 8f, breath, palette) }
         coins.forEachIndexed { i, coin -> if (coin.pulses) GutterSpot(80f, { layout()?.let { Offset(90f, centers[i]) } }) { c -> coin.pulse(this, c, breath, palette) } }
         Column(Modifier.drawBehind {
             val l = layout() ?: return@drawBehind
@@ -222,7 +222,7 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
             }
         }
         // Above it: the waiting transactions' dashed outline, marching.
-        for (id in waiting) GutterSpot(14f, { layout()?.nodes?.firstOrNull { it.id == id && !it.coin }?.let { Offset(it.x, it.y) } }) { c ->
+        for (id in waiting) for (copy in rows.indices) GutterSpot(14f, { waitingAt(id, copy) }) { c ->
             drawRoundRect(palette.orange, Offset(c.x - 4, c.y - 4), Size(8f, 8f), CornerRadius(2.5f), alpha = .7f + .3f * breath.breathe,
                 style = Stroke(1.4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 1.6f), -breath.march * 3.6f / 5.4f)))
         }

@@ -238,6 +238,27 @@ class ExitTreeTest {
         assertEquals("the shared one drawn once", 1, drawn.count { it.id == "t0" })
     }
 
+    @Test fun exitsThatShareMoreSitTogetherSoBranchesNeverMeet() {
+        // A and A' share a branch after the first transaction, B leaves there: listed A, B, A', the branch's transactions would
+        // sit on B's row, on top of B's own. Sat together they each keep their band.
+        fun path(branch: String, r: Int) = List(20) { i -> (if (i == 0) "t0" else if (i < 10) "$branch$i" else "$branch$r.$i") to when { i < 6 -> st.mined; i == 6 -> st.waiting; else -> st.unsent } }
+        val listed = listOf(path("a", 0), path("b", 1), path("a", 2))
+        val rows = ExitGutter.tree(listed, { row -> row.dropLast(1).map { it.first } })
+        assertEquals(listOf(listed[0], listed[2], listed[1]), rows)
+        val drawn = ExitGutter.shared(rows, listOf(32f, 96f, 160f)).nodes.filter { !it.coin }
+        for (a in drawn) for (b in drawn) if (a !== b) assertFalse("${a.id} on ${b.id}", kotlin.math.abs(a.x - b.x) < 10 && kotlin.math.abs(a.y - b.y) < 10)
+    }
+
+    @Test fun aPathThatPartsTooOftenFoldsEachExitAlone() {
+        // Seven nine-transaction exits sharing a waiting root, each leaving the rest one transaction later: too many trunks
+        // for the room, so each exit folds alone, every copy of the root waiting.
+        val paths = (0 until 7).map { r -> List(9) { i -> (if (i <= r) "s$i" else "r$r.$i") to if (i == 0) st.waiting else st.unsent } }
+        val drawn = ExitGutter.shared(paths, List(7) { 32f + 64f * it }).nodes.filter { !it.coin }
+        val columns = drawn.map { it.x }.distinct().sorted()
+        for ((a, b) in columns.zipWithNext()) assertTrue("$a → $b", b - a >= ExitGutter.minStep - .01f)
+        assertEquals(7, drawn.count { it.id == "s0" && !it.folded && it.st == st.waiting })
+    }
+
     @Test fun aRestartedExitNeverHidesASiblingsProgress() {
         // The first row restarted (Start: nothing listed yet); its sibling has the shared root in a block and the next one waiting.
         val paths = listOf(listOf("root" to st.unsent, "x" to st.unsent, "leafA" to st.unsent), listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))
