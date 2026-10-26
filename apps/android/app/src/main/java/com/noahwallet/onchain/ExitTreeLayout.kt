@@ -300,28 +300,50 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             // Your other exits' coins: at their place, else slid down their branch toward it or up it (where a branch clears
             // the coins nearer your path), else further out. Each branch is outlined along the curve drawn, short of where it
             // joins your path: there it may meet the stubs, the other branches and its level, but nowhere may a branch and
-            // another coin cross.
+            // another coin cross. As many stay as fit, lower levels first, each at the first spot in its order that leaves
+            // room for the rest (a search with a budget, so a crowded picture can't take long).
             fun branch(x: Float, y: Float, level: Int, group: String): List<TreeShape> {
                 val joinY = ys[level] - 4
                 return (1..20).map { linkAt(x, y + 6, tx, joinY, it / 20f) }.filter { (bx, by) -> hypot(bx - tx, by - joinY) > 9 }
                     .map { (bx, by) -> TreeShape.circle(TreeShape.Kind.branch, group, bx, by, .7f) }
             }
             fun meets(shape: TreeShape, level: Int) = shape.kind == TreeShape.Kind.stub || shape.kind == TreeShape.Kind.branch || shape.group == "node$level"
-            val siblings = mutableListOf<Sibling>()
-            for (level in othersAt.keys.sorted()) for ((index, other) in othersAt.getValue(level).withIndex()) {
+            class Spot(val x: Float, val y: Float, val outline: List<TreeShape>) {
+                val l = outline.minOf { it.l }; val t = outline.minOf { it.t }; val r = outline.maxOf { it.r }; val b = outline.maxOf { it.b }
+            }
+            fun apart(a: Spot, b: Spot) = with(TreeGeometry.clearance) { a.l > b.r + this || b.l > a.r + this || a.t > b.b + this || b.t > a.b + this } ||
+                a.outline.none { p -> b.outline.any { q -> (p.kind != TreeShape.Kind.branch || q.kind != TreeShape.Kind.branch) && p.overlaps(q, TreeGeometry.clearance) } }
+            val others = othersAt.keys.sorted().flatMap { level -> othersAt.getValue(level).mapIndexed { index, other -> Triple(level, index, other.index) } }
+            // Each one's spots, in order, that are clear of everything else.
+            val options = others.map { (level, index) ->
                 val (bx, by) = geo.other(ys, level, index); val group = "sibling$level.$index"
-                val spots = listOf(0f, .45f, .9f).flatMap { shift ->
+                listOf(0f, .45f, .9f).flatMap { shift ->
                     (generateSequence(by) { it + 3 }.takeWhile { it <= max(by, ys[level] - 10) } + generateSequence(by - 3) { it - 3 }.takeWhile { it >= geo.otherTop })
                         .map { bx - shift * geo.spread to it }.toList()
+                }.mapNotNull { (x, y) ->
+                    val coin = TreeShape.circle(TreeShape.Kind.sibling, group, x, y, 6f)
+                    val line = if (clear(coin)) branch(x, y, level, group) else return@mapNotNull null
+                    if (line.any { b -> shapes.any { it.group != group && !meets(it, level) && it.overlaps(b, TreeGeometry.clearance) } }) null
+                    else Spot(x, y, listOf(coin) + line)
                 }
-                val spot = spots.firstOrNull { (x, y) ->
-                    clear(TreeShape.circle(TreeShape.Kind.sibling, group, x, y, 6f)) && branch(x, y, level, group).all { b ->
-                        shapes.none { it.group != group && !meets(it, level) && it.overlaps(b, TreeGeometry.clearance) }
-                    }
-                } ?: continue
-                siblings += Sibling(other.index, level, index, spot.first, spot.second - ys[level], null)
-                shapes += TreeShape.circle(TreeShape.Kind.sibling, group, spot.first, spot.second, 6f)
-                shapes += branch(spot.first, spot.second, level, group)
+            }
+            // Then the most that fit together, the earlier ones first, each at its first spot that works.
+            val chosen = arrayOfNulls<Spot>(others.size); var best = chosen.copyOf(); var kept = 0; var budget = 20_000
+            fun search(i: Int, count: Int) {
+                if (count + others.size - i <= kept || budget <= 0) return
+                if (i == others.size) { best = chosen.copyOf(); kept = count; return }
+                for (spot in options[i]) {
+                    if (kept == others.size || budget <= 0) return
+                    budget -= 1 + i
+                    if ((0 until i).all { j -> chosen[j]?.let { apart(it, spot) } ?: true }) { chosen[i] = spot; search(i + 1, count + 1); chosen[i] = null }
+                }
+                search(i + 1, count)
+            }
+            search(0, 0)
+            val siblings = mutableListOf<Sibling>()
+            for ((i, spot) in best.withIndex()) if (spot != null) {
+                val (level, index, other) = others[i]
+                siblings += Sibling(other, level, index, spot.x, spot.y - ys[level], null); shapes += spot.outline
             }
             // Their amounts, left of each coin (on a halo): the list says them when there's no room.
             for ((index, sibling) in siblings.withIndex()) {

@@ -81,6 +81,8 @@ class ExitTreeSweepTest {
         val geo = layout.geo; val lock = if (drawn.locked && !drawn.claiming) 1f else 0f
         for (j in 1..drawn.n) assertTrue("$label: gap $j", layout.ys[j - 1] - layout.ys[j] >= geo.minimumGap(j, geo.node, geo.coinReserve(lock), docked = drawn.docked, ringed = drawn.ringed) - .01f)
         assertEquals("$label: the real count", scene.n, drawn.count)
+        // Every other exit finds a spot here, so none is left out without the overlap check seeing it.
+        assertEquals("$label: your other exits", drawn.others.count { it.level in 1 until drawn.n }, layout.siblings.size)
         layouts++
         return layout
     }
@@ -197,6 +199,10 @@ class ExitTreeSweepTest {
                 assertTrue("${frame.name}: $a's branch crosses $b", hypot(x - b.x, y - (layout.ys[b.level] + b.dy)) >= 6 + .7f)
             }
         }
+        // Three leaving at the last level beside your coin on the small phone: all of them fit, the first stepping out for
+        // the rest.
+        val top = check(path(8, 4, others = List(3) { ExitScene.Other(7, 24_500L - 3_000 * it) }), small, w, "eight transactions, three others at 7")
+        assertEquals("three others at the last level", 3, top.siblings.size)
         // At packed levels on a long path, they slide or step out, never onto each other.
         val deep = check(path(20, 12, others = listOf(ExitScene.Other(3, 24_500), ExitScene.Other(4, 21_000))), small, w, "packed others")
         val coins = deep.shapes.filter { it.kind == TreeShape.Kind.sibling }
