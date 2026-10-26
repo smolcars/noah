@@ -6,18 +6,22 @@ import UIKit
 @MainActor
 final class RestorePasteboard {
     private let pasteboard: UIPasteboard
-    private var accepted: SHA256.Digest?
+    /// The accepted phrase's digest, and the pasteboard's `changeCount` when it was pasted.
+    private var accepted: (digest: SHA256.Digest, change: Int)?
 
     init(_ pasteboard: UIPasteboard = .general) { self.pasteboard = pasteboard }
 
-    func accepted(_ text: String) {
-        accepted = Self.digest(text)
+    /// `change` is the pasteboard's `changeCount` at the paste, before any loading.
+    func accepted(_ text: String, change: Int) {
+        accepted = (Self.digest(text), change)
         clearIfUnchanged()
     }
 
+    /// Only while the pasteboard still holds what was pasted. Anything copied since isn't the accepted phrase, and
+    /// isn't read: reading another app's copy can ask for paste permission.
     func clearIfUnchanged() {
-        guard let accepted, let current = pasteboard.strings,
-              Self.digest(current.joined(separator: "\n")) == accepted else { return }
+        guard let accepted, pasteboard.changeCount == accepted.change, let current = pasteboard.strings,
+              Self.digest(current.joined(separator: "\n")) == accepted.digest else { return }
         pasteboard.items = []
     }
 

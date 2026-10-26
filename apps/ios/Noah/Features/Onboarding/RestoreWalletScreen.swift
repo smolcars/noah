@@ -33,8 +33,9 @@ struct RestoreWalletScreen: View {
     @Binding var draft: RestoreDraft
     let issue: RestoreIssue?
     let haptics: OnboardingHaptics
-    /// A whole phrase was pasted; the flow's `RestorePasteboard` clears it from the clipboard.
-    let onPaste: (String) -> Void
+    /// A whole phrase was pasted from the pasteboard at that `changeCount`; the flow's `RestorePasteboard`
+    /// clears it from the clipboard.
+    let onPaste: (String, Int) -> Void
     let onRestore: () -> Void
     let onBack: () -> Void
 
@@ -159,16 +160,17 @@ struct RestoreWalletScreen: View {
         draft.input.update(text, at: index)
         draft.invalidPhrase = false
         draft.pasteRejected = false
-        if pasted && !draft.input.wrongWordCount { onPasted(text) }
+        // A field pastes synchronously, so the pasteboard still holds what it pasted.
+        if pasted && !draft.input.wrongWordCount { onPasted(text, change: UIPasteboard.general.changeCount) }
     }
 
     /// A whole phrase pasted into any field fills every word.
-    func onPasted(_ text: String) {
+    func onPasted(_ text: String, change: Int) {
         draft.focusedWord = nil
         draft.generation += 1
         haptics.play(.light)
         if draft.input.words.indices.contains(where: { draft.isInvalid($0) }) { haptics.play(.warning) }
-        onPaste(text)
+        onPaste(text, change)
     }
 
     private func acceptFirst(at index: Int) -> Bool {
@@ -233,8 +235,8 @@ struct RestoreWalletScreen: View {
             RestorePasteControl {
                 // The items load after the tap. Back, the 12/24 switch, Restore or a field paste meanwhile move the
                 // generation, and the late text is dropped.
-                let generation = draft.generation
-                return { text in if draft.generation == generation { paste(text) } }
+                let generation = draft.generation, change = UIPasteboard.general.changeCount
+                return { text in if draft.generation == generation { paste(text, change: change) } }
             }
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button, maxHeight: NoahTokens.Size.button)
                 .accessibilityIdentifier("restore-paste")
@@ -246,7 +248,7 @@ struct RestoreWalletScreen: View {
     }
 
     /// What the paste control read; `RestorePasteboard` (in the flow) clears an accepted phrase from the clipboard.
-    private func paste(_ text: String) {
+    private func paste(_ text: String, change: Int) {
         guard [12, 24].contains(RecoveryPhraseInput.normalizedWords(text).count) else {
             draft.pasteRejected = true
             haptics.play(.warning)
@@ -255,7 +257,7 @@ struct RestoreWalletScreen: View {
         draft.input.update(text, at: 0)
         draft.invalidPhrase = false
         draft.pasteRejected = false
-        onPasted(text)
+        onPasted(text, change: change)
     }
 }
 

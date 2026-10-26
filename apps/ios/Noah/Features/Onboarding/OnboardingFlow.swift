@@ -148,7 +148,7 @@ struct OnboardingFlow: View {
             DoneScreen(layout: layout, address: savedAddress, finishing: finishing, onOpen: openWallet)
         case .restore:
             RestoreWalletScreen(layout: layout, draft: $draft, issue: model.restoreIssue, haptics: haptics,
-                                onPaste: { clipboard.accepted($0) }, onRestore: restore,
+                                onPaste: { clipboard.accepted($0, change: $1) }, onRestore: restore,
                                 onBack: { draft.focusedWord = nil; go(.welcome, travel: .back) })
         case .storedSeed:
             StoredSeedRestoreScreen(layout: layout, issue: model.restoreIssue) {

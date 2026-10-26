@@ -414,11 +414,11 @@ struct RestoreFieldPrivacyTests {
         for copy in [[line + "\n"], [words.joined(separator: "\r\n")], [words.joined(separator: "\u{00A0}")],
                      [words.prefix(6).joined(separator: " "), words.suffix(6).joined(separator: " ")]] {
             board.strings = copy
-            RestorePasteboard(board).accepted(line)
+            RestorePasteboard(board).accepted(line, change: board.changeCount)
             #expect(!board.hasStrings)
         }
         board.strings = [line + " zoo"]
-        RestorePasteboard(board).accepted(line)
+        RestorePasteboard(board).accepted(line, change: board.changeCount)
         #expect(board.hasStrings)
     }
 
@@ -464,7 +464,7 @@ struct RestoreFieldPrivacyTests {
         let host = UIHostingController(rootView: RestoreWalletScreen(
             layout: OnboardingLayout(size: window.frame.size, insets: EdgeInsets()),
             draft: Binding(get: { box.draft }, set: { box.draft = $0 }), issue: nil, haptics: OnboardingHaptics(),
-            onPaste: { box.pasted.append($0) }, onRestore: {}, onBack: {}))
+            onPaste: { text, _ in box.pasted.append(text) }, onRestore: {}, onBack: {}))
         window.rootViewController = host
         window.isHidden = false
         defer { window.isHidden = true }
@@ -493,22 +493,56 @@ struct RestoreFieldPrivacyTests {
         #expect(newerKept)
     }
 
+    /// RTF alone, from the paste control's decoding to the clipboard being cleared; then a copy made after the paste,
+    /// or during its loading, is never cleared.
+    @Test func anRTFOnlyPhraseIsPastedThenClearedAndLaterCopiesAreLeft() async throws {
+        let name = UIPasteboard.Name("noah-restore-test-\(UUID().uuidString)")
+        let board = try #require(UIPasteboard(name: name, create: true))
+        defer { UIPasteboard.remove(withName: name) }
+        let phrase = (Array(repeating: "abandon", count: 11) + ["about"]).joined(separator: " ") + "\n"
+        let rtf = try NSAttributedString(string: phrase).data(from: NSRange(location: 0, length: phrase.utf16.count),
+                                                              documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
+        board.items = [[UTType.rtf.identifier: rtf]]
+        let provider = NSItemProvider()
+        provider.registerDataRepresentation(for: .rtf) { completion in completion(rtf, nil); return nil }
+        let clipboard = RestorePasteboard(board)
+        let target = RestorePasteControl.Target()
+        var pasted: String?
+        target.onPaste = {
+            let change = board.changeCount
+            return { text in pasted = text; clipboard.accepted(text, change: change) }
+        }
+        target.paste(itemProviders: [provider])
+        try await until { pasted != nil }
+        #expect(RecoveryPhraseInput.normalizedWords(pasted ?? "").count == 12)
+        #expect(board.numberOfItems == 0)
+
+        board.string = phrase
+        clipboard.clearIfUnchanged()
+        #expect(board.string == phrase)
+        let before = board.changeCount
+        board.string = "copied while loading"
+        clipboard.accepted(phrase, change: before)
+        #expect(board.string == "copied while loading")
+    }
+
     @Test func acceptedPasteClearsOnlyMatchingClipboardContent() {
         let name = UIPasteboard.Name("noah-restore-test-\(UUID().uuidString)")
         let board = UIPasteboard(name: name, create: true)!
         defer { UIPasteboard.remove(withName: name) }
         let clipboard = RestorePasteboard(board)
         board.string = "public test content"
-        clipboard.accepted("public test content")
+        clipboard.accepted("public test content", change: board.changeCount)
         #expect(board.string == nil)
         board.string = "replacement"
         clipboard.clearIfUnchanged()
         #expect(board.string == "replacement")
+        // Copied again after the paste: a new copy, never read or cleared.
         board.string = "public test content"
         clipboard.clearIfUnchanged()
-        #expect(board.string == nil)
+        #expect(board.string == "public test content")
         board.string = "replacement before acceptance"
-        clipboard.accepted("public test content")
+        clipboard.accepted("public test content", change: board.changeCount)
         #expect(board.string == "replacement before acceptance")
     }
 }

@@ -140,7 +140,7 @@ struct OnboardingShotTests {
             return AnyView(ShotHost { layout in
                 RestoreBinding(draft: value) { binding in
                     RestoreWalletScreen(layout: layout, draft: binding, issue: nil, haptics: haptics,
-                                        onPaste: { _ in }, onRestore: {}, onBack: {})
+                                        onPaste: { _, _ in }, onRestore: {}, onBack: {})
                 }
             })
         case "restoring":
@@ -159,7 +159,7 @@ struct OnboardingShotTests {
                 RestoreBinding(draft: RestoreDraft()) { binding in
                     RestoreWalletScreen(layout: layout, draft: binding,
                                         issue: RestoreIssue(message: "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled."),
-                                        haptics: haptics, onPaste: { _ in }, onRestore: {}, onBack: {})
+                                        haptics: haptics, onPaste: { _, _ in }, onRestore: {}, onBack: {})
                 }
             })
         case "stored-seed":
