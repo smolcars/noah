@@ -4,7 +4,6 @@ import org.junit.Assert.*
 import org.junit.Test
 import com.noahwallet.onchain.ExitActions.Action as a
 import com.noahwallet.onchain.ExitScene.Mark as m
-import com.noahwallet.onchain.ExitList.Step as s
 
 /** exit.md, Testing: bark's states map to phases, the inferred rules, and what the list and Settings show. */
 class ExitStagesTest {
@@ -345,16 +344,6 @@ class ExitStagesTest {
             ExitList.shared(listOf(a, paths("b", "root", "l2a", "l1b", "leafB", state = "Claimed"))))
     }
 
-    @Test fun longSharedPathsStayInsideThePicture() {
-        assertEquals("a round's four hops keep today's spacing", 30f, ExitList.rows(250f, 3).step, 0f)
-        // Four tree hops and two checkpoint or arkoor hops: 8 transactions, the deepest at depth 7; and longer still.
-        for (deepest in 1..12) {
-            val rows = ExitList.rows(250f, deepest)
-            assertTrue("depth $deepest: the coin's amount is cut off", rows.y(deepest) - ExitList.labelRoom >= 0f)
-            assertTrue(rows.step <= 30f)
-        }
-    }
-
     @Test fun exitsFromTwoRoundsAreDrawnAsTwoGroups() {
         fun paths(id: String, vararg txs: String) = exit("Processing", ExitDetails(), packages = txs.map { ExitPackage(it) }, id = id)
         val a = paths("a", "r1", "a1"); val b = paths("b", "r1", "b1"); val c = paths("c", "r2", "c1"); val d = paths("d", "r2", "d1")
@@ -373,24 +362,6 @@ class ExitStagesTest {
         val claim = ExitContext(0, null, null, claimFee = 262, claimIds = listOf("a", "b"))
         assertEquals(55_238L, ExitRules.received(31_000, claim.claimShare("a")!!) + ExitRules.received(24_500, claim.claimShare("b")!!))
         assertNull(ExitContext(0, null, null).claimShare("a"))
-    }
-
-    @Test fun theListsRailAndSharedTreeFollowEachExit() {
-        assertEquals(listOf(s.now, s.todo, s.todo, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.lift)))
-        assertEquals(listOf(s.done, s.now, s.todo, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.bump)))
-        assertEquals(listOf(s.done, s.failed, s.todo, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.mempool, ExitStage.Attention.needsFunds)))
-        assertEquals(listOf(s.done, s.done, s.now, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.wait)))
-        assertEquals(listOf(s.done, s.done, s.done, s.now, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.claimable)))
-        assertEquals(List(5) { s.done }, ExitList.rail(ExitStage(ExitStage.Phase.claimed)))
-        assertEquals(listOf(s.done, s.todo, s.todo, s.todo, s.todo), ExitList.rail(ExitStage(ExitStage.Phase.canceled)))
-        fun paths(id: String, vararg txs: String) = exit("Processing", processing(100, tx(txs[0], "confirmed", block = 99)), packages = txs.map { ExitPackage(it) }, id = id)
-        val group = ExitList.shared(listOf(paths("a", "root", "x", "leafA"), paths("b", "root", "x", "leafB"))).single()
-        val placed = ExitList.layout(group).associateBy { it.txid }
-        assertEquals(setOf("root", "x", "leafA", "leafB"), placed.keys)
-        assertEquals(null, placed.getValue("root").parent); assertEquals("x", placed.getValue("leafB").parent)
-        assertEquals(0, placed.getValue("leafA").coin); assertEquals(1, placed.getValue("leafB").coin); assertNull(placed.getValue("x").coin)
-        assertEquals("shared nodes sit between the coins they lead to", 0f, placed.getValue("x").x, 0.001f)
-        assertEquals(ExitList.TxState.mined, placed.getValue("root").state); assertEquals(ExitList.TxState.waiting, placed.getValue("x").state)
     }
 
     @Test fun anotherWalletTakesOnlyAnOnchainAddressForThisNetwork() {

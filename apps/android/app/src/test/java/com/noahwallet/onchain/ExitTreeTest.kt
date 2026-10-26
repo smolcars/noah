@@ -109,6 +109,15 @@ class ExitTreeTest {
             ExitDetails.Transaction(tx, ExitDetails.Status(kind, block = if (kind == "confirmed") ExitDetails.Block(99) else null)) }),
             emptyList(), emptyList(), txs.map { ExitPackage(it) })
 
+    @Test fun onlyExitsThatShareTransactionsShareAGutter() {
+        val a = exit("a", "Processing", listOf("root", "x", "leafA")); val b = exit("b", "Processing", listOf("root", "x", "leafB"))
+        val c = exit("c", "Processing", listOf("r2", "y", "leafC")); val d = exit("d", "Claimed", listOf("root", "z", "leafD"))
+        val shared = ExitList.shared(listOf(a, b, c, d))
+        assertEquals(listOf(listOf(a, b), listOf(c)), ExitList.blocks(listOf(a, c, b), shared))
+        assertEquals("a finished exit has its own row", listOf(listOf(d)), ExitList.blocks(listOf(d), shared))
+        assertEquals("a group split across sections: each part alone", listOf(listOf(a)), ExitList.blocks(listOf(a), shared))
+    }
+
     @Test fun aSharedGutterDrawsEachTransactionOnce() {
         val paths = listOf(listOf("root" to st.mined, "x" to st.waiting, "leafA" to st.unsent), listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))
         val layout = ExitGutter.shared(paths, listOf(30f, 94f))

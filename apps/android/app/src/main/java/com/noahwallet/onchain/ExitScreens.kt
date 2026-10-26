@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noahwallet.R
@@ -167,8 +166,9 @@ private fun rememberSampleCost(app: AppModel, vtxos: List<VtxoModel>): ExitCosts
 }
 
 /**
- * The warning (prototype `SCR.warn`), Settings → Emergency exit: one line, exits under way, four facts with the real
- * exit delta and per-VTXO fee, and Choose VTXOs. Reading it and estimating never broadcasts anything.
+ * The warning (prototype `SCR.warn`), Settings → Emergency exit: one line; with no exits, the explainer tree (it grows once
+ * as the page opens); with one, its row; with more, an Exits row and their counts; then four facts with the real exit
+ * delta and per-VTXO fee, and Choose VTXOs. Reading it and estimating never broadcasts anything.
  */
 @Composable
 internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
@@ -191,13 +191,18 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
     }, leading = {
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
-        val live = exits.filter { it.state !in ExitTimeline.terminal }
-        if (exits.isNotEmpty()) Column(Modifier.padding(top = 14.dp)) {
-            live.take(3).forEach { exit -> ExitRow(exit, tip, money, divider = true, needsFunds = exit.id in needsFunds) { open(exit.id) } }
-            SettingsRow(tr("All exits"), SettingsIcons.exit, value = if (live.isEmpty()) null else tr("{n} in progress", live.size.toString()),
-                divider = false, modifier = Modifier.testTag("exit-all"), onClick = all)
+        val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
+        when (exits.size) {
+            0 -> ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp).testTag("exit-warn-picture"))
+            1 -> Column(Modifier.padding(top = 10.dp)) {
+                Text(if (stages.getValue(exits[0].id).live) tr("In progress") else tr("Finished"), Modifier.padding(top = 8.dp, bottom = 2.dp).semantics { heading() },
+                    style = HomeType.header, color = palette.muted)
+                ExitListRow(exits[0], stages.getValue(exits[0].id), tip, money, divider = false) { open(exits[0].id) }
+            }
+            else -> Column(Modifier.padding(top = 14.dp)) {
+                SettingsRow(tr("Exits"), SettingsIcons.exit, sub = exitCounts(stages.values), divider = false, modifier = Modifier.testTag("exit-all"), onClick = all)
+            }
         }
-        ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(236.dp).testTag("exit-warn-picture"))
     }) {
         if (suspended) FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
         Column(Modifier.padding(top = 20.dp)) {
@@ -229,34 +234,13 @@ private fun Fact(icon: Int, title: String, line: String, divider: Boolean = true
     }
 }
 
-/** One exit in a list: the coin, its amount and its phase in a line. The full row arrives with the exits list. */
+/** Your coin as a list avatar (prototype `.av.coin`): a soft circle in an orange ring. */
 @Composable
-internal fun ExitRow(exit: ExitModel, tip: Long, money: (Long) -> String, divider: Boolean, needsFunds: Boolean = false, onClick: () -> Unit) {
-    val palette = LocalPalette.current
-    val stage = ExitStages.of(exit, tip, needsFunds)
-    Row(Modifier.fillMaxWidth().heightIn(min = 62.dp).drawBehind {
-        if (divider) drawRect(palette.hairline, Offset(54.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 54.dp.toPx(), 1.dp.toPx()))
-    }.clickable(role = Role.Button, onClick = onClick).semantics(mergeDescendants = true) {}.testTag("exit-row-${exit.id.take(12)}"),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        ExitCoin(40.dp, pending = stage.live, badge = needsFunds)
-        Column(Modifier.weight(1f)) {
-            Text(money(exit.amount), style = HomeType.amount, color = palette.foreground, maxLines = 1)
-            Text(exitStatusWord(stage), style = HomeType.small, color = if (needsFunds) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
-
-/** Your coin as a list avatar (prototype `.av.coin`): a soft circle in an orange ring; [pending] adds the turning dashes. */
-@Composable
-internal fun ExitCoin(size: androidx.compose.ui.unit.Dp, pending: Boolean = false, badge: Boolean = false, done: Boolean = false) {
+internal fun ExitCoin(size: androidx.compose.ui.unit.Dp) {
     val palette = LocalPalette.current
     Box {
-        SettingsAvatar(size, pending = pending, badge = badge)
+        SettingsAvatar(size)
         Box(Modifier.size(size).drawBehind { drawCircle(palette.orange, this.size.minDimension / 2 - 1.25.dp.toPx(), style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx())) })
-        if (done) Box(Modifier.align(Alignment.BottomEnd).offset(3.dp, 3.dp).size(19.dp).background(palette.background, CircleShape).padding(2.dp)
-            .background(palette.foreground, CircleShape), contentAlignment = Alignment.Center) {
-            Icon(painterResource(SettingsIcons.check), null, Modifier.size(11.dp), tint = palette.background)
-        }
     }
 }
 

@@ -331,58 +331,19 @@ internal object ExitList {
             .map { group -> Shared(group, group.flatMap { exit -> exit.packages.map { it.txid } }.distinct().size, group.sumOf { it.packages.size }) }
     }
 
-    /** The list's five-step rail (prototype `.mini`): started, sending, waiting, ready, claimed. */
-    enum class Step { done, now, failed, todo }
-    fun rail(stage: ExitStage): List<Step> {
-        if (stage.phase in setOf(ExitStage.Phase.canceled, ExitStage.Phase.spent, ExitStage.Phase.swept)) return listOf(Step.done) + List(4) { Step.todo }
-        val at = when (stage.phase) {
-            ExitStage.Phase.lift, ExitStage.Phase.publish -> 0
-            ExitStage.Phase.onchain, ExitStage.Phase.wait -> 2
-            ExitStage.Phase.claimable -> 3
-            ExitStage.Phase.claiming -> 4
-            ExitStage.Phase.claimed -> 5
-            else -> 1
-        }
-        return List(5) { i -> when { i < at -> Step.done; i > at -> Step.todo; stage.attention == ExitStage.Attention.needsFunds -> Step.failed; else -> Step.now } }
-    }
-
     /**
-     * The shared picture's rows in a canvas [height] dp tall: the round's block at [y0], each depth [step] above it, close
-     * enough that the deepest coin and its amount ([labelRoom] above its centre) stay inside.
+     * A list section's rows as the list draws them (option B): the exits of one shared group that are in this section, at the
+     * first one's place, share a gutter; every other exit is a row of its own.
      */
-    data class Rows(val y0: Float, val step: Float) { fun y(depth: Int) = y0 - 26 - depth * step }
-    const val labelRoom = 34f
-    fun rows(height: Float, deepest: Int): Rows {
-        val y0 = minOf(height - 44, (height + 190) / 2)
-        return Rows(y0, if (deepest <= 0) 30f else minOf(30f, (y0 - 26 - labelRoom) / deepest))
-    }
-
-    /** The shared picture's transactions: each drawn once, at its depth from the round, between the exits' coins it leads to. */
-    enum class TxState { mined, sent, waiting }
-    data class Placed(val txid: String, val parent: String?, val depth: Int, val x: Float, val state: TxState, val coin: Int?)
-    fun layout(group: Shared): List<Placed> {
-        val parents = linkedMapOf<String, String?>(); val depths = mutableMapOf<String, Int>(); val coins = mutableMapOf<String, Int>()
-        val states = mutableMapOf<String, TxState>()
-        group.exits.forEachIndexed { e, exit ->
-            val txs = exit.details.transactions
-            exit.packages.forEachIndexed { i, p ->
-                parents.putIfAbsent(p.txid, exit.packages.getOrNull(i - 1)?.txid); depths[p.txid] = i
-                val kind = txs?.find { it.txid == p.txid }?.status?.kind
-                states[p.txid] = when {
-                    txs == null && exit.state != "Start" -> TxState.mined
-                    kind == "confirmed" -> TxState.mined
-                    kind == "awaiting-confirmation" -> TxState.sent
-                    else -> states[p.txid] ?: TxState.waiting
-                }
-            }
-            exit.packages.lastOrNull()?.let { coins[it.txid] = e }
+    fun blocks(section: List<ExitModel>, shared: List<Shared>): List<List<ExitModel>> {
+        val ids = section.map { it.id }.toSet()
+        val groups = shared.map { group -> group.exits.filter { it.id in ids } }.filter { it.size > 1 }
+        val done = mutableSetOf<String>()
+        return section.mapNotNull { exit ->
+            if (exit.id in done) return@mapNotNull null
+            val block = groups.firstOrNull { group -> group.any { it.id == exit.id } }?.let { group -> section.filter { e -> group.any { it.id == e.id } } } ?: listOf(exit)
+            done += block.map { it.id }; block
         }
-        val x = mutableMapOf<String, Float>()
-        coins.entries.forEachIndexed { i, (txid, _) -> x[txid] = if (coins.size == 1) 0f else i / (coins.size - 1f) - .5f }
-        for (txid in parents.keys.sortedByDescending { depths.getValue(it) }) if (txid !in x) {
-            x[txid] = parents.filterValues { it == txid }.keys.mapNotNull { x[it] }.average().toFloat().takeIf { !it.isNaN() } ?: 0f
-        }
-        return parents.map { (txid, parent) -> Placed(txid, parent, depths.getValue(txid), x.getValue(txid), states.getValue(txid), coins[txid]) }
     }
 }
 
