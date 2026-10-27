@@ -9,6 +9,8 @@ final class SettingsSummary {
         var overview: () async throws -> OnchainOverview
         var notificationsOn: () async -> Bool
         var storage: SettingsStorage
+        /// Where the exit pages' reads and submissions meet (`OnchainModel`).
+        var shared: SharedOverview? = nil
 
         static var live: Self {
             Self(overview: { try await WalletSession.shared.onchainOverview() },
@@ -16,17 +18,27 @@ final class SettingsSummary {
                      let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
                      return [.authorized, .provisional, .ephemeral].contains(status)
                  },
-                 storage: .shared)
+                 storage: .shared, shared: .shared)
         }
     }
 
-    private(set) var overview: OnchainOverview?
+    /// What the rows show: Settings' own read, or, once you cancel, claim or start something after it began, the
+    /// newest read a page made since, so Back to Settings shows your exits as you left them.
+    var overview: OnchainOverview? {
+        // Read first, so a page's read updates the rows.
+        let page = dependencies.shared?.overview
+        guard let page, page.walletID == own?.walletID, ownEpoch != dependencies.shared?.epoch else { return own }
+        return page
+    }
+    private var own: OnchainOverview?
     private(set) var notificationsOn: Bool?
     private(set) var backup = PersistedBackupState()
     private(set) var displayName = ""
     private(set) var debug = false
     @ObservationIgnored private let dependencies: Dependencies
     @ObservationIgnored private var loadedAt = Date.distantPast
+    /// The submissions counted (`SharedOverview.epoch`) when Settings' own read began.
+    @ObservationIgnored private var ownEpoch: Int?
     @ObservationIgnored private var loading = false
 
     init(dependencies: Dependencies = .live) {
@@ -34,15 +46,16 @@ final class SettingsSummary {
         reloadLocal()
     }
 
-    /// Wallet reads at most every 10 s unless forced (after a renew or a board).
+    /// Wallet reads at most every 10 s unless forced (after a renew or a board) or a page has submitted something since.
     func refresh(suspended: Bool, force: Bool = false) async {
         reloadLocal()
-        guard !loading, force || Date().timeIntervalSince(loadedAt) > 10 else { return }
+        let epoch = dependencies.shared?.epoch
+        guard !loading, force || epoch != ownEpoch || Date().timeIntervalSince(loadedAt) > 10 else { return }
         loading = true
         defer { loading = false }
         notificationsOn = await dependencies.notificationsOn()
-        if suspended { overview = nil }
-        else if let latest = try? await dependencies.overview() { overview = latest }
+        if suspended { own = nil }
+        else if let latest = try? await dependencies.overview() { own = latest; ownEpoch = epoch }
         loadedAt = Date()
     }
 

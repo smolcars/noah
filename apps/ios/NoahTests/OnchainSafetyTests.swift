@@ -262,6 +262,26 @@ struct OnchainModelTests {
         #expect(shared.overview == nil)
         #expect(!exit.busy)
     }
+
+    /// Back to Settings after you cancel an exit: its Emergency exit row shows the exit page's read from after the
+    /// cancel at once, and Settings reads again however recently it last did.
+    @Test func settingsShowsTheExitsAsYouLeftThemAfterASubmission() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "settings-shared-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let shared = SharedOverview(), reads = Reads()
+        let summary = SettingsSummary(dependencies: .init(overview: { try await reads.read(walletID: "wallet") }, notificationsOn: { true },
+                                                          storage: try SettingsStorage(rootPath: root.path), shared: shared))
+        await summary.refresh(suspended: false)
+        #expect(summary.overview?.tip == 1)
+        let exit = model(shared, reads)
+        await exit.review(.cancel, ids: ["a"])
+        #expect(await exit.confirm())
+        #expect(summary.overview?.tip == 2)
+        // The wallet moves on without a submission: only a read of Settings' own sees it.
+        await reads.submit(showing: nil)
+        await summary.refresh(suspended: false)
+        #expect(summary.overview?.tip == 3)
+    }
     @Test func unavailableAndStaleRefreshNeverReadOrMutate() async {
         let calls = Calls()
         let model = OnchainModel(dependencies: dependencies(calls))
