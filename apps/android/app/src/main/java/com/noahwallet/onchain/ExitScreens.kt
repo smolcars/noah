@@ -210,18 +210,19 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
                                 transactions: Int? = 4, revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) },
                                 status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
+    // The tree waits for your VTXOs, a second at most, so it grows once with your path's transactions rather than a round's
+    // usual four first. Back on the page, it's there at once, grown, with the count it had. Kept out of the frame's panes,
+    // which a turned phone lays out elsewhere, so the count outlives the change.
+    val count = rememberSaveable { mutableStateOf<Int?>(null) }
+    val grows = remember { count.value == null }
+    LaunchedEffect(transactions) { if (transactions != null) count.value = transactions }
+    LaunchedEffect(Unit) { delay(1_000); if (count.value == null) count.value = 4 }
     ExitFrame(tr("Emergency exit"), back, foot = {
         FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), wrap = true, enabled = !suspended, onClick = choose)
     }, leading = {
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
-        // The tree waits for your VTXOs, a second at most, so it grows once with your path's transactions rather than a
-        // round's usual four first. Back on the page, it's there at once, grown, with the count it had.
-        val count = rememberSaveable { mutableStateOf<Int?>(null) }
-        val grows = remember { count.value == null }
-        LaunchedEffect(transactions) { if (transactions != null) count.value = transactions }
-        LaunchedEffect(Unit) { delay(1_000); if (count.value == null) count.value = 4 }
         val area = Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp)
         val path = transactions ?: count.value
         if (path == null) Spacer(area)
