@@ -193,16 +193,22 @@ internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
     val revealed = rememberSaveable { mutableStateOf(false) }
     val overview = model.overview ?: SharedOverview.shared.overview.takeIf { revealed.value }
     val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed, app.session.daemonRun) }.orEmpty() }
+    // The tree's transactions: your biggest VTXO's path (the one the fee fact prices), else a round's usual four.
+    val transactions = overview?.let { read -> read.vtxos.filter { it.eligible }.maxByOrNull { it.amount }?.exitDepth?.toInt()?.takeIf { it > 0 } ?: 4 }
     ExitWarningContent(overview?.exits.orEmpty(), overview?.tip ?: 0, rememberExitDelta(app), rememberSampleCost(app, overview?.vtxos.orEmpty())?.broadcast,
         app.isWalletSuspended, { money(app, it) }, nav.back, choose = { nav.open(ExitChoosePage) }, open = { nav.open(ExitPage(it)) },
-        all = { nav.open(ExitsPage) }, needsFunds = needsFunds, revealed = revealed) { OnchainStatus(app, model) }
+        all = { nav.open(ExitsPage) }, needsFunds = needsFunds, transactions = transactions, revealed = revealed) { OnchainStatus(app, model) }
 }
 
-/** [revealed]: the exits card has shown on this page; kept with the page, so going back to it never plays its entrance again. */
+/**
+ * [transactions]: the tree's, null until the wallet is read. [revealed]: the exits card has shown on this page; kept with the
+ * page, so going back to it never plays its entrance again.
+ */
 @Composable
 internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?, sample: Long?, suspended: Boolean, money: (Long) -> String,
                                 back: (() -> Unit)?, choose: () -> Unit, open: (String) -> Unit, all: () -> Unit, needsFunds: Set<String> = emptySet(),
-                                revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }, status: @Composable () -> Unit = {}) {
+                                transactions: Int? = 4, revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) },
+                                status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     ExitFrame(tr("Emergency exit"), back, foot = {
         FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), wrap = true, enabled = !suspended, onClick = choose)
@@ -210,7 +216,16 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
-        ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp).testTag("exit-warn-picture"))
+        // The tree waits for your VTXOs, a second at most, so it grows once with your path's transactions rather than a
+        // round's usual four first. Back on the page, it's there at once, grown, with the count it had.
+        val count = rememberSaveable { mutableStateOf<Int?>(null) }
+        val grows = remember { count.value == null }
+        LaunchedEffect(transactions) { if (transactions != null) count.value = transactions }
+        LaunchedEffect(Unit) { delay(1_000); if (count.value == null) count.value = 4 }
+        val area = Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp)
+        val path = transactions ?: count.value
+        if (path == null) Spacer(area)
+        else ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), area.testTag("exit-warn-picture"), enter = grows)
         // The exits already running, or ended: one opens directly, several open the list. Exits known when the page opens
         // show at once; ones read later fade in under the picture and the facts ease down (Reduce Motion: a fade only), once
         // per page: back on it, they show at once.

@@ -66,11 +66,12 @@ import kotlinx.coroutines.flow.first
  * block, hollow circles for the rest, your coin at the top with the timelock dial, and the claim's stem to the
  * destination. It moves only when [scene] changes, with the house springs; under Reduce Motion it snaps. What waits for the
  * next block breathes for as long as the picture is on screen and resumed, in small overlays, so the tree's canvas stays
- * still between states. [balance] is the on-chain wallet's; [received] what a claim to this phone brought.
+ * still between states. [balance] is the on-chain wallet's; [received] what a claim to this phone brought. [enter] false
+ * draws it as it stands, without its entrance (Back to a page it already grew on).
  */
 @Composable
 internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifier = Modifier, money: (Long) -> String = { it.toString() },
-                         balance: Long? = null, received: Long? = null) {
+                         balance: Long? = null, received: Long? = null, enter: Boolean = true) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val density = LocalDensity.current
@@ -92,7 +93,7 @@ internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifi
         val capacity = remember(w, h, scale, wide, scene.locked) { TreeGeometry(w, h, 1, scale, wide).capacity(if (scene.locked) 1f else 0f) }
         val drawn = scene.fold(if (scene.explain) min(capacity, 8) else capacity)
         // Each move plays to its end; a state that arrives meanwhile moves next, from where this one ends, so nothing jumps.
-        var move by remember { mutableStateOf(TreeMotion(if (reduceMotion) drawn else null, drawn)) }
+        var move by remember { mutableStateOf(TreeMotion(if (reduceMotion || !enter) drawn else null, drawn)) }
         val clock = remember { Animatable(0f) }
         val latest by rememberUpdatedState(drawn)
         LaunchedEffect(reduceMotion) {
