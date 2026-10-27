@@ -9,15 +9,18 @@ use tower_governor::{
 };
 
 const FLY_CLIENT_IP_HEADER: &str = "fly-client-ip";
+const RAILWAY_CLIENT_IP_HEADER: &str = "x-real-ip";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct FlyClientIpKeyExtractor;
+pub struct ProxyClientIpKeyExtractor {
+    header: &'static str,
+}
 
-impl KeyExtractor for FlyClientIpKeyExtractor {
+impl KeyExtractor for ProxyClientIpKeyExtractor {
     type Key = IpAddr;
 
     fn extract<T>(&self, request: &Request<T>) -> Result<Self::Key, GovernorError> {
-        if let Some(value) = request.headers().get(FLY_CLIENT_IP_HEADER) {
+        if let Some(value) = request.headers().get(self.header) {
             return value
                 .to_str()
                 .ok()
@@ -41,8 +44,8 @@ type RateLimiter = GovernorLayer<
     Body,
 >;
 
-type FlyRateLimiter = GovernorLayer<
-    FlyClientIpKeyExtractor,
+type ProxyRateLimiter = GovernorLayer<
+    ProxyClientIpKeyExtractor,
     governor::middleware::NoOpMiddleware<governor::clock::QuantaInstant>,
     Body,
 >;
@@ -60,13 +63,18 @@ pub fn create_public_rate_limiter() -> RateLimiter {
     GovernorLayer::new(config)
 }
 
-/// Creates a strict public limiter using the client IP supplied by Fly's trusted proxy.
+/// Creates a strict public limiter using the hosting proxy's client-IP header.
 /// Local requests fall back to their peer address so development remains usable.
-pub fn create_lnurl_rate_limiter() -> FlyRateLimiter {
+pub fn create_lnurl_rate_limiter() -> ProxyRateLimiter {
+    let header = if std::env::var_os("RAILWAY_SERVICE_ID").is_some() {
+        RAILWAY_CLIENT_IP_HEADER
+    } else {
+        FLY_CLIENT_IP_HEADER
+    };
     let config = GovernorConfigBuilder::default()
         .per_second(5)
         .burst_size(60)
-        .key_extractor(FlyClientIpKeyExtractor)
+        .key_extractor(ProxyClientIpKeyExtractor { header })
         .finish()
         .expect("Failed to create LNURL rate limiter config");
 
@@ -111,7 +119,7 @@ mod tests {
     };
     use tower_governor::{errors::GovernorError, key_extractor::KeyExtractor};
 
-    use super::FlyClientIpKeyExtractor;
+    use super::{FLY_CLIENT_IP_HEADER, ProxyClientIpKeyExtractor, RAILWAY_CLIENT_IP_HEADER};
 
     #[test]
     fn trusts_fly_client_ip_instead_of_forwarded_headers() {
@@ -127,7 +135,11 @@ mod tests {
             .insert(ConnectInfo(SocketAddr::from((Ipv4Addr::LOCALHOST, 3000))));
 
         assert_eq!(
-            FlyClientIpKeyExtractor.extract(&request).unwrap(),
+            ProxyClientIpKeyExtractor {
+                header: FLY_CLIENT_IP_HEADER
+            }
+            .extract(&request)
+            .unwrap(),
             IpAddr::V4(Ipv4Addr::new(203, 0, 113, 10))
         );
     }
@@ -140,7 +152,11 @@ mod tests {
             .insert(ConnectInfo(SocketAddr::from((Ipv4Addr::LOCALHOST, 3000))));
 
         assert_eq!(
-            FlyClientIpKeyExtractor.extract(&request).unwrap(),
+            ProxyClientIpKeyExtractor {
+                header: FLY_CLIENT_IP_HEADER
+            }
+            .extract(&request)
+            .unwrap(),
             IpAddr::V4(Ipv4Addr::LOCALHOST)
         );
     }
@@ -156,7 +172,78 @@ mod tests {
             .insert(ConnectInfo(SocketAddr::from((Ipv4Addr::LOCALHOST, 3000))));
 
         assert!(matches!(
-            FlyClientIpKeyExtractor.extract(&request),
+            ProxyClientIpKeyExtractor {
+                header: FLY_CLIENT_IP_HEADER
+            }
+            .extract(&request),
+            Err(GovernorError::UnableToExtractKey)
+        ));
+    }
+
+    #[test]
+    fn trusts_railway_real_ip_instead_of_fly_or_forwarded_headers() {
+        let mut request = Request::new(Body::empty());
+        request
+            .headers_mut()
+            .insert("x-real-ip", HeaderValue::from_static("2001:db8::42"));
+        request
+            .headers_mut()
+            .insert("fly-client-ip", HeaderValue::from_static("203.0.113.10"));
+        request
+            .headers_mut()
+            .insert("x-forwarded-for", HeaderValue::from_static("198.51.100.20"));
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from((Ipv4Addr::LOCALHOST, 3000))));
+
+        assert_eq!(
+            ProxyClientIpKeyExtractor {
+                header: RAILWAY_CLIENT_IP_HEADER
+            }
+            .extract(&request)
+            .unwrap(),
+            "2001:db8::42".parse::<IpAddr>().unwrap()
+        );
+    }
+
+    #[test]
+    fn railway_does_not_trust_a_fly_header_when_real_ip_is_missing() {
+        let mut request = Request::new(Body::empty());
+        request
+            .headers_mut()
+            .insert("fly-client-ip", HeaderValue::from_static("203.0.113.10"));
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from((Ipv4Addr::LOCALHOST, 3000))));
+
+        assert_eq!(
+            ProxyClientIpKeyExtractor {
+                header: RAILWAY_CLIENT_IP_HEADER
+            }
+            .extract(&request)
+            .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST)
+        );
+    }
+
+    #[test]
+    fn rejects_a_malformed_railway_real_ip() {
+        let mut request = Request::new(Body::empty());
+        request
+            .headers_mut()
+            .insert("x-real-ip", HeaderValue::from_static("not-an-ip"));
+        request
+            .headers_mut()
+            .insert("fly-client-ip", HeaderValue::from_static("203.0.113.10"));
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from((Ipv4Addr::LOCALHOST, 3000))));
+
+        assert!(matches!(
+            ProxyClientIpKeyExtractor {
+                header: RAILWAY_CLIENT_IP_HEADER
+            }
+            .extract(&request),
             Err(GovernorError::UnableToExtractKey)
         ));
     }

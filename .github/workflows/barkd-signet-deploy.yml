@@ -9,6 +9,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy signet Barkd
+    if: ${{ vars.SIGNET_DEPLOY_TARGET != 'railway' }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     concurrency: fly-barkd-signet-deploy
     steps:

@@ -28,5 +28,8 @@
     "postinstall": "bun scripts/download_ark_binaries.js",
     "prepare": "husky",
     "check": "bun client check"
+  },
+  "devDependencies": {
+    "railway": "3.16.0"
   }
 }
