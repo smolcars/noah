@@ -112,8 +112,8 @@ Versions are pinned in `gradle/libs.versions.toml`, checked against
 - kotlinx.serialization 1.11.0, coroutines 1.11.0, OkHttp 5.5.0.
 - Tencent MMKV 2.4.3, preserving the RN MMKV 2.4.x core line.
 - Firebase BOM 35.0.2 / Messaging, google-services plugin 4.5.0.
-- UnifiedPush connector **3.1.2**, deliberately matching RN rather than upgrading
-  its persisted registration database in this scaffold.
+- UnifiedPush connector **3.3.5**. RN stays on 3.1.2; both use registration
+  database version 1, so RN's registrations carry over unchanged.
 - JUnit 4.13.2; minimum Android API 24, compile/target API 37 (Android 17).
 
 [AGP 9.4 compatibility](https://developer.android.com/build/releases/agp-9-4-0-release-notes)
@@ -443,8 +443,9 @@ The wallet phase requests `POST_NOTIFICATIONS` on Android 13+. Registration requ
 RN `wallet-storage.isInitialized`, successful server registration and permission.
 GMS devices exchange their current FCM token with Expo using the preserved installation
 UUID, application ID, Firebase app and EAS project. `onNewToken` queues registration
-with the latest token. No-GMS devices reuse connector **3.1.2**, its database/legacy
-preferences, `noah-<variant>` and `noah_unified_push` endpoints. Endpoint changes
+with the latest token. No-GMS devices reuse RN's connector database/legacy
+preferences (connector **3.3.5** migrates legacy preferences on a background thread),
+`noah-<variant>` and `noah_unified_push` endpoints. Endpoint changes
 queue authenticated server registration. Saved distributors take precedence, then
 ntfy, then the first available distributor. No distributor means waiting for one;
 there is no Firebase fallback on a non-GMS device. Settings UI is still pending.

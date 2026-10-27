@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import com.noahwallet.BuildConfig
 import org.unifiedpush.android.connector.UnifiedPush
 
-/** Connector 3.1.2 itself reads/migrates its RN SQLite and legacy preferences in place. */
+/** The connector itself reads RN's 3.1.2 SQLite (same database version) and migrates legacy preferences in place, in the background since 3.3. */
 class UnifiedPushRegistration(context: Context, variant: String = BuildConfig.APP_VARIANT) {
     private val context = context.applicationContext
     val instance = "noah-$variant"

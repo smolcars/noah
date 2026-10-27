@@ -51,14 +51,21 @@ class PushCompatibilityTest {
             .putString("endpoint_noah-regtest", "https://example.test/regtest").commit()
         assertEquals(distributor, UnifiedPush.getSavedDistributor(context))
         assertEquals(distributor, UnifiedPush.getAckDistributor(context))
-        SQLiteDatabase.openDatabase(database.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-            db.rawQuery("SELECT instance, connectorToken FROM tokens ORDER BY instance", null).use { cursor ->
-                val registrations = mutableMapOf<String, String>()
-                while (cursor.moveToNext()) registrations[cursor.getString(0)] = cursor.getString(1)
-                assertEquals(mapOf("noah-mainnet" to "fixture-mainnet-token", "noah-signet" to "fixture-signet-token",
-                    "noah-regtest" to "fixture-regtest-token"), registrations)
+        // Since connector 3.3, the legacy registration migrates on a background thread.
+        val registrations = mutableMapOf<String, String>()
+        val deadline = System.currentTimeMillis() + 5_000
+        while (true) {
+            registrations.clear()
+            SQLiteDatabase.openDatabase(database.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                db.rawQuery("SELECT instance, connectorToken FROM tokens ORDER BY instance", null).use { cursor ->
+                    while (cursor.moveToNext()) registrations[cursor.getString(0)] = cursor.getString(1)
+                }
             }
+            if ("noah-regtest" in registrations || System.currentTimeMillis() > deadline) break
+            Thread.sleep(50)
         }
+        assertEquals(mapOf("noah-mainnet" to "fixture-mainnet-token", "noah-signet" to "fixture-signet-token",
+            "noah-regtest" to "fixture-regtest-token"), registrations)
         assertEquals("https://example.test/regtest", UnifiedPushRegistration.endpoint(prefs, "noah-regtest"))
         assertEquals("https://example.test/legacy", UnifiedPushRegistration.endpoint(prefs, "noah-mainnet"))
         val registration = UnifiedPushRegistration(context, "regtest")
