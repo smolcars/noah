@@ -38,11 +38,18 @@ class ExitGalleryTest {
         compose.setContent { NoahTheme { Localized(language) { scene?.let { (name, content) -> key(name) {
             Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost(content) }
         } } } } }
-        fun show(name: String, wait: Long = 2_500, content: @Composable () -> Unit) {
+        fun show(name: String, wait: Long = 2_500, realtime: Boolean = false, content: @Composable () -> Unit) {
             if (only != null && name !in only) return
             compose.runOnUiThread { scene = name to content }
-            // Effects and springs run on the test clock: step it like frames, giving real work time between steps.
-            repeat((wait / 100).toInt()) { compose.mainClock.advanceTimeBy(100); Thread.sleep(40) }
+            // Effects and springs run on the test clock: step it like frames, giving real work time between steps. A
+            // realtime scene keeps the test clock in step with the wall clock, so a screen recording shows its motion at real speed.
+            if (realtime) {
+                val start = android.os.SystemClock.uptimeMillis(); val from = compose.mainClock.currentTime
+                while (compose.mainClock.currentTime - from < wait) {
+                    val behind = android.os.SystemClock.uptimeMillis() - start - (compose.mainClock.currentTime - from)
+                    if (behind >= 16) compose.mainClock.advanceTimeBy(behind) else Thread.sleep(4)
+                }
+            } else repeat((wait / 100).toInt()) { compose.mainClock.advanceTimeBy(100); Thread.sleep(40) }
             Thread.sleep(300)
             val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
             File(folder, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -60,6 +67,12 @@ class ExitGalleryTest {
         show("warn") { ExitWarningContent(emptyList(), f.tip, 144, 5_533, false, money, {}, {}, {}, {}) }
         show("warn-one") { ExitWarningContent(listOf(f.bump), f.tip, 144, 5_533, false, money, {}, {}, {}, {}) }
         show("warn-exits") { ExitWarningContent(f.list, f.tip + 2, 144, 5_533, false, money, {}, {}, {}, {}, needsFunds = setOf(f.list[5].id)) }
+        show("warn-past") { ExitWarningContent(f.list.filter { !f.stage(it, f.tip + 2).live }, f.tip + 2, 144, 5_533, false, money, {}, {}, {}, {}) }
+        // The exits read 1.5 s after the page opens, as a slow wallet's would: the picture stays and the card fades in under it.
+        show("warn-late", 4_000, realtime = true) {
+            val exits by produceState(emptyList<ExitModel>()) { kotlinx.coroutines.delay(1_500); value = f.list }
+            ExitWarningContent(exits, f.tip + 2, 144, 5_533, false, money, {}, {}, {}, {}, needsFunds = setOf(f.list[5].id))
+        }
         show("choose-all") { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, money, {}, estimate, {}, {}) }
         show("choose-pick") { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, money, {}, estimate, {}, {}, initial = listOf(f.vtxos[0].id, f.vtxos[8].id)) }
         // bark's All estimate left c02 and dust c13 out; it refused c03. Picked ones that can't exit leave the total.

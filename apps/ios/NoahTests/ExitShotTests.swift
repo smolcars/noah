@@ -9,7 +9,7 @@ import UIKit
 /// pages in Settings' stack with fake wallet data shaped like the prototype's (tip 921,345; the
 /// exit followed is ₿31,000, four transactions). Write a state to Documents/exit-shot; "stop" ends
 /// the session. Light and dark follow the simulator; a wide window (the Duo open) shows the panes.
-/// States: warn, warn-live, warn-many, choose, choose-all, choose-unfunded, review, review-unfunded,
+/// States: warn, warn-live, warn-many, warn-past (only ended exits), warn-late (the exits read 1.5 s after the page opens), choose, choose-all, choose-unfunded, review, review-unfunded,
 /// progress-<lift|publish|sending|mempool|confirm|mempool3|onchain|wait|claimable|claiming|claimed>,
 /// progress-<nofunds|feesrose|stuck|shared|stale|canceled|spent>, progress-shared3 (three exits sharing a path),
 /// progress-deep (nine transactions), progress-deep20 and progress-deep20-6 (twenty, folded to fit),
@@ -248,8 +248,12 @@ struct ExitShotTests {
         return (overview, exit)
     }
 
-    static func model(_ overview: OnchainOverview, detail: ExitModel? = nil, quote: Bool = true, reviewFails: Bool = false, live: Live? = nil) -> OnchainModel {
-        OnchainModel(dependencies: .init(ready: { true }, overview: { live?.overview ?? overview },
+    static func model(_ overview: OnchainOverview, detail: ExitModel? = nil, quote: Bool = true, reviewFails: Bool = false, live: Live? = nil,
+                      slow: Duration? = nil) -> OnchainModel {
+        OnchainModel(dependencies: .init(ready: { true }, overview: {
+                if let slow { try await Task.sleep(for: slow) }
+                return live?.overview ?? overview
+            },
             quote: { action, ids, _, destination in
                 if reviewFails { throw OnchainFailure.changed }
                 guard quote else { throw ExitEstimateUnavailable(review: .init(action: action, walletID: "fixture", ids: ids, amount: 0, confirmed: overview.confirmed)) }
@@ -279,9 +283,14 @@ struct ExitShotTests {
         let onchain: @MainActor () -> OnchainModel
         var live: Live?
         switch state {
-        case "warn", "warn-live", "warn-many":
-            let exits = state == "warn" ? [] : state == "warn-many" ? Self.listed() : [Self.followed("mempool")]
-            page = .exit; onchain = { Self.model(Self.overview(exits: exits)) }
+        case "warn", "warn-live", "warn-many", "warn-past", "warn-late":
+            let exits = switch state {
+            case "warn": [ExitModel]()
+            case "warn-many", "warn-late": Self.listed()
+            case "warn-past": Self.listed().filter { !ExitRules.live($0.state) }
+            default: [Self.followed("mempool")]
+            }
+            page = .exit; onchain = { Self.model(Self.overview(exits: exits), slow: state == "warn-late" ? .milliseconds(1_500) : nil) }
         case "choose", "choose-all", "choose-unfunded":
             page = .exitChoose; onchain = { Self.model(Self.overview(exits: [], confirmed: state == "choose-unfunded" ? 310 : 18_400)) }
         case "review", "review-unfunded", "review-unknown", "review-again":
