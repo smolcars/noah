@@ -4,7 +4,7 @@ These flows target **only** `com.noahwallet.regtest`, installed from `apps/andro
 
 ## Flows
 
-Every PR runs both groups in one CI job, on one emulator and regtest stack: smoke first, then funded. The tag decides the group. CI installs the R8-minified regtest release, debug-signed (`CI_DEBUG_SIGNING=true ./gradlew :app:assembleRegtestRelease`), so a missing keep rule fails the PR instead of crashing release builds. Each group creates **one wallet** and reuses it, so its flows run in order and can't be split across shards.
+Every PR that touches the native Android paths (see `.github/workflows/native-android.yml`) runs both groups in one CI job, on one emulator and regtest stack: smoke first, then funded. The tag decides the group. CI installs the R8-minified regtest release, debug-signed (`CI_DEBUG_SIGNING=true ./gradlew :app:assembleRegtestRelease`), so a missing keep rule fails the PR instead of crashing release builds. Each group creates **one wallet** and reuses it, so its flows run in order and can't be split across shards.
 
 | Flow | Tag | Covers | Time |
 | --- | --- | --- | --- |
