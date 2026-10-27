@@ -43,6 +43,17 @@ class PushNotificationsTest {
         assertNotNull(posted.contentIntent)
     }
 
+    @Test fun unifiedPushServiceDisplaysArkReceiptWithoutOpeningAWallet() {
+        val service = org.robolectric.Robolectric.buildService(NoahUnifiedPushService::class.java).create().get()
+        val content = """{"notification_type":"visible_notification","title":"Payment received","body":"You received 1234 sats via Ark."}"""
+        service.onMessage(org.unifiedpush.android.connector.data.PushMessage(content.toByteArray(), false), UnifiedPushRegistration(service).instance)
+        val posted = service.getSystemService(NotificationManager::class.java).activeNotifications.single().notification
+        assertEquals("Payment received", posted.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        assertEquals("You received 1234 sats via Ark.", posted.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals(com.noahwallet.notifications.NotificationChannels.DEFAULT, posted.channelId)
+        assertNotNull(posted.contentIntent)
+    }
+
     @Test fun silentPushDoesNotDisplayAReceipt() {
         val context = RuntimeEnvironment.getApplication()
         PushNotifications.remote(context, com.google.firebase.messaging.RemoteMessage.Builder("noah")

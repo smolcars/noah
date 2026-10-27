@@ -10,7 +10,11 @@ class NoahUnifiedPushService : PushService() {
     override fun onMessage(message: PushMessage, instance: String) {
         if (instance != UnifiedPushRegistration(this).instance) return
         try {
-            PushWork.enqueue(this, PushPayload.decode(message.content.toString(Charsets.UTF_8)), expedited = false)
+            val content = message.content.toString(Charsets.UTF_8)
+            // Distributors never display messages, so receipts are shown here, without opening a wallet.
+            val visible = PushPayload.visible(content)
+            if (visible != null) PushNotifications.visible(this, visible)
+            else PushWork.enqueue(this, PushPayload.decode(content), expedited = false)
         } catch (_: Exception) { AppLog(this, "push").w("Rejected invalid UnifiedPush message") }
     }
 

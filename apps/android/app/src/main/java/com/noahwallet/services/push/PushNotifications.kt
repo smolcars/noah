@@ -57,9 +57,17 @@ object PushNotifications {
     }
 
     /** Expo sends visible receipts as data title/message; FCM also supports a notification envelope. */
-    fun remote(context: Context, message: com.google.firebase.messaging.RemoteMessage) {
-        val title = message.notification?.title ?: message.data["title"]
-        val body = message.notification?.body ?: message.data["message"]
+    fun remote(context: Context, message: com.google.firebase.messaging.RemoteMessage) = show(context,
+        title = message.notification?.title ?: message.data["title"],
+        body = message.notification?.body ?: message.data["message"],
+        sound = (message.notification?.sound ?: message.data["sound"]) in listOf(null, "default"),
+        tag = message.messageId ?: java.util.UUID.randomUUID().toString())
+
+    /** UnifiedPush has no notification envelope; the server sends the same receipts as [VisiblePush]. */
+    fun visible(context: Context, push: VisiblePush) =
+        show(context, push.title, push.body, sound = true, tag = java.util.UUID.randomUUID().toString())
+
+    private fun show(context: Context, title: String?, body: String?, sound: Boolean, tag: String) {
         if (title.isNullOrEmpty() && body.isNullOrEmpty()) return
         ensureChannels(context)
         if (!permissionGranted(context)) return
@@ -68,9 +76,8 @@ object PushNotifications {
         val notification = NotificationCompat.Builder(context, NotificationChannels.DEFAULT)
             .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
             .setContentIntent(intent).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH)
-        if ((message.notification?.sound ?: message.data["sound"]) in listOf(null, "default"))
-            notification.setDefaults(android.app.Notification.DEFAULT_SOUND)
-        context.getSystemService(NotificationManager::class.java).notify(message.messageId ?: java.util.UUID.randomUUID().toString(), 1, notification.build())
+        if (sound) notification.setDefaults(android.app.Notification.DEFAULT_SOUND)
+        context.getSystemService(NotificationManager::class.java).notify(tag, 1, notification.build())
     }
 
     fun foreground(context: Context): ForegroundInfo {

@@ -2,7 +2,12 @@ package com.noahwallet.services.push
 
 import com.noahwallet.api.generated.models.*
 import com.noahwallet.services.server.ServerClient
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+
+/** A notification the server wrote for UnifiedPush, which (unlike FCM) carries no title or body of its own. */
+@Serializable
+data class VisiblePush(val title: String? = null, val body: String? = null)
 
 /** FCM's data.body is a JSON string; UnifiedPush sends the object directly. */
 object PushPayload {
@@ -23,4 +28,11 @@ object PushPayload {
     }
 
     fun encode(notification: NotificationData): String = ServerClient.json.encodeToString(notification)
+
+    /** The server's `visible_notification` UnifiedPush body (push.rs `unified_push_body`); null for anything else. */
+    fun visible(body: String): VisiblePush? {
+        val value = ServerClient.json.parseToJsonElement(body) as? JsonObject ?: return null
+        if ((value["notification_type"] as? JsonPrimitive)?.contentOrNull != "visible_notification") return null
+        return ServerClient.json.decodeFromJsonElement<VisiblePush>(value)
+    }
 }
