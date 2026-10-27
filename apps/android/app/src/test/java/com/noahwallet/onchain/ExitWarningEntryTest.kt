@@ -136,6 +136,19 @@ class ExitWarningEntryTest {
         assertTrue("grown at once", back.sameAs(drawn()))
     }
 
+    /** A fold bends or a Duo opens while you're on the page: the tree moves into the leading pane as it stands. */
+    @Config(qualifiers = "w900dp-h600dp")
+    @Test fun theTreeStaysGrownWhenTheLayoutChangesOnThePage() {
+        transactions = 6
+        pageInStack()
+        compose.mainClock.advanceTimeBy(4_000)
+        wide = true; compose.waitForIdle(); frames(2)
+        picture().assertExists()
+        val moved = drawn()
+        compose.mainClock.advanceTimeBy(4_000)
+        assertTrue("grown at once", moved.sameAs(drawn()))
+    }
+
     @Test fun aReadThatStallsGrowsTheUsualFourAfterASecond() {
         transactions = null
         page()

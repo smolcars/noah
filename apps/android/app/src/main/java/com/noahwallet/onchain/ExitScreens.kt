@@ -211,10 +211,11 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
                                 status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     // The tree waits for your VTXOs, a second at most, so it grows once with your path's transactions rather than a round's
-    // usual four first. Back on the page, it's there at once, grown, with the count it had. Kept out of the frame's panes,
-    // which a turned phone lays out elsewhere, so the count outlives the change.
+    // usual four first. It grows only once: back on the page, or when the panes change under it (a turned phone, a fold
+    // bending, a Duo opening), it's there at once, grown, with the count it had. Kept out of the frame's panes, which each
+    // layout composes in a different place, so both outlive the change.
     val count = rememberSaveable { mutableStateOf<Int?>(null) }
-    val grows = remember { count.value == null }
+    val grows = remember { mutableStateOf(count.value == null) }
     LaunchedEffect(transactions) { if (transactions != null) count.value = transactions }
     LaunchedEffect(Unit) { delay(1_000); if (count.value == null) count.value = 4 }
     ExitFrame(tr("Emergency exit"), back, foot = {
@@ -226,7 +227,11 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         val area = Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp)
         val path = transactions ?: count.value
         if (path == null) Spacer(area)
-        else ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), area.testTag("exit-warn-picture"), enter = grows)
+        else {
+            ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), area.testTag("exit-warn-picture"), enter = grows.value)
+            // The picture reads it once, as it first lays out, so this doesn't cut short the grow it started.
+            LaunchedEffect(Unit) { grows.value = false }
+        }
         // The exits already running, or ended: one opens directly, several open the list. Exits known when the page opens
         // show at once; ones read later fade in under the picture and the facts ease down (Reduce Motion: a fade only), once
         // per page: back on it, they show at once.
