@@ -10,6 +10,9 @@ struct UnilateralExitView: View {
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     /// The exits card is on the page. Exits known when it opens show at once; ones read later fade in.
     @State private var entry: Bool
+    /// The tree is on the page. It waits for your VTXOs, a second at most, so it grows once with your path's
+    /// transactions rather than a round's usual four first.
+    @State private var counted: Bool
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
@@ -19,6 +22,7 @@ struct UnilateralExitView: View {
     init(model: OnchainModel = OnchainModel()) {
         _model = State(initialValue: model)
         _entry = State(initialValue: !(model.freshest?.exits ?? []).isEmpty)
+        _counted = State(initialValue: model.freshest != nil)
     }
 
     private var language: String { locale.identifier }
@@ -35,12 +39,18 @@ struct UnilateralExitView: View {
                 .noahText(SettingsText.line).foregroundStyle(NoahTokens.Colors.muted)
                 .fixedSize(horizontal: false, vertical: true)
             // Where an exit goes: your branch of the round's tree, standing on Bitcoin. It grows once and stays.
-            ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
-                          accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
-                                                         count: Self.explained(sample), locale: language))
-                .frame(height: settings.wide ? max(240, paneHeight - 200) : window.size.height > 0 && window.size.height < 700 ? 236 : 268)
-                .padding(.top, 14)
-                .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
+            Group {
+                if counted {
+                    ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
+                                  accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
+                                                                 count: Self.explained(sample), locale: language))
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(height: settings.wide ? max(240, paneHeight - 200) : window.size.height > 0 && window.size.height < 700 ? 236 : 268)
+            .padding(.top, 14)
+            .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
             // The exits already running, or ended: one opens directly, several open the list.
             if entry, let kind = ExitEntry(exits) {
                 ExitEntryCard(entry: kind, sub: ExitListView.subtitle(exits, language: language)) {
@@ -78,6 +88,12 @@ struct UnilateralExitView: View {
         // The facts under the card ease down as it arrives; Reduce Motion only fades the card in.
         .onChange(of: exits.isEmpty) { _, empty in
             withAnimation(reduceMotion ? nil : NoahTokens.Motion.snappy) { entry = !empty }
+        }
+        .onChange(of: overview == nil, initial: true) { _, missing in if !missing { counted = true } }
+        .task {
+            // A read that stalls (the wallet settling, a slow status check): the usual four after a second.
+            guard !counted, (try? await Task.sleep(for: .seconds(1))) != nil else { return }
+            counted = true
         }
     }
 
