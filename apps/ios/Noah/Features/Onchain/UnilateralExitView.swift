@@ -18,13 +18,15 @@ struct UnilateralExitView: View {
 
     init(model: OnchainModel = OnchainModel()) {
         _model = State(initialValue: model)
-        _entry = State(initialValue: !(model.overview?.exits ?? []).isEmpty)
+        _entry = State(initialValue: !(model.freshest?.exits ?? []).isEmpty)
     }
 
     private var language: String { locale.identifier }
-    private var exits: [ExitModel] { model.overview?.exits ?? [] }
+    /// Back from an exit you just canceled or claimed, that page's newer read, until this page reads again.
+    private var overview: OnchainOverview? { model.freshest }
+    private var exits: [ExitModel] { overview?.exits ?? [] }
     /// The biggest VTXO that can exit: the per-VTXO fee the warning quotes.
-    private var sample: VtxoModel? { (model.overview?.vtxos ?? []).filter(\.eligible).max { $0.amount < $1.amount } }
+    private var sample: VtxoModel? { (overview?.vtxos ?? []).filter(\.eligible).max { $0.amount < $1.amount } }
 
     var body: some View {
         let money = ExitMoney(app: app, locale: locale)

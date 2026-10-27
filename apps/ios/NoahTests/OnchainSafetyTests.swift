@@ -168,6 +168,70 @@ struct OnchainModelTests {
             quote: { _, _, _, _ in OnchainJournalTests.quote },
             execute: { _ in await calls.mutate() }, attempt: { [] }, acknowledge: { _ in })
     }
+
+    /// The wallet's reads, numbered by the overview's tip; a submission moves it on. One read can be held mid-way.
+    actor Reads {
+        var version: UInt32 = 1
+        var sawEarlierRead = false
+        var held: CheckedContinuation<Void, Never>?
+        private var hold = false
+        func holdNext() { hold = true }
+        func read(walletID: String) async -> OnchainOverview {
+            let seen = OnchainOverview(walletID: walletID, vtxos: [], exits: [], confirmed: 40000, tip: version, pendingTotal: 0)
+            if hold {
+                hold = false
+                await withCheckedContinuation { held = $0 }
+            }
+            return seen
+        }
+        func release() { held?.resume(); held = nil }
+        func submit(showing: OnchainOverview?) {
+            sawEarlierRead = sawEarlierRead || showing != nil
+            version += 1
+        }
+    }
+
+    /// exit-v2-notes.md, Approved item 4: Back to the Emergency exit page shows the newest read since your last cancel,
+    /// claim or start, never one from before it.
+    @Test func theSharedOverviewIsTheNewestReadSinceTheLastSubmission() async {
+        let shared = SharedOverview(), reads = Reads()
+        func model(walletID: String = "wallet") -> OnchainModel {
+            var dependencies = OnchainModel.Dependencies(
+                ready: { true }, overview: { await reads.read(walletID: walletID) },
+                quote: { _, _, _, _ in OnchainJournalTests.quote },
+                execute: { _ in
+                    await reads.submit(showing: await shared.overview)
+                    return "submitted"
+                }, attempt: { [] }, acknowledge: { _ in })
+            dependencies.shared = shared
+            return OnchainModel(dependencies: dependencies)
+        }
+        let warning = model()
+        await warning.load()
+        #expect(shared.overview?.tip == 1)
+        // The exit's page cancels it: no page shows the read from before while that runs, and the exit page's read after
+        // it is what the Emergency exit page shows when Back returns there, until its own read.
+        let exit = model()
+        await exit.review(.cancel, ids: ["a"])
+        #expect(await exit.confirm())
+        #expect(await !reads.sawEarlierRead)
+        #expect(shared.overview?.tip == 2)
+        #expect(warning.overview?.tip == 1 && warning.freshest?.tip == 2)
+        // Never another wallet's.
+        let other = model(walletID: "other")
+        await other.load()
+        #expect(other.freshest?.walletID == "other" && warning.freshest?.walletID == "wallet")
+        // A read that began before a submission and ends after it may have missed it: dropped.
+        await reads.holdNext()
+        let slow = model()
+        let reading = Task { await slow.load() }
+        while await reads.held == nil { await Task.yield() }
+        await exit.review(.cancel, ids: ["b"])
+        #expect(await exit.confirm())
+        await reads.release()
+        await reading.value
+        #expect(slow.overview?.tip == 2 && shared.overview?.tip == 3)
+    }
     @Test func unavailableAndStaleRefreshNeverReadOrMutate() async {
         let calls = Calls()
         let model = OnchainModel(dependencies: dependencies(calls))

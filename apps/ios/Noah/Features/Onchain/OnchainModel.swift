@@ -29,6 +29,8 @@ final class OnchainModel {
         /// Waits while the wallet is only briefly not ready (`ExitRules.settling`), as after every app switch; true once
         /// it's ready.
         var settle: @Sendable () async -> Bool = { false }
+        /// Where every page's reads and submissions meet, so a page Back returns to never shows an older read.
+        var shared: SharedOverview? = nil
         static func live(session: WalletSession = .shared) -> Self {
             @Sendable func wallet(_ rule: (Bool, Bool, Bool, Bool) -> Bool) async -> Bool {
                 let state = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
@@ -60,7 +62,7 @@ final class OnchainModel {
                         guard await wallet(ExitRules.settling), (try? await Task.sleep(for: .milliseconds(500))) != nil else { break }
                     }
                     return await wallet(ExitRules.ready)
-                })
+                }, shared: .shared)
         }
 
         /// The wallet's commits and the journal's changes, coalesced. The journal is subscribed before this returns.
@@ -145,6 +147,12 @@ final class OnchainModel {
     private(set) var error: String?
     var locked: Bool { busy }
 
+    /// The overview to show: another page's read when it's newer than this model's own (Back to a page after you
+    /// canceled, claimed or started an exit on the next one), else this model's.
+    var freshest: OnchainOverview? {
+        dependencies.shared?.overview.flatMap { $0.walletID == overview?.walletID ? $0 : nil } ?? overview
+    }
+
     init(dependencies: Dependencies = .live(), detailID: String? = nil) {
         self.dependencies = dependencies
         self.detailID = detailID
@@ -206,10 +214,12 @@ final class OnchainModel {
                 guard await dependencies.ready() else { reloadPending = true; return }
                 exit = detail
             }
+            let since = dependencies.shared?.epoch
             let latest = try await dependencies.overview()
             guard token == generation else { return }
             guard await dependencies.ready() else { reloadPending = true; return }
             overview = latest
+            if let since { dependencies.shared?.read(latest, since: since) }
             var seen = sightings.walletID == latest.walletID ? sightings.value
                 : dependencies.sightings?.load(walletID: latest.walletID) ?? .init()
             if seen.observe(latest.exits, tip: latest.tip, now: Date()) { try? dependencies.sightings?.save(seen, walletID: latest.walletID) }
@@ -279,6 +289,8 @@ final class OnchainModel {
         error = nil
         defer { busy = false }
         var submitted = false
+        // What this submits changes what every page shows: from here on, none shows a read from before it.
+        dependencies.shared?.changed()
         do {
             guard await dependencies.ready(), generation == token, quote.isCurrent else {
                 throw OnchainFailure.changed
@@ -297,6 +309,8 @@ final class OnchainModel {
                 (error as? OnchainFailure)?.errorDescription ?? ExitRefusal.message(error) ?? OnchainFailure.uncertain.errorDescription
         }
         await dependencies.discardReview(quote)
+        // Reads that ran during the submission may have missed it.
+        dependencies.shared?.changed()
         let submissionError = error
         await load()
         if let submissionError { error = submissionError }
@@ -435,4 +449,25 @@ actor WalletBackgroundActivity {
 
     func begin() { count += 1; revision += 1; publish() }
     func end() { count -= 1; completionRevision += 1; revision += 1; publish() }
+}
+
+/// The freshest overview any page's model has read since the last submission one made (an exit started, canceled or
+/// claimed, a board, a renew). The Emergency exit page shows it when Back returns there, until its own read arrives, so
+/// it never shows exits as they were before what you just did. Reads only replace their own model's overview.
+@MainActor
+@Observable
+final class SharedOverview {
+    /// Nonisolated, so the live dependencies, which are built off the main actor, can hold it.
+    nonisolated static let shared = SharedOverview()
+    private(set) var overview: OnchainOverview?
+    /// Counts submissions: a read that began before the latest one is dropped.
+    @ObservationIgnored private(set) var epoch = 0
+
+    nonisolated init() {}
+
+    func read(_ overview: OnchainOverview, since: Int) { if since == epoch { self.overview = overview } }
+    func changed() {
+        epoch += 1
+        overview = nil
+    }
 }
