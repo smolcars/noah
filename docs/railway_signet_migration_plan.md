@@ -13,6 +13,7 @@ Verified preparation:
 - Redis uses AOF with `appendfsync everysec` plus snapshots and `noeviction`; its restart test retained the value and expiration. A dummy file on Barkd's destination volume survived restart and download/hash comparison.
 - Daily, weekly, and monthly snapshots are enabled on all three destination volumes. Verified retention: **6/27/89 days** respectively.
 - Existing signet application settings were installed privately on the inactive API, including the JWT secret, AWS credentials, and Barkd bearer token. IaC preserves those existing values rather than checking them into source.
+- Review follow-up compared live source setting names and the 22 preserved target values: no relevant source settings were missing and all preserved values matched. Optional overrides such as `RUN_MAILBOX_WORKER`, `SES_FROM_ADDRESS`, `AUTH_JWT_TTL_HOURS`, and the additional cron settings were unset on Fly. Repeat this comparison at cutover if source settings change.
 - Barkd's read-only baseline recorded signet wallet fingerprint `ae27ceed` and no pending receives at that time. `/data` currently occupies about 32 MiB, including `barkd/db.sqlite` (1,220,608 bytes), its configuration/auth files, and logs. The directory is owned by numeric UID/GID `999:999`. There is also an auth file outside the nested datadir, so archive the entire `/data` volume after stopping the daemon. Recheck receives and file inventory at the freeze.
 - Cloudflare CLI authenticated. The user selected the **Hampus account** (`4b89665ef6a974a9db30192e09eeab1e`); zone `noahwallet.io` is `894a63ad1efb270163c649415a574f19`. The `_railway-verify.signet` TXT record is installed. Traffic still uses the original Fly A/AAAA; the future CNAME target is `s8qd7ioc.up.railway.app`.
 
@@ -73,6 +74,12 @@ Set the Railway API's:
 
 Keep Barkd's `BARKD_DATADIR=/data/barkd`, `BARKD_BIND_HOST=::`, `BARKD_BIND_PORT=3000`, `BARKD_NO_UI=true`. Check actual private DNS/address-family reachability from the API container. Keep the current signet Ark/chain-source configuration in the restored datadir. S3 objects and external services stay where they are; preserve their references and test access from Railway. [Local deployment settings](../fly/signet.fly.toml), [Barkd settings](../fly/signet.barkd.fly.toml), [Barkd datadir/bind flags](https://second.tech/docs/barkd/start).
 
+**IaC variable ownership:** a plan-only omission test confirmed that removing an
+existing API variable from this file plans a destructive `variable.delete`.
+Declare every installed setting explicitly, using `preserve()` for privately
+installed secrets. Do not add a variable manually and assume future applies will
+keep it. Inspect the plan before applying changes.
+
 ### Rehearsal and preflight gates
 
 - Record actual source database, PostgreSQL version, Noah schemas/extensions, database size, table counts, SQLx migration versions/checksums, and sequence state. Noah needs `pg_trgm` ([migration](../server/migrations/0008_ln_address_autocomplete.sql)); verify the target can restore it and all required schema objects. Review provider-only objects/permissions rather than suppressing restore errors.
@@ -94,6 +101,27 @@ Reserve a **one-hour maintenance window**, then refine from rehearsal timings. T
 5. Record a freeze timestamp. Keep source Postgres and Upstash running for read-only export, with all application writers fenced. Now capture the final Postgres, Redis, and Barkd copies. These form the migration set; do not substitute an earlier snapshot for one member.
 
 The API starts SQLx migrations, cron, Ark connections, and the mailbox worker at process startup ([main.rs](../server/src/main.rs)). `RUN_MAILBOX_WORKER=false` alone does not disable all jobs. It also currently lacks an HTTP graceful-shutdown hook, so stopping it can interrupt requests; verify the resulting pending work before resuming. Restored mailbox leases may need their existing 120-second claim TTL to expire ([worker](../server/src/mailbox_worker.rs)).
+
+At step 2, **only after migration approval**, fence every source API Machine with
+the following command, then ensure it is stopped. The update itself can stop the
+running process and begins the outage; it must not be run during preparation:
+
+```sh
+flyctl machine update "$SIGNET_API_MACHINE" --app noah-signet \
+  --autostart=false --restart no --skip-start --yes
+flyctl machine stop "$SIGNET_API_MACHINE" --app noah-signet \
+  --signal SIGTERM --timeout 30
+```
+
+Read the resulting Machine JSON and require `config.services[].autostart=false`,
+`config.restart.policy=no`, and stopped state. Exercise the old Fly route with a
+health request and verify that the Machine stays stopped, then check for remaining
+application database sessions before recording the freeze timestamp. Keep the
+GitHub deploy guard active so a redeploy cannot undo this fence. The installed CLI
+supports these flags; [Fly's update implementation](https://github.com/superfly/flyctl/blob/master/internal/command/machine/update.go)
+passes `--skip-start` through as `SkipLaunch`, and its
+[configuration builder](https://github.com/superfly/flyctl/blob/master/internal/command/machine/run.go)
+updates each service's autostart setting explicitly.
 
 ## 3. Export and restore Postgres
 
@@ -199,6 +227,7 @@ Preserve numeric ownership (`999:999` on the recorded source image) and verify i
 1. Verify all imports, private references, and backups. Confirm old API/worker and old Barkd remain stopped and cannot auto-start. Mark this as the final point for the simplest rollback.
 2. Start **Railway Barkd first** on the restored volume with the pinned image. Clear the importer's start-command override so the image's normal entrypoint and user handling run. Verify the recorded fingerprint, existing wallet, signet network, Ark connection, auth token, and pending receives. A daemon start may sync/change wallet state even without public traffic: treat this as the boundary after which the old wallet copy may be stale. [Start-command behavior](https://docs.railway.com/deployments/start-command).
 3. Start **one Railway API instance** against the restored Postgres and Redis. Verify migrations have no unexpected changes, Redis connects, the Barkd startup readiness check succeeds, and jobs/mailbox sessions recover. `/health` is only an HTTP liveness response; Barkd probe failure only logs a warning and can fall back to device wake-up. Neither alone proves forwarded invoices work.
+   Check the LNURL limiter through Railway's edge with forged `X-Real-IP` and `fly-client-ip` headers to confirm the proxy supplies the actual client IP. Verify whether GitHub autodeploy is connected, retain the intended deployment policy, and record the final API commit/image digest.
 4. Use Railway's temporary HTTPS hostname for smoke checks; ensure generated Lightning callbacks still use `signet.noahwallet.io`. Register that custom domain on the API service and set target port 3000. Install Railway's displayed CNAME and ownership TXT records and validate TLS after DNS changes. DNS/certificate completion can exceed the nominal maintenance window; do not reopen traffic until the actual hostname works. [Railway custom domains](https://docs.railway.com/networking/domains/working-with-domains#custom-domains).
 5. Replace the **old A and AAAA records** with Railway's required records (normally the provided CNAME for this subdomain). A CNAME cannot coexist with old A/AAAA at the same name. Do not leave IPv6 pointed at Fly. Keep Fly writers stopped through propagation; cached clients can fail temporarily but cannot split the data between hosts.
 6. Test through the real domain: existing JWT session and fresh login/challenge one-time consumption, existing user/Lightning identity, backup listing/download from existing S3 keys, price endpoints, invoice exchange, verification, and a real signet forwarded receive reaching settlement/delivery. Check mailbox wake-up/job reporting, recurring jobs, and maintenance state without resetting counters.
