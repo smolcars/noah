@@ -328,12 +328,14 @@ struct ExitStageView: View {
     var wide = false
     /// The picture as one VoiceOver element; nil hides it.
     var accessibilityText: String?
+    /// The explainer has grown, kept by a page whose layout changes rebuild this view (compact and wide panes), so it
+    /// grows once per visit. Without one, this view keeps it, which covers Back.
+    var grew: Binding<Bool>?
     @State private var from: ExitStageScene?
     @State private var changedAt = Date.distantPast
     @State private var settled = true
     @State private var visible = true
-    /// The explainer has grown: Back to its page shows it grown rather than growing it again.
-    @State private var grew = false
+    @State private var grewHere = false
     @ScaledMetric(relativeTo: .caption) private var textScale = 1.0
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -362,9 +364,10 @@ struct ExitStageView: View {
             }
         }
         .onAppear {
-            // The explainer grows once when the page opens, not again on Back; Reduce Motion shows it grown.
-            guard scene.explain, !grew, !reduceMotion else { return }
-            grew = true
+            // The explainer grows once when the page opens, not again on Back or a layout change; Reduce Motion shows it grown.
+            let once = grew ?? $grewHere
+            guard scene.explain, !once.wrappedValue, !reduceMotion else { return }
+            once.wrappedValue = true
             var seed = scene
             seed.grown = false
             begin(from: seed)

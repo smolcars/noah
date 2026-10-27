@@ -13,6 +13,9 @@ struct UnilateralExitView: View {
     /// The tree is on the page. It waits for your VTXOs, a second at most, so it grows once with your path's
     /// transactions rather than a round's usual four first.
     @State private var counted: Bool
+    /// The tree has grown. Kept here, above the panes a layout change rebuilds (a Duo opening, a turned phone, an iPad
+    /// resized), so it grows once per visit.
+    @State private var grew = false
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
@@ -43,7 +46,7 @@ struct UnilateralExitView: View {
                 if counted {
                     ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
                                   accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
-                                                                 count: Self.explained(sample), locale: language))
+                                                                 count: Self.explained(sample), locale: language), grew: $grew)
                 } else {
                     Color.clear
                 }
