@@ -1,6 +1,14 @@
 package com.noahwallet.onchain
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -23,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noahwallet.R
@@ -30,9 +40,11 @@ import com.noahwallet.localization.tr
 import com.noahwallet.localization.trPlural
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.activity.*
+import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.home.HomeType
 import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.LocalPose
+import com.noahwallet.ui.onboarding.LocalReduceMotion
 import com.noahwallet.ui.onboarding.OnboardingPose
 import com.noahwallet.ui.onboarding.rememberHaptics
 import com.noahwallet.ui.send.SendPill
@@ -167,9 +179,9 @@ private fun rememberSampleCost(app: AppModel, vtxos: List<VtxoModel>): ExitCosts
 }
 
 /**
- * The warning (prototype `SCR.warn`), Settings → Emergency exit: one line; with no exits, the explainer tree (it grows once
- * as the page opens); with one, its row; with more, an Exits row and their counts; then four facts with the real exit
- * delta and per-VTXO fee, and Choose VTXOs. Reading it and estimating never broadcasts anything.
+ * The warning (prototype `SCR.warn`), Settings → Emergency exit: one line; the explainer tree (it grows once as the page
+ * opens and stays); under it, once there are exits, one card to them (exit-v2-notes.md, Approved item 4); then four facts
+ * with the real exit delta and per-VTXO fee, and Choose VTXOs. Reading it and estimating never broadcasts anything.
  */
 @Composable
 internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
@@ -193,15 +205,17 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
-        when (exits.size) {
-            0 -> ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp).testTag("exit-warn-picture"))
-            1 -> Column(Modifier.padding(top = 10.dp)) {
-                Text(if (stages.getValue(exits[0].id).live) tr("In progress") else tr("Finished"), Modifier.padding(top = 8.dp, bottom = 2.dp).semantics { heading() },
-                    style = HomeType.header, color = palette.muted)
-                ExitListRow(exits[0], stages.getValue(exits[0].id), tip, money, divider = false) { open(exits[0].id) }
-            }
-            else -> Column(Modifier.padding(top = 14.dp)) {
-                SettingsRow(tr("Exits"), SettingsIcons.exit, sub = exitCounts(stages.values), divider = false, modifier = Modifier.testTag("exit-all"), onClick = all)
+        ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp).testTag("exit-warn-picture"))
+        // The exits already running, or ended: one opens directly, several open the list. Exits known when the page opens
+        // show at once; ones read later fade in under the picture and the facts ease down (Reduce Motion: a fade only).
+        val shown = remember { MutableTransitionState(exits.isNotEmpty()) }.apply { targetState = exits.isNotEmpty() }
+        val reduceMotion = LocalReduceMotion.current
+        AnimatedVisibility(shown, enter = if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else
+            fadeIn(NoahTokens.Motion.snappy()) + slideInVertically(NoahTokens.Motion.snappy()) { it / 6 } +
+                expandVertically(NoahTokens.Motion.snappy(), expandFrom = Alignment.Top),
+            exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else fadeOut(NoahTokens.Motion.snappy()) + shrinkVertically(NoahTokens.Motion.snappy())) {
+            ExitEntry.of(stages.values)?.let { entry ->
+                ExitEntryCard(entry, exitCounts(stages.values), Modifier.padding(top = 14.dp)) { if (exits.size == 1) open(exits[0].id) else all() }
             }
         }
     }) {
@@ -216,6 +230,49 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         }
         FinePrint(tr("Reading this screen and estimating fees never broadcasts an exit."))
         status()
+    }
+}
+
+/**
+ * What the warning page's exits card holds: exits still pending (running or ready to claim), past ones (claimed, canceled
+ * or otherwise ended), or both. Pending ones tint it orange.
+ */
+internal enum class ExitEntry(val title: String) {
+    pending("Pending exits"), past("Past exits"), both("Pending and past exits");
+
+    val tinted get() = this != past
+
+    companion object {
+        fun of(stages: Collection<ExitStage>): ExitEntry? = when (stages.any { it.live } to stages.any { !it.live }) {
+            true to true -> both
+            true to false -> pending
+            false to true -> past
+            else -> null
+        }
+    }
+}
+
+/**
+ * The warning page's way to your exits: one card under the picture, light orange while any is pending, the soft surface
+ * once all have ended. Its title and counts wrap; it never truncates.
+ */
+@Composable
+private fun ExitEntryCard(entry: ExitEntry, sub: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
+    val shape = RoundedCornerShape(NoahTokens.Radius.m)
+    Row(modifier.fillMaxWidth().heightIn(min = 64.dp).clip(shape).background(if (entry.tinted) palette.orangeTint else palette.soft, shape)
+        .clickable(role = Role.Button) { haptics.light(); onClick() }.semantics(mergeDescendants = true) {}.testTag("exit-all")
+        .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(Modifier.size(34.dp).background(palette.background, CircleShape), contentAlignment = Alignment.Center) {
+            Icon(painterResource(SettingsIcons.exit), null, Modifier.size(19.dp), tint = if (entry.tinted) palette.orangeText else palette.foreground)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(tr(entry.title), style = SettingsType.row.copy(fontWeight = FontWeight.Medium), color = palette.foreground)
+            // Orange text on the orange tint: muted grey is too faint on it.
+            sub?.let { Text(it, Modifier.padding(top = 1.dp), style = HomeType.small, color = if (entry.tinted) palette.orangeText else palette.muted) }
+        }
+        Icon(painterResource(com.noahwallet.ui.home.HomeIcons.chevron), null, Modifier.size(18.dp), tint = palette.muted)
     }
 }
 

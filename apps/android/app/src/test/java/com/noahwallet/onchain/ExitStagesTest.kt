@@ -336,6 +336,20 @@ class ExitStagesTest {
         for (state in listOf("Claimed", "Canceled", "VtxoAlreadySpent", "VtxoSwept")) assertFalse(state, ExitList.live(listOf(exit(state, ExitDetails()))))
     }
 
+    @Test fun theWarningsExitsCardIsTitledByWhatItHoldsAndTintedWhileAnyIsPending() {
+        fun entry(vararg states: String) = ExitEntry.of(states.mapIndexed { i, state -> ExitStages.of(exit(state, ExitDetails(tip_height = 100), id = "v$i"), 100) })
+        assertNull(entry())
+        for (state in listOf("Start", "Processing", "AwaitingDelta", "Claimable", "ClaimInProgress")) assertEquals(state, ExitEntry.pending, entry(state))
+        for (state in listOf("Claimed", "Canceled", "VtxoAlreadySpent", "VtxoSwept")) assertEquals(state, ExitEntry.past, entry(state))
+        assertEquals(ExitEntry.pending, entry("Processing", "Claimable"))
+        assertEquals(ExitEntry.past, entry("Claimed", "Canceled"))
+        assertEquals(ExitEntry.both, entry("Claimable", "Claimed"))
+        assertEquals(ExitEntry.both, entry("Processing", "Canceled", "Claimed"))
+        assertEquals(listOf("Pending exits", "Past exits", "Pending and past exits"), ExitEntry.entries.map { it.title })
+        // Orange while any exit is still yours to finish; the soft surface once they've all ended.
+        assertTrue(ExitEntry.pending.tinted); assertTrue(ExitEntry.both.tinted); assertFalse(ExitEntry.past.tinted)
+    }
+
     @Test fun theListDrawsSharedPathsOnlyWhenExitsShareATransaction() {
         fun paths(id: String, vararg txs: String, state: String = "Processing") = exit(state, ExitDetails(), packages = txs.map { ExitPackage(it) }, id = id)
         val a = paths("a", "root", "l2a", "l1a", "leafA"); val b = paths("b", "root", "l2a", "l1b", "leafB"); val c = paths("c", "root2", "x", "y", "z")
