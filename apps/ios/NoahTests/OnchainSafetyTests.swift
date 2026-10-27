@@ -169,43 +169,54 @@ struct OnchainModelTests {
             execute: { _ in await calls.mutate() }, attempt: { [] }, acknowledge: { _ in })
     }
 
-    /// The wallet's reads, numbered by the overview's tip; a submission moves it on. One read can be held mid-way.
+    /// The wallet's reads, numbered by the overview's tip; a submission moves it on. One read or submission can be held
+    /// mid-way; a held submission finishes even if its caller is canceled, as the wallet's does, and a canceled caller's
+    /// read fails.
     actor Reads {
         var version: UInt32 = 1
         var sawEarlierRead = false
         var held: CheckedContinuation<Void, Never>?
-        private var hold = false
-        func holdNext() { hold = true }
-        func read(walletID: String) async -> OnchainOverview {
+        private var holdRead = false, holdSubmission = false
+        func holdNext() { holdRead = true }
+        func holdNextSubmission() { holdSubmission = true }
+        func read(walletID: String) async throws -> OnchainOverview {
+            try Task.checkCancellation()
             let seen = OnchainOverview(walletID: walletID, vtxos: [], exits: [], confirmed: 40000, tip: version, pendingTotal: 0)
-            if hold {
-                hold = false
+            if holdRead {
+                holdRead = false
                 await withCheckedContinuation { held = $0 }
             }
             return seen
         }
         func release() { held?.resume(); held = nil }
-        func submit(showing: OnchainOverview?) {
+        func submit(showing: OnchainOverview?) async {
             sawEarlierRead = sawEarlierRead || showing != nil
+            if holdSubmission {
+                holdSubmission = false
+                await withCheckedContinuation { held = $0 }
+            }
             version += 1
         }
+    }
+
+    /// A page's model on the wallet `reads` stands for, sharing `shared` with the others.
+    func model(_ shared: SharedOverview, _ reads: Reads, walletID: String = "wallet") -> OnchainModel {
+        var dependencies = OnchainModel.Dependencies(
+            ready: { true }, overview: { try await reads.read(walletID: walletID) },
+            quote: { _, _, _, _ in OnchainJournalTests.quote },
+            execute: { _ in
+                await reads.submit(showing: await shared.overview)
+                return "submitted"
+            }, attempt: { [] }, acknowledge: { _ in })
+        dependencies.shared = shared
+        return OnchainModel(dependencies: dependencies)
     }
 
     /// exit-v2-notes.md, Approved item 4: Back to the Emergency exit page shows the newest read since your last cancel,
     /// claim or start, never one from before it.
     @Test func theSharedOverviewIsTheNewestReadSinceTheLastSubmission() async {
         let shared = SharedOverview(), reads = Reads()
-        func model(walletID: String = "wallet") -> OnchainModel {
-            var dependencies = OnchainModel.Dependencies(
-                ready: { true }, overview: { await reads.read(walletID: walletID) },
-                quote: { _, _, _, _ in OnchainJournalTests.quote },
-                execute: { _ in
-                    await reads.submit(showing: await shared.overview)
-                    return "submitted"
-                }, attempt: { [] }, acknowledge: { _ in })
-            dependencies.shared = shared
-            return OnchainModel(dependencies: dependencies)
-        }
+        func model(walletID: String = "wallet") -> OnchainModel { self.model(shared, reads, walletID: walletID) }
         let warning = model()
         await warning.load()
         #expect(shared.overview?.tip == 1)
@@ -231,6 +242,25 @@ struct OnchainModelTests {
         await reads.release()
         await reading.value
         #expect(slow.overview?.tip == 2 && shared.overview?.tip == 3)
+    }
+
+    /// Back cancels the submitting page's task while the wallet still finishes the submission: a read made meanwhile may
+    /// predate it, so it isn't what the page Back returns to shows.
+    @Test func aSubmissionWhoseCallerIsCanceledStillDropsReadsMadeDuringIt() async {
+        let shared = SharedOverview(), reads = Reads()
+        let exit = model(shared, reads)
+        await exit.review(.cancel, ids: ["a"])
+        await reads.holdNextSubmission()
+        let confirming = Task { await exit.confirm() }
+        while await reads.held == nil { await Task.yield() }
+        // Another page reads while the cancel is still being sent: what it reads is from before it.
+        await model(shared, reads).load()
+        #expect(shared.overview?.tip == 1)
+        confirming.cancel()
+        await reads.release()
+        _ = await confirming.value
+        #expect(shared.overview == nil)
+        #expect(!exit.busy)
     }
     @Test func unavailableAndStaleRefreshNeverReadOrMutate() async {
         let calls = Calls()
