@@ -13,12 +13,14 @@ export default defineRailway((ctx) => {
     startCommand:
       '/bin/sh -c \'exec docker-entrypoint.sh redis-server --requirepass "$REDIS_PASSWORD" --save 60 1 --dir "$RAILWAY_VOLUME_MOUNT_PATH" --appendonly yes --appendfsync everysec --maxmemory-policy noeviction\'',
   };
-  const barkData = volume("bark_data", { region: "us-east4-eqdc4a", sizeMB: 1024 });
+  const barkData = volume("bark_data", { region, sizeMB: 1024 });
 
-  // Import the stopped wallet before replacing this tools image with Barkd.
+  // The complete stopped Fly wallet volume has been restored and verified.
   const barkd = service("noah-barkd-signet", {
-    source: image("debian:bookworm-slim", { autoUpdates: { type: "disabled" } }),
-    start: "/bin/sleep infinity",
+    source: image(
+      "niteshbalusu/noah-barkd@sha256:e1d9dff674ff1c548d27a5c6f2c84e0a690921867ec2b49aacc6a82cb5b78e6d",
+      { autoUpdates: { type: "disabled" } },
+    ),
     replicas: { [region]: 1 },
     deploy: {
       requiredMountPath: "/data",
@@ -34,10 +36,15 @@ export default defineRailway((ctx) => {
     },
   });
 
-  // Stage the image without starting migrations or jobs before cutover approval.
+  // Published from the reviewed migration commit; updates are deployed explicitly.
   const api = service("api", {
     build: { builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
-    start: "/bin/sleep infinity",
+    source: image(
+      "niteshbalusu/noah-server@sha256:872272a39b71ec8f46878408d003aa4cb0fe5955f9856e2c56be57d324361d8f",
+      { autoUpdates: { type: "disabled" } },
+    ),
+    healthcheck: "/health",
+    healthcheckTimeout: 120,
     domains: [{ domain: "signet.noahwallet.io", port: 3000 }],
     replicas: { [region]: 1 },
     deploy: { restartPolicyType: "ALWAYS" },

@@ -1,10 +1,23 @@
 # Signet migration from Fly.io to Railway
 
-Planning date: **2026-10-26**, preparation updated **2026-10-27**. Status: **destination preparation; source still serving on Fly**. Scope: the signet API, PostgreSQL data, Redis data, and Barkd's existing wallet/volume. A planned outage is acceptable. Mainnet stays on Fly. Related: [Railway assessment](railway_migration_assessment.md).
+Planning date: **2026-10-26**, execution **2026-10-27**. Status: **Railway services active; production DNS and HTTPS verified; client receive acceptance pending**. Scope: the signet API, PostgreSQL data, Redis data, and Barkd's existing wallet/volume. Mainnet stays on Fly. Related: [Railway assessment](railway_migration_assessment.md).
 
-**User approval boundary:** finish preparation and verification, then stop. Do not stop Fly, start the Railway API or Barkd wallet, or switch traffic DNS without the user's explicit approval. The code PR stays unmerged during preparation; server-image staging uses a sleep command to prevent migrations and background jobs.
+**Execution authorization:** the user explicitly approved migration and separately approved an administrator merge of [preparation PR #383](https://github.com/smolcars/noah/pull/383). Server, Android, and Android end-to-end CI passed; the iOS CocoaPods CDN certificate failure was the known reason for overriding `client_gate`. The PR merged as `dfc325fb77fa962fe44c290a6692b56d1f0013f7` before the write freeze.
 
-Progress: CLI-authenticated project `noah` and environment `signet` created in workspace `Noah`; services/volumes provisioned from [.railway/railway.ts](../.railway/railway.ts). The user approved Railway's **Postgres 18** default. API image staging uses an explicit sleep command, and Barkd's destination runs only an inert importer. Rehearsal copies of Postgres and Redis have been restored; these must be refreshed after the write freeze. No outage has begun.
+Project `noah`, environment `signet`, and workspace `Noah` are managed by [.railway/railway.ts](../.railway/railway.ts). Railway now holds the **final frozen-source copies**, replacing the rehearsal datasets. Postgres 18 was approved by the user. The API and restored Barkd are active; old Fly application Machines have sleep-command fences and remain stopped.
+
+## Execution record
+
+- Outage began **10:37:33 UTC**; the coordinated source freeze completed **10:41:35 UTC**. Cloudflare DNS switched **11:00:39 UTC**, replacing both Fly A/AAAA records with the Railway CNAME in the Hampus account.
+- Normal HTTPS hostname/certificate validation and `/health` HTTP 200 on `signet.noahwallet.io` were verified at **11:07:23 UTC** (about **30 minutes** including verification). Existing Lightning-address metadata also passed through the production hostname. Railway's explicit `customDomainIssueCertificate` API was used after DNS propagated; TLS verification was never disabled.
+- Final Postgres archive: **818,301 bytes**, SHA-256 `9be4b813e092dfd39cf202ae1de37bb2fe994437430aa14f0ac14bd98c670a6f`. After restore, all **12 tables' exact row counts and data hashes, 22 SQLx migration checksums, and three sequence states** matched the frozen source.
+- Final Redis copy: **two permanent strings**, verified exactly, RDB saved and local AOF fsync acknowledged. Byte/TTL copying had already been rehearsed; no stale rehearsal data was merged into the final keyspace.
+- Final complete wallet-volume archive: **2,026,782 bytes**, SHA-256 `add9189b0dea0809c22bdd698151ee0907e8aeb80eaf798cb14d4e5aac698956`. All **nine restored files** matched the archive. Offline SQLite integrity/foreign-key checks passed and the REST token matched the existing API secret.
+- Railway Barkd retained fingerprint **`ae27ceed`**, signet network, the exact pre-stop balance, and zero pending receives. Authentication and wallet identity survived a controlled restart. The API's Postgres, Redis, and Barkd startup readiness checks passed; authenticated S3 listing from the Railway container passed.
+- HTTPS smoke checks on `api-signet.up.railway.app` passed. An existing Lightning address returned metadata with the unchanged production callback hostname. An API-issued auth challenge had its 600-second TTL and single-use consumption verified; requests varying forged IP headers still shared the LNURL limit (59 HTTP 400 and 16 HTTP 429 responses).
+- Manual `signet-final-import` snapshots exist for all three destination volumes, in addition to their scheduled backups. A source Fly wallet-volume snapshot was also requested. Persistent recovery copies are under `~/.local/share/noah-migrations/signet-2026-10-27`, outside this repository, with directory mode 0700/files 0600 on FileVault-protected storage. They include final archives, inventories, source Machine/DNS configurations, and timestamps.
+- Railway GitHub deployment triggers remain absent. Releases use explicit pinned-image updates; `SIGNET_DEPLOY_TARGET=railway` skips Fly signet deployment jobs.
+- The CLI refused agent deletion of `/data/barkd-import.tar.gz`; the temporary archive remains on the private wallet volume for human cleanup. Barkd uses `/data/barkd` and ignores that root-level archive. Do not copy wallet archives or credentials into this repository.
 
 Verified preparation:
 
@@ -122,6 +135,13 @@ supports these flags; [Fly's update implementation](https://github.com/superfly/
 passes `--skip-start` through as `SkipLaunch`, and its
 [configuration builder](https://github.com/superfly/flyctl/blob/master/internal/command/machine/run.go)
 updates each service's autostart setting explicitly.
+
+**Observed during execution:** the old API was found running again during the
+old-route probe despite `autostart=false` and restart policy `no`. Before final
+exports, its command was additionally replaced with `/bin/sleep infinity` and it
+was stopped again. The absence of API database sessions was confirmed. Keep this
+command fence on the historical source Machine: an unexpected Machine wake must
+not launch the server. Barkd's historical Machine has the same command fence.
 
 ## 3. Export and restore Postgres
 
@@ -256,9 +276,8 @@ Existing React Native and native iOS/Android clients already use `signet.noahwal
 
 Retain the stopped source services/volumes and protected migration archives for an agreed observation period (proposed: seven days). They are historical recovery material, not a live rollback replica. After successful acceptance, remove the old signet API, Postgres, Barkd, and **signet Upstash Redis**, and close any temporary import endpoints/credentials. Check detached volumes, IPs, and billing before considering retirement complete. Keep all mainnet services/deployment paths intact.
 
-## Work held until explicit migration approval
+## Acceptance and observation remaining
 
-- Merge the tested hostname/CI preparation and publish a fixed server image; activate the Fly signet deployment guard.
-- Refresh Barkd's identity, pending-action, and datadir baselines immediately before stopping it.
-- Refresh all three stores from the frozen source; the current Postgres/Redis imports are rehearsal snapshots.
-- Start the restored Barkd and API, verify health/dependencies/application behavior, then replace only the signet DNS routing records and verify TLS.
+- Use the signet app to confirm the existing session, backup access, and a complete forwarded Lightning receive. Public metadata and backend readiness checks do not replace that client test.
+- Observe scheduled jobs and backup completion. Keep historical Fly stores stopped/fenced for the proposed seven-day observation period before retirement.
+- Have a human remove the temporary wallet import archive using the authenticated Railway CLI; its agent safety guard rejected automated deletion.
