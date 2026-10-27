@@ -206,8 +206,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
 @Stable
 class SharedOverview {
     var overview by mutableStateOf<OnchainOverview?>(null); private set
-    /** Counts submissions and unavailable wallets: a read that began before the latest one is dropped. */
-    var epoch = 0; private set
+    /** Counts submissions and unavailable wallets: a read that began before the latest one is dropped. Settings reads again as it moves. */
+    var epoch by mutableIntStateOf(0); private set
     fun read(overview: OnchainOverview, since: Int) { if (since == epoch) this.overview = overview }
     fun changed() { epoch++; overview = null }
     companion object { val shared = SharedOverview() }

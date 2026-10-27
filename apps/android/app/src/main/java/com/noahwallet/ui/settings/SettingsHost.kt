@@ -33,6 +33,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.noahwallet.onchain.OnchainOverview
+import com.noahwallet.onchain.SharedOverview
 import com.noahwallet.services.storage.PersistedBackupState
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.AppModel
@@ -103,7 +104,9 @@ internal fun rememberSettingsLive(model: AppModel): SettingsLive {
             }
         }
     }
-    LaunchedEffect(model.isWalletSuspended, revision, model.summaryRevision) {
+    // A cancel, claim or start on an exit's page doesn't move the wallet's revision: Settings reads again as it's sent, so its
+    // Emergency exit row is current when Back returns to it.
+    LaunchedEffect(model.isWalletSuspended, revision, model.summaryRevision, SharedOverview.shared.epoch) {
         live.overview = if (!com.noahwallet.onchain.onchainReady(model)) null
             else try { withContext(Dispatchers.IO) { model.session.onchainOverview() } }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { live.overview }
