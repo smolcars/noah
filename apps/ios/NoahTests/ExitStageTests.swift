@@ -594,6 +594,27 @@ struct ExitStageTests {
                 == "6 in progress · 1 ready to claim")
     }
 
+    @Test func theExitsCardIsTitledByWhatItHoldsAndTintedWhileAnyIsPending() {
+        func entry(_ states: [String]) -> ExitEntry? {
+            ExitEntry(states.enumerated().map { Self.exit("\($0.offset)", $0.element, []) })
+        }
+        #expect(entry([]) == nil)
+        for state in ["Start", "Processing", "AwaitingDelta", "Claimable", "ClaimInProgress"] {
+            #expect(entry([state]) == .pending, "\(state)")
+        }
+        for state in ["Claimed", "Canceled", "VtxoAlreadySpent", "VtxoSwept"] {
+            #expect(entry([state]) == .past, "\(state)")
+        }
+        #expect(entry(["Processing", "Claimable"]) == .pending)
+        #expect(entry(["Claimed", "Canceled"]) == .past)
+        #expect(entry(["Claimable", "Claimed"]) == .both)
+        #expect(entry(["Processing", "Canceled", "Claimed"]) == .both)
+        #expect(ExitEntry.pending.title == "Pending exits" && ExitEntry.past.title == "Past exits"
+                && ExitEntry.both.title == "Pending and past exits")
+        // Orange while any exit is still yours to finish; the soft surface once they've all ended.
+        #expect(ExitEntry.pending.tinted && ExitEntry.both.tinted && !ExitEntry.past.tinted)
+    }
+
     @Test func onlyExitsThatShareTransactionsGetAPathInTheirGutter() {
         let root = Self.tx("r1", "confirmed", height: 99)
         let a = Self.exit("a", "Processing", [root, Self.tx("l2", "confirmed", height: 100), Self.tx("a1", "awaiting-confirmation"), Self.tx("a2", "verify-inputs")])

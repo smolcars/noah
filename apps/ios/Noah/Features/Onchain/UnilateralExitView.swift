@@ -2,18 +2,24 @@ import BarkBoltFFI
 import SwiftUI
 
 /// Settings → Emergency exit: the warning (docs/native-rewrite/design/exit.md). One line, then the
-/// explainer tree while there are no exits (or the exits already running), four facts with the real
-/// timelock and fee estimate. Reading it and estimating never sends anything.
+/// explainer tree, the card to your exits under it once there are any (exit-v2-notes.md, Approved
+/// item 4), four facts with the real timelock and fee estimate. Reading it and estimating never sends anything.
 struct UnilateralExitView: View {
     @State private var model: OnchainModel
     @State private var perVtxo: UInt64?
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
+    /// The exits card is on the page. Exits known when it opens show at once; ones read later fade in.
+    @State private var entry: Bool
     @Environment(AppModel.self) private var app
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
     @Environment(\.exitPaneHeight) private var paneHeight
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
+    init(model: OnchainModel = OnchainModel()) {
+        _model = State(initialValue: model)
+        _entry = State(initialValue: !(model.overview?.exits ?? []).isEmpty)
+    }
 
     private var language: String { locale.identifier }
     private var exits: [ExitModel] { model.overview?.exits ?? [] }
@@ -26,25 +32,20 @@ struct UnilateralExitView: View {
             Text(verbatim: L10n.text("Emergency use only. It takes your bitcoin out of Ark without Ark’s server.", locale: language))
                 .noahText(SettingsText.line).foregroundStyle(NoahTokens.Colors.muted)
                 .fixedSize(horizontal: false, vertical: true)
+            // Where an exit goes: your branch of the round's tree, standing on Bitcoin. It grows once and stays.
+            ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
+                          accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
+                                                         count: Self.explained(sample), locale: language))
+                .frame(height: settings.wide ? max(240, paneHeight - 200) : window.size.height > 0 && window.size.height < 700 ? 236 : 268)
+                .padding(.top, 14)
+                .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
             // The exits already running, or ended: one opens directly, several open the list.
-            if exits.count == 1, let exit = exits.first {
-                let progress = model.progress(exit), tip = model.overview?.tip ?? 0
-                ExitListRow(exit: exit, progress: progress, text: ExitText(progress: progress, exit: exit, tip: tip, overview: model.overview,
-                                                                           attempts: model.attempts, money: money, language: language),
-                            coin: ExitGutterCoin(progress, tip: tip, delta: model.overview?.exitDelta ?? 144), hairline: false) { settings.open(.exitProgress(exit.id)) }
-                    .padding(.top, 14)
-            } else if !exits.isEmpty {
-                SettingsRow(icon: "list.bullet", title: L10n.text("Exits", locale: language), sub: ExitListView.subtitle(exits, language: language),
-                            hairline: false, id: "exit-entry") { settings.open(.exitList) }
-                    .padding(.top, 14)
-            } else {
-                // Where an exit goes: your branch of the round's tree, standing on Bitcoin. Only while there are no exits.
-                ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
-                              accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
-                                                             count: Self.explained(sample), locale: language))
-                    .frame(height: settings.wide ? max(240, paneHeight - 200) : window.size.height > 0 && window.size.height < 700 ? 236 : 268)
-                    .padding(.top, 14)
-                    .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
+            if entry, let kind = ExitEntry(exits) {
+                ExitEntryCard(entry: kind, sub: ExitListView.subtitle(exits, language: language)) {
+                    if exits.count == 1, let exit = exits.first { settings.open(.exitProgress(exit.id)) } else { settings.open(.exitList) }
+                }
+                .padding(.top, 14)
+                .transition(reduceMotion ? .opacity.animation(NoahTokens.Motion.reduceMotionFade) : .opacity.combined(with: .offset(y: 10)))
             }
         } trailing: {
             VStack(spacing: 0) {
@@ -72,6 +73,10 @@ struct UnilateralExitView: View {
             guard let sample else { return }
             perVtxo = await model.exitEstimate([sample.id])?.exitBroadcastFeeSats
         }
+        // The facts under the card ease down as it arrives; Reduce Motion only fades the card in.
+        .onChange(of: exits.isEmpty) { _, empty in
+            withAnimation(reduceMotion ? nil : NoahTokens.Motion.snappy) { entry = !empty }
+        }
     }
 
     /// The explainer's transactions: your biggest VTXO's path, else a round's usual four.
@@ -82,6 +87,73 @@ struct UnilateralExitView: View {
     private func fact(_ icon: String, _ title: String, _ line: String, last: Bool = false) -> some View {
         SettingsRowLabel(icon: icon, title: L10n.text(title, locale: language), sub: line, hairline: !last) { EmptyView() }
             .accessibilityElement(children: .combine)
+    }
+}
+
+/// What the warning page's exits card holds: exits still pending (running or ready to claim), past
+/// ones (claimed, canceled or otherwise ended), or both. Pending ones tint it orange.
+enum ExitEntry: Equatable {
+    case pending, past, both
+
+    init?(_ exits: [ExitModel]) {
+        switch (exits.contains { ExitRules.live($0.state) }, exits.contains { !ExitRules.live($0.state) }) {
+        case (true, true): self = .both
+        case (true, false): self = .pending
+        case (false, true): self = .past
+        case (false, false): return nil
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .pending: "Pending exits"
+        case .past: "Past exits"
+        case .both: "Pending and past exits"
+        }
+    }
+
+    var tinted: Bool { self != .past }
+}
+
+/// The warning page's way to your exits: one card under the tree, light orange while any is pending,
+/// the soft surface once all have ended. Its title and counts wrap; it never truncates.
+struct ExitEntryCard: View {
+    let entry: ExitEntry
+    let sub: String?
+    let action: () -> Void
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: "rectangle.portrait.and.arrow.right").font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(entry.tinted ? NoahTokens.Colors.orangeText : NoahTokens.Colors.foreground)
+                    .frame(width: 34, height: 34)
+                    .background(NoahTokens.Colors.background, in: Circle())
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: L10n.text(entry.title, locale: locale.identifier)).noahText(NoahTokens.Typography.label)
+                        .foregroundStyle(NoahTokens.Colors.foreground)
+                    if let sub {
+                        // Orange text on the orange tint: muted grey is too faint on it.
+                        Text(verbatim: sub).noahText(HomeText.footnote)
+                            .foregroundStyle(entry.tinted ? NoahTokens.Colors.orangeText : NoahTokens.Colors.muted)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .frame(minHeight: 64)
+            .background(entry.tinted ? NoahTokens.Colors.orangeTint : NoahTokens.Colors.soft,
+                        in: RoundedRectangle(cornerRadius: NoahTokens.Radius.m, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: NoahTokens.Radius.m, style: .continuous))
+        }
+        .buttonStyle(HomePressStyle(scale: 0.98))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("exit-entry")
     }
 }
 
