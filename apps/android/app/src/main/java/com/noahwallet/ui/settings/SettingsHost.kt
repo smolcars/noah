@@ -298,7 +298,7 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         SettingsDestination.Recurring -> com.noahwallet.recurring.RecurringListPage(model, nav)
         is SchedulePage -> com.noahwallet.recurring.ScheduleScreen(model, nav, key.id)
         is EditorPage -> com.noahwallet.recurring.RecurringEditorPage(model, nav, key.id)
-        SettingsDestination.Exits -> com.noahwallet.onchain.ExitWarningPage(model, nav, live.overview)
+        SettingsDestination.Exits -> com.noahwallet.onchain.ExitWarningPage(model, nav)
         ExitChoosePage -> com.noahwallet.onchain.ExitChoosePage(model, nav)
         is ExitStartPage -> com.noahwallet.onchain.ExitStartPage(model, nav, key.ids)
         is ExitPage -> com.noahwallet.onchain.ExitProgressPage(model, nav, key.id)

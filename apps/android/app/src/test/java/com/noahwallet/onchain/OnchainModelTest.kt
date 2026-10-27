@@ -181,6 +181,38 @@ class OnchainModelTest {
             }, { calls++; "submitted" }, { attempts }, { id -> attempts = attempts.filter { it.id != id } },
             { checks++; if (failStatusRead) error("transport"); false }, {}, { id -> detailCalls++; ExitModel(id, 1, "Canceled", ExitDetails(), listOf("Start", "Canceled"), emptyList()) }, { receiptRefreshes++ }, settle = { settle() }, discard = { discarded.add(it) }, coin = { coin(it) })
     }
+    /**
+     * exit-v2-notes.md, Approved item 4: Back to the Emergency exit page shows the newest read since your last cancel, claim or
+     * start (the overview's tip numbers the reads here), never one from before it.
+     */
+    @Test fun theSharedOverviewIsTheNewestReadSinceTheLastSubmission() = runBlocking {
+        val shared = SharedOverview()
+        var version = 1L
+        var duringSubmission: OnchainOverview? = null
+        var gate: CompletableDeferred<Unit>? = null
+        fun model() = OnchainModel(OnchainModel.Dependencies({ true },
+            { val seen = OnchainOverview("wallet", emptyList(), emptyList(), 100_000, version, 0, null); gate?.await(); seen },
+            { action, ids, _, destination -> OnchainQuote(action, "wallet", ids, destination, 31_000) },
+            { duringSubmission = shared.overview; version++; "submitted" }, { emptyList() }, {}, { false }, {}, { null }, {}, shared = shared))
+        val warning = model(); warning.load()
+        assertEquals(1L, shared.overview?.tip)
+        // The exit's page cancels it: no page shows the read from before while that runs, and the exit page's read after it
+        // is what Back shows.
+        val exit = model()
+        exit.review(OnchainAction.cancel, listOf("a")); exit.confirm()
+        assertNull(duringSubmission); assertEquals(2L, shared.overview?.tip)
+        // A read that began before a submission and ends after it may have missed it: dropped.
+        val slow = CompletableDeferred<Unit>(); gate = slow
+        val other = model(); val reading = launch { other.load() }
+        yield(); gate = null
+        assertTrue("still reading", other.loading)
+        exit.review(OnchainAction.cancel, listOf("b")); exit.confirm()
+        slow.complete(Unit); reading.join()
+        assertEquals(2L, other.overview?.tip); assertEquals(3L, shared.overview?.tip)
+        // A wallet that's gone (suspended) leaves nothing to show.
+        warning.unavailable()
+        assertNull(shared.overview)
+    }
     @Test fun aFailedCoinLookupIsUnknownAndEachCompletedReadRetriesIt() = runBlocking {
         val f = Fake(); val m = OnchainModel(f.dependencies())
         f.coin = { error("The VTXO with id spent cannot be found") }

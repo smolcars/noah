@@ -45,12 +45,12 @@ internal suspend fun onchainSettle(app: AppModel): Boolean {
 }
 internal fun onchainDependencies(app: AppModel) =
     onchainDependencies(app.session, app.services.lifecycle, AutoBoardFunding.stored(app.settings), ExitClaimRecords.stored(app.settings),
-        ExitSeen.stored(app.settings), settle = { onchainSettle(app) }) { onchainReady(app) }
+        ExitSeen.stored(app.settings), settle = { onchainSettle(app) }, shared = SharedOverview.shared) { onchainReady(app) }
 
 /** The model's calls on [session], each mutation under [lifecycle]'s gate; a device test runs them on a fake wallet. */
 internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletSession, lifecycle: com.noahwallet.services.wallet.WalletLifecycle,
                                  funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, settle: suspend () -> Boolean = { false },
-                                 ready: () -> Boolean) = OnchainModel.Dependencies(
+                                 shared: SharedOverview? = null, ready: () -> Boolean) = OnchainModel.Dependencies(
     ready = ready, settle = settle, overview = session::onchainOverview,
     quote = { action, ids, amount, destination -> session.quoteOnchain(action, ids, amount, destination) },
     execute = { quote -> lifecycle.withWalletMutation {
@@ -75,7 +75,7 @@ internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletS
         if (!ready()) fail(OnchainFailure.unavailable)
         session.executeOnchain(quote, renewal = true)
     } },
-    coin = session::vtxoDetail,
+    coin = session::vtxoDetail, shared = shared,
 )
 
 @Composable

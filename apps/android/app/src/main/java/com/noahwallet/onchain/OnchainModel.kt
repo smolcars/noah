@@ -21,6 +21,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val executeRenewal: suspend (OnchainQuote) -> String = { fail(OnchainFailure.unavailable) },
         /** One coin by ID from the wallet, spent ones included (Activity opens a payment's coins). */
         val coin: suspend (String) -> VtxoModel = { fail(OnchainFailure.unavailable) },
+        /** Where every page's reads and submissions meet, so a page Back returns to never shows an older read. */
+        val shared: SharedOverview? = null,
     )
     /**
      * A coin the overview doesn't list, such as one a payment spent, or the failed lookup. bark has no not-found code,
@@ -74,7 +76,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         quote?.let { held -> disposalScope.launch { dependencies.discard(held) } }
         quote = null; estimateFallback = null; renewal = false
     }
-    fun unavailable() { invalidate(); overview = null; exit = null }
+    fun unavailable() { invalidate(); overview = null; exit = null; dependencies.shared?.changed() }
     private fun visible(saved: List<OnchainOperationJournal.Attempt>) = saved.filter { it.overrideAudit?.acknowledgedAt == null }
     private var readAgain = false
     /** One read at a time; asking during a read gets one more read after it, however many times it was asked. */
@@ -97,9 +99,13 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             try { dependencies.refreshReceipts() } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
             attempts = visible(dependencies.attempts())
             val token = generation
+            val since = dependencies.shared?.epoch
             val detail = detailID?.let { dependencies.detail(it) }
             val latest = dependencies.overview()
-            if (generation == token && dependencies.ready()) { exit = detail; overview = latest; error = receiptError; revision++ }
+            if (generation == token && dependencies.ready()) {
+                exit = detail; overview = latest; error = receiptError; revision++
+                since?.let { dependencies.shared?.read(latest, it) }
+            }
             // The wallet got busy during the read: read again, which waits for it.
             else if (!dependencies.ready()) readAgain = true
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -139,6 +145,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         val renewing = renewal
         val token = generation
         quote = null; renewal = false; busy = true; error = null
+        // What this submits changes what every page shows: from here on, none shows a read from before it.
+        dependencies.shared?.changed()
         try {
             if (!dependencies.ready() || !reviewed.current()) fail(OnchainFailure.changed)
             message = if (renewing) dependencies.executeRenewal(reviewed) else dependencies.execute(reviewed)
@@ -151,6 +159,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         }
         catch (failure: Exception) { error = (failure as? OnchainException ?: failure as? ExitNotPossible)?.message ?: OnchainFailure.uncertain.text }
         finally { withContext(NonCancellable) { dependencies.discard(reviewed) }; busy = false }
+        // Reads that ran during the submission may have missed it.
+        dependencies.shared?.changed()
         val submissionError = error
         load()
         if (submissionError != null) error = submissionError
@@ -184,4 +194,19 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         } catch (failure: Exception) { error = OnchainFailure.uncertain.text }
         finally { busy = false }
     }
+}
+
+/**
+ * The freshest overview any page's model has read since the last submission one made (an exit started, canceled or
+ * claimed, a board, a renew). The Emergency exit page shows it when Back returns there, until its own read arrives, so it
+ * never shows exits as they were before what you just did.
+ */
+@Stable
+class SharedOverview {
+    var overview by mutableStateOf<OnchainOverview?>(null); private set
+    /** Counts submissions and unavailable wallets: a read that began before the latest one is dropped. */
+    var epoch = 0; private set
+    fun read(overview: OnchainOverview, since: Int) { if (since == epoch) this.overview = overview }
+    fun changed() { epoch++; overview = null }
+    companion object { val shared = SharedOverview() }
 }

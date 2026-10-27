@@ -185,13 +185,13 @@ private fun rememberSampleCost(app: AppModel, vtxos: List<VtxoModel>): ExitCosts
  * with the real exit delta and per-VTXO fee, and Choose VTXOs. Reading it and estimating never broadcasts anything.
  */
 @Composable
-internal fun ExitWarningPage(app: AppModel, nav: SettingsNav, settings: OnchainOverview?) {
+internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
     val model = rememberOnchainModel(app)
     OnchainEffects(app, model, reloadOnChange = true)
-    // Back from an exit or the list, the page's model reads again: once the card has shown, Settings' last read ([settings])
-    // stands in until then, so the card is there at once rather than gone and back.
+    // Back from an exit or the list, the page's model reads again: once the card has shown, the freshest read since your last
+    // cancel, claim or start stands in until then, so the card is there at once, as it is now, rather than gone and back.
     val revealed = rememberSaveable { mutableStateOf(false) }
-    val overview = model.overview ?: settings.takeIf { revealed.value }
+    val overview = model.overview ?: SharedOverview.shared.overview.takeIf { revealed.value }
     val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed, app.session.daemonRun) }.orEmpty() }
     ExitWarningContent(overview?.exits.orEmpty(), overview?.tip ?: 0, rememberExitDelta(app), rememberSampleCost(app, overview?.vtxos.orEmpty())?.broadcast,
         app.isWalletSuspended, { money(app, it) }, nav.back, choose = { nav.open(ExitChoosePage) }, open = { nav.open(ExitPage(it)) },
