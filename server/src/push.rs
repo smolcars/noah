@@ -179,6 +179,24 @@ pub struct PushNotificationData {
     pub content_available: bool,
 }
 
+/// The body POSTed to a UnifiedPush endpoint. UnifiedPush has no title or body
+/// beside the data (as Expo/FCM have), and distributors never display messages
+/// themselves, so a notification with a title or body goes as a typed payload
+/// the app shows as-is. Its `data` isn't sent: the only visible notification,
+/// an Ark receive, has none. Background commands are sent unchanged.
+pub(crate) fn unified_push_body(data: &PushNotificationData) -> String {
+    if data.title.is_none() && data.body.is_none() {
+        return data.data.clone();
+    }
+
+    serde_json::json!({
+        "notification_type": "visible_notification",
+        "title": data.title,
+        "body": data.body,
+    })
+    .to_string()
+}
+
 #[derive(Debug, Clone)]
 pub struct PushDispatchReceipt {
     pub pubkey: String,
@@ -498,12 +516,12 @@ pub(crate) async fn send_batched_notifications(
     }
 
     if allow_unified_push && !unified_tokens.is_empty() {
-        let data_clone = data.clone();
+        let payload = unified_push_body(&data);
         stream::iter(unified_tokens)
             .for_each_concurrent(Some(UNIFIED_PUSH_CONCURRENCY_LIMIT), |endpoint| {
-                let payload = data_clone.clone();
+                let payload = payload.as_str();
                 async move {
-                    if let Err(e) = send_unified_notification(&endpoint, &payload.data).await {
+                    if let Err(e) = send_unified_notification(&endpoint, payload).await {
                         tracing::error!("Failed to send unified push notification: {}", e);
                     }
                 }
@@ -612,6 +630,40 @@ mod tests {
         assert!(is_expo_token("ExponentPushToken[test-token]"));
         assert!(is_expo_token("ExpoPushToken[test-token]"));
         assert!(is_expo_token("123e4567-e89b-12d3-a456-426614174000"));
+    }
+
+    #[test]
+    fn unified_push_gets_background_commands_unchanged() {
+        let data = r#"{"notification_type":"maintenance","notification_k1":"k1"}"#;
+        let command = PushNotificationData {
+            title: None,
+            body: None,
+            data: data.to_string(),
+            priority: Priority::High,
+            content_available: true,
+        };
+
+        assert_eq!(unified_push_body(&command), data);
+    }
+
+    #[test]
+    fn unified_push_gets_a_title_or_body_as_a_visible_notification() {
+        let body_only = PushNotificationData {
+            title: None,
+            body: Some("body".to_string()),
+            data: "{}".to_string(),
+            priority: Priority::High,
+            content_available: false,
+        };
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&unified_push_body(&body_only)).unwrap(),
+            serde_json::json!({
+                "notification_type": "visible_notification",
+                "title": null,
+                "body": "body",
+            })
+        );
     }
 
     #[test]
