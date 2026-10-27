@@ -126,7 +126,7 @@ Nothing here needs new bark data or new polling. iOS `ExitProgress` already has:
 - One line, then the explainer tree, then the four facts and Choose VTXOs.
 - With one exit, its row (with its path in the gutter) sits above the tree.
 - With several, an "Exits" row with a wrapping subtitle ("6 in progress · 1 ready to claim").
-- The explainer grows once when the page opens.
+- The explainer grows once when the page opens, with your biggest VTXO's transactions. It waits up to a second for the wallet's read rather than drawing a round's usual four and then redrawing; a slower read gets the four, which change when it arrives. Back to the page shows it grown.
 
 **Choose VTXOs.** v1, except that rows and sublines wrap.
 
