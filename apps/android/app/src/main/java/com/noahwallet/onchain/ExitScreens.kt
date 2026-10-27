@@ -2,6 +2,7 @@ package com.noahwallet.onchain
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -184,20 +185,24 @@ private fun rememberSampleCost(app: AppModel, vtxos: List<VtxoModel>): ExitCosts
  * with the real exit delta and per-VTXO fee, and Choose VTXOs. Reading it and estimating never broadcasts anything.
  */
 @Composable
-internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
+internal fun ExitWarningPage(app: AppModel, nav: SettingsNav, settings: OnchainOverview?) {
     val model = rememberOnchainModel(app)
     OnchainEffects(app, model, reloadOnChange = true)
-    val overview = model.overview
+    // Back from an exit or the list, the page's model reads again: once the card has shown, Settings' last read ([settings])
+    // stands in until then, so the card is there at once rather than gone and back.
+    val revealed = rememberSaveable { mutableStateOf(false) }
+    val overview = model.overview ?: settings.takeIf { revealed.value }
     val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed, app.session.daemonRun) }.orEmpty() }
     ExitWarningContent(overview?.exits.orEmpty(), overview?.tip ?: 0, rememberExitDelta(app), rememberSampleCost(app, overview?.vtxos.orEmpty())?.broadcast,
         app.isWalletSuspended, { money(app, it) }, nav.back, choose = { nav.open(ExitChoosePage) }, open = { nav.open(ExitPage(it)) },
-        all = { nav.open(ExitsPage) }, needsFunds = needsFunds) { OnchainStatus(app, model) }
+        all = { nav.open(ExitsPage) }, needsFunds = needsFunds, revealed = revealed) { OnchainStatus(app, model) }
 }
 
+/** [revealed]: the exits card has shown on this page; kept with the page, so going back to it never plays its entrance again. */
 @Composable
 internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?, sample: Long?, suspended: Boolean, money: (Long) -> String,
                                 back: (() -> Unit)?, choose: () -> Unit, open: (String) -> Unit, all: () -> Unit, needsFunds: Set<String> = emptySet(),
-                                status: @Composable () -> Unit = {}) {
+                                revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     ExitFrame(tr("Emergency exit"), back, foot = {
         FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), wrap = true, enabled = !suspended, onClick = choose)
@@ -207,12 +212,21 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
         ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp).testTag("exit-warn-picture"))
         // The exits already running, or ended: one opens directly, several open the list. Exits known when the page opens
-        // show at once; ones read later fade in under the picture and the facts ease down (Reduce Motion: a fade only).
+        // show at once; ones read later fade in under the picture and the facts ease down (Reduce Motion: a fade only), once
+        // per page: back on it, they show at once.
         val shown = remember { MutableTransitionState(exits.isNotEmpty()) }.apply { targetState = exits.isNotEmpty() }
         val reduceMotion = LocalReduceMotion.current
-        AnimatedVisibility(shown, enter = if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else
-            fadeIn(NoahTokens.Motion.snappy()) + slideInVertically(NoahTokens.Motion.snappy()) { it / 6 } +
-                expandVertically(NoahTokens.Motion.snappy(), expandFrom = Alignment.Top),
+        // Chosen as the exits arrive, before this arrival marks the page revealed, so the entrance it starts runs to the end.
+        val enter = remember(exits.isNotEmpty()) {
+            when {
+                revealed.value -> EnterTransition.None
+                reduceMotion -> fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+                else -> fadeIn(NoahTokens.Motion.snappy()) + slideInVertically(NoahTokens.Motion.snappy()) { it / 6 } +
+                    expandVertically(NoahTokens.Motion.snappy(), expandFrom = Alignment.Top)
+            }
+        }
+        LaunchedEffect(exits.isNotEmpty()) { if (exits.isNotEmpty()) revealed.value = true }
+        AnimatedVisibility(shown, enter = enter,
             exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else fadeOut(NoahTokens.Motion.snappy()) + shrinkVertically(NoahTokens.Motion.snappy())) {
             ExitEntry.of(stages.values)?.let { entry ->
                 ExitEntryCard(entry, exitCounts(stages.values), Modifier.padding(top = 14.dp)) { if (exits.size == 1) open(exits[0].id) else all() }
