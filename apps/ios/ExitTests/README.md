@@ -103,4 +103,5 @@ another wallet), `warn-many` (the exits card, pending and past), `warn-past` (pa
 only) and `warn-late` (the exits arrive 1.5 s after the page opens, so the card's arrival
 can be recorded). After a progress state, `step progress-<state>` keeps the page on screen
 and moves it to that state, as a new read would, so the motion can be recorded (for
-example `progress-mempool`, then `step progress-confirm`).
+example `progress-mempool`, then `step progress-confirm`). `open list` pushes the Exits
+list over the page and `back` pops it, as Settings' stack does.
