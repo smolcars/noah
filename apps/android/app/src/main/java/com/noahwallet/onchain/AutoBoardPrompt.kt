@@ -90,6 +90,8 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
             if (!busy) {
                 plan = null; busy = true
                 scope.launch {
+                    // A board changes what every page shows, as the pages' own submissions do (SharedOverview).
+                    SharedOverview.shared.changed()
                     try {
                         message = app.services.lifecycle.withWalletMutation {
                             if (!enabled() || !onchainReady(app) || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) fail(OnchainFailure.unavailable)
@@ -110,7 +112,10 @@ fun AutoBoardPrompt(app: AppModel, onBoarded: (Long) -> Unit) {
                         if (failure is CancellationException) throw failure
                         message = (failure as? OnchainException)?.message ?: OnchainFailure.uncertain.text
                     }
-                    finally { withContext(NonCancellable) { app.session.discardBoardReview(quote) }; busy = false; generation++ }
+                    finally {
+                        SharedOverview.shared.changed()
+                        withContext(NonCancellable) { app.session.discardBoardReview(quote) }; busy = false; generation++
+                    }
                 }
             }
         }) }

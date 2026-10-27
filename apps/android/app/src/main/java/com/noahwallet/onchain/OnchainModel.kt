@@ -158,9 +158,11 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             }
         }
         catch (failure: Exception) { error = (failure as? OnchainException ?: failure as? ExitNotPossible)?.message ?: OnchainFailure.uncertain.text }
-        finally { withContext(NonCancellable) { dependencies.discard(reviewed) }; busy = false }
-        // Reads that ran during the submission may have missed it.
-        dependencies.shared?.changed()
+        finally {
+            // Reads that ran during the submission may have missed it, even when Back canceled its caller.
+            dependencies.shared?.changed()
+            withContext(NonCancellable) { dependencies.discard(reviewed) }; busy = false
+        }
         val submissionError = error
         load()
         if (submissionError != null) error = submissionError
@@ -197,8 +199,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
 }
 
 /**
- * The freshest overview any page's model has read since the last submission one made (an exit started, canceled or
- * claimed, a board, a renew). The Emergency exit page shows it when Back returns there, until its own read arrives, so it
+ * The freshest overview any page's model has read since the last submission (an exit started, canceled or claimed, a
+ * board, a renew), whether or not the page that submitted it is still there. The Emergency exit page shows it when Back returns there, until its own read arrives, so it
  * never shows exits as they were before what you just did.
  */
 @Stable

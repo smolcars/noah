@@ -213,6 +213,32 @@ class OnchainModelTest {
         warning.unavailable()
         assertNull(shared.overview)
     }
+    /**
+     * Back cancels the submitting page while the wallet still finishes the submission (WalletSession runs it non-cancellably):
+     * a read made meanwhile may predate it, so it isn't kept for the page Back returns to.
+     */
+    @Test fun aSubmissionWhoseCallerBackCanceledStillDropsReadsMadeDuringIt() = runBlocking {
+        val shared = SharedOverview()
+        var version = 1L
+        val submitting = CompletableDeferred<Unit>(); val finish = CompletableDeferred<Unit>()
+        fun model() = OnchainModel(OnchainModel.Dependencies({ true },
+            { OnchainOverview("wallet", emptyList(), emptyList(), 100_000, version, 0, null) },
+            { action, ids, _, destination -> OnchainQuote(action, "wallet", ids, destination, 31_000) },
+            // As WalletSession.withOpen: the wallet finishes the call, and the canceled caller hears so as it returns.
+            { withContext(NonCancellable + Dispatchers.Default) { submitting.complete(Unit); finish.await(); version++ }; "submitted" },
+            { emptyList() }, {}, { false }, {}, { null }, {}, shared = shared))
+        val exit = model()
+        exit.review(OnchainAction.cancel, listOf("a"))
+        val confirming = launch { exit.confirm() }
+        submitting.await()
+        // Another page reads while the cancel is still being sent: what it reads is from before it.
+        model().load()
+        assertEquals(1L, shared.overview?.tip)
+        confirming.cancel(); finish.complete(Unit); confirming.join()
+        assertTrue(confirming.isCancelled)
+        assertNull("the read from during the cancel isn't what Back shows", shared.overview)
+        assertFalse(exit.busy)
+    }
     @Test fun aFailedCoinLookupIsUnknownAndEachCompletedReadRetriesIt() = runBlocking {
         val f = Fake(); val m = OnchainModel(f.dependencies())
         f.coin = { error("The VTXO with id spent cannot be found") }
