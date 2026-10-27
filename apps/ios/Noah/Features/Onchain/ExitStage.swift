@@ -332,6 +332,8 @@ struct ExitStageView: View {
     @State private var changedAt = Date.distantPast
     @State private var settled = true
     @State private var visible = true
+    /// The explainer has grown: Back to its page shows it grown rather than growing it again.
+    @State private var grew = false
     @ScaledMetric(relativeTo: .caption) private var textScale = 1.0
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -360,8 +362,9 @@ struct ExitStageView: View {
             }
         }
         .onAppear {
-            // The explainer grows once when the page opens; Reduce Motion shows it grown.
-            guard scene.explain, !reduceMotion else { return }
+            // The explainer grows once when the page opens, not again on Back; Reduce Motion shows it grown.
+            guard scene.explain, !grew, !reduceMotion else { return }
+            grew = true
             var seed = scene
             seed.grown = false
             begin(from: seed)
