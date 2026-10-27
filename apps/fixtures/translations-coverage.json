@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1490,
-  "sourceKeys": 1527,
+  "catalogEntries": 1493,
+  "sourceKeys": 1530,
   "coverage": {
     "ios": {
       "used": [
@@ -774,6 +774,7 @@
         "Paid from your Ark balance.",
         "Paid from your on-chain bitcoin.",
         "Paid over Lightning. Their secret is your proof of payment.",
+        "Past exits",
         "Paste exactly 12 or 24 words. Your entries haven't been replaced.",
         "Paste payment request",
         "Pause",
@@ -803,6 +804,8 @@
         "Pending Offboard",
         "Pending Rounds",
         "Pending Send",
+        "Pending and past exits",
+        "Pending exits",
         "Pending: {amount}",
         "Permission required",
         "Pick a name",
@@ -2132,6 +2135,7 @@
         "Paid from your Ark balance.",
         "Paid from your on-chain bitcoin.",
         "Paid over Lightning. Their secret is your proof of payment.",
+        "Past exits",
         "Paste",
         "Paste exactly 12 or 24 words. Your entries haven't been replaced.",
         "Pause",
@@ -2161,6 +2165,8 @@
         "Pending Offboard",
         "Pending Rounds",
         "Pending Send",
+        "Pending and past exits",
+        "Pending exits",
         "Pending: {amount}",
         "Permission required",
         "Pick a name",

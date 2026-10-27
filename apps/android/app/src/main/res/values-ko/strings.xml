@@ -879,6 +879,7 @@
   <string name="gt_a0145d18401ff94f">"Ark 잔액에서 결제돼요."</string>
   <string name="gt_5dc01c1c6bc76383">"온체인 비트코인에서 지불해요."</string>
   <string name="gt_17cceb4191297e74">"라이트닝으로 결제했어요. 상대의 비밀값이 결제 증명이에요."</string>
+  <string name="gt_f2fa541dbd0e5274">"지난 출금"</string>
   <string name="gt_f3380f7b44bd70af">"붙여넣기"</string>
   <string name="gt_2b0c0a6b85adb58c">"정확히 12개 또는 24개의 단어를 붙여 넣으세요. 기존 입력 내용은 그대로 유지됩니다."</string>
   <string name="gt_f012547b9f87dbeb">"결제 요청 붙여넣기"</string>
@@ -910,6 +911,8 @@
   <string name="gt_21682e0a58f5581b">"오프보딩 대기 중"</string>
   <string name="gt_779dd1993ab4b13c">"대기 중인 라운드"</string>
   <string name="gt_5fb55a3f477aee2b">"전송 대기 중"</string>
+  <string name="gt_48b8c81ab100b17d">"미완료 및 지난 출금"</string>
+  <string name="gt_4262dff6a3c38095">"미완료 출금"</string>
   <string name="gt_f41dbd7482670f0c">"대기 중: %1$s"</string>
   <string name="gt_dbb6cf817820de0b">"권한 필요"</string>
   <string name="gt_cbf613fce96573ac">"이름 정하기"</string>

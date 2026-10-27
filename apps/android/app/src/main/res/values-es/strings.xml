@@ -879,6 +879,7 @@
   <string name="gt_a0145d18401ff94f">"Se paga con tu saldo de Ark."</string>
   <string name="gt_5dc01c1c6bc76383">"Pagadas con tus bitcoins en cadena."</string>
   <string name="gt_17cceb4191297e74">"Pagado por Lightning. Su secreto es tu prueba de pago."</string>
+  <string name="gt_f2fa541dbd0e5274">"Salidas anteriores"</string>
   <string name="gt_f3380f7b44bd70af">"Pegar"</string>
   <string name="gt_2b0c0a6b85adb58c">"Pega exactamente 12 o 24 palabras. No se ha sustituido el texto que has introducido."</string>
   <string name="gt_f012547b9f87dbeb">"Pegar solicitud de pago"</string>
@@ -910,6 +911,8 @@
   <string name="gt_21682e0a58f5581b">"Retiro pendiente"</string>
   <string name="gt_779dd1993ab4b13c">"Rondas pendientes"</string>
   <string name="gt_5fb55a3f477aee2b">"Envío pendiente"</string>
+  <string name="gt_48b8c81ab100b17d">"Salidas pendientes y anteriores"</string>
+  <string name="gt_4262dff6a3c38095">"Salidas pendientes"</string>
   <string name="gt_f41dbd7482670f0c">"Pendiente: %1$s"</string>
   <string name="gt_dbb6cf817820de0b">"Permiso necesario"</string>
   <string name="gt_cbf613fce96573ac">"Elige un nombre"</string>

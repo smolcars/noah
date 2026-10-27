@@ -879,6 +879,7 @@
   <string name="gt_a0145d18401ff94f">"Paid from your Ark balance."</string>
   <string name="gt_5dc01c1c6bc76383">"Paid from your on-chain bitcoin."</string>
   <string name="gt_17cceb4191297e74">"Paid over Lightning. Their secret is your proof of payment."</string>
+  <string name="gt_f2fa541dbd0e5274">"Past exits"</string>
   <string name="gt_f3380f7b44bd70af">"Paste"</string>
   <string name="gt_2b0c0a6b85adb58c">"Paste exactly 12 or 24 words. Your entries haven\'t been replaced."</string>
   <string name="gt_f012547b9f87dbeb">"Paste payment request"</string>
@@ -910,6 +911,8 @@
   <string name="gt_21682e0a58f5581b">"Pending Offboard"</string>
   <string name="gt_779dd1993ab4b13c">"Pending Rounds"</string>
   <string name="gt_5fb55a3f477aee2b">"Pending Send"</string>
+  <string name="gt_48b8c81ab100b17d">"Pending and past exits"</string>
+  <string name="gt_4262dff6a3c38095">"Pending exits"</string>
   <string name="gt_f41dbd7482670f0c">"Pending: %1$s"</string>
   <string name="gt_dbb6cf817820de0b">"Permission required"</string>
   <string name="gt_cbf613fce96573ac">"Pick a name"</string>

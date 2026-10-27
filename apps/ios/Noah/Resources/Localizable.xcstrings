@@ -31081,6 +31081,42 @@
         }
       }
     },
+    "Past exits": {
+      "comment": "GT gt_f2fa541dbd0e5274; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Past exits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salidas anteriores"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "過去の出金"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 출금"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidigare nöduttag"
+          }
+        }
+      }
+    },
     "Paste": {
       "comment": "GT gt_f3380f7b44bd70af; arguments: none",
       "extractionState": "manual",
@@ -32193,6 +32229,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Väntande överföring"
+          }
+        }
+      }
+    },
+    "Pending and past exits": {
+      "comment": "GT gt_48b8c81ab100b17d; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending and past exits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salidas pendientes y anteriores"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未完了と過去の出金"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미완료 및 지난 출금"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pågående och tidigare nöduttag"
+          }
+        }
+      }
+    },
+    "Pending exits": {
+      "comment": "GT gt_4262dff6a3c38095; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending exits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salidas pendientes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未完了の出金"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미완료 출금"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pågående nöduttag"
           }
         }
       }

@@ -879,6 +879,7 @@
   <string name="gt_a0145d18401ff94f">"Ark残高から支払われます。"</string>
   <string name="gt_5dc01c1c6bc76383">"オンチェーンのビットコインから支払います。"</string>
   <string name="gt_17cceb4191297e74">"Lightningで支払いました。相手のシークレットが支払いの証明になります。"</string>
+  <string name="gt_f2fa541dbd0e5274">"過去の出金"</string>
   <string name="gt_f3380f7b44bd70af">"貼り付け"</string>
   <string name="gt_2b0c0a6b85adb58c">"12語または24語ちょうどを貼り付けてください。入力内容は変更されていません。"</string>
   <string name="gt_f012547b9f87dbeb">"支払いリクエストを貼り付け"</string>
@@ -910,6 +911,8 @@
   <string name="gt_21682e0a58f5581b">"オフボード待ち"</string>
   <string name="gt_779dd1993ab4b13c">"保留中のラウンド"</string>
   <string name="gt_5fb55a3f477aee2b">"送金待ち"</string>
+  <string name="gt_48b8c81ab100b17d">"未完了と過去の出金"</string>
+  <string name="gt_4262dff6a3c38095">"未完了の出金"</string>
   <string name="gt_f41dbd7482670f0c">"保留中：%1$s"</string>
   <string name="gt_dbb6cf817820de0b">"権限が必要です"</string>
   <string name="gt_cbf613fce96573ac">"名前を決める"</string>
