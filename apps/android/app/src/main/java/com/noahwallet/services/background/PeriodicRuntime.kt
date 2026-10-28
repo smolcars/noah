@@ -22,7 +22,7 @@ internal class PeriodicRuntime(context: Context, services: AppServices) {
         maintenance = services.session::maintenanceDelegated,
         backupEnabled = { services.registration.state.isBackupEnabled == true },
         backup = { services.backupCoordinator.flush(BackupCoordinator.Reason.startup, requireEnabled = true) },
-        widgetSummary = { summary = services.session.summary(); ticket = WidgetDataWriter.ticket() },
+        widgetSummary = { ticket = WidgetDataWriter.ticket(); summary = services.session.summary() },
         widgetExpiry = { extras = services.session.widgetExtras() },
         publishWidget = { summary?.let { WidgetDataWriter.write(context, it.balance, extras, services::widgetDisplay, BuildConfig.APP_VARIANT, ticket) } },
         progressExits = { services.session.progressPendingExits { AppLog(context, "backgroundTasks").w("Background exit progress failed: $it") } },

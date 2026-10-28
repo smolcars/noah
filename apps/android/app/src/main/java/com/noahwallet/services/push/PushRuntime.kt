@@ -68,8 +68,8 @@ class PushRuntime(private val context: Context, private val services: AppService
             // withOpen shields its block from cancellation, so check the caller's admission explicitly.
             services.session.withOpen { handles ->
                 admitted()
-                val summary = handles.summary()
                 val ticket = WidgetDataWriter.ticket()
+                val summary = handles.summary()
                 admitted()
                 val extras = WidgetDataWriter.extras(handles, BuildConfig.APP_VARIANT)
                 admitted()

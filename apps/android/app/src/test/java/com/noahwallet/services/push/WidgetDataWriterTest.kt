@@ -33,7 +33,7 @@ class WidgetDataWriterTest {
     private val bip177 = WidgetDataWriter.Display(BitcoinAmountUnit.bip177, false, "USD")
     private val now = 1_761_577_200_000L // 2026-10-27T15:00:00Z
 
-    @Before fun reset() { prefs.edit().clear().commit() }
+    @Before fun reset() { prefs.edit().clear().commit(); WidgetDataWriter.forgetQuote() }
 
     private fun movement(id: String, at: Long, sats: Long) = com.noahwallet.history.HistoryTransaction(id, "Arkoor", kotlin.math.abs(sats),
         com.noahwallet.history.HistoryRules.isoDate(java.util.Date(at)), if (sats < 0) "outgoing" else "incoming", source = "ark",
@@ -162,6 +162,32 @@ class WidgetDataWriterTest {
         assertNull(stored)
         WidgetDataWriter.write(context, sats(500), null, { bip177 }, "regtest", WidgetDataWriter.ticket())
         assertEquals(500L, stored!!.balance)
+    }
+
+    /** Home's quote can arrive before the first snapshot (a new wallet's first visit): the first write still shows fiat. */
+    @Test fun aQuoteBeforeTheFirstSnapshotReachesTheFirstWrite() = runBlocking {
+        WidgetDataWriter.republish(context, { bip177 }, "regtest", WidgetDataWriter.Quote("USD", 100_000_000.0))
+        assertNull(stored)
+        WidgetDataWriter.write(context, balance, null, { bip177 }, "regtest", WidgetDataWriter.ticket())
+        assertEquals(100_000_000.0, stored!!.fiatPrice!!, 0.0); assertEquals("USD", stored!!.fiatCurrency)
+        // Home's newer quote wins over the one the snapshot carried.
+        WidgetDataWriter.republish(context, { bip177 }, "regtest", WidgetDataWriter.Quote("USD", 50_000_000.0))
+        WidgetDataWriter.write(context, balance, null, { bip177 }, "regtest", WidgetDataWriter.ticket())
+        assertEquals(50_000_000.0, stored!!.fiatPrice!!, 0.0)
+    }
+
+    /** A write that started reading before a settings change lands after its republish, and keeps what it changed. */
+    @Test fun aPendingWriteKeepsANewerRepublish() = runBlocking {
+        WidgetDataWriter.write(context, balance, null, { bip177 }, "regtest", WidgetDataWriter.ticket())
+        var settings = bip177
+        val push = WidgetDataWriter.ticket()
+        settings = WidgetDataWriter.Display(BitcoinAmountUnit.sats, true, "EUR")
+        WidgetDataWriter.republish(context, { settings }, "regtest", WidgetDataWriter.Quote("EUR", 90_000.0))
+        val republished = stored!!
+        WidgetDataWriter.write(context, balance, null, { settings }, "regtest", push)
+        assertTrue(stored!!.hidden); assertTrue(stored!!.sats)
+        assertEquals("EUR", stored!!.fiatCurrency); assertEquals(90_000.0, stored!!.fiatPrice!!, 0.0)
+        assertEquals(republished.copy(writtenAt = stored!!.writtenAt), stored)
     }
 
     /** Confirmation dates are kept per txid beside the snapshot, never recomputed, and go with the wallet. */

@@ -59,6 +59,17 @@ class HeadlessEntryPointsTest {
         assertTrue(source("recurring/RecurringRuntime").contains("wallet?.isInitialized != false"))
         assertFalse(code.contains("ensureWalletOpen")); assertFalse(code.contains("ensureOpen"))
     }
+    /** Every widget writer takes its ticket before its first wallet read, so a stalled read can't win over a newer one. */
+    @Test fun everyWidgetWriterTakesItsTicketBeforeReadingTheWallet() {
+        for ((path, read) in listOf("services/push/PushRuntime" to "handles.summary()", "services/background/PeriodicRuntime" to "services.session.summary()",
+            "recurring/RecurringRuntime" to "services.session.summary()", "ui/AppModel" to "session.summary()")) {
+            val code = source(path)
+            val ticket = code.indexOf("WidgetDataWriter.ticket()")
+            assertTrue(path, ticket >= 0)
+            assertTrue("$path reads before its ticket", ticket < code.indexOf(read))
+        }
+    }
+
     @Test fun everyWidgetRendersCachedDataWithoutOpeningWallets() {
         val code = source("widgets/NoahWidgetProvider")
         assertTrue(code.contains("WidgetSnapshot.read(prefs)"))

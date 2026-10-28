@@ -60,10 +60,21 @@ object WidgetDataWriter {
     private val reads = java.util.concurrent.atomic.AtomicLong()
     /** The newest read published, or the clear that followed it; guarded by [writes]. */
     private var published = 0L
+    /** Home's latest quote in this process, kept whether or not a snapshot exists yet; guarded by [writes]. */
+    private var latestQuote: Quote? = null
+
+    /** Tests start without a quote from an earlier one. */
+    internal fun forgetQuote() { latestQuote = null }
+
+    /** The newest valid quote in [currency]: Home's latest, else the one a snapshot carried over. */
+    private fun quote(currency: String, stored: WidgetSnapshot?): Quote? =
+        listOfNotNull(latestQuote, stored?.let { s -> s.fiatPrice?.let { price -> s.fiatCurrency?.let { Quote(it, price) } } })
+            .firstOrNull { it.currency == currency && it.price.isFinite() && it.price > 0 }
 
     /**
-     * Take right after reading the balance, and pass to [write]: a write whose read is older than one already published
-     * (a push that stalled while the app published a newer balance) or than a clear (a deleted wallet) is dropped.
+     * Take before reading anything from the wallet, and pass to [write]: a write whose reads started before those of one
+     * already published (a push that stalled while the app published a newer balance), or before a clear (a deleted
+     * wallet), is dropped. Every writer takes it the same way.
      */
     fun ticket(): Long = reads.incrementAndGet()
     /** Confirmed transactions' dates by txid ([WidgetWave.ChainDate]), kept beside the snapshot and cleared with it. */
@@ -126,24 +137,26 @@ object WidgetDataWriter {
     /**
      * The whole snapshot replaces the file, old keys included. [display] is read under the lock from its live source, so
      * a slow writer never brings back a hide, unit or currency the user has changed since; the last quote carries over
-     * while its currency holds. [ticket]: taken right after [balance] was read. [known]: block times Activity has read
+     * while its currency holds. [ticket]: taken before [balance] was read. [known]: block times Activity has read
      * (txid → epoch ms), which date transactions exactly.
      */
     @Suppress("LongParameterList") // known and checkStage are optional per caller
     suspend fun write(context: Context, balance: WalletBalance, extras: Extras?, display: () -> Display, variant: String, ticket: Long,
         known: Map<String, Long> = emptyMap(), checkStage: () -> Unit = {}): Unit = withContext(NonCancellable + Dispatchers.IO) {
         val wrote = writes.withLock {
-            if (ticket < published) return@withLock false
+            if (ticket <= published) return@withLock false
             val prefs = prefs(context, variant)
             val stored = WidgetSnapshot.decode(prefs.getString(WidgetSnapshot.KEY, null))
-            val quote = stored?.let { s -> s.fiatPrice?.let { price -> s.fiatCurrency?.let { Quote(it, price) } } }
+            // Settings and the quote as they are now, not as they were when the wallet was read.
+            val display = display()
             val now = System.currentTimeMillis()
             // Unreadable history keeps the dates already known.
             val storedDates = dates(prefs.getString(CHAIN_DATES, null))
             val chainDates = extras?.rows?.let { WidgetWave.chainDates(it, storedDates, known, extras.tip, now) } ?: storedDates
             val committed = prefs.commitEdit {
                 clear()
-                    .putString(WidgetSnapshot.KEY, snapshot(balance, extras, display(), quote, chainDates.mapValues { it.value.at }, now).encode())
+                    .putString(WidgetSnapshot.KEY,
+                        snapshot(balance, extras, display, quote(display.currency, stored), chainDates.mapValues { it.value.at }, now).encode())
                     .putString(CHAIN_DATES, kotlinx.serialization.json.Json.encodeToString(dateMap, chainDates))
                 checkStage()
             }
@@ -156,16 +169,16 @@ object WidgetDataWriter {
 
     /**
      * The hide setting, the unit, the fiat currency or Home's [quote] changed: the stored snapshot takes them without
-     * reading the wallet. With no snapshot yet (no wallet), there's nothing to change.
+     * reading the wallet. A quote is kept even before there's a snapshot, for the first write.
      */
     suspend fun republish(context: Context, display: () -> Display, variant: String,
         quote: Quote? = null): Unit = withContext(NonCancellable + Dispatchers.IO) {
         val changed = writes.withLock {
+            if (quote != null) latestQuote = quote
             val prefs = prefs(context, variant)
             val display = display()
             val stored = WidgetSnapshot.decode(prefs.getString(WidgetSnapshot.KEY, null)) ?: return@withLock false
-            val price = (quote ?: stored.fiatPrice?.let { price -> stored.fiatCurrency?.let { Quote(it, price) } })
-                ?.takeIf { it.currency == display.currency && it.price.isFinite() && it.price > 0 }?.price
+            val price = quote(display.currency, stored)?.price
             val next = stored.copy(amountUnit = display.unit.name, hidden = display.hidden,
                 fiatCurrency = price?.let { display.currency }, fiatPrice = price)
             if (next == stored) return@withLock false

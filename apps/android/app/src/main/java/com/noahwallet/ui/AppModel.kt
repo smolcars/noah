@@ -428,7 +428,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             checkStage()
             if (sync) session.sync()
             var ticket = 0L
-            summary = ForegroundWidgetRefresh.read({ session.summary().also { ticket = com.noahwallet.services.push.WidgetDataWriter.ticket() } },
+            summary = ForegroundWidgetRefresh.read({ ticket = com.noahwallet.services.push.WidgetDataWriter.ticket(); session.summary() },
                 session::widgetExtras, ::checkStage) { balance, extras ->
                 com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, extras, { widgetDisplay }, BuildConfig.APP_VARIANT,
                     ticket, known = widgetBlockTimes(), checkStage = ::checkStage)
