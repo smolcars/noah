@@ -3,7 +3,7 @@ import XCTest
 /// Taps through the installed regtest app on a physical device so upgrade
 /// acceptance runs need no human. Only ever drives `com.noahwallet.regtest`
 /// and answers system permission alerts with "Allow".
-final class RegtestDriverTests: XCTestCase {
+final class RegtestDriverTests: XCTestCase { // swiftlint:disable:this balanced_xctest_lifecycle - nothing to tear down: the app outlives each run
     private let app = XCUIApplication(bundleIdentifier: "com.noahwallet.regtest")
     private let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
 
@@ -138,39 +138,51 @@ final class RegtestDriverTests: XCTestCase {
                 TimeInterval(argument[argument.index(after: at)...]).map { (String(argument[..<at]), $0) }
             } ?? (argument, 30)
             print("NOAH-STEP \(command):\(argument)")
-            switch command {
-            case "activate": app.activate()
-            case "tap": step(label, timeout: seconds)
-            case "tapid":
-                let target = app.descendants(matching: .any)[label]
-                XCTAssertTrue(target.waitForExistence(timeout: seconds), "No element \(label)")
-                target.tap()
-            case "wait": wait(for: label, timeout: seconds)
-            case "gone":
-                let deadline = Date().addingTimeInterval(seconds)
-                while element(label).exists && Date() < deadline { allowAlerts(); sleep(1) }
-                XCTAssertFalse(element(label).exists, "Still showing \"\(label)\"")
-            case "scrollto":
-                for _ in 0..<10 where !(element(label).exists && element(label).isHittable) { app.swipeUp() }
-                step(label)
-            case "type": app.typeText(argument)
-            case "field":
-                let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
-                let field = app.textFields.element(boundBy: Int(parts[0]) ?? 0)
-                XCTAssertTrue(field.waitForExistence(timeout: 15))
-                field.tap()
-                field.typeText(parts.count > 1 ? parts[1] : "")
-            case "tapxy":
-                // Screen points from the top-left, for system popovers outside the app's tree.
-                let xy = argument.split(separator: ":").compactMap { Double($0) }
-                app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: xy[0], dy: xy[1])).tap()
-            case "swipeup": app.swipeUp()
-            case "swipedown": app.swipeDown()
-            case "home": XCUIDevice.shared.press(.home)
-            case "sleep": settle(seconds: TimeInterval(argument) ?? 1)
-            case "dump": print("NOAH-DUMP-BEGIN\n\(app.debugDescription)\nNOAH-DUMP-END")
-            default: XCTFail("Unknown step \(line)")
-            }
+            if !runElementStep(command, label: label, seconds: seconds) { runDeviceStep(command, argument: argument, line: line) }
+        }
+    }
+
+    /// Steps that find an element by its label; false for any other command.
+    private func runElementStep(_ command: String, label: String, seconds: TimeInterval) -> Bool {
+        switch command {
+        case "tap": step(label, timeout: seconds)
+        case "tapid":
+            let target = app.descendants(matching: .any)[label]
+            XCTAssertTrue(target.waitForExistence(timeout: seconds), "No element \(label)")
+            target.tap()
+        case "wait": wait(for: label, timeout: seconds)
+        case "gone":
+            let deadline = Date().addingTimeInterval(seconds)
+            while element(label).exists && Date() < deadline { allowAlerts(); sleep(1) }
+            XCTAssertFalse(element(label).exists, "Still showing \"\(label)\"")
+        case "scrollto":
+            for _ in 0..<10 where !(element(label).exists && element(label).isHittable) { app.swipeUp() }
+            step(label)
+        default: return false
+        }
+        return true
+    }
+
+    private func runDeviceStep(_ command: String, argument: String, line: String) {
+        switch command {
+        case "activate": app.activate()
+        case "type": app.typeText(argument)
+        case "field":
+            let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
+            let field = app.textFields.element(boundBy: Int(parts[0]) ?? 0)
+            XCTAssertTrue(field.waitForExistence(timeout: 15))
+            field.tap()
+            field.typeText(parts.count > 1 ? parts[1] : "")
+        case "tapxy":
+            // Screen points from the top-left, for system popovers outside the app's tree.
+            let xy = argument.split(separator: ":").compactMap { Double($0) }
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: xy[0], dy: xy[1])).tap()
+        case "swipeup": app.swipeUp()
+        case "swipedown": app.swipeDown()
+        case "home": XCUIDevice.shared.press(.home)
+        case "sleep": settle(seconds: TimeInterval(argument) ?? 1)
+        case "dump": print("NOAH-DUMP-BEGIN\n\(app.debugDescription)\nNOAH-DUMP-END")
+        default: XCTFail("Unknown step \(line)")
         }
     }
 
