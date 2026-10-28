@@ -151,28 +151,59 @@ class NoahWidgetProviderTest {
         assertNull(WidgetViews.frame(WidgetLayout.wide, content, 372f, 84f))
     }
 
+    private val foldSlots = listOf(android.util.SizeF(360f, 600f), android.util.SizeF(660f, 280f), android.util.SizeF(740f, 560f),
+        android.util.SizeF(620f, 680f))
+    /** The launcher's limit on a Pixel Fold that booted closed: 6 × its 1080 × 2092 cover. */
+    private val closedBootCap = 6L * 1080 * 2092
+    private fun bytes(built: WidgetViews.Built) = built.bitmaps.distinctBy { System.identityHashCode(it) }.sumOf { it.allocationByteCount.toLong() }
+
     /**
-     * A Fold reports up to four slots and their bitmaps travel in one update, which the launcher refuses above 6 × its
-     * display's pixels: these slots needed 37.4 MB for No wallet against 24.4 MB (Sol review), leaving the old balance up.
+     * A Fold reports up to four slots and their bitmaps travel in one update, which the launcher refuses above 6 × the
+     * pixels of the display it booted on. Unfolded, only the inner display is listed, though it may have booted closed
+     * (Sol review: an 18,052,100-byte No-wallet plan against a 13,556,160-byte cap).
      */
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Test
     fun foldSlotsStayInsideTheLaunchersBitmapBudget() {
         language("en")
-        val sizes = listOf(android.util.SizeF(360f, 600f), android.util.SizeF(660f, 280f), android.util.SizeF(740f, 560f), android.util.SizeF(620f, 680f))
-        val launcher = 6L * 1840 * 2208
-        val fullSlots = sizes.sumOf { Math.round(it.width * 2.75f).toLong() * Math.round(it.height * 2.75f) * 4 }
-        assertTrue("the old full-slot seas didn't fit", fullSlots > launcher)
+        val unfolded = WidgetViews.budget(listOf(2208L * 1840))
+        assertTrue("never more than a closed boot allows", unfolded <= closedBootCap)
+        assertEquals("a phone's own display still decides", WidgetViews.budget(listOf(720L * 1280)), 6L * 720 * 1280 * 4 / 5)
+        val fullSlots = foldSlots.sumOf { Math.round(it.width * 2.75f).toLong() * Math.round(it.height * 2.75f) * 4 }
+        assertTrue("the old full-slot seas didn't fit", fullSlots > closedBootCap)
         for (content in listOf(null, WidgetContent.of(context, month, "regtest", now), WidgetContent.of(context, month.copy(hidden = true), "regtest", now))) {
-            val built = WidgetViews.buildAll(context, "regtest", content, sizes, 2.75f, WidgetViews.budget(1840L * 2208))
-            val bytes = built.bitmaps.distinctBy { System.identityHashCode(it) }.sumOf { it.allocationByteCount.toLong() }
-            assertTrue("$bytes bytes", bytes <= WidgetViews.budget(1840L * 2208))
-            assertTrue(bytes < launcher)
-            assertEquals(sizes.toSet(), built.views.keys)
+            val built = WidgetViews.buildAll(context, "regtest", content, foldSlots, 2.75f, unfolded)
+            assertTrue("${bytes(built)} bytes", bytes(built) <= unfolded)
+            assertEquals(foldSlots.toSet(), built.views.keys)
         }
         // Where it fits, full resolution: one slot draws at 2.75 px per dp.
-        val one = WidgetViews.buildAll(context, "regtest", null, sizes.take(1), 2.75f, WidgetViews.budget(1840L * 2208))
+        val one = WidgetViews.buildAll(context, "regtest", null, foldSlots.take(1), 2.75f, unfolded)
         assertEquals(Math.round(360 * 2.75f), one.bitmaps.single().width)
+    }
+
+    /** A launcher that still refuses the update (a lower limit than we took) gets it again with a quarter of the bytes. */
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun aRefusedUpdateIsRetriedWithSmallerBitmaps() {
+        language("en")
+        // As if the budget came from the inner display alone, with no bound: the cover's limit refuses it.
+        val tooMuch = 6L * 2208 * 1840
+        val budgets = mutableListOf<Long>(); var built: WidgetViews.Built? = null; var shown: WidgetViews.Built? = null
+        NoahWidgetProvider.publish(tooMuch, { budget -> budgets += budget
+            WidgetViews.buildAll(context, "regtest", null, foldSlots, 2.75f, budget).also { built = it }.views.values.first() }) {
+            require(bytes(built!!) <= closedBootCap) { "RemoteViews for widget update exceeds maximum bitmap memory usage" }
+            shown = built
+        }
+        assertEquals(listOf(tooMuch, tooMuch / 4), budgets)
+        assertNotNull("No wallet replaces the deleted balance", shown)
+        // A second refusal isn't retried again: the provider logs it.
+        var attempts = 0
+        assertThrows(IllegalArgumentException::class.java) {
+            NoahWidgetProvider.publish(1_000, { WidgetViews.buildAll(context, "regtest", null, foldSlots.take(1), 1f, it).views.values.first() }) {
+                attempts++; throw IllegalArgumentException("refused")
+            }
+        }
+        assertEquals(2, attempts)
     }
 
     @GraphicsMode(GraphicsMode.Mode.NATIVE)

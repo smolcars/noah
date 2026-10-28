@@ -84,17 +84,19 @@ internal object WidgetViews {
 
     /**
      * The launcher refuses an update whose bitmaps exceed 1.5 × its display's pixels × 4 bytes (AppWidgetService), across
-     * every size in the map. From the smallest display (a Fold's outer one), with a fifth to spare.
+     * every size in the map, and fixes that display at boot. An unfolded Fold lists only its inner display, though it may
+     * have booted closed, so this takes the smallest display listed but never more than [BOOT_DISPLAY_BOUND], with a fifth
+     * to spare.
      */
     @Suppress("DEPRECATION")
-    fun bitmapBudget(context: Context): Long {
-        val pixels = context.getSystemService(android.hardware.display.DisplayManager::class.java)?.displays.orEmpty()
-            .map { android.graphics.Point().also(it::getRealSize) }.filter { it.x > 0 && it.y > 0 }
-            .minOfOrNull { it.x.toLong() * it.y } ?: context.resources.displayMetrics.let { it.widthPixels.toLong() * it.heightPixels }
-        return budget(pixels)
-    }
+    fun bitmapBudget(context: Context): Long = budget(context.getSystemService(android.hardware.display.DisplayManager::class.java)?.displays.orEmpty()
+        .map { android.graphics.Point().also(it::getRealSize) }.filter { it.x > 0 && it.y > 0 }.map { it.x.toLong() * it.y }
+        .ifEmpty { listOf(context.resources.displayMetrics.let { it.widthPixels.toLong() * it.heightPixels }) })
 
-    fun budget(displayPixels: Long): Long = 6 * displayPixels * 4 / 5
+    /** A boot display no larger than 1080 × 1920: below a Pixel Fold's (1080 × 2092) and a Galaxy Fold's (904 × 2316) cover. */
+    const val BOOT_DISPLAY_BOUND = 1080L * 1920
+
+    fun budget(displayPixels: List<Long>): Long = 6 * minOf(displayPixels.minOrNull() ?: BOOT_DISPLAY_BOUND, BOOT_DISPLAY_BOUND) * 4 / 5
 
     /** One update's views by size, and every distinct bitmap they hold. */
     class Built(val views: Map<SizeF, RemoteViews>, val bitmaps: List<Bitmap>)

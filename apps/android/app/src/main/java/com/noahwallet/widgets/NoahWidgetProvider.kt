@@ -36,6 +36,14 @@ open class NoahWidgetProvider : AppWidgetProvider() {
             else emptyList()
             return reported.filter { it.width > 0 && it.height > 0 }.distinct().take(4).ifEmpty { orientations(options).toList().distinct() }
         }
+        /**
+         * Publishes [build]'s views. A launcher that still refuses them (its bitmap limit is lower than we took it to be)
+         * gets them again with a quarter of the bitmap bytes, so a deleted wallet's balance never stays on screen.
+         */
+        internal fun publish(budget: Long, build: (Long) -> RemoteViews, update: (RemoteViews) -> Unit) {
+            try { update(build(budget)) } catch (_: IllegalArgumentException) { update(build(budget / 4)) }
+        }
+
         /** Portrait (min width, max height) and landscape (max width, min height), as Android 7–11 report them. */
         internal fun orientations(options: Bundle): Pair<SizeF, SizeF> {
             fun value(key: String) = options.getInt(key, 0).toFloat()
@@ -87,13 +95,13 @@ open class NoahWidgetProvider : AppWidgetProvider() {
             val density = context.resources.displayMetrics.density
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
             // Every size travels in one update, within the launcher's bitmap budget.
-            val budget = WidgetViews.bitmapBudget(context)
-            val views = if (Build.VERSION.SDK_INT >= 31) RemoteViews(WidgetViews.buildAll(context, variant, content, sizes(options), density, budget).views)
-            else orientations(options).let { (portrait, landscape) ->
-                val built = WidgetViews.buildAll(context, variant, content, listOf(landscape, portrait).distinct(), density, budget).views
-                RemoteViews(built.getValue(landscape), built.getValue(portrait))
-            }
-            appWidgetManager.updateAppWidget(appWidgetId, views)
+            fun views(budget: Long) =
+                if (Build.VERSION.SDK_INT >= 31) RemoteViews(WidgetViews.buildAll(context, variant, content, sizes(options), density, budget).views)
+                else orientations(options).let { (portrait, landscape) ->
+                    val built = WidgetViews.buildAll(context, variant, content, listOf(landscape, portrait).distinct(), density, budget).views
+                    RemoteViews(built.getValue(landscape), built.getValue(portrait))
+                }
+            publish(WidgetViews.bitmapBudget(context), ::views) { appWidgetManager.updateAppWidget(appWidgetId, it) }
         } catch (e: Exception) {
             AppLog(context.applicationContext, "NoahWidget").e("Error updating widget: ${SafeErrorDescription.of(e)}")
         }
