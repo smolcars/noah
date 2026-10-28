@@ -6,9 +6,8 @@ import com.noahwallet.history.HistoryTransaction
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
-import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.time.ZoneId
+import java.util.TimeZone
 import kotlin.random.Random
 
 class WidgetWaveTest {
@@ -28,7 +27,7 @@ class WidgetWaveTest {
                         WidgetWave.Change(instant(it.jsonObject.getValue("at").jsonPrimitive.content), it.jsonObject.getValue("delta").jsonPrimitive.long)
                     }
                     val values = WidgetWave.dailyBalances(input.getValue("currentBalance").jsonPrimitive.long, changes,
-                        instant(input.getValue("now").jsonPrimitive.content), ZoneId.of(input.getValue("timeZone").jsonPrimitive.content))
+                        instant(input.getValue("now").jsonPrimitive.content), TimeZone.getTimeZone(input.getValue("timeZone").jsonPrimitive.content))
                     assertEquals(case.name, expected.getValue("values").jsonArray.map { it.jsonPrimitive.long }, values)
                     assertEquals(case.name, expected.getValue("change").jsonPrimitive.long, WidgetWave.change(values))
                     assertEquals(case.name, expected.getValue("calm").jsonPrimitive.boolean, WidgetWave.calm(values))
@@ -66,12 +65,26 @@ class WidgetWaveTest {
 
     @Test fun aLaterDayMovesTheWindowOn() {
         val values = (0L..30L).map { it * 10 }
-        val day = LocalDate.of(2026, 10, 27)
+        val day = WidgetWave.day(instant("2026-10-27T12:00:00Z"), TimeZone.getTimeZone("UTC"))
         assertEquals(values, WidgetWave.shifted(values, day, day))
-        assertEquals((2L..30L).map { it * 10 } + listOf(300L, 300L), WidgetWave.shifted(values, day, day.plusDays(2)))
-        assertEquals(List(31) { 300L }, WidgetWave.shifted(values, day, day.plusDays(40)))
+        assertEquals((2L..30L).map { it * 10 } + listOf(300L, 300L), WidgetWave.shifted(values, day, day + 2))
+        assertEquals(List(31) { 300L }, WidgetWave.shifted(values, day, day + 40))
         // A clock set back never shifts the other way.
-        assertEquals(values, WidgetWave.shifted(values, day, day.minusDays(1)))
+        assertEquals(values, WidgetWave.shifted(values, day, day - 1))
+    }
+
+    /** Local days without java.time (Android 7 has none): whole days across daylight saving, and the zone's own date. */
+    @Test fun localDaysFollowTheZone() {
+        val newYork = TimeZone.getTimeZone("America/New_York")
+        // 23:30 on Oct 31 and 01:30 on Nov 1 (before and after the clocks go back) are one day apart; Nov 2 is two.
+        val before = WidgetWave.day(instant("2026-10-31T23:30:00-04:00"), newYork)
+        assertEquals(before + 1, WidgetWave.day(instant("2026-11-01T01:30:00-05:00"), newYork))
+        assertEquals(before + 2, WidgetWave.day(instant("2026-11-02T00:00:00-05:00"), newYork))
+        // The same instant is a day later in Tokyo than in UTC.
+        val at = instant("2026-10-26T16:30:00Z")
+        assertEquals(WidgetWave.day(at, TimeZone.getTimeZone("UTC")) + 1, WidgetWave.day(at, TimeZone.getTimeZone("Asia/Tokyo")))
+        assertEquals(0L, WidgetWave.day(0, TimeZone.getTimeZone("UTC")))
+        assertEquals(-1L, WidgetWave.day(-1, TimeZone.getTimeZone("UTC")))
     }
 
     /**
@@ -145,13 +158,13 @@ class WidgetWaveTest {
         assertTrue(dates.getValue("round-txid") > instant("2026-10-27T00:00:00Z"))
         val changes = WidgetWave.changes(rows, dates)
         assertEquals(listOf(WidgetWave.Change(instant("2026-09-20T12:00:00Z"), -300)), changes)
-        assertTrue(WidgetWave.calm(WidgetWave.dailyBalances(100_000, changes, now, ZoneId.of("UTC"))))
+        assertTrue(WidgetWave.calm(WidgetWave.dailyBalances(100_000, changes, now, TimeZone.getTimeZone("UTC"))))
         // A recent one moves the wave by its fee, inside the window, whichever half is newer.
         val recent = old.copy(date = "2026-10-26T12:00:00.000Z")
-        val wave = WidgetWave.dailyBalances(100_000, WidgetWave.changes(HistoryRules.unified(listOf(recent, credit)), dates), now, ZoneId.of("UTC"))
+        val wave = WidgetWave.dailyBalances(100_000, WidgetWave.changes(HistoryRules.unified(listOf(recent, credit)), dates), now, TimeZone.getTimeZone("UTC"))
         assertEquals(300L, wave.first() - wave.last())
         // Unpaired, the credit alone would have read as +29,700 of income.
-        assertEquals(29_700L, WidgetWave.change(WidgetWave.dailyBalances(100_000, WidgetWave.changes(listOf(credit), dates), now, ZoneId.of("UTC"))))
+        assertEquals(29_700L, WidgetWave.change(WidgetWave.dailyBalances(100_000, WidgetWave.changes(listOf(credit), dates), now, TimeZone.getTimeZone("UTC"))))
     }
 
     /** A confirmation's date is estimated once and kept: a tip that stands still never makes it drift towards today. */

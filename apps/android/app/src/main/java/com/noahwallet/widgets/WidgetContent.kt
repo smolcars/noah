@@ -7,8 +7,8 @@ import com.noahwallet.formatting.FiatCurrency
 import com.noahwallet.localization.L10n
 import com.noahwallet.services.storage.LegacyLocale
 import com.noahwallet.ui.home.HomeRules
-import java.time.ZoneId
 import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.abs
 
 /** What a widget shows, in the app's language, from the snapshot alone (widgets.md, What every widget shows). */
@@ -42,7 +42,7 @@ internal data class WidgetContent(
         private const val HOUR = 3_600_000L
 
         fun of(context: Context, snapshot: WidgetSnapshot, variant: String, now: Long = System.currentTimeMillis(),
-            zone: ZoneId = ZoneId.systemDefault()): WidgetContent {
+            zone: TimeZone = TimeZone.getDefault()): WidgetContent {
             val locale = Locale.forLanguageTag(LegacyLocale.resolved(context))
             val unit = if (snapshot.sats) BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
             val hidden = snapshot.hidden
@@ -70,7 +70,7 @@ internal data class WidgetContent(
             )
         }
 
-        private fun wave(snapshot: WidgetSnapshot, now: Long, zone: ZoneId): List<Long>? {
+        private fun wave(snapshot: WidgetSnapshot, now: Long, zone: TimeZone): List<Long>? {
             val daily = snapshot.daily?.let { values ->
                 snapshot.writtenAt?.let { WidgetWave.shifted(values, WidgetWave.day(it, zone), WidgetWave.day(now, zone)) } ?: values
             }

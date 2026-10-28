@@ -1,9 +1,8 @@
 package com.noahwallet.widgets
 
 import com.noahwallet.history.HistoryTransaction
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import java.util.GregorianCalendar
+import java.util.TimeZone
 import kotlin.math.sqrt
 
 /**
@@ -22,16 +21,26 @@ object WidgetWave {
      * value[30] is [current]; value[i] is [current] minus every change whose local date in [zone] is after day i
      * (today − (30 − i)). Older changes cancel out; a future-dated one (clock skew) counts as today.
      */
-    fun dailyBalances(current: Long, changes: List<Change>, now: Long, zone: ZoneId): List<Long> {
+    fun dailyBalances(current: Long, changes: List<Change>, now: Long, zone: TimeZone): List<Long> {
         val today = day(now, zone)
         val dated = changes.map { minOf(day(it.at, zone), today) to it.sats }
         return (0..DAYS).map { i ->
-            val day = today.minusDays((DAYS - i).toLong())
+            val day = today - (DAYS - i)
             current - dated.sumOf { (date, sats) -> if (date > day) sats else 0L }
         }
     }
 
-    fun day(at: Long, zone: ZoneId): LocalDate = Instant.ofEpochMilli(at).atZone(zone).toLocalDate()
+    /**
+     * The local date of [at] in [zone], as days since 1970-01-01: whole days apart whatever daylight saving does in between.
+     * java.util, not java.time, which Android 7 (API 24–25) lacks.
+     */
+    fun day(at: Long, zone: TimeZone): Long {
+        val local = GregorianCalendar(zone).apply { timeInMillis = at }
+        val utc = GregorianCalendar(TimeZone.getTimeZone("""UTC""")).apply {
+            clear(); set(local.get(GregorianCalendar.YEAR), local.get(GregorianCalendar.MONTH), local.get(GregorianCalendar.DAY_OF_MONTH))
+        }
+        return Math.floorDiv(utc.timeInMillis, 86_400_000L)
+    }
 
     /** The label's change: exact, not smoothed. */
     fun change(values: List<Long>): Long = values.last() - values.first()
@@ -40,8 +49,8 @@ object WidgetWave {
     fun calm(values: List<Long>): Boolean = values.all { it == values.first() }
 
     /** Values written on an earlier local day, moved on to [today]: the days since saw no change. */
-    fun shifted(values: List<Long>, writtenDay: LocalDate, today: LocalDate): List<Long> {
-        val days = java.time.temporal.ChronoUnit.DAYS.between(writtenDay, today).coerceIn(0, values.size.toLong()).toInt()
+    fun shifted(values: List<Long>, writtenDay: Long, today: Long): List<Long> {
+        val days = (today - writtenDay).coerceIn(0, values.size.toLong()).toInt()
         return values.indices.map { i -> values.getOrElse(i + days) { values.last() } }
     }
 

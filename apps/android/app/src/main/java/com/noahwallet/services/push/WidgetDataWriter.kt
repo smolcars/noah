@@ -26,7 +26,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import java.time.ZoneId
+import java.util.TimeZone
 
 /**
  * The widget's snapshot (docs/native-rewrite/design/widgets.md, Data the app writes): each writer reads the wallet and
@@ -87,7 +87,7 @@ object WidgetDataWriter {
 
     @Suppress("LongParameterList") // now and zone are test seams
     internal fun snapshot(balance: WalletBalance, extras: Extras?, display: Display, quote: Quote?, chainDates: Map<String, Long> = emptyMap(),
-        now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): WidgetSnapshot {
+        now: Long = System.currentTimeMillis(), zone: TimeZone = TimeZone.getDefault()): WidgetSnapshot {
         val total = balance.totalSats.toLong()
         val changes = extras?.rows?.let { WidgetWave.changes(it, chainDates) }
         val price = quote?.takeIf { it.currency == display.currency && it.price.isFinite() && it.price > 0 }?.price

@@ -68,6 +68,12 @@ class HeadlessEntryPointsTest {
             assertFalse(path, drawn.contains("AppServices")); assertFalse(path, drawn.contains("WalletSession"))
             assertFalse(path, drawn.contains("SettingsStorage"))
         }
+        // Android 7 (API 24–25) has no java.time and the app doesn't desugar it: the widget and its writer use java.util.
+        for (path in listOf("widgets/NoahWidgetProvider", "widgets/WidgetContent", "widgets/WidgetViews", "widgets/WidgetSea", "widgets/WidgetType",
+            "widgets/WidgetSnapshot", "widgets/WidgetWave", "services/push/WidgetDataWriter")) {
+            val code = source(path).lines().filterNot { it.trimStart().startsWith("*") || it.trimStart().startsWith("//") }.joinToString("\n")
+            assertFalse(path, Regex("""import java\.time|java\.time\.\w""").containsMatchIn(code))
+        }
         for (path in listOf("NoahWidgetMainnetProvider", "NoahWidgetSignetProvider", "NoahWidgetRegtestProvider")) {
             assertTrue(path, source("widgets/$path").contains("NoahWidgetProvider()"))
         }

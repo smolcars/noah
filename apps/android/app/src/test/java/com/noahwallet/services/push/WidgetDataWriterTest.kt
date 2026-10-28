@@ -21,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
-import java.time.ZoneId
+import java.util.TimeZone
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
@@ -42,10 +42,10 @@ class WidgetDataWriterTest {
     @Test fun snapshotHoldsHomesBalancePendingWaveAndRenew() {
         val rows = listOf(movement("a", now - 3 * 86_400_000L, 25), movement("b", now - 3_600_000, -5))
         val changes = WidgetWave.changes(rows, emptyMap())
-        val snapshot = WidgetDataWriter.snapshot(balance, WidgetDataWriter.Extras(rows, 100, 18), bip177, null, emptyMap(), now, ZoneId.of("UTC"))
+        val snapshot = WidgetDataWriter.snapshot(balance, WidgetDataWriter.Extras(rows, 100, 18), bip177, null, emptyMap(), now, TimeZone.getTimeZone("UTC"))
         // Arriving is Home's: the claimable Lightning receive, with no unconfirmed deposit in history.
         assertEquals(75L, snapshot.balance); assertEquals(3L, snapshot.arriving)
-        assertEquals(WidgetWave.dailyBalances(75, changes, now, ZoneId.of("UTC")), snapshot.daily)
+        assertEquals(WidgetWave.dailyBalances(75, changes, now, TimeZone.getTimeZone("UTC")), snapshot.daily)
         assertEquals(75L, snapshot.daily!!.last()); assertEquals(55L, snapshot.daily!!.first())
         assertEquals(now + 18 * 600_000L, snapshot.renewDue)
         assertEquals("bip177", snapshot.amountUnit); assertEquals(now, snapshot.writtenAt)
