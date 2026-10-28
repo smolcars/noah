@@ -3,356 +3,418 @@ import WidgetKit
 
 struct BalanceEntry: TimelineEntry {
     let date: Date
-    let totalBalance: Double
-    let onchainBalance: Double
-    let offchainBalance: Double
-    let pendingBalance: Double
-    let closestExpiryBlocks: Double
-    let expiryThreshold: Double
+    /// Nil: no wallet (never set up, or deleted).
+    let snapshot: WidgetSnapshot?
 }
 
-class BalanceProvider: TimelineProvider {
+/// Reads the app's snapshot; the widget never opens the wallet.
+struct BalanceProvider: TimelineProvider {
     let appGroup: String
-
-    init(appGroup: String) {
-        self.appGroup = appGroup
-    }
+    let variant: String
 
     func placeholder(in _: Context) -> BalanceEntry {
-        BalanceEntry(
-            date: Date(),
-            totalBalance: 0,
-            onchainBalance: 0,
-            offchainBalance: 0,
-            pendingBalance: 0,
-            closestExpiryBlocks: -999,
-            expiryThreshold: 288)
+        BalanceEntry(date: .now, snapshot: WidgetSnapshot(writtenAt: .now, balance: 252_742, pending: 0, dailyBalances: nil,
+                                                          amountUnit: .bip177, hidden: false, fiat: nil, renewBy: nil, variant: variant))
     }
 
     // swiftlint:disable:next unneeded_escaping - TimelineProvider's requirement
     func getSnapshot(in _: Context, completion: @escaping (BalanceEntry) -> Void) {
-        let entry = loadBalanceEntry()
-        completion(entry)
+        let now = Date()
+        completion(BalanceEntry(date: now, snapshot: read(now)))
     }
 
-    func getTimeline(
-        // swiftlint:disable:next unneeded_escaping - TimelineProvider's requirement
-        in _: Context, completion: @escaping (Timeline<BalanceEntry>) -> Void) {
-        let entry = loadBalanceEntry()
-
-        // Refresh every 15 minutes
-        let nextUpdate =
-            Calendar.current.date(byAdding: .minute, value: 15, to: Date())
-                ?? Date().addingTimeInterval(15 * 60)
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-
-        completion(timeline)
+    // swiftlint:disable:next unneeded_escaping - TimelineProvider's requirement
+    func getTimeline(in _: Context, completion: @escaping (Timeline<BalanceEntry>) -> Void) {
+        let now = Date()
+        let snapshot = read(now)
+        let entries = (snapshot?.timelineDates(now: now, calendar: .current) ?? [now]).map { BalanceEntry(date: $0, snapshot: snapshot) }
+        completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(15 * 60))))
     }
 
-    private func loadBalanceEntry() -> BalanceEntry {
-        guard let userDefaults = UserDefaults(suiteName: appGroup),
-              let balanceData = userDefaults.dictionary(forKey: "widgetBalance")
-        else {
-            return BalanceEntry(
-                date: Date(),
-                totalBalance: 0,
-                onchainBalance: 0,
-                offchainBalance: 0,
-                pendingBalance: 0,
-                closestExpiryBlocks: -999,
-                expiryThreshold: 288)
-        }
-
-        return BalanceEntry(
-            date: Date(),
-            totalBalance: balanceData["totalBalance"] as? Double ?? 0,
-            onchainBalance: balanceData["onchainBalance"] as? Double ?? 0,
-            offchainBalance: balanceData["offchainBalance"] as? Double ?? 0,
-            pendingBalance: balanceData["pendingBalance"] as? Double ?? 0,
-            closestExpiryBlocks: balanceData["closestExpiryBlocks"] as? Double ?? -999,
-            expiryThreshold: balanceData["expiryThreshold"] as? Double ?? 288)
+    private func read(_ now: Date) -> WidgetSnapshot? {
+        UserDefaults(suiteName: appGroup).flatMap { WidgetSnapshot.read(from: $0, variant: variant, now: now) }
     }
 }
 
-struct NoahBalanceWidgetView: View {
-    var entry: BalanceEntry
-    var language: String
-    var variantName: String?
-    var variantColor: Color?
-    @Environment(\.widgetFamily) var family
-    @Environment(\.widgetRenderingMode) var renderingMode
+/// The in-app routes the widgets open (`com.noahwallet.<variant>://widget/…`).
+struct WidgetLinks {
+    let variant: String
 
-    private static let numberFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter
-    }()
+    func url(_ path: String) -> URL {
+        guard let url = URL(string: "com.noahwallet.\(variant)://widget/\(path)") else { preconditionFailure("a variant and path make a URL") }
+        return url
+    }
+    var home: URL { url("home") }
+    var receive: URL { url("receive") }
+    var scan: URL { url("scan") }
+    var send: URL { url("send") }
+}
+
+struct NoahBalanceWidgetView: View {
+    let entry: BalanceEntry
+    let language: String
+    let links: WidgetLinks
+    @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var mode
 
     var body: some View {
-        if family == .systemSmall {
-            smallWidgetLayout
-        } else {
-            mediumWidgetLayout
-        }
-    }
-
-    private func getExpiryStatus() -> (icon: String, color: Color) {
-        let blocks = entry.closestExpiryBlocks
-        let threshold = entry.expiryThreshold
-
-        // Critical: within 20% of threshold (e.g., < 58 blocks if threshold is 288)
-        // Also includes expired VTXOs (negative blocks).
-        let criticalThreshold = threshold * 0.2
-
-        if blocks <= criticalThreshold { return ("exclamationmark.triangle.fill", .red) }
-        if blocks <= threshold { return ("bell.fill", .orange) }
-        return ("checkmark.circle.fill", .green)
-    }
-
-    private var shouldShowExpiry: Bool {
-        // Hide expiry section if no VTXOs (-999 sentinel value)
-        entry.closestExpiryBlocks != -999
-    }
-
-    private var shouldUseCompactSmallLayout: Bool {
-        // When pending and/or expiry rows are visible we tighten spacing
-        // so content stays comfortably within the small widget bounds.
-        entry.pendingBalance > 0 || shouldShowExpiry
-    }
-
-    private var smallWidgetLayout: some View {
-        VStack(alignment: .leading, spacing: shouldUseCompactSmallLayout ? 4 : 6) {
-            smallHeader
-
-            Spacer(minLength: shouldUseCompactSmallLayout ? 2 : 6)
-
-            smallBalances
-
-            Spacer(minLength: shouldUseCompactSmallLayout ? 2 : 6)
-
-            // One row each, so a translated label gets the widget's width.
-            VStack(spacing: 1) {
-                smallBalanceRow(L10n.text("Onchain", locale: language), entry.onchainBalance)
-                smallBalanceRow(L10n.text("Offchain", locale: language), entry.offchainBalance)
-            }
-        }
-        .padding(.horizontal, shouldUseCompactSmallLayout ? 10 : 12)
-        .padding(.vertical, shouldUseCompactSmallLayout ? 10 : 12)
-    }
-
-    private var smallHeader: some View {
-        HStack(alignment: .top) {
-            Text(L10n.text("Noah Wallet", locale: language))
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            Spacer(minLength: 4)
-            if let variantName, let variantColor {
-                Text(variantName)
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(badgeBackground(color: variantColor))
-                    .foregroundColor(badgeForeground(color: variantColor))
-                    .cornerRadius(3)
-            }
-        }
-    }
-
-    private var smallBalances: some View {
-        VStack(alignment: .leading, spacing: shouldUseCompactSmallLayout ? 2 : 3) {
-            Text("₿\u{00A0}\(formatSatsCompact(entry.totalBalance))")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-
-            if entry.pendingBalance > 0 {
-                Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSatsCompact(entry.pendingBalance))", locale: language))
-                    .font(.caption2)
-                    .foregroundColor(.yellow)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-
-            // Expiry status - only show if VTXOs exist
-            if shouldShowExpiry {
-                HStack(spacing: 3) {
-                    let expiryStatus = getExpiryStatus()
-                    Image(systemName: expiryStatus.icon).accessibilityHidden(true)
-                        .font(.system(size: 10))
-                        .foregroundColor(expiryStatus.color)
-                    Text(L10n.plural("{n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
-                        .font(.caption2)
-                        .foregroundColor(expiryStatus.color)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+        let look = WidgetLook(mode)
+        Group {
+            if family == .accessoryCircular {
+                CircularView(look: look, label: L10n.text("Scan", locale: language))
+            } else if let snapshot = entry.snapshot {
+                let presentation = WidgetPresentation(snapshot: snapshot, now: entry.date, language: language)
+                switch family {
+                case .systemMedium: MediumView(presentation: presentation, look: look, links: links, language: language)
+                case .accessoryRectangular: RectangularView(presentation: presentation, look: look)
+                case .accessoryInline: InlineView(presentation: presentation)
+                default: SmallView(presentation: presentation, look: look)
+                }
+            } else {
+                switch family {
+                case .accessoryInline: Image(.longshipGlyph).renderingMode(.template).accessibilityHidden(true)
+                case .accessoryRectangular: Longship(look: look).frame(maxHeight: 28)
+                default: NoWalletView(look: look)
                 }
             }
         }
+        .widgetURL(family == .accessoryCircular ? links.scan : links.home)
+        .containerBackground(for: .widget) {
+            switch family {
+            case .systemSmall, .systemMedium: NoahTokens.Colors.background
+            case .accessoryRectangular: AccessoryWidgetBackground()
+            default: Color.clear
+            }
+        }
     }
+}
 
-    private func smallBalanceRow(_ label: String, _ value: Double) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.gray)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+// MARK: Families
+
+/// Label row, wave, balance, fiat, status.
+private struct SmallView: View {
+    let presentation: WidgetPresentation
+    let look: WidgetLook
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                ChangeLabel(change: presentation.change, look: look)
+                Spacer(minLength: 0)
+                if let chip = presentation.chip { NetworkChip(text: chip, look: look) }
+            }
+            .frame(height: 16)
+            .padding(.bottom, 3)
             Spacer(minLength: 0)
-            Text("\(formatSatsCompact(value))")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.white)
-                .minimumScaleFactor(0.8)
+            BalanceText(presentation: presentation, size: 30, look: look).waveFloor()
+            FiatLine(presentation: presentation, look: look).padding(.top, 2)
+            if let status = presentation.status {
+                StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .twoLines, look: look).padding(.top, 5)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(presentation.accessibilityLabel)
+        .padding(EdgeInsets(top: 12, leading: 16, bottom: 13, trailing: 16))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .backgroundPreferenceValue(WaveFloor.self) { floor in
+            GeometryReader { proxy in
+                // Full-bleed, from under the label row down to 4 pt above the balance.
+                let bottom = floor.map { proxy[$0].y - 4 } ?? proxy.size.height
+                WaveLayer(values: presentation.wave, band: CGRect(x: 0, y: 28, width: proxy.size.width, height: max(26, bottom - 28)),
+                          size: proxy.size, boat: 24, inset: 14, look: look)
+            }
+        }
+    }
+}
+
+/// The balance column leading, the label top trailing, the wave in the trailing half, Actions along the bottom.
+private struct MediumView: View {
+    let presentation: WidgetPresentation
+    let look: WidgetLook
+    let links: WidgetLinks
+    let language: String
+
+    var body: some View {
+        GeometryReader { proxy in
+            VStack(alignment: .leading, spacing: 0) {
+                summary(width: proxy.size.width)
+                Spacer(minLength: 0)
+                actions.waveFloor()
+            }
+            .padding(EdgeInsets(top: 15, leading: 16, bottom: 14, trailing: 16))
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .backgroundPreferenceValue(WaveFloor.self) { floor in
+                // The trailing ~52%, from under the label to 8 pt above the Actions, fading in from the left.
+                let start = proxy.size.width * 0.48
+                let bottom = floor.map { proxy[$0].y - 8 } ?? proxy.size.height
+                WaveLayer(values: presentation.wave,
+                          band: CGRect(x: start, y: 32, width: proxy.size.width - start, height: max(26, bottom - 32)),
+                          size: proxy.size, boat: 26, inset: 16, look: look)
+                    .mask(LinearGradient(stops: [.init(color: .clear, location: 0.48), .init(color: .black, location: 0.48 + 0.52 * 0.34)],
+                                         startPoint: .leading, endPoint: .trailing))
+            }
+        }
+    }
+
+    private func summary(width: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                BalanceText(presentation: presentation, size: 34, look: look)
+                FiatLine(presentation: presentation, look: look).padding(.top, 2)
+                if let status = presentation.status {
+                    // One line ("Renew · Expires in 18 hours"); two only when a language doesn't fit.
+                    ViewThatFits(in: .horizontal) {
+                        StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .oneLine, look: look)
+                        StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .twoLines, look: look)
+                    }
+                    .padding(.top, 5)
+                }
+            }
+            .frame(width: max(0, width * 0.57 - 16), alignment: .leading)
+            HStack(spacing: 6) {
+                if let chip = presentation.chip { NetworkChip(text: chip, look: look) }
+                ChangeLabel(change: presentation.change, look: look)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .frame(height: 16)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(presentation.accessibilityLabel)
+    }
+
+    private var actions: some View {
+        HStack(spacing: 8) {
+            ActionCapsule(title: L10n.text("Receive", locale: language), glyph: "arrow.down.left", url: links.receive, look: look)
+            ActionCapsule(title: L10n.text("Scan", locale: language), glyph: "qrcode.viewfinder", url: links.scan, look: look)
+            ActionCapsule(title: L10n.text("Send", locale: language), glyph: "arrow.up.right", url: links.send, look: look)
+        }
+    }
+}
+
+/// Lock Screen: the balance, then the status line, or the fiat when there's none.
+private struct RectangularView: View {
+    let presentation: WidgetPresentation
+    let look: WidgetLook
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            BalanceText(presentation: presentation, size: 22, look: look)
+            if let status = presentation.status {
+                StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .short, look: look, size: 12)
+            } else if let fiat = presentation.fiat {
+                Text(verbatim: fiat).font(.system(size: 12, weight: .medium)).foregroundStyle(look.muted).lineLimit(1).privacySensitive()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(presentation.accessibilityLabel)
+    }
+}
+
+/// Lock Screen: the scan glyph; opens Scan.
+private struct CircularView: View {
+    let look: WidgetLook
+    let label: String
+
+    var body: some View {
+        ZStack {
+            AccessoryWidgetBackground()
+            Image(systemName: "qrcode.viewfinder").font(.system(size: 26, weight: .medium)).foregroundStyle(look.foreground)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+    }
+}
+
+/// Lock Screen: the longship glyph and the balance.
+private struct InlineView: View {
+    let presentation: WidgetPresentation
+
+    var body: some View {
+        Label {
+            Text(verbatim: presentation.balance).privacySensitive()
+        } icon: {
+            Image(.longshipGlyph).renderingMode(.template)
+        }
+        .accessibilityLabel(presentation.accessibilityLabel)
+    }
+}
+
+// MARK: Pieces
+
+/// Space Grotesk 600, tabular digits, shrinking to fit down to half size. In sats, "sats" at about half size.
+private struct BalanceText: View {
+    let presentation: WidgetPresentation
+    let size: CGFloat
+    let look: WidgetLook
+
+    var body: some View {
+        Text(text)
+            .font(.custom("SpaceGrotesk-SemiBold", fixedSize: size))
+            .monospacedDigit()
+            .tracking(-0.03 * size)
+            .foregroundStyle(look.foreground)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .widgetAccentable()
+            .privacySensitive()
+    }
+
+    private var text: AttributedString {
+        guard presentation.unit == .sats else { return AttributedString(presentation.balance) }
+        var unit = AttributedString(" sats")
+        unit.font = .custom("SpaceGrotesk-Medium", fixedSize: size * 0.52)
+        return AttributedString(presentation.number) + unit
+    }
+}
+
+private struct FiatLine: View {
+    let presentation: WidgetPresentation
+    let look: WidgetLook
+
+    var body: some View {
+        if let fiat = presentation.fiat {
+            Text(verbatim: fiat)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(look.muted)
                 .lineLimit(1)
-                .layoutPriority(1)
+                .minimumScaleFactor(0.8)
+                .privacySensitive()
+        }
+    }
+}
+
+/// "+₿ 30,142 · 30 days": the amount in the foreground, the rest muted.
+private struct ChangeLabel: View {
+    let change: WidgetPresentation.Change?
+    let look: WidgetLook
+
+    var body: some View {
+        if let change {
+            Text(text(change))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .privacySensitive()
         }
     }
 
-    private var mediumWidgetLayout: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            mediumHeader
+    private func text(_ change: WidgetPresentation.Change) -> AttributedString {
+        var amount = AttributedString(change.amount)
+        amount.font = .custom("SpaceGrotesk-SemiBold", fixedSize: 12)
+        amount.foregroundColor = look.foreground
+        var period = AttributedString(" · " + change.period)
+        period.font = .system(size: 11.5)
+        period.foregroundColor = look.muted
+        return amount + period
+    }
+}
 
-            Spacer()
+/// Home's network chip.
+private struct NetworkChip: View {
+    let text: String
+    let look: WidgetLook
 
-            mediumBalances
+    var body: some View {
+        Text(verbatim: text)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(look.chipText)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 7).padding(.vertical, 3)
+            .background(look.chipFill, in: Capsule())
+            .layoutPriority(1)
+    }
+}
 
-            Spacer()
-
-            mediumSplit
-        }
-        .padding(14)
+/// At most one line: Renew (wins) or arriving.
+private struct StatusLine: View {
+    enum Layout {
+        /// Small: Renew, then the expiry under it; arriving wraps to two lines.
+        case twoLines
+        /// Medium: "Renew · Expires in 18 hours".
+        case oneLine
+        /// Lock Screen: the glyph and the expiry.
+        case short
     }
 
-    private var mediumHeader: some View {
-        HStack {
-            Text(L10n.text("Noah Wallet", locale: language))
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            Spacer()
-            if let variantName, let variantColor {
-                Text(variantName)
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(badgeBackground(color: variantColor))
-                    .foregroundColor(badgeForeground(color: variantColor))
-                    .cornerRadius(4)
-            }
-        }
-    }
+    let status: WidgetPresentation.Status
+    let renewTitle: String
+    let layout: Layout
+    let look: WidgetLook
+    var size: CGFloat = 13
 
-    private var mediumBalances: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("₿\u{00A0}\(formatSats(entry.totalBalance))")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-
-            if entry.pendingBalance > 0 {
-                Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSats(entry.pendingBalance))", locale: language))
-                    .font(.caption2)
-                    .foregroundColor(.yellow)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-
-            // Expiry status - only show if VTXOs exist
-            if shouldShowExpiry {
-                HStack(spacing: 4) {
-                    let expiryStatus = getExpiryStatus()
-                    Image(systemName: expiryStatus.icon).accessibilityHidden(true)
-                        .font(.system(size: 12))
-                        .foregroundColor(expiryStatus.color)
-                    Text(L10n.plural("VTXO expires: {n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
-                        .font(.caption)
-                        .foregroundColor(expiryStatus.color)
+    var body: some View {
+        Group {
+            switch status {
+            case .renew(let expiry):
+                switch layout {
+                case .twoLines:
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 5) { glyph; Text(verbatim: renewTitle).fontWeight(.semibold).foregroundStyle(look.foreground) }
+                        Text(verbatim: expiry).foregroundStyle(look.muted).lineLimit(2)
+                    }
+                case .oneLine:
+                    HStack(spacing: 5) {
+                        glyph
+                        Text(oneLine(expiry)).lineLimit(1)
+                    }
+                case .short:
+                    HStack(spacing: 4) { glyph; Text(verbatim: expiry).foregroundStyle(look.muted).lineLimit(1) }
+                }
+            case .arriving(let text):
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Circle().fill(look.muted).frame(width: 7, height: 7)
+                    Text(verbatim: text).foregroundStyle(look.foreground).lineLimit(layout == .twoLines ? 2 : 1)
                 }
             }
         }
+        .font(.system(size: size, weight: .medium))
+        .fixedSize(horizontal: layout == .oneLine, vertical: true)
+        .privacySensitive()
     }
 
-    private var mediumSplit: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.text("Onchain", locale: language))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                Text("\(formatSats(entry.onchainBalance))")
-                    .font(.caption)
-                    .foregroundColor(.white)
+    private var glyph: some View {
+        Image(systemName: "clock.arrow.circlepath").accessibilityHidden(true).font(.system(size: size, weight: .semibold))
+            .foregroundStyle(look.foreground)
+    }
+
+    private func oneLine(_ expiry: String) -> AttributedString {
+        var title = AttributedString(renewTitle)
+        title.font = .system(size: size, weight: .semibold)
+        title.foregroundColor = look.foreground
+        var rest = AttributedString(" · " + expiry)
+        rest.foregroundColor = look.muted
+        return title + rest
+    }
+}
+
+/// Receive, Scan or Send: a soft capsule that opens that screen.
+private struct ActionCapsule: View {
+    let title: String
+    let glyph: String
+    let url: URL
+    let look: WidgetLook
+
+    var body: some View {
+        Link(destination: url) {
+            HStack(spacing: 6) {
+                Image(systemName: glyph).accessibilityHidden(true).font(.system(size: 15, weight: .semibold))
+                Text(verbatim: title).font(.system(size: 14, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.75)
             }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(L10n.text("Offchain", locale: language))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                Text("\(formatSats(entry.offchainBalance))")
-                    .font(.caption)
-                    .foregroundColor(.white)
-            }
+            .foregroundStyle(look.foreground)
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, minHeight: 38, maxHeight: 38)
+            .background(look.soft, in: Capsule())
         }
     }
+}
 
-    private func formatSats(_ value: Double) -> String {
-        Self.numberFormatter.string(for: value) ?? "0"
-    }
+/// The top of what sits under the wave: the band ends just above it.
+private struct WaveFloor: PreferenceKey {
+    static var defaultValue: Anchor<CGPoint>? { nil }
+    static func reduce(value: inout Anchor<CGPoint>?, nextValue: () -> Anchor<CGPoint>?) { value = value ?? nextValue() }
+}
 
-    private func formatSatsCompact(_ value: Double) -> String {
-        if value >= 1_000_000 {
-            // 1M+ sats - show as "1.5M" format
-            let millions = value / 1_000_000
-            return String(format: "%.1fM", millions)
-        }
-        if value >= 100_000 {
-            // 100K+ sats - show as "123K" format
-            let thousands = value / 1_000
-            return String(format: "%.0fK", thousands)
-        }
-        if value >= 10_000 {
-            // 10K+ sats - show as "12.3K" format
-            let thousands = value / 1_000
-            return String(format: "%.1fK", thousands)
-        }
-        // Less than 10K - show full number
-        return formatSats(value)
-    }
-
-    private func badgeBackground(color: Color) -> Color {
-        if #available(iOS 26.0, *) {
-            switch renderingMode {
-            case .fullColor:
-                return color
-            case .accented, .vibrant:
-                return color.opacity(0.3)
-            default:
-                return Color.clear
-            }
-        } else {
-            return color
-        }
-    }
-
-    private func badgeForeground(color _: Color) -> Color {
-        if #available(iOS 26.0, *) {
-            switch renderingMode {
-            case .fullColor:
-                return .black
-            case .accented, .vibrant:
-                return .primary
-            default:
-                return .primary
-            }
-        } else {
-            return .black
-        }
-    }
+private extension View {
+    func waveFloor() -> some View { anchorPreference(key: WaveFloor.self, value: .top) { $0 } }
 }

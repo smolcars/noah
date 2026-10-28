@@ -165,6 +165,15 @@ targets:
         buildPhase: resources
       - path: Noah/Localization/L10n.swift
       - path: Noah/Services/Storage/LegacyLocale.swift
+      # The snapshot, its wave and texts, Home's amounts and the design tokens and fonts.
+      - path: Noah/Widget
+      - path: Noah/Formatting/BitcoinAmount.swift
+      - path: Noah/Formatting/FiatCurrency.swift
+      - path: Noah/DesignSystem/NoahTokens.swift
+      - path: Noah/Resources/Fonts/SpaceGrotesk-Medium.ttf
+        buildPhase: resources
+      - path: Noah/Resources/Fonts/SpaceGrotesk-SemiBold.ttf
+        buildPhase: resources
     settings:
       base:
         PRODUCT_NAME: NoahWidget

@@ -10,12 +10,12 @@ struct WidgetLocalizationTests {
         let widget = try #require(Bundle(url: url))
         for language in LegacyLocale.supported {
             let strings = try #require(widget.path(forResource: language, ofType: "lproj").flatMap(Bundle.init(path:)), "\(language)")
-            #expect(strings.localizedString(forKey: "Offchain", value: nil, table: nil) == L10n.text("Offchain", locale: language))
-            let blocks = strings.localizedString(forKey: "{n} blocks", value: nil, table: nil)
-            #expect(String(format: blocks, locale: Locale(identifier: language), Int64(1)) == L10n.plural("{n} blocks", count: 1, locale: language))
+            #expect(strings.localizedString(forKey: "Renew", value: nil, table: nil) == L10n.text("Renew", locale: language))
+            let hours = strings.localizedString(forKey: "Expires in {n} hours", value: nil, table: nil)
+            #expect(String(format: hours, locale: Locale(identifier: language), Int64(1)) == L10n.plural("Expires in {n} hours", count: 1, locale: language))
         }
         let spanish = try #require(widget.path(forResource: "es", ofType: "lproj").flatMap(Bundle.init(path:)))
-        #expect(spanish.localizedString(forKey: "Onchain", value: nil, table: nil) == "En la cadena")
+        #expect(spanish.localizedString(forKey: "Receive", value: nil, table: nil) == "Recibir")
     }
 
     @Test func languageChoiceReachesTheWidget() throws {
