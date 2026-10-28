@@ -163,14 +163,17 @@
             grpcurl
             just
             rust-analyzer
-          ] ++ nativeLintPackagesFor pkgs;
+          ];
 
           darwinPackages = with pkgs; [
             bundler
             (cocoapodsFor pkgs)
             (darwinDerivations.xcode-wrapper pkgs)
             maestro
-          ];
+          ]
+          # Native app work happens on macOS; elsewhere use `nix develop .#native-lint`. Kept out of the Linux shell the
+          # RN Android CI build runs in.
+          ++ nativeLintPackagesFor pkgs;
 
           darwinHook = ''
             export LC_ALL=en_US.UTF-8
