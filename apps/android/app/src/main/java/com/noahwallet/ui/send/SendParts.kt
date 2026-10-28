@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
@@ -55,10 +56,13 @@ import com.noahwallet.ui.WalletAlertDialog
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.home.HomeIcons
 import com.noahwallet.ui.home.tonal
+import com.noahwallet.ui.onboarding.Haptics
 import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.LocalReduceMotion
 import com.noahwallet.ui.onboarding.rememberHaptics
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -377,72 +381,93 @@ internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, conf
     val currentConfirm by rememberUpdatedState(onConfirm)
     val currentEnabled by rememberUpdatedState(enabled)
     val label = if (sending) busyLabel else hold
+    val gesture = HoldGesture(scope, progress, press, haptics, reduceMotion)
     // [wrap]: a long label takes a second line and the pill grows (exit pages at large text), rather than shrinking.
     Box(modifier.fillMaxWidth().then(if (wrap) Modifier.heightIn(min = 58.dp) else Modifier.height(58.dp))
         .graphicsLayer { scaleX = press.value; scaleY = press.value; alpha = if (enabled || sending) 1f else .4f }
-        .drawWithContent {
-            drawContent()
-            val p = progress.value
-            if (p > 0f) {
-                val inset = 2.dp.toPx()
-                val path = pill(-inset, -inset, size.width + inset, size.height + inset)
-                val length = PathMeasure().apply { setPath(path, false) }.length
-                drawPath(StageArt.segment(path, 0f, length * p), palette.orange, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
-            }
-        }
+        .holdStroke(progress, palette.orange)
         .background(palette.foreground, RoundedCornerShape(29.dp))
         .testTag(tag)
         // A pose change moves the pill under the finger, so it restarts the gesture: hold again in the new pose.
-        .pointerInput(LocalPose.current) {
-            awaitEachGesture {
-                val finger = awaitFirstDown(requireUnconsumed = false).id
-                if (!currentEnabled) return@awaitEachGesture
-                var fired = false
-                val hold = scope.launch {
-                    launch { if (!reduceMotion) press.animateTo(.97f, NoahTokens.Motion.tap()) }
-                    val ticks = launch {
-                        delay(200); haptics.selection(); delay(200); haptics.light(); delay(200); haptics.medium()
-                    }
-                    // Every hold is a full 0.8 s, even one that starts while the last one rewinds. The stroke follows
-                    // frame time rather than an animation, so it still traces when animations are removed.
-                    progress.snapTo(0f)
-                    val stroke = launch {
-                        val start = withFrameMillis { it }
-                        while (true) progress.snapTo(((withFrameMillis { it } - start) / HoldMillis.toFloat()).coerceAtMost(1f))
-                    }
-                    // Sending waits on the unscaled clock: "Remove animations" finishes animations at once but can't shorten this.
-                    delay(HoldMillis)
-                    stroke.cancel(); ticks.cancel()
-                    progress.snapTo(1f)
-                    if (currentEnabled) { fired = true; haptics.heavy(); currentConfirm() }
-                }
-                try { holdUntilReleased(finger) } finally {
-                    if (!fired && hold.isActive) {
-                        hold.cancel()
-                        scope.launch { launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
-                            progress.animateTo(0f, tween(260, easing = LinearOutSlowInEasing)) }
-                    } else scope.launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
-                }
-            }
-        }
-        .semantics(mergeDescendants = true) {
-            role = Role.Button
-            contentDescription = label
-            if (!enabled) disabled()
-            onClick(label = action) { currentEnabled.also { if (it) confirming = true } }
-            customActions = listOf(CustomAccessibilityAction(action) { currentEnabled.also { if (it) confirming = true } })
-        }, contentAlignment = Alignment.Center) {
+        .pointerInput(LocalPose.current) { with(gesture) { detect({ currentEnabled }, { currentConfirm() }) } }
+        .holdSemantics(label, action, enabled) { currentEnabled.also { if (it) confirming = true } }, contentAlignment = Alignment.Center) {
         if (wrap) WrappingLabel(label, SendType.pill.copy(color = palette.background, textAlign = TextAlign.Center),
             Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
         else androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = palette.background),
             maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = SendType.pill.fontSize))
     }
     LaunchedEffect(sending) { if (!sending && progress.value >= 1f) progress.snapTo(0f) }
-    if (confirming) WalletAlertDialog(onDismissRequest = { confirming = false },
+    if (confirming) HoldAlternative(action, confirm, tag, { confirming = false }) { if (currentEnabled) { haptics.heavy(); currentConfirm() } }
+}
+
+/** The hold's accessibility alternative: [action] asked as a question, confirmed with [confirm]. */
+@Composable
+private fun HoldAlternative(action: String, confirm: String, tag: String, dismiss: () -> Unit, onConfirm: () -> Unit) {
+    WalletAlertDialog(onDismissRequest = dismiss,
         title = { Text(action) },
-        confirmButton = { TextButton({ confirming = false; if (currentEnabled) { haptics.heavy(); currentConfirm() } },
-            Modifier.testTag("$tag-confirm")) { Text(confirm) } },
-        dismissButton = { TextButton({ confirming = false }) { Text(tr("Cancel")) } })
+        confirmButton = { TextButton({ dismiss(); onConfirm() }, Modifier.testTag("$tag-confirm")) { Text(confirm) } },
+        dismissButton = { TextButton(dismiss) { Text(tr("Cancel")) } })
+}
+
+/** TalkBack can't hold: [action] (a tap or the custom action) asks to confirm instead, through [ask]. */
+private fun Modifier.holdSemantics(label: String, action: String, enabled: Boolean, ask: () -> Boolean) = semantics(mergeDescendants = true) {
+    role = Role.Button
+    contentDescription = label
+    if (!enabled) disabled()
+    onClick(label = action) { ask() }
+    customActions = listOf(CustomAccessibilityAction(action) { ask() })
+}
+
+/** The hold's stroke: the orange line tracing the pill's outline as [progress] runs 0 → 1. */
+private fun Modifier.holdStroke(progress: Animatable<Float, AnimationVector1D>, color: Color) = drawWithContent {
+    drawContent()
+    val p = progress.value
+    if (p > 0f) {
+        val inset = 2.dp.toPx()
+        val path = pill(-inset, -inset, size.width + inset, size.height + inset)
+        val length = PathMeasure().apply { setPath(path, false) }.length
+        drawPath(StageArt.segment(path, 0f, length * p), color, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
+
+/** Hold to confirm: the press, the 0.8 s stroke and the haptics along it; [detect] confirms once a full hold completes. */
+private class HoldGesture(
+    private val scope: CoroutineScope, private val progress: Animatable<Float, AnimationVector1D>,
+    private val press: Animatable<Float, AnimationVector1D>, private val haptics: Haptics, private val reduceMotion: Boolean,
+) {
+    suspend fun PointerInputScope.detect(enabled: () -> Boolean, confirm: () -> Unit) = awaitEachGesture {
+        val finger = awaitFirstDown(requireUnconsumed = false).id
+        if (!enabled()) return@awaitEachGesture
+        var fired = false
+        val hold = scope.launch {
+            launch { if (!reduceMotion) press.animateTo(.97f, NoahTokens.Motion.tap()) }
+            val ticks = launch {
+                delay(200); haptics.selection(); delay(200); haptics.light(); delay(200); haptics.medium()
+            }
+            // Every hold is a full 0.8 s, even one that starts while the last one rewinds. The stroke follows
+            // frame time rather than an animation, so it still traces when animations are removed.
+            progress.snapTo(0f)
+            val stroke = launch {
+                val start = withFrameMillis { it }
+                while (true) progress.snapTo(((withFrameMillis { it } - start) / HoldMillis.toFloat()).coerceAtMost(1f))
+            }
+            // Sending waits on the unscaled clock: "Remove animations" finishes animations at once but can't shorten this.
+            delay(HoldMillis)
+            stroke.cancel(); ticks.cancel()
+            progress.snapTo(1f)
+            if (enabled()) { fired = true; haptics.heavy(); confirm() }
+        }
+        try { holdUntilReleased(finger) } finally { release(!fired && hold.isActive, hold) }
+    }
+
+    /** The finger lifted: an unfinished hold rewinds its stroke; either way the pill springs back. */
+    private fun release(unfinished: Boolean, hold: Job) {
+        if (unfinished) {
+            hold.cancel()
+            scope.launch { launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
+                progress.animateTo(0f, tween(260, easing = LinearOutSlowInEasing)) }
+        } else scope.launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
+    }
 }
 
 /**
@@ -535,12 +560,19 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
             if (red) palette.failure else palette.foreground))
         .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled && !loading, role = Role.Button, onClick = onClick)
         .padding(horizontal = 14.dp, vertical = if (wrap) 6.dp else 0.dp), contentAlignment = Alignment.Center) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = ink, strokeWidth = 2.dp)
-            else icon?.let { Icon(painterResource(it), null, Modifier.size(20.dp), tint = ink) }
-            if (wrap) WrappingLabel(title, style.copy(color = ink, textAlign = TextAlign.Center))
-            else androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center),
-                maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
-        }
+        PillLabel(title, style.copy(color = ink, textAlign = TextAlign.Center), loading, icon, wrap)
+    }
+}
+
+/** The pill's spinner or icon, then its title: on one line that shrinks to fit, or wrapping with [wrap]. */
+@Composable
+private fun PillLabel(title: String, style: TextStyle, loading: Boolean, icon: Int?, wrap: Boolean) {
+    val ink = style.color
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = ink, strokeWidth = 2.dp)
+        else icon?.let { Icon(painterResource(it), null, Modifier.size(20.dp), tint = ink) }
+        if (wrap) WrappingLabel(title, style)
+        else androidx.compose.foundation.text.BasicText(title, style = style,
+            maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
     }
 }

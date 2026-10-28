@@ -195,8 +195,8 @@ internal object SendProgressRules {
      * attempts' coins, so nothing there can be tied to this one (async-payments.md, "Reused hashes").
      */
     fun refund(state: SendController.State, attempt: SendAttempt?, movements: List<Movement>): SendRefund {
-        if (state != SendController.State.failed || attempt == null || attempt.receipt != null ||
-            attempt.payment.method !in lightningMethods) return SendRefund.none
+        if (state != SendController.State.failed || attempt == null) return SendRefund.none
+        if (attempt.receipt != null || attempt.payment.method !in lightningMethods) return SendRefund.none
         val hash = attempt.paymentHash ?: return SendRefund.none
         val sends = movements.filter { movement ->
             movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" &&
