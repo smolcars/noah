@@ -203,7 +203,8 @@ internal class ExitSeen(private val read: () -> String?, private val write: (Str
  */
 class ExitClaimRecords(private val read: () -> String?, private val write: (String) -> Unit) {
     /** [destination] is the other wallet's address; null for this phone's own wallet. */
-    @kotlinx.serialization.Serializable data class Record(val txid: String, val fee: Long, val ids: List<String>, val toPhone: Boolean, val destination: String? = null)
+    @kotlinx.serialization.Serializable data class Record(val txid: String, val fee: Long, val ids: List<String>, val toPhone: Boolean,
+        val destination: String? = null)
 
     fun all(): List<Record> = read()?.let { runCatching { Json.decodeFromString<List<Record>>(it) }.getOrNull() }.orEmpty()
     @Synchronized fun add(record: Record) = write(Json.encodeToString(all().filter { it.txid != record.txid } + record))

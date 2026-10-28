@@ -32,7 +32,8 @@ import kotlinx.serialization.Serializable
         val bound = movements.filter { SendReconciliation.isLightning(it, paymentHash) }
         val resolution = SendReconciliation.lightning(bound, paymentHash, payment.amount, SendSnapshot(), SendReconciliation.fixesAmount(invoice))
         val receipt = (resolution as? SendResolution.Paid)?.receipt ?: throw SendFailure(SendFailure.Reason.unresolved)
-        requireSend(receipt.isProven(payment, paymentHash) && receipt.fee != null && receipt.fee <= quote.fee && receipt.amount <= quote.total - receipt.fee, SendFailure.Reason.unresolved)
+        requireSend(receipt.isProven(payment, paymentHash) && receipt.fee != null && receipt.fee <= quote.fee && receipt.amount <= quote.total - receipt.fee,
+            SendFailure.Reason.unresolved)
         return receipt
     }
 }

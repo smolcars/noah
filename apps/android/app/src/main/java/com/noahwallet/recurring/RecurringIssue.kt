@@ -14,14 +14,17 @@ import kotlinx.serialization.Serializable
     val valid get() = arguments.size == (if (code in listOf(Code.quoteExceedsCap, Code.scheduleExceedsCap)) 2 else 0) &&
         arguments.all { it.toLongOrNull()?.let { value -> value >= 0 } == true }
     fun message(context: Context): String = when (code) {
-        Code.quoteExceedsCap -> L10n.text(context, "The fee for this payment ({fee} sats) is above your automatic limit of {cap} sats. Review it to pay manually.", arguments[0], arguments[1])
-        Code.scheduleExceedsCap -> L10n.text(context, "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.", arguments[0], arguments[1])
+        Code.quoteExceedsCap -> L10n.text(context,
+            "The fee for this payment ({fee} sats) is above your automatic limit of {cap} sats. Review it to pay manually.", arguments[0], arguments[1])
+        Code.scheduleExceedsCap -> L10n.text(context,
+            "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.", arguments[0], arguments[1])
         Code.policyEvidence -> L10n.text(context, RecurringPolicyLedger.message)
         Code.automationStopped -> L10n.text(context, RecurringAutomationAuthority.message)
         Code.legacyHistory -> L10n.text(context, RecurringJournal.legacyMessage)
         Code.invalidJournal -> L10n.text(context, RecurringJournal.invalidMessage)
         Code.interrupted -> L10n.text(context, "Noah was interrupted while sending this payment. Check your transaction history before resuming.")
-        Code.tooManyMissed -> L10n.text(context, "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment.")
+        Code.tooManyMissed -> L10n.text(context,
+            "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment.")
         Code.arkFee -> L10n.text(context, "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually.")
         Code.uncertain -> L10n.text(context, "This payment may have been sent. Check its status before making another payment.")
         Code.alreadyPaid -> L10n.text(context, "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.")

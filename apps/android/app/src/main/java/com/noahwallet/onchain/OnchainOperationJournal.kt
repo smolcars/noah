@@ -27,7 +27,8 @@ internal class OnchainFile(val file: File, private val syncParent: (File) -> Uni
 /** Call-specific v0.4.0 allowlist. Never classify by diagnostic text. */
 object OnchainSubmission {
     fun preBroadcast(error: Exception, action: OnchainAction): OnchainFailure? {
-        if (error is OnchainException && error.reason in setOf(OnchainFailure.claimFeeChanged, OnchainFailure.cancellationRefused, OnchainFailure.keepFailed)) return error.reason
+        if (error is OnchainException && error.reason in setOf(OnchainFailure.claimFeeChanged, OnchainFailure.cancellationRefused,
+                OnchainFailure.keepFailed)) return error.reason
         // BDK CreateTxError occurs before board sign/store/cosign. Other calls still return OTHER.
         if (action == OnchainAction.board && error is BarkError && error.code in
             setOf(BarkErrorCode.INSUFFICIENT_FUNDS, BarkErrorCode.DUST)) return OnchainFailure.constructionFailed

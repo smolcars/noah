@@ -44,7 +44,8 @@ class WalletDataLocation(filesDirectory: File, variant: String) {
             }
         }.getOrNull() ?: return DeletionStatus.mismatched
         when (seed) {
-            is SecretResult.Found -> if (identity.seedTag == null || !MessageDigest.isEqual(RestoreTransaction.tag(seed.value, Base64.decode(identity.seedSalt)), Base64.decode(identity.seedTag))) return DeletionStatus.mismatched
+            is SecretResult.Found -> if (identity.seedTag == null || !MessageDigest.isEqual(RestoreTransaction.tag(seed.value,
+                    Base64.decode(identity.seedSalt)), Base64.decode(identity.seedTag))) return DeletionStatus.mismatched
             is SecretResult.Unavailable -> return DeletionStatus.waitingForSecret
             SecretResult.NotFound -> Unit // Only non-seed cleanup remains.
         }

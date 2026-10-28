@@ -48,11 +48,13 @@ class SendModel(val controller: SendController, private val network: String,
     val sats: Long get() = if (isMax) SendFlow.maxBalance(source, onchainBalance, arkBalance)
     else if (useFiat) btcPrice?.let { FiatCurrency.fiatToSats(amount.toDoubleOrNull() ?: Double.NaN, it) } ?: 0 else amount.toLongOrNull() ?: 0
     val matchingRoute get() = route?.takeIf { parsed.destinationType == "lnurl" && it.destination == SendDestination.cleaned(destination).lowercase() }
-    val rails get() = if (parsed.destinationType == "lnurl" && matchingRoute?.arkAddress != null && comment.isEmpty()) listOf(SendRail.ark, SendRail.lightning) else SendFlow.rails(parsed.destinationType, parsed.bip321)
+    val rails get() = if (parsed.destinationType == "lnurl" && matchingRoute?.arkAddress != null && comment.isEmpty()) listOf(SendRail.ark,
+        SendRail.lightning) else SendFlow.rails(parsed.destinationType, parsed.bip321)
     val availability: Map<String, Boolean> get() {
         val invoice = parsed.bip321?.get("lightningInvoice") ?: destination
         val pending = PaymentEncoding.invoice(invoice)?.hash in pendingLightningHashes
-        return mapOf("ark" to (sats > 0 && arkBalance >= sats), "lightning" to (sats > 0 && (arkBalance >= sats || pending || parsed.destinationType == "lnurl")),
+        return mapOf("ark" to (sats > 0 && arkBalance >= sats),
+            "lightning" to (sats > 0 && (arkBalance >= sats || pending || parsed.destinationType == "lnurl")),
             "onchain" to (isMax || sats > 0 && (arkBalance >= sats || onchainBalance >= sats)))
     }
     val sources get() = SendSource.entries.filter { val balance = if (it == SendSource.offchain) arkBalance else onchainBalance; if (isMax) balance > 0 else sats > 0 && balance >= sats }
@@ -151,14 +153,16 @@ class SendModel(val controller: SendController, private val network: String,
             var method = parsed.destinationType ?: ""; var target = SendDestination.cleaned(destination)
             if (method == "lnurl") target = target.lowercase()
             parsed.bip321?.let { request -> method = SendFlow.method(rail, request) ?: throw SendFailure(SendFailure.Reason.invalid)
-                target = request.getValue(mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "offer" to "offer", "onchain" to "onchainAddress").getValue(method)) }
+                target = request.getValue(mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "offer" to "offer",
+                    "onchain" to "onchainAddress").getValue(method)) }
             if (method == "lnurl") {
                 val route = matchingRoute ?: throw SendFailure(SendFailure.Reason.invalid)
                 val msat = Math.multiplyExact(sats, 1000); requireSend(msat in route.minMsat..route.maxMsat && comment.length <= route.commentAllowed)
                 if (rail == SendRail.ark && comment.isEmpty() && route.arkAddress != null) { method = "ark"; target = route.arkAddress }
             }
             if (method == "lightning") PaymentEncoding.invoice(target)?.sats?.takeIf { it.signum() > 0 }?.let { requireSend(it.compareTo(sats.toBigDecimal()) == 0) }
-            val metadata = if (parsed.destinationType == "lnurl" && SendDestination.isLightningAddress(destination)) SendPayment.metadata(destination, comment, amount, if (useFiat) fiatCurrency else null) else null
+            val metadata = if (parsed.destinationType == "lnurl" && SendDestination.isLightningAddress(destination)) SendPayment.metadata(destination, comment,
+                amount, if (useFiat) fiatCurrency else null) else null
             val payment = SendPayment(target, method, sats, if (rail == SendRail.onchain) source else null, isMax, comment, metadata)
             requireSend(!isMax || method == "onchain" && source != null)
             val reviewed = quotePayment(payment)

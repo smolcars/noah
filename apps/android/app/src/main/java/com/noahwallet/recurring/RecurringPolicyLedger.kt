@@ -7,9 +7,11 @@ import java.io.File
 import java.security.MessageDigest
 
 /** Write-ahead authority for policies; MMKV is never allowed to repair newer evidence. */
-internal class RecurringPolicyLedger(val file: File, private val warn: () -> Unit = {}, private val sync: (File) -> Unit = ::syncDirectory, private val syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }) {
+internal class RecurringPolicyLedger(val file: File, private val warn: () -> Unit = {}, private val sync: (File) -> Unit = ::syncDirectory,
+    private val syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }) {
     @Serializable private data class Marker(val version: Int, val binding: RecurringStore.Binding)
-    @Serializable private data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val generation: Long, val revision: String?, val status: String, val digest: String?, val settlementKey: String? = null, val pending: RecurringPayment? = null, val predecessor: String? = null, val digestVersion: Int? = null, val predecessorVersion: Int? = null, val formatMigration: Boolean = false)
+    @Serializable private data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val generation: Long, val revision: String?,
+        val status: String, val digest: String?, val settlementKey: String? = null, val pending: RecurringPayment? = null, val predecessor: String? = null, val digestVersion: Int? = null, val predecessorVersion: Int? = null, val formatMigration: Boolean = false)
     @Serializable private data class State(val version: Int, val binding: RecurringStore.Binding, val generation: Long, val entries: Map<String, Entry>)
     val marker get() = File("${file.path}.initialized")
     private val json = RecurringStore.json
@@ -36,7 +38,8 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
         ?: if (entry.digest == digest(schedule, 2)) 2 else 1
     private fun entry(binding: RecurringStore.Binding, schedule: RecurringPayment, generation: Long) =
         Entry(binding, schedule.id, generation, schedule.nativeRevision, schedule.status, digest(schedule, 2), digestVersion = 2)
-    private fun matches(entry: Entry?, binding: RecurringStore.Binding, schedule: RecurringPayment) = entry != null && entry.binding == binding && entry.scheduleID == schedule.id && entry.status == schedule.status &&
+    private fun matches(entry: Entry?, binding: RecurringStore.Binding,
+        schedule: RecurringPayment) = entry != null && entry.binding == binding && entry.scheduleID == schedule.id && entry.status == schedule.status &&
         entry.revision == schedule.nativeRevision && digestMatches(entry.digest, entry.digestVersion, schedule)
     private fun persist(state: State) = durableRecurringWrite(file, json.encodeToString(state).toByteArray(), sync, syncFile)
     private fun state(binding: RecurringStore.Binding, schedules: Map<String, RecurringPayment>): State {
@@ -68,7 +71,8 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
         schedules.filter { (id, schedule) -> !matches(state.entries[key(binding, id)], binding, schedule) }.keys.also { if (it.isNotEmpty()) warn() }
     } catch (_: Exception) { schedules.keys }
 
-    fun commit(binding: RecurringStore.Binding, before: Map<String, RecurringPayment>, after: Map<String, RecurringPayment>, policyID: String? = null, reapproval: Boolean = false, settlementKey: String? = null, migrationIDs: Set<String> = emptySet()) {
+    fun commit(binding: RecurringStore.Binding, before: Map<String, RecurringPayment>, after: Map<String, RecurringPayment>, policyID: String? = null,
+        reapproval: Boolean = false, settlementKey: String? = null, migrationIDs: Set<String> = emptySet()) {
         val state = state(binding, before)
         val changed = (before.keys + after.keys + listOfNotNull(policyID)).filter { it == policyID || it in migrationIDs || before[it] != after[it] }
         if (changed.isEmpty()) return
@@ -84,7 +88,8 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
                 entries[key] = entry(binding, schedule, generation).copy(settlementKey = settlementKey ?: entries[key]?.settlementKey,
                     pending = if (settlementKey != null || id in migrationIDs) schedule else null,
                     predecessor = if (settlementKey != null || id in migrationIDs) entries[key]?.digest else null,
-                    predecessorVersion = if (settlementKey != null || id in migrationIDs) entries[key]?.let { matchingVersion(it, before.getValue(id)) } else null, formatMigration = id in migrationIDs)
+                    predecessorVersion = if (settlementKey != null || id in migrationIDs) entries[key]?.let { matchingVersion(it,
+                        before.getValue(id)) } else null, formatMigration = id in migrationIDs)
             }
         }
         try { persist(state.copy(generation = generation, entries = entries)) }
@@ -109,7 +114,8 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
         val pending = state.entries.filterValues { it.binding == binding && it.pending != null }
         if (pending.isEmpty()) return
         check(pending.values.all { e -> schedules[e.scheduleID]?.let { matches(e, binding, it) } == true }) { message }
-        persist(state.copy(entries = state.entries.mapValues { (id, e) -> if (id in pending) e.copy(pending = null, predecessor = null, predecessorVersion = null, formatMigration = false) else e }))
+        persist(state.copy(entries = state.entries.mapValues { (id, e) -> if (id in pending) e.copy(pending = null, predecessor = null,
+            predecessorVersion = null, formatMigration = false) else e }))
     }
     /** Only exact, completed authority may enter the next format's write-ahead transaction. */
     fun migrate(binding: RecurringStore.Binding, schedules: Map<String, RecurringPayment>): Boolean {

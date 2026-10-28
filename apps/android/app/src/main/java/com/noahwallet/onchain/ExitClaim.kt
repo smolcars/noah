@@ -75,9 +75,11 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
             model.review(OnchainAction.claim, ids, destination = destination)
         } finally { pending = false }
     }
-    ExitClaimContent(exits, model.overview?.tip ?: 0, model.quote?.takeIf { it.destination == destination }, model.estimateFallback?.takeIf { it.destination == destination },
+    ExitClaimContent(exits, model.overview?.tip ?: 0, model.quote?.takeIf { it.destination == destination },
+        model.estimateFallback?.takeIf { it.destination == destination },
         to, typed, address, phone, phoneError, model.busy, suspended, money, nav.back, reviewing = pending,
-        choose = { to = it }, type = { typed = it }, reviewAgain = { destination?.let { scope.launch { model.review(OnchainAction.claim, ids, destination = it) } } },
+        choose = { to = it }, type = { typed = it }, reviewAgain = { destination?.let { scope.launch { model.review(OnchainAction.claim, ids,
+            destination = it) } } },
         withoutEstimate = model::continueWithoutEstimate,
         claim = {
             if (!model.busy && model.quote != null) {
@@ -108,7 +110,8 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
     val wide = LocalPose.current !is OnboardingPose.Compact
     ExitFrame(tr("Claim"), back, hero = true, pictureLeads = true, foot = {
         when {
-            fallback != null && quote == null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), wrap = true, enabled = !busy, onClick = withoutEstimate)
+            fallback != null && quote == null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), wrap = true,
+                enabled = !busy, onClick = withoutEstimate)
             // An expired review, or none while idle (a changed fee or failed submit dropped it): ask again rather than leave Claim off.
             (quote != null && !current) || (quote == null && destination != null && exits.isNotEmpty() && !busy && !reviewing) ->
                 FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), wrap = true, enabled = !busy && !suspended, onClick = reviewAgain)
@@ -123,17 +126,21 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
             Text(tr("Unlocked at block {height}", number(it)), Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
         val first = exits.firstOrNull()
-        if (wide && first != null) ExitPicture(ExitScene.of(first, ExitStages.of(first, tip), tip), tr("Ready to claim"), exitPicture().padding(top = 14.dp), money)
+        if (wide && first != null) ExitPicture(ExitScene.of(first, ExitStages.of(first, tip), tip), tr("Ready to claim"), exitPicture().padding(top = 14.dp),
+            money)
     }) {
         if (exits.isEmpty()) { FinePrint(tr("No exits are ready to claim.")); status(); return@ExitFrame }
         SectionLabel(tr("To"))
         // Fixed while a review runs: a review asked meanwhile would be dropped, leaving Claim off.
-        RadioRow(tr("Another wallet"), selected = to == ClaimTo.other, modifier = Modifier.testTag("exit-to-other"), enabled = !busy) { haptics.selection(); choose(ClaimTo.other) }
+        RadioRow(tr("Another wallet"), selected = to == ClaimTo.other, modifier = Modifier.testTag("exit-to-other"),
+            enabled = !busy) { haptics.selection(); choose(ClaimTo.other) }
         if (to == ClaimTo.other) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f)) {
                     SettingsField(typed, type, tr("Bitcoin address"), Modifier.testTag("exit-claim-address"), failed = typed.isNotBlank() && address == null,
-                        enabled = !busy, keyboard = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false), mono = true)
+                        enabled = !busy, keyboard = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Uri,
+                            autoCorrectEnabled = false), mono = true)
                 }
             }
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -149,7 +156,8 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
         else tr("Noah won’t move these back to Ark."), failed = phoneError)
         Column(Modifier.padding(top = 18.dp)) {
             if (exits.size > 1) ExitValueRow(tr("Exits"), exits.size.toString(), ValueKind.number)
-            ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: if (quote != null || fallback != null) tr("Unknown") else "—", ValueKind.number, last = true)
+            ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: if (quote != null || fallback != null) tr("Unknown") else "—",
+                ValueKind.number, last = true)
             TotalRow(tr("You get"), known?.let { "~" + money(it.net) } ?: "—")
         }
         if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = true)?.let { Warning(tr(it), failed = true) }

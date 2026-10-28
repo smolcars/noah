@@ -29,13 +29,15 @@ object PushNotifications {
         if (Build.VERSION.SDK_INT < 26) return
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(NotificationChannels.DEFAULT) == null) {
-            manager.createNotificationChannel(NotificationChannel(NotificationChannels.DEFAULT, L10n.text(context, "Default"), NotificationManager.IMPORTANCE_MAX).apply {
+            manager.createNotificationChannel(NotificationChannel(NotificationChannels.DEFAULT, L10n.text(context, "Default"),
+                NotificationManager.IMPORTANCE_MAX).apply {
                 vibrationPattern = longArrayOf(0, 250, 250, 250)
                 lightColor = Color.parseColor("#FF231F7C")
             })
         }
         if (manager.getNotificationChannel(NotificationChannels.UNIFIED_PUSH) == null) {
-            manager.createNotificationChannel(NotificationChannel(NotificationChannels.UNIFIED_PUSH, L10n.text(context, "Noah notifications"), NotificationManager.IMPORTANCE_HIGH))
+            manager.createNotificationChannel(NotificationChannel(NotificationChannels.UNIFIED_PUSH, L10n.text(context, "Noah notifications"),
+                NotificationManager.IMPORTANCE_HIGH))
         }
     }
 

@@ -45,7 +45,8 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
                             })
                         } finally { snapshot.close() }
                     }
-                }.getOrElse { NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true) }
+                }.getOrElse { NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"),
+                    settingsNoticePending = true) }
                 fallback = state
                 persist(state)
             }
@@ -71,7 +72,8 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         cached?.takeIf { !verify && stamp != null && it.first == stamp }?.let { return it.second }
         return try { nativeFile.load().also { cached = stamp?.let { s -> s to it } } } catch (_: Exception) {
             cached = null
-            val defaults = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true)
+            val defaults = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"),
+                settingsNoticePending = true)
             fallback = defaults
             runCatching { persist(defaults) }
             defaults
@@ -106,7 +108,8 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     fun sync() = requireHealthy()
     fun takeUpgradeNotices(): List<String> = synchronized(openLock) {
         val state = load(verify = true)
-        val notices = listOfNotNull(settingsNotice(state.values).takeIf { state.settingsNoticePending }, recurringNotice.takeIf { state.recurringNoticePending })
+        val notices = listOfNotNull(settingsNotice(state.values).takeIf { state.settingsNoticePending },
+            recurringNotice.takeIf { state.recurringNoticePending })
         if (notices.isNotEmpty()) {
             val consumed = state.copy(settingsNoticePending = false, recurringNoticePending = false)
             fallback = consumed
@@ -116,7 +119,8 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     }
     fun removeAll() = synchronized(openLock) {
         val state = load(verify = true)
-        try { persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(state.values), cleanupPending = true)) }
+        try { persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(state.values),
+            cleanupPending = true)) }
         catch (failure: Exception) { fallback = state; throw failure }
         finishCleanup()
     }
@@ -132,7 +136,8 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         val state = load(verify = true)
         val wallet = persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState()
         val raw = PersistedStateCodec.encode(wallet.copy(isInitialized = true, isWalletLoaded = true), 0)
-        val completed = state.copy(values = state.values + (PersistedWalletState.key to RNStoreCodec.merge(PersistedWalletState.key, state.values[PersistedWalletState.key], raw)))
+        val completed = state.copy(values = state.values + (PersistedWalletState.key to RNStoreCodec.merge(PersistedWalletState.key,
+            state.values[PersistedWalletState.key], raw)))
         try { persist(completed); true } catch (_: Exception) { fallback = completed; false }
     }
     fun beginOnboarding() {

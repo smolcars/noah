@@ -100,7 +100,8 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
                 actions()
             }
         }
-        else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade, chip = chip) { leading(); trailing() }
+        else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade,
+            chip = chip) { leading(); trailing() }
     }
 }
 
@@ -210,7 +211,8 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
-        ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"), Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp).testTag("exit-warn-picture"))
+        ExitPicture(ExitScene.sample(), tr("Your VTXO’s path to the chain"),
+            Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp).testTag("exit-warn-picture"))
         // The exits already running, or ended: one opens directly, several open the list. Exits known when the page opens
         // show at once; ones read later fade in under the picture and the facts ease down (Reduce Motion: a fade only), once
         // per page: back on it, they show at once.
@@ -312,7 +314,8 @@ internal fun ExitCoin(size: androidx.compose.ui.unit.Dp) {
     val palette = LocalPalette.current
     Box {
         SettingsAvatar(size)
-        Box(Modifier.size(size).drawBehind { drawCircle(palette.orange, this.size.minDimension / 2 - 1.25.dp.toPx(), style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx())) })
+        Box(Modifier.size(size).drawBehind { drawCircle(palette.orange, this.size.minDimension / 2 - 1.25.dp.toPx(),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx())) })
     }
 }
 
@@ -401,7 +404,8 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     // A summary above the pill: the fade turns solid sooner so rows never show through it (prototype `.foot:has(.fsum)`).
     ExitFrame(tr("Choose VTXOs"), back, footFade = if (everything) .46f else .3f, foot = {
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            if (!everything) Text(if (chosen.isEmpty()) tr("Choose the VTXOs to exit") else fees?.chainFee?.let { tr("{amount} · fees ~{fee}", money(value), money(it)) }
+            if (!everything) Text(if (chosen.isEmpty()) tr("Choose the VTXOs to exit") else fees?.chainFee?.let { tr("{amount} · fees ~{fee}", money(value),
+                money(it)) }
                 ?: money(value), Modifier.padding(bottom = 8.dp), style = HomeType.amount.copy(fontSize = 15.sp), color = palette.foreground)
             SendPill(tr("Review exit"), Modifier.fillMaxWidth().testTag("exit-review"), height = 56.dp, wrap = true,
                 enabled = chosen.isNotEmpty() && !busy && !suspended && (!everything || classified)) { haptics.light(); review(ids) }
@@ -445,7 +449,8 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
             val out = ExitCosts.leftOut(vtxos, costs.orEmpty())
             if (out.dust > 0) FinePrint(tr("Left out: {amount}, too small to exit.", money(out.dust)))
             if (out.locked > 0) FinePrint(tr("Left out: {amount}, in use right now.", money(out.locked)))
-            if (out.uneconomic > 0) FinePrint(tr("Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.", money(out.uneconomic)))
+            if (out.uneconomic > 0) FinePrint(tr("Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.",
+                money(out.uneconomic)))
         }
         Spacer(Modifier.height(40.dp))
         status()
@@ -504,7 +509,8 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
         Column(Modifier.weight(1f)) {
             WrappingLabel(money(vtxo.amount), HomeType.amount.copy(color = palette.foreground))
             Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted)
-            if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.small, color = palette.muted)
+            if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.small,
+                color = palette.muted)
         }
     }
 }

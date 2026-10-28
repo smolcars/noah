@@ -77,7 +77,8 @@ class WalletCreator(private val dependencies: Dependencies) {
     }
 
     companion object {
-        fun live(context: Context, session: WalletSession = WalletSession.shared(context), settings: SettingsStorage = SettingsStorage(context)): WalletCreator {
+        fun live(context: Context, session: WalletSession = WalletSession.shared(context),
+            settings: SettingsStorage = SettingsStorage(context)): WalletCreator {
             val variant = BuildConfig.APP_VARIANT
             val storage = SeedStorage(context.applicationContext, variant)
             val location = WalletDataLocation(context.applicationContext.filesDir, variant)

@@ -28,7 +28,8 @@ class SendController(private val dependencies: Dependencies,
     /** This wallet's saved payment isn't read yet (every settled storageBlocked carries a message): Send is neither free nor holding one. */
     val loading get() = state == State.storageBlocked && message == null
     val canOverride get() = !checking && (unboundJournal != null || unreadableJournal ||
-        attempt != null && (state in listOf(State.uncertain, State.storageBlocked) || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
+        attempt != null && (state in listOf(State.uncertain,
+            State.storageBlocked) || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
 
     fun invalidateForWalletChange() {
         recurringEvidenceDurable = false
@@ -63,7 +64,8 @@ class SendController(private val dependencies: Dependencies,
                 if (saved.walletIdentity != identity) { dependencies.write(null); loadedAttempt = null; loadedState = State.ready; return@reservation }
                 // Retain the original read-only evidence until migration is durable.
                 loadedAttempt = saved
-                if (saved.safetyVersion !in 1..journalVersion || saved.receipt?.isProven(saved.payment, saved.paymentHash) == false || saved.alreadyPaid?.isProven(saved.payment, saved.paymentHash, true) == false) {
+                if (saved.safetyVersion !in 1..journalVersion || saved.receipt?.isProven(saved.payment,
+                        saved.paymentHash) == false || saved.alreadyPaid?.isProven(saved.payment, saved.paymentHash, true) == false) {
                     saved = saved.copy(safetyVersion = journalVersion, receipt = null, alreadyPaid = null, failed = false,
                         possibleTxids = (saved.possibleTxids + listOfNotNull(saved.receipt?.txid, saved.alreadyPaid?.txid)).distinct(),
                         failureMessage = "This saved payment outcome could not be verified. It may have been sent. Check history before sending again.")
@@ -113,19 +115,22 @@ class SendController(private val dependencies: Dependencies,
                         requireSend(identity == quote.walletIdentity, SendFailure.Reason.unresolved)
                         beforeSubmit?.invoke()
                         if (payment.method in listOf("lightning", "lnurl")) {
-                            val marker = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = identity, inspectionPending = true, recurringOccurrenceKey = recurringKey, payment = payment, quote = quote)
+                            val marker = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = identity, inspectionPending = true,
+                                recurringOccurrenceKey = recurringKey, payment = payment, quote = quote)
                             dependencies.write(marker); attempt = marker
                         }
                         val snapshot = wallet.prepare(payment, quote)
                         if (current != generation) { wallet.discard(quote, includingClaimed = true); return@reserve }
                         if (recurringKey != null && snapshot.checkpoint != null) throw SendFailure(SendFailure.Reason.lightningInProgress)
-                        val pending = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = identity, recurringOccurrenceKey = recurringKey, broadcastingTxid = quote.prepared?.txid, payment = payment,
+                        val pending = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = identity, recurringOccurrenceKey = recurringKey,
+                            broadcastingTxid = quote.prepared?.txid, payment = payment,
                             snapshot = snapshot, paymentHash = PaymentEncoding.invoice(snapshot.resolvedInvoice ?: if (payment.method == "lightning") payment.destination else "")?.hash, quote = quote)
                         dependencies.write(pending); attempt = pending
                     } catch (failure: Exception) {
                         if (current != generation) return@reserve
                         if (failure is SendNotSubmitted && recurringKey != null && attempt == null) {
-                            val stopped = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = quote.walletIdentity, recurringOccurrenceKey = recurringKey,
+                            val stopped = SendAttempt(recurringAttemptID = recurringAttemptID, walletIdentity = quote.walletIdentity,
+                                recurringOccurrenceKey = recurringKey,
                                 payment = payment, quote = quote, failed = true, failureMessage = failure.reason.message)
                             attempt = stopped; message = failure.reason.message; finish(SendResolution.Failed)
                             return@reserve
@@ -229,7 +234,8 @@ class SendController(private val dependencies: Dependencies,
         clear()
     }
     val overrideWarning get() = listOfNotNull(attempt?.receipt?.conflictDescription, SendOverrideAudit.warningText).joinToString("\n\n")
-    suspend fun startNewPaymentAfterHistoryCheck(confirmed: Boolean, warning: String = overrideWarning, confirmation: String = SendOverrideAudit.confirmationText) {
+    suspend fun startNewPaymentAfterHistoryCheck(confirmed: Boolean, warning: String = overrideWarning,
+        confirmation: String = SendOverrideAudit.confirmationText) {
         if (!confirmed || !canOverride) return
         val evidence = attempt ?: unboundJournal
         val quarantine = unreadableJournal

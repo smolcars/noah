@@ -71,7 +71,8 @@ internal fun intervalText(interval: RecurringInterval): String = when {
 @Composable
 private fun scheduleLine(s: RecurringPayment, running: Boolean, locale: java.util.Locale): Pair<String, Boolean> = when {
     s.inFlight != null && running -> tr("Sending") to false
-    s.status == "active" -> (s.nextRunAt?.let { tr("{interval} · next {date}", intervalText(s.interval), recurringShortDay(it, locale)) } ?: intervalText(s.interval)) to false
+    s.status == "active" -> (s.nextRunAt?.let { tr("{interval} · next {date}", intervalText(s.interval),
+        recurringShortDay(it, locale)) } ?: intervalText(s.interval)) to false
     s.status == "paused" -> tr("Paused") to false
     s.status == "completed" -> tr("Completed") to false
     s.status == "needs_approval" -> tr("Needs approval") to true
@@ -111,13 +112,15 @@ internal fun RecurringListPage(app: AppModel, nav: SettingsNav) {
             shown.forEachIndexed { index, s ->
                 val (line, failed) = scheduleLine(s, executor.running, locale)
                 Row(Modifier.fillMaxWidth().height(66.dp)
-                    .drawBehind { if (index < shown.lastIndex) drawRect(palette.hairline, Offset(56.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 56.dp.toPx(), 1.dp.toPx())) }
+                    .drawBehind { if (index < shown.lastIndex) drawRect(palette.hairline, Offset(56.dp.toPx(), size.height - 1.dp.toPx()),
+                        Size(size.width - 56.dp.toPx(), 1.dp.toPx())) }
                     .clickable(role = Role.Button) { nav.open(SchedulePage(s.id)) }.testTag("recurring-row-${s.id}"),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     ScheduleAvatar(s, large = false)
                     Column(Modifier.weight(1f)) {
                         Text(s.label, style = HomeType.rowTitle, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(line, style = HomeType.small, color = if (failed) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(line, style = HomeType.small, color = if (failed) palette.failure else palette.muted, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis)
                     }
                     Text(s.formattedAmount(app.amountUnit, locale).let { if (app.hidden) "••••" else it }, style = HomeType.amount,
                         color = if (s.status == "active") palette.foreground else palette.muted, maxLines = 1)
@@ -207,18 +210,22 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executo
     fun pauseOrResume() = act(if (s.status == "active") paused else resumed) { if (s.status == "active") executor.pause(s.id) else executor.resume(s.id) }
     SettingsFrame(tr("Recurring payment"), nav.back, hero = true, foot = when {
         s.status == "needs_approval" -> ({
-            FootPill(tr("Review and pay"), Modifier.testTag("recurring-review-pay"), enabled = !executor.running && !executor.controller.locked && !app.isWalletSuspended) {
+            FootPill(tr("Review and pay"), Modifier.testTag("recurring-review-pay"),
+                enabled = !executor.running && !executor.controller.locked && !app.isWalletSuspended) {
                 act { preparing = true; try { review = executor.review(s.id) } finally { preparing = false } }
             }
         })
-        adjustable -> ({ FootPill(resumeTitle, Modifier.testTag("recurring-pause-resume"), outlined = s.status == "active", enabled = canResume) { pauseOrResume() } })
+        adjustable -> ({ FootPill(resumeTitle, Modifier.testTag("recurring-pause-resume"), outlined = s.status == "active",
+            enabled = canResume) { pauseOrResume() } })
         else -> null
     }) {
         Column(Modifier.padding(top = 6.dp)) {
             ScheduleAvatar(s, large = true)
-            Text(if (app.hidden) "••••" else s.formattedAmount(app.amountUnit, locale), Modifier.padding(top = 18.dp), style = ActivityType.big, color = palette.foreground, maxLines = 1)
+            Text(if (app.hidden) "••••" else s.formattedAmount(app.amountUnit, locale), Modifier.padding(top = 18.dp), style = ActivityType.big,
+                color = palette.foreground, maxLines = 1)
             val (line, failed) = scheduleLine(s, executor.running, locale)
-            Text(line, Modifier.padding(top = 10.dp), style = ActivityType.status, color = if (failed) palette.failure else if (s.status == "paused") palette.muted else palette.foreground)
+            Text(line, Modifier.padding(top = 10.dp), style = ActivityType.status,
+                color = if (failed) palette.failure else if (s.status == "paused") palette.muted else palette.foreground)
             Text(s.label, Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
         }
         Column(Modifier.padding(top = 22.dp)) {
@@ -228,16 +235,19 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executo
                 glyph = if (s.destinationType == "ark") SettingsIcons.ark else SettingsIcons.lightning, toasts = toasts)
             if (!s.unsupportedStorage) DetailRow(tr("Repeats"), intervalText(s.interval), toasts = toasts)
             if (s.status == "active") s.nextRunAt?.let { DetailRow(tr("Next"), recurringDate(it), toasts = toasts) }
-            DetailRow(tr("Ends"), s.endAt?.let { recurringDay(it) } ?: s.maxOccurrences?.let { trPlural("After {n} payments", it) } ?: tr("Never"), toasts = toasts)
+            DetailRow(tr("Ends"), s.endAt?.let { recurringDay(it) } ?: s.maxOccurrences?.let { trPlural("After {n} payments", it) } ?: tr("Never"),
+                toasts = toasts)
             DetailRow(tr("Paid"), trPlural("{n} payments", s.occurrencesPaid), toasts = toasts, last = s.runs.isEmpty())
             s.runs.firstOrNull()?.let { run ->
-                DetailRow(tr("Last"), recurringDate(run.attemptedAt) + " · " + when (run.status) { "success" -> tr("Sent"); "skipped" -> tr("Skipped"); else -> tr("Failed") },
+                DetailRow(tr("Last"),
+                    recurringDate(run.attemptedAt) + " · " + when (run.status) { "success" -> tr("Sent"); "skipped" -> tr("Skipped"); else -> tr("Failed") },
                     toasts = toasts, failed = run.status != "success" && run.status != "skipped", last = true)
             }
         }
         s.lastError?.let { FinePrint(s.issue?.message(context) ?: tr(it), failed = true) }
         val rows = mutableListOf<@Composable (Boolean) -> Unit>()
-        if (adjustable && (s.inFlight == null || s.requiresPolicyApproval)) rows += { d -> SettingsRow(tr("Edit"), divider = d, enabled = !app.isWalletSuspended,
+        if (adjustable && (s.inFlight == null || s.requiresPolicyApproval)) rows += { d -> SettingsRow(tr("Edit"), divider = d,
+            enabled = !app.isWalletSuspended,
             modifier = Modifier.testTag("recurring-edit")) { nav.open(EditorPage(s.id)) } }
         if (s.status == "needs_approval") rows += { d -> SettingsRow(resumeTitle, end = RowEnd.None, divider = d, enabled = canResume) { pauseOrResume() } }
         if (attention) rows += { d -> SettingsRow(tr("Check status"), end = RowEnd.None, divider = d, enabled = !executor.running,

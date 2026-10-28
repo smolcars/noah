@@ -116,7 +116,8 @@ internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifi
             }
         }
         Pulses(frame, breath, palette, shown)
-        for (item in layout.labels) if (item.pill != null) Pill(item, layout, measurer, styles, measure, frame, breath, palette, if (item.key in stay) 1f else null, move)
+        for (item in layout.labels) if (item.pill != null) Pill(item, layout, measurer, styles, measure, frame, breath, palette,
+            if (item.key in stay) 1f else null, move)
     }
 }
 
@@ -226,7 +227,8 @@ internal fun DrawScope.exitWalletBadge(at: Offset, palette: NoahTokens.Palette) 
     treeBadge(at, 14f, TreeIcons.wallet, palette.foreground, palette.hairline, palette.background, 1f)
 
 /** A circle badge with an icon: the server, the phone or the other wallet (prototype `badge`). */
-private fun DrawScope.treeBadge(at: Offset, r: Float, icon: Path, ink: Color, ring: Color, paper: Color, alpha: Float, dashed: Boolean = false, dots: Boolean = false) {
+private fun DrawScope.treeBadge(at: Offset, r: Float, icon: Path, ink: Color, ring: Color, paper: Color, alpha: Float, dashed: Boolean = false,
+    dots: Boolean = false) {
     if (alpha <= 0f) return
     val a = clamp(alpha)
     drawCircle(paper, r, at, alpha = a)
@@ -260,14 +262,16 @@ private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: F
         val shape = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(box.x, box.y, box.x + h, box.y + h, CornerRadius(3.5f))) }
         clipPath(shape) { val fill = h * clamp(mine * 1.6f); drawRect(palette.foreground, Offset(box.x, box.y + h - fill), Size(h, fill), alpha = a) }
         if (mine < 1f) drawRoundRect(palette.foreground, box, Size(h, h), CornerRadius(3.5f), alpha = a, style = Stroke(1.6f))
-        if (ripple > 0f && ripple < 1f) drawRoundRect(palette.foreground, Offset(box.x - 10 * ripple, box.y - 10 * ripple), Size(h + 20 * ripple, h + 20 * ripple),
+        if (ripple > 0f && ripple < 1f) drawRoundRect(palette.foreground, Offset(box.x - 10 * ripple, box.y - 10 * ripple),
+            Size(h + 20 * ripple, h + 20 * ripple),
             CornerRadius(4 + 6 * ripple), alpha = a * .4f * (1 - ripple), style = Stroke(1.2f))
     } else if (send > 0f || (ready && mark == ExitScene.Mark.waiting)) {
         // From a hollow circle; or, sent once it was ready, from its outlined square, whose solid outline fades into the dashes.
         if (send < 1f && !ready) drawCircle(palette.orange, 5.5f * (1 - send), at, alpha = a, style = Stroke(1.6f))
         val h = if (ready) z else z * (.6f + .4f * send)
         drawRoundRect(palette.background, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f), alpha = a)
-        if (ready && send < 1f) drawRoundRect(palette.orange, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f), alpha = a * (1 - send), style = Stroke(1.6f))
+        if (ready && send < 1f) drawRoundRect(palette.orange, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f), alpha = a * (1 - send),
+            style = Stroke(1.6f))
         if (outline) drawRoundRect(if (grey) palette.muted else palette.orange, Offset(at.x - h / 2, at.y - h / 2), Size(h, h), CornerRadius(3.5f),
             alpha = a * send * if (grey) .8f else .88f, style = Stroke(1.8f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2.4f))))
     } else if (mark == ExitScene.Mark.needsFee || mark == ExitScene.Mark.ready) {
@@ -332,7 +336,8 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
         sibling.amount?.let { size ->
             // On a background halo, so the stubs behind it don't run through the amount.
             val text = measure(words.money(amount), size)
-            drawRoundRect(palette.background, Offset(at.x - 12 - text.size.width, at.y - text.size.height / 2f), Size(text.size.width + 4f, text.size.height.toFloat()),
+            drawRoundRect(palette.background, Offset(at.x - 12 - text.size.width, at.y - text.size.height / 2f),
+                Size(text.size.width + 4f, text.size.height.toFloat()),
                 CornerRadius(3f), alpha = a * labA)
             text(text, at.x - 10, at.y, palette.muted, a * labA, 1)
         }
@@ -344,13 +349,15 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
         sibling(sib, Offset(x, y), f.ys[sib.level], treeA * m.pop(sib.level, t) * fade, s.others[sib.other].amount, layout.words)
     }
     if (before != null && slide < 1f) for (old in before.siblings) if (layout.siblings.none { same(old, it, before.scene) }) {
-        sibling(old, Offset(old.x, before.ys[old.level] + old.dy), before.ys[old.level], treeA * (1 - slide), before.scene.others[old.other].amount, before.words)
+        sibling(old, Offset(old.x, before.ys[old.level] + old.dy), before.ys[old.level], treeA * (1 - slide), before.scene.others[old.other].amount,
+            before.words)
     }
     // Before it's sent (Start), a ghost of the branch: what the exit will send.
     val ghost = m.ghost(t)
     if (ghost > 0f) {
         treeLink(Offset(tx, gY - rS), Offset(tx, yC + rC), 0f, 1f, palette.muted, 1.2f, ghost, floatArrayOf(2f, 4f))
-        for (j in 1 until n) { drawCircle(palette.background, 4f, f.node(j), alpha = ghost); drawCircle(palette.muted, 4f, f.node(j), alpha = ghost, style = Stroke(1.2f)) }
+        for (j in 1 until n) { drawCircle(palette.background, 4f, f.node(j), alpha = ghost); drawCircle(palette.muted, 4f, f.node(j), alpha = ghost,
+            style = Stroke(1.2f)) }
     }
     // Your branch: ink below a transaction once it's in a block, orange while it's on its way.
     for (j in 1..n) {
@@ -375,14 +382,16 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
         text(text, at.x, at.y, palette.orange, alpha, 0)
     }
     fun plates(at: Offset, z: Float, alpha: Float) {
-        for (plate in 1..2) drawLine(palette.background, Offset(at.x - z / 2 + 1.5f, at.y - z / 2 + z * plate / 3f), Offset(at.x + z / 2 - 1.5f, at.y - z / 2 + z * plate / 3f), 1.2f, alpha = alpha)
+        for (plate in 1..2) drawLine(palette.background, Offset(at.x - z / 2 + 1.5f, at.y - z / 2 + z * plate / 3f),
+            Offset(at.x + z / 2 - 1.5f, at.y - z / 2 + z * plate / 3f), 1.2f, alpha = alpha)
     }
     // A level folding into the stack or "+N" slides into it as it fades.
     val was = m.from
     if (before != null && was != null && slide < 1f) for ((level, into) in m.merging) {
         val at = Offset(tx, lerp(before.ys[level + 1], f.ys[into + 1], slide)); val z = geo.node; val a = treeA * (1 - slide)
         val mark = was.marks[level]; val mined = if (mark == ExitScene.Mark.mined) 1f else 0f
-        before.more[level + 1]?.let { more(at, z, it, a) } ?: txNode(at, z, mark, if (mark == ExitScene.Mark.waiting) 1f else 0f, mined, 1f, 0f, a, 1f, s.stale, true, palette)
+        before.more[level + 1]?.let { more(at, z, it, a) } ?: txNode(at, z, mark, if (mark == ExitScene.Mark.waiting) 1f else 0f, mined, 1f, 0f, a, 1f, s.stale,
+            true, palette)
         if (was.folded(level) && mined >= 1f) plates(at, z, a)
     }
     for (j in 1 until n) {
@@ -410,7 +419,8 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
             if (u <= 0f || alpha <= 0f || fa <= 0f) return
             val q = Offset(lerp(wx - 8, anchor.x, u), lerp(wy - 10, anchor.y, u) - sin(PI * clamp(u)).toFloat() * 34)
             if (u > .96f) drawLine(palette.foreground, Offset(anchor.x - 5, anchor.y - 4), anchor, 1f, alpha = .5f * alpha * fa)
-            if (pose.theirs[at]) { drawCircle(palette.background, r, q, alpha = alpha * fa); drawCircle(palette.muted, r, q, alpha = alpha * fa, style = Stroke(1.4f)) }
+            if (pose.theirs[at]) { drawCircle(palette.background, r, q, alpha = alpha * fa); drawCircle(palette.muted, r, q, alpha = alpha * fa,
+                style = Stroke(1.4f)) }
             else drawCircle(palette.foreground, r, q, alpha = alpha * fa)
         }
         val bump = if (pose === s) m.bump(t) else if (pose.attention == ExitStage.Attention.feesRose) 1f else 0f
@@ -443,7 +453,8 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
     if (land > .5f) drawCircle(palette.muted, rC * .8f, Offset(tx, yC), alpha = .45f * clamp((land - .5f) * 2) * treeA,
         style = Stroke(1.3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f))))
     val ripple = m.ripple(last, t)
-    if (coinMined > 0f && ripple > 0f && ripple < 1f) drawCircle(palette.foreground, f.coinR + 4 + 12 * ripple, f.coin, alpha = .4f * (1 - ripple), style = Stroke(1.2f))
+    if (coinMined > 0f && ripple > 0f && ripple < 1f) drawCircle(palette.foreground, f.coinR + 4 + 12 * ripple, f.coin, alpha = .4f * (1 - ripple),
+        style = Stroke(1.2f))
     // The timelock: a dial around your coin, a tick per 6 blocks, and a padlock.
     val lock = m.lock(t)
     if (lock > 0f && stem < 1f) {
@@ -456,7 +467,8 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
             drawLine(palette.muted, Offset(tx + cos(an).toFloat() * (r + 3.5f), yC + sin(an).toFloat() * (r + 3.5f)),
                 Offset(tx + cos(an).toFloat() * r1, yC + sin(an).toFloat() * r1), 1f, StrokeCap.Round, alpha = a * if (h / ticks.toFloat() < pk) .75f else .35f)
         }
-        if (pk > 0f) drawArc(if (open > 0f) palette.orange else palette.foreground, -90f, 360f * min(1f, pk) * lock, false, Offset(tx - r, yC - r), Size(2 * r, 2 * r),
+        if (pk > 0f) drawArc(if (open > 0f) palette.orange else palette.foreground, -90f, 360f * min(1f, pk) * lock, false, Offset(tx - r, yC - r),
+            Size(2 * r, 2 * r),
             alpha = a, style = Stroke(2.6f, cap = StrokeCap.Round))
         treePadlock(Offset(tx + rC * .78f, yC + rC * .72f), 15f * m.padlock(t), open, 1 - stem, palette.foreground, palette.background)
     }
@@ -466,11 +478,13 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
         val arrive = m.arrive(t); val grow = if (arrive > 0f) 1 + .12f * arrive else 1f
         val nf = ExitScene.Mark.needsFee in s.marks; val swap = m.swap(t); val aW = if (dest) 1f else wA
         scale(grow, grow, Offset(wx, wy)) {
-            if (swap < 1f) treeBadge(Offset(wx, wy), 15f, TreeIcons.phone, palette.foreground, if (nf) palette.failure else palette.hairline, palette.background, aW * (1 - swap))
+            if (swap < 1f) treeBadge(Offset(wx, wy), 15f, TreeIcons.phone, palette.foreground, if (nf) palette.failure else palette.hairline,
+                palette.background, aW * (1 - swap))
             if (swap > 0f) treeBadge(Offset(wx, wy), 15f, TreeIcons.wallet, palette.foreground, palette.hairline, palette.background, swap)
         }
         val ring = m.ring(t)
-        if (ring > 0f) drawArc(palette.orange, -90f, 360f * ring, false, Offset(wx - 20 * grow, wy - 20 * grow), Size(40 * grow, 40 * grow), style = Stroke(2.2f))
+        if (ring > 0f) drawArc(palette.orange, -90f, 360f * ring, false, Offset(wx - 20 * grow, wy - 20 * grow), Size(40 * grow, 40 * grow),
+            style = Stroke(2.2f))
         if (arrive > 0f) treeCheck(Offset(wx + 15, wy - 15), clamp(arrive, 0f, 1.2f), palette.foreground, palette.background)
         if (nf) {
             drawCircle(palette.failure, 6.5f, Offset(wx + 12, wy - 12))
@@ -532,7 +546,8 @@ private fun Spot(side: Float, center: () -> Offset?, draw: DrawScope.(Float) -> 
 private fun Glows(frame: () -> TreeFrame, breath: Breath, palette: NoahTokens.Palette, scene: ExitScene) {
     val claimWaits = scene.claiming && !scene.claimed
     val pulse = scene.waiting.takeIf { it >= 0 && !scene.stale }
-    if (claimWaits || (pulse != null && pulse < scene.n - 1)) Spot(64f, { frame().let { f -> if (claimWaits) f.claim else f.node(checkNotNull(pulse) + 1) } }) { half ->
+    if (claimWaits || (pulse != null && pulse < scene.n - 1)) Spot(64f,
+        { frame().let { f -> if (claimWaits) f.claim else f.node(checkNotNull(pulse) + 1) } }) { half ->
         val f = frame(); val c = Offset(half, half)
         val z = if (claimWaits) 13f else f.geo.node
         val u = if (claimWaits) f.move.claimSend(f.t) else f.send(checkNotNull(pulse))
@@ -565,7 +580,8 @@ private fun Glows(frame: () -> TreeFrame, breath: Breath, palette: NoahTokens.Pa
 private fun Pulses(frame: () -> TreeFrame, breath: Breath, palette: NoahTokens.Palette, scene: ExitScene) {
     val claimWaits = scene.claiming && !scene.claimed
     val pulse = scene.waiting.takeIf { it >= 0 && !scene.stale }
-    if (claimWaits || (pulse != null && pulse < scene.n - 1)) Spot(24f, { frame().let { f -> if (claimWaits) f.claim else f.node(checkNotNull(pulse) + 1) } }) { half ->
+    if (claimWaits || (pulse != null && pulse < scene.n - 1)) Spot(24f,
+        { frame().let { f -> if (claimWaits) f.claim else f.node(checkNotNull(pulse) + 1) } }) { half ->
         val f = frame(); val c = Offset(half, half)
         val z = if (claimWaits) 13f else f.geo.node
         val u = if (claimWaits) f.move.claimSend(f.t) else f.send(checkNotNull(pulse))

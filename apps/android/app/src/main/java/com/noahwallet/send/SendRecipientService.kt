@@ -61,7 +61,8 @@ class SendRecipientService(private val network: String, private val warn: (Strin
             val value = SendDestination.cleaned(destination).lowercase(); val parts = value.split('@'); val username = parts.first()
             if (parts.size !in 1..2 || username.length < 2 || !Regex("^[a-z0-9_.-]+$").matches(username)) return null
             if (parts.size == 1) {
-                if (username.length > 32 || !username.first().isLetter() || listOf("bc1", "tb1", "bcrt1", "lnbc", "lntb", "lnbcrt", "ark", "tark", "lno").any(username::startsWith)) return null
+                if (username.length > 32 || !username.first().isLetter() || listOf("bc1", "tb1", "bcrt1", "lnbc", "lntb", "lnbcrt", "ark", "tark",
+                        "lno").any(username::startsWith)) return null
             } else if (!domain.startsWith(parts[1])) return null
             return value
         }

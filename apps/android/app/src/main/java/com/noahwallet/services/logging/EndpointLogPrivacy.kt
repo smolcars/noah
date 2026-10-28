@@ -95,7 +95,8 @@ internal object EndpointLogPrivacy {
         origins += origin
         policy = null
     }
-    private val commonWords = setOf("api", "block", "blocks", "tip", "height", "hash", "tx", "txs", "transaction", "transactions", "address", "scripthash", "mempool", "v0", "v1", "v2", "testnet", "signet", "mainnet", "regtest", "esplora", "fee-estimates", "outspend", "outspends", "status", "hex", "raw", "merkle-proof", "merkleblock-proof", "utxo", "broadcast")
+    private val commonWords = setOf("api", "block", "blocks", "tip", "height", "hash", "tx", "txs", "transaction", "transactions", "address", "scripthash",
+        "mempool", "v0", "v1", "v2", "testnet", "signet", "mainnet", "regtest", "esplora", "fee-estimates", "outspend", "outspends", "status", "hex", "raw", "merkle-proof", "merkleblock-proof", "utxo", "broadcast")
     private val publicNames by lazy {
         setOf("example", "localhost", "com", "org", "net", "edu", "gov", "co", "ac") +
             publicOrigins.flatMap { authority(it).orEmpty().split('.') }
@@ -279,7 +280,8 @@ internal object EndpointLogPrivacy {
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
-    internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()), hosts: Set<String> = emptySet()): String? = sanitize(text, registered, matcher, hosts, recordReadBack = false)
+    internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()),
+        hosts: Set<String> = emptySet()): String? = sanitize(text, registered, matcher, hosts, recordReadBack = false)
 
     private fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Boolean): String? {
         if (registered.isNotEmpty() && hasExcessiveCombiningRun(text)) return "[custom-esplora]"

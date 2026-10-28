@@ -81,7 +81,8 @@ object PaymentEncoding {
             return byteArrayOf((if (version == 0) 0 else 0x50 + version).toByte(), program.size.toByte()) + program
         }
         val decoded = base58(value) ?: return null
-        return if (decoded[0].toInt() and 255 in listOf(0, 111)) byteArrayOf(0x76, 0xa9.toByte(), 0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x88.toByte(), 0xac.toByte())
+        return if (decoded[0].toInt() and 255 in listOf(0, 111)) byteArrayOf(0x76, 0xa9.toByte(),
+            0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x88.toByte(), 0xac.toByte())
         else byteArrayOf(0xa9.toByte(), 0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x87.toByte())
     }
     data class Invoice(val network: String, val sats: BigDecimal?, val hash: String, val expires: Long, val descriptionHash: String?,
@@ -95,7 +96,8 @@ object PaymentEncoding {
         if (hrp.isNotEmpty()) {
             val unit = hrp.last(); val suffix = unit in "munp"; val digits = if (suffix) hrp.dropLast(1) else hrp
             if (digits.isEmpty() || digits.any { it !in '0'..'9' } || (unit == 'p' && !digits.endsWith('0'))) return null
-            amount = digits.toBigDecimalOrNull()?.multiply(if (suffix) mapOf('m' to "100000", 'u' to "100", 'n' to "0.1", 'p' to "0.0001").getValue(unit).toBigDecimal() else BigDecimal(100000000)) ?: return null
+            amount = digits.toBigDecimalOrNull()?.multiply(if (suffix) mapOf('m' to "100000", 'u' to "100", 'n' to "0.1",
+                'p' to "0.0001").getValue(unit).toBigDecimal() else BigDecimal(100000000)) ?: return null
         }
         val payload = decoded.words.dropLast(104)
         var index = 7; var hash: String? = null; var descriptionHash: String? = null; var expiry = 3600L; var description: String? = null
@@ -109,7 +111,8 @@ object PaymentEncoding {
         }
         if (hash == null || index != payload.size) return null
         val timestamp = payload.take(7).fold(0L) { acc, x -> acc * 32 + x }
-        return Invoice(mapOf("lnbc" to "mainnet", "lntb" to "testnet", "lntbs" to "signet", "lnbcrt" to "regtest").getValue(networkPrefix), amount, hash!!, timestamp + expiry, descriptionHash, description)
+        return Invoice(mapOf("lnbc" to "mainnet", "lntb" to "testnet", "lntbs" to "signet", "lnbcrt" to "regtest").getValue(networkPrefix), amount, hash!!,
+            timestamp + expiry, descriptionHash, description)
     }
     /** A BOLT12 offer's `offer_description` (TLV 10): bech32 words without a checksum, `+` joins split parts. */
     fun offerDescription(offer: String): String? {

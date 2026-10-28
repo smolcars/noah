@@ -84,8 +84,10 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
         when {
             quote != null && current -> HoldToConfirm(tr("Hold to start exit"), tr("Starting"), tr("Start exit"), tr("Start exit"),
                 enabled = !busy && !suspended, sending = busy, modifier = Modifier.weight(1f), tag = "exit-hold-start", wrap = true, onConfirm = start)
-            fallback != null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), wrap = true, enabled = !busy, onClick = withoutEstimate)
-            else -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), wrap = true, enabled = !busy && !suspended, loading = busy, onClick = reviewAgain)
+            fallback != null -> FootPill(tr("Continue without estimate"), Modifier.testTag("exit-without-estimate"), wrap = true, enabled = !busy,
+                onClick = withoutEstimate)
+            else -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), wrap = true, enabled = !busy && !suspended, loading = busy,
+                onClick = reviewAgain)
         }
     }, leading = {
         ExitBig(review?.let { tr("Exit {amount}", money(it.amount)) } ?: tr("Exit"), Modifier.padding(top = 6.dp).testTag("exit-start-amount"))
@@ -111,7 +113,8 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             money(checkNotNull(known.chainFee) - known.confirmed)), failed = true)
         if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = false)?.let { Warning(tr(it), failed = true) }
         if (review?.feesUnknown == true) {
-            Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), failed = true)
+            Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
+                failed = true)
             Warning(tr("Broadcast funding status is unknown; confirmed onchain funds are required."), failed = true)
         }
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
@@ -138,7 +141,8 @@ private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?) {
             val w = size.width / density; val y = size.height / density / 2 - 4; val x0 = 10f; val x1 = w - 14; val cx = w / 2
             drawRoundRect(palette.foreground, Offset(x0, y - 8), Size(16f, 16f), CornerRadius(4f))
             // A long path folds to the stops that keep their spacing ("+N" for the rest), as the picture's does.
-            val stops = ExitRail.stops(path, x0 + 30, w * .36f - x0 - 34, cx - 21, { "+" + number.format(it) }) { styles.width(measurer, it, ExitRail.moreSize, true) }
+            val stops = ExitRail.stops(path, x0 + 30, w * .36f - x0 - 34, cx - 21,
+                { "+" + number.format(it) }) { styles.width(measurer, it, ExitRail.moreSize, true) }
             var px = x0 + 16
             for (stop in stops) {
                 val x = stop.x
@@ -173,13 +177,15 @@ private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?) {
     val captions = listOf(count?.let { trPlural("{n} transactions", it) } to if (batch) tr("shared ones once") else tr("one block each"),
         delta?.let { trPlural("{n} blocks", it) } to tr("about a day"), tr("Claim") to tr("to another wallet"))
     @Composable fun caption(title: String?, line: String, align: androidx.compose.ui.text.style.TextAlign, modifier: Modifier) = Column(modifier) {
-        title?.let { Text(it, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground, textAlign = align) }
+        title?.let { Text(it, Modifier.fillMaxWidth(), style = HomeType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+            color = palette.foreground, textAlign = align) }
         Text(line, Modifier.fillMaxWidth(), style = HomeType.small, color = palette.muted, textAlign = align)
     }
     if (stacked) Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for ((title, line) in captions) caption(title, line, androidx.compose.ui.text.style.TextAlign.Start, Modifier.fillMaxWidth())
     } else Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        val aligns = listOf(androidx.compose.ui.text.style.TextAlign.Start, androidx.compose.ui.text.style.TextAlign.Center, androidx.compose.ui.text.style.TextAlign.End)
+        val aligns = listOf(androidx.compose.ui.text.style.TextAlign.Start, androidx.compose.ui.text.style.TextAlign.Center,
+            androidx.compose.ui.text.style.TextAlign.End)
         captions.forEachIndexed { i, (title, line) -> caption(title, line, aligns[i], Modifier.weight(1f)) }
     }
 }

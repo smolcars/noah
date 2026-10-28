@@ -62,7 +62,8 @@ internal fun expiresText(vtxo: VtxoModel): String {
     }
 }
 
-internal fun money(app: AppModel, sats: Long) = if (app.hidden) BitcoinAmount.format(0, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier)).replace("0", "••••")
+internal fun money(app: AppModel, sats: Long) = if (app.hidden) BitcoinAmount.format(0, app.amountUnit,
+    Locale.forLanguageTag(app.localeIdentifier)).replace("0", "••••")
 else BitcoinAmount.format(sats, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier))
 
 /** The VTXO lifetime the server gives new VTXOs (blocks), for the expiry line and the lifetime bar. */
@@ -117,9 +118,11 @@ internal fun VtxosPage(app: AppModel, nav: SettingsNav) {
                 if (due.isNotEmpty()) {
                     Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(Modifier.size(8.dp).background(palette.orange, CircleShape))
-                        Text(trPlural("{n} VTXOs expire within a day", due.size), style = HomeType.line.copy(fontWeight = FontWeight.Medium), color = palette.foreground)
+                        Text(trPlural("{n} VTXOs expire within a day", due.size), style = HomeType.line.copy(fontWeight = FontWeight.Medium),
+                            color = palette.foreground)
                     }
-                    if (!selecting) SendPill(tr("Renew {amount}", money(app, due.sumOf { it.amount })), Modifier.padding(top = 14.dp).testTag("vtxos-renew-due"),
+                    if (!selecting) SendPill(tr("Renew {amount}", money(app, due.sumOf { it.amount })),
+                        Modifier.padding(top = 14.dp).testTag("vtxos-renew-due"),
                         outlined = true, height = 40.dp, enabled = !model.busy && !app.isWalletSuspended) { haptics.light(); renew(due.map { it.id }) }
                 } else vtxos.filter { it.refreshable }.minOfOrNull { it.expiry - it.tip }?.let { soonest ->
                     Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -207,11 +210,13 @@ private fun VtxoRow(app: AppModel, vtxo: VtxoModel, selecting: Boolean, checked:
         .graphicsLayer { alpha = if (selecting && !selectable) .4f else 1f }.testTag("vtxo-row-${vtxo.id.take(12)}"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         if (selecting) Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
-            Checkbox(checked, null, enabled = selectable, colors = CheckboxDefaults.colors(checkedColor = palette.foreground, checkmarkColor = palette.background,
-                uncheckedColor = palette.muted, disabledUncheckedColor = palette.hairline))
+            Checkbox(checked, null, enabled = selectable,
+                colors = CheckboxDefaults.colors(checkedColor = palette.foreground, checkmarkColor = palette.background,
+                    uncheckedColor = palette.muted, disabledUncheckedColor = palette.hairline))
         } else VtxoAvatar(42.dp, glyphAvatar = !locked, unit = app.amountUnit, icon = if (locked) SettingsIcons.lock else null, due = vtxo.renewable)
         Column(Modifier.weight(1f)) {
-            Text(status, style = HomeType.rowTitle, color = if (vtxo.expired && !locked) palette.failure else palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(status, style = HomeType.rowTitle, color = if (vtxo.expired && !locked) palette.failure else palette.foreground, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
             Text(tr("Block {height} · {id}", java.text.NumberFormat.getIntegerInstance(locale).format(vtxo.expiry), vtxo.id.take(6) + "…"),
                 style = HomeType.small, color = palette.muted, maxLines = 1)
         }
@@ -301,7 +306,8 @@ private fun ExpiryLine(vtxos: List<VtxoModel>, lifetime: Long) {
             placed += Triple(cx, cy, r)
             val locked = vtxo.state == "Locked"
             val due = !locked && vtxo.expiry - vtxo.tip <= threshold
-            if (locked) drawCircle(palette.foreground, r, Offset(cx, cy), style = Stroke(1.4.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.5.dp.toPx(), 2.dp.toPx()))))
+            if (locked) drawCircle(palette.foreground, r, Offset(cx, cy),
+                style = Stroke(1.4.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.5.dp.toPx(), 2.dp.toPx()))))
             else {
                 drawCircle(palette.foreground.copy(alpha = if (due) 1f else .85f), r, Offset(cx, cy))
                 if (due) drawCircle(palette.orange, r + 2.5.dp.toPx(), Offset(cx, cy), style = Stroke(2.dp.toPx()))
@@ -395,7 +401,8 @@ internal fun VtxoDetailPage(app: AppModel, nav: SettingsNav, id: String) {
         Column(Modifier.padding(top = 22.dp)) {
             DetailRow(tr("State"), when (vtxo.state) { "Spendable" -> tr("Spendable"); "Locked" -> tr("Locked"); else -> vtxo.state }, toasts = toasts)
             DetailRow(tr("Expires"), tr("Block {height}", number.format(vtxo.expiry)), toasts = toasts)
-            DetailRow(tr("Blocks left"), if (vtxo.expiry <= vtxo.tip) tr("Expired") else number.format(vtxo.expiry - vtxo.tip), ValueKind.number, toasts = toasts)
+            DetailRow(tr("Blocks left"), if (vtxo.expiry <= vtxo.tip) tr("Expired") else number.format(vtxo.expiry - vtxo.tip), ValueKind.number,
+                toasts = toasts)
             DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts)
             DetailRow(tr("Anchor"), short(vtxo.anchorPoint), ValueKind.mono, copy = vtxo.anchorPoint,
                 explorer = OnchainDisplay.explorerURL(vtxo.anchorPoint, BuildConfig.APP_VARIANT), toasts = toasts, last = true, onExplorer = { url ->

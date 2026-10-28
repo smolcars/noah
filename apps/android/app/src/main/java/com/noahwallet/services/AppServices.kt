@@ -180,7 +180,8 @@ class AppServices private constructor(private val context: Context) {
     class RestoreNotSettled : Exception("""Interrupted restore not settled yet""")
 
     /** Headless opens only read seeds; pending restore/deletion always waits for foreground recovery. */
-    private val walletOpener = StoredWalletOpener(seed, { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
+    private val walletOpener = StoredWalletOpener(seed,
+        { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
 
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
 
@@ -194,7 +195,8 @@ class AppServices private constructor(private val context: Context) {
     private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean,
         customWait: com.noahwallet.services.wallet.EsploraOpenWait? = null,
         lateCompletion: suspend (Boolean) -> Unit = {}): Unit = withContext(Dispatchers.IO) {
-        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground, customWait, lateCompletion) }; return@withContext }
+        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground, customWait,
+            lateCompletion) }; return@withContext }
         settings.validateStores()
         if (!foreground) requireBackgroundWallet()
         val location = WalletDataLocation(context.filesDir, variant)

@@ -126,7 +126,8 @@ internal data class ExitScene(
             claimFee: Long? = null, destination: String? = null): ExitScene {
             val n = stage.total.coerceAtLeast(1)
             val txs = exit.path
-            val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming, ExitStage.Phase.claimed)
+            val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming,
+                ExitStage.Phase.claimed)
             val needsFunds = stage.attention == ExitStage.Attention.needsFunds
             val marks = List(n) { i ->
                 val status = txs.getOrNull(i)?.status
@@ -293,7 +294,8 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
     fun other(levels: FloatArray, level: Int, index: Int): Pair<Float, Float> {
         val y = levels.getOrElse(level) { roundY }; val gap = (y - levels.getOrElse(level + 1) { coinY }).coerceAtLeast(12f)
         val first = y - gap * .95f
-        return trunk - (1.15f + 1.05f * index) * spread to maxOf(otherTop, if (index == 0) first else min(y - gap * (1.5f + .55f * (index - 1)), first - 14 * index))
+        return trunk - (1.15f + 1.05f * index) * spread to maxOf(otherTop,
+            if (index == 0) first else min(y - gap * (1.5f + .55f * (index - 1)), first - 14 * index))
     }
     /** The highest another exit's coin goes: room above its 6 dp radius. */
     val otherTop get() = 6 + 6 * scale
@@ -443,7 +445,8 @@ internal object ExitGutter {
     /** Each of [exit]'s transactions, root first, as the gutter draws it. */
     fun path(exit: ExitModel, stage: ExitStage): List<Pair<String, St>> {
         val txs = exit.path
-        val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming, ExitStage.Phase.claimed)
+        val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming,
+            ExitStage.Phase.claimed)
         val ids = exit.packages.map { it.txid }.ifEmpty { txs.map { it.txid } }
         return ids.mapIndexed { i, id ->
             val kind = txs.getOrNull(i)?.status?.kind
@@ -487,7 +490,8 @@ internal object ExitGutter {
      * of rows and no two branches' transactions land on each other; otherwise as they came. [ids]: a row's transactions.
      */
     fun <T> tree(rows: List<T>, ids: (T) -> List<String>, depth: Int = 0): List<T> =
-        if (rows.size < 2) rows else rows.groupBy { ids(it).getOrNull(depth) }.flatMap { (id, group) -> if (id != null && group.size > 1) tree(group, ids, depth + 1) else group }
+        if (rows.size < 2) rows else rows.groupBy { ids(it).getOrNull(depth) }.flatMap { (id, group) -> if (id != null && group.size > 1) tree(group, ids,
+            depth + 1) else group }
 
     /** The gutter for a shared group: the round's block at [x0], each transaction [step] further, every coin at [coinX]. */
     const val sharedWidth = 112f
@@ -511,7 +515,8 @@ internal object ExitGutter {
         // keeps the least step, each exit's transaction being sent on its own.
         val room = coinX - 14 - 6 - x0; val fit = (room / minStep).toInt()
         val columns = List(paths.size) { mutableListOf<IntRange>() }
-        fun parting(group: List<Int>, from: Int) = generateSequence(from) { it + 1 }.first { i -> group.any { ids[it].size <= i } || group.map { ids[it][i] }.distinct().size > 1 }
+        fun parting(group: List<Int>,
+            from: Int) = generateSequence(from) { it + 1 }.first { i -> group.any { ids[it].size <= i } || group.map { ids[it][i] }.distinct().size > 1 }
         fun branches(group: List<Int>, at: Int) = group.filter { ids[it].size > at }.groupBy { ids[it][at] }.values
         fun least(group: List<Int>, from: Int): Int {
             val p = parting(group, from); val trunk = kinds(group, from, p)
@@ -684,7 +689,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
         val ends = mutableListOf(0f)
         fun end(start: Float, length: Float) { if (!start.isNaN()) ends += start + length }
         end(lift, HouseSpring.snappy.seconds); end(grow, growSeconds + .9f)
-        for (i in 0 until n) { end(mine[i], maxOf(HouseSpring.bouncy.seconds, HouseSpring.snappy.seconds / 1.6f, .8f)); end(send[i], HouseSpring.snappy.seconds) }
+        for (i in 0 until n) { end(mine[i], maxOf(HouseSpring.bouncy.seconds, HouseSpring.snappy.seconds / 1.6f, .8f)); end(send[i],
+            HouseSpring.snappy.seconds) }
         end(fee, HouseSpring.soft.seconds); end(bump, .15f + HouseSpring.soft.seconds); end(flash, .5f)
         end(lock, maxOf(HouseSpring.soft.seconds, HouseSpring.bouncy.seconds)); end(dial, HouseSpring.snappy.seconds); end(open, HouseSpring.bouncy.seconds)
         end(claim, HouseSpring.calm.seconds); end(claimSend, HouseSpring.snappy.seconds); end(claimMine, 1.35f + HouseSpring.soft.seconds)
@@ -701,7 +707,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     fun grow(j: Int, t: Float) = if (grow.isNaN()) flag(!to.lifting) else ((t - grow - (j - 1) * growStep) / growStep).coerceIn(0f, 1f)
     /** A node's pop as the growing branch reaches it; before the branch grows (Start) only its ghost shows. */
     fun pop(j: Int, t: Float) = if (grow.isNaN()) flag(!to.lifting) else HouseSpring.bouncy(t - grow - (j * growStep - .05f))
-    fun ghost(t: Float) = when { to.lifting -> .5f; from?.lifting == true && !grow.isNaN() -> .5f * (1 - ((t - grow) / growSeconds).coerceIn(0f, 1f)); else -> 0f }
+    fun ghost(t: Float) = when { to.lifting -> .5f; from?.lifting == true && !grow.isNaN() -> .5f * (1 - ((t - grow) / growSeconds).coerceIn(0f,
+        1f)); else -> 0f }
     fun lift(t: Float) = when {
         to.lifting -> if (lift.isNaN()) 1f else HouseSpring.snappy(t - lift)
         from?.lifting == true && !grow.isNaN() -> 1 - ((t - grow - growSeconds) / .8f).coerceIn(0f, 1f)
@@ -716,7 +723,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     }
     fun cancel(t: Float) = between(flag(was.canceled), flag(to.canceled), cancel, HouseSpring.soft, t)
     private fun sent(mark: ExitScene.Mark?) = flag(mark == ExitScene.Mark.waiting || mark == ExitScene.Mark.mined)
-    fun send(i: Int, t: Float) = if (to.canceled && !was.canceled) sent(wasMark(i)) * (1 - cancel(t)) else between(sent(wasMark(i)), sent(to.marks[i]), send[i], HouseSpring.snappy, t)
+    fun send(i: Int, t: Float) = if (to.canceled && !was.canceled) sent(wasMark(i)) * (1 - cancel(t)) else between(sent(wasMark(i)), sent(to.marks[i]), send[i],
+        HouseSpring.snappy, t)
     fun mine(i: Int, t: Float) = between(flag(wasMark(i) == ExitScene.Mark.mined), flag(to.mined(i)), mine[i], HouseSpring.snappy, t)
     fun stamp(i: Int, t: Float) = if (mine[i].isNaN()) 1f else HouseSpring.bouncy(t - mine[i])
     fun ripple(i: Int, t: Float) = if (mine[i].isNaN()) 0f else ((t - mine[i]) / .8f).coerceIn(0f, 1f)

@@ -15,7 +15,8 @@ internal class OnchainOperations(
     private val refused: MutableMap<String, String> = mutableMapOf(),
 ) {
     /** A refusal for [ids], noted against its VTXO. */
-    private fun refusal(error: Exception, ids: List<String>) = ExitErrors.refusal(error, ids)?.also { r -> r.vtxoId?.let { refused[it] = checkNotNull(r.message) } }
+    private fun refusal(error: Exception, ids: List<String>) = ExitErrors.refusal(error,
+        ids)?.also { r -> r.vtxoId?.let { refused[it] = checkNotNull(r.message) } }
     suspend fun overview(threshold: UInt): OnchainOverview {
         val tip = wallet.tip()
         val expiring = wallet.expiring(threshold)
@@ -50,7 +51,8 @@ internal class OnchainOperations(
     suspend fun exitCosts(ids: List<String>): Map<String, ExitCosts.Cost?> {
         if (!ready()) fail(OnchainFailure.unavailable)
         return ids.associateWith { id ->
-            try { wallet.exitFee(listOf(id), null).let { ExitCosts.Cost(it.exitBroadcastFeeSats.toLong(), it.claimFeeSats.toLong(), it.txsToBroadcast.toLong()) } }
+            try { wallet.exitFee(listOf(id),
+                null).let { ExitCosts.Cost(it.exitBroadcastFeeSats.toLong(), it.claimFeeSats.toLong(), it.txsToBroadcast.toLong()) } }
             catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { refusal(failure, listOf(id)); null }
         }
     }
@@ -146,7 +148,8 @@ internal class OnchainOperations(
                         prepared.netSats + prepared.arkFeeSats != prepared.grossSats) fail(OnchainFailure.changed)
                     quote = quote.copy(amount = prepared.grossSats.toLong(), fee = prepared.arkFeeSats.toLong(),
                         chainFee = prepared.onchainFeeSats.toLong(), boardAll = amount == 0L, feeRate = rate.toLong(),
-                        preparedBoard = BoardPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.map { BoardInput(it.txid, it.vout) }))
+                        preparedBoard = BoardPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(),
+                            prepared.inputs.map { BoardInput(it.txid, it.vout) }))
                     wallet.bindBoard(quote)
                 } catch (error: Exception) {
                     withContext(NonCancellable) { wallet.discardBoard(prepared.id) }
@@ -231,7 +234,8 @@ internal class OnchainOperations(
             } catch (failure: ExitEstimateUnavailable) { throw failure.preserving(reviewed, elapsed(), now()) }
             if (!ready() || !reviewed.matches(fresh) || !reviewed.current(elapsed(), now())) fail(OnchainFailure.changed)
             // A sync while this waited for the locks can move the tip past an expiry; the quote above can't tell.
-            if (renewalThreshold != null && (reviewed.action != OnchainAction.refresh || !renewable(reviewed.ids, renewalThreshold))) fail(OnchainFailure.changed)
+            if (renewalThreshold != null && (reviewed.action != OnchainAction.refresh || !renewable(reviewed.ids,
+                    renewalThreshold))) fail(OnchainFailure.changed)
         }
         try { return journal.perform(reviewed) { recordTransaction ->
             when (reviewed.action) {
@@ -241,7 +245,8 @@ internal class OnchainOperations(
                     val result = try { wallet.submitBoard(reviewed) }
                     catch (error: BarkError) {
                         // SDK 0.7.0 throws only before bark records the board, a reorged parent included; failures after return an outcome.
-                        if (error.code in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.PREPARED_BOARD_CHANGED))
+                        if (error.code in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE,
+                                BarkErrorCode.PREPARED_BOARD_CHANGED))
                             throw BoardNotSubmitted(boardFailure(error))
                         // An unreachable chain source while re-checking the inputs.
                         if (error.code == BarkErrorCode.OTHER) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
@@ -280,7 +285,8 @@ internal class OnchainOperations(
                         keepOnchain((0 until tx.outputs).map { "${tx.txid}:$it" }.toSet())
                     } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { fail(OnchainFailure.keepFailed) }
                     // Kept before broadcast, so a broadcast that went through but timed out still shows what it paid; display only.
-                    fun record(txid: String) = runCatching { recordClaim(ExitClaimRecords.Record(txid, claim.feeSats.toLong(), reviewed.ids, mine, reviewed.destination.takeIf { !mine })) }
+                    fun record(txid: String) = runCatching { recordClaim(ExitClaimRecords.Record(txid, claim.feeSats.toLong(), reviewed.ids, mine,
+                        reviewed.destination.takeIf { !mine })) }
                     signed?.let { record(it.txid) }
                     // Every error after entering broadcast remains uncertain, including typed BDK errors.
                     val txid = try { wallet.broadcastClaim(claim.psbtBase64) } catch (_: Exception) { fail(OnchainFailure.uncertain) }

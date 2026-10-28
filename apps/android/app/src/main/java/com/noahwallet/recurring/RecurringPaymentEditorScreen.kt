@@ -60,7 +60,8 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     RecurringPaymentEditorScreen(executor, original, app.amountUnit, nav) { nav.pop() }
 }
 
-@Composable internal fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, amountUnit: com.noahwallet.formatting.BitcoinAmountUnit = com.noahwallet.formatting.BitcoinAmountUnit.bip177,
+@Composable internal fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?,
+    amountUnit: com.noahwallet.formatting.BitcoinAmountUnit = com.noahwallet.formatting.BitcoinAmountUnit.bip177,
     nav: SettingsNav? = null, done: () -> Unit) {
     val palette = LocalPalette.current
     val toasts = LocalSettingsToasts.current
@@ -73,7 +74,8 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
     var comment by rememberSaveable(original?.id) { mutableStateOf(original?.comment ?: "") }
     var unit by rememberSaveable(original?.id) { mutableStateOf(original?.interval?.unit ?: "month") }
     var every by rememberSaveable(original?.id) { mutableStateOf(original?.interval?.every?.toString() ?: recurringDefaultEvery(unit)) }
-    val tomorrow = rememberSaveable(original?.id) { Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY, 9); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis }
+    val tomorrow = rememberSaveable(original?.id) { Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY,
+        9); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis }
     var start by rememberSaveable(original?.id) { mutableLongStateOf(original?.startAt ?: tomorrow) }
     var endMode by rememberSaveable(original?.id) { mutableStateOf(if (original?.endAt != null) "date" else if (original?.maxOccurrences != null) "count" else "never") }
     var end by rememberSaveable(original?.id) { mutableLongStateOf(original?.endAt ?: tomorrow) }
@@ -96,13 +98,15 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
         // Saving leaves the editor when it ends, so Settings' navigation waits for it (SettingsNav.save).
         focus.clearFocus(); error = null; saving = true; nav?.hold(true)
         scope.launch {
-            try { RecurringRecipient.resolve(recipient); executor.save(draft(), original != null); haptics.success(); toasts.show(if (original == null) scheduled else saved); done() }
+            try { RecurringRecipient.resolve(recipient); executor.save(draft(),
+                original != null); haptics.success(); toasts.show(if (original == null) scheduled else saved); done() }
             catch (e: Exception) { error = e.message ?: "Couldn't save this payment. Try again." }
             finally { saving = false; nav?.hold(false) }
         }
     }
     SettingsFrame(if (original == null) tr("New payment") else tr("Edit payment"), nav?.back ?: done, foot = {
-        FootPill(if (original == null) tr("Schedule payment") else tr("Save"), Modifier.testTag("recurring-save-button"), enabled = !saving, loading = saving) { save() }
+        FootPill(if (original == null) tr("Schedule payment") else tr("Save"), Modifier.testTag("recurring-save-button"), enabled = !saving,
+            loading = saving) { save() }
     }) {
         // The amount, whole sats: ₿ before it (BIP-177) or "sats" after it.
         val bip177 = amountUnit == com.noahwallet.formatting.BitcoinAmountUnit.bip177
@@ -114,16 +118,21 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
                 .testTag("recurring-amount-input"), enabled = !saving, textStyle = style.copy(color = palette.foreground), singleLine = true,
                 cursorBrush = SolidColor(palette.orange), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 decorationBox = { inner -> Box { if (amount.isEmpty()) Text("0", style = style, color = palette.muted); inner() } })
-            Text(if (bip177) " " + tr("each time") else " " + tr("sats each time"), Modifier.padding(bottom = 8.dp, start = 3.dp), style = HomeType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.muted)
+            Text(if (bip177) " " + tr("each time") else " " + tr("sats each time"), Modifier.padding(bottom = 8.dp, start = 3.dp),
+                style = HomeType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.muted)
         }
         Underline(false, modifier = Modifier.padding(top = 10.dp))
-        SettingsField(recipient, { recipient = it }, tr("Name, address or offer"), Modifier.testTag("recurring-recipient-input"), label = tr("To"), enabled = !saving,
+        SettingsField(recipient, { recipient = it }, tr("Name, address or offer"), Modifier.testTag("recurring-recipient-input"), label = tr("To"),
+            enabled = !saving,
             tag = destination?.second?.let { when (it) { "ark" -> tr("Ark address"); "lnurl" -> tr("Lightning address"); else -> tr("BOLT12 offer") } },
             keyboard = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri))
-        SettingsField(label, { label = limitedRecurringText(it, 64) }, tr("e.g. Rent"), Modifier.testTag("recurring-label-input"), label = tr("Name"), enabled = !saving)
-        if (destination?.second == "lnurl") SettingsField(comment, { comment = limitedRecurringText(it, 140) }, tr("Shared with the recipient"), label = tr("Note (optional)"), enabled = !saving)
+        SettingsField(label, { label = limitedRecurringText(it, 64) }, tr("e.g. Rent"), Modifier.testTag("recurring-label-input"), label = tr("Name"),
+            enabled = !saving)
+        if (destination?.second == "lnurl") SettingsField(comment, { comment = limitedRecurringText(it, 140) }, tr("Shared with the recipient"),
+            label = tr("Note (optional)"), enabled = !saving)
         FieldLabel(tr("Repeats"))
-        Segmented(listOf("week" to tr("Weekly"), "month" to tr("Monthly"), "day" to tr("Custom")), unit, enabled = !saving) { unit = it; every = recurringDefaultEvery(it) }
+        Segmented(listOf("week" to tr("Weekly"), "month" to tr("Monthly"), "day" to tr("Custom")), unit,
+            enabled = !saving) { unit = it; every = recurringDefaultEvery(it) }
         val n = every.toIntOrNull() ?: 1
         Stepper(when (unit) {
             "week" -> if (n == 1) tr("Every week") else trPlural("Every {n} weeks", n)
@@ -146,7 +155,8 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
             FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 (0..2).mapNotNull { preview.next(it, TimeZone.getDefault()) }.forEach { at ->
                     Box(Modifier.height(36.dp).border(1.dp, palette.hairline, androidx.compose.foundation.shape.CircleShape).padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center) { Text(recurringShortDay(at, locale), style = HomeType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground) }
+                        contentAlignment = Alignment.Center) { Text(recurringShortDay(at, locale),
+                        style = HomeType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground) }
                 }
             }
         }

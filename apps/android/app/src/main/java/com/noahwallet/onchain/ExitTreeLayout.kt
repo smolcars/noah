@@ -20,7 +20,9 @@ internal class TreeStrings(private val text: (String, Array<out String>) -> Stri
             val format = java.text.NumberFormat.getIntegerInstance(locale)
             fun id(source: String, type: String) = resources.getIdentifier(L10n.resourceName(source), type, packageName)
             return TreeStrings({ source, arguments -> id(source, "string").let { if (it == 0) source else resources.getString(it, *arguments) } },
-                { source, n -> id(source, "plurals").let { if (it == 0) source else String.format(locale, resources.getQuantityString(it, n.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()), format.format(n)) } },
+                { source, n -> id(source,
+                    "plurals").let { if (it == 0) source else String.format(locale,
+                    resources.getQuantityString(it, n.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()), format.format(n)) } },
                 { format.format(it) }, money, locale.language == "ja")
         }
     }
@@ -112,20 +114,24 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             val strong = TreeLabels.Tone.strong
             fun line(text: String, tone: TreeLabels.Tone = TreeLabels.Tone.muted, bold: Boolean = false) = TreeLabels.Line(text, tone, bold)
             // The round's block: bark gives no height, so it says what it is; on one line, shrunk, where two don't fit.
-            fun round(tone: TreeLabels.Tone, bold: Boolean) = TreeLabels.Item(geo.roundY - lh + 3, listOf(line(w.tr("The round,"), tone, bold), line(w.tr("already on Bitcoin"))), 2f,
-                fallbacks = listOf(TreeLabels.Item(geo.roundY, listOf(line(w.tr("The round,") + (if (w.japanese) "" else " ") + w.tr("already on Bitcoin"))), 2f, shrinks = true)))
+            fun round(tone: TreeLabels.Tone, bold: Boolean) = TreeLabels.Item(geo.roundY - lh + 3,
+                listOf(line(w.tr("The round,"), tone, bold), line(w.tr("already on Bitcoin"))), 2f,
+                fallbacks = listOf(TreeLabels.Item(geo.roundY, listOf(line(w.tr("The round,") + (if (w.japanese) "" else " ") + w.tr("already on Bitcoin"))),
+                    2f, shrinks = true)))
             if (s.explain) {
                 items += TreeLabels.Item(geo.coinY, listOf(line(w.tr("Your VTXO"), strong, true), line(w.tr("in Ark"))), 3f)
-                if (n > 1) items += TreeLabels.Item((ys[1] + ys[n - 1]) / 2 - 7 * k, listOf(line(w.trPlural("{n} transactions", s.count.toLong()), strong, true),
-                    line(w.tr("one block each,")), line(w.tr("root first"))), 2f, brace = min(ys[n] + geo.coinR + 5, ys[1] + 7) to ys[1] + 7)
+                if (n > 1) items += TreeLabels.Item((ys[1] + ys[n - 1]) / 2 - 7 * k,
+                    listOf(line(w.trPlural("{n} transactions", s.count.toLong()), strong, true),
+                        line(w.tr("one block each,")), line(w.tr("root first"))), 2f, brace = min(ys[n] + geo.coinR + 5, ys[1] + 7) to ys[1] + 7)
                 items += round(strong, true)
                 return items
             }
             if (s.claiming) {
                 // The claim transaction, beside its node on the stem.
                 val (x, y) = geo.claimNode
-                items += TreeLabels.Item(y, if (s.claimed) listOf(line(w.tr("Block {height}", w.number(s.claimedBlock ?: s.tip)), strong, true), line(w.tr("claim")))
-                else listOfNotNull(line(w.tr("Next block"), strong, true), s.claimFee?.let { line(w.tr("claim fee {amount}", w.money(it))) }), 4f,
+                items += TreeLabels.Item(y,
+                    if (s.claimed) listOf(line(w.tr("Block {height}", w.number(s.claimedBlock ?: s.tip)), strong, true), line(w.tr("claim")))
+                    else listOfNotNull(line(w.tr("Next block"), strong, true), s.claimFee?.let { line(w.tr("claim fee {amount}", w.money(it))) }), 4f,
                     if (s.claimed) null else TreeLabels.Pill.orange, x = x - 16)
                 return items
             }
@@ -138,7 +144,8 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 when (s.marks[i]) {
                     ExitScene.Mark.mined -> if (!(j == n && s.locked)) s.heights[i]?.let { height ->
                         val oldest = s.oldest?.getOrNull(i)?.takeIf { s.folded(i) } ?: height
-                        val text = if (oldest != height) w.tr("Blocks {from}–{to}", w.number(oldest), w.number(height)) else w.tr("Block {height}", w.number(height))
+                        val text = if (oldest != height) w.tr("Blocks {from}–{to}", w.number(oldest), w.number(height)) else w.tr("Block {height}",
+                            w.number(height))
                         items += TreeLabels.Item(y, listOf(line(text + shared, strong)), if (i == latest) 2.2f else 1f, blocks = oldest..height)
                     }
                     ExitScene.Mark.ready -> items += TreeLabels.Item(y, listOf(line(w.tr("Ready to send"), strong, true)), 4f)
@@ -148,7 +155,8 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                         val sub = when {
                             s.stale -> s.checkedAt?.let { w.tr("last checked at {height}", w.number(it)) }
                             s.theirs[i] -> w.tr("sent by someone else")
-                            s.attention == ExitStage.Attention.feesRose -> s.rate?.let { w.tr("fee raised · {rate} sat/vB", it.toString()) } ?: w.tr("a block came without it")
+                            s.attention == ExitStage.Attention.feesRose -> s.rate?.let { w.tr("fee raised · {rate} sat/vB",
+                                it.toString()) } ?: w.tr("a block came without it")
                             s.attention == ExitStage.Attention.stuck -> w.trPlural("{n} blocks without it", s.waited)
                             else -> s.fee?.let { w.tr("fee {amount}", w.money(it)) + shared }
                         }
@@ -158,12 +166,15 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                     ExitScene.Mark.unsent -> if (unsent < 0) unsent = j
                 }
             }
-            if (unsent in 1 until n && !s.lifting) items += TreeLabels.Item(ys[unsent], listOf(line(w.trPlural("{n} more to send", (s.count - s.real(unsent - 1)).toLong()))), 1.5f)
+            if (unsent in 1 until n && !s.lifting) items += TreeLabels.Item(ys[unsent],
+                listOf(line(w.trPlural("{n} more to send", (s.count - s.real(unsent - 1)).toLong()))), 1.5f)
             when {
                 s.locked -> items += TreeLabels.Item(geo.coinY, if (s.open) listOf(line(w.tr("Unlocked"), strong, true),
                     line(w.tr("since block {height}", w.number(s.unlockedAt ?: s.claimableHeight ?: s.tip))))
-                else listOfNotNull(line(w.trPlural("Locked · {n} blocks", s.left), strong, true), s.claimableHeight?.let { line(w.tr("opens at {height}", w.number(it))) }), 3.5f)
-                s.coin == ExitScene.Mark.unsent -> items += TreeLabels.Item(geo.coinY, listOf(line(if (s.canceled) w.tr("Back in Ark") else w.tr("Your VTXO"), strong, true)), 3.5f)
+                else listOfNotNull(line(w.trPlural("Locked · {n} blocks", s.left), strong, true),
+                    s.claimableHeight?.let { line(w.tr("opens at {height}", w.number(it))) }), 3.5f)
+                s.coin == ExitScene.Mark.unsent -> items += TreeLabels.Item(geo.coinY,
+                    listOf(line(if (s.canceled) w.tr("Back in Ark") else w.tr("Your VTXO"), strong, true)), 3.5f)
                 else -> {}
             }
             return items
@@ -201,7 +212,8 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
         }
 
         /** A line [i] of [item]'s y and size. */
-        fun lineY(item: TreeLabels.Item, i: Int, geo: TreeGeometry) = item.y + i * geo.lineHeight + if (item.pill != null && i >= item.head) 4 * geo.scale else 0f
+        fun lineY(item: TreeLabels.Item, i: Int,
+            geo: TreeGeometry) = item.y + i * geo.lineHeight + if (item.pill != null && i >= item.head) 4 * geo.scale else 0f
         fun lineSize(item: TreeLabels.Item, i: Int, geo: TreeGeometry) = (if (i < item.head) geo.fontSize else geo.subSize) * item.size
 
         /** A pill around a label's first line, however many lines it wrapped to: l, t, r, b. */
@@ -237,7 +249,8 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             val y1 = min(geo.ground + 11 * k, y2 - (textHeight(sizes.first) + textHeight(sizes.second)) / 2)
             val needsFee = ExitScene.Mark.needsFee in s.marks
             return listOfNotNull(WalletLine(first, y1, sizes.first, s.claiming, if (s.claiming) TreeLabels.Tone.strong else TreeLabels.Tone.muted),
-                second?.let { WalletLine(it, y2, sizes.second, true, when { needsFee -> TreeLabels.Tone.failure; s.claiming -> TreeLabels.Tone.muted; else -> TreeLabels.Tone.strong }) })
+                second?.let { WalletLine(it, y2, sizes.second, true,
+                    when { needsFee -> TreeLabels.Tone.failure; s.claiming -> TreeLabels.Tone.muted; else -> TreeLabels.Tone.strong }) })
         }
 
         /**
@@ -263,11 +276,13 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 }
                 shapes += TreeShape.box(TreeShape.Kind.node, "node$level", tx - half, ys[level] - geo.node / 2, tx + half, ys[level] + geo.node / 2)
                 // The fee child docked on the waiting transaction's anchor; the red ring of one short of funds.
-                if (s.marks[i] == ExitScene.Mark.waiting && s.paid[i]) shapes += TreeShape.circle(TreeShape.Kind.node, "node$level", tx + 9, ys[level] + 7, 4.8f)
+                if (s.marks[i] == ExitScene.Mark.waiting && s.paid[i]) shapes += TreeShape.circle(TreeShape.Kind.node, "node$level", tx + 9, ys[level] + 7,
+                    4.8f)
                 if (s.marks[i] == ExitScene.Mark.needsFee) shapes += TreeShape.circle(TreeShape.Kind.node, "node$level", tx, ys[level], geo.ring(geo.node))
             }
             // Your coin with its dashed ring or, while locked, the timelock's dial; while claiming, the coin alone.
-            shapes += TreeShape.circle(TreeShape.Kind.coin, "coin", tx, geo.coinY - if (s.lifting) 5 else 0, if (s.claiming) geo.coinR else geo.coinReserve(lock))
+            shapes += TreeShape.circle(TreeShape.Kind.coin, "coin", tx, geo.coinY - if (s.lifting) 5 else 0,
+                if (s.claiming) geo.coinR else geo.coinReserve(lock))
             if (s.claiming) geo.claimNode.let { (x, y) -> shapes += TreeShape.box(TreeShape.Kind.claim, "claim", x - 6.5f, y - 6.5f, x + 6.5f, y + 6.5f) }
             val lines = walletLines(s, geo, w, balance, received)
             if (s.wallet || s.claiming) {
@@ -285,7 +300,8 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 shapes += frame(label, geo, measure, "label$index")
                 label.brace?.let { (y0, y1) -> shapes += TreeShape.box(TreeShape.Kind.brace, "label$index", tx + 27, y0, tx + 32, y1) }
             }
-            fun clear(shape: TreeShape) = shape.inside(geo.width, geo.height) && shapes.none { it.group != shape.group && it.overlaps(shape, TreeGeometry.clearance) }
+            fun clear(shape: TreeShape) = shape.inside(geo.width,
+                geo.height) && shapes.none { it.group != shape.group && it.overlaps(shape, TreeGeometry.clearance) }
             // The other people's stubs.
             val stubs = mutableListOf<Stub>()
             val othersAt = s.others.withIndex().filter { it.value.level in 1 until n }.groupBy { it.value.level }
@@ -312,13 +328,15 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 val l = outline.minOf { it.l }; val t = outline.minOf { it.t }; val r = outline.maxOf { it.r }; val b = outline.maxOf { it.b }
             }
             fun apart(a: Spot, b: Spot) = with(TreeGeometry.clearance) { a.l > b.r + this || b.l > a.r + this || a.t > b.b + this || b.t > a.b + this } ||
-                a.outline.none { p -> b.outline.any { q -> (p.kind != TreeShape.Kind.branch || q.kind != TreeShape.Kind.branch) && p.overlaps(q, TreeGeometry.clearance) } }
+                a.outline.none { p -> b.outline.any { q -> (p.kind != TreeShape.Kind.branch || q.kind != TreeShape.Kind.branch) && p.overlaps(q,
+                    TreeGeometry.clearance) } }
             val others = othersAt.keys.sorted().flatMap { level -> othersAt.getValue(level).mapIndexed { index, other -> Triple(level, index, other.index) } }
             // Each one's spots, in order, that are clear of everything else.
             val options = others.map { (level, index) ->
                 val (bx, by) = geo.other(ys, level, index); val group = "sibling$level.$index"
                 listOf(0f, .45f, .9f).flatMap { shift ->
-                    (generateSequence(by) { it + 3 }.takeWhile { it <= max(by, ys[level] - 10) } + generateSequence(by - 3) { it - 3 }.takeWhile { it >= geo.otherTop })
+                    (generateSequence(by) { it + 3 }.takeWhile { it <= max(by,
+                        ys[level] - 10) } + generateSequence(by - 3) { it - 3 }.takeWhile { it >= geo.otherTop })
                         .map { bx - shift * geo.spread to it }.toList()
                 }.mapNotNull { (x, y) ->
                     val coin = TreeShape.circle(TreeShape.Kind.sibling, group, x, y, 6f)
@@ -352,7 +370,8 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 val size = if (width <= room) full else full * room / width
                 if (size < full * .75f) continue
                 val textWidth = measure.width(amount, size, false); val h = textHeight(size)
-                val shape = TreeShape.box(TreeShape.Kind.amount, "sibling${sibling.level}.${sibling.slot}", sibling.x - 12 - textWidth, y - h / 2, sibling.x - 8, y + h / 2)
+                val shape = TreeShape.box(TreeShape.Kind.amount, "sibling${sibling.level}.${sibling.slot}", sibling.x - 12 - textWidth, y - h / 2,
+                    sibling.x - 8, y + h / 2)
                 if (!clear(shape)) continue
                 siblings[index] = sibling.copy(amount = size); shapes += shape
             }
@@ -366,7 +385,8 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 val top = ys[1] + 9; val height = wrapped.size * lh
                 val above = (geo.ground - geo.block - 5) - top
                 val spots = listOfNotNull(if (height <= above) top + (above - height) / 2 else null, if (height <= geo.ground - 3 - top) top else null)
-                if (width <= right - 14) spots.map { TreeShape.box(TreeShape.Kind.caption, "caption", right - width, it, right, it + height) }.firstOrNull(::clear)?.let { shape ->
+                if (width <= right - 14) spots.map { TreeShape.box(TreeShape.Kind.caption, "caption", right - width, it, right,
+                    it + height) }.firstOrNull(::clear)?.let { shape ->
                     caption = wrapped; captionY = shape.t + lh / 2 - ys[1]; shapes += shape
                 }
             }

@@ -41,7 +41,8 @@ class RecurringRuntime private constructor(context: Context) {
             }
         }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
     internal val syncForegroundAdmission = com.noahwallet.services.wallet.ForegroundSyncAdmission()
-    internal fun foregroundRunner(refreshSummary: suspend () -> Unit) = RecurringForegroundRunner(scope, refreshSummary = refreshSummary, isOnboarded = services::isOnboarded) { budget ->
+    internal fun foregroundRunner(refreshSummary: suspend () -> Unit) = RecurringForegroundRunner(scope, refreshSummary = refreshSummary,
+        isOnboarded = services::isOnboarded) { budget ->
         syncForegroundAdmission.run { admission ->
             services.syncInForeground(admission)
             if (budget.available && admission.available) executor.execute(budget = admission)
@@ -99,7 +100,8 @@ object RecurringRecipient {
         var payment = SendPayment(destination, type, schedule.amountSat, comment = schedule.comment)
         if (type == "lnurl") {
             val route = session.resolveSendRecipient(destination)
-            require(Math.multiplyExact(schedule.amountSat, 1000) in route.minMsat..route.maxMsat) { "The recipient no longer accepts this amount. Update or cancel the recurring payment." }
+            require(Math.multiplyExact(schedule.amountSat,
+                1000) in route.minMsat..route.maxMsat) { "The recipient no longer accepts this amount. Update or cancel the recurring payment." }
             // Match attended Send: a note must reach the recipient through LNURL.
             if (route.arkAddress != null && schedule.comment.isEmpty()) payment = payment.copy(destination = route.arkAddress, method = "ark")
         }

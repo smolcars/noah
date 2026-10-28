@@ -11,20 +11,24 @@ object RNStoreCodec {
         "privacy-storage" to 0, "profile-storage" to 0, "recurring-payment-storage" to 0,
         "server-storage" to 0, "transaction-storage" to 1)
     private val fields = mapOf(
-        "wallet-storage" to setOf("isInitialized", "isWalletLoaded", "staticVtxoPubkey", "isBiometricsEnabled", "isDebugModeEnabled", "isWalletSuspended", "hasSeenBatteryOptimizationPrompt"),
-        "backup-storage" to setOf("backupPending", "lastBackupAt", "lastBackupAttemptAt", "lastBackupStatus", "lastBackupError", "lastBackupId", "lastUploadedSnapshotSha256"),
+        "wallet-storage" to setOf("isInitialized", "isWalletLoaded", "staticVtxoPubkey", "isBiometricsEnabled", "isDebugModeEnabled", "isWalletSuspended",
+            "hasSeenBatteryOptimizationPrompt"),
+        "backup-storage" to setOf("backupPending", "lastBackupAt", "lastBackupAttemptAt", "lastBackupStatus", "lastBackupError", "lastBackupId",
+            "lastUploadedSnapshotSha256"),
         "esplora-storage" to setOf("endpointOverride"),
         "privacy-storage" to setOf("isHomeBalanceHidden"),
         "profile-storage" to setOf("displayName", "preferredCurrency", "bitcoinAmountUnit"),
         "recurring-payment-storage" to setOf("schedules", "serverSyncPending"),
-        "server-storage" to setOf("isRegisteredWithServer", "lightningAddress", "nostrPubkey", "isBackupEnabled", "emailAddress", "isEmailVerified", "isEmailPromptDismissed", "mailboxAuthorizationExpiry", "isMailboxAuthorizationEnabled", "lastReportedDeviceFingerprint", "lastDeviceReportAt"),
+        "server-storage" to setOf("isRegisteredWithServer", "lightningAddress", "nostrPubkey", "isBackupEnabled", "emailAddress", "isEmailVerified",
+            "isEmailPromptDismissed", "mailboxAuthorizationExpiry", "isMailboxAuthorizationEnabled", "lastReportedDeviceFingerprint", "lastDeviceReportAt"),
         "transaction-storage" to setOf("isAutoBoardingEnabled", "hasAttemptedAutoBoarding"),
     )
     private val booleans = setOf("isInitialized", "isWalletLoaded", "isBiometricsEnabled", "isDebugModeEnabled",
         "isWalletSuspended", "hasSeenBatteryOptimizationPrompt", "backupPending", "isHomeBalanceHidden",
         "serverSyncPending", "isRegisteredWithServer", "isBackupEnabled", "isEmailVerified", "isEmailPromptDismissed",
         "isMailboxAuthorizationEnabled", "isAutoBoardingEnabled", "hasAttemptedAutoBoarding")
-    private val nullableStrings = setOf("displayName", "preferredCurrency", "bitcoinAmountUnit", "staticVtxoPubkey", "endpointOverride", "lastBackupError", "lastBackupId",
+    private val nullableStrings = setOf("displayName", "preferredCurrency", "bitcoinAmountUnit", "staticVtxoPubkey", "endpointOverride", "lastBackupError",
+        "lastBackupId",
         "lastUploadedSnapshotSha256", "lightningAddress", "nostrPubkey", "emailAddress", "lastReportedDeviceFingerprint")
     private val strings = setOf("lastBackupStatus")
     private val numbers = setOf("lastBackupAt", "lastBackupAttemptAt", "mailboxAuthorizationExpiry", "lastDeviceReportAt")

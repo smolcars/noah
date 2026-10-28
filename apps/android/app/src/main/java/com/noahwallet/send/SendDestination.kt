@@ -81,7 +81,8 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
             if (isLightningAddress(value)) return if (addressEndpoint(value)?.host?.let(::isOnion) == true) SendDestination() else SendDestination("lnurl")
             PaymentEncoding.invoice(value)?.let { invoice ->
                 if (!matches(invoice.network, network, "lightning")) return mismatch(invoice.network, network)
-                if (invoice.sats != null && invoice.sats > BigDecimal.ZERO && invoice.sats < BigDecimal.ONE) return SendDestination("lightning", error = SendDestinationError.SubSatoshiInvoice)
+                if (invoice.sats != null && invoice.sats > BigDecimal.ZERO && invoice.sats < BigDecimal.ONE) return SendDestination("lightning",
+                    error = SendDestinationError.SubSatoshiInvoice)
                 return SendDestination("lightning", invoice.sats?.takeIf { it >= BigDecimal.ONE }, (invoice.sats ?: BigDecimal.ZERO) < BigDecimal.ONE)
             }
             if (offer(value)) return SendDestination("offer")
@@ -127,7 +128,8 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
             val errors = mutableListOf<SendDestinationError>(); val seen = mutableSetOf<String>(); var amount: BigDecimal? = null; var invalid = false
             fun add(raw: String, type: String) {
                 val parsed = parse(raw, network)
-                if (parsed.destinationType == type) methods[mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "offer" to "offer", "onchain" to "onchainAddress").getValue(type)] = raw
+                if (parsed.destinationType == type) methods[mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "offer" to "offer",
+                    "onchain" to "onchainAddress").getValue(type)] = raw
                 else if (parsed.error is SendDestinationError.NetworkMismatch) { errors.add(parsed.error); invalid = true }
                 else if (type == "offer") errors.add(SendDestinationError.InvalidOffer)
             }
@@ -137,11 +139,14 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
             if (parts.size > 1) for (pair in parts[1].split('&')) {
                 val fields = pair.split('=', limit = 2)
                 // URI query decoding preserves literal '+', unlike form decoding.
-                val key = runCatching { URLDecoder.decode(fields[0].replace("+", "%2B"), "UTF-8") }.getOrNull() ?: return SendDestination(error = SendDestinationError.InvalidURI)
-                val decoded = runCatching { URLDecoder.decode(fields.getOrElse(1) { "" }.replace("+", "%2B"), "UTF-8") }.getOrNull() ?: return SendDestination(error = SendDestinationError.InvalidURI)
+                val key = runCatching { URLDecoder.decode(fields[0].replace("+", "%2B"),
+                    "UTF-8") }.getOrNull() ?: return SendDestination(error = SendDestinationError.InvalidURI)
+                val decoded = runCatching { URLDecoder.decode(fields.getOrElse(1) { "" }.replace("+", "%2B"),
+                    "UTF-8") }.getOrNull() ?: return SendDestination(error = SendDestinationError.InvalidURI)
                 // BIP-321 `req-` parameters must be understood or refused; Send understands these two.
                 val lower = key.lowercase().let { if (it == "req-ark" || it == "req-amount") it.drop(4) else it }
-                if (lower in listOf("amount", "label", "message") && !seen.add(lower)) { errors.add(SendDestinationError.DuplicateParameter(lower)); invalid = true; continue }
+                if (lower in listOf("amount", "label",
+                        "message") && !seen.add(lower)) { errors.add(SendDestinationError.DuplicateParameter(lower)); invalid = true; continue }
                 when (lower) {
                     "amount" -> {
                         val sats = uriAmount(decoded)
@@ -152,8 +157,10 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
                     "lightning" -> add(decoded, "lightning")
                     "lno" -> add(decoded, "offer")
                     "bc", "tb", "tbs", "bcrt" -> {
-                        val actual = PaymentEncoding.bitcoinNetwork(decoded); val expected = mapOf("bc" to "mainnet", "tb" to "testnet", "tbs" to "signet", "bcrt" to "regtest").getValue(lower)
-                        if (actual != null && matches(actual, expected, "onchain")) add(decoded, "onchain") else { errors.add(SendDestinationError.AddressNetworkMismatch(lower)); invalid = true }
+                        val actual = PaymentEncoding.bitcoinNetwork(decoded); val expected = mapOf("bc" to "mainnet", "tb" to "testnet", "tbs" to "signet",
+                            "bcrt" to "regtest").getValue(lower)
+                        if (actual != null && matches(actual, expected, "onchain")) add(decoded,
+                            "onchain") else { errors.add(SendDestinationError.AddressNetworkMismatch(lower)); invalid = true }
                     }
                     "label", "message", "pop" -> Unit
                     else -> if (lower.startsWith("req-")) { errors.add(SendDestinationError.UnknownRequiredParameter(key)); invalid = true }

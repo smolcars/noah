@@ -23,7 +23,8 @@ internal class RecurringAutomationAuthority(directory: File,
             }
             val marker = RecurringStore.json.decodeFromString<Marker>(marker.readText())
             val raw = file.readText()
-            require(RecurringStore.json.parseToJsonElement(raw).jsonObject.keys.containsAll(listOf("version", "instance", "generation", "suspended", "stopped")))
+            require(RecurringStore.json.parseToJsonElement(raw).jsonObject.keys.containsAll(listOf("version", "instance", "generation", "suspended",
+                "stopped")))
             return RecurringStore.json.decodeFromString<State>(raw).also {
                 require(marker.version == 1 && it.version == 1 && marker.instance == it.instance)
                 UUID.fromString(it.instance); UUID.fromString(it.generation)

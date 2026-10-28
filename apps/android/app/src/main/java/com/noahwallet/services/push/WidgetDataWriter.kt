@@ -29,10 +29,12 @@ object WidgetDataWriter {
     /** Redraws the variant's widget, which also picks up a newly chosen language. */
     fun broadcast(context: Context, variant: String) {
         val name = variant.replaceFirstChar { it.uppercase() }
-        context.sendBroadcast(Intent(NoahWidgetProvider.ACTION_WIDGET_DATA_CHANGED).setComponent(ComponentName(context.packageName, "com.noahwallet.widgets.NoahWidget${name}Provider")))
+        context.sendBroadcast(Intent(NoahWidgetProvider.ACTION_WIDGET_DATA_CHANGED).setComponent(ComponentName(context.packageName,
+            "com.noahwallet.widgets.NoahWidget${name}Provider")))
     }
 
-    suspend fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String, preserveExpiry: Boolean = false, checkStage: () -> Unit = {}): Unit = withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String, preserveExpiry: Boolean = false,
+        checkStage: () -> Unit = {}): Unit = withContext(NonCancellable + Dispatchers.IO) {
         val editor = context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit()
         values(balance, closestExpiryBlocks, variant).forEach { (key, value) ->
             if (!preserveExpiry || key != "closestExpiryBlocks") editor.putLong(key, value)

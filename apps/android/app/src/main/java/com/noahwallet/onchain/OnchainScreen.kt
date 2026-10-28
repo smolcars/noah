@@ -173,7 +173,8 @@ internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
     if (model.loading || model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     model.attempts.forEach { attempt ->
         HorizontalDivider()
-        Text(tr(if (attempt.overrideAudit != null) "Overridden attempt" else if (attempt.receipt == null) "Check operation status" else "Submitted"), style = MaterialTheme.typography.titleLarge)
+        Text(tr(if (attempt.overrideAudit != null) "Overridden attempt" else if (attempt.receipt == null) "Check operation status" else "Submitted"),
+            style = MaterialTheme.typography.titleLarge)
         Text(tr(attempt.quote.action.title))
         AmountRow(app, "Reviewed amount", attempt.quote.amount)
         Text(tr(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(attempt.quote.createdAt))))
@@ -194,13 +195,15 @@ internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
         (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
         if (attempt.receipt != null && !attempt.receipt.broadcastRetryPending) {
             TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Done")) }
-            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Refresh network status")) }
+            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } },
+                enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Refresh network status")) }
         }
         else {
             Text(tr("Noah checks again automatically as your wallet syncs."))
             TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Check status")) }
             // An uncertain board stays locked until Check status settles it, so it has no override.
-            if (attempt.receipt == null && attempt.overrideAudit == null && !attempt.uncertainBoard) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
+            if (attempt.receipt == null && attempt.overrideAudit == null && !attempt.uncertainBoard) TextButton({ overrideID = attempt.id },
+                enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
         }
     }
     overrideID?.let { id -> WalletAlertDialog(onDismissRequest = { overrideID = null },
@@ -227,7 +230,8 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
             AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)
             if (quote.ids.isNotEmpty()) Text(tr("VTXOs selected") + ": " + quote.ids.size)
             if (quote.action != OnchainAction.cancel && quote.fee != null && quote.chainFee != null) {
-                AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
+                AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" },
+                    quote.fee)
                 if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
                     AmountRow(app, if (quote.action == OnchainAction.board) "Onchain fee" else "Estimated broadcast fees", quote.chainFee)
                 AmountRow(app, if (quote.action == OnchainAction.board) "Ark receives" else "Amount after fee", quote.net)
@@ -241,16 +245,19 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
             quote.destination?.let { DetailRow("Destination", it) }
             quote.externalDestinationWarning?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
             if (quote.feesUnknown) {
-                Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), color = MaterialTheme.colorScheme.error)
+                Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
+                    color = MaterialTheme.colorScheme.error)
                 if (quote.action == OnchainAction.startExit) Text(tr("Broadcast funding status is unknown; confirmed onchain funds are required."))
             }
             Text(reviewText(quote))
             if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
-                if (quote.fee != null && quote.chainFee != null) ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+                if (quote.fee != null && quote.chainFee != null) ExitRules.warning(quote.amount, quote.fee, quote.totalFee,
+                    quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
                 if (!quote.feesUnknown && !quote.fundable) Text(tr("Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."))
             }
             if (!current) Text(tr(OnchainFailure.changed.text), color = MaterialTheme.colorScheme.error)
-            Button(confirm, enabled = current && !app.isWalletSuspended) { Text(tr(if (quote.feesUnknown) { if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit" } else quote.action.title)) }
+            Button(confirm,
+                enabled = current && !app.isWalletSuspended) { Text(tr(if (quote.feesUnknown) { if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit" } else quote.action.title)) }
             TextButton(cancel) { Text(tr(cancelTitle)) }
         }
     }

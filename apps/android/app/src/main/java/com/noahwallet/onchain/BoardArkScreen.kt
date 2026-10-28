@@ -54,7 +54,8 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
         confirmations = runCatching { withContext(Dispatchers.IO) { app.session.arkInfo()?.requiredBoardConfirmations?.toLong() } }.getOrNull()
     }
     OnchainEffects(app, model, reloadOnChange = true)
-    fun money(sats: Long) = if (app.hidden) BitcoinAmount.format(0, app.amountUnit, locale).replace("0", "••••") else BitcoinAmount.format(sats, app.amountUnit, locale)
+    fun money(sats: Long) = if (app.hidden) BitcoinAmount.format(0, app.amountUnit, locale).replace("0", "••••") else BitcoinAmount.format(sats, app.amountUnit,
+        locale)
     val overview = model.overview
     // A submitted board until it has the confirmations Ark needs: Send's block row follows it.
     val boarding = model.attempts.firstOrNull { attempt ->
@@ -83,9 +84,11 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
                         autoBoard = value
                     }
                 }) },
-            if (minimum != null) ({ d -> SettingsRow(tr("Smallest move"), SettingsIcons.ark, value = money(minimum!!), numeric = true, end = RowEnd.None, divider = d) }) else null,
+            if (minimum != null) ({ d -> SettingsRow(tr("Smallest move"), SettingsIcons.ark, value = money(minimum!!), numeric = true, end = RowEnd.None,
+                divider = d) }) else null,
         ))
-        FinePrint(tr("Bitcoin in Ark moves instantly and costs less to send.") + (confirmations?.let { " " + tr("It needs {n} confirmations to arrive.", it.toString()) } ?: ""))
+        FinePrint(tr("Bitcoin in Ark moves instantly and costs less to send.") + (confirmations?.let { " " + tr("It needs {n} confirmations to arrive.",
+            it.toString()) } ?: ""))
         OnchainStatus(app, model)
     }
     if (moving) BoardSheet(app, model, overview?.confirmed ?: 0, ::money, scope) { moving = false; model.invalidate() }
@@ -96,7 +99,8 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
  * leaving on-chain — and an explicit Move. Changing the amount drops the review.
  */
 @Composable
-private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, money: (Long) -> String, scope: kotlinx.coroutines.CoroutineScope, dismiss: () -> Unit) {
+private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, money: (Long) -> String, scope: kotlinx.coroutines.CoroutineScope,
+    dismiss: () -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current

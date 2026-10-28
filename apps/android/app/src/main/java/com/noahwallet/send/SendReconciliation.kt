@@ -13,14 +13,16 @@ object SendReconciliation {
     /** The exact movement for history metadata, never a destination/amount/time match.
      *  Movements that predate the attempt (an inherited Lightning checkpoint) are left untouched. */
     fun metadataMovementID(receipt: SendReceipt, snapshot: SendSnapshot): UInt? = receipt.movementID?.takeIf { it !in snapshot.movementIDs }
-    fun isLightning(movement: Movement, hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
+    fun isLightning(movement: Movement,
+        hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
     fun matches(movement: Movement, payment: SendPayment, hash: String?): Boolean {
         if (payment.source == SendSource.onchain) return false
         val subsystem = movement.subsystemName.lowercase(); val kind = movement.subsystemKind.lowercase()
         when (payment.method) {
             "ark" -> if (subsystem != "bark.arkoor" || kind != "send") return false
             "lightning", "lnurl", "offer" -> if (subsystem != "bark.lightning_send" || kind != "send") return false
-            "onchain" -> if (payment.source != SendSource.offchain || subsystem !in listOf("bark.offboard", "bark.round") || kind != if (payment.max) "offboard" else "send_onchain") return false
+            "onchain" -> if (payment.source != SendSource.offchain || subsystem !in listOf("bark.offboard",
+                    "bark.round") || kind != if (payment.max) "offboard" else "send_onchain") return false
             else -> return false
         }
         if (hash != null) return movement.paymentHash == hash
@@ -42,7 +44,8 @@ object SendReconciliation {
     private fun alreadyPaid(receipt: SendReceipt, fixed: Boolean) = SendResolution.AlreadyPaid(if (fixed) receipt else receipt.copy(amount = 0, fee = null))
     fun lightning(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, fixed: Boolean): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
-        val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
+        val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum,
+            x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
             if (movement.id in snapshot.movementIDs) return alreadyPaid(receipt, fixed)
@@ -62,7 +65,8 @@ object SendReconciliation {
     fun lightningAttempt(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, startedAt: Long?, fixed: Boolean): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
         if (movement.id !in snapshot.movementIDs) return lightning(candidates, hash, amount, snapshot, fixed)
-        val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
+        val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum,
+            x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
         val completedSince = startedAt?.let { start -> movement.completedAt?.let { HistoryRules.parseDate(it) }?.time?.let { it > start } }
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
@@ -94,7 +98,8 @@ object SendReconciliation {
                 runCatching { Json.parseToJsonElement(it.metadataJson).jsonObject["offboard_txid"]?.jsonPrimitive?.content }.getOrNull() == receipt.txid
         }
         val movement = matches.singleOrNull() ?: return receipt
-        val amount = runCatching { SendTransaction.amount(payment.destination, Json.parseToJsonElement(movement.metadataJson).jsonObject.getValue("offboard_tx").jsonPrimitive.content) }.getOrNull() ?: return receipt
+        val amount = runCatching { SendTransaction.amount(payment.destination,
+            Json.parseToJsonElement(movement.metadataJson).jsonObject.getValue("offboard_tx").jsonPrimitive.content) }.getOrNull() ?: return receipt
         if (amount <= 0 || !payment.max && amount != payment.amount) return receipt
         return receipt.copy(amount = amount, amountIsPending = false, fee = movement.offchainFeeSats.toLong(), movementID = movement.id)
     }
@@ -181,7 +186,8 @@ object SendTransaction {
     fun parse(hex: String): Parsed {
         require(hex.length % 2 == 0)
         val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray(); var cursor = 0
-        fun take(count: Int): ByteArray { require(count >= 0 && count <= bytes.size - cursor); return bytes.copyOfRange(cursor, cursor + count).also { cursor += count } }
+        fun take(count: Int): ByteArray { require(count >= 0 && count <= bytes.size - cursor); return bytes.copyOfRange(cursor,
+            cursor + count).also { cursor += count } }
         fun integer(count: Int): ULong = take(count).mapIndexed { i, x -> (x.toInt() and 255).toULong() shl (i * 8) }.fold(0uL) { a, x -> a or x }
         fun size(): Int { val tag = integer(1); val value = if (tag < 253u) tag else integer(if (tag == 253uL) 2 else if (tag == 254uL) 4 else 8); require(value <= bytes.size.toULong()); return value.toInt() }
         take(4)
