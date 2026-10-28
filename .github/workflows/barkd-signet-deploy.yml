@@ -28,7 +28,10 @@ jobs:
       - name: Install pinned Railway CLI
         run: npm install --global @railway/cli@5.71.0
       - name: Install the IaC SDK
-        run: npm install --ignore-scripts --no-package-lock --workspaces=false
+        run: |
+          sdk_version=$(node -p 'require("./package.json").devDependencies.railway')
+          npm install --prefix "$RUNNER_TEMP/noah-railway-sdk" --ignore-scripts --no-package-lock "railway@$sdk_version"
+          ln -s "$RUNNER_TEMP/noah-railway-sdk/node_modules" node_modules
       - name: Release the reviewed Barkd image through railway.ts
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_SIGNET_TOKEN }}

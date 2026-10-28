@@ -147,7 +147,10 @@ jobs:
         run: npm install --global @railway/cli@5.71.0
       - name: Install the IaC SDK
         if: steps.current.outputs.deploy == 'true'
-        run: npm install --ignore-scripts --no-package-lock --workspaces=false
+        run: |
+          sdk_version=$(node -p 'require("./package.json").devDependencies.railway')
+          npm install --prefix "$RUNNER_TEMP/noah-railway-sdk" --ignore-scripts --no-package-lock "railway@$sdk_version"
+          ln -s "$RUNNER_TEMP/noah-railway-sdk/node_modules" node_modules
       - name: Release the API image through railway.ts
         if: steps.current.outputs.deploy == 'true'
         env:
