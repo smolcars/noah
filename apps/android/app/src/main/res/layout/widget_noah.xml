@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     The 2×2 widget (widgets.md, Android): label row, the wave, balance, fiat and one status line. Also the provider's
-    initial layout, whose name the upgrade check pins. Heights are fixed so WidgetLayout can place the wave and boat.
+    initial layout, whose name the upgrade check pins. Rows grow with large text; WidgetViews measures them to place the
+    wave and boat, or to choose the 2×1 where they don't fit.
     Tints are android:tint in every widget layout: launchers inflate framework views, which ignore AppCompat's app:tint.
 -->
 <!-- Attributes newer than minSdk (clipToOutline, autoSize, textFontWeight) only refine newer launchers; widget text can't be selected. -->
@@ -56,13 +57,14 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="18dp"
+            android:layout_height="wrap_content"
             android:gravity="center_vertical"
+            android:minHeight="18dp"
             android:orientation="horizontal">
 
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
@@ -154,8 +156,9 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="17dp"
+                android:layout_height="wrap_content"
                 android:gravity="center_vertical"
+                android:minHeight="17dp"
                 android:orientation="horizontal">
 
                 <ImageView
@@ -180,15 +183,12 @@
                 <TextView
                     android:id="@+id/widget_status_title"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:autoSizeMaxTextSize="13sp"
-                    android:autoSizeMinTextSize="9sp"
-                    android:autoSizeStepGranularity="0.5sp"
-                    android:autoSizeTextType="uniform"
+                    android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
                     android:gravity="center_vertical|start"
                     android:includeFontPadding="false"
-                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:maxLines="2"
                     android:textColor="@color/widget_text"
                     android:textSize="13sp" />
             </LinearLayout>
@@ -196,15 +196,13 @@
             <TextView
                 android:id="@+id/widget_status_detail"
                 android:layout_width="match_parent"
-                android:layout_height="17dp"
-                android:autoSizeMaxTextSize="13sp"
-                android:autoSizeMinTextSize="9sp"
-                android:autoSizeStepGranularity="0.5sp"
-                android:autoSizeTextType="uniform"
+                android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center_vertical|start"
                 android:includeFontPadding="false"
-                android:maxLines="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:minHeight="17dp"
                 android:textColor="@color/widget_muted"
                 android:textSize="13sp"
                 android:visibility="gone" />

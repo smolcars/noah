@@ -57,24 +57,22 @@
         <LinearLayout
             android:id="@+id/widget_status"
             android:layout_width="match_parent"
-            android:layout_height="16dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="1dp"
             android:gravity="center_vertical"
+            android:minHeight="16dp"
             android:orientation="horizontal"
             android:visibility="gone">
 
             <TextView
                 android:id="@+id/widget_status_title"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:autoSizeMaxTextSize="12sp"
-                android:autoSizeMinTextSize="9sp"
-                android:autoSizeStepGranularity="0.5sp"
-                android:autoSizeTextType="uniform"
+                android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center_vertical|start"
                 android:includeFontPadding="false"
-                android:maxLines="1"
+                android:ellipsize="end"
+                android:maxLines="2"
                 android:textColor="@color/widget_text"
                 android:textSize="12sp" />
         </LinearLayout>

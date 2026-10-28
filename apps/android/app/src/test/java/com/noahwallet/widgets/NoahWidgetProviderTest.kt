@@ -26,6 +26,8 @@ import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
+// Layouts are chosen by measured text: real fonts throughout.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NoahWidgetProviderTest {
     private val context get() = RuntimeEnvironment.getApplication()
     private fun language(code: String) { context.getSharedPreferences("gt_store", 0).edit().putString(LegacyLocale.key, code).commit() }
@@ -384,7 +386,7 @@ class NoahWidgetProviderTest {
                 assertTrue("$at: the balance column ends before the label", view.right(R.id.widget_balance) <= view.left(R.id.widget_chip))
                 // The balance's box is the column the label leaves, and the figures are drawn for it: within the text's
                 // rounding at 1×, where drawn at half size and scaled down they'd be 11% over.
-                val box = WidgetViews.balanceBox(WidgetLayout.medium, width, WidgetViews.label(context, content, width, 180f)).width
+                val box = WidgetViews.balanceBox(WidgetLayout.medium, width, WidgetViews.plan(context, content, width, 180f).label).width
                 val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
                 assertEquals(at, box * d, balance.width.toFloat(), d)
                 assertTrue(at, balance.drawable.intrinsicWidth <= balance.width * 1.05f)
@@ -418,75 +420,132 @@ class NoahWidgetProviderTest {
     @Test
     fun largeTextNeverHidesTheMediumBalanceOnAPhone() = largeText()
 
+    /** All of [id]'s text shows: no ellipsis, no line cut by the view, and the view inside the widget's [clip] (px). */
+    private fun View.readable(id: Int, clip: Int): Boolean = findViewById<TextView>(id).let { text ->
+        val laid = text.layout ?: return false
+        laid.getEllipsisCount(laid.lineCount - 1) == 0 && laid.height <= text.height - text.totalPaddingTop - text.totalPaddingBottom + 1 &&
+            top(id) >= 0 && bottom(id) <= clip && right(id) <= width
+    }
+
     private fun largeText() {
         language("en")
         val large = month.copy(balance = 12_480_315, daily = List(30) { 222_600L } + 12_480_315, amountUnit = "sats")
         // Sol's cases (fiat and an Arriving or Renew line), one without a status line, a mainnet one and the usual ones.
         val cases = listOf("regtest" to large, "regtest" to large.copy(arriving = 0, renewDue = now + 18 * hour), "regtest" to large.copy(arriving = 0),
-            "mainnet" to large, "regtest" to month, "mainnet" to month.copy(amountUnit = "sats"))
+            "mainnet" to large, "regtest" to month, "mainnet" to month.copy(amountUnit = "sats", arriving = 0, renewDue = now + 18 * hour))
+        // The widths tested before, the landscape phone's 4×2 and the 2×2s (phone, Fold), at short and usual heights.
+        val sizes = listOf(320f, 380.57f, 676.57f).flatMap { w -> listOf(120f, 137f, 160f, 180f).map { w to it } } +
+            listOf(172.19f, 151.62f).flatMap { w -> listOf(120f, 137f, 160f, 233.9f).map { w to it } }
         val placements = mutableSetOf<String>()
+        val layouts = mutableSetOf<WidgetLayout>()
         try {
             for (scale in listOf(1f, 1.3f, 2f)) {
                 RuntimeEnvironment.setFontScale(scale)
-                val d = context.resources.displayMetrics.density
-                for ((variant, snapshot) in cases) placements += checkLargeText(scale, d, variant, snapshot)
+                for ((variant, snapshot, size) in cases.flatMap { (variant, snapshot) -> sizes.map { Triple(variant, snapshot, it) } }) {
+                    val slot = layOut(scale, variant, snapshot, size)
+                    layouts += slot.plan.layout
+                    checkLargeText(slot)?.let(placements::add)
+                }
             }
             assertEquals(setOf("beside", "own line", "left out"), placements)
+            assertEquals(setOf(WidgetLayout.medium, WidgetLayout.wide, WidgetLayout.small, WidgetLayout.narrow), layouts)
+            RuntimeEnvironment.setFontScale(1f)
+            // The landscape phone's 4×2 (676.57 × 137.14 dp) with fiat and a status line: the 4×1; without the status line, it fits.
+            assertEquals(WidgetLayout.wide, WidgetViews.plan(context, WidgetContent.of(context, month, "regtest", now), 676.57f, 137.14f).layout)
+            val quiet = WidgetContent.of(context, month.copy(arriving = 0), "regtest", now)
+            assertEquals(WidgetLayout.medium, WidgetViews.plan(context, quiet, 676.57f, 137.14f).layout)
             // Sol's case: at 200% in 180 dp above an Arriving line, the label is left out; without a status line it has its
             // own; at 100% it stays beside the balance, without " · 30 days".
             RuntimeEnvironment.setFontScale(2f)
             val sol = WidgetContent.of(context, large, "regtest", now)
             assertEquals("+12,257,715 sats", sol.change)
-            assertFalse(WidgetViews.label(context, sol, 320f, 180f).shown)
-            assertTrue(WidgetViews.label(context, WidgetContent.of(context, large.copy(arriving = 0), "regtest", now), 320f, 180f).line)
+            assertFalse(WidgetViews.plan(context, sol, 320f, 180f).label!!.shown)
+            assertTrue(WidgetViews.plan(context, WidgetContent.of(context, large.copy(arriving = 0), "regtest", now), 320f, 180f).label!!.line)
             RuntimeEnvironment.setFontScale(1f)
-            val usual = WidgetViews.label(context, sol, 320f, 180f)
+            val usual = WidgetViews.plan(context, sol, 320f, 180f).label!!
             assertTrue(usual.shown); assertFalse(usual.line); assertFalse(usual.days); assertEquals(1f, usual.scale)
         } finally { RuntimeEnvironment.setFontScale(1f) }
     }
 
-    /**
-     * One medium widget at [scale] in each size: the balance at its floor or larger and drawn for its box, the label beside
-     * it, on its own line or left out, and the status line and Actions inside the padding. Returns where the label went.
-     */
-    private fun checkLargeText(scale: Float, d: Float, variant: String, snapshot: WidgetSnapshot): List<String> {
-        val placements = mutableListOf<String>()
-        for ((width, height) in listOf(320f, 380.57f).flatMap { width -> listOf(160f, 180f).map { width to it } }) {
-            val content = WidgetContent.of(context, snapshot, variant, now)
-            val label = WidgetViews.label(context, content, width, height)
-            val view = laidOut(content, width, height, variant)
-            val at = "$scale× $variant ${content.change} ${content.status?.javaClass?.simpleName} $width × $height dp, $label"
-            placements += when { !label.shown -> "left out"; label.line -> "own line"; else -> "beside" }
-            // The balance at its narrowest or wider...
-            val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
-            val narrowest = WidgetType.minWidth(context, content.balance, content.satsSuffix, 34f, 38f, d, WidgetViews.MEDIUM_FLOOR)
-            assertTrue("$at: a ${balance.width} px balance", balance.width >= narrowest - 1)
-            assertTrue("$at: drawn at its floor or larger", balance.drawable.intrinsicWidth >= narrowest - 1)
-            assertTrue("$at: drawn for its box", balance.drawable.intrinsicWidth <= balance.width * 1.05f)
-            // ...the label beside it, on its own line or left out, the amount whole...
-            assertEquals(at, label.line, view.shown(R.id.widget_label_line))
-            assertEquals(at, label.shown && !label.line, view.shown(R.id.widget_label))
-            if (label.shown) {
-                val change = if (label.line) R.id.widget_change_line else R.id.widget_change
-                assertEquals(at, content.change, view.text(change)); assertTrue(at, view.whole(change))
-                assertTrue("$at: inside the padding", view.right(change) <= ((width - 18f) * d).toInt() + 1)
-            }
-            // ...and under the balance's fiat, the status line and every Action whole inside the widget's padding,
-            // where the launcher clips them.
-            val clip = ((height - 16f) * d).toInt()
-            var above = view.bottom(R.id.widget_fiat)
-            if (content.status != null) {
-                assertTrue(at, view.shown(R.id.widget_status))
-                assertTrue("$at: the status line from ${view.top(R.id.widget_status)}", view.top(R.id.widget_status) >= above)
-                above = view.bottom(R.id.widget_status)
-            }
-            for (id in listOf(R.id.widget_receive, R.id.widget_scan, R.id.widget_send)) {
-                assertEquals(at, (40 * d).toInt(), view.findViewById<View>(id).height)
-                assertTrue("$at: an Action at ${view.top(id)}..${view.bottom(id)} px, the status line to $above, clipped at $clip",
-                    view.top(id) >= above && view.bottom(id) <= clip)
-            }
+    /** One widget under test, laid out: what it shows, how it was planned, its width (dp) and where its launcher clips it (px). */
+    private class LaidOut(val view: View, val content: WidgetContent, val plan: WidgetViews.Plan, val width: Float, val clip: Int, val at: String)
+
+    private fun layOut(scale: Float, variant: String, snapshot: WidgetSnapshot, size: Pair<Float, Float>): LaidOut {
+        val (width, height) = size
+        val d = context.resources.displayMetrics.density
+        val content = WidgetContent.of(context, snapshot, variant, now)
+        val plan = WidgetViews.plan(context, content, width, height)
+        val view = laidOut(content, width, height, variant)
+        val at = "$scale× $variant ${content.change} ${content.status?.javaClass?.simpleName} $width × $height dp, $plan"
+        // Two rows end at their bottom padding, where the launcher clips them; one row at the widget's edge.
+        val twoRows = plan.layout == WidgetLayout.medium || plan.layout == WidgetLayout.small
+        val clip = (((if (twoRows) height - 16f else height)) * d).toInt() + 1
+        return LaidOut(view, content, plan, width, clip, at)
+    }
+
+    /** The balance and the status line whole inside the widget, then its layout's label, Actions or label row; medium's label placement. */
+    private fun checkLargeText(slot: LaidOut): String? {
+        val view = slot.view; val at = slot.at; val clip = slot.clip
+        assertTrue("$at: the balance", view.bottom(R.id.widget_balance) <= clip)
+        // The status line whole, at every size and font scale.
+        if (slot.content.status != null) {
+            assertTrue(at, view.shown(R.id.widget_status))
+            for (id in listOf(R.id.widget_status_title, R.id.widget_status_detail, R.id.widget_status_detail_line).filter { view.shown(it) })
+                assertTrue("$at: \"${view.text(id)}\" at ${view.top(id)}..${view.bottom(id)} px, clipped at $clip", view.readable(id, clip))
         }
-        return placements
+        return when (slot.plan.layout) {
+            WidgetLayout.medium -> checkMedium(slot)
+            WidgetLayout.wide -> { checkWide(slot); null }
+            WidgetLayout.small -> { checkSmall(slot); null }
+            else -> null
+        }
+    }
+
+    private fun checkMedium(slot: LaidOut): String {
+        val view = slot.view; val content = slot.content; val at = slot.at; val clip = slot.clip; val width = slot.width
+        val d = context.resources.displayMetrics.density
+        val label = slot.plan.label!!
+        val placement = when { !label.shown -> "left out"; label.line -> "own line"; else -> "beside" }
+        // The balance at its narrowest or wider...
+        val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
+        val narrowest = WidgetType.minWidth(context, content.balance, content.satsSuffix, 34f, 38f, d, WidgetViews.MEDIUM_FLOOR)
+        assertTrue("$at: a ${balance.width} px balance", balance.width >= narrowest - 1)
+        assertTrue("$at: drawn at its floor or larger", balance.drawable.intrinsicWidth >= narrowest - 1)
+        assertTrue("$at: drawn for its box", balance.drawable.intrinsicWidth <= balance.width * 1.05f)
+        // ...the label beside it, on its own line or left out, the amount whole...
+        assertEquals(at, label.line, view.shown(R.id.widget_label_line))
+        assertEquals(at, label.shown && !label.line, view.shown(R.id.widget_label))
+        if (label.shown) {
+            val change = if (label.line) R.id.widget_change_line else R.id.widget_change
+            assertEquals(at, content.change, view.text(change)); assertTrue(at, view.whole(change))
+            assertTrue("$at: inside the padding", view.right(change) <= ((width - 18f) * d).toInt() + 1)
+        }
+        // ...and under the fiat and the status line, every Action whole inside the widget.
+        val above = if (content.status != null) view.bottom(R.id.widget_status) else view.bottom(R.id.widget_fiat)
+        for (id in listOf(R.id.widget_receive, R.id.widget_scan, R.id.widget_send)) {
+            assertEquals(at, (40 * d).toInt(), view.findViewById<View>(id).height)
+            assertTrue("$at: an Action at ${view.top(id)}..${view.bottom(id)} px, the line above to $above, clipped at $clip",
+                view.top(id) >= above && view.bottom(id) <= clip)
+        }
+        return placement
+    }
+
+    /** The balance at its floor in the column, and every icon button whole inside the widget. */
+    private fun checkWide(slot: LaidOut) {
+        val view = slot.view; val content = slot.content; val at = slot.at; val clip = slot.clip
+        val d = context.resources.displayMetrics.density
+        val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
+        assertTrue(at, balance.width >= WidgetType.minWidth(context, content.balance, content.satsSuffix, 24f, 28f, d, .5f) - 1)
+        for (id in listOf(R.id.widget_receive, R.id.widget_scan, R.id.widget_send))
+            assertTrue("$at: an Action at ${view.top(id)}..${view.bottom(id)} px of $clip",
+                view.top(id) >= 0 && view.bottom(id) <= clip && view.right(id) <= view.width)
+    }
+
+    /** The label row grows with its text: nothing in it is cut. */
+    private fun checkSmall(slot: LaidOut) {
+        val view = slot.view
+        for (id in listOf(R.id.widget_change, R.id.widget_change_days).filter { view.shown(it) })
+            view.findViewById<TextView>(id).let { assertTrue(slot.at, it.layout.height <= it.height + 1) }
     }
 
     /** The placed widget renders through the provider, from the old keys before the app runs, then the full snapshot. */

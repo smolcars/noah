@@ -205,63 +205,83 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- The status runs under the balance and the label, clear of the boat. -->
+        <!--
+            The status runs under the balance and the label, clear of the boat: one line, or "Renew" and the expiry under it
+            where one doesn't fit. It grows with the text, sized in WidgetViews.status.
+        -->
         <LinearLayout
             android:id="@+id/widget_status"
             android:layout_width="match_parent"
-            android:layout_height="17dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
             android:layout_marginEnd="48dp"
             android:importantForAccessibility="noHideDescendants"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:visibility="gone">
 
-            <ImageView
-                android:id="@+id/widget_status_icon"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:layout_marginEnd="5dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_home_renew"
-                android:tint="@color/widget_text"
-                android:visibility="gone" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="17dp"
+                android:orientation="horizontal">
 
-            <ImageView
-                android:id="@+id/widget_status_dot"
-                android:layout_width="7dp"
-                android:layout_height="7dp"
-                android:layout_marginEnd="5dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/widget_dot"
-                android:visibility="gone" />
+                <ImageView
+                    android:id="@+id/widget_status_icon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="5dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_home_renew"
+                    android:tint="@color/widget_text"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/widget_status_dot"
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:layout_marginEnd="5dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/widget_status_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center_vertical|start"
+                    android:includeFontPadding="false"
+                    android:maxLines="2"
+                    android:textColor="@color/widget_text"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/widget_status_detail"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center_vertical|start"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/widget_status_title"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
+                android:id="@+id/widget_status_detail_line"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center_vertical|start"
                 android:includeFontPadding="false"
-                android:maxLines="1"
-                android:textColor="@color/widget_text"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/widget_status_detail"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:autoSizeMaxTextSize="13sp"
-                android:autoSizeMinTextSize="9sp"
-                android:autoSizeStepGranularity="0.5sp"
-                android:autoSizeTextType="uniform"
-                android:ellipsize="end"
-                android:fontFamily="sans-serif-medium"
-                android:gravity="center_vertical|start"
-                android:includeFontPadding="false"
-                android:maxLines="1"
+                android:maxLines="2"
+                android:minHeight="17dp"
                 android:textColor="@color/widget_muted"
                 android:textSize="13sp"
                 android:visibility="gone" />
