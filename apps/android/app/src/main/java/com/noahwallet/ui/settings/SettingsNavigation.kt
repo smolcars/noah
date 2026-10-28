@@ -36,7 +36,8 @@ enum class SettingsDestination : NavKey {
 internal object SettingsRoutes {
     private val parents = listOf(SettingsDestination.Lightning, SettingsDestination.Email).associateWith { SettingsDestination.Profile } +
         (SettingsDestination.UnifiedPush to SettingsDestination.Notifications) +
-        listOf(SettingsDestination.Ark, SettingsDestination.Esplora, SettingsDestination.Logs, SettingsDestination.Debug).associateWith { SettingsDestination.Advanced }
+        listOf(SettingsDestination.Ark, SettingsDestination.Esplora, SettingsDestination.Logs,
+            SettingsDestination.Debug).associateWith { SettingsDestination.Advanced }
 
     /** The page a page's Back returns to; null for the list. */
     fun parent(page: NavKey): NavKey? = when (page) {

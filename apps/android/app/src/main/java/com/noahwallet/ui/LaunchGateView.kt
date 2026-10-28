@@ -109,7 +109,8 @@ fun LaunchGateView(model: AppModel) {
     LaunchedEffect(model.onboarded, permissionStatus, gateRevision) {
         platformGate = withContext(Dispatchers.IO) {
             PlatformGateRules.gate(model.onboarded, PlatformAccess.physical(), permissionStatus,
-                PlatformAccess.batteryEnabled(context), model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
+                PlatformAccess.batteryEnabled(context),
+                model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
         }
         resolvedGateInputs = gateInputs
         hasResolvedPlatformGate = true
@@ -161,7 +162,8 @@ fun LaunchGateView(model: AppModel) {
                 .walletContentProtection(covered)
                 .drawBehind {
                     chrome.background?.let { drawRect(it) }
-                    chrome.bottom?.let { val inset = insets.getBottom(this).toFloat(); drawRect(it, androidx.compose.ui.geometry.Offset(0f, size.height - inset), androidx.compose.ui.geometry.Size(size.width, inset)) }
+                    chrome.bottom?.let { val inset = insets.getBottom(this).toFloat()
+                        drawRect(it, androidx.compose.ui.geometry.Offset(0f, size.height - inset), androidx.compose.ui.geometry.Size(size.width, inset)) }
                 }
                 .windowInsetsPadding(insets)
                 .avoidHinge(if (fullWindow || route == LaunchRoute.app) emptyList() else LocalFoldingFeatures.current)) {
@@ -194,7 +196,8 @@ fun LaunchGateView(model: AppModel) {
             color = if (locked) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background) {
             if (!locked) {
                 LaunchMessage(null, false, model::start, model)
-            } else com.noahwallet.ui.settings.LockCover(model.walletLock.error, model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
+            } else com.noahwallet.ui.settings.LockCover(model.walletLock.error,
+                model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
         }
     }
 }
@@ -206,7 +209,8 @@ internal enum class LaunchRoute { customServer, message, loading, push, battery,
  * behind App lock, so it can't open once the gate clears (deep-links.md, Gates); the wallet's tabs wait for unlock.
  */
 internal fun linkStep(route: LaunchRoute, locked: Boolean, checking: Boolean, state: LaunchState?, openFailed: Boolean, suspended: Boolean) = when {
-    checking || route == LaunchRoute.loading || route == LaunchRoute.message && (state == null || state == LaunchState.existingWallet && !openFailed) -> LinkStep.wait
+    checking || route == LaunchRoute.loading || route == LaunchRoute.message &&
+        (state == null || state == LaunchState.existingWallet && !openFailed) -> LinkStep.wait
     route != LaunchRoute.app || suspended -> LinkStep.ignore
     locked -> LinkStep.wait
     else -> LinkStep.open

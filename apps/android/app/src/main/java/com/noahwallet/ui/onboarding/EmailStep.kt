@@ -103,7 +103,8 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
     }
     FormLayout(trailingTop = {
         AnimatedVisibility(stage != EmailStage.verified, enter = fadeIn(), exit = fadeOut()) {
-            TextAction(tr("Skip"), Modifier.testTag("onboarding-email-skip"), muted = true, enabled = !model.busy) { haptics.light(); focusManager.clearFocus(); model.step = "notifications" }
+            TextAction(tr("Skip"), Modifier.testTag("onboarding-email-skip"), muted = true, enabled = !model.busy) { haptics.light(); focusManager.clearFocus()
+                model.step = "notifications" }
         }
     }, headline = { large ->
         AnimatedContent(stage == EmailStage.entry, transitionSpec = {
@@ -168,7 +169,8 @@ internal fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, ena
                     .semantics { contentDescription = label; contentType = ContentType.EmailAddress }.testTag("email-address-input"),
                 enabled = enabled, textStyle = NoahTokens.Typography.field.copy(color = palette.foreground),
                 cursorBrush = SolidColor(palette.orange), singleLine = true,
-                keyboardOptions = KeyboardOptions(KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
+                keyboardOptions = KeyboardOptions(KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { send() }),
                 decorationBox = { inner ->
                     Box {

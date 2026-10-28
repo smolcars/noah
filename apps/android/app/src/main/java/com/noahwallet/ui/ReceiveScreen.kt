@@ -139,7 +139,8 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     }
     // On-chain arrivals and payments to your Lightning address, from the wallet's records, one at a time.
     val rows = app.history.transactions
-    ReceiveRecordsWatcher(rows, app.history.isLoading, request, ownArk.toSet(), ownHashes.toSet(), records, arrivalState, chainState) { scope.launch { app.refresh() } }
+    ReceiveRecordsWatcher(rows, app.history.isLoading, request, ownArk.toSet(), ownHashes.toSet(), records, arrivalState,
+        chainState) { scope.launch { app.refresh() } }
     // While visible: re-check the wallet and the chain tip every 30 s (no faster), for on-chain arrivals and the block row.
     LaunchedEffect(lifecycle, app.isWalletSuspended) {
         if (app.isWalletSuspended) return@LaunchedEffect
@@ -154,9 +155,11 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
     val confirmedAt = chain?.txid?.let { txid -> rows.firstOrNull { it.txid == txid && it.source == "onchain-wallet" } }
         ?.takeIf { it.hasConfirmation == true }?.confirmationHeight?.toLong()
     val address = app.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
-    val ui = ReceiveUi(request, address, format, app.amountUnit, locale, price, currency, error = error, errorTitle = errorTitle, saving = saving, invoiceError = invoiceError,
+    val ui = ReceiveUi(request, address, format, app.amountUnit, locale, price, currency, error = error, errorTitle = errorTitle, saving = saving,
+        invoiceError = invoiceError,
         arrival = arrival, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current }, confirmedAt = confirmedAt,
-        listening = app.session.isOpen && !app.isWalletSuspended && error == null && (format == ReceiveFormat.lightningAddress && address != null || request != null))
+        listening = app.session.isOpen && !app.isWalletSuspended && error == null &&
+            (format == ReceiveFormat.lightningAddress && address != null || request != null))
     val actions = ReceiveActions(
         select = { format = it },
         saveAmount = { sats, note ->

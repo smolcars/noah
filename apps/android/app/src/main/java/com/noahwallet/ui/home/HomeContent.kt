@@ -202,7 +202,8 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     // to the top or have it overwritten; only then does the anchor follow the reader's scrolling.
     val paned = pose !is OnboardingPose.Compact
     val items = remember(ui.rows, ui.domain, ui.now) {
-        ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { (_, rows) -> rows.map { it.id } }, ui.rows.isEmpty())
+        ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { (_, rows) -> rows.map { it.id } },
+            ui.rows.isEmpty())
     }
     val recent = remember(ui.rows) { ui.rows.take(Recent.rows).map { it.id } }
     val currentItems by rememberUpdatedState(items)
@@ -220,7 +221,8 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
             val scroll = homeScroll.compact
             val tuck = ((with(androidx.compose.ui.platform.LocalDensity.current) { scroll.value.toDp().value } - 4f) / 52f).coerceIn(0f, 1f)
             PullToRefreshBox(refreshing, actions.refresh, state = pullState, indicator = {
-                PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
+                PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
                     containerColor = palette.sheet, color = palette.foreground)
             }) {
                 Column(Modifier.fillMaxSize().verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }.testTag("home-scroll"),
@@ -238,7 +240,8 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
         is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
             Box(Modifier.width(pose.start).fillMaxHeight()) {
                 PullToRefreshBox(refreshing, actions.refresh, state = pullState, indicator = {
-                    PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
+                    PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing,
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
                         containerColor = palette.sheet, color = palette.foreground)
                 }) {
                     Pane(homeScroll.leading, top = 70.dp, horizontal = 24.dp) {
@@ -256,7 +259,8 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
         is OnboardingPose.Tabletop -> Column(Modifier.fillMaxSize()) {
             Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds()) {
                 PullToRefreshBox(refreshing, actions.refresh, state = pullState, indicator = {
-                    PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing, modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
+                    PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing,
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
                         containerColor = palette.sheet, color = palette.foreground)
                 }) {
                     Pane(homeScroll.leading, top = compactTop, horizontal = 24.dp) {
@@ -279,7 +283,8 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
 @Composable
 private fun Pane(state: ScrollState, top: Dp, horizontal: Dp, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(state).testTag("home-leading"), horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(start = horizontal, end = horizontal, top = top, bottom = 32.dp), content = content)
+        Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(start = horizontal, end = horizontal, top = top, bottom = 32.dp),
+            content = content)
     }
 }
 
@@ -306,9 +311,12 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
             {
                 if (!suspended) {
                     val shown = tuck > .7f
-                    val alpha by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f, androidx.compose.animation.core.tween(if (reduceMotion) 180 else 250), label = "mini")
-                    val rise by androidx.compose.animation.core.animateFloatAsState(if (shown || reduceMotion) 0f else 6f, androidx.compose.animation.core.tween(300), label = "mini-rise")
-                    Text(if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0", "••••") else ui.balance?.let { BitcoinAmount.format(it.totalSats.toLong(), ui.unit, ui.locale) } ?: "",
+                    val alpha by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f,
+                        androidx.compose.animation.core.tween(if (reduceMotion) 180 else 250), label = "mini")
+                    val rise by androidx.compose.animation.core.animateFloatAsState(if (shown || reduceMotion) 0f else 6f,
+                        androidx.compose.animation.core.tween(300), label = "mini-rise")
+                    Text(if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0",
+                        "••••") else ui.balance?.let { BitcoinAmount.format(it.totalSats.toLong(), ui.unit, ui.locale) } ?: "",
                         Modifier.padding(horizontal = 8.dp).graphicsLayer { this.alpha = alpha; translationY = rise * density }.clearAndSetSemantics { },
                         style = HomeType.mini, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -351,7 +359,8 @@ private fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, 
     val scale = remember { androidx.compose.animation.core.Animatable(1f) }
     LaunchedEffect(ui.hidden) {
         if (hidden == ui.hidden) return@LaunchedEffect
-        if (reduceMotion) { morph.animateTo(0f, androidx.compose.animation.core.tween(90)); hidden = ui.hidden; morph.animateTo(1f, androidx.compose.animation.core.tween(90)); return@LaunchedEffect }
+        if (reduceMotion) { morph.animateTo(0f, androidx.compose.animation.core.tween(90)); hidden = ui.hidden
+            morph.animateTo(1f, androidx.compose.animation.core.tween(90)); return@LaunchedEffect }
         kotlinx.coroutines.coroutineScope {
             launch { morph.animateTo(0f, androidx.compose.animation.core.tween(140)) }
             launch { scale.animateTo(.96f, androidx.compose.animation.core.tween(140)) }
@@ -379,7 +388,8 @@ private fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, 
             scaleX = s; scaleY = s
             transformOrigin = TransformOrigin(0f, 1f)
         }
-        .then(if (Build.VERSION.SDK_INT >= 31 && morph.value < .99f && !reduceMotion) Modifier.blur((4 * (1 - morph.value.coerceIn(0f, 1f))).dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+        .then(if (Build.VERSION.SDK_INT >= 31 && morph.value < .99f && !reduceMotion) Modifier.blur((4 * (1 - morph.value.coerceIn(0f, 1f))).dp,
+            BlurredEdgeTreatment.Unbounded) else Modifier)
         .combinedClickable(interactionSource = null, indication = null, hapticFeedbackEnabled = false, onClick = onTap, onLongClick = onToggle)
         .clearAndSetSemantics {
             contentDescription = description
@@ -568,7 +578,8 @@ private fun TrailingPane(ui: HomeUi, state: HomeRules.State, entered: Long, reve
     when (state) {
         HomeRules.State.fresh -> BoxWithConstraints(Modifier.fillMaxSize()) {
             val height = maxHeight
-            Column(Modifier.fillMaxSize().verticalScroll(scroll.card).onGloballyPositioned { scroll.paneContent = it }, horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.fillMaxSize().verticalScroll(scroll.card).onGloballyPositioned { scroll.paneContent = it },
+                horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.heightIn(min = height).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(horizontal = 32.dp, vertical = 28.dp),
                     contentAlignment = Alignment.Center) { card() }
             }
@@ -594,7 +605,8 @@ private fun ActivityList(ui: HomeUi, entered: Long, memory: HomeMemory, actions:
         var index = 0
         for ((day, items) in groups) {
             item(key = "day-$day") {
-                Text(when (day) { HomeDays.Day.Today -> tr("Today"); HomeDays.Day.Yesterday -> tr("Yesterday"); is HomeDays.Day.On -> dayLabel(day.date, ui.locale, ui.now) },
+                Text(when (day) { HomeDays.Day.Today -> tr("Today"); HomeDays.Day.Yesterday -> tr("Yesterday")
+                    is HomeDays.Day.On -> dayLabel(day.date, ui.locale, ui.now) },
                     Modifier.padding(top = 14.dp), style = HomeType.header, color = palette.muted)
             }
             itemsIndexed(items, key = { _, row -> row.id }) { i, row ->
@@ -672,7 +684,8 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
         val ink = NoahTokens.Light.qrInk
         val copyLabel = tr("Copy Lightning address")
         Box(Modifier.fillMaxWidth()
-            .shadow(if (palette === NoahTokens.Dark) 0.dp else 14.dp, RoundedCornerShape(30.dp), ambientColor = Color.Black.copy(alpha = .08f), spotColor = Color.Black.copy(alpha = .08f))
+            .shadow(if (palette === NoahTokens.Dark) 0.dp else 14.dp, RoundedCornerShape(30.dp), ambientColor = Color.Black.copy(alpha = .08f),
+                spotColor = Color.Black.copy(alpha = .08f))
             .background(NoahTokens.Light.qrCard, RoundedCornerShape(30.dp))
             .border(1.dp, Color.Black.copy(alpha = .07f), RoundedCornerShape(30.dp))
             .then(if (address != null && !playing) Modifier.clickable(onClickLabel = copyLabel, role = Role.Button) { onCopy(address) } else Modifier)
@@ -681,11 +694,13 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
                 Text(tr("Lightning address unavailable"), style = NoahTokens.Typography.sheetTitle, color = ink)
                 Text(tr("Finish setting up your Lightning address before sharing your QR."), style = HomeType.line, color = Color(0xFF6B6B6B))
                 Pill(tr("Open Profile"), height = 44.dp, container = ink, content = Color.White, onClick = onProfile)
-            } else Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = copyLabel }, horizontalAlignment = Alignment.CenterHorizontally) {
+            } else Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = copyLabel },
+                horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(qrSide).graphicsLayer {
                     alpha = 1 - qrOut.coerceIn(0f, 1f)
                     if (!reduceMotion) { val sc = 1 - .14f * qrOut; scaleX = sc; scaleY = sc }
-                }.then(if (Build.VERSION.SDK_INT >= 31 && playing && !reduceMotion && qrOut > .01f) Modifier.blur((6 * qrOut.coerceIn(0f, 1f)).dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                }.then(if (Build.VERSION.SDK_INT >= 31 && playing && !reduceMotion && qrOut > .01f) Modifier.blur((6 * qrOut.coerceIn(0f, 1f)).dp,
+                    BlurredEdgeTreatment.Unbounded) else Modifier)
                     .testTag("home-qr")) {
                     StyledQR(address, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion)
                 }
@@ -694,7 +709,8 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
                 Text(tr("Scan with any Lightning wallet"), Modifier.padding(top = 2.dp).graphicsLayer { alpha = 1 - qrOut.coerceIn(0f, 1f) },
                     style = HomeType.small, color = Color(0xFF6B6B6B), textAlign = TextAlign.Center)
             }
-            if (playing) Column(Modifier.matchParentSize().graphicsLayer { alpha = gotIn.coerceIn(0f, 1f) }.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+            if (playing) Column(Modifier.matchParentSize().graphicsLayer { alpha = gotIn.coerceIn(0f,
+                1f) }.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Canvas(Modifier.size(84.dp)) {
                     val unit = size.width / 84f
@@ -707,10 +723,12 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
                     drawPath(partial, ink, style = Stroke(3.2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
                 }
                 Text("+" + if (ui.hidden) "••••" else BitcoinAmount.format(payment.sats, ui.unit, ui.locale),
-                    Modifier.padding(top = 18.dp).graphicsLayer { alpha = amountIn.coerceIn(0f, 1f); if (!reduceMotion) translationY = 8 * (1 - amountIn) * density },
+                    Modifier.padding(top = 18.dp).graphicsLayer { alpha = amountIn.coerceIn(0f, 1f)
+                        if (!reduceMotion) translationY = 8 * (1 - amountIn) * density },
                     style = HomeType.got, color = ink)
                 payment.from?.let { from ->
-                    Text(tr("from {name}", from), Modifier.padding(top = 6.dp).graphicsLayer { alpha = fromIn.coerceIn(0f, 1f) }, style = HomeType.line, color = Color(0xFF6B6B6B))
+                    Text(tr("from {name}", from), Modifier.padding(top = 6.dp).graphicsLayer { alpha = fromIn.coerceIn(0f, 1f) }, style = HomeType.line,
+                        color = Color(0xFF6B6B6B))
                 }
             }
         }
@@ -728,10 +746,12 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
 private fun BalanceSheet(ui: HomeUi, onDismiss: () -> Unit) {
     val palette = LocalPalette.current
     val balance = ui.balance
-    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(surfaceContainerLow = palette.soft, surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
+    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(surfaceContainerLow = palette.soft,
+        surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
         OnboardingSheet(onDismiss, rememberModalBottomSheetState(skipPartiallyExpanded = false)) {
             Text(tr("Balance"), Modifier.semantics { heading() }, style = NoahTokens.Typography.sheetTitle, color = palette.foreground)
-            Text(if (balance == null) "" else if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0", "••••••") else BitcoinAmount.format(balance.totalSats.toLong(), ui.unit, ui.locale),
+            Text(if (balance == null) "" else if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0",
+                "••••••") else BitcoinAmount.format(balance.totalSats.toLong(), ui.unit, ui.locale),
                 Modifier.padding(top = 12.dp, bottom = 16.dp), style = HomeType.total, color = palette.foreground)
             balance?.details?.forEachIndexed { index, row ->
                 Row(Modifier.fillMaxWidth().height(46.dp).then(if (index < balance.details.lastIndex) Modifier.drawBehindHairline(palette.hairline) else Modifier),

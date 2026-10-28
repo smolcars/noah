@@ -93,7 +93,8 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
             model.history.observe(model.preferredCurrency)
         }
     }
-    if (selectedTab == Destination.Home && backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
+    if (selectedTab == Destination.Home &&
+        backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
     val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
         model.repeatPayment = it
         showSend()
@@ -142,7 +143,8 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
                                     }
                                 }
                                 entry<Destination> { destination ->
-                                    if (destination == Destination.Home || model.isWalletSuspended) CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
+                                    if (destination == Destination.Home ||
+                                        model.isWalletSuspended) CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
                                         HomeScreen(model, onViewAll = {
                                             selectedTab = Destination.History
                                         }, onRepeatPayment = repeat, onSettings = openPage, onScan = { backStack.add(QRDestination(true)) },
@@ -152,7 +154,8 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
                                             openSettings(SettingsDestination.Settings, fromGear = true)
                                         }
                                     }
-                                    else if (destination == Destination.History) ActivityScreen(model, repeat, onReceive = { selectedTab = Destination.Receive },
+                                    else if (destination == Destination.History) ActivityScreen(model, repeat,
+                                        onReceive = { selectedTab = Destination.Receive },
                                         onSettings = openPage, barHidden = { activityBarHidden = it })
                                     else if (destination == Destination.Receive) ReceiveScreen(model, onProfile = {
                                         openSettings(SettingsDestination.Profile)

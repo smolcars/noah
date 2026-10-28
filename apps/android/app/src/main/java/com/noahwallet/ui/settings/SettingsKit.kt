@@ -133,7 +133,8 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
     val scroll = if (bare) null else scroll
     // The fixed foot measures itself (two-line pills at large text): nothing sits under it.
     var footHeight by remember { mutableIntStateOf(0) }
-    val bottom = if (foot != null) maxOf(if (wide) 140.dp else 150.dp, with(LocalDensity.current) { footHeight.toDp() } + 12.dp) else if (wide) 110.dp else 56.dp
+    val bottom = if (foot != null) maxOf(if (wide) 140.dp else 150.dp,
+        with(LocalDensity.current) { footHeight.toDp() } + 12.dp) else if (wide) 110.dp else 56.dp
     Box(modifier.fillMaxSize().background(palette.background)) {
         val body: @Composable ColumnScope.() -> Unit = {
             if (!wide && !hero) Row(Modifier.fillMaxWidth().heightIn(min = 46.dp), verticalAlignment = Alignment.CenterVertically,
@@ -144,7 +145,8 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
             line?.let { Text(it, Modifier.padding(bottom = 4.dp), style = HomeType.line, color = palette.muted) }
             content()
         }
-        val padding = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = start, end = end, top = navHeight + if (wide) 6.dp else 0.dp, bottom = bottom)
+        val padding = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = start, end = end, top = navHeight + if (wide) 6.dp else 0.dp,
+            bottom = bottom)
         if (bare) Column(Modifier.fillMaxSize().padding(top = navHeight), content = content)
         else if (scroll != null) Column(Modifier.fillMaxSize().verticalScroll(scroll), horizontalAlignment = Alignment.CenterHorizontally) {
             Column(padding, content = body)
@@ -190,7 +192,8 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
 internal fun RowScope.FootPill(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, outlined: Boolean = false,
     danger: Boolean = false, loading: Boolean = false, icon: Int? = null, weight: Float = 1f, wrap: Boolean = false, onClick: () -> Unit) {
     val haptics = rememberHaptics()
-    SendPill(title, modifier.weight(weight), enabled = enabled, outlined = outlined, height = 56.dp, danger = danger, loading = loading, icon = icon, wrap = wrap) {
+    SendPill(title, modifier.weight(weight), enabled = enabled, outlined = outlined, height = 56.dp, danger = danger, loading = loading, icon = icon,
+        wrap = wrap) {
         haptics.light(); onClick()
     }
 }
@@ -250,7 +253,8 @@ internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null
         val ink = if (danger) palette.failure else palette.foreground
         if (leading) Box(Modifier.size(34.dp).background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
             if (icon != null) Icon(painterResource(icon), null, Modifier.size(19.dp), tint = ink)
-            else Text(glyph!!, style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 17.sp), color = ink)
+            else Text(glyph!!, style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 17.sp),
+                color = ink)
         }
         Column(Modifier.weight(1f).padding(vertical = 9.dp)) {
             Text(title, style = SettingsType.row.copy(fontWeight = if (bold) FontWeight.Medium else FontWeight.Normal), color = ink)
@@ -351,14 +355,17 @@ internal fun StatusMark(kind: MarkKind, icon: Int? = null, iconTint: Color? = nu
             val s = size.width / 56f
             val color = ring ?: when (kind) { MarkKind.ok -> palette.orange; MarkKind.failed -> palette.failure; else -> palette.hairline }
             drawCircle(color, 26 * s, style = Stroke(2.5f * s))
-            if (kind == MarkKind.running) drawArc(palette.foreground, spin - 90f, 90f, false, Offset(2 * s, 2 * s), Size(52 * s, 52 * s), style = Stroke(2.6f * s, cap = StrokeCap.Round))
+            if (kind == MarkKind.running) drawArc(palette.foreground, spin - 90f, 90f, false, Offset(2 * s, 2 * s), Size(52 * s, 52 * s),
+                style = Stroke(2.6f * s, cap = StrokeCap.Round))
             if (kind == MarkKind.ok && icon == null && check > 0f) {
-                val path = androidx.compose.ui.graphics.Path().apply { moveTo(18.5f * s, 28.8f * s); lineTo(24.9f * s, 35.2f * s); lineTo(37.9f * s, 21.8f * s) }
+                val path = androidx.compose.ui.graphics.Path().apply { moveTo(18.5f * s, 28.8f * s); lineTo(24.9f * s, 35.2f * s)
+                    lineTo(37.9f * s, 21.8f * s) }
                 drawPath(com.noahwallet.ui.onboarding.trimmed(path, check), palette.foreground, style = Stroke(2.6f * s, cap = StrokeCap.Round,
                     join = androidx.compose.ui.graphics.StrokeJoin.Round))
             }
         }
-        if (kind == MarkKind.failed && icon == null) Text("!", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 22.sp), color = palette.failure)
+        if (kind == MarkKind.failed && icon == null) Text("!", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 22.sp),
+            color = palette.failure)
         icon?.let { Icon(painterResource(it), null, Modifier.size(26.dp), tint = iconTint ?: palette.muted) }
     }
 }
@@ -431,7 +438,8 @@ internal fun SettingsField(value: String, onValue: (String) -> Unit, placeholder
             textStyle = (if (mono) com.noahwallet.ui.activity.ActivityType.mono.copy(fontSize = 15.sp, lineHeight = 21.sp) else NoahTokens.Typography.body)
                 .copy(color = palette.foreground), singleLine = lines == 1 && !mono, minLines = lines,
             cursorBrush = SolidColor(palette.orange), keyboardOptions = keyboard, interactionSource = interaction,
-            decorationBox = { inner -> Box { if (value.isEmpty()) Text(placeholder, style = NoahTokens.Typography.body, color = palette.muted, maxLines = 1); inner() } })
+            decorationBox = { inner -> Box { if (value.isEmpty()) Text(placeholder, style = NoahTokens.Typography.body, color = palette.muted, maxLines = 1)
+                inner() } })
         tag?.let { Text(it, Modifier.padding(end = 8.dp), style = HomeType.header, color = palette.muted, maxLines = 1) }
     }
 }
@@ -507,8 +515,10 @@ internal fun FilterChip(text: String, onClear: () -> Unit) {
         if (!reduceMotion) scale.animateTo(1f, NoahTokens.Motion.bouncy())
     }
     val clear = tr("Clear filter")
-    Row(Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value; this.alpha = alpha.value }.height(30.dp).tonal(RoundedCornerShape(15.dp), palette.soft)
-        .clickable(onClickLabel = clear, role = Role.Button) { haptics.selection(); onClear() }.padding(start = 12.dp, end = 8.dp).testTag("settings-filter-chip"),
+    Row(Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value; this.alpha = alpha.value }.height(30.dp).tonal(RoundedCornerShape(15.dp),
+        palette.soft)
+        .clickable(onClickLabel = clear, role = Role.Button) { haptics.selection(); onClear() }.padding(start = 12.dp,
+            end = 8.dp).testTag("settings-filter-chip"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(text, style = ActivityType.chip, color = palette.foreground)
         Icon(painterResource(HomeIcons.close), clear, Modifier.size(14.dp), tint = palette.muted)
@@ -575,7 +585,8 @@ internal fun Stepper(text: String, value: Long, range: LongRange, modifier: Modi
                     .clickable(enabled = enabled && next in range, role = Role.Button, onClickLabel = label) { haptics.selection(); onValue(next) }
                     .graphicsLayer { alpha = if (enabled && next in range) 1f else .35f }.semantics { contentDescription = label },
                     contentAlignment = Alignment.Center) {
-                    Text(if (delta < 0) "−" else "+", style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 20.sp, lineHeight = 20.sp), color = palette.foreground)
+                    Text(if (delta < 0) "−" else "+", style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 20.sp, lineHeight = 20.sp),
+                        color = palette.foreground)
                 }
             }
         }

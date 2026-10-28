@@ -126,7 +126,8 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
             if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) warning = started
         } else if (model.walletLock.authenticate(fragment, "View your seed phrase")) {
             val loaded = model.mnemonic()
-            if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { holder.show(loaded, started); haptics.success() }
+            if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { holder.show(loaded, started)
+                haptics.success() }
         }
     }
     // Opening the page asks once, as today; after that, Show asks.
@@ -139,22 +140,25 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     }
     val copied = tr("Copied · clears in 2 minutes")
     val backedUp = tr("Backed up")
-    SettingsFrame(tr("Recovery phrase"), nav.back, line = if (words.isEmpty()) tr("The words that restore your wallet.") else tr("{n} words that restore your wallet.", words.size), foot = if (words.isEmpty()) null else ({
-        FootPill(tr("Copy"), Modifier.testTag("recovery-copy"), outlined = true, icon = SettingsIcons.copy) {
-            clipboard.setPrimaryClip(PhraseClip.clip(label, words.joinToString(" ")))
-            holder.clipDeadline = SystemClock.elapsedRealtime() + PhraseClip.clearAfterMillis
-            haptics.success(); toasts.show(copied)
-        }
-        if (!model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {
-            nav.save(model, "Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); haptics.success(); toasts.show(backedUp); nav.pop() }
-        }
-    })) {
+    SettingsFrame(tr("Recovery phrase"), nav.back,
+        line = if (words.isEmpty()) tr("The words that restore your wallet.") else tr("{n} words that restore your wallet.", words.size),
+        foot = if (words.isEmpty()) null else ({
+            FootPill(tr("Copy"), Modifier.testTag("recovery-copy"), outlined = true, icon = SettingsIcons.copy) {
+                clipboard.setPrimaryClip(PhraseClip.clip(label, words.joinToString(" ")))
+                holder.clipDeadline = SystemClock.elapsedRealtime() + PhraseClip.clearAfterMillis
+                haptics.success(); toasts.show(copied)
+            }
+            if (!model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {
+                nav.save(model, "Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); haptics.success(); toasts.show(backedUp); nav.pop() }
+            }
+        })) {
         PhraseGrid(words, holder.shownAt, authenticating = model.walletLock.authenticating) { scope.launch { reveal() } }
         model.walletLock.error?.let { FinePrint(tr(it), failed = true) }
         Warning(tr("Never share them. Anyone with these words can take your bitcoin."))
     }
     warning?.let { started ->
-        SettingsSheet({ warning = null }, tr("No screen lock"), tr("Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.")) { close ->
+        SettingsSheet({ warning = null }, tr("No screen lock"),
+            tr("Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.")) { close ->
             SheetActions(tr("Cancel"), tr("Show anyway"), onCancel = close, onConfirm = {
                 warning = null
                 scope.launch {
@@ -192,8 +196,10 @@ private fun PhraseGrid(words: List<String>, shownAt: Long, authenticating: Boole
                             val progress = remember(word, index) { Animatable(if (fresh && !reduceMotion) 0f else 1f) }
                             LaunchedEffect(word, index) { if (progress.value < 1f) { delay(index * 35L); progress.animateTo(1f, NoahTokens.Motion.soft()) } }
                             val blur = 8f * (1 - progress.value)
-                            Text(word, Modifier.testTag("recovery-word-${index + 1}").graphicsLayer { alpha = progress.value; translationY = 4 * (1 - progress.value) * density }
-                                .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier),
+                            Text(word,
+                                Modifier.testTag("recovery-word-${index + 1}").graphicsLayer { alpha = progress.value
+                                    translationY = 4 * (1 - progress.value) * density }
+                                    .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier),
                                 style = SettingsType.word, color = palette.foreground, maxLines = 1)
                         }
                     }
@@ -216,7 +222,8 @@ internal fun LockCover(error: String?, authenticating: Boolean, unlock: () -> Un
     Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
         Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Box(Modifier.size(64.dp).background(palette.soft, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(SettingsIcons.lock), null, Modifier.size(28.dp), tint = palette.foreground)
+                androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(SettingsIcons.lock), null, Modifier.size(28.dp),
+                    tint = palette.foreground)
             }
             Text(tr("Noah is locked"), Modifier.padding(top = 24.dp), style = SettingsType.hero, color = palette.foreground)
             Text(tr("Unlock to see your wallet."), Modifier.padding(top = 6.dp), style = com.noahwallet.ui.home.HomeType.line, color = palette.muted)

@@ -61,7 +61,8 @@ internal fun StyledQR(content: String, modifier: Modifier = Modifier, reveal: Bo
             for (r in 0 until n) for (c in 0 until n) if (model.dot(r, c)) addOval(androidx.compose.ui.geometry.Rect(Offset(c + .5f, r + .5f), .44f))
         }
     }
-    val ring = remember { Path().apply { fillType = PathFillType.EvenOdd; addRoundRect(roundRect(0f, 0f, 7f, 2.4f)); addRoundRect(roundRect(1f, 1f, 5f, 1.5f)) } }
+    val ring = remember { Path().apply { fillType = PathFillType.EvenOdd; addRoundRect(roundRect(0f, 0f, 7f, 2.4f))
+        addRoundRect(roundRect(1f, 1f, 5f, 1.5f)) } }
     val pupil = remember { Path().apply { addRoundRect(roundRect(2f, 2f, 3f, 1.1f)) } }
     val modulesIn = step(elapsed, 320, SpringCurve.soft, 1_000, reduceMotion)
     val logoIn = step(elapsed, 380, SpringCurve.bouncy, reduceMotion = reduceMotion)

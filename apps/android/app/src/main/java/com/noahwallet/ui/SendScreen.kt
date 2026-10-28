@@ -35,7 +35,9 @@ import kotlinx.serialization.json.JsonObject
 @Composable
 fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit) {
     val context = LocalContext.current
-    val presentation = viewModel<SendPresentation>(key = "send-presentation") { SendPresentation(SendModel(SendRuntime.shared(context).controller, BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend, offerAmount = app.session::sendOfferAmount)) }
+    val presentation = viewModel<SendPresentation>(key = "send-presentation") { SendPresentation(SendModel(SendRuntime.shared(context).controller,
+        BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend,
+        offerAmount = app.session::sendOfferAmount)) }
     val model = presentation.model
     val controller = model.controller
     val scope = presentation.viewModelScope
@@ -84,7 +86,8 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
                 val query = SendRecipientService.suggestionQuery(candidate, LightningIdentity.domain(BuildConfig.APP_VARIANT)) ?: return@launch
                 delay(200)
                 val result = runCatching { V0LnAddressSuggestionsClient(app.services.client).lnAddressSuggestions(LightningAddressSuggestionsPayload(query)).value().suggestions }.getOrDefault(emptyList())
-                if (model.destination == candidate && isActive) model.suggestions = SendRecipientService.withoutOwnAddress(result, app.server.state.lightningAddress)
+                if (model.destination == candidate && isActive) model.suggestions = SendRecipientService.withoutOwnAddress(result,
+                    app.server.state.lightningAddress)
             }
         }
     }
@@ -143,7 +146,8 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
         }
     }
     val hideBar = model.stage != SendStage.amount && !controller.locked || controller.locked &&
-        controller.state != SendController.State.storageBlocked && !(controller.state == SendController.State.uncertain && controller.attempt?.existingLightning == null)
+        controller.state != SendController.State.storageBlocked &&
+        !(controller.state == SendController.State.uncertain && controller.attempt?.existingLightning == null)
     SideEffect { tabBar(hideBar && !scanner) }
     DisposableEffect(Unit) { onDispose { tabBar(false) } }
     BackHandler(!controller.locked && !model.busy && (model.stage != SendStage.amount || model.progress.recipientConfirmed)) { model.back() }

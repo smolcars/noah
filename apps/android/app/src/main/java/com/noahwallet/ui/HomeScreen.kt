@@ -144,12 +144,14 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
         if (memory.toastSeen == key) toasts.retext(key, completionText)
         else {
             memory.toastSeen = key
-            toasts.show(completionText, (HomeRules.successMillis - (System.currentTimeMillis() - completionAt)).coerceIn(1_000, HomeRules.successMillis), tag = key)
+            toasts.show(completionText, (HomeRules.successMillis - (System.currentTimeMillis() - completionAt)).coerceIn(1_000, HomeRules.successMillis),
+                tag = key)
         }
     }
 
     val ui = HomeUi(
-        state = if (starting) HomeRules.State.fresh else state, address = address, variant = BuildConfig.APP_VARIANT, balance = balance, unit = model.amountUnit,
+        state = if (starting) HomeRules.State.fresh else state, address = address, variant = BuildConfig.APP_VARIANT, balance = balance,
+        unit = model.amountUnit,
         locale = locale, hidden = model.hidden,
         fiat = HomeRules.fiat(balance?.totalSats?.toLong(), price, currency, locale, model.hidden),
         status = HomeRules.status(model.error, balance, rows, signals.active.size),
@@ -182,7 +184,8 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
         },
         rounds = { showRounds = true },
         refresh = {
-            scope.launch { refreshing = true; try { model.refresh(true); model.history.refresh(model.preferredCurrency); refreshRevision++ } finally { refreshing = false } }
+            scope.launch { refreshing = true
+                try { model.refresh(true); model.history.refresh(model.preferredCurrency); refreshRevision++ } finally { refreshing = false } }
         },
     )
     com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {

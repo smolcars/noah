@@ -248,7 +248,8 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
             }
             PillButton(tr("Restore"), Modifier.weight(1f).testTag("restore-submit"), enabled = complete && model.canRestoreWallet) {
                 focus.clearFocus(); hideKeyboard()
-                if (!RecoveryPhraseInput.isValid(input.phrase) || !runCatching { io.github.niteshbalusu11.bark.validateMnemonic(input.phrase) }.getOrDefault(false)) {
+                if (!RecoveryPhraseInput.isValid(input.phrase) ||
+                    !runCatching { io.github.niteshbalusu11.bark.validateMnemonic(input.phrase) }.getOrDefault(false)) {
                     haptics.error(); checksumFailed = true; return@PillButton
                 }
                 haptics.medium()

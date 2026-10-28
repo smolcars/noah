@@ -102,7 +102,8 @@ internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
-    com.noahwallet.ui.onboarding.OnboardingSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), padded = false) {
+    com.noahwallet.ui.onboarding.OnboardingSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        padded = false) {
         androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().readableWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
             TextButton(close) { Text(tr("Close")) }

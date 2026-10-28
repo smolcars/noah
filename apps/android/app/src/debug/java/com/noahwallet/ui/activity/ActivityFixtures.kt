@@ -37,7 +37,8 @@ object ActivityFixtures {
         fun field(tag: Int, data: List<Int>) { words += tag; words += data.size / 32; words += data.size % 32; words += data }
         fun toWords(bytes: ByteArray): List<Int> {
             val out = mutableListOf<Int>(); var acc = 0; var bits = 0
-            for (b in bytes) { acc = (acc shl 8) or (b.toInt() and 255); bits += 8; while (bits >= 5) { bits -= 5; out += (acc shr bits) and 31 }; acc = acc and ((1 shl bits) - 1) }
+            for (b in bytes) { acc = (acc shl 8) or (b.toInt() and 255); bits += 8; while (bits >= 5) { bits -= 5; out += (acc shr bits) and 31 }
+                acc = acc and ((1 shl bits) - 1) }
             if (bits > 0) out += (acc shl (5 - bits)) and 31
             return out
         }
@@ -52,7 +53,8 @@ object ActivityFixtures {
         fun polymod(values: List<Int>): Int {
             var check = 1
             val generators = intArrayOf(0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3)
-            for (word in values) { val top = check ushr 25; check = ((check and 0x1ffffff) shl 5) xor word; for (i in 0..4) if ((top shr i) and 1 != 0) check = check xor generators[i] }
+            for (word in values) { val top = check ushr 25; check = ((check and 0x1ffffff) shl 5) xor word
+                for (i in 0..4) if ((top shr i) and 1 != 0) check = check xor generators[i] }
             return check
         }
         val expanded = prefix.map { it.code shr 5 } + 0 + prefix.map { it.code and 31 }
@@ -93,13 +95,17 @@ object ActivityFixtures {
         val day = 60L * 24
         val monthly = HistoryTransaction.Recurring("savings", "Savings", RecurringInterval("month", 1))
         return listOf(
-            ark(2, "bark.lightning_receive:receive", now, 60 * 15 + 36, 4_842, receivedOn = listOf(to("invoice", invoice("Lunch split", 2), 4_842)), metadata = preimage("r2")),
-            ark(3, "bark.lightning_send:send", now, 60 * 25 + 1, -4_200, -4_212, 12, sentTo = listOf(to("invoice", invoice("Coffee Collective", 3), 4_200)), metadata = preimage("r3")),
+            ark(2, "bark.lightning_receive:receive", now, 60 * 15 + 36, 4_842, receivedOn = listOf(to("invoice", invoice("Lunch split", 2), 4_842)),
+                metadata = preimage("r2")),
+            ark(3, "bark.lightning_send:send", now, 60 * 25 + 1, -4_200, -4_212, 12, sentTo = listOf(to("invoice", invoice("Coffee Collective", 3), 4_200)),
+                metadata = preimage("r3")),
             ark(4, "bark.lightning_send:send", now, 60 * 36 + 11, -5_000, -5_015, 15, sentTo = listOf(to("lightning-address", "bob@getalby.com", 5_000)),
                 metadata = repeat("bob@getalby.com", 5_000, "Pizza night", "5.60").dropLast(1) + "," + preimage("r4").drop(1)),
-            ark(6, "bark.arkoor:send", now, day * 3 + 101, -10_000, sentTo = listOf(to("ark", "tark1qrosa", 10_000)), metadata = repeat("rosa@noahwallet.io", 10_000))
+            ark(6, "bark.arkoor:send", now, day * 3 + 101, -10_000, sentTo = listOf(to("ark", "tark1qrosa", 10_000)),
+                metadata = repeat("rosa@noahwallet.io", 10_000))
                 .copy(recurring = monthly),
-            ark(7, "bark.arkoor:send", now, day * 5 - 400, -500, sentTo = listOf(to("ark", "tark1qnitesh", 500)), metadata = repeat("nitesh@noahwallet.io", 500)),
+            ark(7, "bark.arkoor:send", now, day * 5 - 400, -500, sentTo = listOf(to("ark", "tark1qnitesh", 500)),
+                metadata = repeat("nitesh@noahwallet.io", 500)),
             ark(8, "bark.round:refresh", now, day * 5 + 389, 0, -45, 45, inputs = 3),
             ark(9, "bark.offboard:send_onchain", now, day * 7 - 66, -53_000, -53_420, 420,
                 sentTo = listOf(to("bitcoin", "bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0h7r3", 53_000)), metadata = """{"offboard_txid":"${hex("r9-tx")}"}"""),
@@ -107,23 +113,31 @@ object ActivityFixtures {
                 metadata = """{"chain_anchor":"${hex("r12")}:0","onchain_fee_sat":310}"""),
             chain("r12", -140_310, now, day * 11 + 1_100, confirmed = true, fee = 310),
             chain("r13", 150_000, now, day * 11 + 1_180, confirmed = true),
-            ark(14, "bark.lightning_send:send", now, day * 15 - 10, -3_300, -3_310, 10, sentTo = listOf(to("offer", offer("Satoshi Station"), 3_300)), metadata = preimage("r14")),
+            ark(14, "bark.lightning_send:send", now, day * 15 - 10, -3_300, -3_310, 10, sentTo = listOf(to("offer", offer("Satoshi Station"), 3_300)),
+                metadata = preimage("r14")),
             ark(15, "bark.arkoor:receive", now, day * 16, 12_000, receivedOn = listOf(to("ark", "tark1qme", 12_000)), inputs = 0),
-            ark(19, "bark.arkoor:send", now, day * 24 + 380, -1_000, sentTo = listOf(to("ark", "tark1qmaya", 1_000)), metadata = repeat("maya@noahwallet.io", 1_000, "For coffee")),
-            ark(26, "bark.lightning_send:send", now, day * 35, -2_000, 0, status = "canceled", sentTo = listOf(to("lightning-address", "bob@getalby.com", 2_000)), outputs = 0),
+            ark(19, "bark.arkoor:send", now, day * 24 + 380, -1_000, sentTo = listOf(to("ark", "tark1qmaya", 1_000)),
+                metadata = repeat("maya@noahwallet.io", 1_000, "For coffee")),
+            ark(26, "bark.lightning_send:send", now, day * 35, -2_000, 0, status = "canceled",
+                sentTo = listOf(to("lightning-address", "bob@getalby.com", 2_000)), outputs = 0),
         )
     }
 
     private fun pending(now: Date): List<HistoryTransaction> = listOf(
         chain("p1", 100_000, now, 0, confirmed = false),
-        ark(102, "bark.lightning_send:send", now, 11, -5_000, -5_015, 15, status = "pending", sentTo = listOf(to("lightning-address", "bob@getalby.com", 5_000))),
+        ark(102, "bark.lightning_send:send", now, 11, -5_000, -5_015, 15, status = "pending",
+            sentTo = listOf(to("lightning-address", "bob@getalby.com", 5_000))),
         ark(103, "bark.offboard:send_onchain", now, 39, -40_000, -40_420, 420, status = "pending",
-            sentTo = listOf(to("bitcoin", "bcrt1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr", 40_000)), metadata = """{"offboard_txid":"$signedTxid"}"""),
+            sentTo = listOf(to("bitcoin", "bcrt1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr", 40_000)),
+            metadata = """{"offboard_txid":"$signedTxid"}"""),
         ark(104, "bark.offboard:offboard", now, 51, -30_150, -30_150, 150, status = "pending",
             sentTo = listOf(to("bitcoin", "bcrt1qd4vf2m5yc8wz0jw7k3l9n8s6h2t5q3x7r0p9a", 30_000)), outputs = 0),
-        ark(105, "bark.exit:start", now, 60 * 13 + 41, -20_000, status = "pending", sentTo = listOf(to("bitcoin", "bcrt1qexitaddress0000000000000000000000", 20_000)), outputs = 0),
-        ark(201, "bark.lightning_send:send", now, 63, -4_200, 0, 12, status = "failed", sentTo = listOf(to("invoice", invoice("Coffee Collective", 11), 4_200)), outputs = 0),
-        ark(202, "bark.lightning_send:send", now, 106, -8_900, 0, status = "failed", sentTo = listOf(to("invoice", invoice("Nakamoto Books", 12), 8_900)), outputs = 2),
+        ark(105, "bark.exit:start", now, 60 * 13 + 41, -20_000, status = "pending",
+            sentTo = listOf(to("bitcoin", "bcrt1qexitaddress0000000000000000000000", 20_000)), outputs = 0),
+        ark(201, "bark.lightning_send:send", now, 63, -4_200, 0, 12, status = "failed", sentTo = listOf(to("invoice", invoice("Coffee Collective", 11), 4_200)),
+            outputs = 0),
+        ark(202, "bark.lightning_send:send", now, 106, -8_900, 0, status = "failed", sentTo = listOf(to("invoice", invoice("Nakamoto Books", 12), 8_900)),
+            outputs = 2),
     )
 
     /** [state]: everyday, busy, empty, loading, error. */
@@ -145,7 +159,8 @@ object ActivityFixtures {
  * Activity owning the whole window, and [ActivityContent] in the onboarding frame that resolves the pose.
  */
 @Composable
-fun ActivityPreviewHost(ui: ActivityUi, state: ActivityState = rememberActivityState(), actions: ActivityActions = ActivityActions(), keepBar: Boolean = false) {
+fun ActivityPreviewHost(ui: ActivityUi, state: ActivityState = rememberActivityState(), actions: ActivityActions = ActivityActions(),
+    keepBar: Boolean = false) {
     val chrome = remember { WindowChrome() }
     val insets = WindowInsets.safeDrawing
     var barHidden by remember { mutableStateOf(false) }
@@ -160,9 +175,12 @@ fun ActivityPreviewHost(ui: ActivityUi, state: ActivityState = rememberActivityS
                 AdaptiveNavigation(Destination.History, {}, fullWindow = true, showBar = !barHidden) { padding ->
                     Box(Modifier.padding(padding)) {
                         com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
-                            ActivityContent(ui, ActivityActions(refresh = actions.refresh, retry = actions.retry, receive = actions.receive, repeat = actions.repeat,
-                                share = actions.share, export = actions.export, explorer = actions.explorer, recurring = actions.recurring, exits = actions.exits,
-                                coin = actions.coin, barHidden = { barHidden = it && !keepBar; actions.barHidden(it) }, seen = actions.seen, shown = actions.shown), state)
+                            ActivityContent(ui,
+                                ActivityActions(refresh = actions.refresh, retry = actions.retry, receive = actions.receive, repeat = actions.repeat,
+                                    share = actions.share, export = actions.export, explorer = actions.explorer, recurring = actions.recurring,
+                                    exits = actions.exits,
+                                    coin = actions.coin, barHidden = { barHidden = it && !keepBar; actions.barHidden(it) }, seen = actions.seen,
+                                    shown = actions.shown), state)
                         }
                     }
                 }

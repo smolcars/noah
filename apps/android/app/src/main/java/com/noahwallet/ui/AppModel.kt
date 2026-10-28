@@ -151,7 +151,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var homeMemory = com.noahwallet.ui.home.HomeMemory(); private set
 
     fun preference(key: String, value: String) {
-        settings.set(com.noahwallet.services.storage.SettingsPreferences.update(settings.string("profile-storage"), mapOf(key to JsonPrimitive(value))), "profile-storage")
+        settings.set(com.noahwallet.services.storage.SettingsPreferences.update(settings.string("profile-storage"), mapOf(key to JsonPrimitive(value))),
+            "profile-storage")
         if (key == "bitcoinAmountUnit") amountUnit = if (value == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
         if (key == "preferredCurrency") preferredCurrency = SettingsPreferences.preferredCurrency(settings.string("profile-storage"))
     }
@@ -283,7 +284,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 customOpenWait = null
                 if (recovering) launchState = LaunchState.restoreIncomplete
                 else if (launchState == LaunchState.existingWallet) launchState = LaunchState.openFailure(failure)
-                error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
+                error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy ||
+                    failure is WalletLifecycle.WaitingForSecureStorage) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
                 else "Couldn't open your wallet. Please try again."
             }
             finally { withContext(Dispatchers.IO) { refreshRecoveryFiles() }; starting = false }
@@ -307,7 +309,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) {
-                val message = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message
+                val message = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy ||
+                    failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message
                 else if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback
                 if (inline != null) inline(message) else error = message
             }

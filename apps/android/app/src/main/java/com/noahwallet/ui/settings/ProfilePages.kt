@@ -62,7 +62,8 @@ internal fun ProfilePage(model: AppModel, nav: SettingsNav) {
     val failed = tr("Couldn't refresh your profile. Please try again.")
     LaunchedEffect(Unit) {
         try {
-            key = withContext(Dispatchers.IO) { com.noahwallet.services.server.ServerClient.loginKey(BuildConfig.APP_VARIANT, model.mnemonic().joinToString(" ")) }
+            key = withContext(Dispatchers.IO) { com.noahwallet.services.server.ServerClient.loginKey(BuildConfig.APP_VARIANT,
+                model.mnemonic().joinToString(" ")) }
             model.server.refreshProfile(); server = model.server.state
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { toasts.show(failed) }
     }
@@ -160,7 +161,8 @@ internal fun LightningAddressPage(model: AppModel, nav: SettingsNav) {
     SettingsFrame(tr("Lightning address"), nav.back, line = tr("How people pay you."), foot = {
         FootPill(tr("Save"), Modifier.testTag("lightning-save"), enabled = !unchanged && !nsec && availability.canContinue, loading = model.busy) { save() }
     }) {
-        NameField(name, { name = it }, domain, !model.busy, focus, tr("Lightning address"), { save() }, Modifier.padding(top = 30.dp).testTag("lightning-username-input"))
+        NameField(name, { name = it }, domain, !model.busy, focus, tr("Lightning address"), { save() },
+            Modifier.padding(top = 30.dp).testTag("lightning-username-input"))
         if (nsec || error != null) Row(Modifier.padding(top = 14.dp).heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.foundation.layout.Box(Modifier.size(8.dp).background(palette.failure, CircleShape))
@@ -227,7 +229,8 @@ internal fun EmailPage(model: AppModel, nav: SettingsNav) {
         EmailStage.verified -> tr("Email verified")
     }
     SettingsFrame(tr("Email"), nav.back, line = line, foot = when (stage) {
-        EmailStage.entry -> ({ FootPill(tr("Send code"), Modifier.testTag("email-send"), enabled = EmailRules.isValid(presentation.email), loading = model.busy) { send() } })
+        EmailStage.entry -> ({ FootPill(tr("Send code"), Modifier.testTag("email-send"), enabled = EmailRules.isValid(presentation.email),
+            loading = model.busy) { send() } })
         EmailStage.verified -> ({ FootPill(tr("Done")) { nav.pop() } })
         EmailStage.code -> null
     }) {

@@ -95,7 +95,8 @@ internal fun ActivityDetail(ui: ActivityUi, row: ActivityRules.Row, actions: Act
         val edge by animateFloatAsState(if (scroll.value > 2) 1f else 0f, tween(200), label = "edge")
         Box(Modifier.fillMaxWidth().height(detailNav).graphicsLayer { alpha = edge }
             .background(Brush.verticalGradient(0f to palette.background, .78f to palette.background, 1f to palette.background.copy(alpha = 0f))))
-        Row(Modifier.fillMaxWidth().height(detailNav).padding(horizontal = 4.dp).enter(0, wide, shared, elapsed), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(detailNav).padding(horizontal = 4.dp).enter(0, wide, shared, elapsed),
+            verticalAlignment = Alignment.CenterVertically) {
             if (!closable) BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("activity-detail-back")) { haptics.light(); close() }
             Spacer(Modifier.weight(1f))
             BarButton(R.drawable.ic_activity_share, tr("Share"), Modifier.testTag("activity-detail-share")) { haptics.light(); actions.share(receipt) }
@@ -214,7 +215,8 @@ internal fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, local
     val elapsed by produceState(0L, confirmedAt != null, reduceMotion) {
         while (isActive && confirmedAt == null && !reduceMotion) { withFrameMillis { }; value = SystemClock.elapsedRealtime() - started }
     }
-    val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium, fontSize = with(density) { (11f / (density.density * fontScale)).sp })
+    val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium,
+        fontSize = with(density) { (11f / (density.density * fontScale)).sp })
     val next = tr("next")
     val nextLabel = remember(next, style) { measurer.measure(next, style) }
     Canvas(Modifier.padding(top = 20.dp).size(188.dp, 62.dp).testTag("activity-block-row").clearAndSetSemantics { }) {
@@ -226,8 +228,10 @@ internal fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, local
     }
     val confirmations = BlockRow.confirmations(shownTip, confirmedAt)
     val line = if (confirmedAt == null) tr("Waiting for block {height}", format.format(shownTip + 1))
-    else tr("Confirmed in block {height}", format.format(confirmedAt)) + if (needed > 1) " · " + tr("{n} of {total}", format.format(confirmations.coerceAtMost(needed)), format.format(needed)) else ""
-    Text(line, Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }, style = HomeType.line.copy(fontWeight = FontWeight.Medium), color = palette.muted)
+    else tr("Confirmed in block {height}", format.format(confirmedAt)) + if (needed > 1) " · " + tr("{n} of {total}",
+        format.format(confirmations.coerceAtMost(needed)), format.format(needed)) else ""
+    Text(line, Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }, style = HomeType.line.copy(fontWeight = FontWeight.Medium),
+        color = palette.muted)
 }
 
 /**
@@ -245,13 +249,15 @@ internal fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind
     Row(Modifier.fillMaxWidth().heightIn(min = if (small) 44.dp else 48.dp)
         .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
         .drawBehind { if (!last) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
-        .semantics(mergeDescendants = onClick != null) {}, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+        .semantics(mergeDescendants = onClick != null) {}, verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(tr(label), style = ActivityType.label.let { if (small) it.copy(fontSize = 15.sp) else it }, color = palette.muted, maxLines = 1)
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             glyph?.let { Icon(painterResource(it), null, Modifier.size(16.dp), tint = palette.foreground) }
             if (dot) Box(Modifier.size(8.dp).background(palette.orange, CircleShape))
             SelectionContainer(Modifier.weight(1f, fill = false)) {
-                Text(value, style = style, color = if (failed) palette.failure else palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
+                Text(value, style = style, color = if (failed) palette.failure else palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End)
             }
             if (ok) Box(Modifier.size(16.dp).background(palette.orange, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(painterResource(R.drawable.ic_activity_check), null, Modifier.size(11.dp), tint = androidx.compose.ui.graphics.Color.White)
@@ -339,11 +345,13 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
         rows += { last -> DetailRow("Date", date, toasts = toasts, last = last) }
     }
     record.confirmationHeight?.takeIf { record.hasConfirmation == true }?.let { height ->
-        rows += { last -> DetailRow("Confirmed", tr("Block {height}", java.text.NumberFormat.getIntegerInstance(ui.locale).format(height.toLong())), toasts = toasts, last = last) }
+        rows += { last -> DetailRow("Confirmed", tr("Block {height}", java.text.NumberFormat.getIntegerInstance(ui.locale).format(height.toLong())),
+            toasts = toasts, last = last) }
     }
     record.repeatPayment?.takeIf { it.amountMode == "FIAT" && it.fiatCurrency != null }?.let { repeat ->
         repeat.amountInput.toDoubleOrNull()?.let { value ->
-            rows += { last -> DetailRow("Entered as", if (ui.hidden) "••••" else FiatCurrency.format(value, repeat.fiatCurrency!!, ui.locale), toasts = toasts, last = last) }
+            rows += { last -> DetailRow("Entered as", if (ui.hidden) "••••" else FiatCurrency.format(value, repeat.fiatCurrency!!, ui.locale), toasts = toasts,
+                last = last) }
         }
     }
     val note = record.repeatPayment?.comment?.takeIf { it.isNotEmpty() } ?: record.description
@@ -351,12 +359,15 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
     record.recurring?.takeIf { record.direction == "outgoing" }?.let { recurring ->
         rows += { last -> DetailRow("Repeats", tr(recurring.interval.description), toasts = toasts, last = last) { actions.recurring(recurring.scheduleID) } }
     }
-    if (record.movementKind == "exit") rows += { last -> DetailRow("Progress", tr("Exit details"), toasts = toasts, last = last) { actions.exits(record.exitedVtxos.orEmpty()) } }
+    if (record.movementKind == "exit") rows += { last -> DetailRow("Progress", tr("Exit details"), toasts = toasts,
+        last = last) { actions.exits(record.exitedVtxos.orEmpty()) } }
     record.exitFeeFor?.let { id -> rows += { last -> DetailRow("Progress", tr("Exit details"), toasts = toasts, last = last) { actions.exits(listOf(id)) } } }
-    ActivityRules.proof(record)?.let { proof -> rows += { last -> DetailRow("Proof of payment", short(proof), ValueKind.mono, copy = proof, toasts = toasts, last = last) } }
+    ActivityRules.proof(record)?.let { proof -> rows += { last -> DetailRow("Proof of payment", short(proof), ValueKind.mono, copy = proof, toasts = toasts,
+        last = last) } }
     ActivityRules.chainTxid(record)?.let { txid ->
         val url = ActivityRules.explorerURL(record, ui.variant)
-        rows += { last -> DetailRow("Transaction ID", short(txid), ValueKind.mono, copy = txid, explorer = url, toasts = toasts, onExplorer = explore, last = last) }
+        rows += { last -> DetailRow("Transaction ID", short(txid), ValueKind.mono, copy = txid, explorer = url, toasts = toasts, onExplorer = explore,
+            last = last) }
     }
     rows.forEachIndexed { i, content -> content(i == rows.lastIndex) }
 }
@@ -397,13 +408,15 @@ internal fun Details(open: Boolean, onOpen: (Boolean) -> Unit, scroll: androidx.
         }.clickable(role = Role.Button) {
             haptics.selection(); onOpen(!open)
             if (!open) scope.launch { delay(120); scroll.animateScrollTo(scroll.value + with(density) { 220.dp.roundToPx() }) }
-        }.semantics { stateDescription = if (open) expanded else collapsed }.testTag("activity-details-toggle"), verticalAlignment = Alignment.CenterVertically) {
+        }.semantics { stateDescription = if (open) expanded else collapsed }.testTag("activity-details-toggle"),
+            verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Details"), Modifier.weight(1f), style = ActivityType.value, color = palette.foreground)
             Icon(painterResource(HomeIcons.chevron), null, Modifier.size(18.dp).graphicsLayer { rotationZ = turn }, tint = palette.muted)
         }
         AnimatedVisibility(open, enter = if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
         else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
-            exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f, 157.9137f))) {
+            exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f,
+                157.9137f))) {
             Column(Modifier.testTag("activity-details"), content = content)
         }
     }
@@ -413,18 +426,21 @@ internal fun Details(open: Boolean, onOpen: (Boolean) -> Unit, scroll: androidx.
 private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: ActivityActions, toasts: HomeToasts) {
     val palette = LocalPalette.current
     fun money(sats: Long) = if (ui.hidden) "₿••••" else BitcoinAmount.format(sats, ui.unit, ui.locale)
-    fun signed(sats: Long) = if (ui.hidden) "₿••••" else (if (sats > 0) "+" else if (sats < 0) "−" else "") + BitcoinAmount.format(kotlin.math.abs(sats), ui.unit, ui.locale)
+    fun signed(sats: Long) = if (ui.hidden) "₿••••" else (if (sats > 0) "+" else if (sats < 0) "−" else "") + BitcoinAmount.format(kotlin.math.abs(sats),
+        ui.unit, ui.locale)
     @Composable fun section(title: String) = Text(tr(title), Modifier.padding(top = 18.dp, bottom = 2.dp), style = HomeType.header, color = palette.muted)
     record.paymentHash?.let { DetailBlock("Payment hash", it, toasts) }
     record.preimage?.takeIf { record.direction == "incoming" }?.let { DetailBlock("Preimage", it, toasts) }
-    (record.receivedOn?.singleOrNull()?.destination?.takeIf { it.isNotEmpty() && record.direction == "incoming" } ?: record.invoice?.takeIf { record.direction == "incoming" })
+    (record.receivedOn?.singleOrNull()?.destination?.takeIf { it.isNotEmpty() &&
+        record.direction == "incoming" } ?: record.invoice?.takeIf { record.direction == "incoming" })
         ?.let { DetailBlock("Invoice", it, toasts) }
     record.offer?.let { DetailBlock("Offer", it, toasts) }
     DetailBlock("Payment ID", record.id, toasts)
     if (record.source == "onchain-wallet" || record.balanceChangeSat != null) {
         DetailRow("Chain status", tr(if (record.hasConfirmation == true) "Confirmed" else "Unconfirmed"), small = true, toasts = toasts)
         record.balanceChangeSat?.let { DetailRow("Balance change", signed(it), ValueKind.number, small = true, toasts = toasts) }
-        record.confirmationHeight?.let { DetailRow("Block height", java.text.NumberFormat.getIntegerInstance(ui.locale).format(it.toLong()), small = true, toasts = toasts) }
+        record.confirmationHeight?.let { DetailRow("Block height", java.text.NumberFormat.getIntegerInstance(ui.locale).format(it.toLong()), small = true,
+            toasts = toasts) }
         record.confirmationHash?.let { DetailBlock("Block hash", it, toasts) }
         record.txHex?.let { DetailBlock("Raw transaction", it, toasts) }
     }
@@ -436,7 +452,8 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
     // As in React Native: the anchor only when it isn't the transaction already shown.
     record.chainAnchor?.takeIf { it.substringBefore(':') != record.txid?.substringBefore(':') }?.let { DetailBlock("Chain anchor", it, toasts) }
     listOf("Sent to" to record.sentTo, "Received on" to record.receivedOn).forEach { (label, values) ->
-        if (!values.isNullOrEmpty()) DetailBlock(label, values.joinToString("\n") { "${it.destination} · ${money(it.amount_sat)}" }, toasts, copy = values.size == 1)
+        if (!values.isNullOrEmpty()) DetailBlock(label, values.joinToString("\n") { "${it.destination} · ${money(it.amount_sat)}" }, toasts,
+            copy = values.size == 1)
     }
     listOf("Spent coins" to record.inputVtxos, "New coins" to record.outputVtxos, "Exited coins" to record.exitedVtxos).forEach { (title, coins) ->
         if (coins.isNullOrEmpty()) return@forEach

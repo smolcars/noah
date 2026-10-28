@@ -44,11 +44,14 @@ object SendFixtures {
             return when (outcome) {
                 Outcome.arkSent -> SendReceipt(payment.amount, proof = SendReceipt.Proof.submitReturnedArkSuccess)
                 Outcome.lightningSent -> SendReceipt(payment.amount, paymentHash = "hash", movementID = 9u, fee = 4, proof = SendReceipt.Proof.actualMovement)
-                Outcome.chainSent, Outcome.chainConfirmed -> SendReceipt(payment.amount, txid = "f".repeat(64), fee = 420, proof = SendReceipt.Proof.submitReturnedTxid)
-                Outcome.broadcastPending -> SendReceipt(payment.amount, txid = "f".repeat(64), fee = 420, proof = SendReceipt.Proof.submitReturnedTxid, broadcastRetryPending = true)
+                Outcome.chainSent,
+                Outcome.chainConfirmed -> SendReceipt(payment.amount, txid = "f".repeat(64), fee = 420, proof = SendReceipt.Proof.submitReturnedTxid)
+                Outcome.broadcastPending -> SendReceipt(payment.amount, txid = "f".repeat(64), fee = 420, proof = SendReceipt.Proof.submitReturnedTxid,
+                    broadcastRetryPending = true)
                 Outcome.pending -> throw SendExistingLightning(SendLightningProgress(payment.amount, 12))
                 Outcome.notSent -> throw SendNotSubmitted(SendFailure.Reason.fundsChanged)
-                Outcome.alreadyPaid -> throw SendAlreadyPaid(SendReceipt(payment.amount, paymentHash = "hash", movementID = 9u, fee = 4, proof = SendReceipt.Proof.actualMovement))
+                Outcome.alreadyPaid -> throw SendAlreadyPaid(SendReceipt(payment.amount, paymentHash = "hash", movementID = 9u, fee = 4,
+                    proof = SendReceipt.Proof.actualMovement))
                 Outcome.refunded, Outcome.unknown -> throw IllegalStateException("Fixture payment call failed")
                 Outcome.never -> error("unreachable")
             }
@@ -82,7 +85,8 @@ object SendFixtures {
         HistoryTransaction(id, type, 1_000, com.noahwallet.history.HistoryRules.isoDate(java.util.Date(now.time - minutes * 60_000)), "outgoing",
             source = "ark", destination = destination, movementStatus = "successful")
 
-    fun env(tip: Long? = 921_345, refund: SendRefund? = null, estimates: Map<SendRail, Long> = mapOf(SendRail.ark to 0L, SendRail.lightning to 12L, SendRail.onchain to 420L),
+    fun env(tip: Long? = 921_345, refund: SendRefund? = null, estimates: Map<SendRail,
+        Long> = mapOf(SendRail.ark to 0L, SendRail.lightning to 12L, SendRail.onchain to 420L),
         chainNeeded: Long = 2) = SendEnv(BitcoinAmountUnit.bip177, Locale.US, "regtest", domain, history(), tip = tip, chainNeeded = chainNeeded,
         refund = refund, estimates = estimates)
 

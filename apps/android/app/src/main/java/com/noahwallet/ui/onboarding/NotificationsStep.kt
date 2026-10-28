@@ -47,7 +47,8 @@ internal fun NotificationsContent(clock: SceneClock, off: Boolean, busy: Boolean
         }
     }, bottom = {
         Spacer(Modifier.height(NoahTokens.Space.screen))
-        PillButton(if (off) tr("Open Settings") else tr("Turn on notifications"), Modifier.fillMaxWidth().testTag(if (off) "notifications-open-settings" else "notifications-enable"),
+        PillButton(if (off) tr("Open Settings") else tr("Turn on notifications"),
+            Modifier.fillMaxWidth().testTag(if (off) "notifications-open-settings" else "notifications-enable"),
             loading = busy, onClick = onPrimary)
     })
 }
@@ -105,7 +106,8 @@ internal fun NotificationsStep(model: AppModel, presentation: OnboardingPresenta
         when {
             stage == NotificationStage.off -> PlatformAccess.openNotificationSettings(context)
             granted() -> allowed()
-            Build.VERSION.SDK_INT >= 33 -> { haptics.light(); PlatformAccess.markNotificationsAsked(context); permission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+            Build.VERSION.SDK_INT >= 33 -> { haptics.light(); PlatformAccess.markNotificationsAsked(context)
+                permission.launch(Manifest.permission.POST_NOTIFICATIONS) }
             else -> required()
         }
     }

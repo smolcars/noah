@@ -53,7 +53,8 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
     LaunchedEffect(copied) { if (copied) { delay(1800); copied = false } }
     fun close() { scanning = false; if (startScanning) onBack() }
     DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && !(context as android.app.Activity).isChangingConfigurations && scanning) close() }
+        val observer = LifecycleEventObserver { _,
+                                                event -> if (event == Lifecycle.Event.ON_STOP && !(context as android.app.Activity).isChangingConfigurations && scanning) close() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }

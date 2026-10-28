@@ -28,7 +28,8 @@ object L10n {
         val localized = context(context)
         val id = localized.resources.getIdentifier(resourceName(source), "plurals", context.packageName)
         require(id != 0) { """Missing plural resource: $source""" }
-        return localized.resources.getQuantityString(id, count, java.text.NumberFormat.getIntegerInstance(localized.resources.configuration.locales[0]).format(count), *arguments)
+        return localized.resources.getQuantityString(id, count,
+            java.text.NumberFormat.getIntegerInstance(localized.resources.configuration.locales[0]).format(count), *arguments)
     }
 }
 

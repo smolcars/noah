@@ -51,10 +51,12 @@ internal fun NotificationsPage(model: AppModel, nav: SettingsNav, live: Settings
         }
         SettingsGroup(rows = listOfNotNull(
             { d -> SettingsRow(tr("Claim payments in the background"), SettingsIcons.bolt, sub = tr("Lets Noah wake up for Lightning"), divider = d,
-                modifier = Modifier.testTag("notifications-mailbox"), end = RowEnd.Toggle(server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
+                modifier = Modifier.testTag("notifications-mailbox"),
+                end = RowEnd.Toggle(server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
                     model.action("Couldn't update mailbox notifications.") { model.server.setMailboxEnabled(it); server = model.server.state }
                 }) },
-            { d -> SettingsRow(tr("Battery"), SettingsIcons.battery, value = if (battery == SettingsRules.Battery.unrestricted) tr("Unrestricted") else tr("Optimized"),
+            { d -> SettingsRow(tr("Battery"), SettingsIcons.battery,
+                value = if (battery == SettingsRules.Battery.unrestricted) tr("Unrestricted") else tr("Optimized"),
                 divider = d, modifier = Modifier.testTag("notifications-battery")) { if (!PlatformAccess.openBattery(context)) toasts.show(noBattery) } },
             if (distributor != null) ({ d ->
                 val name = distributor.distributors.firstOrNull { it.id == distributor.selected }?.name
@@ -62,7 +64,8 @@ internal fun NotificationsPage(model: AppModel, nav: SettingsNav, live: Settings
                     dot = if (distributor.endpoint == null && !distributor.loading) RowDot.failure else null, divider = d,
                     modifier = Modifier.testTag("notifications-unifiedpush")) { nav.open(SettingsDestination.UnifiedPush) }
             }) else null,
-            { d -> SettingsRow(tr("System settings"), SettingsIcons.gear, end = RowEnd.External, divider = d) { PlatformAccess.openNotificationSettings(context) } },
+            { d -> SettingsRow(tr("System settings"), SettingsIcons.gear, end = RowEnd.External,
+                divider = d) { PlatformAccess.openNotificationSettings(context) } },
         ))
         if (known && !on) FinePrint(tr("Turn them on in Settings. Noah checks again when you come back."))
     }

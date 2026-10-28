@@ -124,7 +124,8 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
     val address = model.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
     val name = profileName(model) ?: address?.substringBefore('@')
     val tap = rememberDebugTaps(model, live)
-    fun money(sats: Long) = if (model.hidden) BitcoinAmount.format(0, model.amountUnit, locale).replace("0", "••••") else BitcoinAmount.format(sats, model.amountUnit, locale)
+    fun money(sats: Long) = if (model.hidden) BitcoinAmount.format(0, model.amountUnit, locale).replace("0", "••••") else BitcoinAmount.format(sats,
+        model.amountUnit, locale)
     val open = nav.open
     SettingsFrame(tr("Settings"), nav.back, scroll = scroll) {
         Me(name ?: tr("Profile"), address, selected == SettingsDestination.Profile) { open(SettingsDestination.Profile) }
@@ -134,7 +135,8 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
                 SettingsRules.Backup.failed -> tr("Failed"); SettingsRules.Backup.running -> tr("Backing up…")
                 SettingsRules.Backup.on -> tr("On"); SettingsRules.Backup.off -> tr("Off")
             }, dot = if (backup == SettingsRules.Backup.failed) RowDot.failure else null, failed = backup == SettingsRules.Backup.failed,
-                selected = selected == SettingsDestination.Backup, divider = d, modifier = Modifier.testTag("settings-backup")) { open(SettingsDestination.Backup) } },
+                selected = selected == SettingsDestination.Backup, divider = d,
+                modifier = Modifier.testTag("settings-backup")) { open(SettingsDestination.Backup) } },
             { d -> SettingsRow(tr("Recovery phrase"), SettingsIcons.key, value = if (!model.recoveryPhraseBackedUp) tr("Not saved") else null,
                 dot = if (!model.recoveryPhraseBackedUp) RowDot.attention else null, selected = selected == SettingsDestination.Seed, divider = d,
                 modifier = Modifier.testTag("settings-recovery")) { open(SettingsDestination.Seed) } },
@@ -154,14 +156,17 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
             }, dot = if (vtxos == SettingsRules.Vtxos.Renew) RowDot.attention else null, selected = selected == SettingsDestination.Vtxos, divider = d,
                 modifier = Modifier.testTag("settings-vtxos")) { open(SettingsDestination.Vtxos) } },
             { d -> SettingsRow(tr("On-chain"), SettingsIcons.chain, value = onchain?.let(::money), numeric = true,
-                selected = selected == SettingsDestination.Board, divider = d, modifier = Modifier.testTag("settings-board-ark")) { open(SettingsDestination.Board) } },
+                selected = selected == SettingsDestination.Board, divider = d,
+                modifier = Modifier.testTag("settings-board-ark")) { open(SettingsDestination.Board) } },
             { d -> SettingsRow(tr("Recurring payments"), SettingsIcons.repeat, value = when {
                 recurring.approve > 0 -> tr("Approve"); recurring.active > 0 -> tr("{n} active", recurring.active.toString()); else -> null
             }, dot = if (recurring.approve > 0) RowDot.attention else null, selected = selected == SettingsDestination.Recurring, divider = d,
                 modifier = Modifier.testTag("settings-recurring-payments")) { open(SettingsDestination.Recurring) } },
             // Decision 5 (exit.md): only while an exit runs, from its start until it's claimed or canceled.
-            { d -> SettingsRow(tr("Emergency exit"), SettingsIcons.exit, value = if (com.noahwallet.onchain.ExitList.live(live.overview?.exits)) tr("In progress") else null,
-                selected = selected == SettingsDestination.Exits, divider = d, modifier = Modifier.testTag("settings-emergencyExit")) { open(SettingsDestination.Exits) } },
+            { d -> SettingsRow(tr("Emergency exit"), SettingsIcons.exit,
+                value = if (com.noahwallet.onchain.ExitList.live(live.overview?.exits)) tr("In progress") else null,
+                selected = selected == SettingsDestination.Exits, divider = d,
+                modifier = Modifier.testTag("settings-emergencyExit")) { open(SettingsDestination.Exits) } },
             { d -> SettingsRow(tr("Spend bitcoin nearby"), SettingsIcons.map, divider = d, modifier = Modifier.testTag("settings-btcmap")) { nav.map() } },
         ))
         SettingsGroup(tr("Display"), rows = listOf(
@@ -177,11 +182,13 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
         ))
         val notifications = live.permission
         SettingsGroup(tr("App"), rows = listOf(
-            { d -> SettingsRow(tr("Notifications"), if (notifications == PlatformGateRules.Permission.granted || notifications == PlatformGateRules.Permission.checking)
-                SettingsIcons.bell else SettingsIcons.bellOff, value = when (notifications) {
-                PlatformGateRules.Permission.granted -> tr("On"); PlatformGateRules.Permission.checking -> null; else -> tr("Off")
-            }, failed = notifications == PlatformGateRules.Permission.denied || notifications == PlatformGateRules.Permission.undetermined,
-                dot = if (notifications == PlatformGateRules.Permission.denied || notifications == PlatformGateRules.Permission.undetermined) RowDot.failure else null,
+            { d -> SettingsRow(tr("Notifications"),
+                if (notifications == PlatformGateRules.Permission.granted || notifications == PlatformGateRules.Permission.checking)
+                    SettingsIcons.bell else SettingsIcons.bellOff, value = when (notifications) {
+                    PlatformGateRules.Permission.granted -> tr("On"); PlatformGateRules.Permission.checking -> null; else -> tr("Off")
+                }, failed = notifications == PlatformGateRules.Permission.denied || notifications == PlatformGateRules.Permission.undetermined,
+                dot = if (notifications == PlatformGateRules.Permission.denied ||
+                    notifications == PlatformGateRules.Permission.undetermined) RowDot.failure else null,
                 selected = selected == SettingsDestination.Notifications, divider = d, modifier = Modifier.testTag("settings-notifications")) {
                 open(SettingsDestination.Notifications)
             } },
@@ -222,14 +229,16 @@ private fun Me(name: String, address: String?, selected: Boolean, onClick: () ->
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp)
-        .drawBehind { if (pressed || selected) drawRoundRect(palette.soft, Offset(-12.dp.toPx(), -8.dp.toPx()), Size(size.width + 24.dp.toPx(), size.height + 18.dp.toPx()), CornerRadius(20.dp.toPx())) }
+        .drawBehind { if (pressed || selected) drawRoundRect(palette.soft, Offset(-12.dp.toPx(), -8.dp.toPx()),
+            Size(size.width + 24.dp.toPx(), size.height + 18.dp.toPx()), CornerRadius(20.dp.toPx())) }
         .clickable(interaction, null, role = Role.Button, onClickLabel = tr("Profile")) { haptics.light(); onClick() }
         .semantics(mergeDescendants = true) { if (selected) this.selected = true }.testTag("settings-profile"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         SettingsAvatar(60.dp, Modifier.meAvatar(), you = true, initial = address?.take(1) ?: name.take(1))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(name, Modifier.weight(1f, fill = false), style = SettingsType.name, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, Modifier.weight(1f, fill = false), style = SettingsType.name, color = palette.foreground, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
                 NetworkBadge(BuildConfig.APP_VARIANT)
             }
             address?.let { Text(it, style = HomeType.line, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -342,7 +351,8 @@ internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, onRecovery: 
                 else -> tr("Never")
             }, toasts = toasts, failed = checklist.backupFailed, last = true)
         }
-        SettingsField(typed, { typed = it; model.deleteWalletError = null }, tr("Type delete to confirm"), Modifier.testTag("delete-wallet-input"), enabled = !deleting,
+        SettingsField(typed, { typed = it; model.deleteWalletError = null }, tr("Type delete to confirm"), Modifier.testTag("delete-wallet-input"),
+            enabled = !deleting,
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
         error?.let { Text(it, Modifier.padding(top = 10.dp), style = HomeType.line, color = palette.failure) }
         SheetActions(tr("Cancel"), if (deleting) tr("Deleting") else tr("Delete"), onCancel = close, enabled = confirmed && (!model.busy || deleting),

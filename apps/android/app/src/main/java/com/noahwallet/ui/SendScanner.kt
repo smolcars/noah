@@ -39,7 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean
     LaunchedEffect(Unit) { if (!permitted) permission.launch(Manifest.permission.CAMERA) }
     BackHandler(onBack = onClose)
     val scroll = rememberScrollState()
-    Column(Modifier.fillMaxSize().readableWidth().then(if (!permitted) Modifier.verticalScroll(scroll) else Modifier).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().readableWidth().then(if (!permitted) Modifier.verticalScroll(scroll) else Modifier).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(tr("Scan QR code"), Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
             TextButton(onClick = onClose) { Text(tr("Close")) }
@@ -67,7 +68,8 @@ import java.util.concurrent.atomic.AtomicBoolean
                     }
                 }
                 displays.registerDisplayListener(displayListener, android.os.Handler(android.os.Looper.getMainLooper()))
-                val reader = MultiFormatReader().apply { setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE, BarcodeFormat.EAN_13), DecodeHintType.TRY_HARDER to true)) }
+                val reader = MultiFormatReader().apply { setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE, BarcodeFormat.EAN_13),
+                    DecodeHintType.TRY_HARDER to true)) }
                 analysis.setAnalyzer(executor) { image ->
                     try {
                         if (!active.get() || scanned.get()) return@setAnalyzer
@@ -101,7 +103,8 @@ import java.util.concurrent.atomic.AtomicBoolean
             Text(tr("Camera permission is required to scan QR codes."))
             NoahButton("Allow camera") { permission.launch(Manifest.permission.CAMERA) }
             TextButton(onClick = {
-                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${context.packageName}")))
+                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:${context.packageName}")))
             }) { Text(tr("Open settings")) }
         }
     }

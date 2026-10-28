@@ -156,16 +156,19 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
         }) {
             val shape = RoundedCornerShape(30.dp)
             Box(Modifier.fillMaxWidth()
-                .shadow(if (palette === NoahTokens.Dark) 0.dp else 14.dp, shape, ambientColor = Color.Black.copy(alpha = .08f), spotColor = Color.Black.copy(alpha = .08f))
+                .shadow(if (palette === NoahTokens.Dark) 0.dp else 14.dp, shape, ambientColor = Color.Black.copy(alpha = .08f),
+                    spotColor = Color.Black.copy(alpha = .08f))
                 .clip(shape).background(NoahTokens.Light.qrCard).border(1.dp, Color.Black.copy(alpha = .07f), shape)
-                .then(if (onTap != null && !showBack) Modifier.clickable(role = Role.Button, onClickLabel = tr("Ways to pay you"), onClick = onTap) else Modifier)
+                .then(if (onTap != null && !showBack) Modifier.clickable(role = Role.Button, onClickLabel = tr("Ways to pay you"),
+                    onClick = onTap) else Modifier)
                 .testTag("receive-card")) {
                 // The front stays in layout (it sizes the card); the back draws over it, turned to face you.
                 Column(Modifier.fillMaxWidth().graphicsLayer { alpha = if (reduceMotion) 1 - backFade else if (showBack) 0f else 1f }
                     .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = if (face.band != null) 0.dp else 18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     when {
-                        face.unavailable -> Column(Modifier.fillMaxWidth().height(qrSide + 50.dp), verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
+                        face.unavailable -> Column(Modifier.fillMaxWidth().height(qrSide + 50.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
                             Text(tr("Lightning address unavailable"), style = NoahTokens.Typography.sheetTitle, color = ink)
                             Text(tr("Finish setting up your Lightning address before sharing your QR."), style = HomeType.line, color = Color(0xFF6B6B6B))
                             Pill(tr("Open Profile"), height = 44.dp, container = ink, content = Color.White, onClick = onProfile)
@@ -175,9 +178,11 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
                         }
                         else -> {
                             Box(Modifier.size(qrSide).semantics { contentDescription = face.title }.testTag("receive-qr")) {
-                                StyledQR(face.payload, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion, correction = ReceiveFormats.correction(face.payload))
+                                StyledQR(face.payload, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion,
+                                    correction = ReceiveFormats.correction(face.payload))
                             }
-                            Text(face.title, Modifier.padding(top = 12.dp), style = HomeType.qrName, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(face.title, Modifier.padding(top = 12.dp), style = HomeType.qrName, color = ink, maxLines = 1,
+                                overflow = TextOverflow.Ellipsis)
                             Text(face.caption, Modifier.padding(top = 2.dp), style = HomeType.small, color = Color(0xFF6B6B6B), textAlign = TextAlign.Center)
                         }
                     }
@@ -186,7 +191,8 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
                 if (showBack && arrival != null) Back(arrival, amount ?: "", elapsed - ReceiveTimeline.flipAt(arrival.rail, reduceMotion),
                     Modifier.matchParentSize().graphicsLayer { if (reduceMotion) alpha = backFade else rotationY = 180f })
             }
-            if (arrival != null && arrival.rail != ReceiveArrival.Rail.onchain && !showBack) ArrivalOverlay(arrival.rail, elapsed, qrSide, Modifier.matchParentSize())
+            if (arrival != null && arrival.rail != ReceiveArrival.Rail.onchain && !showBack) ArrivalOverlay(arrival.rail, elapsed, qrSide,
+                Modifier.matchParentSize())
         }
         // Listening again once an arrival has played (an on-chain one stays for its block row).
         if (listening && !reduceMotion && (arrival == null || elapsed > ReceiveTimeline.end(arrival.rail, false))) ListeningLight(Modifier.matchParentSize())
@@ -223,14 +229,16 @@ private fun Back(arrival: ReceiveArrival, amount: String, t: Long, modifier: Mod
         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
         Canvas(Modifier.size(76.dp)) {
             val unit = size.width / 84f
-            drawArc(NoahTokens.Light.orange, -90f, 360f * ring.coerceIn(0f, 1f), false, Offset(2 * unit, 2 * unit), Size(80 * unit, 80 * unit), style = Stroke(2.5f * unit))
+            drawArc(NoahTokens.Light.orange, -90f, 360f * ring.coerceIn(0f, 1f), false, Offset(2 * unit, 2 * unit), Size(80 * unit, 80 * unit),
+                style = Stroke(2.5f * unit))
             val path = Path().apply { moveTo(27 * unit, 43 * unit); relativeLineTo(10 * unit, 10 * unit); relativeLineTo(21 * unit, -22 * unit) }
             drawPath(StageArt.segment(path, 0f, PathMeasure().apply { setPath(path, false) }.length * check.coerceIn(0f, 1f)), ink,
                 style = Stroke(3.2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         Text("+$amount", style = SendType.big.copy(fontSize = 44.sp, lineHeight = 46.sp), color = ink, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(painterResource(when (arrival.rail) { ReceiveArrival.Rail.ark -> SendIcons.ark; ReceiveArrival.Rail.lightning -> HomeIcons.lightning; ReceiveArrival.Rail.onchain -> HomeIcons.chain }),
+            Icon(painterResource(when (arrival.rail) { ReceiveArrival.Rail.ark -> SendIcons.ark; ReceiveArrival.Rail.lightning -> HomeIcons.lightning
+                ReceiveArrival.Rail.onchain -> HomeIcons.chain }),
                 null, Modifier.size(16.dp), tint = Color(0xFF6B6B6B))
             Text(when (arrival.rail) {
                 ReceiveArrival.Rail.ark -> tr("via Ark · just now")
@@ -251,7 +259,8 @@ private fun ArrivalOverlay(rail: ReceiveArrival.Rail, t: Long, qrSide: Dp, modif
     val reduceMotion = LocalReduceMotion.current
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val glyph = remember(density) { measurer.measure("₿", TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = with(density) { (27f / (density.density * fontScale)).sp })) }
+    val glyph = remember(density) { measurer.measure("₿",
+        TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = with(density) { (27f / (density.density * fontScale)).sp })) }
     val ink = NoahTokens.Light.qrInk
     Canvas(modifier) {
         val k = density.density
@@ -266,7 +275,8 @@ private fun ArrivalOverlay(rail: ReceiveArrival.Rail, t: Long, qrSide: Dp, modif
             }
             fun travel(v: Float) = if (reduceMotion) (if (v > 0f) 1f else 0f) else v
             val serverIn = at(0, curve = SpringCurve.bouncy)
-            val serverOut = when (rail) { ReceiveArrival.Rail.ark -> at(380, 250, SpringCurve.soft); else -> at(2_500, curve = SpringCurve.soft) }.coerceIn(0f, 1f)
+            val serverOut = when (rail) { ReceiveArrival.Rail.ark -> at(380, 250, SpringCurve.soft); else -> at(2_500, curve = SpringCurve.soft) }.coerceIn(0f,
+                1f)
             badge(false, Offset(cx, sv), serverIn.coerceIn(0f, 1f) * (1 - serverOut), if (reduceMotion) 1f else StageArt.lerp(.4f, 1f, serverIn), palette)
             val drop = at(if (rail == ReceiveArrival.Rail.ark) 380 else 850, curve = SpringCurve.bouncy)
             val coinOut = at(if (rail == ReceiveArrival.Rail.ark) 1_250 else 2_760).coerceIn(0f, 1f)
@@ -294,7 +304,8 @@ private fun ArrivalOverlay(rail: ReceiveArrival.Rail, t: Long, qrSide: Dp, modif
                     if (!reduceMotion && t >= start && t < start + 620) {
                         val q = StageArt.cubic(.4f, 0f, .2f, 1f).transform((t - start) / 620f)
                         val bolt = Path().apply { moveTo(w + 40, sv - 60); lineTo(cx + 44, sv - 14); lineTo(cx + 52, sv - 2); lineTo(cx + 16, sv) }
-                        drawPath(StageArt.segment(bolt, 480 * q - 240, 480 * q), NoahTokens.Light.orange, style = Stroke(3.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        drawPath(StageArt.segment(bolt, 480 * q - 240, 480 * q), NoahTokens.Light.orange,
+                            style = Stroke(3.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                     val keyStart = if (reduceMotion) (1_650 * .45f).toLong() else 1_650L
                     if (t >= keyStart && t < keyStart + (if (reduceMotion) 190 else 420)) {
@@ -308,7 +319,8 @@ private fun ArrivalOverlay(rail: ReceiveArrival.Rail, t: Long, qrSide: Dp, modif
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawText(text: androidx.compose.ui.text.TextLayoutResult, color: Color, topLeft: Offset, alpha: Float) =
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawText(text: androidx.compose.ui.text.TextLayoutResult, color: Color, topLeft: Offset,
+    alpha: Float) =
     drawText(text, color = color, topLeft = topLeft, alpha = alpha.coerceIn(0f, 1f))
 
 /** A thin orange segment slowly circling the card while it can be paid (7 s a lap). */
@@ -353,7 +365,8 @@ internal fun ReceiveBlockRow(arrival: ReceiveArrival?, tip: Long?, confirmedAt: 
     var wasConfirmed by remember(arrival?.startedAt) { mutableStateOf(confirmedAt != null) }
     LaunchedEffect(confirmedAt) { if (confirmedAt != null && !wasConfirmed) { wasConfirmed = true; haptics.light() } }
     val fade = if (visible) step(elapsed, 0, SpringCurve.soft, reduceMotion = reduceMotion).coerceIn(0f, 1f) else 0f
-    val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium, fontSize = with(density) { (10.5f / (density.density * fontScale)).sp })
+    val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium,
+        fontSize = with(density) { (10.5f / (density.density * fontScale)).sp })
     val next = remember(nextLabel, density) { measurer.measure(nextLabel, style) }
     Canvas(modifier.width(width).height(58.dp).clearAndSetSemantics { }) {
         if (!visible || shownTip == null) return@Canvas

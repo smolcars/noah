@@ -76,7 +76,8 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
             }, divider = d, modifier = Modifier.testTag("advanced-esplora")) { nav.open(SettingsDestination.Esplora) } },
         ))
         SettingsGroup(tr("Diagnostics"), rows = listOfNotNull(
-            { d -> SettingsRow(tr("Logs"), SettingsIcons.doc, divider = d, modifier = Modifier.testTag("advanced-logs")) { nav.open(SettingsDestination.Logs) } },
+            { d -> SettingsRow(tr("Logs"), SettingsIcons.doc, divider = d,
+                modifier = Modifier.testTag("advanced-logs")) { nav.open(SettingsDestination.Logs) } },
             { d -> SettingsRow(tr("Reset registration"), SettingsIcons.refresh, divider = d, enabled = !model.busy && !model.isWalletSuspended,
                 modifier = Modifier.testTag("advanced-reset")) { sheet = "reset" } },
             // Decision 7: once unlocked, debug can be turned off; five taps on the version turn it back on.
@@ -91,10 +92,12 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
             } }) else null,
         ))
         SettingsGroup(tr("Wallet"), rows = listOf({ d ->
-            SettingsRow(tr("Suspend wallet"), SettingsIcons.stop, sub = tr("Pauses all wallet activity"), divider = d, modifier = Modifier.testTag("advanced-suspend"),
+            SettingsRow(tr("Suspend wallet"), SettingsIcons.stop, sub = tr("Pauses all wallet activity"), divider = d,
+                modifier = Modifier.testTag("advanced-suspend"),
                 end = RowEnd.Toggle(model.isWalletSuspended, !model.busy) { suspend ->
                     if (suspend) sheet = "suspend"
-                    else model.action("Couldn't change wallet suspension. Please try again.") { model.resumeWallet(); haptics.success(); toasts.show(resumedText) }
+                    else model.action("Couldn't change wallet suspension. Please try again.") { model.resumeWallet(); haptics.success()
+                        toasts.show(resumedText) }
                 })
         }))
     }
@@ -104,7 +107,8 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
             SettingsSheet({ sheet = null }, tr("Reset registration?"), tr("Noah registers this wallet with the server again. Your wallet stays.")) { close ->
                 SheetActions(tr("Cancel"), tr("Reset"), onCancel = close, enabled = !model.busy && !model.isWalletSuspended, loading = model.busy,
                     confirmTag = "advanced-reset-confirm", onConfirm = {
-                        model.action("Couldn't register again. Please retry.") { model.reRegisterWithServer(); haptics.success(); toasts.show(registered); close() }
+                        model.action("Couldn't register again. Please retry.") { model.reRegisterWithServer(); haptics.success(); toasts.show(registered)
+                            close() }
                     })
             }
         }
@@ -114,7 +118,8 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
                 modifier = Modifier.testTag("suspend-sheet")) { close ->
                 SheetActions(tr("Cancel"), tr("Suspend"), onCancel = close, danger = true, enabled = !model.busy, loading = model.busy,
                     confirmTag = "advanced-suspend-confirm", onConfirm = {
-                        model.action("Couldn't change wallet suspension. Please try again.") { model.suspendWallet(); haptics.warning(); toasts.show(suspended); close() }
+                        model.action("Couldn't change wallet suspension. Please try again.") { model.suspendWallet(); haptics.warning(); toasts.show(suspended)
+                            close() }
                     })
             }
         }
@@ -133,7 +138,8 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
     var info by remember { mutableStateOf<io.github.niteshbalusu11.bark.ArkInfo?>(null) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    suspend fun load() { loading = true; try { info = withContext(Dispatchers.IO) { model.session.arkInfo() } } catch (e: CancellationException) { throw e } catch (_: Exception) { } finally { loading = false } }
+    suspend fun load() { loading = true
+        try { info = withContext(Dispatchers.IO) { model.session.arkInfo() } } catch (e: CancellationException) { throw e } catch (_: Exception) { } finally { loading = false } }
     LaunchedEffect(Unit) { if (!model.isWalletSuspended) load() }
     val selection = EsploraSettings(model.settings).selection(BuildConfig.APP_VARIANT)
     val config = WalletConfiguration.effective(BuildConfig.APP_VARIANT, selection.endpoint)
@@ -141,7 +147,8 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
     fun sats(value: Long) = BitcoinAmount.format(value, model.amountUnit, locale)
     val network = when (BuildConfig.APP_VARIANT) { "mainnet" -> tr("Mainnet"); "signet" -> tr("Signet"); else -> tr("Regtest") }
     SettingsFrame(tr("Ark server"), nav.back, chip = {
-        Text(network, Modifier.tonal(RoundedCornerShape(50), palette.soft).padding(horizontal = 9.dp, vertical = 3.dp), style = HomeType.header, color = palette.foreground)
+        Text(network, Modifier.tonal(RoundedCornerShape(50), palette.soft).padding(horizontal = 9.dp, vertical = 3.dp), style = HomeType.header,
+            color = palette.foreground)
     }) {
         Column(Modifier.padding(top = 6.dp)) {
             DetailRow(tr("Address"), host(config.arkServer), copy = config.arkServer, toasts = toasts)
@@ -169,14 +176,16 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
             DetailRow(tr("Receive anti-DoS"), if (current.lnReceiveAntiDosRequired) tr("Required") else tr("Not required"), toasts = toasts, last = true)
         }
         SectionLabel(tr("Endpoints"))
-        DetailRow(tr("Esplora"), if (selection.endpoint == null) tr("Noah default") else tr("Custom"), toasts = toasts) { nav.open(SettingsDestination.Esplora) }
+        DetailRow(tr("Esplora"), if (selection.endpoint == null) tr("Noah default") else tr("Custom"),
+            toasts = toasts) { nav.open(SettingsDestination.Esplora) }
         config.esplora?.let { DetailRow(tr("Esplora API"), host(it), copy = it, toasts = toasts) }
         config.bitcoind?.let { DetailRow(tr("Bitcoind RPC"), host(it), copy = it, toasts = toasts) }
         val height = ArkInfoEndpoints.blockHeight(BuildConfig.APP_VARIANT, selection.endpoint)
         DetailRow(tr("Block height API"), host(height), copy = height, toasts = toasts)
         val explorer = "https://mempool.space" + if (BuildConfig.APP_VARIANT == "mainnet") "" else "/signet"
         DetailRow(tr("Explorer"), host(explorer), copy = explorer, toasts = toasts)
-        val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT, BuildConfig.REGTEST_SERVER_URL))
+        val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT,
+            BuildConfig.REGTEST_SERVER_URL))
         DetailRow(tr("Price API"), host(prices.first), copy = prices.first, toasts = toasts)
         DetailRow(tr("Historical price API"), host(prices.second), copy = prices.second, toasts = toasts, last = true)
     }
@@ -223,7 +232,8 @@ internal fun EsploraPage(model: AppModel, nav: SettingsNav) {
     SettingsFrame(tr("Esplora"), nav.back, line = tr("Where Noah reads the Bitcoin chain."), foot = if (regtest) null else ({
         FootPill(tr("Use default"), Modifier.testTag("esplora-reset"), outlined = true, weight = .75f,
             enabled = editable && (selection.endpoint != null || selection.input != null)) { apply(null) }
-        FootPill(if (model.busy) tr("Testing") else tr("Test and save"), Modifier.testTag("esplora-save"), enabled = editable && input.isNotBlank(), loading = model.busy) { apply(input) }
+        FootPill(if (model.busy) tr("Testing") else tr("Test and save"), Modifier.testTag("esplora-save"), enabled = editable && input.isNotBlank(),
+            loading = model.busy) { apply(input) }
     })) {
         Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(if (regtest) tr("Bitcoin Core") else effective, style = SettingsType.current, color = palette.foreground, maxLines = 2)
@@ -231,8 +241,10 @@ internal fun EsploraPage(model: AppModel, nav: SettingsNav) {
                 style = HomeType.line, color = palette.muted)
         }
         if (!regtest) {
-            SettingsField(input, { input = it; error = null }, "https://mempool.space/api", Modifier.testTag("esplora-endpoint-input"), label = tr("Custom server"),
-                failed = error != null, enabled = editable, keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
+            SettingsField(input, { input = it; error = null }, "https://mempool.space/api", Modifier.testTag("esplora-endpoint-input"),
+                label = tr("Custom server"),
+                failed = error != null, enabled = editable,
+                keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
             error?.let { FinePrint(tr(it), failed = true) } ?: FinePrint(tr("Noah checks it’s on the right network before switching."))
             selection.attention?.let { FinePrint(tr(it), failed = true) }
             Warning(tr("A custom server can see your addresses. Use one you trust."), SettingsIcons.eye)
@@ -330,8 +342,10 @@ internal fun DebugPage(model: AppModel, nav: SettingsNav) {
         result?.let { value ->
             FieldLabel(tr("Result"))
             SelectionContainer {
-                Text(value, Modifier.padding(top = 8.dp).fillMaxWidth().background(palette.soft, RoundedCornerShape(18.dp)).padding(horizontal = 16.dp, vertical = 14.dp)
-                    .testTag("debug-result"), style = SettingsType.result, color = palette.foreground)
+                Text(value,
+                    Modifier.padding(top = 8.dp).fillMaxWidth().background(palette.soft, RoundedCornerShape(18.dp)).padding(horizontal = 16.dp,
+                        vertical = 14.dp)
+                        .testTag("debug-result"), style = SettingsType.result, color = palette.foreground)
             }
             val copied = tr("Copied")
             SettingsLink(tr("Copy")) {

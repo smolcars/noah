@@ -50,14 +50,16 @@ internal object BlockRow {
             val text = label(height)
             drawText(text, color = if (slot == 2 && s < 1f) palette.foreground else palette.muted, alpha = (if (slot < 0) 1 - s else 1f) * alpha,
                 topLeft = Offset(left + size / 2 - text.size.width / 2f, y + size + 14 - text.size.height / 2f))
-            if (confirmedAt == height && dot > 0f) drawCircle(palette.background, 6f, Offset(left + size / 2, y + size / 2), alpha = dot.coerceIn(0f, 1f) * alpha)
+            if (confirmedAt == height && dot > 0f) drawCircle(palette.background, 6f, Offset(left + size / 2, y + size / 2),
+                alpha = dot.coerceIn(0f, 1f) * alpha)
         }
         // The next block, waiting for your transaction.
         val left = x(3)
         val appear = if (shift > 0f) s else 1f
         drawRoundRect(palette.foreground, Offset(left, y), Size(size, size), CornerRadius(6f), alpha = appear * blink * alpha,
             style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f))))
-        drawText(next, color = palette.muted, alpha = appear * alpha, topLeft = Offset(left + size / 2 - next.size.width / 2f, y + size + 14 - next.size.height / 2f))
+        drawText(next, color = palette.muted, alpha = appear * alpha,
+            topLeft = Offset(left + size / 2 - next.size.width / 2f, y + size + 14 - next.size.height / 2f))
         if (confirmedAt == null && dot > 0f) drawCircle(palette.orange, 6f, Offset(left + size / 2, y + size / 2), alpha = dot.coerceIn(0f, 1f) * alpha)
     }
 

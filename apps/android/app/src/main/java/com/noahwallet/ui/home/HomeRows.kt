@@ -124,12 +124,14 @@ object HomeDays {
     }
     fun day(date: Date?, now: Date): Day? {
         if (date == null) return null
-        val today = Calendar.getInstance().apply { time = now; set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val today = Calendar.getInstance().apply { time = now; set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0) }
         val yesterday = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
         return when {
             !date.before(today.time) -> Day.Today
             !date.before(yesterday.time) -> Day.Yesterday
-            else -> Day.On(Calendar.getInstance().apply { time = date; set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.time)
+            else -> Day.On(Calendar.getInstance().apply { time = date; set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0) }.time)
         }
     }
     fun <T> grouped(rows: List<T>, date: (T) -> Date?, now: Date): List<Pair<Day, List<T>>> {

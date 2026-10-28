@@ -58,7 +58,8 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
     val glyph = { r: Float -> measurer.measure("₿", TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = units(r * 1.05f))) }
     val payGlyph = remember(density) { glyph(30f) }
     val refundGlyph = remember(density) { measurer.measure("₿", TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = units(30f))) }
-    val initial = remember(who.initial, density) { who.initial?.let { measurer.measure(it, TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = units(20f))) } }
+    val initial = remember(who.initial,
+        density) { who.initial?.let { measurer.measure(it, TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = units(20f))) } }
     val labelStyle = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = units(11.5f))
     val next = remember(nextLabel, density) { measurer.measure(nextLabel, labelStyle) }
     val format = remember(locale) { java.text.NumberFormat.getIntegerInstance(locale) }
@@ -120,7 +121,8 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
                     scale(sc, sc, at) {
                         drawCircle(palette.foreground, 10f, at, alpha = check.coerceIn(0f, 1f) * destAlpha)
                         val tick = Path().apply { moveTo(at.x - 4.5f, at.y); relativeLineTo(3f, 3f); relativeLineTo(5.5f, -6f) }
-                        drawPath(tick, palette.background, alpha = check.coerceIn(0f, 1f) * destAlpha, style = Stroke(2.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        drawPath(tick, palette.background, alpha = check.coerceIn(0f, 1f) * destAlpha,
+                            style = Stroke(2.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                 }
             }
@@ -148,13 +150,15 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
                 }
                 SendRoute.lightning -> {
                     val inServer = p(SendPhase.paid)
-                    payAt = StageArt.lerp(payAt, sv, travel(inServer)); payScale *= StageArt.lerp(1f, .3f, travel(inServer)); payAlpha *= 1 - inServer.coerceIn(0f, 1f)
+                    payAt = StageArt.lerp(payAt, sv, travel(inServer)); payScale *= StageArt.lerp(1f, .3f, travel(inServer))
+                    payAlpha *= 1 - inServer.coerceIn(0f, 1f)
                     val back = p(SendPhase.back)
                     payScale *= StageArt.lerp(1f, .6f, travel(back)); payAlpha *= 1 - back.coerceIn(0f, 1f)
                 }
                 SendRoute.chainArk -> {
                     val inServer = p(SendPhase.drop)
-                    payAt = StageArt.lerp(payAt, sv, travel(inServer)); payScale *= StageArt.lerp(1f, .3f, travel(inServer)); payAlpha *= 1 - inServer.coerceIn(0f, 1f)
+                    payAt = StageArt.lerp(payAt, sv, travel(inServer)); payScale *= StageArt.lerp(1f, .3f, travel(inServer))
+                    payAlpha *= 1 - inServer.coerceIn(0f, 1f)
                 }
                 SendRoute.chainWallet -> {
                     val gone = p(SendPhase.drop)
@@ -180,7 +184,8 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
                         line(Offset(pay.x + 58, pay.y - 58), Offset(pay.x + 17, pay.y - 24), palette.foreground, drawn(160), fade * stageAlpha)
                     }
                     val seal = p(SendPhase.sign, 900, SpringCurve.soft)
-                    if (seal > 0f && seal < 1f && !reduceMotion) drawCircle(palette.foreground, 30f * StageArt.lerp(1f, 1.7f, seal), pay, alpha = (1 - seal) * stageAlpha, style = Stroke(2f))
+                    if (seal > 0f && seal < 1f && !reduceMotion) drawCircle(palette.foreground, 30f * StageArt.lerp(1f, 1.7f, seal), pay,
+                        alpha = (1 - seal) * stageAlpha, style = Stroke(2f))
                     val ring = p(SendPhase.sign, 900).coerceIn(0f, 1f)
                     if (ring > 0f) drawCircle(palette.foreground, 34f, pay, alpha = .5f * ring * fade * stageAlpha, style = Stroke(1.5f))
                 }
@@ -191,7 +196,9 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
                     val open = if (has(SendPhase.signBack)) p(SendPhase.signBack, curve = SpringCurve.bouncy) else p(SendPhase.key, 900, SpringCurve.bouncy)
                     val lockScale = if (reduceMotion) 1f else StageArt.lerp(.6f, 1f, lockIn)
                     translate(0f, if (reduceMotion) 0f else -10f * (1 - lockIn)) {
-                        scale(lockScale, lockScale, lockAt) { padlock(lockAt, lockIn.coerceIn(0f, 1f) * (1 - lockOut) * stageAlpha, if (reduceMotion) open.coerceIn(0f, 1f) else open, palette.foreground, palette.background) }
+                        scale(lockScale, lockScale,
+                            lockAt) { padlock(lockAt, lockIn.coerceIn(0f, 1f) * (1 - lockOut) * stageAlpha, if (reduceMotion) open.coerceIn(0f, 1f) else open,
+                            palette.foreground, palette.background) }
                     }
                     // Ark holds it while Lightning pays: the server and the dotted tether.
                     val serverIn = p(SendPhase.hold, curve = SpringCurve.bouncy)
@@ -205,7 +212,8 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
                     val tetherOut = maxOf(p(SendPhase.paid), p(SendPhase.signBack)).coerceIn(0f, 1f)
                     line(Offset(pay.x + 14, pay.y - 40), Offset(sv.x - 13, sv.y + 12), palette.foreground, tether, (1 - tetherOut) * stageAlpha, dashed = true)
                     // The bolt runs from the server to the recipient, looping while Lightning is still paying.
-                    val bolt = Path().apply { moveTo(sv.x + 15, sv.y + 8); lineTo(sv.x + 34, sv.y + 26); lineTo(sv.x + 26, sv.y + 31); lineTo(d.x - 17, d.y - 20) }
+                    val bolt = Path().apply { moveTo(sv.x + 15, sv.y + 8); lineTo(sv.x + 34, sv.y + 26); lineTo(sv.x + 26, sv.y + 31)
+                        lineTo(d.x - 17, d.y - 20) }
                     val payStart = startOf(SendPhase.pay)
                     val fizzle = local(SendPhase.fizzle)
                     if (fizzle != null) {
@@ -247,16 +255,19 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
                     if (route == SendRoute.chainArk) {
                         val serverIn = p(SendPhase.swap, curve = SpringCurve.bouncy)
                         val serverOut = p(SendPhase.waiting, curve = SpringCurve.soft).coerceIn(0f, 1f)
-                        badge(false, sv, serverIn.coerceIn(0f, 1f) * (1 - serverOut) * stageAlpha, if (reduceMotion) 1f else StageArt.lerp(.4f, 1f, serverIn), palette)
+                        badge(false, sv, serverIn.coerceIn(0f, 1f) * (1 - serverOut) * stageAlpha, if (reduceMotion) 1f else StageArt.lerp(.4f, 1f, serverIn),
+                            palette)
                         val tether = local(SendPhase.swap)?.let { ((it - 150) / 300f).coerceIn(0f, 1f) } ?: 0f
-                        line(Offset(pay.x + 14, pay.y - 26), Offset(sv.x - 13, sv.y + 12), palette.foreground, tether, (1 - p(SendPhase.drop).coerceIn(0f, 1f)) * stageAlpha, dashed = true)
+                        line(Offset(pay.x + 14, pay.y - 26), Offset(sv.x - 13, sv.y + 12), palette.foreground, tether,
+                            (1 - p(SendPhase.drop).coerceIn(0f, 1f)) * stageAlpha, dashed = true)
                     }
                     // The transaction travels into the next block, where the strip holds it.
                     local(SendPhase.drop)?.let { t ->
                         val q = step(t, 250, SpringCurve.soft, reduceMotion = reduceMotion)
                         if (shownTip != null && q > 0f && q < .999f && !reduceMotion) {
                             val from = if (route == SendRoute.chainArk) sv else pay
-                            drawCircle(palette.orange, 6f, StageArt.lerp(from, Offset(86f + 3 * 50f + 19f, 176f + 19f), q), alpha = q.coerceIn(0f, 1f) * stageAlpha)
+                            drawCircle(palette.orange, 6f, StageArt.lerp(from, Offset(86f + 3 * 50f + 19f, 176f + 19f), q),
+                                alpha = q.coerceIn(0f, 1f) * stageAlpha)
                         }
                     }
                 }
@@ -272,14 +283,16 @@ private fun glyphPath(glyph: SendWho.Glyph): Path = when (glyph) {
     SendWho.Glyph.request -> StageArt.request
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawText(text: androidx.compose.ui.text.TextLayoutResult, color: Color, center: Offset, alpha: Float) =
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawText(text: androidx.compose.ui.text.TextLayoutResult, color: Color, center: Offset,
+    alpha: Float) =
     drawText(text, color = color, alpha = alpha.coerceIn(0f, 1f), topLeft = Offset(center.x - text.size.width / 2f, center.y - text.size.height / 2f))
 
 /** The phase line's words for [SendTimeline]'s current phase; null hides it. [height]: the block it waits for or confirmed in. */
 internal data class PhaseLine(val source: String, val argument: String? = null, val done: Boolean = false, val suffix: Pair<Long, Long>? = null)
 
 internal object SendPhaseLines {
-    fun of(motion: SendMotion, elapsed: Long, reduceMotion: Boolean, amount: String, tip: Long?, confirmedAt: Long?, needed: Long, format: (Long) -> String): PhaseLine? {
+    fun of(motion: SendMotion, elapsed: Long, reduceMotion: Boolean, amount: String, tip: Long?, confirmedAt: Long?, needed: Long,
+        format: (Long) -> String): PhaseLine? {
         val started = SendTimeline.started(motion, elapsed, reduceMotion)
         if (SendTimeline.stillPaying(motion, elapsed, reduceMotion)) return PhaseLine("Still paying. This can take a few minutes.")
         return when (started.lastOrNull()?.phase) {

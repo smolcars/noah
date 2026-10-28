@@ -142,7 +142,8 @@ private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boole
     val spring = spring<androidx.compose.ui.unit.IntOffset>(.85f, 438.6491f / 1.21f)
     val fade = spring<Float>(.85f, 438.6491f / 1.21f)
     val shift = with(density) { 30.dp.roundToPx() }
-    if (split) return (fadeIn(tween(220, delayMillis = 60)) + slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
+    if (split) return (fadeIn(tween(220,
+        delayMillis = 60)) + slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
     return (fadeIn(fade) + slideInHorizontally(spring) { if (forward) shift else -shift }) togetherWith
         (fadeOut(fade) + slideOutHorizontally(spring) { if (forward) -shift else shift })
 }
@@ -196,7 +197,8 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
             var poseSwap by remember { mutableStateOf(false) }
             var drawnWide by remember { mutableStateOf(wide) }
             if (drawnWide != wide) SideEffect { drawnWide = wide; poseSwap = true }
-            fun transition(forward: Boolean) = if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else pageTransition(forward, reduceMotion, wide, density)
+            fun transition(forward: Boolean) = if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else pageTransition(forward, reduceMotion,
+                wide, density)
             fun pop() { poseSwap = false; if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
             // While a save that navigates runs (SettingsNav.save), you can't move away from its page: Back, the bar's back,
             // list picks and links wait. Its completion leaves only its own page, so it can't dismiss another one.

@@ -110,7 +110,8 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
             }
         }
     }, actions = {
-        PillButton(tr("Continue"), Modifier.fillMaxWidth().testTag("onboarding-name-continue"), enabled = availability.canContinue, loading = model.busy) { save() }
+        PillButton(tr("Continue"), Modifier.fillMaxWidth().testTag("onboarding-name-continue"), enabled = availability.canContinue,
+            loading = model.busy) { save() }
     })
 }
 

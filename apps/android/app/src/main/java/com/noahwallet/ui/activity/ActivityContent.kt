@@ -182,7 +182,8 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
     val rows = remember(ui.records, ui.ownDomain) { ActivityRules.rows(ui.records, ui.ownDomain) }
     val selected = rows.firstOrNull { it.id == state.selected }
     // A payment that's gone from the wallet's records (a wallet reset) closes; a loading list keeps the selection.
-    LaunchedEffect(selected == null, ui.loading) { if (state.selected != null && selected == null && !ui.loading && ui.records.isNotEmpty()) state.selected = null }
+    LaunchedEffect(selected == null,
+        ui.loading) { if (state.selected != null && selected == null && !ui.loading && ui.records.isNotEmpty()) state.selected = null }
     // A pending offboard's record doesn't change at its first confirmation; history reads still come (wallet events,
     // pull to refresh, resume), so the block row re-reads the chain then. No polling.
     LaunchedEffect(selected?.record, ui.revision) { selected?.record?.let(actions.shown) }
@@ -194,7 +195,8 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
     if (compact) {
         val seekable = remember { SeekableTransitionState(state.selected) }
         val scope = rememberCoroutineScope()
-        LaunchedEffect(state.selected) { if (seekable.targetState != state.selected || seekable.currentState != state.selected) seekable.animateTo(state.selected) }
+        LaunchedEffect(state.selected) { if (seekable.targetState != state.selected ||
+            seekable.currentState != state.selected) seekable.animateTo(state.selected) }
         // The back gesture previews the way back: the detail shrinks into its row as the finger moves.
         androidx.activity.compose.PredictiveBackHandler(enabled = state.selected != null) { progress ->
             try {
@@ -323,7 +325,8 @@ private fun ActivityList(ui: ActivityUi, actions: ActivityActions, state: Activi
     val fullyVisible by remember(listState) {
         derivedStateOf {
             val info = listState.layoutInfo
-            info.visibleItemsInfo.filter { it.offset >= info.viewportStartOffset && it.offset + it.size <= info.viewportEndOffset }.mapNotNull { it.key as? String }.toSet()
+            info.visibleItemsInfo.filter { it.offset >= info.viewportStartOffset &&
+                it.offset + it.size <= info.viewportEndOffset }.mapNotNull { it.key as? String }.toSet()
         }
     }
     LazyColumn(Modifier.fillMaxSize().testTag("activity-list"), listState, contentPadding = PaddingValues(bottom = if (wide) 36.dp else 24.dp)) {
@@ -416,7 +419,8 @@ private fun FilterChip(state: ActivityState) {
         if (!reduceMotion) scale.animateTo(1f, NoahTokens.Motion.bouncy())
     }
     val clear = tr("Clear filter")
-    Row(Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value; this.alpha = alpha.value }.height(30.dp).tonal(RoundedCornerShape(15.dp), palette.soft)
+    Row(Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value; this.alpha = alpha.value }.height(30.dp).tonal(RoundedCornerShape(15.dp),
+        palette.soft)
         .clickable(onClickLabel = clear, role = Role.Button) { haptics.selection(); state.filter = HistoryFilter.All }
         .padding(start = 12.dp, end = 8.dp).testTag("activity-filter-chip"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -451,7 +455,8 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
             Row(Modifier.weight(1f).height(48.dp).graphicsLayer { alpha = .4f + .6f * open.value.coerceIn(0f, 1f) }
                 .tonal(RoundedCornerShape(24.dp), palette.soft).padding(start = 0.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 BarButton(R.drawable.ic_activity_back, tr("Close search")) { haptics.light(); close() }
-                BasicTextField(state.query, { state.query = it }, Modifier.weight(1f).focusRequester(focus).testTag("activity-search-field"), textStyle = ActivityType.search.copy(color = palette.foreground), singleLine = true,
+                BasicTextField(state.query, { state.query = it }, Modifier.weight(1f).focusRequester(focus).testTag("activity-search-field"),
+                    textStyle = ActivityType.search.copy(color = palette.foreground), singleLine = true,
                     cursorBrush = SolidColor(palette.orange), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }), decorationBox = { field ->
                         Box(contentAlignment = Alignment.CenterStart) {
@@ -462,7 +467,8 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
                 if (state.query.isNotEmpty()) Box(Modifier.size(30.dp).clip(CircleShape).clickable(onClickLabel = tr("Clear search"), role = Role.Button) {
                     // show(): an already focused field (keyboard hidden by back or Search) doesn't bring it back on focus.
                     state.query = ""; focus.requestFocus(); keyboard?.show()
-                }, contentAlignment = Alignment.Center) { Icon(painterResource(HomeIcons.close), tr("Clear search"), Modifier.size(16.dp), tint = palette.muted) }
+                }, contentAlignment = Alignment.Center) { Icon(painterResource(HomeIcons.close), tr("Clear search"), Modifier.size(16.dp),
+                    tint = palette.muted) }
             }
             return@Row
         }
@@ -476,7 +482,8 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
             Text(tr("Activity"), Modifier.padding(start = 12.dp).weight(1f).graphicsLayer { this.alpha = alpha }.clearAndSetSemantics { },
                 style = ActivityType.mini, color = palette.foreground, maxLines = 1)
         }
-        BarButton(R.drawable.ic_activity_search, tr("Search"), Modifier.testTag("activity-search")) { haptics.light(); focusOnOpen = true; state.searching = true }
+        BarButton(R.drawable.ic_activity_search, tr("Search"), Modifier.testTag("activity-search")) { haptics.light(); focusOnOpen = true
+            state.searching = true }
         Box {
             var menu by remember { mutableStateOf(false) }
             BarButton(R.drawable.ic_activity_more, tr("More"), Modifier.testTag("activity-more")) { haptics.light(); menu = true }
@@ -509,13 +516,15 @@ private fun ActivityMenu(open: Boolean, filter: HistoryFilter, onDismiss: () -> 
             val checked = option == filter
             DropdownMenuItem({ Text(tr(ActivityRules.filterName(option)), style = ActivityType.menu) }, { onFilter(option) },
                 Modifier.semantics { role = Role.RadioButton; selected = checked }, colors = colors,
-                leadingIcon = { Icon(painterResource(R.drawable.ic_activity_check), null, Modifier.size(18.dp).graphicsLayer { alpha = if (checked) 1f else 0f }) })
+                leadingIcon = { Icon(painterResource(R.drawable.ic_activity_check), null,
+                    Modifier.size(18.dp).graphicsLayer { alpha = if (checked) 1f else 0f }) })
         }
         HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.hairline)
         DropdownMenuItem({ Text(tr("Export CSV"), style = ActivityType.menu) }, onExport, colors = colors, leadingIcon = { Spacer(Modifier.size(18.dp)) },
             trailingIcon = { Icon(painterResource(R.drawable.ic_activity_share), null, Modifier.size(20.dp)) })
         // Its own string: the shared "Refresh" reads as "renew" in es, sv and ko.
-        DropdownMenuItem({ Text(tr("Refresh activity"), style = ActivityType.menu) }, onRefresh, colors = colors, leadingIcon = { Spacer(Modifier.size(18.dp)) },
+        DropdownMenuItem({ Text(tr("Refresh activity"), style = ActivityType.menu) }, onRefresh, colors = colors,
+            leadingIcon = { Spacer(Modifier.size(18.dp)) },
             trailingIcon = { Icon(painterResource(R.drawable.ic_activity_refresh), null, Modifier.size(20.dp)) })
     }
 }
@@ -547,9 +556,11 @@ private fun LazyListScope.skeleton(reduceMotion: Boolean) {
 private fun ErrorState(message: String, retry: () -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
-    Column(Modifier.fillMaxWidth().padding(top = 120.dp, start = 24.dp, end = 24.dp).testTag("activity-error"), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth().padding(top = 120.dp, start = 24.dp, end = 24.dp).testTag("activity-error"),
+        horizontalAlignment = Alignment.CenterHorizontally) {
         Text(tr("Couldn't load activity"), style = ActivityType.errorTitle, color = palette.foreground, textAlign = TextAlign.Center)
-        Text(tr(message), Modifier.padding(top = 6.dp, bottom = 16.dp).widthIn(max = 270.dp), style = HomeType.line, color = palette.muted, textAlign = TextAlign.Center)
+        Text(tr(message), Modifier.padding(top = 6.dp, bottom = 16.dp).widthIn(max = 270.dp), style = HomeType.line, color = palette.muted,
+            textAlign = TextAlign.Center)
         Pill(tr("Try again"), height = 40.dp, outlined = true, style = ActivityType.link) { haptics.light(); retry() }
     }
 }
@@ -559,7 +570,8 @@ private fun ErrorState(message: String, retry: () -> Unit) {
 private fun EmptyState(receive: () -> Unit) {
     val palette = LocalPalette.current
     val initial = "a" // a person's initial, the first of the three avatar kinds; not copy
-    Column(Modifier.fillMaxWidth().padding(top = 44.dp, start = 24.dp, end = 24.dp).testTag("activity-empty"), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth().padding(top = 44.dp, start = 24.dp, end = 24.dp).testTag("activity-empty"),
+        horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.widthIn(max = 300.dp).fillMaxWidth().clearAndSetSemantics { }) {
             listOf<@Composable () -> Unit>(
                 { Text(initial, style = HomeType.avatar, color = palette.muted) },

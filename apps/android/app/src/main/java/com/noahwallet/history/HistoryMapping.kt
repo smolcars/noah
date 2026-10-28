@@ -59,7 +59,8 @@ object HistoryMapping {
         return HistoryTransaction("movement-${m.id}", type, amount, HistoryRules.isoDate(date), if (outgoing) "outgoing" else "incoming",
             sortTimestamp = date.time.toDouble(), source = "ark", txid = transactionID(m, metadata, outgoing),
             destination = repeat?.destination ?: first?.value ?: "", movementId = m.id, movementStatus = m.status, movementKind = kind,
-            subsystemName = subsystem?.let { m.subsystemName.lowercase(Locale.ROOT) }, subsystemKind = subsystem?.let { m.subsystemKind.lowercase(Locale.ROOT) },
+            subsystemName = subsystem?.let { m.subsystemName.lowercase(Locale.ROOT) },
+            subsystemKind = subsystem?.let { m.subsystemKind.lowercase(Locale.ROOT) },
             metadataJson = m.metadataJson, intendedBalanceSat = m.intendedBalanceSats, effectiveBalanceSat = m.effectiveBalanceSats,
             offchainFeeSat = m.offchainFeeSats.toLong(), onchainFeeSat = metadata.onchainFeeSat, chainAnchor = metadata.chainAnchor,
             sentTo = m.sentToAddresses.map(::destination), receivedOn = m.receivedOnAddresses.map(::destination),
@@ -82,7 +83,8 @@ object HistoryMapping {
      */
     fun exitFees(exits: List<ExitTransactionStatus>): Map<String, String> = exits.flatMap { exit ->
         val past = (exit.history.orEmpty() + exit.state).filterIsInstance<ExitState.Processing>().flatMap { it.transactions }.mapNotNull { tx ->
-            when (val status = tx.status) { is ExitTxStatus.AwaitingConfirmation -> status.childTxid; is ExitTxStatus.Confirmed -> status.childTxid; else -> null }
+            when (val status = tx.status) { is ExitTxStatus.AwaitingConfirmation -> status.childTxid; is ExitTxStatus.Confirmed -> status.childTxid
+                else -> null }
         }
         (exit.transactions.mapNotNull { it.childTxid } + past).map { it to exit.vtxoId }
     }.toMap()

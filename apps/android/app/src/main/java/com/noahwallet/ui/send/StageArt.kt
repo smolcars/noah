@@ -60,7 +60,8 @@ internal object StageArt {
     }
 
     /** Your coin (soft fill, orange ring), the refund (the same, thinner ring) or the payment (solid, with ₿). */
-    fun DrawScope.coin(center: Offset, r: Float, kind: Coin, alpha: Float, scale: Float, palette: com.noahwallet.ui.design.NoahTokens.Palette, glyph: TextLayoutResult? = null) {
+    fun DrawScope.coin(center: Offset, r: Float, kind: Coin, alpha: Float, scale: Float, palette: com.noahwallet.ui.design.NoahTokens.Palette,
+        glyph: TextLayoutResult? = null) {
         if (alpha <= 0f) return
         val a = alpha.coerceIn(0f, 1f)
         scale(scale, scale, center) {
@@ -111,7 +112,8 @@ internal object StageArt {
         return out
     }
 
-    fun cubic(x1: Float, y1: Float, x2: Float, y2: Float): androidx.compose.animation.core.Easing = androidx.compose.animation.core.CubicBezierEasing(x1, y1, x2, y2)
+    fun cubic(x1: Float, y1: Float, x2: Float, y2: Float): androidx.compose.animation.core.Easing = androidx.compose.animation.core.CubicBezierEasing(x1, y1,
+        x2, y2)
     fun lerp(a: Offset, b: Offset, t: Float) = Offset(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
     fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 

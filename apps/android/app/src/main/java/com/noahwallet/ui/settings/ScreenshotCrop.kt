@@ -80,10 +80,18 @@ internal fun ScreenshotCropDialog(image: Bitmap, onCancel: () -> Unit, onCrop: (
                 drawRect(Color.White, origin + Offset(width * crop.left, height * crop.top),
                     Size(width * (crop.right - crop.left), height * (crop.bottom - crop.top)), style = Stroke(2.dp.toPx()))
             }
-            Text(left); Slider(crop.left, { crop = crop.copy(left = it) }, modifier = Modifier.semantics { contentDescription = left }, valueRange = 0f..(crop.right - 0.01f))
-            Text(right); Slider(crop.right, { crop = crop.copy(right = it) }, modifier = Modifier.semantics { contentDescription = right }, valueRange = (crop.left + 0.01f)..1f)
-            Text(top); Slider(crop.top, { crop = crop.copy(top = it) }, modifier = Modifier.semantics { contentDescription = top }, valueRange = 0f..(crop.bottom - 0.01f))
-            Text(bottom); Slider(crop.bottom, { crop = crop.copy(bottom = it) }, modifier = Modifier.semantics { contentDescription = bottom }, valueRange = (crop.top + 0.01f)..1f)
+            Text(left)
+            Slider(crop.left, { crop = crop.copy(left = it) }, modifier = Modifier.semantics { contentDescription = left },
+                valueRange = 0f..(crop.right - 0.01f))
+            Text(right)
+            Slider(crop.right, { crop = crop.copy(right = it) }, modifier = Modifier.semantics { contentDescription = right },
+                valueRange = (crop.left + 0.01f)..1f)
+            Text(top)
+            Slider(crop.top, { crop = crop.copy(top = it) }, modifier = Modifier.semantics { contentDescription = top },
+                valueRange = 0f..(crop.bottom - 0.01f))
+            Text(bottom)
+            Slider(crop.bottom, { crop = crop.copy(bottom = it) }, modifier = Modifier.semantics { contentDescription = bottom },
+                valueRange = (crop.top + 0.01f)..1f)
         }
     }, dismissButton = { TextButton(onCancel) { Text(tr("Cancel")) } },
         confirmButton = { TextButton({ onCrop(crop) }) { Text(tr("Done")) } })

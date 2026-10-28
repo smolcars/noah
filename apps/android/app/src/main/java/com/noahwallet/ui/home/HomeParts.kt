@@ -65,10 +65,12 @@ internal object HomeType {
     val qrName = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp, lineHeightStyle = box)
     val listTitle = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.01).em, lineHeightStyle = box)
     val rowTitle = NoahTokens.Typography.body.copy(lineHeightStyle = box)
-    val amount = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp, fontFeatureSettings = "tnum", lineHeightStyle = box)
+    val amount = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp, fontFeatureSettings = "tnum",
+        lineHeightStyle = box)
     val avatar = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 17.sp, lineHeightStyle = trim)
     val total = NoahTokens.Typography.amount.copy(lineHeight = 36.sp, lineHeightStyle = trim)
-    val got = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, lineHeight = 30.sp, letterSpacing = (-0.02).em, lineHeightStyle = trim)
+    val got = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, lineHeight = 30.sp, letterSpacing = (-0.02).em,
+        lineHeightStyle = trim)
     val toast = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp, lineHeightStyle = box)
 }
 
@@ -128,7 +130,8 @@ internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZ
         text.forEachIndexed { index, char ->
             key(text.length - index) {
                 // One line box for every character so they share a baseline; separators' descenders may overflow it.
-                if (!char.isDigit()) Text(char.toString(), Modifier.height(lineHeight).testTag("home-balance-char"), style = style, color = color, overflow = TextOverflow.Visible)
+                if (!char.isDigit()) Text(char.toString(), Modifier.height(lineHeight).testTag("home-balance-char"), style = style, color = color,
+                    overflow = TextOverflow.Visible)
                 else {
                     val target = char.digitToInt()
                     val order = digitIndex.indexOf(index)
@@ -148,7 +151,8 @@ internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZ
                         // Unbounded: the ten-digit column is taller than the one-line window it rolls through.
                         Column(Modifier.align(Alignment.TopCenter).wrapContentHeight(Alignment.Top, unbounded = true).requiredWidth(widths.max())
                             .offset { IntOffset(0, -(position.value * lineHeight.toPx()).roundToInt()) }) {
-                            for (digit in 0..9) Text("$digit", Modifier.height(lineHeight).fillMaxWidth(), style = style, color = color, textAlign = TextAlign.Center)
+                            for (digit in 0..9) Text("$digit", Modifier.height(lineHeight).fillMaxWidth(), style = style, color = color,
+                                textAlign = TextAlign.Center)
                         }
                     }
                 }
@@ -230,7 +234,8 @@ internal fun NudgeCard(icon: Int, title: String, subtitle: String?, action: Stri
         }
         action?.let { Pill(it, enabled = enabled, onClick = onAction) }
         dismissLabel?.let { label ->
-            Box(Modifier.padding(start = 0.dp).offset(x = (-4).dp).size(28.dp).clip(CircleShape).clickable(onClickLabel = label, role = Role.Button, onClick = onDismiss)
+            Box(Modifier.padding(start = 0.dp).offset(x = (-4).dp).size(28.dp).clip(CircleShape).clickable(onClickLabel = label, role = Role.Button,
+                onClick = onDismiss)
                 .semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
                 Icon(painterResource(HomeIcons.close), null, Modifier.size(14.dp), tint = palette.muted)
             }
@@ -272,7 +277,8 @@ internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, large: Boolean 
         Box(Modifier.fillMaxSize().background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
             val icon = when (val avatar = row.avatar) {
                 is HomeRow.Avatar.Initial -> null.also {
-                    Text(avatar.letter, style = if (large) HomeType.avatar.copy(fontSize = 24.sp, lineHeight = 24.sp) else HomeType.avatar, color = palette.foreground)
+                    Text(avatar.letter, style = if (large) HomeType.avatar.copy(fontSize = 24.sp, lineHeight = 24.sp) else HomeType.avatar,
+                        color = palette.foreground)
                 }
                 HomeRow.Avatar.Lightning -> HomeIcons.lightning
                 HomeRow.Avatar.Chain -> HomeIcons.chain
@@ -308,7 +314,8 @@ internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, large: Boolean 
             Box(Modifier.align(Alignment.TopEnd).offset(3.dp, (-3).dp).size(15.dp).graphicsLayer {
                 // Grows a little, then shrinks to nothing (prototype keyframes 1 → 1.35 at 25 % → 0).
                 val g = gone.value
-                val shrink = if (reduceMotion) 1f else if (g < .25f) lerp(1f, 1.35f, SpringCurve.soft.over(g / .25f)) else lerp(1.35f, 0f, SpringCurve.soft.over((g - .25f) / .75f))
+                val shrink = if (reduceMotion) 1f else if (g < .25f) lerp(1f, 1.35f, SpringCurve.soft.over(g / .25f)) else lerp(1.35f, 0f,
+                    SpringCurve.soft.over((g - .25f) / .75f))
                 scaleX = scale.value * shrink; scaleY = scale.value * shrink
                 alpha = if (reduceMotion) 1 - g else if (g < .25f) 1f else 1 - (g - .25f) / .75f
             }.background(palette.background, CircleShape).padding(2.dp).background(palette.orange, CircleShape))
@@ -361,9 +368,11 @@ internal fun ActivityRow(row: HomeRow, hidden: Boolean, unit: com.noahwallet.for
     Row(modifier.fillMaxWidth().height(66.dp)
         .drawBehind {
             // The selected row's soft highlight reaches 12 dp past the text (prototype `.rw.sel::before`).
-            if (selected) drawRoundRect(palette.soft, Offset(-12.dp.toPx(), 3.dp.toPx()), androidx.compose.ui.geometry.Size(size.width + 24.dp.toPx(), size.height - 6.dp.toPx()),
+            if (selected) drawRoundRect(palette.soft, Offset(-12.dp.toPx(), 3.dp.toPx()),
+                androidx.compose.ui.geometry.Size(size.width + 24.dp.toPx(), size.height - 6.dp.toPx()),
                 androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()))
-            if (divider) drawRect(palette.hairline, Offset(56.dp.toPx(), size.height - 1.dp.toPx()), androidx.compose.ui.geometry.Size(size.width - 56.dp.toPx(), 1.dp.toPx()))
+            if (divider) drawRect(palette.hairline, Offset(56.dp.toPx(), size.height - 1.dp.toPx()),
+                androidx.compose.ui.geometry.Size(size.width - 56.dp.toPx(), 1.dp.toPx()))
         }.clickable(role = Role.Button, onClick = onClick).semantics(mergeDescendants = true) { if (selected) this.selected = true },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         RowAvatar(row, new, pop, fading = fading, onSeen = onSeen, modifier = avatarModifier)
@@ -396,7 +405,8 @@ internal fun HomeToast(message: HomeToastMessage?, modifier: Modifier = Modifier
     val inEnd = (340f / current.millis).coerceAtMost(.2f)
     val outStart = 1 - (306f / current.millis).coerceAtMost(.18f)
     val alpha = when { p < inEnd -> p / inEnd; p > outStart -> (1 - p) / (1 - outStart); else -> 1f }
-    val rise = when { reduceMotion -> 0f; p < inEnd -> 8 * (1 - SpringCurve.snappy.over(p / inEnd)); p > outStart -> -4 * (p - outStart) / (1 - outStart); else -> 0f }
+    val rise = when { reduceMotion -> 0f; p < inEnd -> 8 * (1 - SpringCurve.snappy.over(p / inEnd)); p > outStart -> -4 * (p - outStart) / (1 - outStart)
+        else -> 0f }
     val scale = if (reduceMotion || p >= inEnd) 1f else lerp(.9f, 1f, SpringCurve.snappy.over(p / inEnd))
     Box(modifier.graphicsLayer { this.alpha = alpha.coerceIn(0f, 1f); translationY = rise * density; scaleX = scale; scaleY = scale }
         .height(34.dp).background(palette.foreground, RoundedCornerShape(17.dp)).padding(horizontal = 16.dp)

@@ -110,7 +110,8 @@ enum class SendEnding { sending, arkSent, lightningSent, chainSent, pending, ref
             return when (state) {
                 SendController.State.ready -> null
                 SendController.State.submitting -> if (stillPaying) pending else sending
-                SendController.State.succeeded -> when (route) { SendRoute.ark -> arkSent; SendRoute.lightning -> lightningSent; null -> unknown; else -> chainSent }
+                SendController.State.succeeded -> when (route) { SendRoute.ark -> arkSent; SendRoute.lightning -> lightningSent; null -> unknown
+                    else -> chainSent }
                 SendController.State.failed -> when {
                     route != SendRoute.lightning -> notSent
                     refund == SendRefund.recorded -> refunded
@@ -146,7 +147,9 @@ internal object SendWhoRules {
     }
     /** The type line under a result: Lightning address, Noah user, Bitcoin address and so on. */
     fun kind(type: String?, destination: String, ownDomain: String?): String? = when (type) {
-        "lnurl" -> if (ownDomain != null && SendDestination.cleaned(destination).lowercase(Locale.ROOT).substringAfter('@', "") == ownDomain.lowercase(Locale.ROOT)) "Noah user" else "Lightning address"
+        "lnurl" -> if (ownDomain != null &&
+            SendDestination.cleaned(destination).lowercase(Locale.ROOT).substringAfter('@',
+                "") == ownDomain.lowercase(Locale.ROOT)) "Noah user" else "Lightning address"
         "onchain" -> "Bitcoin address"
         "lightning" -> "Lightning invoice"
         "bip321" -> "Payment request"
@@ -221,7 +224,8 @@ internal fun SendApproval(presentation: SendPresentation, payment: SendPayment, 
     }
 }
 
-private fun SendPayment.rail() = when (SendRoute.of(this)) { SendRoute.ark -> SendRail.ark; SendRoute.lightning -> SendRail.lightning; else -> SendRail.onchain }
+private fun SendPayment.rail() = when (SendRoute.of(this)) { SendRoute.ark -> SendRail.ark; SendRoute.lightning -> SendRail.lightning
+    else -> SendRail.onchain }
 
 private fun formatted(sats: Long, env: SendEnv) = BitcoinAmount.format(sats, env.unit, env.locale)
 
@@ -265,7 +269,8 @@ private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Bool
             }
         }
         is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
-            Box(Modifier.width(pose.start).fillMaxHeight().padding(start = 34.dp, end = 34.dp, top = 14.dp, bottom = 24.dp), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.width(pose.start).fillMaxHeight().padding(start = 34.dp, end = 34.dp, top = 14.dp, bottom = 24.dp),
+                contentAlignment = Alignment.TopCenter) {
                 Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize()) {
                     navRow()
                     Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
@@ -273,20 +278,24 @@ private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Bool
                 }
             }
             Spacer(Modifier.width(pose.end - pose.start))
-            Box(Modifier.weight(1f).fillMaxHeight().imePadding().padding(start = 40.dp, end = 34.dp, top = 22.dp, bottom = 24.dp), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.weight(1f).fillMaxHeight().imePadding().padding(start = 40.dp, end = 34.dp, top = 22.dp, bottom = 24.dp),
+                contentAlignment = Alignment.TopCenter) {
                 Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize().verticalScroll(rememberScrollState()),
                     verticalArrangement = arrangement(trailingAt)) { trailing(); bottom?.invoke(this) }
             }
         }
         is OnboardingPose.Tabletop -> Column(Modifier.fillMaxSize()) {
-            Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds().padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 8.dp), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds().padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 8.dp),
+                contentAlignment = Alignment.TopCenter) {
                 Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize()) {
                     navRow()
-                    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center, content = leading)
+                    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center,
+                        content = leading)
                 }
             }
             Spacer(Modifier.height(pose.bottom - pose.top))
-            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().imePadding().padding(horizontal = 20.dp, vertical = 12.dp), contentAlignment = Alignment.TopCenter) {
+            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().imePadding().padding(horizontal = 20.dp, vertical = 12.dp),
+                contentAlignment = Alignment.TopCenter) {
                 stacked(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize())
             }
         }
@@ -385,12 +394,14 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
         Scan(!model.busy, actions.scan)
     }, leadingCentred = true, trailingAt = Alignment.Bottom, leading = {
         Text(if (over) tr("Only {amount} available", formatted(available, env)) else tr("{amount} available", formatted(available, env)),
-            Modifier.fillMaxWidth().padding(top = 28.dp), style = SendType.line, color = if (over) palette.failure else palette.muted, textAlign = TextAlign.Center)
+            Modifier.fillMaxWidth().padding(top = 28.dp), style = SendType.line, color = if (over) palette.failure else palette.muted,
+            textAlign = TextAlign.Center)
         Box(Modifier.fillMaxWidth().padding(top = 30.dp).height(72.dp), contentAlignment = Alignment.BottomCenter) {
             AutoFit { AmountFigure(text, model.amount.isEmpty(), shake.value, modifier = Modifier.testTag("send-amount")) }
         }
         val price = model.btcPrice
-        Row(Modifier.fillMaxWidth().padding(top = 14.dp).height(24.dp).then(if (price != null && editable) Modifier.clickableNoRipple { haptics.selection(); model.toggleCurrency() }.testTag("send-currency-toggle") else Modifier),
+        Row(Modifier.fillMaxWidth().padding(top = 14.dp).height(24.dp).then(if (price != null && editable) Modifier.clickableNoRipple { haptics.selection()
+            model.toggleCurrency() }.testTag("send-currency-toggle") else Modifier),
             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             if (price != null) {
                 Text(if (model.useFiat) formatted(sats, env) else FiatCurrency.display(sats, price, model.fiatCurrency, env.locale),
@@ -416,9 +427,12 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
         }
         model.error?.let { ErrorLine(it, model) }
     }, trailing = {
-        SendKeypad(model.useFiat, editable, Modifier.padding(top = 12.dp), keyHeight = if (LocalPose.current is OnboardingPose.Tabletop) 48.dp else 60.dp) { key -> model.amount = keypadInput(model.amount, key, model.useFiat) }
+        SendKeypad(model.useFiat, editable, Modifier.padding(top = 12.dp),
+            keyHeight = if (LocalPose.current is OnboardingPose.Tabletop) 48.dp else 60.dp) { key -> model.amount = keypadInput(model.amount, key,
+            model.useFiat) }
         // An empty amount continues recipient-first, as today's "Choose recipient first" did.
-        SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(top = 12.dp).testTag("send-continue"), enabled = !model.busy && !over) {
+        SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(top = 12.dp).testTag("send-continue"),
+            enabled = !model.busy && !over) {
             haptics.light()
             scope.launch { if (model.amount.isEmpty() && !model.progress.recipientConfirmed) model.recipientFirst() else model.continueStage() }
         }
@@ -438,7 +452,8 @@ private fun AutoFit(content: @Composable () -> Unit) {
         val placeable = measurables.first().measure(constraints.copy(minWidth = 0, maxWidth = androidx.compose.ui.unit.Constraints.Infinity))
         val scale = if (placeable.width > constraints.maxWidth) constraints.maxWidth / placeable.width.toFloat() else 1f
         layout(constraints.maxWidth, placeable.height) {
-            placeable.placeWithLayer((constraints.maxWidth - placeable.width) / 2, 0) { scaleX = scale; scaleY = scale; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f) }
+            placeable.placeWithLayer((constraints.maxWidth - placeable.width) / 2, 0) { scaleX = scale; scaleY = scale
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f) }
         }
     }
 }
@@ -483,8 +498,10 @@ private fun ToStep(presentation: SendPresentation, env: SendEnv, actions: SendAc
                         val who = SendWhoRules.of(destination, type, env.ownDomain)
                         Column(Modifier.width(60.dp).clickableNoRipple { haptics.light(); scope.launch { model.importRecipient(destination) } }
                             .semantics(mergeDescendants = true) { }, horizontalAlignment = Alignment.CenterHorizontally) {
-                            WhoAvatar(who, 56.dp, SendType.initial.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)))
-                            Text(who.name.substringBefore('@'), Modifier.padding(top = 6.dp), style = SendType.small.copy(fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)),
+                            WhoAvatar(who, 56.dp,
+                                SendType.initial.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)))
+                            Text(who.name.substringBefore('@'), Modifier.padding(top = 6.dp),
+                                style = SendType.small.copy(fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)),
                                 color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
@@ -497,11 +514,13 @@ private fun ToStep(presentation: SendPresentation, env: SendEnv, actions: SendAc
             if (kind != null) {
                 val who = SendWhoRules.of(model.destination, parsed.destinationType, env.ownDomain)
                 val subtitle = listOfNotNull(tr(kind), if (model.matchingRoute != null) tr("Recipient verified") else null).joinToString(" · ")
-                WhoRow(who.copy(name = tr(who.name)), subtitle, divider = suggestions.isNotEmpty(), enabled = !model.busy, busy = model.resolvingRecipient || model.busy,
+                WhoRow(who.copy(name = tr(who.name)), subtitle, divider = suggestions.isNotEmpty(), enabled = !model.busy, busy = model.resolvingRecipient ||
+                    model.busy,
                     modifier = Modifier.testTag("send-result")) { haptics.light(); next() }
             }
             suggestions.forEachIndexed { index, suggestion ->
-                WhoRow(SendWhoRules.of(suggestion, "lnurl", env.ownDomain).copy(name = suggestion), tr("Noah user"), divider = index < suggestions.lastIndex, enabled = !model.busy) {
+                WhoRow(SendWhoRules.of(suggestion, "lnurl", env.ownDomain).copy(name = suggestion), tr("Noah user"), divider = index < suggestions.lastIndex,
+                    enabled = !model.busy) {
                     haptics.light(); model.setRecipient(suggestion); next()
                 }
             }
@@ -516,7 +535,8 @@ private fun ToStep(presentation: SendPresentation, env: SendEnv, actions: SendAc
         model.error?.let { ErrorLine(it, model) }
         model.controller.message?.let { ErrorLine(it) }
         if (typed) SendPill(if (model.busy || model.resolvingRecipient) tr("Preparing…") else tr("Next"),
-            Modifier.fillMaxWidth().padding(top = 20.dp).testTag("send-continue"), enabled = !model.busy && !model.resolvingRecipient) { haptics.light(); next() }
+            Modifier.fillMaxWidth().padding(top = 20.dp).testTag("send-continue"), enabled = !model.busy && !model.resolvingRecipient) { haptics.light()
+            next() }
     })
 }
 
@@ -533,13 +553,15 @@ private fun NoteField(value: String, onValue: (String) -> Unit, limit: Int, enab
         BasicTextField(value, onValue, Modifier.weight(1f).padding(vertical = 14.dp).testTag("send-note"), enabled = enabled,
             textStyle = SendType.body.copy(color = palette.foreground), cursorBrush = SolidColor(palette.orange), maxLines = 3,
             decorationBox = { inner -> Box { if (value.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted); inner() } })
-        Text("${value.length}/$limit", Modifier.padding(start = 8.dp), style = SendType.small, color = if (value.length > limit) palette.failure else palette.muted)
+        Text("${value.length}/$limit", Modifier.padding(start = 8.dp), style = SendType.small,
+            color = if (value.length > limit) palette.failure else palette.muted)
     }
 }
 
 // Method and balance
 
-private fun railIcon(rail: SendRail) = when (rail) { SendRail.ark -> SendIcons.ark; SendRail.lightning -> HomeIcons.lightning; SendRail.onchain -> HomeIcons.chain }
+private fun railIcon(rail: SendRail) = when (rail) { SendRail.ark -> SendIcons.ark; SendRail.lightning -> HomeIcons.lightning
+    SendRail.onchain -> HomeIcons.chain }
 
 /** A card's line: the SDK's fee estimate, labelled as one; without an estimate, just the timing (never a zero fee). */
 @Composable
@@ -559,14 +581,17 @@ private fun MethodStep(presentation: SendPresentation, env: SendEnv) {
     val availability = model.availability
     val best = SendFlow.recommend(rails, availability)
     StepPanes(nav = { Back { model.back() }; Title(); Spacer(Modifier.width(40.dp)) }, leadingCentred = false, trailingAt = Alignment.Top, leading = {
-        Text(tr("How to send {amount}", formatted(model.sats, env)), Modifier.padding(top = 18.dp).semantics { heading() }, style = SendType.big, color = palette.foreground)
+        Text(tr("How to send {amount}", formatted(model.sats, env)), Modifier.padding(top = 18.dp).semantics { heading() }, style = SendType.big,
+            color = palette.foreground)
         Text(tr("Choose payment method"), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.muted)
     }, trailing = {
         Column(Modifier.padding(top = 22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             rails.forEach { rail ->
                 val available = availability[rail.name] == true
-                RailCard(railIcon(rail), tr(rail.label), if (available) railLine(rail, env.estimates[rail], env) else tr("Insufficient funds for this payment method."),
-                    best = available && rail == best && rails.size > 1, enabled = available && !model.busy, selected = model.progress.railConfirmed && model.progress.selectedRail == rail,
+                RailCard(railIcon(rail), tr(rail.label),
+                    if (available) railLine(rail, env.estimates[rail], env) else tr("Insufficient funds for this payment method."),
+                    best = available && rail == best && rails.size > 1, enabled = available && !model.busy, selected = model.progress.railConfirmed &&
+                        model.progress.selectedRail == rail,
                     modifier = Modifier.testTag("send-rail-${rail.name}")) {
                     haptics.selection()
                     model.progress = model.progress.copy(selectedRail = rail, railConfirmed = true)
@@ -591,7 +616,8 @@ private fun SourceStep(presentation: SendPresentation, env: SendEnv) {
         Column(Modifier.padding(top = 22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SendSource.entries.forEach { source ->
                 val balance = if (source == SendSource.offchain) model.arkBalance else model.onchainBalance
-                RailCard(if (source == SendSource.offchain) SendIcons.ark else HomeIcons.chain, tr(source.label), tr("{amount} available", formatted(balance, env)),
+                RailCard(if (source == SendSource.offchain) SendIcons.ark else HomeIcons.chain, tr(source.label),
+                    tr("{amount} available", formatted(balance, env)),
                     best = false, enabled = source in model.sources && !model.busy, selected = model.source == source,
                     modifier = Modifier.testTag("send-source-${source.name}")) {
                     haptics.selection(); model.source = source
@@ -617,13 +643,15 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
     val amount = quote?.amount ?: model.sats
     ReviewPanes(amount, SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain), model.progress.selectedRail, model.source,
         quote, payment, env, backEnabled = !model.busy, back = model::back, notes = {
-            reviewNote(model, quote, env, presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = LocalPalette.current.muted) }
+            reviewNote(model, quote, env,
+                presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = LocalPalette.current.muted) }
             model.error?.let { ErrorLine(it, model) }
             controller.message?.let { ErrorLine(it) }
         }) {
         if (ready) HoldToSend(formatted(amount, env), enabled = !controller.locked, sending = controller.locked, modifier = Modifier.padding(bottom = 6.dp)) {
             presentation.confirm(payment!!, quote!!)
-        } else SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-continue"), enabled = !model.busy) {
+        } else SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-continue"),
+            enabled = !model.busy) {
             haptics.light(); scope.launch { model.continueStage() }
         }
     }
@@ -637,7 +665,8 @@ private fun ReviewPanes(amount: Long, who: SendWho, rail: SendRail?, source: Sen
     val tabletop = LocalPose.current is OnboardingPose.Tabletop
     val rows = @Composable { ReviewRows(source, quote, payment, rail, env, if (tabletop) 16.dp else 24.dp) }
     StepPanes(nav = { Back(backEnabled, back); Spacer(Modifier.weight(1f)) }, leadingCentred = false, trailingAt = Alignment.Bottom, leading = {
-        Text(tr("Send {amount}", formatted(amount, env)), Modifier.padding(top = 18.dp).semantics { heading() }.testTag("send-review-title"), style = SendType.big, color = palette.foreground)
+        Text(tr("Send {amount}", formatted(amount, env)), Modifier.padding(top = 18.dp).semantics { heading() }.testTag("send-review-title"),
+            style = SendType.big, color = palette.foreground)
         Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             WhoAvatar(who, 36.dp, SendType.initial.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)))
             Text(tr(who.name), style = SendType.body, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -657,12 +686,16 @@ private fun ReviewRows(source: SendSource?, quote: SendQuote?, payment: SendPaym
     // Every row puts its label above its value at large text sizes rather than cutting either off.
     Column(Modifier.padding(top = top)) {
         if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), wraps = true)
-        if (rail != null) ValueRow(tr("Arrives"), arrives(rail, source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
+        if (rail != null) ValueRow(tr("Arrives"),
+            arrives(rail, source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
         if (quote != null) {
-            ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark, wraps = true)
+            ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"),
+                if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark,
+                wraps = true)
             payment?.source?.let { ValueRow(tr("From"), tr(it.label), wraps = true) }
             if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment, wraps = true)
-            ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false, wraps = true)
+            ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"),
+                formatted(quote.total, env), number = true, divider = false, wraps = true)
         }
     }
 }
@@ -729,7 +762,8 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         }
         presentation.hapticsAt = elapsed
     }
-    val amount = receipt?.takeIf { it.amount > 0 && !it.amountIsPending }?.amount ?: attempt?.existingLightning?.amount ?: attempt?.quote?.amount ?: payment?.amount ?: 0
+    val amount = receipt?.takeIf { it.amount > 0 &&
+        !it.amountIsPending }?.amount ?: attempt?.existingLightning?.amount ?: attempt?.quote?.amount ?: payment?.amount ?: 0
     val who = payment?.let { SendWhoRules.of(it.destination, it.method, env.ownDomain) } ?: SendWho("")
     val confirmedAt = receipt?.chainStatus?.takeIf { it.kind == com.noahwallet.services.wallet.ChainStatus.Kind.confirmed }?.height
     val tip = env.tip?.let { tip -> confirmedAt?.let { maxOf(tip, it) } ?: tip } ?: confirmedAt
@@ -745,22 +779,27 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         if (before != null && confirmations > before && live != null) { if (confirmations >= needed) haptics.success() else haptics.light() }
     }
     val resultShown = live == null || SendTimeline.resultShown(motion, elapsed, reduceMotion)
-    val title = if (!resultShown || ending == null || ending == SendEnding.sending) tr("Sending {amount}", formatted(amount, env)) else resultTitle(ending, amount, receipt, env)
+    val title = if (!resultShown || ending == null || ending == SendEnding.sending) tr("Sending {amount}", formatted(amount, env)) else resultTitle(ending,
+        amount, receipt, env)
     val stageHeight: Dp = if (pose is OnboardingPose.Wide) 330.dp else if (pose is OnboardingPose.Tabletop) 200.dp else 270.dp
     val show = remember { Animatable(if (resultShown) 1f else 0f) }
     LaunchedEffect(resultShown) { if (resultShown) show.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) }
     StepPanes(nav = { }, leadingCentred = false, trailingAt = Alignment.CenterVertically, leading = {
         val sent = resultShown && ending in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent)
         SwapTitle(title, SendType.big, Modifier.padding(top = 6.dp).testTag(if (sent) "send-success" else "send-title"))
-        if (who.name.isNotEmpty()) Text(tr("to {recipient}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt, Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
+        if (who.name.isNotEmpty()) Text(tr("to {recipient}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt,
+            Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
         PhaseText(line?.let { phase ->
             val text = if (phase.argument != null) tr(phase.source, phase.argument) else tr(phase.source)
             phase.suffix?.let { (n, total) -> text + " · " + tr("{n} of {total}", n.toString(), total.toString()) } ?: text
         }, line?.done == true, Modifier.padding(top = 4.dp))
     }, trailing = {
-        Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f); if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
-            if (resultShown && ending != null && ending != SendEnding.sending) ResultArea(ending, controller, attempt, receipt, amount, who, confirmedAt, env, actions)
+        Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f)
+            if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
+            if (resultShown && ending != null && ending != SendEnding.sending) ResultArea(ending, controller, attempt, receipt, amount, who, confirmedAt, env,
+                actions)
         }
     }, bottom = {
         Spacer(Modifier.height(16.dp))
@@ -772,7 +811,8 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         if (doneShown && receipt?.broadcastRetryPending == true || unresolved) SendPill(tr("Close"),
             Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }) {
             haptics.light(); actions.leave()
-        } else if (doneShown) SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) },
+        } else if (doneShown) SendPill(tr("Done"),
+            Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) },
             enabled = !controller.checking) {
             haptics.light(); if (ending == SendEnding.pending) actions.leave() else actions.done()
         }
@@ -834,7 +874,8 @@ internal fun ResultArea(ending: SendEnding, controller: SendController, attempt:
         }
         SendEnding.pending -> tr("Lightning is still finding a route. You can leave this screen; Noah finishes it in the background.")
         // Only a person or address can be "reached"; an invoice just gets the refund line.
-        SendEnding.refunded -> if (who.initial != null) tr("{amount} is back in your wallet. Lightning couldn’t reach {recipient}.", formatted(amount, env), who.name)
+        SendEnding.refunded -> if (who.initial != null) tr("{amount} is back in your wallet. Lightning couldn’t reach {recipient}.", formatted(amount, env),
+            who.name)
         else tr("{amount} is back in your wallet.", formatted(amount, env))
         // A retried invoice: bark's records can't say this attempt's coins came back, so no "back in your wallet".
         SendEnding.failed -> tr("That payment didn’t go through.")
@@ -846,8 +887,10 @@ internal fun ResultArea(ending: SendEnding, controller: SendController, attempt:
         val rows = mutableListOf<@Composable (Boolean) -> Unit>()
         if (rail != null) rows += { divider -> ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), divider = divider) }
         when (ending) {
-            SendEnding.pending -> attempt?.existingLightning?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {amount}", formatted(fee, env)), number = true, divider = d) } }
-                ?: attempt?.quote?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {amount}", formatted(fee, env)), number = true, divider = d) } }
+            SendEnding.pending -> attempt?.existingLightning?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {amount}", formatted(fee, env)),
+                number = true, divider = d) } }
+                ?: attempt?.quote?.fee?.let { fee -> rows += { d -> ValueRow(tr("Fee"), tr("up to {amount}", formatted(fee, env)), number = true,
+                    divider = d) } }
             SendEnding.refunded -> rows += { d -> ValueRow(tr("Fee"), tr("None"), divider = d) }
             SendEnding.arkSent -> {
                 val fee = receipt?.fee ?: attempt?.quote?.fee ?: 0
@@ -872,33 +915,40 @@ internal fun ResultArea(ending: SendEnding, controller: SendController, attempt:
                     copy = { copy(p.label, p.value) }, modifier = Modifier.testTag("send-success-copy-proof")) } }
             }
         }
-        attempt?.existingLightning?.takeIf { ending == SendEnding.unknown }?.let { existing -> rows += { d -> ValueRow(tr("Existing fee"), formatted(existing.fee, env), number = true, divider = d) } }
+        attempt?.existingLightning?.takeIf { ending == SendEnding.unknown }?.let { existing -> rows += { d -> ValueRow(tr("Existing fee"),
+            formatted(existing.fee, env), number = true, divider = d) } }
         rows.forEachIndexed { index, row -> row(index < rows.lastIndex) }
     }
     // Today's notes, in the order today's receipt showed them.
     val notes = buildList {
         receipt?.conflictDescription?.let { add(tr(it) to false) }
-        if (ending == SendEnding.alreadyPaid || ending == SendEnding.unknown) attempt?.existingLightning?.let { add(tr("A payment of {amount} sats for this invoice is already in progress. Do not pay again.", java.text.NumberFormat.getIntegerInstance(env.locale).format(it.amount)) to false) }
+        if (ending == SendEnding.alreadyPaid ||
+            ending == SendEnding.unknown) attempt?.existingLightning?.let { add(tr("A payment of {amount} sats for this invoice is already in progress. Do not pay again.", java.text.NumberFormat.getIntegerInstance(env.locale).format(it.amount)) to false) }
         receipt?.chainStatus?.takeIf { it.kind == com.noahwallet.services.wallet.ChainStatus.Kind.notFound }?.let { add(tr(it.text) to false) }
         if (ending != SendEnding.chainSent && receipt?.broadcastRetryPending == true) add(tr(SendReceipt.broadcastPendingMessage) to false)
         controller.message?.let { add(tr(it) to true) }
     }
-    notes.forEach { (text, failure) -> Text(text, Modifier.padding(top = 10.dp), style = SendType.small, color = if (failure) palette.failure else palette.muted) }
+    notes.forEach { (text, failure) -> Text(text, Modifier.padding(top = 10.dp), style = SendType.small,
+        color = if (failure) palette.failure else palette.muted) }
     // Today's actions: check status (never submits), the explorer link and the audited override.
     if (ending in setOf(SendEnding.unknown, SendEnding.unavailable, SendEnding.pending) || receipt?.txid != null) {
         val label = if (controller.checking) "Checking…" else if (controller.state == SendController.State.storageBlocked) "Retry"
         else if (controller.state == SendController.State.succeeded) "Refresh payment status" else "Check status"
         if (ending == SendEnding.chainSent) TextButton(actions.checkStatus, enabled = !controller.checking, modifier = Modifier.padding(top = 8.dp)) {
             Text(tr(label), style = SendType.line, color = palette.foreground)
-        } else SendPill(tr(label), Modifier.fillMaxWidth().padding(top = 16.dp).testTag("send-check-status"), enabled = !controller.checking, outlined = true, onClick = actions.checkStatus)
+        } else SendPill(tr(label), Modifier.fillMaxWidth().padding(top = 16.dp).testTag("send-check-status"), enabled = !controller.checking, outlined = true,
+            onClick = actions.checkStatus)
     }
     receipt?.txid?.takeIf { it.isNotEmpty() && env.variant != "regtest" && ending == SendEnding.chainSent }?.let { txid ->
-        TextButton({ context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://mempool.space/${if (env.variant == "mainnet") "" else "signet/"}tx/$txid"))) }) { Text(tr("View in explorer"), style = SendType.line, color = palette.foreground) }
+        TextButton({ context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+            android.net.Uri.parse("https://mempool.space/${if (env.variant == "mainnet") "" else "signet/"}tx/$txid"))) }) { Text(tr("View in explorer"),
+            style = SendType.line, color = palette.foreground) }
     }
     if (controller.canOverride) TextButton({ overrideStep = 1 }, Modifier.padding(top = 4.dp)) {
         Text(tr("Start a new payment after checking history"), style = SendType.line, color = palette.failure)
     }
-    if (overrideStep > 0) WalletAlertDialog(onDismissRequest = { overrideStep = 0 }, title = { Text(tr(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText)) },
+    if (overrideStep > 0) WalletAlertDialog(onDismissRequest = { overrideStep = 0 },
+        title = { Text(tr(if (overrideStep == 1) "Have you checked?" else SendOverrideAudit.titleText)) },
         text = { Text(tr(if (overrideStep == 1) "Check your history and confirm with the recipient. This payment may already have been sent." else controller.overrideWarning)) },
         confirmButton = { TextButton(onClick = { if (overrideStep == 1) overrideStep = 2 else { scope.launch { controller.startNewPaymentAfterHistoryCheck(true); overrideStep = 0; actions.startOver() } } }) {
             Text(tr(if (overrideStep == 1) "I checked history" else SendOverrideAudit.confirmationText)) } },

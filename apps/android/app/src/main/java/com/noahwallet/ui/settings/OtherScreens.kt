@@ -97,7 +97,8 @@ internal fun FeedbackPage(model: AppModel, nav: SettingsNav) {
         else FootPill(tr("Send"), Modifier.testTag("feedback-send"), loading = model.busy,
             enabled = !model.busy && !loading && cropImage == null && name.isNotBlank() && subject.isNotBlank() && body.isNotBlank()) {
             model.action("Failed to submit feedback. Please try again.") {
-                val payload = try { FeedbackDraft(name, email, subject, body, screenshot).payload(DeviceInfo.current()) { Base64.encodeToString(it, Base64.NO_WRAP) } }
+                val payload = try { FeedbackDraft(name, email, subject, body,
+                    screenshot).payload(DeviceInfo.current()) { Base64.encodeToString(it, Base64.NO_WRAP) } }
                 catch (validation: IllegalArgumentException) { error = validation.message; return@action }
                 V0SupportTicketClient(model.services.client).submitSupportTicket(payload).value()
                 success = true; haptics.success(); name = ""; email = ""; subject = ""; body = ""; screenshot = null
@@ -118,7 +119,8 @@ internal fun FeedbackPage(model: AppModel, nav: SettingsNav) {
             keyboard = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false))
         SettingsField(subject, { subject = it }, tr("Short summary"), Modifier.testTag("feedback-subject"), label = tr("Subject"), enabled = !model.busy,
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
-        SettingsField(body, { body = it }, tr("What happened, or what would help?"), Modifier.testTag("feedback-message"), label = tr("Message"), enabled = !model.busy,
+        SettingsField(body, { body = it }, tr("What happened, or what would help?"), Modifier.testTag("feedback-message"), label = tr("Message"),
+            enabled = !model.busy,
             lines = 5, keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
         FieldLabel(tr("Screenshot (optional)"))
         val shot = screenshot
@@ -126,7 +128,8 @@ internal fun FeedbackPage(model: AppModel, nav: SettingsNav) {
             val preview = remember(shot) { android.graphics.BitmapFactory.decodeByteArray(shot, 0, shot.size)?.asImageBitmap() }
             preview?.let { Image(it, tr("Selected screenshot"), Modifier.padding(top = 8.dp).heightIn(max = 180.dp).clip(RoundedCornerShape(18.dp))) }
             SettingsLink(tr("Remove screenshot"), enabled = !model.busy) { screenshot = null }
-        } else Row(Modifier.padding(top = 8.dp).fillMaxWidth().height(84.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, palette.hairline, RoundedCornerShape(18.dp))
+        } else Row(Modifier.padding(top = 8.dp).fillMaxWidth().height(84.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, palette.hairline,
+            RoundedCornerShape(18.dp))
             .clickable(enabled = !model.busy && !loading, role = Role.Button) { picker.launch("image/*") }.testTag("feedback-screenshot"),
             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(SettingsIcons.image), null, Modifier.size(20.dp), tint = palette.muted)
@@ -136,7 +139,8 @@ internal fun FeedbackPage(model: AppModel, nav: SettingsNav) {
         Text(tr("JPEG or PNG, 5 MB or smaller"), Modifier.padding(top = 6.dp), style = HomeType.small, color = palette.muted)
         error?.let { FinePrint(tr(it), failed = true) }
         FinePrint(tr("Your app version and phone model are attached."))
-        SettingsGroup(rows = listOf({ d -> SettingsRow(tr("Chat on Telegram"), SettingsIcons.send, end = RowEnd.External, divider = d) { uri.openUri(telegramURL) } }))
+        SettingsGroup(rows = listOf({ d -> SettingsRow(tr("Chat on Telegram"), SettingsIcons.send, end = RowEnd.External,
+            divider = d) { uri.openUri(telegramURL) } }))
     }
     cropImage?.let { image ->
         ScreenshotCropDialog(image, onCancel = { cropImage = null }) { crop ->
@@ -174,7 +178,8 @@ internal fun AboutPage(model: AppModel, nav: SettingsNav, live: SettingsLive) {
         SettingsGroup(rows = listOf(
             { d -> SettingsRow(tr("Telegram"), SettingsIcons.telegram, end = RowEnd.External, divider = d) { uri.openUri(telegramURL) } },
             { d -> SettingsRow(tr("Source code"), SettingsIcons.github, end = RowEnd.External, divider = d) { uri.openUri(sourceURL) } },
-            { d -> SettingsRow(tr("Privacy policy"), SettingsIcons.shield, end = RowEnd.External, divider = d, modifier = Modifier.testTag("about-privacy")) { uri.openUri(privacyURL) } },
+            { d -> SettingsRow(tr("Privacy policy"), SettingsIcons.shield, end = RowEnd.External, divider = d,
+                modifier = Modifier.testTag("about-privacy")) { uri.openUri(privacyURL) } },
         ))
     }
 }
@@ -203,7 +208,8 @@ private fun StoryPlayer() {
         while (isActive) { player?.let { if (!seeking) position = it.currentPosition.toFloat(); playing = it.isPlaying }; delay(500) }
     }
     fun time(ms: Float): String { val seconds = ms.toInt() / 1000; return "%d:%02d".format(seconds / 60, seconds % 60) }
-    Row(Modifier.padding(top = 22.dp).fillMaxWidth().tonal(RoundedCornerShape(22.dp), palette.soft).padding(start = 14.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+    Row(Modifier.padding(top = 22.dp).fillMaxWidth().tonal(RoundedCornerShape(22.dp), palette.soft).padding(start = 14.dp, end = 16.dp, top = 14.dp,
+        bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         val label = if (playing) tr("Pause") else tr("Play")
         Box(Modifier.size(44.dp).background(palette.foreground, CircleShape).clip(CircleShape)
@@ -217,7 +223,8 @@ private fun StoryPlayer() {
             // The prototype's 4 dp scrub bar, still draggable (today's seek).
             val colors = SliderDefaults.colors(thumbColor = palette.foreground, activeTrackColor = palette.foreground, inactiveTrackColor = palette.hairline,
                 disabledActiveTrackColor = palette.hairline, disabledInactiveTrackColor = palette.hairline)
-            Slider(position, { seeking = true; position = it }, Modifier.padding(top = 4.dp).height(16.dp).testTag("about-story-scrub"), valueRange = 0f..duration,
+            Slider(position, { seeking = true; position = it }, Modifier.padding(top = 4.dp).height(16.dp).testTag("about-story-scrub"),
+                valueRange = 0f..duration,
                 onValueChangeFinished = { player?.seekTo(position.toInt()); seeking = false }, enabled = player != null, colors = colors,
                 thumb = { Box(Modifier.size(10.dp).background(if (player != null) palette.foreground else palette.hairline, CircleShape)) },
                 track = { state -> SliderDefaults.Track(state, Modifier.height(4.dp), colors = colors, enabled = player != null,

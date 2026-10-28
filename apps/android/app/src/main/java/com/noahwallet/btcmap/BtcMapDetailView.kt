@@ -56,8 +56,10 @@ fun BtcMapDetailView(model: BtcMapModel, place: BtcMapPlace, modifier: Modifier 
                 Text(merchant.name, style = MaterialTheme.typography.headlineMedium)
                 Text(tr(merchant.category.label), style = MaterialTheme.typography.bodySmall)
                 merchant.verified_at?.let { Text(tr("Verified {date}", it.take(10)), style = MaterialTheme.typography.bodySmall) }
-                if ((merchant.boosted_until ?: "") > btcMapTimestamp(System.currentTimeMillis())) Text(tr("Featured"), color = MaterialTheme.colorScheme.primary)
-                model.userLocation?.let { Text(tr(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center), androidx.compose.ui.platform.LocalConfiguration.current.locales[0])), style = MaterialTheme.typography.bodySmall) }
+                if ((merchant.boosted_until ?: "") > btcMapTimestamp(System.currentTimeMillis())) Text(tr("Featured"),
+                    color = MaterialTheme.colorScheme.primary)
+                model.userLocation?.let { Text(tr(BtcMapDistance.format(BtcMapDistance.kilometers(it, place.center),
+                    androidx.compose.ui.platform.LocalConfiguration.current.locales[0])), style = MaterialTheme.typography.bodySmall) }
             }
             TextButton(model::closeDetail) { Text(tr("Close")) }
         }

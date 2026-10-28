@@ -141,7 +141,8 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
     val check = remember { Animatable(1f) }
     var previous by remember { mutableStateOf(kind) }
     LaunchedEffect(kind) {
-        if (previous == SettingsRules.Backup.running && kind == SettingsRules.Backup.on && !reduceMotion) { check.snapTo(0f); check.animateTo(1f, NoahTokens.Motion.soft()) }
+        if (previous == SettingsRules.Backup.running && kind == SettingsRules.Backup.on && !reduceMotion) { check.snapTo(0f)
+            check.animateTo(1f, NoahTokens.Motion.soft()) }
         previous = kind
     }
     val backedUp = tr("Backed up")
@@ -180,19 +181,24 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
             { d -> Column {
                 SettingsRow(tr("Backups"), SettingsIcons.doc, value = backups.items?.size?.toString(), end = RowEnd.Expand(open), divider = d || open,
                     modifier = Modifier.testTag("backup-list")) { open = !open; haptics.selection() }
-                AnimatedVisibility(open, enter = if (reduceMotion) fadeIn(tween(180)) else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
+                AnimatedVisibility(open,
+                    enter = if (reduceMotion) fadeIn(tween(180)) else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
                     exit = if (reduceMotion) fadeOut(tween(180)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f, 157.9137f))) {
                     Column(Modifier.padding(start = 48.dp)) {
                         val records = backups.items
                         when {
-                            backups.failed && records == null -> Text(tr("Couldn't list backups."), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.failure)
+                            backups.failed &&
+                                records == null -> Text(tr("Couldn't list backups."), Modifier.padding(vertical = 14.dp), style = HomeType.line,
+                                color = palette.failure)
                             records == null -> Text(tr("Loading…"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
                             records.isEmpty() -> Text(tr("No backups found"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
                             else -> records.forEachIndexed { index, backup ->
-                                BackupLine(backupDate(backup.createdAt, locale), "${backup.encryptedSize / 1024} KB", divider = true, enabled = !model.busy) { deleting = backup }
+                                BackupLine(backupDate(backup.createdAt, locale), "${backup.encryptedSize / 1024} KB", divider = true,
+                                    enabled = !model.busy) { deleting = backup }
                             }
                         }
-                        if (backups.failed && records != null) Text(tr("Couldn't list backups."), Modifier.padding(vertical = 10.dp), style = HomeType.small, color = palette.failure)
+                        if (backups.failed && records != null) Text(tr("Couldn't list backups."), Modifier.padding(vertical = 10.dp), style = HomeType.small,
+                            color = palette.failure)
                     }
                 }
             } },
@@ -216,7 +222,8 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
     }
     if (exporting) {
         val filename = rememberSaveable { ExportFilename.database() }
-        SettingsSheet({ exporting = false }, tr("Export wallet file"), tr("An encrypted copy of this wallet. Restoring it needs your recovery phrase.")) { close ->
+        SettingsSheet({ exporting = false }, tr("Export wallet file"),
+            tr("An encrypted copy of this wallet. Restoring it needs your recovery phrase.")) { close ->
             Row(Modifier.padding(top = 20.dp).fillMaxWidth().tonal(RoundedCornerShape(20.dp), palette.soft).padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Icon(painterResource(SettingsIcons.doc), null, Modifier.size(26.dp), tint = palette.foreground)

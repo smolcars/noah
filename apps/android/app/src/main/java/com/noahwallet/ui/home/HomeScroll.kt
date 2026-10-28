@@ -121,7 +121,8 @@ class HomeScroll internal constructor(val compact: ScrollState, val leading: Scr
                 val k = recent.indexOf(id)
                 // Past Recent's rows, the nearest the column comes is its end.
                 if (k < 0) { compact.scrollTo(Int.MAX_VALUE); return }
-                placed { (recentTop to rowHeight).takeIf { it.first >= 0 && it.second > 0 } }?.let { (top, height) -> compact.scrollTo(top + k * height + offset) }
+                placed { (recentTop to rowHeight).takeIf { it.first >= 0 && it.second > 0 } }?.let { (top,
+                    height) -> compact.scrollTo(top + k * height + offset) }
             }
             is Anchor.Card -> placed { compactCard }?.let { (top, height) -> compact.scrollTo(top + (at.fraction * height).roundToInt()) }
         }

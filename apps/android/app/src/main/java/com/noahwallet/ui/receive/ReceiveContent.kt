@@ -102,8 +102,10 @@ internal fun cardFace(ui: ReceiveUi, format: ReceiveFormat): CardFace {
     return when (format) {
         ReceiveFormat.lightningAddress -> CardFace(payload, ui.address ?: "", tr("Scan with any Lightning wallet"), null, ui.address.isNullOrEmpty())
         ReceiveFormat.request -> CardFace(payload, tr("Payment request"),
-            if (amount != null) tr("Scan with any bitcoin or Lightning wallet") else tr("Scan with any bitcoin wallet"), amount?.let { ui.sats(it) to ui.fiat(it) }, false)
-        ReceiveFormat.invoice -> CardFace(payload, tr("Lightning invoice"), tr("Scan with any Lightning wallet"), amount?.let { ui.sats(it) to ui.fiat(it) }, false)
+            if (amount != null) tr("Scan with any bitcoin or Lightning wallet") else tr("Scan with any bitcoin wallet"),
+            amount?.let { ui.sats(it) to ui.fiat(it) }, false)
+        ReceiveFormat.invoice -> CardFace(payload, tr("Lightning invoice"), tr("Scan with any Lightning wallet"), amount?.let { ui.sats(it) to ui.fiat(it) },
+            false)
         ReceiveFormat.ark -> CardFace(payload, tr("Ark address"), tr("Scan with an Ark wallet"), null, false)
         ReceiveFormat.onchain -> CardFace(payload, tr("Bitcoin address"), tr("Scan with any bitcoin wallet"), null, false)
     }
@@ -116,13 +118,16 @@ private fun formatRows(ui: ReceiveUi): List<FormatRow> {
     val amount = ui.amount
     fun preview(format: ReceiveFormat) = ReceiveFormats.payload(format, ui.request, ui.address)?.let(ReceiveFormats::preview) ?: ""
     return listOf(
-        FormatRow(ReceiveFormat.lightningAddress, tr("Lightning address"), ui.address ?: tr("Lightning address unavailable"), tr("From any Lightning wallet"), !ui.address.isNullOrEmpty()),
+        FormatRow(ReceiveFormat.lightningAddress, tr("Lightning address"), ui.address ?: tr("Lightning address unavailable"), tr("From any Lightning wallet"),
+            !ui.address.isNullOrEmpty()),
         FormatRow(ReceiveFormat.request, tr("Payment request"), preview(ReceiveFormat.request),
-            if (amount != null) tr("Bitcoin, Ark and Lightning for {amount}", ui.sats(amount)) else tr("Bitcoin and Ark in one code. Add an amount for Lightning"), ui.request != null),
+            if (amount != null) tr("Bitcoin, Ark and Lightning for {amount}",
+                ui.sats(amount)) else tr("Bitcoin and Ark in one code. Add an amount for Lightning"), ui.request != null),
         FormatRow(ReceiveFormat.invoice, tr("Lightning invoice"), preview(ReceiveFormat.invoice).ifEmpty { tr("Add an amount first") },
             if (amount != null) tr("For {amount} only", ui.sats(amount)) else tr("Invoices need an amount"), amount != null),
         FormatRow(ReceiveFormat.ark, tr("Ark address"), preview(ReceiveFormat.ark), tr("Instant and free from Ark wallets"), ui.request != null),
-        FormatRow(ReceiveFormat.onchain, tr("Bitcoin address"), preview(ReceiveFormat.onchain), tr("From any bitcoin wallet, about 20 min"), ui.request != null),
+        FormatRow(ReceiveFormat.onchain, tr("Bitcoin address"), preview(ReceiveFormat.onchain), tr("From any bitcoin wallet, about 20 min"),
+            ui.request != null),
     )
 }
 
@@ -197,7 +202,8 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     }
     val pills = @Composable { modifier: Modifier ->
         Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SendPill(if (ui.amount == null) tr("Add amount") else tr("Change amount"), Modifier.weight(1f).testTag("receive-amount-button"), enabled = ui.request != null && !ui.saving,
+            SendPill(if (ui.amount == null) tr("Add amount") else tr("Change amount"), Modifier.weight(1f).testTag("receive-amount-button"),
+                enabled = ui.request != null && !ui.saving,
                 outlined = true, height = 48.dp) { amountSheet() }
             SendPill(tr("Share"), Modifier.weight(1f).testTag("receive-share"), enabled = face.payload != null, height = 48.dp) { share() }
         }
@@ -205,7 +211,8 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     val list = @Composable { FormatList(ui, rows, onSelect = { select(it, false) }, onCopy = ::copy) }
     // Today's request errors (and a failed Lightning receive) while the card still shows your address.
     val problem = @Composable { modifier: Modifier ->
-        if (ui.error != null && !(ui.request == null && ui.format != ReceiveFormat.lightningAddress)) Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        if (ui.error != null && !(ui.request == null && ui.format != ReceiveFormat.lightningAddress)) Column(modifier,
+            horizontalAlignment = Alignment.CenterHorizontally) {
             ui.errorTitle?.let { Text(tr(it), style = SendType.strong, color = palette.foreground, textAlign = TextAlign.Center) }
             Text(tr(ui.error), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center)
             androidx.compose.material3.TextButton(actions.retry) { Text(tr("Retry"), style = SendType.line, color = palette.foreground) }
@@ -221,7 +228,8 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
                 Box(Modifier.padding(top = 12.dp)) { card() }
                 under()
                 pills(Modifier.width(cardWidth).padding(top = 18.dp))
-                ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp).width(cardWidth), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }
+                ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp).width(cardWidth), style = SendType.small, color = palette.failure,
+                    textAlign = TextAlign.Center) }
                 problem(Modifier.padding(top = 12.dp).width(cardWidth))
             }
             HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
@@ -275,7 +283,9 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
         presented = ui.arrival?.startedAt
     }
     if (sheet == "formats" && !paned && !arriving) TonalSheet({ sheet = null }) {
-        Text(tr("Ways to pay you"), Modifier.padding(bottom = 4.dp).semantics { heading() }, style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)), color = palette.foreground)
+        Text(tr("Ways to pay you"), Modifier.padding(bottom = 4.dp).semantics { heading() },
+            style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)),
+            color = palette.foreground)
         FormatList(ui, rows, onSelect = { select(it, true) }, onCopy = ::copy)
     }
     if (sheet == "amount" && ui.request != null && !arriving) TonalSheet({ if (!ui.saving) sheet = null }) {
@@ -304,7 +314,8 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
 @Composable
 private fun TonalSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
-    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(surfaceContainerLow = palette.soft, surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
+    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(surfaceContainerLow = palette.soft,
+        surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
         OnboardingSheet(onDismiss, rememberModalBottomSheetState(skipPartiallyExpanded = true), content = content)
     }
 }
@@ -325,7 +336,8 @@ private fun FitHeight(content: @Composable () -> Unit) {
 @Composable
 private fun ErrorCard(error: String, title: String?, width: Dp, retry: () -> Unit) {
     val palette = LocalPalette.current
-    Column(Modifier.width(width).padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.width(width).padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
         title?.let { Text(tr(it), style = SendType.strong, color = palette.foreground, textAlign = TextAlign.Center) }
         Text(tr(error), style = SendType.line, color = palette.failure, textAlign = TextAlign.Center)
         SendPill(tr("Retry"), Modifier.fillMaxWidth(), height = 48.dp, onClick = retry)
@@ -341,19 +353,25 @@ private fun FormatList(ui: ReceiveUi, rows: List<FormatRow>, onSelect: (ReceiveF
             val selected = row.format == ui.format
             val dot by animateFloatAsState(if (selected) 1f else 0f, tween(200), label = "radio")
             val copyLabel = tr("Copy {label}", row.name)
-            Row(Modifier.fillMaxWidth().heightIn(min = 66.dp).graphicsLayer { alpha = if (row.enabled || row.format == ReceiveFormat.invoice) (if (row.enabled) 1f else .35f) else .35f }
+            Row(Modifier.fillMaxWidth().heightIn(min = 66.dp).graphicsLayer { alpha = if (row.enabled ||
+                row.format == ReceiveFormat.invoice) (if (row.enabled) 1f else .35f) else .35f }
                 .drawBehind { if (index < rows.lastIndex) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
                 .clickable(enabled = row.enabled || row.format == ReceiveFormat.invoice, role = Role.RadioButton) { onSelect(row.format) }
                 .semantics { this.selected = selected }.testTag("receive-format-${row.format.name}"),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(10.dp).background(androidx.compose.ui.graphics.lerp(palette.background.copy(alpha = 0f), palette.foreground, dot), CircleShape)
-                    .then(if (dot < 1f) Modifier.drawBehind { drawCircle(palette.hairline, size.minDimension / 2 - .75.dp.toPx(), style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx())) } else Modifier))
+                Box(Modifier.size(10.dp).background(androidx.compose.ui.graphics.lerp(palette.background.copy(alpha = 0f), palette.foreground, dot),
+                    CircleShape)
+                    .then(if (dot < 1f) Modifier.drawBehind { drawCircle(palette.hairline, size.minDimension / 2 - .75.dp.toPx(),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx())) } else Modifier))
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
-                    Text(row.name, style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)), color = palette.foreground)
-                    if (row.value.isNotEmpty()) Text(row.value, Modifier.padding(top = 1.dp), style = SendType.mono, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(row.name, style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)),
+                        color = palette.foreground)
+                    if (row.value.isNotEmpty()) Text(row.value, Modifier.padding(top = 1.dp), style = SendType.mono, color = palette.foreground, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
                     Text(row.subtitle, style = SendType.small, color = palette.muted)
                 }
-                Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft).clickable(enabled = row.enabled, role = Role.Button, onClickLabel = copyLabel) { onCopy(row.format) }
+                Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft).clickable(enabled = row.enabled, role = Role.Button,
+                    onClickLabel = copyLabel) { onCopy(row.format) }
                     .semantics { contentDescription = copyLabel }.testTag("receive-copy-${row.format.name}"), contentAlignment = Alignment.Center) {
                     Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
                 }
@@ -381,20 +399,23 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
     val valid = sats == 0L || runCatching { ReceiveRequest.validate(sats, note) }.isSuccess
     val text = when {
         amount.isEmpty() -> ui.sats(0)
-        fiat -> (runCatching { java.util.Currency.getInstance(ui.currency).getSymbol(ui.locale) }.getOrDefault(ui.currency)) + amount.replace('.', DecimalFormatSymbols.getInstance(ui.locale).decimalSeparator)
+        fiat -> (runCatching { java.util.Currency.getInstance(ui.currency).getSymbol(ui.locale) }.getOrDefault(ui.currency)) + amount.replace('.',
+            DecimalFormatSymbols.getInstance(ui.locale).decimalSeparator)
         else -> ui.sats(sats)
     }
     // Under a horizontal fold the sheet only has the lower half, so the amount sits beside the keypad there.
     val sideBySide = LocalPose.current is OnboardingPose.Tabletop
     val fields = @Composable {
         Text(if (request.amountSat == null) tr("Add amount") else tr("Change amount"), Modifier.fillMaxWidth().semantics { heading() },
-            style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)), color = palette.foreground)
+            style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)),
+            color = palette.foreground)
         Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(58.dp), contentAlignment = Alignment.BottomCenter) {
             AmountFigure(text, amount.isEmpty(), shake.value, SendType.sheetAmount, Modifier.testTag("receive-amount-input"))
         }
         Row(Modifier.padding(top = 8.dp).height(24.dp).then(if (ui.price != null && !ui.saving) Modifier.clickable(role = Role.Button) {
             haptics.selection()
-            amount = if (fiat) sats.takeIf { it > 0 }?.toString() ?: "" else sats.takeIf { it > 0 }?.let { FiatCurrency.satsToFiat(it, ui.price, ui.currency) } ?: ""
+            amount = if (fiat) sats.takeIf { it > 0 }?.toString() ?: "" else sats.takeIf { it > 0 }?.let { FiatCurrency.satsToFiat(it, ui.price,
+                ui.currency) } ?: ""
             fiat = !fiat
         } else Modifier), verticalAlignment = Alignment.CenterVertically) {
             ui.price?.let { price ->
@@ -402,8 +423,10 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
                 Icon(painterResource(SendIcons.swap), null, Modifier.padding(start = 8.dp).size(16.dp), tint = palette.muted)
             }
         }
-        if (!noting) Box(Modifier.padding(top = 12.dp, bottom = 6.dp)) { SendChip(tr("Add a note"), Modifier.testTag("receive-note-chip"), enabled = !ui.saving) { haptics.light(); noting = true } }
-        else Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp).heightIn(min = 48.dp).tonal(RoundedCornerShape(24.dp), palette.soft).padding(horizontal = 18.dp),
+        if (!noting) Box(Modifier.padding(top = 12.dp, bottom = 6.dp)) { SendChip(tr("Add a note"), Modifier.testTag("receive-note-chip"),
+            enabled = !ui.saving) { haptics.light(); noting = true } }
+        else Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp).heightIn(min = 48.dp).tonal(RoundedCornerShape(24.dp),
+            palette.soft).padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(note, { note = it }, Modifier.weight(1f).padding(vertical = 12.dp).testTag("receive-description-input"), enabled = !ui.saving,
                 textStyle = SendType.body.copy(color = palette.foreground), cursorBrush = SolidColor(palette.orange), maxLines = 3,

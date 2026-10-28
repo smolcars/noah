@@ -224,7 +224,8 @@ internal fun OnboardingSheet(onDismissRequest: () -> Unit, sheetState: SheetStat
         else -> Modifier
     }, sheetState = sheetState, sheetMaxWidth = pane?.width ?: com.noahwallet.ui.AdaptiveLayout.readableWidth.dp,
         capAboveHorizontalFold = fold == null) {
-        Column(Modifier.fillMaxWidth().then(if (padded) Modifier.padding(start = NoahTokens.Space.screen, end = NoahTokens.Space.screen, bottom = NoahTokens.Space.xl) else Modifier), content = content)
+        Column(Modifier.fillMaxWidth().then(if (padded) Modifier.padding(start = NoahTokens.Space.screen, end = NoahTokens.Space.screen,
+            bottom = NoahTokens.Space.xl) else Modifier), content = content)
     }
 }
 
