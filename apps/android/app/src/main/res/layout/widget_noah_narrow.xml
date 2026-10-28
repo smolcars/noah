@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The 2×1 widget (widgets.md, Android): the longship, the balance and one line (status, or fiat). -->
+<!-- Attributes newer than minSdk (clipToOutline, autoSize, textFontWeight) only refine newer launchers; widget text can't be selected. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
@@ -8,9 +9,10 @@
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
     android:layoutDirection="ltr"
-    tools:ignore="UseAppTint"
+    tools:ignore="UseAppTint,UnusedAttribute,SelectableText"
     android:gravity="center_vertical"
     android:orientation="horizontal"
+    android:baselineAligned="false"
     android:paddingStart="16dp"
     android:paddingEnd="16dp">
 
@@ -23,6 +25,7 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:importantForAccessibility="no"
             android:scaleType="fitCenter"
             android:src="@drawable/widget_ship"
             android:tint="@color/widget_text" />
@@ -30,6 +33,7 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:importantForAccessibility="no"
             android:scaleType="fitCenter"
             android:src="@drawable/widget_mark_wave"
             android:tint="@color/widget_wave" />

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The 4×1 widget (widgets.md, Android): the longship, the balance and one line, then Receive, Scan and Send. -->
+<!-- Attributes newer than minSdk (clipToOutline, autoSize, textFontWeight) only refine newer launchers; widget text can't be selected. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
@@ -8,9 +9,10 @@
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
     android:layoutDirection="ltr"
-    tools:ignore="UseAppTint"
+    tools:ignore="UseAppTint,UnusedAttribute,SelectableText"
     android:gravity="center_vertical"
     android:orientation="horizontal"
+    android:baselineAligned="false"
     android:paddingStart="18dp"
     android:paddingEnd="14dp">
 
@@ -23,6 +25,7 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:importantForAccessibility="no"
             android:scaleType="fitCenter"
             android:src="@drawable/widget_ship"
             android:tint="@color/widget_text" />
@@ -30,6 +33,7 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:importantForAccessibility="no"
             android:scaleType="fitCenter"
             android:src="@drawable/widget_mark_wave"
             android:tint="@color/widget_wave" />
@@ -63,6 +67,7 @@
                 android:id="@+id/widget_status_icon"
                 android:layout_width="12dp"
                 android:layout_height="12dp"
+                android:importantForAccessibility="no"
                 android:layout_marginEnd="4dp"
                 android:src="@drawable/ic_home_renew"
                 android:tint="@color/widget_text"
@@ -72,6 +77,7 @@
                 android:id="@+id/widget_status_dot"
                 android:layout_width="6dp"
                 android:layout_height="6dp"
+                android:importantForAccessibility="no"
                 android:layout_marginEnd="4dp"
                 android:src="@drawable/widget_dot"
                 android:visibility="gone" />

@@ -6,9 +6,9 @@
   <string name="widget_title">Noah Wallet</string>
   <string name="widget_onchain">Onchain</string>
   <string name="widget_offchain">Offchain</string>
-  <string name="widget_preview_badge" translatable="false">REGTEST</string>
-  <string name="widget_preview_balance" translatable="false">0 sats</string>
-  <string name="widget_preview_amount" translatable="false">0</string>
+  <string name="widget_preview_change" translatable="false">+₿ 30,142</string>
+  <string name="widget_preview_balance" translatable="false">₿ 252,742</string>
+  <string name="widget_preview_fiat" translatable="false">$283.07</string>
   <string name="home">Home</string>
   <string name="receive">Receive</string>
   <string name="send">Send</string>

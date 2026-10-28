@@ -116,7 +116,7 @@ class ForegroundWidgetDeviceTest {
                         com.noahwallet.services.push.WidgetDataWriter.ticket())
                     val stored = com.noahwallet.widgets.WidgetSnapshot.read(context.getSharedPreferences("com.noahwallet.regtest", 0))!!
                     assertEquals(balance.totalSats.toLong(), stored.daily!!.last())
-                    assertEquals(0L, stored.daily!!.first())
+                    assertEquals(0L, stored.daily.first())
                     published = true
                 }
                 assertTrue(published)

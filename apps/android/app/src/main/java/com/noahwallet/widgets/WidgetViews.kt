@@ -17,6 +17,7 @@ import android.util.SizeF
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
+import androidx.core.net.toUri
 import com.noahwallet.MainActivity
 import com.noahwallet.R
 import kotlin.math.ceil
@@ -49,7 +50,7 @@ internal object WidgetViews {
     /** The routes the widget opens (widgets.md, Opening the app from a widget), with distinct request codes. */
     enum class Route(val path: String, val requestCode: Int) { home("home", 4100), receive("receive", 4101), scan("scan", 4102), send("send", 4103) }
 
-    fun uri(variant: String, route: Route): Uri = Uri.parse("com.noahwallet.$variant://widget/${route.path}")
+    fun uri(variant: String, route: Route): Uri = "com.noahwallet.$variant://widget/${route.path}".toUri()
 
     private fun open(context: Context, variant: String, route: Route): PendingIntent = PendingIntent.getActivity(context, route.requestCode,
         Intent(context, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(uri(variant, route))

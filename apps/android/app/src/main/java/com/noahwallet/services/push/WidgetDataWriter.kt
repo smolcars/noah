@@ -182,7 +182,7 @@ object WidgetDataWriter {
             val next = stored.copy(amountUnit = display.unit.name, hidden = display.hidden,
                 fiatCurrency = price?.let { display.currency }, fiatPrice = price)
             if (next == stored) return@withLock false
-            check(prefs.edit().putString(WidgetSnapshot.KEY, next.encode()).commit()) { "Widget preferences could not be saved" }
+            check(prefs.commitEdit { putString(WidgetSnapshot.KEY, next.encode()) }) { "Widget preferences could not be saved" }
             true
         }
         if (changed) broadcast(context, variant)

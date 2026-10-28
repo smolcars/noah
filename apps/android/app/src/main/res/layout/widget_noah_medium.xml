@@ -3,6 +3,7 @@
     The 4×2 and larger widget (widgets.md, Android): the balance column leads, the label sits top trailing, the wave
     fills the trailing ~52% and Receive · Scan · Send run along the bottom. Heights are fixed for WidgetLayout.
 -->
+<!-- Attributes newer than minSdk (clipToOutline, autoSize, textFontWeight) only refine newer launchers; widget text can't be selected. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
@@ -11,7 +12,7 @@
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
     android:layoutDirection="ltr"
-    tools:ignore="UseAppTint">
+    tools:ignore="UseAppTint,UnusedAttribute,SelectableText">
 
     <FrameLayout
         android:id="@+id/widget_sea_box"
@@ -109,6 +110,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:importantForAccessibility="noHideDescendants"
+            android:baselineAligned="false"
             android:orientation="horizontal">
 
             <LinearLayout
@@ -265,14 +267,17 @@
                 android:visibility="gone" />
         </LinearLayout>
 
+        <!-- A weighted spacer: RemoteViews has no Space. -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            tools:ignore="UselessLeaf"
             android:layout_weight="1" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="40dp"
+            android:baselineAligned="false"
             android:orientation="horizontal">
 
             <LinearLayout

@@ -10,6 +10,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.graphics.Shader
+import androidx.core.graphics.createBitmap
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -79,7 +80,7 @@ internal object WidgetSea {
     fun draw(values: List<Long>?, frame: Frame, scale: Float): Drawn {
         val line = line(values, frame)
         val (width, height) = pixels(frame, scale)
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(width, height)
         val canvas = Canvas(bitmap)
         canvas.scale(width / frame.w, height / frame.h)
         val sea = Path(line.path).apply { lineTo(frame.w, frame.h); lineTo(0f, frame.h); close() }

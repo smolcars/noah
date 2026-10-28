@@ -4,6 +4,7 @@
     initial layout, whose name the upgrade check pins. Heights are fixed so WidgetLayout can place the wave and boat.
     Tints are android:tint in every widget layout: launchers inflate framework views, which ignore AppCompat's app:tint.
 -->
+<!-- Attributes newer than minSdk (clipToOutline, autoSize, textFontWeight) only refine newer launchers; widget text can't be selected. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
@@ -12,7 +13,7 @@
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
     android:layoutDirection="ltr"
-    tools:ignore="UseAppTint">
+    tools:ignore="UseAppTint,UnusedAttribute,SelectableText">
 
     <FrameLayout
         android:id="@+id/widget_sea_box"
@@ -85,6 +86,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    tools:ignore="NestedWeights"
                     android:ellipsize="end"
                     android:includeFontPadding="false"
                     android:maxLines="1"
@@ -110,9 +112,11 @@
                 android:visibility="gone" />
         </LinearLayout>
 
+        <!-- A weighted spacer: RemoteViews has no Space. -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            tools:ignore="UselessLeaf"
             android:layout_weight="1" />
 
         <ImageView
@@ -158,6 +162,7 @@
                     android:id="@+id/widget_status_icon"
                     android:layout_width="14dp"
                     android:layout_height="14dp"
+                    android:importantForAccessibility="no"
                     android:layout_marginEnd="5dp"
                     android:src="@drawable/ic_home_renew"
                     android:tint="@color/widget_text"
@@ -167,6 +172,7 @@
                     android:id="@+id/widget_status_dot"
                     android:layout_width="7dp"
                     android:layout_height="7dp"
+                    android:importantForAccessibility="no"
                     android:layout_marginEnd="5dp"
                     android:src="@drawable/widget_dot"
                     android:visibility="gone" />

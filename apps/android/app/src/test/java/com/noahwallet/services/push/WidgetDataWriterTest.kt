@@ -46,7 +46,7 @@ class WidgetDataWriterTest {
         // Arriving is Home's: the claimable Lightning receive, with no unconfirmed deposit in history.
         assertEquals(75L, snapshot.balance); assertEquals(3L, snapshot.arriving)
         assertEquals(WidgetWave.dailyBalances(75, changes, now, TimeZone.getTimeZone("UTC")), snapshot.daily)
-        assertEquals(75L, snapshot.daily!!.last()); assertEquals(55L, snapshot.daily!!.first())
+        assertEquals(75L, snapshot.daily!!.last()); assertEquals(55L, snapshot.daily.first())
         assertEquals(now + 18 * 600_000L, snapshot.renewDue)
         assertEquals("bip177", snapshot.amountUnit); assertEquals(now, snapshot.writtenAt)
         // Unreadable history or Renew: calm water, no Renew line.

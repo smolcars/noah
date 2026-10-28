@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The widget picker's scalable preview (Android 12+): the 2×2 with sample data, not the user's wallet. -->
+<!-- Attributes newer than minSdk (clipToOutline, autoSize, textFontWeight) only refine newer launchers. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
@@ -8,11 +9,12 @@
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
     android:layoutDirection="ltr"
-    tools:ignore="UseAppTint">
+    tools:ignore="UseAppTint,UnusedAttribute">
 
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="148dp"
+        android:importantForAccessibility="no"
         android:layout_marginTop="32dp"
         android:scaleType="fitXY"
         android:src="@drawable/widget_preview_wave" />
@@ -20,6 +22,7 @@
     <ImageView
         android:layout_width="26dp"
         android:layout_height="26dp"
+        android:importantForAccessibility="no"
         android:layout_marginStart="138dp"
         android:layout_marginTop="41.2dp"
         android:scaleType="fitCenter"
@@ -44,13 +47,15 @@
             android:fontFeatureSettings="tnum"
             android:gravity="center_vertical"
             android:includeFontPadding="false"
-            android:text="+₿ 30,142"
+            android:text="@string/widget_preview_change"
             android:textColor="@color/widget_text"
             android:textSize="12sp" />
 
+        <!-- A weighted spacer: RemoteViews has no Space. -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            tools:ignore="UselessLeaf"
             android:layout_weight="1" />
 
         <TextView
@@ -64,7 +69,7 @@
             android:includeFontPadding="false"
             android:letterSpacing="-0.03"
             android:maxLines="1"
-            android:text="₿ 252,742"
+            android:text="@string/widget_preview_balance"
             android:textColor="@color/widget_text"
             android:textSize="30sp" />
 
@@ -75,7 +80,7 @@
             android:fontFamily="sans-serif-medium"
             android:gravity="center_vertical|start"
             android:includeFontPadding="false"
-            android:text="$283.07"
+            android:text="@string/widget_preview_fiat"
             android:textColor="@color/widget_muted"
             android:textSize="13sp" />
     </LinearLayout>

@@ -9,6 +9,7 @@ import android.graphics.Typeface
 import android.text.TextPaint
 import android.util.TypedValue
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.createBitmap
 import com.noahwallet.R
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -80,7 +81,7 @@ internal object WidgetType {
         val byWidth = (full * minOf(1f, available / width(full).coerceAtLeast(1f))).coerceAtLeast(full * floor)
         // Large system text: the height holds it too, whatever the width allows.
         val size = minOf(byWidth, tallest(context, main, full, height))
-        val bitmap = Bitmap.createBitmap(ceil(width(size)).toInt().coerceAtLeast(1), height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(ceil(width(size)).toInt().coerceAtLeast(1), height)
         val canvas = Canvas(bitmap)
         val numbers = paint(context, size, false)
         // The line's bottom on the box's bottom, as a bottom-gravity TextView without font padding sets it.
