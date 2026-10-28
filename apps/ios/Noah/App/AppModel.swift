@@ -104,6 +104,7 @@ final class AppModel {
     let pushPermission: PushPermissionModel
     let walletLock: WalletLock
     let paymentLink = PaymentLinkRoute()
+    let widgetRoute = WidgetRoute()
     var paymentLinkGate: PaymentLinkRoute.Gate {
         .init(phase: phase, onboarding: holdsOnboardingAfterRestore,
               gated: isWalletSuspended || pushPermission.blocksWallet(initialized: true) || (phase == .launching && customServerUnresponsive),

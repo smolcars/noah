@@ -21,9 +21,14 @@ struct RootView: View {
                 phaseView
             }
         }
-        .onOpenURL { model.paymentLink.receive($0, gate: model.paymentLinkGate) }
+        .onOpenURL {
+            model.paymentLink.receive($0, gate: model.paymentLinkGate)
+            model.widgetRoute.receive($0, gate: model.paymentLinkGate, variant: model.variant)
+        }
         // Launch ending in onboarding or a gate drops a link held through it. Initial: the phase swaps this Group's child.
-        .onChange(of: model.paymentLinkGate, initial: true) { _, gate in if gate == .ignore { _ = model.paymentLink.take(gate) } }
+        .onChange(of: model.paymentLinkGate, initial: true) { _, gate in
+            if gate == .ignore { _ = model.paymentLink.take(gate); _ = model.widgetRoute.take(gate) }
+        }
         .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in
             Task { await model.walletConfigurationChanged() }
         }
@@ -195,6 +200,9 @@ struct WalletTabs: View {
         .onChange(of: app.paymentLink.pending != nil && app.paymentLinkGate == .open, initial: true) { _, ready in
             if ready, let link = app.paymentLink.take(.open) { open(link, link: true) }
         }
+        .onChange(of: app.widgetRoute.pending != nil && app.paymentLinkGate == .open, initial: true) { _, ready in
+            if ready, let destination = app.widgetRoute.take(.open) { open(destination) }
+        }
         .environment(history)
         .environment(tracker)
         .environment(settingsSummary)
@@ -225,6 +233,20 @@ struct WalletTabs: View {
         Task {
             let applied = link ? await PaymentLinkRoute.apply(value, to: send) : await QRScanRoute.apply(value, to: send)
             if !applied { linkBlocked = link; scanBlocked = true }
+        }
+    }
+
+    /// A widget's tap picks a tab and never discards anything: an open recurring approval keeps the screen,
+    /// and Send's camera opens only over a draft (`WidgetRoute.scans`).
+    private func open(_ destination: WidgetRoute.Destination) {
+        guard !app.paymentLink.approvalOpen else { return }
+        switch destination {
+        case .home: selection = .home
+        case .receive: selection = .receive
+        case .send: selection = .send
+        case .scan:
+            selection = .send
+            if WidgetRoute.scans(send) { send.scanning = true }
         }
     }
 
