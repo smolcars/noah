@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList") // fixture builders: every field is a named, defaulted argument
+
 package com.noahwallet.ui.activity
 
 import androidx.compose.foundation.layout.*
@@ -87,8 +89,12 @@ object ActivityFixtures {
             if (confirmed) BlockRef(height.toUInt(), "0000000000000000000" + hex("$id-bh", 45)) else null, false)
         return HistoryMapping.transaction(transaction, if (confirmed) Date(now.time - minutes * minute) else null)
     }
-    private fun repeat(destination: String, amount: Long, comment: String = "", fiat: String? = null) =
-        """{"noah":{"repeat_payment":{"version":1,"destination":"$destination","comment":"$comment","amount_mode":"${if (fiat != null) "fiat" else "sats"}","amount_value":"${fiat ?: amount}"${if (fiat != null) ",\"fiat_currency\":\"USD\"" else ""}}}}"""
+    private fun repeat(destination: String, amount: Long, comment: String = "", fiat: String? = null): String {
+        val mode = if (fiat != null) "fiat" else "sats"
+        val currency = if (fiat != null) ",\"fiat_currency\":\"USD\"" else ""
+        val payment = """"version":1,"destination":"$destination","comment":"$comment","amount_mode":"$mode","amount_value":"${fiat ?: amount}"$currency"""
+        return """{"noah":{"repeat_payment":{$payment}}}"""
+    }
     private fun preimage(id: String) = """{"payment_preimage":"${hex("$id-preimage")}"}"""
 
     private fun settled(now: Date): List<HistoryTransaction> {

@@ -11,6 +11,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 /** Post-commit errors must never offer another transaction over the new wallet. */
+@Suppress("LongParameterList") // each step is injected so restore and settings tests can fail it on its own
 class RestoreCompletion(
     private val loadState: () -> PersistedWalletState,
     private val saveState: (PersistedWalletState) -> Unit,
@@ -29,6 +30,7 @@ class RestoreCompletion(
          * The app's wiring: wallet flags and, for a typed phrase, the backup acknowledgement land in settings
          * inside completion, before the receipt clears, so a replay after process death applies them too.
          */
+        @Suppress("LongParameterList") // the app's wiring of the constructor's seams, which settings and backup tests call directly
         fun withSettings(settings: SettingsStorage, journal: RestoreCompletionJournal?, seedRestored: (String, String?) -> Unit,
             recover: suspend () -> RestoreTransaction.Recovery, openWallet: suspend () -> Unit,
             clearToken: suspend () -> Unit = {}, acknowledged: () -> Unit = {}) = RestoreCompletion(

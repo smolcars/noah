@@ -90,7 +90,10 @@ object SendFixtures {
         chainNeeded: Long = 2) = SendEnv(BitcoinAmountUnit.bip177, Locale.US, "regtest", domain, history(), tip = tip, chainNeeded = chainNeeded,
         refund = refund, estimates = estimates)
 
-    fun request(amount: Long? = null) = "bitcoin:$onchain?" + (if (amount != null) "amount=${java.math.BigDecimal.valueOf(amount, 8).stripTrailingZeros().toPlainString()}&lightning=$invoice&" else "") + "ark=$ark"
+    fun request(amount: Long? = null): String {
+        val amounts = if (amount != null) "amount=${java.math.BigDecimal.valueOf(amount, 8).stripTrailingZeros().toPlainString()}&lightning=$invoice&" else ""
+        return "bitcoin:$onchain?" + amounts + "ark=$ark"
+    }
 
     /** Starts a motion whose clock reads [at] ms now, with [reached] milestones. */
     fun motion(route: SendRoute, at: Long, vararg reached: Pair<SendMilestone, Long>) =

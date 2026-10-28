@@ -23,8 +23,8 @@ class ParityPreviewActivity : FragmentActivity() {
         enableEdgeToEdge()
         // Activity from public fixtures on the real clock (motion checks): --es screen activity --es state busy|everyday|empty|loading|error
         if (intent.getStringExtra("screen") == "activity") {
-            setContent { NoahTheme { com.noahwallet.ui.activity.ActivityPreviewHost(com.noahwallet.ui.activity.ActivityFixtures.ui(intent.getStringExtra("state") ?: "busy"),
-                keepBar = intent.getBooleanExtra("keepBar", false)) } }
+            val ui = com.noahwallet.ui.activity.ActivityFixtures.ui(intent.getStringExtra("state") ?: "busy")
+            setContent { NoahTheme { com.noahwallet.ui.activity.ActivityPreviewHost(ui, keepBar = intent.getBooleanExtra("keepBar", false)) } }
             return
         }
         lifecycleScope.launch {

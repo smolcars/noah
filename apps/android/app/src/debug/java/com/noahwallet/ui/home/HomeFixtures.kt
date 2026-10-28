@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList") // fixture builders: every field is a named, defaulted argument
+
 package com.noahwallet.ui.home
 
 import androidx.compose.foundation.layout.*

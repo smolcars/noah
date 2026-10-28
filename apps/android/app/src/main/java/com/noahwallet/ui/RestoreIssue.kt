@@ -13,7 +13,18 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
         val invalidPhrase = RestoreIssue("Check your recovery phrase. Enter all 12 or 24 words in the correct order.")
         val committed = RestoreIssue("Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.", true)
         val recovery = RestoreIssue("An earlier restore needs recovery. Do not retry. Close and restart Noah to continue safely.", true)
-        val existingData = RestoreIssue("Wallet data already exists on this device. Noah won't replace it. Return to your wallet or restart Noah to recover safely.", true)
+        val existingData = RestoreIssue(
+            "Wallet data already exists on this device. Noah won't replace it. Return to your wallet or restart Noah to recover safely.",
+            true,
+        )
+        private val rollbackFailed = RestoreIssue(
+            "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.",
+            true,
+        )
+        private val seedStateUnknown = RestoreIssue(
+            "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.",
+            true)
+        private val wrongPhrase = RestoreIssue("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.")
         fun from(error: Exception): RestoreIssue = when (error) {
             is WalletRestorer.Failure -> when (error.reason) {
                 WalletRestorer.Reason.wrongNetwork -> RestoreIssue("This backup belongs to a different Bitcoin network. Use the matching version of Noah.")
@@ -22,8 +33,8 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
                 WalletRestorer.Reason.unsupportedFormat -> newerBackup
                 WalletRestorer.Reason.downloadMismatch -> RestoreIssue("The downloaded backup is incomplete or damaged. Check your connection and try again.")
                 WalletRestorer.Reason.secureStorageUnavailable -> RestoreIssue("Noah couldn't access secure storage. Unlock your device and try again.")
-                WalletRestorer.Reason.rollbackFailed -> RestoreIssue("Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.", true)
-                WalletRestorer.Reason.seedStateUnknown -> RestoreIssue("Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.", true)
+                WalletRestorer.Reason.rollbackFailed -> rollbackFailed
+                WalletRestorer.Reason.seedStateUnknown -> seedStateUnknown
             }
             is RestoreTransaction.Failure, is RestoreCompletion.RestartRequired -> recovery
             is WalletSession.OpenError -> when (error.reason) {
@@ -33,7 +44,7 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
             }
             is BackupCrypto.Failure -> when (error.reason) {
                 BackupCrypto.Reason.newerVersion -> newerBackup
-                BackupCrypto.Reason.authenticationFailed -> RestoreIssue("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.")
+                BackupCrypto.Reason.authenticationFailed -> wrongPhrase
                 else -> generic
             }
             is BackupArchive.Failure -> if (error.reason == BackupArchive.Reason.newerVersion) newerBackup else generic
