@@ -230,6 +230,8 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
 }
 
 /** One column: the detail grows out of its row over the list, and the back gesture previews the way back. */
+// ExitTransition.KeepUntilTransitionsFinished resolves to the member, as intended; Lint warns because the extension also exists.
+@android.annotation.SuppressLint("MemberExtensionConflict")
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun CompactActivity(ui: ActivityUi, actions: ActivityActions, state: ActivityState, rows: List<ActivityRules.Row>, toasts: HomeToasts) {
