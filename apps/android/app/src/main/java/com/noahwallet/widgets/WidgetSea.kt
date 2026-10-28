@@ -10,7 +10,6 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.graphics.Shader
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -21,6 +20,13 @@ import kotlin.math.sin
  */
 internal object WidgetSea {
     private const val ORANGE = 0xF7931A
+    /** The longship mask's hull bottom, as a share of its height (rows 18–209 of 256 are the ship). */
+    const val HULL = .82f
+    /** The band's headroom over the wave's highest point, as a share of the boat's size (plus 2 dp). */
+    const val HEADROOM = .76f
+
+    /** The boat's top, [bs] tall, so its hull rests on the 2 dp stroke's upper edge at [line]: never through the hull. */
+    fun boatTop(line: Float, bs: Float) = line - HULL * bs - 1
 
     /**
      * Where the sea sits in the widget, in dp: its box ([x], [y], [w], [h]), the wave's band height from its top, the
@@ -44,14 +50,14 @@ internal object WidgetSea {
         val low = swell?.min() ?: 0.0; val high = swell?.max() ?: 0.0
         if (swell == null || high - low < 1e-9) {
             // Calm water: a flat line with a gentle ripple, about 72% down the band (centred: the boat mid-widget).
-            val y = if (frame.centred) (band / 2 + .2f * bs).roundToInt().toFloat() else (band * .72f).roundToInt().toFloat()
+            val y = if (frame.centred) (band / 2 + (HULL - .5f) * bs + 1).roundToInt().toFloat() else (band * .72f).roundToInt().toFloat()
             path.moveTo(0f, y)
             var x = 3f
             while (x <= w + 3) { path.lineTo(x, y + 1.4f * sin(x / 7.0).toFloat()); x += 3 }
             return Line(path, y, bx)
         }
         // From the smoothed minimum (2 dp above the band's bottom) to the maximum (under the boat's headroom).
-        val top = ceil(.63 * bs).toFloat() + 1
+        val top = HEADROOM * bs + 2
         val xs = swell.indices.map { (it.toDouble() / swell.lastIndex) * (bx - 2) }
         val ys = swell.map { top + (1 - (it - low) / (high - low)) * (band - top - 2) }
         path.moveTo(xs[0].toFloat(), ys[0].toFloat())
@@ -62,7 +68,7 @@ internal object WidgetSea {
         return Line(path, today, bx)
     }
 
-    /** Draws at [density] px per dp; the boat's keel sits about 12% of its height below today's level. */
+    /** Draws at [density] px per dp; the boat sails on the line at today, its hull on the stroke's upper edge. */
     fun draw(values: List<Long>?, frame: Frame, density: Float): Drawn {
         val line = line(values, frame)
         val width = (frame.w * density).roundToInt().coerceAtLeast(1)
@@ -83,6 +89,6 @@ internal object WidgetSea {
             shader = LinearGradient(0f, 0f, frame.w * .34f, 0f, Color.TRANSPARENT, Color.BLACK, Shader.TileMode.CLAMP)
             xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
         })
-        return Drawn(bitmap, frame.x + line.boatX, frame.y + line.today - .7f * frame.boat)
+        return Drawn(bitmap, frame.x + line.boatX, frame.y + boatTop(line.today, frame.boat))
     }
 }

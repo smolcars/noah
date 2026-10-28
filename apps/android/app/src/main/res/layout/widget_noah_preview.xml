@@ -19,7 +19,7 @@
         android:layout_width="26dp"
         android:layout_height="26dp"
         android:layout_marginStart="138dp"
-        android:layout_marginTop="42.3dp"
+        android:layout_marginTop="41.2dp"
         android:scaleType="fitCenter"
         android:src="@drawable/widget_ship"
         android:tint="@color/widget_text" />

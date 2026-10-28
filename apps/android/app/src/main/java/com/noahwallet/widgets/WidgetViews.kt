@@ -20,12 +20,16 @@ internal enum class WidgetLayout(val resource: Int) {
     medium(R.layout.widget_noah_medium), empty(R.layout.widget_noah_empty);
 
     companion object {
-        /** Wide enough for Receive, Scan and Send beside the balance; tall enough for the wave. */
-        const val WIDE_DP = 250f
+        /**
+         * By size in dp rather than cells (an Android 9 launcher's 4 columns are ~276 dp): one row takes Receive, Scan
+         * and Send from 300 dp; two rows take the balance column, label, wave and capsules from 320 dp.
+         */
+        const val WIDE_ROW_DP = 300f
+        const val MEDIUM_DP = 320f
         const val TALL_DP = 120f
         fun of(widthDp: Float, heightDp: Float): WidgetLayout = when {
-            heightDp < TALL_DP -> if (widthDp < WIDE_DP) narrow else wide
-            widthDp < WIDE_DP -> small
+            heightDp < TALL_DP -> if (widthDp < WIDE_ROW_DP) narrow else wide
+            widthDp < MEDIUM_DP -> small
             else -> medium
         }
     }
@@ -63,7 +67,8 @@ internal object WidgetViews {
     /** The balance's box (width and height, dp) and full text size (sp), from each layout's fixed dimensions. */
     fun balanceBox(layout: WidgetLayout, widthDp: Float): Triple<Float, Float, Float> = when (layout) {
         WidgetLayout.small -> Triple(widthDp - 36f, 34f, 30f)
-        WidgetLayout.medium -> Triple(widthDp - 36f - 14f - 150f, 38f, 34f)
+        // The balance column's 60% beside the label's 40%.
+        WidgetLayout.medium -> Triple((widthDp - 36f - 14f) * .6f, 38f, 34f)
         // Padding, the longship and three 44 dp buttons with their gaps.
         WidgetLayout.wide -> Triple(widthDp - 32f - 42f - 3 * 52f, 28f, 24f)
         WidgetLayout.narrow -> Triple(widthDp - 32f - 30f, 28f, 24f)

@@ -111,12 +111,16 @@ class NoahWidgetProviderTest {
     @Test fun layoutsBySize() {
         assertEquals(WidgetLayout.narrow, WidgetLayout.of(130f, 80f))
         assertEquals(WidgetLayout.wide, WidgetLayout.of(350f, 80f))
+        // Four columns of an Android 9 launcher's five: too narrow for the buttons or the medium layout.
+        assertEquals(WidgetLayout.narrow, WidgetLayout.of(276f, 80f))
+        assertEquals(WidgetLayout.small, WidgetLayout.of(276f, 200f))
+        assertEquals(WidgetLayout.medium, WidgetLayout.of(330f, 180f))
         assertEquals(WidgetLayout.small, WidgetLayout.of(180f, 180f))
         assertEquals(WidgetLayout.medium, WidgetLayout.of(372f, 180f))
         assertEquals(WidgetLayout.medium, WidgetLayout.of(600f, 400f))
     }
 
-    /** The boat rides at today, 16 dp (small) or 18 dp (medium) in from the right, its keel ~12% below the line. */
+    /** The boat sails on the line at today (hull on the stroke's upper edge), 16 dp (small) or 18 dp (medium) in from the right. */
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Test
     fun seaGeometry() {
@@ -129,9 +133,11 @@ class NoahWidgetProviderTest {
         assertEquals(360, drawn.bitmap.width); assertEquals(296, drawn.bitmap.height)
         assertEquals(180f - 16 - 26, drawn.boatX, .01f)
         val line = WidgetSea.line(content.wave, small)
-        assertEquals(small.y + line.today - .7f * 26, drawn.boatY, .01f)
-        // The wave spans the band from under the boat's headroom to 2 dp above its bottom.
-        assertTrue(line.today in (Math.ceil(.63 * 26).toFloat() + 1)..(small.band - 2))
+        assertEquals(small.y + line.today - .82f * 26 - 1, drawn.boatY, .01f)
+        // The wave spans the band from under the boat's headroom to 2 dp above its bottom, so a boat at the top stays inside.
+        assertTrue(line.today in (.76f * 26 + 2)..(small.band - 2))
+        // The mask's top 18 of 256 rows are empty: the ship itself stays inside the band at the highest point.
+        assertTrue(WidgetSea.boatTop(.76f * 26 + 2, 26f) + 18f / 256 * 26 >= 0f)
         val renew = WidgetViews.frame(WidgetLayout.small, content.copy(status = WidgetContent.Status.Renew("Renew", "x")), 180f, 180f)!!
         assertTrue("two-line Renew makes the band shallower", renew.band < small.band)
         val medium = WidgetViews.frame(WidgetLayout.medium, content, 372f, 180f)!!
