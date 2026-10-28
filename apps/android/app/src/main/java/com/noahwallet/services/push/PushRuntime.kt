@@ -11,7 +11,6 @@ import com.noahwallet.services.AppServices
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
 import com.noahwallet.services.storage.ExpoInstallationID
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -71,11 +70,9 @@ class PushRuntime(private val context: Context, private val services: AppService
                 admitted()
                 val summary = handles.summary()
                 admitted()
-                val expiry = try { handles.closestExpiryBlocks() }
-                catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { null }
+                val extras = WidgetDataWriter.extras(handles, BuildConfig.APP_VARIANT)
                 admitted()
-                WidgetDataWriter.write(context, summary.balance, expiry, BuildConfig.APP_VARIANT)
+                WidgetDataWriter.write(context, summary.balance, extras, services.widgetDisplay(), BuildConfig.APP_VARIANT)
             }
         }, log = log::i,
     ))

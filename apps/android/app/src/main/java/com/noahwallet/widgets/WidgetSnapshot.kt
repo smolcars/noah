@@ -1,16 +1,52 @@
 package com.noahwallet.widgets
 
 import android.content.SharedPreferences
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
-internal data class WidgetSnapshot(val total: Long, val onchain: Long, val offchain: Long,
-    val pending: Long, val closestExpiryBlocks: Long, val expiryThreshold: Long) {
+/**
+ * What the widget shows, written whole by the app (docs/native-rewrite/design/widgets.md, Data the app writes) and only
+ * read by the widget. App-private preferences, never logged.
+ */
+@Serializable
+internal data class WidgetSnapshot(
+    val version: Int = VERSION,
+    /** Sats: the balance Home shows, and today's pending balance (the Arriving line). */
+    val balance: Long,
+    val pending: Long = 0,
+    /** 31 daily balances, oldest first, the last one [balance]; absent draws calm water. */
+    val daily: List<Long>? = null,
+    /** When [daily] was read (epoch ms), so a later day moves the window on. */
+    val writtenAt: Long? = null,
+    /** Home's persisted unit (`bip177` / `sats`) and hide-balance flag. */
+    val amountUnit: String = "bip177",
+    val hidden: Boolean = false,
+    /** Home's latest quote: the balance in [fiatCurrency], and the price it came from, for later writes. */
+    val fiatValue: Double? = null,
+    val fiatCurrency: String? = null,
+    val fiatPrice: Double? = null,
+    /** While Home's Renew rule holds: the soonest refreshable VTXO expiry (epoch ms, now + blocks × 10 min). */
+    val renewDue: Long? = null,
+) {
+    val sats get() = amountUnit == "sats"
+
+    fun encode(): String = json.encodeToString(serializer(), this)
+
     companion object {
-        fun read(prefs: SharedPreferences): WidgetSnapshot {
+        const val VERSION = 1
+        const val KEY = "widgetSnapshot"
+        private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
+
+        fun decode(raw: String?): WidgetSnapshot? = raw?.let { runCatching { json.decodeFromString(serializer(), it) }.getOrNull() }
+            ?.takeIf { it.daily == null || it.daily.size == WidgetWave.DAYS + 1 }
+
+        /** One read of the whole file, so a concurrent commit can't mix two writes. Null: no wallet. */
+        fun read(prefs: SharedPreferences): WidgetSnapshot? {
             val values = prefs.all
-            fun value(key: String, fallback: Long) = values[key] as? Long ?: fallback
-            return WidgetSnapshot(value("totalBalance", 0L), value("onchainBalance", 0L),
-                value("offchainBalance", 0L), value("pendingBalance", 0L),
-                value("closestExpiryBlocks", 999999L), value("expiryThreshold", 288L))
+            decode(values[KEY] as? String)?.let { return it }
+            // The old keys (an RN or earlier native snapshot, before the updated app runs): ₿, no fiat, calm water, no Renew.
+            val total = values["totalBalance"] as? Long ?: return null
+            return WidgetSnapshot(balance = total, pending = values["pendingBalance"] as? Long ?: 0L)
         }
     }
 }

@@ -21,6 +21,7 @@ class WidgetIOTest {
     @Test fun writeAndClearAwaitStorageBeforeBroadcastAndKeepMainResponsive() = runBlocking {
         val base = InstrumentationRegistry.getInstrumentation().targetContext
         val balance = WalletBalance(WalletBalance.Ark(10u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(5u, 3u, 8u))
+        val display = WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD")
         for (clear in listOf(false, true)) {
             val entered = CompletableDeferred<Thread>(); val release = CountDownLatch(1)
             var broadcast = false
@@ -34,15 +35,17 @@ class WidgetIOTest {
                     val prefs = base.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE)
                     if (clear) assertTrue(prefs.all.isEmpty())
                     else {
-                        assertEquals(18L, prefs.getLong("totalBalance", -1))
-                        assertEquals(-2L, prefs.getLong("closestExpiryBlocks", -1))
+                        val stored = com.noahwallet.widgets.WidgetSnapshot.read(prefs)!!
+                        assertEquals(18L, stored.balance)
+                        assertEquals(3L, stored.pending)
+                        assertNotNull(stored.renewDue)
                     }
                     broadcast = true
                 }
             }
             val work = async(Dispatchers.Main) {
                 if (clear) WidgetDataWriter.clear(context, "regtest")
-                else WidgetDataWriter.write(context, balance, -2, "regtest")
+                else WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 2), display, "regtest")
             }
             try {
                 assertNotSame(Looper.getMainLooper().thread, withTimeout(5000) { entered.await() })

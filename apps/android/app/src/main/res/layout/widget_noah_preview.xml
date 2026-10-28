@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget picker's scalable preview (Android 12+): the 2×2 with sample data, not the user's wallet. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="180dp"
+    android:layout_height="180dp"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true"
+    android:layoutDirection="ltr">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="148dp"
+        android:layout_marginTop="32dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_preview_wave" />
+
+    <ImageView
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginStart="138dp"
+        android:layout_marginTop="42.3dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_ship"
+        android:tint="@color/widget_text" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="18dp"
+            android:fontFamily="@font/space_grotesk_semibold"
+            android:fontFeatureSettings="tnum"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
+            android:text="+₿ 30,142"
+            android:textColor="@color/widget_text"
+            android:textSize="12sp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:fontFamily="@font/space_grotesk_semibold"
+            android:fontFeatureSettings="tnum"
+            android:gravity="bottom|start"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.03"
+            android:maxLines="1"
+            android:text="₿ 252,742"
+            android:textColor="@color/widget_text"
+            android:textSize="30sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="17dp"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center_vertical|start"
+            android:includeFontPadding="false"
+            android:text="$283.07"
+            android:textColor="@color/widget_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+</FrameLayout>

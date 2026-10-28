@@ -50,7 +50,8 @@ class ForegroundWidgetDeviceTest {
             instrumentation.waitForIdleSync()
         }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            click("Restore Wallet"); click("24 words")
+            // Welcome's restore entry (onboarding redesign): "I already have a wallet".
+            click("I already have a wallet"); click("24 words")
             scenario.onActivity { activity ->
                 val input = androidx.lifecycle.ViewModelProvider(activity)[com.noahwallet.ui.RecoveryPhrasePresentation::class.java].input
                 check(input.words.size == 24 && input.words.all(String::isEmpty))
@@ -77,7 +78,7 @@ class ForegroundWidgetDeviceTest {
         }
     }
 
-    @Test fun fundedForegroundRefreshPublishesExpiry() = runBlocking {
+    @Test fun fundedForegroundRefreshPublishesTheSnapshot() = runBlocking {
         val url = InstrumentationRegistry.getArguments().getString("noahWidgetFundingURL")
         assumeTrue(url != null)
         check(BuildConfig.APP_VARIANT == "regtest")
@@ -105,12 +106,16 @@ class ForegroundWidgetDeviceTest {
                 val caller = currentCoroutineContext()
                 fun checkStage() { caller.checkWalletAdmission(); admission.checkActive() }
                 var published = false
-                ForegroundWidgetRefresh.read(session::summary, session::closestExpiryBlocks, ::checkStage) { balance, expiry ->
-                    assertTrue(balance.ark.spendable > 0uL); assertNotNull(expiry)
-                    WidgetDataWriter.write(context, balance, expiry, "regtest")
-                    WidgetDataWriter.write(context, balance, null, "regtest", preserveExpiry = true)
-                    val stored = context.getSharedPreferences("com.noahwallet.regtest", 0)
-                    assertEquals(expiry, stored.getLong("closestExpiryBlocks", -999))
+                ForegroundWidgetRefresh.read(session::summary, session::widgetExtras, ::checkStage) { balance, extras ->
+                    assertTrue(balance.ark.spendable > 0uL)
+                    // A new wallet's whole balance arrived inside the window; a fresh VTXO isn't due for Renew.
+                    assertEquals(balance.totalSats.toLong(), extras.changes!!.sumOf { it.sats })
+                    assertNull(extras.renewBlocks)
+                    WidgetDataWriter.write(context, balance, extras,
+                        WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD"), "regtest")
+                    val stored = com.noahwallet.widgets.WidgetSnapshot.read(context.getSharedPreferences("com.noahwallet.regtest", 0))!!
+                    assertEquals(balance.totalSats.toLong(), stored.daily!!.last())
+                    assertEquals(0L, stored.daily!!.first())
                     published = true
                 }
                 assertTrue(published)

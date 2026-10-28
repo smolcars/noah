@@ -86,13 +86,15 @@ class PushCompatibilityTest {
         assertEquals(before.importance, manager.getNotificationChannel("default").importance)
         assertEquals(before.name, manager.getNotificationChannel("default").name)
         val balance = WalletBalance(WalletBalance.Ark(10u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(5u, 3u, 8u))
-        WidgetDataWriter.write(context, balance, -2, "regtest")
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 2),
+            WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.sats, true, "USD"), "regtest")
         val prefs = context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE)
-        assertEquals(18L, prefs.getLong("totalBalance", -1))
-        assertEquals(8L, prefs.getLong("onchainBalance", -1))
-        assertEquals(10L, prefs.getLong("offchainBalance", -1))
-        assertEquals(3L, prefs.getLong("pendingBalance", -1))
-        assertEquals(-2L, prefs.getLong("closestExpiryBlocks", -1))
-        assertEquals(24L, prefs.getLong("expiryThreshold", -1))
+        // The provider reads exactly what the writer stored: one snapshot key, the old keys gone.
+        assertEquals(setOf(com.noahwallet.widgets.WidgetSnapshot.KEY), prefs.all.keys)
+        val stored = com.noahwallet.widgets.WidgetSnapshot.read(prefs)!!
+        assertEquals(18L, stored.balance); assertEquals(3L, stored.pending)
+        assertEquals(List(31) { 18L }, stored.daily)
+        assertTrue(stored.sats); assertTrue(stored.hidden)
+        assertEquals(2 * 600_000L, stored.renewDue!! - stored.writtenAt!!)
     }
 }

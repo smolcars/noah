@@ -157,6 +157,18 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             "profile-storage")
         if (key == "bitcoinAmountUnit") amountUnit = if (value == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
         if (key == "preferredCurrency") preferredCurrency = SettingsPreferences.preferredCurrency(settings.string("profile-storage"))
+        if (key == "bitcoinAmountUnit" || key == "preferredCurrency") republishWidget()
+    }
+
+    /** What the widget follows from Home: unit, hide setting and fiat currency. */
+    private val widgetDisplay get() = com.noahwallet.services.push.WidgetDataWriter.Display(amountUnit, hidden, preferredCurrency)
+
+    /** The widget takes a display change, or Home's latest [quote], without reading the wallet. */
+    fun republishWidget(quote: com.noahwallet.services.push.WidgetDataWriter.Quote? = null) {
+        val display = widgetDisplay
+        viewModelScope.launch {
+            runCatching { com.noahwallet.services.push.WidgetDataWriter.republish(getApplication(), display, BuildConfig.APP_VARIANT, quote) }
+        }
     }
 
     fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
@@ -407,8 +419,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         try {
             checkStage()
             if (sync) session.sync()
-            summary = ForegroundWidgetRefresh.read(session::summary, session::closestExpiryBlocks, ::checkStage) { balance, expiry ->
-                com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, expiry, BuildConfig.APP_VARIANT, checkStage = ::checkStage)
+            summary = ForegroundWidgetRefresh.read(session::summary, session::widgetExtras, ::checkStage) { balance, extras ->
+                com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, extras, widgetDisplay, BuildConfig.APP_VARIANT,
+                    checkStage = ::checkStage)
             }
             summaryRevision++
             error = null
@@ -422,6 +435,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         settings.set(JsonObject(envelope + ("state" to JsonObject(state("privacy-storage") +
             ("isHomeBalanceHidden" to JsonPrimitive(value)))) + ("version" to (envelope["version"] ?: JsonPrimitive(0)))).toString(), "privacy-storage")
         hidden = value
+        republishWidget()
     }
 }
 

@@ -2,18 +2,18 @@ package com.noahwallet.services.wallet
 
 import kotlinx.coroutines.CancellationException
 
-/** Summary and expiry share the caller's foreground admission, never payment settlement. */
+/** Summary and the widget's extras share the caller's foreground admission, never payment settlement. */
 internal object ForegroundWidgetRefresh {
-    suspend fun read(summary: suspend () -> WalletSession.Summary?, expiry: suspend () -> Long?,
-        checkStage: () -> Unit, publish: suspend (WalletBalance, Long?) -> Unit): WalletSession.Summary? {
+    suspend fun <T> read(summary: suspend () -> WalletSession.Summary?, extras: suspend () -> T,
+        checkStage: () -> Unit, publish: suspend (WalletBalance, T) -> Unit): WalletSession.Summary? {
         checkStage()
         val latest = summary()
         checkStage()
         if (latest == null) return null
         try {
-            val blocks = expiry()
+            val read = extras()
             checkStage()
-            publish(latest.balance, blocks)
+            publish(latest.balance, read)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { checkStage() }
         return latest

@@ -1,163 +1,211 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The provider sets every text; values here are only the picker preview's. The 2x1 widget's small type is deliberate. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/widget_root"
+<!--
+    The 2×2 widget (widgets.md, Android): label row, the wave, balance, fiat and one status line. Also the provider's
+    initial layout, whose name the upgrade check pins. Heights are fixed so WidgetLayout can place the wave and boat.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="10dp"
-    android:paddingBottom="8dp"
     android:background="@drawable/widget_background"
-    tools:ignore="SmallSp">
+    android:clipToOutline="true"
+    android:layoutDirection="ltr">
 
-    <!-- Header row -->
-    <LinearLayout
+    <FrameLayout
+        android:id="@+id/widget_sea_box"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_height="match_parent">
 
-        <TextView
-            android:id="@+id/wallet_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/widget_title"
-            android:textColor="@color/widgetTextSecondary"
-            android:textSize="9sp" />
+        <ImageView
+            android:id="@+id/widget_sea"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY" />
+    </FrameLayout>
 
-        <TextView
-            android:id="@+id/variant_badge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/widget_preview_badge"
-            android:textColor="@color/widgetBadgeText"
-            android:textSize="8sp"
-            android:textStyle="bold"
-            android:paddingStart="5dp"
-            android:paddingEnd="5dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
-            android:background="@drawable/badge_background"
-            android:visibility="visible" />
-
-    </LinearLayout>
-
-    <!-- Main balance -->
-    <LinearLayout
+    <FrameLayout
+        android:id="@+id/widget_boat_box"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="2dp">
+        android:layout_height="match_parent">
 
-        <TextView
-            android:id="@+id/balance_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/widget_preview_balance"
-            android:textColor="@color/widgetTextPrimary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/pending_balance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Pending: 0 sats"
-            android:textColor="@color/widgetPendingText"
-            android:textSize="8sp"
+        <ImageView
+            android:id="@+id/widget_boat"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_ship"
+            android:tint="@color/widget_text"
             android:visibility="gone" />
+    </FrameLayout>
 
-        <!-- Expiry status: RemoteViews tints the icon, which a compound drawable can't take -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:ignore="UseCompoundDrawables"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="2dp">
-
-            <!-- Shown only with an expiry, so the picker preview has no untranslated count -->
-            <ImageView
-                android:id="@+id/expiry_icon"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:src="@android:drawable/checkbox_on_background"
-                android:importantForAccessibility="no"
-                android:layout_marginEnd="3dp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/expiry_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="0 blocks"
-                android:textSize="8sp"
-                android:visibility="gone" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- Onchain/Offchain breakdown -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="noHideDescendants"
         android:orientation="vertical"
-        android:layout_marginTop="4dp">
+        android:paddingStart="18dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="16dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="18dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/onchain_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="3dp"
-                android:text="@string/widget_onchain"
-                android:textColor="@color/widgetTextSecondary"
-                android:textSize="9sp" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_change"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/space_grotesk_semibold"
+                    android:fontFeatureSettings="tnum"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/widget_change_days"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11.5sp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/onchain_balance"
+                android:id="@+id/widget_chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/widget_preview_amount"
-                android:textColor="@color/widgetTextPrimary"
-                android:textSize="9sp" />
-
+                android:layout_marginStart="6dp"
+                android:background="@drawable/widget_chip"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:paddingStart="7dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="7dp"
+                android:paddingBottom="3dp"
+                android:textColor="@color/widget_chip_text"
+                android:textSize="11sp"
+                android:visibility="gone" />
         </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/widget_balance"
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:autoSizeMaxTextSize="30sp"
+            android:autoSizeMinTextSize="15sp"
+            android:autoSizeStepGranularity="0.5sp"
+            android:autoSizeTextType="uniform"
+            android:fontFamily="@font/space_grotesk_semibold"
+            android:fontFeatureSettings="tnum"
+            android:gravity="bottom|start"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.03"
+            android:maxLines="1"
+            android:textColor="@color/widget_text"
+            android:textSize="30sp" />
+
+        <TextView
+            android:id="@+id/widget_fiat"
+            android:layout_width="match_parent"
+            android:layout_height="17dp"
+            android:layout_marginTop="2dp"
+            android:autoSizeMaxTextSize="13sp"
+            android:autoSizeMinTextSize="9sp"
+            android:autoSizeStepGranularity="0.5sp"
+            android:autoSizeTextType="uniform"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center_vertical|start"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_muted"
+            android:textSize="13sp"
+            android:visibility="gone" />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/widget_status"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="1dp">
+            android:layout_marginTop="5dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="17dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/widget_status_icon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="5dp"
+                    android:src="@drawable/ic_home_renew"
+                    android:tint="@color/widget_text"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/widget_status_dot"
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:layout_marginEnd="5dp"
+                    android:src="@drawable/widget_dot"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/widget_status_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:autoSizeMaxTextSize="13sp"
+                    android:autoSizeMinTextSize="9sp"
+                    android:autoSizeStepGranularity="0.5sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center_vertical|start"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="13sp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/offchain_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="3dp"
-                android:text="@string/widget_offchain"
-                android:textColor="@color/widgetTextSecondary"
-                android:textSize="9sp" />
-
-            <TextView
-                android:id="@+id/offchain_balance"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/widget_preview_amount"
-                android:textColor="@color/widgetTextPrimary"
-                android:textSize="9sp" />
-
+                android:id="@+id/widget_status_detail"
+                android:layout_width="match_parent"
+                android:layout_height="17dp"
+                android:autoSizeMaxTextSize="13sp"
+                android:autoSizeMinTextSize="9sp"
+                android:autoSizeStepGranularity="0.5sp"
+                android:autoSizeTextType="uniform"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical|start"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_muted"
+                android:textSize="13sp"
+                android:visibility="gone" />
         </LinearLayout>
-
     </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>

@@ -33,7 +33,6 @@ class WalletRestorerTest {
         override suspend fun maintenanceDelegated() = Unit
         override suspend fun bolt11Invoice(amountSats: ULong): String = error("unused")
         override suspend fun claimLightningReceives() = Unit
-        override suspend fun closestExpiryBlocks(): Long? = null
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
         var stopFails = false
         override suspend fun stopDaemonWait() { if (stopFails) throw Boom() }

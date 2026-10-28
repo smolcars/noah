@@ -51,6 +51,8 @@ class AppServices private constructor(private val context: Context) {
         })
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val settings = SettingsStorage(context)
+    /** Home's unit, hide setting and fiat currency, as the widget's background writers read them. */
+    fun widgetDisplay() = com.noahwallet.services.push.WidgetDataWriter.Display.read(settings)
     val scratch = ScratchSpace(java.io.File(context.cacheDir, "noah-scratch")).also { it.sweepAbandoned() }
     val backupService = BackupService(session, client,
         { (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable() }, scratch)

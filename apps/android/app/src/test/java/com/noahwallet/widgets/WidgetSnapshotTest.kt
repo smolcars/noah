@@ -10,27 +10,62 @@ class WidgetSnapshotTest {
         Proxy.newProxyInstance(SharedPreferences::class.java.classLoader, arrayOf(SharedPreferences::class.java)) {
                 _, method, args -> read(method.name, args)
         } as SharedPreferences
+    private fun stored(values: Map<String, Any>) = preferences { method, _ ->
+        if (method == "getAll") values else error("Unexpected preference access: $method")
+    }
+    private val legacy = mapOf("totalBalance" to 30L, "onchainBalance" to 10L, "offchainBalance" to 20L,
+        "pendingBalance" to 5L, "closestExpiryBlocks" to 100L, "expiryThreshold" to 144L)
 
-    @Test fun concurrentCommitCannotMixBalanceBucketsAndExpiryPolicy() {
-        val before = mapOf("totalBalance" to 30L, "onchainBalance" to 10L, "offchainBalance" to 20L,
-            "pendingBalance" to 5L, "closestExpiryBlocks" to 100L, "expiryThreshold" to 144L)
-        val after = mapOf("totalBalance" to 300L, "onchainBalance" to 100L, "offchainBalance" to 200L,
-            "pendingBalance" to 50L, "closestExpiryBlocks" to -999L, "expiryThreshold" to 12L)
-        var current = before
+    /** An RN or earlier native snapshot renders the new design: balance and pending, ₿, no fiat, calm water, no Renew. */
+    @Test fun oldKeysRenderBalanceAndPendingOnly() {
+        assertEquals(WidgetSnapshot(balance = 30, pending = 5), WidgetSnapshot.read(stored(legacy)))
+        val snapshot = WidgetSnapshot.read(stored(legacy))!!
+        assertFalse(snapshot.sats); assertFalse(snapshot.hidden)
+        assertNull(snapshot.daily); assertNull(snapshot.fiatCurrency); assertNull(snapshot.renewDue)
+        // RN wrote only the balance buckets it had; a missing pending is none.
+        assertEquals(WidgetSnapshot(balance = 7), WidgetSnapshot.read(stored(mapOf("totalBalance" to 7L))))
+    }
+
+    @Test fun noSnapshotIsNoWallet() {
+        assertNull(WidgetSnapshot.read(stored(emptyMap())))
+        assertNull(WidgetSnapshot.read(stored(mapOf("expiryThreshold" to 144L))))
+    }
+
+    @Test fun newSnapshotRoundTripsAndWinsOverOldKeys() {
+        val snapshot = WidgetSnapshot(balance = 252_742, pending = 100_000, daily = List(31) { 200_000L + it * 1_700 }.dropLast(1) + 252_742L,
+            writtenAt = 1_761_577_200_000, amountUnit = "sats", hidden = true, fiatValue = 283.07, fiatCurrency = "EUR",
+            fiatPrice = 112_000.0, renewDue = 1_761_640_000_000)
+        assertEquals(snapshot, WidgetSnapshot.decode(snapshot.encode()))
+        assertEquals(snapshot, WidgetSnapshot.read(stored(legacy + (WidgetSnapshot.KEY to snapshot.encode()))))
+        assertTrue(snapshot.encode().contains("\"version\":1"))
+    }
+
+    @Test fun unreadableSnapshotFallsBackToOldKeysOrNoWallet() {
+        assertEquals(WidgetSnapshot(balance = 30, pending = 5), WidgetSnapshot.read(stored(legacy + (WidgetSnapshot.KEY to "{not json"))))
+        assertNull(WidgetSnapshot.read(stored(mapOf(WidgetSnapshot.KEY to "{\"version\":1}"))))
+        // A wave must have its 31 days.
+        assertNull(WidgetSnapshot.decode(WidgetSnapshot(balance = 1, daily = listOf(1, 1)).encode()))
+        // A later version's extra fields don't hide what this one understands.
+        assertEquals(WidgetSnapshot(version = 2, balance = 9), WidgetSnapshot.decode("{\"version\":2,\"balance\":9,\"future\":[1]}"))
+    }
+
+    @Test fun concurrentCommitCannotMixTwoWrites() {
+        val before = WidgetSnapshot(balance = 30, pending = 5).encode()
+        val after = WidgetSnapshot(balance = 300, pending = 50, hidden = true).encode()
+        var current: Map<String, Any> = mapOf(WidgetSnapshot.KEY to before)
         val prefs = preferences { method, args ->
             when (method) {
-                "getAll" -> current.toMap().also { current = after }
-                "getLong" -> (current[args!![0]] ?: args[1]).also { current = after }
+                "getAll" -> current.toMap().also { current = mapOf(WidgetSnapshot.KEY to after) }
+                "getString", "getLong" -> (current[args!![0]] ?: args[1]).also { current = mapOf(WidgetSnapshot.KEY to after) }
                 else -> error("Unexpected preference access: $method")
             }
         }
-        assertEquals(WidgetSnapshot(30, 10, 20, 5, 100, 144), WidgetSnapshot.read(prefs))
-        assertEquals(WidgetSnapshot(300, 100, 200, 50, -999, 12), WidgetSnapshot.read(prefs))
+        assertEquals(WidgetSnapshot(balance = 30, pending = 5), WidgetSnapshot.read(prefs))
+        assertEquals(WidgetSnapshot(balance = 300, pending = 50, hidden = true), WidgetSnapshot.read(prefs))
     }
 
     @Test fun concurrentClearKeepsTheCompleteOldSnapshotUntilNextRead() {
-        var current = mapOf("totalBalance" to 30L, "onchainBalance" to 10L, "offchainBalance" to 20L,
-            "pendingBalance" to 5L, "closestExpiryBlocks" to -999L, "expiryThreshold" to 24L)
+        var current: Map<String, Any> = legacy
         val prefs = preferences { method, args ->
             when (method) {
                 "getAll" -> current.toMap().also { current = emptyMap() }
@@ -38,7 +73,7 @@ class WidgetSnapshotTest {
                 else -> error("Unexpected preference access: $method")
             }
         }
-        assertEquals(WidgetSnapshot(30, 10, 20, 5, -999, 24), WidgetSnapshot.read(prefs))
-        assertEquals(WidgetSnapshot(0, 0, 0, 0, 999999, 288), WidgetSnapshot.read(prefs))
+        assertEquals(WidgetSnapshot(balance = 30, pending = 5), WidgetSnapshot.read(prefs))
+        assertNull(WidgetSnapshot.read(prefs))
     }
 }

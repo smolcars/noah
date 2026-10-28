@@ -10,9 +10,9 @@ class ForegroundWidgetRefreshTest {
     private val summary = WalletSession.Summary(Network.REGTEST, "fixture",
         WalletBalance(WalletBalance.Ark(1234u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 0)
 
-    @Test fun foregroundRefreshPublishesBalanceAndExpiry() = runBlocking {
+    @Test fun foregroundRefreshPublishesBalanceAndExtras() = runBlocking {
         var written: Pair<WalletBalance, Long?>? = null
-        val latest = ForegroundWidgetRefresh.read({ summary }, { 123 }, {}, { balance, expiry -> written = balance to expiry })
+        val latest = ForegroundWidgetRefresh.read({ summary }, { 123L }, {}, { balance, expiry -> written = balance to expiry })
         assertEquals(summary, latest); assertEquals(summary.balance to 123L, written)
     }
 

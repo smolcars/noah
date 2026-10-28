@@ -85,7 +85,6 @@ class WalletSession internal constructor(
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
         suspend fun claimLightningReceives()
-        suspend fun closestExpiryBlocks(): Long?
         suspend fun createSnapshot(destination: File): WalletSnapshotInfo
         suspend fun stopDaemonWait()
         fun close()
@@ -414,7 +413,9 @@ class WalletSession internal constructor(
     suspend fun maintenanceDelegated() = withOpen { it.maintenanceDelegated() }
     suspend fun bolt11Invoice(amountSats: ULong): String = withOpen { it.bolt11Invoice(amountSats) }
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
-    suspend fun closestExpiryBlocks(): Long? = withOpen { it.closestExpiryBlocks() }
+    /** The widget's wave history and Home's Renew, best effort, beside a summary. */
+    suspend fun widgetExtras(): com.noahwallet.services.push.WidgetDataWriter.Extras =
+        withOpen { com.noahwallet.services.push.WidgetDataWriter.extras(it, variant) }
 
     internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T {
         val caller = currentCoroutineContext()
@@ -770,12 +771,6 @@ class WalletSession internal constructor(
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun claimLightningReceives() { wallet.tryClaimAllLightningReceives(false) }
-        override suspend fun closestExpiryBlocks(): Long? {
-            val vtxos = wallet.vtxos()
-            if (vtxos.isEmpty()) return null
-            val tip = onchain.tipHeight().toLong()
-            return vtxos.minOf { it.expiryHeight.toLong() - tip }
-        }
         override suspend fun createSnapshot(destination: File) = wallet.createSnapshot(destination.path)
         override suspend fun stopDaemonWait() { wallet.stopDaemonWait() }
         override fun close() { try { wallet.close() } finally { onchain.close() } }

@@ -22,12 +22,15 @@ class SystemNotificationDeviceTest {
         val jobs = com.noahwallet.services.push.PushJobs(com.noahwallet.services.push.PushJobs.Dependencies(
             ensureWalletOpen = {}, maintenance = {}, createInvoice = { error("Unused") }, submitInvoice = { _, _ -> },
             claimLightning = {}, reportMaintenance = { _, _ -> }, heartbeat = {}, announceReceived = { _, _, _ -> },
-            refreshWidget = { com.noahwallet.services.push.WidgetDataWriter.write(context, balance, 123, "regtest") },
+            refreshWidget = { com.noahwallet.services.push.WidgetDataWriter.write(context, balance,
+                com.noahwallet.services.push.WidgetDataWriter.Extras(emptyList(), 123),
+                com.noahwallet.services.push.WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD"), "regtest") },
             log = {}, backup = {}, reportBackup = { _, _ -> }, recurring = {},
         ))
         jobs.handle(com.noahwallet.api.generated.models.NotificationDataRecurringPaymentDue(1))
-        assertEquals(1234L, context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE).getLong("totalBalance", -1))
-        assertEquals(123L, context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE).getLong("closestExpiryBlocks", -1))
+        val stored = com.noahwallet.widgets.WidgetSnapshot.read(context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE))!!
+        assertEquals(1234L, stored.balance)
+        assertEquals(123 * 600_000L, stored.renewDue!! - stored.writtenAt!!)
     }
 
     @Test fun receiptsAreVisibleAndOpenNoah() {

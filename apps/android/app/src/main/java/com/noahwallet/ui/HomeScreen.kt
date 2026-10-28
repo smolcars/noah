@@ -120,7 +120,9 @@ private fun rememberHomePrice(model: AppModel, currency: String): Double? {
         lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
             while (kotlinx.coroutines.currentCoroutineContext().isActive) {
                 try { price = com.noahwallet.api.generated.client.V0PricesClient(model.services.client)
-                    .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 } }
+                    .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 }
+                    // The widget's fiat line is Home's latest quote.
+                    price?.let { model.republishWidget(com.noahwallet.services.push.WidgetDataWriter.Quote(currency, it)) } }
                 catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                 catch (_: Exception) { }
                 kotlinx.coroutines.delay(300_000)

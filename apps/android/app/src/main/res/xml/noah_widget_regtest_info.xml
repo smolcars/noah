@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    minWidth, minHeight, resize mode, update period, category and initial layout are unchanged: the upgrade check pins
+    them, and placed widgets keep their IDs. Android 12+ places a 2×2 by default and previews the design scaled.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:minWidth="110dp"
     android:minHeight="40dp"
-
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
     android:updatePeriodMillis="900000"
     android:initialLayout="@layout/widget_noah"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_regtest_description"
-    android:previewLayout="@layout/widget_noah"
+    android:previewLayout="@layout/widget_noah_preview"
     tools:targetApi="31" />
