@@ -96,9 +96,10 @@ class SettingsGalleryTest {
                 assertTrue(ready.await(10, java.util.concurrent.TimeUnit.SECONDS))
                 Thread.sleep(2_500)
                 if (scene.scroll) {
-                    val size = android.graphics.Point().also { activity.windowManager.defaultDisplay.getRealSize(it) }
+                    val size = androidx.window.layout.WindowMetricsCalculator.getOrCreate().computeMaximumWindowMetrics(activity).bounds
+                    val x = size.width() / 2
                     repeat(3) {
-                        instrumentation.uiAutomation.executeShellCommand("input swipe ${size.x / 2} ${size.y * 8 / 10} ${size.x / 2} ${size.y / 10} 250").close()
+                        instrumentation.uiAutomation.executeShellCommand("input swipe $x ${size.height() * 8 / 10} $x ${size.height() / 10} 250").close()
                         Thread.sleep(700)
                     }
                     Thread.sleep(800)

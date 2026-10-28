@@ -22,7 +22,7 @@ class StoredWalletOpenerTest {
             override fun create(alias: String) = key
         }, object : SecretFile {
             override fun read() = bytes
-            override fun writeAtomically(value: ByteArray) { writes++; bytes = value }
+            override fun writeAtomically(bytes: ByteArray) { writes++; this@Fixture.bytes = bytes }
             override fun delete() = error("Must not delete seed")
         })) { SecretResult.Found(original) }
         val opener = StoredWalletOpener(seed, { walletState }) {

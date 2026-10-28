@@ -71,6 +71,8 @@ class WalletPrivacyDeviceTest {
             waitFor { activity.lifecycle.currentState == Lifecycle.State.RESUMED }
             val started = model.walletLock.generation
             prompt()
+            // API 28 only (above), where RecentTaskInfo.taskId (API 29) doesn't exist yet.
+            @Suppress("DEPRECATION")
             val task = (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager)
                 .appTasks.first { it.taskInfo?.id == activity.taskId }
             automation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)

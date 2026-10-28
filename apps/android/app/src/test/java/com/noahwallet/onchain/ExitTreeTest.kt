@@ -50,13 +50,13 @@ class ExitTreeTest {
         val drawn = long.fold(cap)
         assertEquals(cap, drawn.n); assertEquals("counts stay real", 100, drawn.count)
         assertEquals("the oldest blocks are one stack at the base",
-            0 until 40 - (drawn.spans!!.count { it.first == it.last && it.first < 40 }), drawn.spans!!.first())
+            0 until 40 - (drawn.spans!!.count { it.first == it.last && it.first < 40 }), drawn.spans.first())
         assertEquals(921_000L, drawn.oldest!!.first()); assertTrue(drawn.folded(0) && drawn.mined(0))
         assertEquals("the waiting one is drawn on its own", 40, drawn.real(drawn.waiting)); assertFalse(drawn.folded(drawn.waiting))
-        assertEquals("the next two to send too", listOf(41..41, 42..42), drawn.spans!!.subList(drawn.waiting + 1, drawn.waiting + 3))
-        assertTrue("the rest to send is one +N", drawn.folded(drawn.n - 2) && !drawn.mined(drawn.n - 2) && drawn.spans!![drawn.n - 2].last == 98)
-        assertEquals("and your coin", 99..99, drawn.spans!!.last())
-        assertEquals("every transaction is in exactly one level", (0 until 100).toList(), drawn.spans!!.flatten())
+        assertEquals("the next two to send too", listOf(41..41, 42..42), drawn.spans.subList(drawn.waiting + 1, drawn.waiting + 3))
+        assertTrue("the rest to send is one +N", drawn.folded(drawn.n - 2) && !drawn.mined(drawn.n - 2) && drawn.spans[drawn.n - 2].last == 98)
+        assertEquals("and your coin", 99..99, drawn.spans.last())
+        assertEquals("every transaction is in exactly one level", (0 until 100).toList(), drawn.spans.flatten())
         // A path that fits isn't touched; the explainer draws 8 at most and says the real count.
         val four = ExitScene.sample(4); assertSame(four, four.fold(cap))
         ExitScene.sample(100).fold(8).let {

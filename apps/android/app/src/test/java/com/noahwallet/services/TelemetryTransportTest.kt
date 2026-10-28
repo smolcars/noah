@@ -19,6 +19,13 @@ import java.util.concurrent.TimeUnit
 
 class TelemetryTransportTest {
     private val serializer = JsonSerializer(SentryOptions.empty())
+    // Sentry's only way to start a scope session; its result type, Scope.SessionPair, is package-private and unused here.
+    @Suppress("INFERRED_INVISIBLE_RETURN_TYPE_WARNING")
+    private fun startedScope(options: SentryOptions): Scope {
+        val scope = Scope(options)
+        scope.startSession()
+        return scope
+    }
     private fun options() = requireNotNull(AppTelemetry.options(AppTelemetry.Variant.mainnet, false,
         "https://public@example.invalid/1", "com.noahwallet.mainnet", "0.2.0", 100))
 
@@ -82,7 +89,7 @@ class TelemetryTransportTest {
         options.setTransportFactory { configured, _ -> TelemetryTransport(received, configured) }
         val client = SentryClient(options)
         try {
-            val scope = Scope(options).apply { startSession() }
+            val scope = startedScope(options)
             val event = failure(mechanism, handled)
             client.captureEvent(event, scope, Hint())
             val envelope = received.envelopes.single()
@@ -102,7 +109,7 @@ class TelemetryTransportTest {
             options.setTransportFactory { _, _ -> captured }
             val client = SentryClient(options)
             try {
-                client.captureEvent(failure("UncaughtExceptionHandler", false), Scope(options).apply { startSession() }, Hint())
+                client.captureEvent(failure("UncaughtExceptionHandler", false), startedScope(options), Hint())
             } finally { client.close() }
             val cached = cache.resolve("crash.envelope")
             cached.outputStream().use { serializer.serialize(captured.envelopes.single(), it) }

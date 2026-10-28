@@ -14,7 +14,8 @@ class SendConflictTest {
     private fun original() = transaction().copy(txHex = hex())
     private fun competing(confirmed: Boolean = true) = transaction("replacement", confirmed).copy(txHex = hex())
     private fun quote() = chainQuote.copy(prepared = chainQuote.prepared!!.copy(inputs = listOf(point)))
-    private fun roundTrip(value: SendAttempt) = Json.decodeFromString<SendAttempt>(Json { encodeDefaults = true }.encodeToString(value))
+    private val withDefaults = Json { encodeDefaults = true }
+    private fun roundTrip(value: SendAttempt) = Json.decodeFromString<SendAttempt>(withDefaults.encodeToString(value))
 
     @Test fun confirmedCompetingInputSurvivesEvictionRestartRefreshAndRequiresOverride() = runBlocking {
         for (evicted in listOf(false, true)) for (hasReceipt in listOf(false, true)) {

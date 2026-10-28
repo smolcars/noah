@@ -40,10 +40,12 @@ class HomeMigrationTest {
     private val rnWallet = SharedFixtures.load("rn-store-compatibility").first { it.name == "RN wallet-storage" }
         .input.jsonObject.getValue("raw").jsonPrimitive.content
 
+    private val lenient = Json { ignoreUnknownKeys = true }
+
     /** RN-era bark movements, mapped as the wallet maps them today. */
     private val rnHistory: List<HistoryTransaction> = SharedFixtures.load("transaction-history")
         .filter { it.input.jsonObject["operation"]?.jsonPrimitive?.content == "movement" && it.expected.jsonObject["included"]?.jsonPrimitive?.boolean == true }
-        .map { Json { ignoreUnknownKeys = true }.decodeFromJsonElement<HistoryTransaction>(it.expected.jsonObject.getValue("transaction")) }
+        .map { lenient.decodeFromJsonElement<HistoryTransaction>(it.expected.jsonObject.getValue("transaction")) }
         .let(HistoryRules::unified)
 
     private val balance = WalletBalance(WalletBalance.Ark(50_000u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))

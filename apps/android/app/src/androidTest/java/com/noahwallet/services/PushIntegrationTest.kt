@@ -66,6 +66,8 @@ class PushIntegrationTest {
             assertEquals(PushRegistration.Outcome.registered, withTimeout(120_000) { PushRuntime(context, services).register() })
             stage = "Expo identity continuity"
             val installation = ExpoInstallationID(context).getOrCreate()
+            // The token PushRuntime registers; FCM 26's register() replacement only hands it to onNewToken.
+            @Suppress("DEPRECATION")
             val fcm = withContext(Dispatchers.IO) { Tasks.await(FirebaseMessaging.getInstance().token, 30, TimeUnit.SECONDS) }
             ServerClient.make("https://exp.host").use { client ->
                 val request = ExpoPushToken.request(installation, context.packageName, fcm)

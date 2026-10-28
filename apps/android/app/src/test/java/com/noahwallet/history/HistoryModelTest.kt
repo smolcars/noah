@@ -186,7 +186,7 @@ class HistoryModelTest {
                     model.transactions.count { it.btcPrice != null } < rows.size)
                 settled = true; events.send("databaseChanged")
                 while (enrichedAtEvent == null) yield()
-                assertTrue("wallet event must be consumed during enrichment", enrichedAtEvent!! < rows.size)
+                assertTrue("wallet event must be consumed during enrichment", enrichedAtEvent < rows.size)
             }
             model.awaitEnrichment()
             assertTrue(model.transactions.all { it.btcPrice == 100000.0 })

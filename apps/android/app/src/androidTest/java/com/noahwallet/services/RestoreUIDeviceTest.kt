@@ -182,7 +182,7 @@ class RestoreUIDeviceTest {
             // Entry was already discarded on submit; leave and return through the actual controls.
             clickText("Back"); waitFor("Phrase screen returns") { wordField() != null }
             clickDescription("Back"); waitFor("Welcome returns") { text("I already have a wallet") != null }
-            assertEquals(0, activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+            assertEquals(0, activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
             clickText("I already have a wallet")
             waitFor("Phrase input returns") { wordField() != null }
             stage = "keep phrase through background"
@@ -213,7 +213,7 @@ class RestoreUIDeviceTest {
             context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             waitFor("Phrase kept through background") { activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
                 firstWord() == typedFirst }
-            assertTrue("Still secure after returning", activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+            assertTrue("Still secure after returning", activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
             instrumentation.runOnMainSync {
                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 assertTrue("Background preserves replacement clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "unrelated replacement")
@@ -270,14 +270,14 @@ class RestoreUIDeviceTest {
             val seedModel = seedOnly.second
             fun secureWindow(): Boolean {
                 var on = false
-                instrumentation.runOnMainSync { on = activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
+                instrumentation.runOnMainSync { on = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
                 return on
             }
             // Read with the hold on the main thread, so a sample can't land between Ready ending and Home appearing.
             fun shieldedWhileHeld(): Boolean {
                 var ok = true
                 instrumentation.runOnMainSync {
-                    if (seedModel.holdRestoreCompletion) ok = activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
+                    if (seedModel.holdRestoreCompletion) ok = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
                 }
                 return ok
             }

@@ -43,7 +43,7 @@ class MMKVRecoveryTest {
     private fun writeRN(root: File, values: Map<String, String>) {
         check(root.isDirectory || root.mkdir())
         MMKV.initialize(app, root.path, null, MMKVLogLevel.LevelNone, null)
-        val rn = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)!!
+        val rn = MMKV.mmkvWithID(id, MMKV.SINGLE_PROCESS_MODE, null, root.path)
         rn.clearAll(); values.forEach { (key, raw) -> check(rn.encode(key, raw)) }; rn.sync(); rn.close()
     }
     @Test fun realRNImportAndThousandsOfNativeWritesPreserveSource() = isolated { context, root ->

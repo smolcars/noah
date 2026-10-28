@@ -68,7 +68,6 @@ class WalletRestorerTest {
             if (!encrypted.exists()) BackupArchive.seal(source,
                 BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), validSeed, encrypted, root, testRounds) { complete, target ->
                 Files.createLink(target.toPath(), complete.toPath())
-                Unit
             }
             val legacyFile = File(root, "legacy")
             if (legacy) {

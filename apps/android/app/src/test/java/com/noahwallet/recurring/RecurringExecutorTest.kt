@@ -414,7 +414,7 @@ class RecurringExecutorTest {
         raw = RecurringStore.json.encodeToString(mapOf("rent" to a))
         val j = RecurringJournal(File("unused"), { raw }, { raw = it })
         j.save(a.copy(plan = a.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = UUID.randomUUID().toString()))
-        assertTrue(raw!!.contains("\"version\":3")); assertTrue(j.consumed(binding, "rent", 1000)); assertTrue(j.consumed(binding, "rent", 2000))
+        assertTrue(raw.contains("\"version\":3")); assertTrue(j.consumed(binding, "rent", 1000)); assertTrue(j.consumed(binding, "rent", 2000))
     }
     @Test fun failedLegacyMigrationCannotOverwriteConsumption() {
         val binding = RecurringStore.Binding(SendIdentity("wallet", "regtest"), UUID.randomUUID().toString())

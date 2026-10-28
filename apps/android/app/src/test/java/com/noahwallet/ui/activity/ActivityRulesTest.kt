@@ -16,6 +16,7 @@ import java.util.TimeZone
 
 /** Activity's list, search, filter, export and receipt rules (docs/native-rewrite/design/activity.md, Testing). */
 class ActivityRulesTest {
+    private val lenient = Json { ignoreUnknownKeys = true }
     private fun at(zone: TimeZone, day: Int, hour: Int, minute: Int = 0) =
         Calendar.getInstance(zone).apply { clear(); set(2026, Calendar.OCTOBER, day, hour, minute) }.time
     private fun record(id: String, date: Date?, status: String = "successful", type: String = "Arkoor", direction: String = "outgoing",
@@ -266,7 +267,7 @@ class ActivityRulesTest {
         fun fees(record: HistoryTransaction) = ActivityRules.fees(record, rows(record).single().home)
         // The shared fixture's successful board without metadata: no network fee, a 500-sat Ark fee.
         val case = SharedFixtures.load("transaction-history").single { it.name == "bark.board:board successful" }
-        val board = Json { ignoreUnknownKeys = true }.decodeFromJsonElement(HistoryTransaction.serializer(), case.expected.jsonObject.getValue("transaction"))
+        val board = lenient.decodeFromJsonElement(HistoryTransaction.serializer(), case.expected.jsonObject.getValue("transaction"))
         assertEquals(listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(500))), fees(board))
         // A board that recorded no fee shows none ("Free" is a claim for sends).
         assertEquals(emptyList<ActivityRules.FeeLine>(), fees(board.copy(offchainFeeSat = 0)))

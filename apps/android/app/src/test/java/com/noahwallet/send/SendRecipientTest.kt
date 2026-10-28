@@ -61,7 +61,7 @@ class SendRecipientTest {
         m.setRecipient("a@example.com"); m.route = route(m.destination); m.parsed = SendDestination("lnurl")
         m.setRecipient("tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd")
         m.parsed = SendDestination("ark"); m.route = route("a@example.com"); m.progress = m.progress.copy(selectedRail = SendRail.ark)
-        m.review(); assertEquals(m.destination, reviewed!!.destination); assertEquals("ark", reviewed!!.method)
+        m.review(); assertEquals(m.destination, reviewed!!.destination); assertEquals("ark", reviewed.method)
     }
     @Test fun exitBackgroundRecipientResetAndCancellationDiscardLatePreparation() = runBlocking {
         for (reason in listOf("exit", "background", "recipient", "reset", "cancel")) {

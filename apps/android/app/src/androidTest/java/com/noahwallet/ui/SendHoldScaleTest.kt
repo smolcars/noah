@@ -3,7 +3,7 @@ package com.noahwallet.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import com.noahwallet.ui.send.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking

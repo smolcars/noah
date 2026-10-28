@@ -11,6 +11,8 @@ data class FixtureCase(val name: String, val input: JsonElement, val expected: J
 private data class FixtureFile(val cases: List<FixtureCase>)
 
 object SharedFixtures {
+    private val json = Json { ignoreUnknownKeys = true }
+
     fun document(domain: String): JsonElement = requireNotNull(javaClass.getResourceAsStream("/$domain.json"))
         .bufferedReader(Charsets.UTF_8).use { Json.parseToJsonElement(it.readText()) }
 
@@ -19,7 +21,7 @@ object SharedFixtures {
             "Missing shared fixture: $domain.json"
         }
         return stream.bufferedReader(Charsets.UTF_8).use {
-            Json { ignoreUnknownKeys = true }.decodeFromString<FixtureFile>(it.readText()).cases
+            json.decodeFromString<FixtureFile>(it.readText()).cases
         }
     }
 }

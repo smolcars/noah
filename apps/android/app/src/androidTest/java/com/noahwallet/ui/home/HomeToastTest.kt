@@ -1,6 +1,6 @@
 package com.noahwallet.ui.home
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.noahwallet.ui.NoahTheme
 import org.junit.Rule
