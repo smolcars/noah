@@ -36,28 +36,7 @@ class Ffi060LiveTest {
         require(BuildConfig.REGTEST_ARK_URL.isNotEmpty() && BuildConfig.REGTEST_BITCOIND_URL.isNotEmpty())
         val seed = SeedStorage(context, "regtest")
         val marker = File(context.filesDir, "ffi060-owned")
-        if (stage == "create") {
-            check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
-            val phrase = generateMnemonic()
-            check(seed.save(phrase) is SecretResult.Found)
-            session.createNew(phrase, false, "ffi060-live")
-            val fingerprint = session.summary()!!.fingerprint
-            marker.writeText(fingerprint)
-            SettingsStorage(context).apply {
-                setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,
-                    staticVtxoPubkey = session.peekPublicKey(0u), isBiometricsEnabled = false,
-                    hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
-                set(SettingsPreferences.autoBoard(string("transaction-storage"), false), "transaction-storage")
-                set(SettingsPreferences.update(string("profile-storage"), mapOf("bitcoinAmountUnit" to JsonPrimitive("sats"))), "profile-storage")
-                sync()
-            }
-            evidence("create", buildJsonObject {
-                put("fingerprint", fingerprint); put("onchainAddress", session.receiveRequest().onchainAddress)
-                put("arkServer", WalletConfiguration.base("regtest").arkServer); put("serverPubkey", session.arkInfo()?.serverPubkey)
-            })
-            session.closeSettled()
-            return@runBlocking
-        }
+        if (stage == "create") return@runBlocking create(seed, marker)
         check(marker.exists())
         val mnemonic = (seed.read() as SecretResult.Found).value
         session.ensureOpen(mnemonic, false, "ffi060-live")
@@ -74,6 +53,29 @@ class Ffi060LiveTest {
                 else -> error("Unknown stage $stage")
             }
         } finally { session.closeSettled(); scope.cancel() }
+    }
+
+    /** A fresh disposable wallet, set up as onboarding leaves it (amounts in sats), marked as this test's own. */
+    private suspend fun create(seed: SeedStorage, marker: File) {
+        check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
+        val phrase = generateMnemonic()
+        check(seed.save(phrase) is SecretResult.Found)
+        session.createNew(phrase, false, "ffi060-live")
+        val fingerprint = session.summary()!!.fingerprint
+        marker.writeText(fingerprint)
+        SettingsStorage(context).apply {
+            setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,
+                staticVtxoPubkey = session.peekPublicKey(0u), isBiometricsEnabled = false,
+                hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
+            set(SettingsPreferences.autoBoard(string("transaction-storage"), false), "transaction-storage")
+            set(SettingsPreferences.update(string("profile-storage"), mapOf("bitcoinAmountUnit" to JsonPrimitive("sats"))), "profile-storage")
+            sync()
+        }
+        evidence("create", buildJsonObject {
+            put("fingerprint", fingerprint); put("onchainAddress", session.receiveRequest().onchainAddress)
+            put("arkServer", WalletConfiguration.base("regtest").arkServer); put("serverPubkey", session.arkInfo()?.serverPubkey)
+        })
+        session.closeSettled()
     }
 
     /** Core paid the onchain address (one block mined); LND pays the invoice written here through the server. */

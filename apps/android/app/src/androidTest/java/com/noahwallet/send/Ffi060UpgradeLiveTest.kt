@@ -34,78 +34,87 @@ class Ffi060UpgradeLiveTest {
         require(BuildConfig.REGTEST_ARK_URL.isNotEmpty() && BuildConfig.REGTEST_BITCOIND_URL.isNotEmpty())
         val seed = SeedStorage(context, "regtest")
         val marker = File(context.filesDir, "ffi060-upgrade-owned")
-        if (stage == "create") {
-            check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
-            val phrase = generateMnemonic()
-            check(seed.save(phrase) is SecretResult.Found)
-            session.createNew(phrase, false, "ffi060-upgrade")
-            marker.writeText(session.summary()!!.fingerprint)
-            SettingsStorage(context).apply {
-                setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,
-                    staticVtxoPubkey = session.peekPublicKey(0u), isBiometricsEnabled = false,
-                    hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
-                set(SettingsPreferences.autoBoard(string("transaction-storage"), false), "transaction-storage")
-                sync()
-            }
-            session.closeSettled()
-            return@runBlocking
-        }
+        if (stage == "create") return@runBlocking create(seed, marker)
         check(marker.exists())
         session.ensureOpen((seed.read() as SecretResult.Found).value, false, "ffi060-upgrade")
         check(session.summary()!!.fingerprint == marker.readText())
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         try {
             when (stage) {
-                "fund" -> {
-                    suspend fun received() = session.movements().any { it.subsystemName == "bark.lightning_receive" && it.status == "successful" }
-                    if (!received()) {
-                        val request = session.receiveInvoice(session.receiveRequest(), 10_000, "")
-                        File(context.cacheDir, "ffi060-upgrade-invoice.txt").writeText(checkNotNull(request.lightningInvoice))
-                        poll(240) { session.sync(includingLightningClaims = true); received() }
-                    }
-                }
-                "send" -> {
-                    session.sync()
-                    val peer = File(context.cacheDir, "ffi060-upgrade-peer-${UUID.randomUUID()}").apply { check(mkdirs()) }
-                    try {
-                        val config = WalletConfiguration.base("regtest").sdkConfig("noah-ffi060-peer/1")
-                        val mnemonic = generateMnemonic()
-                        val onchain = OnchainWallet.default(Network.REGTEST, mnemonic, config, peer.path)
-                        val wallet = Wallet.openWithOnchain(Network.REGTEST, mnemonic, config,
-                            WalletOpenArgs(runDaemon = false, datadir = peer.path, createIfNotExists = true), onchain)
-                        try { send(scope, SendPayment(wallet.newAddress(), "ark", 3_000)) } finally { wallet.close(); onchain.close() }
-                    } finally { peer.deleteRecursively() }
-                    send(scope, SendPayment(checkNotNull(args.getString("invoice")), "lightning", 2_000))
-                    val summary = session.summary()!!
-                    val saved = buildJsonObject {
-                        put("fingerprint", summary.fingerprint); put("spendable", summary.spendableSats.toLong()); put("movements", rows())
-                    }
-                    session.closeSettled()
-                    val result = JsonObject(saved + schema())
-                    baseline.writeText(result.toString())
-                    evidence("baseline", result)
-                }
-                "verify" -> {
-                    val expected = Json.parseToJsonElement(baseline.readText()).jsonObject
-                    val summary = session.summary()!!
-                    assertEquals(expected.getValue("fingerprint").jsonPrimitive.content, summary.fingerprint)
-                    assertEquals(expected.getValue("spendable").jsonPrimitive.long, summary.spendableSats.toLong())
-                    assertEquals(expected.getValue("movements"), rows())
-                    session.sync()
-                    assertEquals(expected.getValue("movements"), rows())
-                    assertEquals(expected.getValue("spendable").jsonPrimitive.long, session.summary()!!.spendableSats.toLong())
-                    session.closeSettled()
-                    val after = schema()
-                    assertEquals(expected.getValue("schemaSha256"), after.getValue("schemaSha256"))
-                    assertEquals(expected.getValue("migration"), after.getValue("migration"))
-                    evidence("verify", buildJsonObject {
-                        put("fingerprint", summary.fingerprint); put("movements", expected.getValue("movements").jsonArray.size)
-                        put("spendable", summary.spendableSats.toLong()); after.forEach { (key, value) -> put(key, value) }
-                    })
-                }
+                "fund" -> fund()
+                "send" -> sendBaseline(scope)
+                "verify" -> verify()
                 else -> error("Unknown stage $stage")
             }
         } finally { session.closeSettled(); scope.cancel() }
+    }
+
+    private suspend fun create(seed: SeedStorage, marker: File) {
+        check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
+        val phrase = generateMnemonic()
+        check(seed.save(phrase) is SecretResult.Found)
+        session.createNew(phrase, false, "ffi060-upgrade")
+        marker.writeText(session.summary()!!.fingerprint)
+        SettingsStorage(context).apply {
+            setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,
+                staticVtxoPubkey = session.peekPublicKey(0u), isBiometricsEnabled = false,
+                hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
+            set(SettingsPreferences.autoBoard(string("transaction-storage"), false), "transaction-storage")
+            sync()
+        }
+        session.closeSettled()
+    }
+
+    private suspend fun fund() {
+        suspend fun received() = session.movements().any { it.subsystemName == "bark.lightning_receive" && it.status == "successful" }
+        if (!received()) {
+            val request = session.receiveInvoice(session.receiveRequest(), 10_000, "")
+            File(context.cacheDir, "ffi060-upgrade-invoice.txt").writeText(checkNotNull(request.lightningInvoice))
+            poll(240) { session.sync(includingLightningClaims = true); received() }
+        }
+    }
+
+    /** Sends over Ark and Lightning, then records the wallet and its database schema before the upgrade. */
+    private suspend fun sendBaseline(scope: CoroutineScope) {
+        session.sync()
+        val peer = File(context.cacheDir, "ffi060-upgrade-peer-${UUID.randomUUID()}").apply { check(mkdirs()) }
+        try {
+            val config = WalletConfiguration.base("regtest").sdkConfig("noah-ffi060-peer/1")
+            val mnemonic = generateMnemonic()
+            val onchain = OnchainWallet.default(Network.REGTEST, mnemonic, config, peer.path)
+            val wallet = Wallet.openWithOnchain(Network.REGTEST, mnemonic, config,
+                WalletOpenArgs(runDaemon = false, datadir = peer.path, createIfNotExists = true), onchain)
+            try { send(scope, SendPayment(wallet.newAddress(), "ark", 3_000)) } finally { wallet.close(); onchain.close() }
+        } finally { peer.deleteRecursively() }
+        send(scope, SendPayment(checkNotNull(args.getString("invoice")), "lightning", 2_000))
+        val summary = session.summary()!!
+        val saved = buildJsonObject {
+            put("fingerprint", summary.fingerprint); put("spendable", summary.spendableSats.toLong()); put("movements", rows())
+        }
+        session.closeSettled()
+        val result = JsonObject(saved + schema())
+        baseline.writeText(result.toString())
+        evidence("baseline", result)
+    }
+
+    /** After the upgrade: the same wallet, balance, movements and schema as the baseline. */
+    private suspend fun verify() {
+        val expected = Json.parseToJsonElement(baseline.readText()).jsonObject
+        val summary = session.summary()!!
+        assertEquals(expected.getValue("fingerprint").jsonPrimitive.content, summary.fingerprint)
+        assertEquals(expected.getValue("spendable").jsonPrimitive.long, summary.spendableSats.toLong())
+        assertEquals(expected.getValue("movements"), rows())
+        session.sync()
+        assertEquals(expected.getValue("movements"), rows())
+        assertEquals(expected.getValue("spendable").jsonPrimitive.long, session.summary()!!.spendableSats.toLong())
+        session.closeSettled()
+        val after = schema()
+        assertEquals(expected.getValue("schemaSha256"), after.getValue("schemaSha256"))
+        assertEquals(expected.getValue("migration"), after.getValue("migration"))
+        evidence("verify", buildJsonObject {
+            put("fingerprint", summary.fingerprint); put("movements", expected.getValue("movements").jsonArray.size)
+            put("spendable", summary.spendableSats.toLong()); after.forEach { (key, value) -> put(key, value) }
+        })
     }
 
     private suspend fun send(scope: CoroutineScope, payment: SendPayment) {

@@ -35,7 +35,7 @@ class ActivityFoldTest {
             NoahTheme {
                 CompositionLocalProvider(LocalFoldingFeatures provides listOfNotNull(fold)) {
                     state = rememberActivityState()
-                    remember { state.setup() }
+                    remember { state.apply { setup() } }
                     Box(Modifier.fillMaxSize()) { ActivityPreviewHost(ActivityFixtures.ui("busy"), state) }
                 }
             }

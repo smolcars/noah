@@ -40,18 +40,7 @@ class SettingsGalleryTest {
         assumeTrue(label != null)
         val only = args.getString("noahSettingsOnly")?.split(',')
         val activity = instrumentation.startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
-        var loaded: AppModel? = null
-        val deadline = System.currentTimeMillis() + 30_000
-        while (System.currentTimeMillis() < deadline) {
-            instrumentation.runOnMainSync { loaded = runCatching { ViewModelProvider(activity)[AppModel::class.java] }.getOrNull() }
-            if (loaded?.launchState != null) break
-            Thread.sleep(100)
-        }
-        val model = checkNotNull(loaded)
-        instrumentation.runOnMainSync { model.start() }
-        val opened = System.currentTimeMillis() + 30_000
-        while (!model.open && System.currentTimeMillis() < opened) Thread.sleep(100)
-        assertTrue("The gallery needs the disposable wallet open", model.open)
+        val model = openedModel(activity)
         Thread.sleep(3_000)
         val folder = File(context.filesDir, "settings-shots/$label").apply { deleteRecursively(); mkdirs() }
         val sample = "sample phrase only never use this example test word copy nothing real".split(' ')
@@ -80,36 +69,56 @@ class SettingsGalleryTest {
             Scene("delete", SettingsDestination.Settings, SettingsPreview("delete")),
         ).filter { only == null || it.name in only }
         try {
-            for (scene in scenes) {
-                val ready = java.util.concurrent.CountDownLatch(1)
-                instrumentation.runOnMainSync {
-                    activity.setContent { LocalizedContent(model.localeIdentifier) { NoahTheme {
-                        key(scene.name) {
-                            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                                val stack = rememberNavBackStack(*SettingsRoutes.chain(scene.page).toTypedArray())
-                                SettingsHost(model, stack, {}, {}, scene.preview)
-                                SideEffect { ready.countDown() }
-                            }
-                        }
-                    } } }
-                }
-                assertTrue(ready.await(10, java.util.concurrent.TimeUnit.SECONDS))
-                Thread.sleep(2_500)
-                if (scene.scroll) {
-                    val size = androidx.window.layout.WindowMetricsCalculator.getOrCreate().computeMaximumWindowMetrics(activity).bounds
-                    val x = size.width() / 2
-                    repeat(3) {
-                        instrumentation.uiAutomation.executeShellCommand("input swipe $x ${size.height() * 8 / 10} $x ${size.height() / 10} 250").close()
-                        Thread.sleep(700)
-                    }
-                    Thread.sleep(800)
-                }
-                instrumentation.waitForIdleSync()
-                assertEquals("Never capture a secure screen", 0, activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
-                val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
-                File(folder, "${scene.name}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                bitmap.recycle()
-            }
+            for (scene in scenes) capture(activity, model, scene, folder)
         } finally { instrumentation.runOnMainSync { activity.finish() } }
+    }
+
+    /** The activity's model once it has launched and opened the disposable wallet. */
+    private fun openedModel(activity: MainActivity): AppModel {
+        var loaded: AppModel? = null
+        val deadline = System.currentTimeMillis() + 30_000
+        while (System.currentTimeMillis() < deadline) {
+            instrumentation.runOnMainSync { loaded = runCatching { ViewModelProvider(activity)[AppModel::class.java] }.getOrNull() }
+            if (loaded?.launchState != null) break
+            Thread.sleep(100)
+        }
+        val model = checkNotNull(loaded)
+        instrumentation.runOnMainSync { model.start() }
+        val opened = System.currentTimeMillis() + 30_000
+        while (!model.open && System.currentTimeMillis() < opened) Thread.sleep(100)
+        assertTrue("The gallery needs the disposable wallet open", model.open)
+        return model
+    }
+
+    /** Shows [scene] in [activity] and screenshots it into [folder]. */
+    private fun capture(activity: MainActivity, model: AppModel, scene: Scene, folder: File) {
+        val ready = java.util.concurrent.CountDownLatch(1)
+        instrumentation.runOnMainSync {
+            activity.setContent { LocalizedContent(model.localeIdentifier) { NoahTheme {
+                key(scene.name) {
+                    Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                        val stack = rememberNavBackStack(*SettingsRoutes.chain(scene.page).toTypedArray())
+                        SettingsHost(model, stack, {}, {}, scene.preview)
+                        SideEffect { ready.countDown() }
+                    }
+                }
+            } } }
+        }
+        assertTrue(ready.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        Thread.sleep(2_500)
+        if (scene.scroll) {
+            val size = androidx.window.layout.WindowMetricsCalculator.getOrCreate().computeMaximumWindowMetrics(activity).bounds
+            val x = size.width() / 2
+            repeat(3) {
+                instrumentation.uiAutomation.executeShellCommand("input swipe $x ${size.height() * 8 / 10} $x ${size.height() / 10} 250").close()
+                Thread.sleep(700)
+            }
+            Thread.sleep(800)
+        }
+        instrumentation.waitForIdleSync()
+        assertEquals("Never capture a secure screen", 0, activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+        val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
+        File(folder, "${scene.name}.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
     }
 }

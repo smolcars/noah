@@ -37,23 +37,7 @@ class ActivityLiveTest {
         require(BuildConfig.REGTEST_ARK_URL.isNotEmpty() && BuildConfig.REGTEST_BITCOIND_URL.isNotEmpty())
         val seed = SeedStorage(context, "regtest")
         val marker = File(context.filesDir, "activity-owned")
-        if (stage == "create") {
-            check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
-            val phrase = generateMnemonic()
-            check(seed.save(phrase) is SecretResult.Found)
-            session.createNew(phrase, false, "activity-live")
-            marker.writeText(session.summary()!!.fingerprint)
-            SettingsStorage(context).apply {
-                setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,
-                    staticVtxoPubkey = session.peekPublicKey(0u), isBiometricsEnabled = false,
-                    hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
-                set(SettingsPreferences.autoBoard(string("transaction-storage"), false), "transaction-storage")
-                sync()
-            }
-            evidence("create", buildJsonObject { put("arkServer", WalletConfiguration.base("regtest").arkServer) })
-            session.closeSettled()
-            return@runBlocking
-        }
+        if (stage == "create") return@runBlocking create(seed, marker)
         // `-e adopt 1`: take over a disposable wallet made through the app's own onboarding (Back checks need one).
         check(marker.exists() || args.getString("adopt") == "1")
         val mnemonic = (seed.read() as SecretResult.Found).value
@@ -61,26 +45,50 @@ class ActivityLiveTest {
         if (!marker.exists()) marker.writeText(session.summary()!!.fingerprint)
         check(session.summary()!!.fingerprint == marker.readText())
         try {
-            when (stage) {
-                "fund" -> fund()
-                "pay" -> pay(expectFailure = false)
-                "fail" -> pay(expectFailure = true)
-                "onchain" -> onchain()
-                "nothing-left" -> nothingLeft()
-                "address" -> evidence("address", buildJsonObject { put("onchain", session.receiveRequest().onchainAddress) })
-                // From the on-chain wallet: pending until its block, with the block row.
-                "chain-send" -> {
-                    val (controller, _) = send(SendPayment(checkNotNull(args.getString("recipient")), "onchain",
-                        checkNotNull(args.getString("amount")).toLong(), SendSource.onchain))
-                    val txid = checkNotNull(controller.attempt?.receipt?.txid) { "On-chain wallet send did not succeed: ${controller.state}" }
-                    controller.acknowledge()
-                    evidence("chain-send", buildJsonObject { put("txid", txid) })
-                }
-                // A stage that stopped before acknowledging leaves its finished attempt in the journal.
-                "ack" -> controller().run { reloadForWalletChange(); acknowledge(); check(state == SendController.State.ready) }
-                else -> error("Unknown stage $stage")
-            }
+            perform(stage)
         } finally { session.closeSettled(); scope.cancel() }
+    }
+
+    /** A fresh disposable wallet, set up as onboarding leaves it, marked as this test's own. */
+    private suspend fun create(seed: SeedStorage, marker: File) {
+        check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
+        val phrase = generateMnemonic()
+        check(seed.save(phrase) is SecretResult.Found)
+        session.createNew(phrase, false, "activity-live")
+        marker.writeText(session.summary()!!.fingerprint)
+        SettingsStorage(context).apply {
+            setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,
+                staticVtxoPubkey = session.peekPublicKey(0u), isBiometricsEnabled = false,
+                hasSeenBatteryOptimizationPrompt = true), PersistedWalletState.key, 0)
+            set(SettingsPreferences.autoBoard(string("transaction-storage"), false), "transaction-storage")
+            sync()
+        }
+        evidence("create", buildJsonObject { put("arkServer", WalletConfiguration.base("regtest").arkServer) })
+        session.closeSettled()
+    }
+
+    private suspend fun perform(stage: String?) {
+        when (stage) {
+            "fund" -> fund()
+            "pay" -> pay(expectFailure = false)
+            "fail" -> pay(expectFailure = true)
+            "onchain" -> onchain()
+            "nothing-left" -> nothingLeft()
+            "address" -> evidence("address", buildJsonObject { put("onchain", session.receiveRequest().onchainAddress) })
+            "chain-send" -> chainSend()
+            // A stage that stopped before acknowledging leaves its finished attempt in the journal.
+            "ack" -> controller().run { reloadForWalletChange(); acknowledge(); check(state == SendController.State.ready) }
+            else -> error("Unknown stage $stage")
+        }
+    }
+
+    /** From the on-chain wallet: pending until its block, with the block row. */
+    private suspend fun chainSend() {
+        val (controller, _) = send(SendPayment(checkNotNull(args.getString("recipient")), "onchain",
+            checkNotNull(args.getString("amount")).toLong(), SendSource.onchain))
+        val txid = checkNotNull(controller.attempt?.receipt?.txid) { "On-chain wallet send did not succeed: ${controller.state}" }
+        controller.acknowledge()
+        evidence("chain-send", buildJsonObject { put("txid", txid) })
     }
 
     /** The host pays this invoice from LND through the server. */

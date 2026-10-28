@@ -96,7 +96,7 @@ class ActivityTransitionTest {
         compose.setContent {
             NoahTheme {
                 state = rememberActivityState()
-                remember { state.open("movement-103") }
+                remember { state.apply { open("movement-103") } }
                 ActivityPreviewHost(ui, state, ActivityActions(shown = { reads += it.id }))
             }
         }

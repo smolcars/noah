@@ -95,6 +95,20 @@ class CrossPlatformBackupTest {
         } finally { session.close(); root.deleteRecursively() }
     }
 
+    /** Reseals [encrypted] as a newer backup: a future manifest format, or a future bark schema in its snapshot. */
+    private fun reseal(encrypted: File, root: File, kind: String) {
+        val opened = BackupArchive.open(encrypted, phrase, File(root, "unpacked"))
+        val manifest = if (kind == "manifest") opened.manifest.copy(formatVersion = 3) else {
+            android.database.sqlite.SQLiteDatabase.openDatabase(opened.snapshot.path, null,
+                android.database.sqlite.SQLiteDatabase.OPEN_READWRITE).use {
+                it.execSQL("INSERT INTO migrations(value) VALUES(9999)")
+            }
+            opened.manifest.copy(barkSchemaVersion = 9999, snapshotSha256 = BackupArchive.sha256(opened.snapshot))
+        }
+        check(encrypted.delete())
+        BackupArchive.seal(opened.snapshot, manifest, phrase, encrypted, root)
+    }
+
     private suspend fun refuseNewer(kind: String): Exception {
         val fixture = Json.parseToJsonElement(instrumentation.context.assets.open("native-backups.json")
             .bufferedReader().use { it.readText() }).jsonObject["cases"]!!.jsonArray
@@ -109,18 +123,7 @@ class CrossPlatformBackupTest {
             }
             if (kind == "envelope") {
                 val bytes = encrypted.readBytes(); bytes[0] = 3; encrypted.writeBytes(bytes)
-            } else if (kind == "manifest" || kind == "schema") {
-                val opened = BackupArchive.open(encrypted, phrase, File(root, "unpacked"))
-                val manifest = if (kind == "manifest") opened.manifest.copy(formatVersion = 3) else {
-                    android.database.sqlite.SQLiteDatabase.openDatabase(opened.snapshot.path, null,
-                        android.database.sqlite.SQLiteDatabase.OPEN_READWRITE).use {
-                        it.execSQL("INSERT INTO migrations(value) VALUES(9999)")
-                    }
-                    opened.manifest.copy(barkSchemaVersion = 9999, snapshotSha256 = BackupArchive.sha256(opened.snapshot))
-                }
-                check(encrypted.delete())
-                BackupArchive.seal(opened.snapshot, manifest, phrase, encrypted, root)
-            }
+            } else if (kind == "manifest" || kind == "schema") reseal(encrypted, root, kind)
             location.directory.mkdirs(); location.database.writeText("previous wallet bytes")
             val before = location.database.readBytes()
             val failure = FixtureServer(encrypted, if (kind == "list") 3 else 2).use { server ->

@@ -25,6 +25,20 @@ class ActivityGalleryTest {
 
     private class Scene(val name: String, val ui: ActivityUi, val setup: ActivityState.() -> Unit = {})
 
+    /** One detail page per kind of record, from the fixture that holds it. */
+    private fun details(everyday: ActivityUi, busy: ActivityUi): List<Scene> {
+        val kinds = listOf("movement-3" to "invoice", "movement-4" to "address", "movement-6" to "recurring", "movement-8" to "renewal",
+            "movement-9" to "onchain-send", "movement-11" to "board", "movement-14" to "offer", "movement-26" to "canceled",
+            "movement-101" to "deposit-pending", "movement-102" to "lightning-pending", "movement-103" to "onchain-pending",
+            "movement-104" to "offboard-round", "movement-105" to "exit", "movement-201" to "failed", "movement-202" to "refunded")
+        return kinds.mapNotNull { (id, name) ->
+            val ui = if (id.removePrefix("movement-").toInt() > 100) busy else everyday
+            val record = ui.records.firstOrNull { it.id == id ||
+                (id == "movement-101" && it.source == "onchain-wallet" && it.hasConfirmation != true) } ?: return@mapNotNull null
+            Scene("detail-$name", ui) { open(record.id) }
+        }
+    }
+
     @Test fun captureEveryState() {
         val label = InstrumentationRegistry.getArguments().getString("noahActivityShots")
         assumeTrue(label != null)
@@ -39,7 +53,7 @@ class ActivityGalleryTest {
                 scene?.let { current ->
                     key(current.name) {
                         val state = rememberActivityState()
-                        remember { current.setup(state) }
+                        remember { state.apply(current.setup) }
                         ActivityPreviewHost(current.ui, state)
                     }
                 }
@@ -67,16 +81,7 @@ class ActivityGalleryTest {
         show(Scene("list-search", busy) { searching = true; query = "bob" })
         show(Scene("list-search-none", busy) { searching = true; query = "zzz" })
         show(Scene("export-sheet", busy) { exporting = true }, wait = 2_000)
-        val kinds = listOf("movement-3" to "invoice", "movement-4" to "address", "movement-6" to "recurring", "movement-8" to "renewal",
-            "movement-9" to "onchain-send", "movement-11" to "board", "movement-14" to "offer", "movement-26" to "canceled",
-            "movement-101" to "deposit-pending", "movement-102" to "lightning-pending", "movement-103" to "onchain-pending",
-            "movement-104" to "offboard-round", "movement-105" to "exit", "movement-201" to "failed", "movement-202" to "refunded")
-        for ((id, name) in kinds) {
-            val ui = if (id.removePrefix("movement-").toInt() > 100) busy else everyday
-            val record = ui.records.firstOrNull { it.id == id ||
-                (id == "movement-101" && it.source == "onchain-wallet" && it.hasConfirmation != true) } ?: continue
-            show(Scene("detail-$name", ui) { open(record.id) })
-        }
+        for (detail in details(everyday, busy)) show(detail)
         show(Scene("detail-invoice-details", everyday) { open("movement-3"); details = true })
         show(Scene("detail-onchain-pending-details", busy) { open("movement-103"); details = true })
     }

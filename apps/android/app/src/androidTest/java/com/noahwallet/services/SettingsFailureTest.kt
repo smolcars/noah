@@ -108,40 +108,46 @@ class SettingsFailureTest {
             if (step == "journalRemoved" || step == "flags") tx.finish()
             if (step != "flags") { file.writeText("damaged"); Os.chmod(file.path, 0) }
             Os.chmod(preferences.path, 320)
-            if (step in listOf("markerOnly", "stateOnly", "corrupt")) {
-                val authority = RecurringAutomationAuthority(location.directory)
-                authority.stop()
-                when (step) {
-                    "markerOnly" -> check(authority.file.delete())
-                    "stateOnly" -> check(authority.marker.delete())
-                    else -> authority.file.writeText("{")
-                }
+            if (step in listOf("markerOnly", "stateOnly", "corrupt")) breakAuthority(step)
+            if (step.startsWith("initializing")) stopAuthorityAt(step, mode)
+            if (step.startsWith("settling")) settleAt(step, mode)
+        }
+        /** Leaves the recurring automation authority stopped with only its marker, only its state, or a corrupt state. */
+        fun breakAuthority(step: String) {
+            val authority = RecurringAutomationAuthority(location.directory)
+            authority.stop()
+            when (step) {
+                "markerOnly" -> check(authority.file.delete())
+                "stateOnly" -> check(authority.marker.delete())
+                else -> authority.file.writeText("{")
             }
-            if (step.startsWith("initializing")) {
-                var count = 0
-                val boundary = step.removePrefix("initializing").toInt()
-                runCatching {
-                    RecurringAutomationAuthority(location.directory) { file, bytes ->
-                        durableRecurringWrite(file, bytes, {
-                            syncDirectory(it); checkpoint(step, mode, ++count, boundary)
-                        }, {
-                            it.sync(); checkpoint(step, mode, ++count, boundary)
-                        })
-                    }.stop()
-                }
-                assertEquals(boundary, count)
+        }
+        /** Dies at the authority's Nth durable write while it first stops. */
+        fun stopAuthorityAt(step: String, mode: String?) {
+            var count = 0
+            val boundary = step.removePrefix("initializing").toInt()
+            runCatching {
+                RecurringAutomationAuthority(location.directory) { file, bytes ->
+                    durableRecurringWrite(file, bytes, {
+                        syncDirectory(it); checkpoint(step, mode, ++count, boundary)
+                    }, {
+                        it.sync(); checkpoint(step, mode, ++count, boundary)
+                    })
+                }.stop()
             }
-            if (step.startsWith("settling")) {
-                var count = 0
-                val boundary = step.removePrefix("settling").toInt()
-                runCatching {
-                    com.noahwallet.services.backup.RestoreTransaction(location, sync = {
-                        com.noahwallet.services.backup.RestoreTransaction.syncFileOrDirectory(it)
-                        checkpoint(step, mode, ++count, boundary)
-                    }).finish()
-                }
-                assertEquals(boundary, count)
+            assertEquals(boundary, count)
+        }
+        /** Dies at the restore's Nth sync while it settles. */
+        fun settleAt(step: String, mode: String?) {
+            var count = 0
+            val boundary = step.removePrefix("settling").toInt()
+            runCatching {
+                com.noahwallet.services.backup.RestoreTransaction(location, sync = {
+                    com.noahwallet.services.backup.RestoreTransaction.syncFileOrDirectory(it)
+                    checkpoint(step, mode, ++count, boundary)
+                }).finish()
             }
+            assertEquals(boundary, count)
         }
         suspend fun recover(step: String) {
             val settings = SettingsStorage(context)

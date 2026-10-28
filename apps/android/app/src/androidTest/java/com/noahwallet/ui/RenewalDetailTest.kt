@@ -36,7 +36,7 @@ class RenewalDetailTest {
                 key(index) {
                     val record: HistoryTransaction = renewalStates[index].first
                     val state = rememberActivityState()
-                    remember { state.open(record.id) }
+                    remember { state.apply { open(record.id) } }
                     ActivityPreviewHost(ActivityFixtures.ui("busy").copy(records = listOf(record)), state)
                 }
             }

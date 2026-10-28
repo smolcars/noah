@@ -31,12 +31,23 @@ class AdaptiveLayoutDeviceTest {
     private val args get() = InstrumentationRegistry.getArguments()
     private val context get() = instrumentation.targetContext
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun capturePresentationGallery() {
         assumeTrue(args.getString("noahAdaptive") == "owned-disposable-avd")
         args.getString("rotation")?.toInt()?.let { instrumentation.uiAutomation.setRotation(it) }
         val activity = instrumentation.startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+        val model = openedModel(activity)
+        val directory = File(context.filesDir, "adaptive-shots/${args.getString("label", "gallery")}").apply { mkdirs() }
+        val gallery = Gallery(activity, model, directory)
+        try {
+            gallery.onboardingAndPayments()
+            gallery.historyAndSettings()
+            gallery.sheetsAndDialogs()
+        } finally { instrumentation.runOnMainSync { activity.finish() } }
+    }
+
+    /** The activity's model once it has launched and opened the disposable wallet. */
+    private fun openedModel(activity: MainActivity): AppModel {
         var loaded: AppModel? = null
         val deadline = System.currentTimeMillis() + 30_000
         while (System.currentTimeMillis() < deadline) {
@@ -50,7 +61,12 @@ class AdaptiveLayoutDeviceTest {
         val opened = System.currentTimeMillis() + 20_000
         while (!model.open && System.currentTimeMillis() < opened) Thread.sleep(100)
         assertTrue("Gallery requires the disposable wallet to be open", model.open)
-        val directory = File(context.filesDir, "adaptive-shots/${args.getString("label", "gallery")}").apply { mkdirs() }
+        return model
+    }
+
+    /** Shows each fixture in [activity] and screenshots it into [directory]. */
+    private inner class Gallery(val activity: MainActivity, val model: AppModel, val directory: File) {
+        @OptIn(ExperimentalMaterial3Api::class)
         fun show(name: String, chrome: Boolean = true, capture: Boolean = true, content: @Composable () -> Unit) {
             val positioned = java.util.concurrent.CountDownLatch(1)
             instrumentation.runOnMainSync {
@@ -76,70 +92,79 @@ class AdaptiveLayoutDeviceTest {
                 bitmap.recycle()
             }
         }
-        try {
-            for (step in listOf("welcome", "name", "email", "notifications", "done")) {
-                instrumentation.runOnMainSync { model.step = step }
-                show("onboarding-$step", chrome = false) { Onboarding(model) }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    private fun Gallery.onboardingAndPayments() {
+        for (step in listOf("welcome", "name", "email", "notifications", "done")) {
+            instrumentation.runOnMainSync { model.step = step }
+            show("onboarding-$step", chrome = false) { Onboarding(model) }
+        }
+        show("restore-blank", chrome = false, capture = false) { RestoreWalletScreen(model) }
+        assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+        show("home", chrome = false) { NoahApp(model) }
+        show("receive") { ReceiveScreen(model) {} }
+        show("qr-hub") { QRHubScreen("adaptive@localhost.com", "Layout wallet", {}, {}, {}) }
+        show("send") { SendScreen(model) {} }
+        show("scanner") { SendScanner({}, {}) }
+        show("receive-amount") { WalletModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            com.noahwallet.ui.receive.ReceiveAmountSheet(com.noahwallet.ui.receive.ReceiveUi(
+                com.noahwallet.services.wallet.ReceiveRequest("tark1layout", "bcrt1layout"), null, com.noahwallet.ui.receive.ReceiveFormat.request,
+                com.noahwallet.formatting.BitcoinAmountUnit.sats, java.util.Locale.US, null, "USD")) { _, _ -> }
+        } }
+    }
+
+    private fun Gallery.historyAndSettings() {
+        show("history") { ActivityScreen(model, {}) }
+        show("btc-map") { com.noahwallet.btcmap.BtcMapScreen {} }
+        show("history-detail") {
+            val state = com.noahwallet.ui.activity.rememberActivityState()
+            remember { state.apply { open("layout-fixture") } }
+            val (ui, actions) = paymentDetail(model, state, null, {}, {})
+            com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
+                HomePaymentSheet(ui.copy(records = listOf(com.noahwallet.history.HistoryTransaction(
+                    "layout-fixture", "Arkoor", 12345, "2026-10-20T12:30:00Z", "outgoing",
+                    destination = "tark1" + "q".repeat(160), movementStatus = "successful", offchainFeeSat = 12,
+                    intendedBalanceSat = -12357, effectiveBalanceSat = -12357))), state, actions)
             }
-            show("restore-blank", chrome = false, capture = false) { RestoreWalletScreen(model) }
-            assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
-            show("home", chrome = false) { NoahApp(model) }
-            show("receive") { ReceiveScreen(model) {} }
-            show("qr-hub") { QRHubScreen("adaptive@localhost.com", "Layout wallet", {}, {}, {}) }
-            show("send") { SendScreen(model) {} }
-            show("scanner") { SendScanner({}, {}) }
-            show("receive-amount") { WalletModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-                com.noahwallet.ui.receive.ReceiveAmountSheet(com.noahwallet.ui.receive.ReceiveUi(
-                    com.noahwallet.services.wallet.ReceiveRequest("tark1layout", "bcrt1layout"), null, com.noahwallet.ui.receive.ReceiveFormat.request, com.noahwallet.formatting.BitcoinAmountUnit.sats, java.util.Locale.US,
-                    null, "USD")) { _, _ -> }
+        }
+        lateinit var mapModel: com.noahwallet.btcmap.BtcMapModel
+        instrumentation.runOnMainSync { mapModel = ViewModelProvider(activity)["btc-map", com.noahwallet.btcmap.BtcMapModel::class.java] }
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) { mapModel.load() }
+        if (mapModel.places.isNotEmpty()) {
+            instrumentation.runOnMainSync { mapModel.select(mapModel.places.first()) }
+            show("btc-map-detail") { com.noahwallet.btcmap.BtcMapScreen {} }
+        }
+        for (destination in SettingsDestination.entries.filter { it != SettingsDestination.Seed }) {
+            show("settings-${destination.name}", chrome = false) {
+                val stack = androidx.navigation3.runtime.rememberNavBackStack(*SettingsRoutes.chain(destination).toTypedArray())
+                SettingsHost(model, stack, {}, {})
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    private fun Gallery.sheetsAndDialogs() {
+        val executor = com.noahwallet.recurring.RecurringRuntime.shared(context).executor
+        show("recurring-editor") { com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, null) {} }
+        val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(read = { null }, write = {},
+            reservation = { error("Gallery never submits payments") }))
+        val approval = com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") }, { error("Gallery never quotes") }, {})
+        show("send-approval") { com.noahwallet.ui.onboarding.OnboardingFrame(null) { com.noahwallet.ui.send.SendApproval(
+            SendPresentation(approval),
+            com.noahwallet.send.SendPayment("ark1" + "q".repeat(180), "ark", 12345), com.noahwallet.send.SendQuote(12345, 5, 12350),
+            com.noahwallet.ui.send.SendFixtures.env(), com.noahwallet.ui.send.SendActions(), paying = false, cancel = {}) {} } }
+        show("dialog") { WalletAlertDialog({}, { TextButton({}) { Text("Confirm") } },
+            title = { Text("Confirm payment") }, text = { Text("Layout verification ".repeat(60)) }) }
+        show("debug-tools", chrome = false) { com.noahwallet.ui.onboarding.OnboardingFrame(null) { DebugPage(model, SettingsNav(null, {}, {}, {}, {})) } }
+        show("lock-cover", chrome = false) {
+            androidx.compose.ui.window.Dialog({},
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+                Surface(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge()) { NoahForm("Noah is Locked") {
+                        Text("Authenticate to access your wallet")
+                        NoahButton("Unlock") {}
+                    } } }
             } }
-            show("history") { ActivityScreen(model, {}) }
-            show("btc-map") { com.noahwallet.btcmap.BtcMapScreen {} }
-            show("history-detail") {
-                val state = com.noahwallet.ui.activity.rememberActivityState()
-                remember { state.open("layout-fixture") }
-                val (ui, actions) = paymentDetail(model, state, null, {}, {})
-                com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
-                    HomePaymentSheet(ui.copy(records = listOf(com.noahwallet.history.HistoryTransaction(
-                        "layout-fixture", "Arkoor", 12345, "2026-10-20T12:30:00Z", "outgoing",
-                        destination = "tark1" + "q".repeat(160), movementStatus = "successful", offchainFeeSat = 12,
-                        intendedBalanceSat = -12357, effectiveBalanceSat = -12357))), state, actions)
-                }
-            }
-            lateinit var mapModel: com.noahwallet.btcmap.BtcMapModel
-            instrumentation.runOnMainSync { mapModel = ViewModelProvider(activity)["btc-map", com.noahwallet.btcmap.BtcMapModel::class.java] }
-            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main) { mapModel.load() }
-            if (mapModel.places.isNotEmpty()) {
-                instrumentation.runOnMainSync { mapModel.select(mapModel.places.first()) }
-                show("btc-map-detail") { com.noahwallet.btcmap.BtcMapScreen {} }
-            }
-            for (destination in SettingsDestination.entries.filter { it != SettingsDestination.Seed }) {
-                show("settings-${destination.name}", chrome = false) {
-                    val stack = androidx.navigation3.runtime.rememberNavBackStack(*SettingsRoutes.chain(destination).toTypedArray())
-                    SettingsHost(model, stack, {}, {})
-                }
-            }
-            val executor = com.noahwallet.recurring.RecurringRuntime.shared(context).executor
-            show("recurring-editor") { com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, null) {} }
-            val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(read = { null }, write = {},
-                reservation = { error("Gallery never submits payments") }))
-            show("send-approval") { com.noahwallet.ui.onboarding.OnboardingFrame(null) { com.noahwallet.ui.send.SendApproval(
-                SendPresentation(com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") },
-                    { error("Gallery never quotes") }, {})),
-                com.noahwallet.send.SendPayment("ark1" + "q".repeat(180), "ark", 12345), com.noahwallet.send.SendQuote(12345, 5, 12350),
-                com.noahwallet.ui.send.SendFixtures.env(), com.noahwallet.ui.send.SendActions(), paying = false, cancel = {}) {} } }
-            show("dialog") { WalletAlertDialog({}, { TextButton({}) { Text("Confirm") } },
-                title = { Text("Confirm payment") }, text = { Text("Layout verification ".repeat(60)) }) }
-            show("debug-tools", chrome = false) { com.noahwallet.ui.onboarding.OnboardingFrame(null) { DebugPage(model, SettingsNav(null, {}, {}, {}, {})) } }
-            show("lock-cover", chrome = false) {
-                androidx.compose.ui.window.Dialog({},
-                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-                    Surface(Modifier.fillMaxSize()) {
-                        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge()) { NoahForm("Noah is Locked") {
-                            Text("Authenticate to access your wallet")
-                            NoahButton("Unlock") {}
-                        } } }
-                } }
-        } finally { instrumentation.runOnMainSync { activity.finish() } }
     }
 }

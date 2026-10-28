@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.*
 import androidx.work.impl.WorkManagerImpl
 import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.TestDriver
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.noahwallet.services.background.PeriodicWalletWorker
@@ -19,6 +20,23 @@ import java.util.concurrent.TimeUnit
 /** Enqueues the production worker through WorkManager on an empty, disposable emulator. */
 @RunWith(AndroidJUnit4::class)
 class PeriodicWorkDeviceTest {
+    /** Runs [kind]'s periodic work once; it must re-enqueue itself, create no wallet, and keep its id when scheduled again. */
+    private fun runOnce(manager: WorkManagerImpl, driver: TestDriver, kind: PeriodicWork.Kind, location: WalletDataLocation) {
+        val id = manager.getWorkInfosForUniqueWork(kind.workName).get().single().id
+        val scheduled = manager.getWorkInfoById(id).get().nextScheduleTimeMillis
+        driver.setAllConstraintsMet(id)
+        driver.setInitialDelayMet(id)
+        val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+        while (manager.getWorkInfoById(id).get().let { it.state != WorkInfo.State.ENQUEUED || it.nextScheduleTimeMillis == scheduled }) {
+            check(System.nanoTime() < end) { "Periodic worker did not finish: ${manager.getWorkInfoById(id).get().state}" }
+            Thread.sleep(20)
+        }
+        assertEquals(WorkInfo.State.ENQUEUED, manager.getWorkInfoById(id).get().state)
+        assertFalse(location.hasAnyData)
+        PeriodicWork.schedule(manager)
+        assertEquals(id, manager.getWorkInfosForUniqueWork(kind.workName).get().single().id)
+    }
+
     @Test fun periodicWorkerRunsHeadlesslyWithoutCreatingWalletAndSurvivesDedupThenCancellation() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val location = WalletDataLocation(context.filesDir, "regtest")
@@ -35,21 +53,7 @@ class PeriodicWorkDeviceTest {
         try {
             PeriodicWork.schedule(manager)
             val driver = WorkManagerTestInitHelper.getTestDriver(context)!!
-            for (kind in PeriodicWork.Kind.entries) {
-                val id = manager.getWorkInfosForUniqueWork(kind.workName).get().single().id
-                val scheduled = manager.getWorkInfoById(id).get().nextScheduleTimeMillis
-                driver.setAllConstraintsMet(id)
-                driver.setInitialDelayMet(id)
-                val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
-                while (manager.getWorkInfoById(id).get().let { it.state != WorkInfo.State.ENQUEUED || it.nextScheduleTimeMillis == scheduled }) {
-                    check(System.nanoTime() < end) { "Periodic worker did not finish: ${manager.getWorkInfoById(id).get().state}" }
-                    Thread.sleep(20)
-                }
-                assertEquals(WorkInfo.State.ENQUEUED, manager.getWorkInfoById(id).get().state)
-                assertFalse(location.hasAnyData)
-                PeriodicWork.schedule(manager)
-                assertEquals(id, manager.getWorkInfosForUniqueWork(kind.workName).get().single().id)
-            }
+            for (kind in PeriodicWork.Kind.entries) runOnce(manager, driver, kind, location)
             PeriodicWork.cancel(manager)
             PeriodicWork.Kind.entries.forEach { kind ->
                 assertEquals(WorkInfo.State.CANCELLED, manager.getWorkInfosForUniqueWork(kind.workName).get().single().state)

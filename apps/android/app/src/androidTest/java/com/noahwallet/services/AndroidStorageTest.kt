@@ -65,42 +65,54 @@ class AndroidStorageTest {
     }
 
     @Test fun realRNFormatsDataStoreAndPreferencesRemainUnchanged() = runBlocking {
-        for (gcm in listOf(true, false)) for (dataStore in listOf(true, false)) {
-            val variant = "test-${UUID.randomUUID()}"
-            val reader = KeychainPassword.mnemonic(context, variant)
-            val alias = reader.service
-            val prefs = context.getSharedPreferences("RN_KEYCHAIN", Context.MODE_PRIVATE)
-            val keys = listOf("u", "p", "c").associateWith { "$alias:$it" }
-            val key = KeyGenerator.getInstance("AES", "AndroidKeyStore").run {
-                init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-                    .setKeySize(256).setBlockModes(if (gcm) "GCM" else "CBC")
-                    .setEncryptionPaddings(if (gcm) "NoPadding" else "PKCS7Padding").build())
-                generateKey()
-            }
-            fun encrypted(value: String): String {
-                val cipher = Cipher.getInstance(if (gcm) "AES/GCM/NoPadding" else "AES/CBC/PKCS7Padding")
-                cipher.init(Cipher.ENCRYPT_MODE, key)
-                return Base64.encodeToString(cipher.iv + cipher.doFinal(value.toByteArray()), Base64.DEFAULT)
-            }
-            val row = mapOf("u" to encrypted("noah"), "p" to encrypted(secret),
-                "c" to if (gcm) "KeystoreAESGCM_NoAuth" else "KeystoreAESCBC")
-            try {
-                if (dataStore) context.rnKeychain.edit { p -> row.forEach { (k, v) -> p[stringPreferencesKey(keys.getValue(k))] = v } }
-                else prefs.edit().apply { row.forEach { (k, v) -> putString(keys.getValue(k), v) } }.commit()
-                val result = reader.read()
-                assertTrue("RN read failed (gcm=$gcm, DataStore=$dataStore, reason=${(result as? SecretResult.Unavailable)?.reason})",
-                    result is SecretResult.Found && result.value == secret)
-                assertFound(reader.read())
-                if (!dataStore) row.forEach { (k, v) -> assertTrue(v == prefs.getString(keys.getValue(k), null)) }
-                // The reader must not recreate a deleted key even when ciphertext still exists.
-                keyStore().deleteEntry(alias)
-                assertTrue(reader.read() is SecretResult.Unavailable)
-                assertFalse(keyStore().containsAlias(alias))
-            } finally {
-                keyStore().deleteEntry(alias)
-                context.rnKeychain.edit { p -> keys.values.forEach { p.remove(stringPreferencesKey(it)) } }
-                prefs.edit().apply { keys.values.forEach(::remove) }.commit()
-            }
+        for (gcm in listOf(true, false)) for (dataStore in listOf(true, false)) checkRNFormat(gcm, dataStore)
+    }
+
+    /** The u/p/c row RN's keychain writes for [secret], encrypted under a new [alias] key in its GCM or CBC format. */
+    private fun rnRow(alias: String, gcm: Boolean): Map<String, String> {
+        val key = KeyGenerator.getInstance("AES", "AndroidKeyStore").run {
+            init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setKeySize(256).setBlockModes(if (gcm) "GCM" else "CBC")
+                .setEncryptionPaddings(if (gcm) "NoPadding" else "PKCS7Padding").build())
+            generateKey()
+        }
+        fun encrypted(value: String): String {
+            val cipher = Cipher.getInstance(if (gcm) "AES/GCM/NoPadding" else "AES/CBC/PKCS7Padding")
+            cipher.init(Cipher.ENCRYPT_MODE, key)
+            return Base64.encodeToString(cipher.iv + cipher.doFinal(value.toByteArray()), Base64.DEFAULT)
+        }
+        return mapOf("u" to encrypted("noah"), "p" to encrypted(secret),
+            "c" to if (gcm) "KeystoreAESGCM_NoAuth" else "KeystoreAESCBC")
+    }
+
+    /** Stores [row] under [keys] where RN's keychain kept it: its DataStore, or the older shared preferences. */
+    private suspend fun writeRNRow(dataStore: Boolean, prefs: android.content.SharedPreferences, keys: Map<String, String>, row: Map<String, String>) {
+        if (dataStore) context.rnKeychain.edit { p -> row.forEach { (k, v) -> p[stringPreferencesKey(keys.getValue(k))] = v } }
+        else prefs.edit().apply { row.forEach { (k, v) -> putString(keys.getValue(k), v) } }.commit()
+    }
+
+    private suspend fun checkRNFormat(gcm: Boolean, dataStore: Boolean) {
+        val variant = "test-${UUID.randomUUID()}"
+        val reader = KeychainPassword.mnemonic(context, variant)
+        val alias = reader.service
+        val prefs = context.getSharedPreferences("RN_KEYCHAIN", Context.MODE_PRIVATE)
+        val keys = listOf("u", "p", "c").associateWith { "$alias:$it" }
+        val row = rnRow(alias, gcm)
+        try {
+            writeRNRow(dataStore, prefs, keys, row)
+            val result = reader.read()
+            assertTrue("RN read failed (gcm=$gcm, DataStore=$dataStore, reason=${(result as? SecretResult.Unavailable)?.reason})",
+                result is SecretResult.Found && result.value == secret)
+            assertFound(reader.read())
+            if (!dataStore) row.forEach { (k, v) -> assertTrue(v == prefs.getString(keys.getValue(k), null)) }
+            // The reader must not recreate a deleted key even when ciphertext still exists.
+            keyStore().deleteEntry(alias)
+            assertTrue(reader.read() is SecretResult.Unavailable)
+            assertFalse(keyStore().containsAlias(alias))
+        } finally {
+            keyStore().deleteEntry(alias)
+            context.rnKeychain.edit { p -> keys.values.forEach { p.remove(stringPreferencesKey(it)) } }
+            prefs.edit().apply { keys.values.forEach(::remove) }.commit()
         }
     }
 

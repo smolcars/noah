@@ -38,6 +38,7 @@ internal object ExitFixtures {
     private fun tx(i: Int, kind: String, child: String? = null, block: Long? = null, origin: String? = "wallet") =
         ExitDetails.Transaction(ids[i], ExitDetails.Status(kind, child, block?.let { ExitDetails.Block(it) }, origin.takeIf { child != null }))
     private fun processing(at: Long, vararg txs: ExitDetails.Transaction) = ExitDetails(kind = "processing", tip_height = at, transactions = txs.toList())
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private fun exit(state: String, details: ExitDetails, history: List<ExitDetails> = emptyList(), fees: Map<String, Long> = emptyMap(),
         next: Long? = null, id: String = vtxos[0].id, amount: Long = 31_000, children: Map<Int, Pair<String, String>> = emptyMap()) =
         ExitModel(id, amount, state, details, history.map { it.kind.orEmpty() }, history,

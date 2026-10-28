@@ -117,20 +117,9 @@ class AdaptiveStateRestorationTest {
         compose.onNode(hasText(recurringDay(first.timeInMillis), substring = true) and hasClickAction()).performScrollTo().performClick()
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         automation.serviceInfo = automation.serviceInfo.apply { flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS }
-        fun button(): android.view.accessibility.AccessibilityNodeInfo? {
-            val root = InstrumentationRegistry.getInstrumentation().uiAutomation.rootInActiveWindow ?: return null
-            return root.findAccessibilityNodeInfosByViewId("android:id/button1").firstOrNull()
-        }
+        fun button() = pickerButton()
         compose.waitUntil(5_000) { button() != null }
-        fun day(value: String): android.view.accessibility.AccessibilityNodeInfo? {
-            fun find(node: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
-                if (node == null) return null
-                // The calendar keeps neighbouring months laid out off screen; pick from the one shown.
-                if (node.text?.toString() == value && node.isClickable && node.isVisibleToUser) return node
-                return (0 until node.childCount).firstNotNullOfOrNull { find(node.getChild(it)) }
-            }
-            return find(automation.rootInActiveWindow)
-        }
+        fun day(value: String) = shownDay(automation.rootInActiveWindow, value)
         assertTrue(checkNotNull(day("22")).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
         assertTrue(checkNotNull(day("23")).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
         compose.waitForIdle()
@@ -143,25 +132,7 @@ class AdaptiveStateRestorationTest {
         val size = android.graphics.Point()
         @Suppress("DEPRECATION")
         compose.activity.windowManager.defaultDisplay.getRealSize(size)
-        fun confirmVisiblePicker() {
-            val action = checkNotNull(button())
-            val bounds = android.graphics.Rect().also(action::getBoundsInScreen)
-            assertTrue(bounds.toString(), bounds.left >= 0 && bounds.top >= 0 && bounds.right <= size.x && bounds.bottom <= size.y)
-            val window = android.graphics.Rect().also { automation.rootInActiveWindow.getBoundsInScreen(it) }
-            for (hinge in reportedHinges) {
-                assertFalse("Picker crosses a vertical hinge", hinge.top <= window.top && hinge.bottom >= window.bottom && window.left < hinge.left &&
-                    window.right > hinge.right)
-                assertFalse("Picker crosses a horizontal hinge", hinge.left <= window.left && hinge.right >= window.right && window.top < hinge.top &&
-                    window.bottom > hinge.bottom)
-            }
-            val args = InstrumentationRegistry.getArguments()
-            if (args.getString("noahAdaptive") == "owned-disposable-avd") {
-                val folder = java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,
-                    "adaptive-shots/${args.getString("label", "state")}").apply { mkdirs() }
-                java.io.File(folder, "picker-geometry.txt").appendText("window=$window action=$bounds hinges=$reportedHinges\n")
-            }
-            assertTrue(action.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
-        }
+        fun confirmVisiblePicker() = confirmVisiblePicker(automation, size, reportedHinges)
         confirmVisiblePicker()
         compose.waitUntil(5_000) { button() != null }
         confirmVisiblePicker()
@@ -169,6 +140,39 @@ class AdaptiveStateRestorationTest {
         first.set(java.util.Calendar.DAY_OF_MONTH, 23)
         compose.waitUntil(5_000) { compose.onAllNodes(hasText(recurringDay(first.timeInMillis),
             substring = true) and hasClickAction()).fetchSemanticsNodes().size == 1 }
+    }
+
+    private fun pickerButton(): android.view.accessibility.AccessibilityNodeInfo? {
+        val root = InstrumentationRegistry.getInstrumentation().uiAutomation.rootInActiveWindow ?: return null
+        return root.findAccessibilityNodeInfosByViewId("android:id/button1").firstOrNull()
+    }
+
+    private fun shownDay(node: android.view.accessibility.AccessibilityNodeInfo?, value: String): android.view.accessibility.AccessibilityNodeInfo? {
+        if (node == null) return null
+        // The calendar keeps neighbouring months laid out off screen; pick from the one shown.
+        if (node.text?.toString() == value && node.isClickable && node.isVisibleToUser) return node
+        return (0 until node.childCount).firstNotNullOfOrNull { shownDay(node.getChild(it), value) }
+    }
+
+    /** The picker's confirm button is on screen and its window crosses no hinge; then it's tapped. */
+    private fun confirmVisiblePicker(automation: android.app.UiAutomation, size: android.graphics.Point, reportedHinges: List<WindowRegion>) {
+        val action = checkNotNull(pickerButton())
+        val bounds = android.graphics.Rect().also(action::getBoundsInScreen)
+        assertTrue(bounds.toString(), bounds.left >= 0 && bounds.top >= 0 && bounds.right <= size.x && bounds.bottom <= size.y)
+        val window = android.graphics.Rect().also { automation.rootInActiveWindow.getBoundsInScreen(it) }
+        for (hinge in reportedHinges) {
+            assertFalse("Picker crosses a vertical hinge", hinge.top <= window.top && hinge.bottom >= window.bottom && window.left < hinge.left &&
+                window.right > hinge.right)
+            assertFalse("Picker crosses a horizontal hinge", hinge.left <= window.left && hinge.right >= window.right && window.top < hinge.top &&
+                window.bottom > hinge.bottom)
+        }
+        val args = InstrumentationRegistry.getArguments()
+        if (args.getString("noahAdaptive") == "owned-disposable-avd") {
+            val folder = java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,
+                "adaptive-shots/${args.getString("label", "state")}").apply { mkdirs() }
+            java.io.File(folder, "picker-geometry.txt").appendText("window=$window action=$bounds hinges=$reportedHinges\n")
+        }
+        assertTrue(action.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
     }
 
     @Test fun recoverySurfaceIsSecureBeforeAndAfterActivityRecreation() {
@@ -303,6 +307,14 @@ class AdaptiveStateRestorationTest {
         compose.runOnIdle { assertTrue(accepted) }
     }
 
+    /** The activity's Send presentation, created around [draft] so the screen reviews and submits it. */
+    private fun presentation(activity: androidx.activity.ComponentActivity, draft: SendModel) = ViewModelProvider(activity, object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return SendPresentation(draft) as T
+        }
+    })["send-presentation", SendPresentation::class.java]
+
     @Test fun actualSendRetainsReviewSubmissionAndReceiptAcrossActivityRecreation() {
         val gate = CompletableDeferred<Unit>()
         val owner = SendIdentity("adaptive-test", "regtest")
@@ -325,12 +337,7 @@ class AdaptiveStateRestorationTest {
         lateinit var presentation: SendPresentation
         val app = AppModel(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application)
         compose.activityRule.scenario.onActivity { activity ->
-            presentation = ViewModelProvider(activity, object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return SendPresentation(draft) as T
-                }
-            })["send-presentation", SendPresentation::class.java]
+            presentation = presentation(activity, draft)
             activity.setContent { NoahTheme { SendScreen(app) {} } }
         }
         compose.runOnIdle {
@@ -341,32 +348,9 @@ class AdaptiveStateRestorationTest {
         }
         runBlocking(Dispatchers.Main) { draft.review() }
         compose.onNodeWithTag("send-hold").assertIsDisplayed()
-        fun recreate(rotate: Boolean = false) {
-            if (rotate) {
-                val previous = compose.activity
-                compose.activityRule.scenario.onActivity { activity ->
-                    activity.requestedOrientation = if (activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
-                        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                }
-                compose.waitUntil(5_000) { compose.activity !== previous }
-            } else compose.activityRule.scenario.recreate()
-            compose.activityRule.scenario.onActivity { activity ->
-                assertSame(presentation, ViewModelProvider(activity)["send-presentation", SendPresentation::class.java])
-                activity.setContent { NoahTheme { SendScreen(app) {} } }
-            }
-            compose.waitForIdle()
-        }
+        fun recreate(rotate: Boolean = false) = recreate(presentation, app, rotate)
         if (InstrumentationRegistry.getArguments().getString("fold") == "true") {
-            for (posture in listOf(0, 2)) {
-                val previous = compose.activity
-                val instrumentation = InstrumentationRegistry.getInstrumentation()
-                instrumentation.uiAutomation.executeShellCommand("cmd device_state state $posture").use { descriptor ->
-                    android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
-                }
-                compose.waitUntil(10_000) { compose.activity !== previous }
-                compose.activityRule.scenario.onActivity { activity -> activity.setContent { NoahTheme { SendScreen(app) {} } } }
-                compose.onNodeWithTag("send-hold").assertIsDisplayed()
-            }
+            for (posture in listOf(0, 2)) fold(posture, app)
         }
         recreate(rotate = true)
         compose.onNodeWithTag("send-hold").assertIsDisplayed()
@@ -385,6 +369,35 @@ class AdaptiveStateRestorationTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Sent", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         captureSendFixture("send-receipt")
         compose.runOnIdle { assertEquals(1, calls); assertEquals(500L, controller.attempt?.receipt?.amount) }
+    }
+
+    /** Recreates the activity (rotating it, if [rotate]); the same [presentation] must come back. */
+    private fun recreate(presentation: SendPresentation, app: AppModel, rotate: Boolean) {
+        if (rotate) {
+            val previous = compose.activity
+            compose.activityRule.scenario.onActivity { activity ->
+                activity.requestedOrientation = if (activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            }
+            compose.waitUntil(5_000) { compose.activity !== previous }
+        } else compose.activityRule.scenario.recreate()
+        compose.activityRule.scenario.onActivity { activity ->
+            assertSame(presentation, ViewModelProvider(activity)["send-presentation", SendPresentation::class.java])
+            activity.setContent { NoahTheme { SendScreen(app) {} } }
+        }
+        compose.waitForIdle()
+    }
+
+    /** Moves the foldable to [posture]; Send's review must still be on screen. */
+    private fun fold(posture: Int, app: AppModel) {
+        val previous = compose.activity
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.uiAutomation.executeShellCommand("cmd device_state state $posture").use { descriptor ->
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
+        }
+        compose.waitUntil(10_000) { compose.activity !== previous }
+        compose.activityRule.scenario.onActivity { activity -> activity.setContent { NoahTheme { SendScreen(app) {} } } }
+        compose.onNodeWithTag("send-hold").assertIsDisplayed()
     }
 
     private fun captureSendFixture(name: String) {

@@ -30,14 +30,16 @@ class MMKVRecoveryTest {
             override fun getNoBackupFilesDir() = noBackup
         }
         try {
-            if (realRN) {
-                check(root.mkdir())
-                listOf(id, "$id.crc").forEach { name ->
-                    instrumentation.context.assets.open("rn-mmkv/$name").use { input -> File(root, name).outputStream().use { input.copyTo(it) } }
-                }
-            }
+            if (realRN) copyRN(root)
             test(context, root)
         } finally { check(parent.deleteRecursively()) }
+    }
+    /** The real RN-written MMKV files, copied into [root]. */
+    private fun copyRN(root: File) {
+        check(root.mkdir())
+        listOf(id, "$id.crc").forEach { name ->
+            instrumentation.context.assets.open("rn-mmkv/$name").use { input -> File(root, name).outputStream().use { input.copyTo(it) } }
+        }
     }
     private fun bytes(root: File) = listOf(id, "$id.crc").map { File(root, it).readBytes().toList() }
     private fun writeRN(root: File, values: Map<String, String>) {
