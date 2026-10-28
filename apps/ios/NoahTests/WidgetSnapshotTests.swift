@@ -254,7 +254,7 @@ extension ForegroundWidgetRefreshTests {
         try settings.setPersistedState(PersistedPrivacyState(isHomeBalanceHidden: true), key: PersistedPrivacyState.key,
                                        version: PersistedPrivacyState.version)
         let republish = Task.detached { WidgetDataWriter.republish(variant: .regtest, display: { .init(settings: settings) }) }
-        await writer.value
+        _ = await writer.value
         await republish.value
         #expect(WidgetSnapshot.read(from: defaults, variant: "regtest")?.hidden == true)
     }
