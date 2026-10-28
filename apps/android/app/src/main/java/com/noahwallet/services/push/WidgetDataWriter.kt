@@ -78,9 +78,9 @@ object WidgetDataWriter {
         val renew = optional {
             // Home's Renew rule: refreshable VTXOs in bark's expiring set for the refresh threshold.
             val threshold = WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt()
-            val tip = handles.m6.tip()
+            val height = tip ?: handles.m6.tip()
             val expiring = handles.m6.expiring(threshold)
-            HomeRules.renew(handles.m6.vtxos().map { com.noahwallet.onchain.vtxoModel(it, tip, expiring) })?.blocks
+            HomeRules.renew(handles.m6.vtxos().map { com.noahwallet.onchain.vtxoModel(it, height, expiring) })?.blocks
         }
         return Extras(rows, tip, renew)
     }
