@@ -291,24 +291,30 @@ private struct FiatLine: View {
     }
 }
 
-/// "+₿ 30,142 · 30 days": the amount in the foreground, the rest muted.
+/// "+₿ 30,142 · 30 days": the amount in the foreground, the rest muted. Short of room it drops " · 30 days", then
+/// shrinks a little, then stays out: the amount is never cut.
 private struct ChangeLabel: View {
     let change: WidgetPresentation.Change?
     let look: WidgetLook
 
     var body: some View {
         if let change {
-            Text(text(change))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .privacySensitive()
+            ViewThatFits(in: .horizontal) {
+                Text(text(change, period: true, scale: 1))
+                Text(text(change, period: false, scale: 1))
+                Text(text(change, period: false, scale: 0.8))
+                Color.clear.frame(width: 0, height: 0)
+            }
+            .lineLimit(1)
+            .privacySensitive()
         }
     }
 
-    private func text(_ change: WidgetPresentation.Change) -> AttributedString {
+    private func text(_ change: WidgetPresentation.Change, period showsPeriod: Bool, scale: CGFloat) -> AttributedString {
         var amount = AttributedString(change.amount)
-        amount.font = .custom("SpaceGrotesk-SemiBold", fixedSize: 12)
+        amount.font = .custom("SpaceGrotesk-SemiBold", fixedSize: 12 * scale)
         amount.foregroundColor = look.foreground
+        guard showsPeriod else { return amount }
         var period = AttributedString(" · " + change.period)
         period.font = .system(size: 11.5)
         period.foregroundColor = look.muted
