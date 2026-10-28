@@ -667,6 +667,52 @@ mod expo_tickets {
         });
     }
 
+    /// Expo keeps getting a visible notification's title and body beside its data;
+    /// only UnifiedPush gets them as a typed payload.
+    #[tokio::test]
+    async fn visible_notification_reaches_expo_with_its_title_and_body() {
+        let (_, state, _guard) = setup_test_app().await;
+        let pubkey = user_with_push_token(&state, 1, LIVE_TOKEN).await;
+        let (sender, mut requests) = tokio::sync::mpsc::unbounded_channel();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let expo_url = format!("http://{}", listener.local_addr().unwrap());
+        let expo_api = Router::new().route(
+            "/--/api/v2/push/send",
+            post(move |Json(request): Json<Value>| {
+                let sender = sender.clone();
+                async move {
+                    sender.send(request).unwrap();
+                    Json(json!({ "data": [{ "status": "ok", "id": "receipt-id" }] }))
+                }
+            }),
+        );
+        tokio::spawn(async move { axum::serve(listener, expo_api).await });
+
+        send_batched_notifications(
+            Expo::new_with_base_url(Some(EXPO_ACCESS_TOKEN.to_string()), &expo_url),
+            state.clone(),
+            PushNotificationData {
+                title: Some("Payment received".to_string()),
+                body: Some("You received 10000 sats via Ark.".to_string()),
+                data: "{}".to_string(),
+                priority: Priority::High,
+                content_available: false,
+            },
+            Some(pubkey),
+            true,
+        )
+        .await
+        .unwrap();
+
+        // The client sends one message as an object.
+        let request = requests.try_recv().expect("expected one Expo request");
+        assert_eq!(request["to"], json!([LIVE_TOKEN]));
+        assert_eq!(request["title"], "Payment received");
+        assert_eq!(request["body"], "You received 10000 sats via Ark.");
+        assert_eq!(request["data"], "{}");
+        assert!(requests.try_recv().is_err());
+    }
+
     /// Tickets that can't be matched to their tokens one by one are skipped.
     #[tracing_test::traced_test]
     #[tokio::test]

@@ -66,11 +66,12 @@ import kotlin.math.sin
  * block, hollow circles for the rest, your coin at the top with the timelock dial, and the claim's stem to the
  * destination. It moves only when [scene] changes, with the house springs; under Reduce Motion it snaps. What waits for the
  * next block breathes for as long as the picture is on screen and resumed, in small overlays, so the tree's canvas stays
- * still between states. [balance] is the on-chain wallet's; [received] what a claim to this phone brought.
+ * still between states. [balance] is the on-chain wallet's; [received] what a claim to this phone brought. [enter] false
+ * draws it as it stands, without its entrance (Back to a page it already grew on).
  */
 @Composable
 internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifier = Modifier, money: (Long) -> String = { it.toString() },
-    balance: Long? = null, received: Long? = null) {
+    balance: Long? = null, received: Long? = null, enter: Boolean = true) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val density = LocalDensity.current
@@ -91,7 +92,7 @@ internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifi
         // A long path folds to the levels that keep their spacing here; the explainer draws 8 at most.
         val capacity = remember(w, h, scale, wide, scene.locked) { TreeGeometry(w, h, 1, scale, wide).capacity(if (scene.locked) 1f else 0f) }
         val drawn = scene.fold(if (scene.explain) min(capacity, 8) else capacity)
-        val moves = remember { TreeMoves(TreeMotion(if (reduceMotion) drawn else null, drawn)) }
+        val moves = remember { TreeMoves(TreeMotion(if (reduceMotion || !enter) drawn else null, drawn)) }
         val latest by rememberUpdatedState(drawn)
         LaunchedEffect(reduceMotion) { moves.play(reduceMotion) { latest } }
         val move = moves.move

@@ -4,7 +4,7 @@ These flows target **only** `com.noahwallet.regtest`, installed from `apps/andro
 
 ## Flows
 
-Every PR runs both groups, as two parallel CI jobs, each with its own emulator and regtest stack. The tag decides the job. CI installs the R8-minified regtest release, debug-signed (`CI_DEBUG_SIGNING=true ./gradlew :app:assembleRegtestRelease`), so a missing keep rule fails the PR instead of crashing release builds. Each job creates **one wallet** and reuses it, so its flows run in order and can't be split across shards.
+Every PR that touches the native Android paths (see `.github/workflows/native-android.yml`) runs both groups in one CI job, on one emulator and regtest stack: smoke first, then funded. The tag decides the group. CI installs the R8-minified regtest release, debug-signed (`CI_DEBUG_SIGNING=true ./gradlew :app:assembleRegtestRelease`), so a missing keep rule fails the PR instead of crashing release builds. Each group creates **one wallet** and reuses it, so its flows run in order and can't be split across shards.
 
 | Flow | Tag | Covers | Time |
 | --- | --- | --- | --- |
@@ -15,15 +15,15 @@ Every PR runs both groups, as two parallel CI jobs, each with its own emulator a
 | `subflows/fund-wallet.yml` (setup, run by the script) | — | Create the wallet as above; Receive → Add amount 10,000 → copy the payment request | 51 s |
 | `funded/ark-send.yml` | `funded` | A `bitcoin:?ark=…&amount=` link opens the review at ₿5,000 via Ark; hold to send; success; the payment in Activity | 14–18 s |
 
-Times are from the local runs below. A job's wall time adds the APK install and Maestro start-up: **smoke about 80 s, funded about 83 s**.
+Times are from the local runs below. A group's wall time adds the APK install and Maestro start-up: **smoke about 80 s, funded about 83 s**.
 
-`config.yaml` orders the smoke chain (`flowsOrder`). Maestro refuses an order naming flows that a tag filter removes, so the funded job runs the `funded/` folder on its own. Subflows are never selected by tag.
+`config.yaml` orders the smoke chain (`flowsOrder`). Maestro refuses an order naming flows that a tag filter removes, so the funded group runs the `funded/` folder on its own. Subflows are never selected by tag.
 
-The funded job is three steps in `scripts/test-maestro-native.sh`: `fund-wallet.yml`; the script reads the request from the emulator clipboard and pays its `lightning=` invoice from LND (`just lncli payinvoice`, no blocks mined); then `funded/` runs with the request's Ark address as `ARK`. The send goes to the wallet's own Ark address, which is valid on any stack. Fixed and amountless requests use BIP-173's regtest vector `bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080`, never paid.
+The funded group is three steps in `scripts/test-maestro-native.sh`: `fund-wallet.yml`; the script reads the request from the emulator clipboard and pays its `lightning=` invoice from LND (`just lncli payinvoice`, no blocks mined); then `funded/` runs with the request's Ark address as `ARK`. The send goes to the wallet's own Ark address, which is valid on any stack. Fixed and amountless requests use BIP-173's regtest vector `bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080`, never paid.
 
 ## Speed
 
-- **One wallet per job** and onboarding once; no `clearState` after the first flow.
+- **One wallet per group** and onboarding once; no `clearState` after the first flow.
 - **Deep links** (`openLink: bitcoin:…`) start Send at the state a flow needs.
 - **No sleeps.** Only element waits, at most 30 s (a Lightning or Ark round trip).
 - **No animations.** The script sets the emulator's animation scales to 0, which also gives the app's reduced-motion path. It turns Wi-Fi off too: the emulator's Wi-Fi reconnected mid-send once locally, which left the payment's outcome uncertain; mobile data reaches the stack the same way.

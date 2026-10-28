@@ -16,6 +16,7 @@ This document explains how the Android app handles push notifications without Go
 ## Message delivery (server → device)
 - Server builds a JSON payload (`NotificationData` in `server/src/types.rs`) and uses `send_push_notification` / `send_push_notification_with_unique_k1` in `server/src/push.rs`.
 - UnifiedPush tokens are sent via `send_unified_notification`, which HTTP POSTs the JSON to the distributor endpoint without an authorization header. The distributor must permit anonymous writes to the app's capability URL.
+- UnifiedPush carries only a body, and distributors never show messages themselves. So a notification with a title or body (today only the Ark "Payment received" receipt) is POSTed as `{"notification_type":"visible_notification","title":…,"body":…}` instead of its data (`unified_push_body`). The native Android app shows it; `NoahPushService` doesn't handle it.
 - Before every delivery, the server resolves the endpoint again, rejects any non-public address, and pins the HTTP request to the validated address set. Redirects and environment proxies are disabled.
 - The UnifiedPush distributor delivers the message to the app, waking `NoahPushService` even without Play Services.
 

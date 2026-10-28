@@ -1040,6 +1040,25 @@ mod tests {
     }
 
     #[test]
+    fn receive_notification_reaches_unified_push_with_its_title_and_body() {
+        let notification =
+            receive_notification(&[&VTXO_VECTORS.arkoor2_vtxo], Some(&usd_rate(100_000.0)))
+                .expect("pubkey vtxo should notify");
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&crate::push::unified_push_body(
+                &notification
+            ))
+            .unwrap(),
+            serde_json::json!({
+                "notification_type": "visible_notification",
+                "title": "Payment received",
+                "body": "You received 8000 sats (≈ US$8.00) via Ark.",
+            })
+        );
+    }
+
+    #[test]
     fn build_receive_notification_includes_usd_when_rate_is_fresh() {
         let notification =
             receive_notification(&[&VTXO_VECTORS.arkoor2_vtxo], Some(&usd_rate(100_000.0)))

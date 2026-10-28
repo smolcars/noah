@@ -58,7 +58,9 @@ jobs:
           push: true
           tags: |
             ghcr.io/smolcars/noah-server:latest-${{ matrix.arch }}
+            ghcr.io/smolcars/noah-server:sha-${{ github.sha }}-${{ matrix.arch }}
             ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:latest-${{ matrix.arch }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:sha-${{ github.sha }}-${{ matrix.arch }}
 
   create-manifest:
     needs: server-build-and-push
@@ -79,17 +81,22 @@ jobs:
 
       - name: 🎯 Create and push multi-arch manifest
         run: |
-          docker buildx imagetools create -t ghcr.io/smolcars/noah-server:latest \
-            ghcr.io/smolcars/noah-server:latest-amd64 \
-            ghcr.io/smolcars/noah-server:latest-arm64
+          docker buildx imagetools create \
+            -t ghcr.io/smolcars/noah-server:latest \
+            -t ghcr.io/smolcars/noah-server:sha-${{ github.sha }} \
+            ghcr.io/smolcars/noah-server:sha-${{ github.sha }}-amd64 \
+            ghcr.io/smolcars/noah-server:sha-${{ github.sha }}-arm64
 
-          docker buildx imagetools create -t ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:latest \
-            ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:latest-amd64 \
-            ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:latest-arm64
+          docker buildx imagetools create \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:latest \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:sha-${{ github.sha }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:sha-${{ github.sha }}-amd64 \
+            ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:sha-${{ github.sha }}-arm64
 
   fly-deploy:
     name: Deploy to Fly
     needs: create-manifest
+    if: ${{ vars.SIGNET_DEPLOY_TARGET != 'railway' }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     concurrency: deploy-group
     steps:
@@ -101,8 +108,11 @@ jobs:
 
   mainnet-fly-deploy:
     name: Deploy mainnet to Fly
-    needs: fly-deploy
-    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+    needs: [create-manifest, fly-deploy]
+    if: >-
+      ${{ !cancelled() && needs.create-manifest.result == 'success' &&
+          (needs.fly-deploy.result == 'success' || needs.fly-deploy.result == 'skipped') &&
+          github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: production
     concurrency: fly-mainnet-deploy

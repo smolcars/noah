@@ -51,14 +51,15 @@ class PushCompatibilityTest {
             .putString("endpoint_noah-regtest", "https://example.test/regtest").commit()
         assertEquals(distributor, UnifiedPush.getSavedDistributor(context))
         assertEquals(distributor, UnifiedPush.getAckDistributor(context))
-        SQLiteDatabase.openDatabase(database.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-            db.rawQuery("SELECT instance, connectorToken FROM tokens ORDER BY instance", null).use { cursor ->
-                val registrations = mutableMapOf<String, String>()
-                while (cursor.moveToNext()) registrations[cursor.getString(0)] = cursor.getString(1)
-                assertEquals(mapOf("noah-mainnet" to "fixture-mainnet-token", "noah-signet" to "fixture-signet-token",
-                    "noah-regtest" to "fixture-regtest-token"), registrations)
-            }
+        // Since connector 3.3, the legacy registration migrates on a background thread.
+        val deadline = System.currentTimeMillis() + 5_000
+        var registrations = connectorTokens(database)
+        while ("noah-regtest" !in registrations && System.currentTimeMillis() <= deadline) {
+            Thread.sleep(50)
+            registrations = connectorTokens(database)
         }
+        assertEquals(mapOf("noah-mainnet" to "fixture-mainnet-token", "noah-signet" to "fixture-signet-token",
+            "noah-regtest" to "fixture-regtest-token"), registrations)
         assertEquals("https://example.test/regtest", UnifiedPushRegistration.endpoint(prefs, "noah-regtest"))
         assertEquals("https://example.test/legacy", UnifiedPushRegistration.endpoint(prefs, "noah-mainnet"))
         val registration = UnifiedPushRegistration(context, "regtest")
@@ -67,6 +68,13 @@ class PushCompatibilityTest {
         assertEquals("https://example.test/rotated", prefs.getString("endpoint_noah-regtest", null))
         assertEquals("https://example.test/rotated", prefs.getString("endpoint", null))
     }
+
+    private fun connectorTokens(database: File): Map<String, String> =
+        SQLiteDatabase.openDatabase(database.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            db.rawQuery("SELECT instance, connectorToken FROM tokens ORDER BY instance", null).use { cursor ->
+                buildMap { while (cursor.moveToNext()) put(cursor.getString(0), cursor.getString(1)) }
+            }
+        }
 
     @Test fun channelSettingsSurviveAndWidgetPreferencesMatchProviderReads() = kotlinx.coroutines.runBlocking {
         val manager = context.getSystemService(NotificationManager::class.java)
