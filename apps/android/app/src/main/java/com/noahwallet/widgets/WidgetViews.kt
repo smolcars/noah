@@ -60,16 +60,16 @@ internal object WidgetViews {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
     /**
-     * The slot's sea in dp, from the heights in its layout; null for the one-row layouts. The 2×2's status line and label
-     * row grow with large text: [status] and [labelRow] are their measured heights (dp, [plan]).
+     * The slot's sea in dp, from the heights in its layout; null for the one-row layouts. The 2×2's status line, fiat and
+     * label row grow with large text: [status], [fiat] and [labelRow] are their measured heights (dp, [plan]).
      */
     @Suppress("LongParameterList") // the slot, and the measured rows that move its sea
     fun frame(layout: WidgetLayout, content: WidgetContent?, widthDp: Float, heightDp: Float, status: Float? = null,
-        labelRow: Float = 18f, lift: Float = 0f): WidgetSea.Frame? = when (layout) {
+        labelRow: Float = 18f, lift: Float = 0f, fiat: Float? = null): WidgetSea.Frame? = when (layout) {
         WidgetLayout.small -> {
             // From the bottom: padding, the status line (Renew takes two lines here), fiat, then the balance.
             val lines = status ?: when (content?.status) { is WidgetContent.Status.Renew -> 39f; is WidgetContent.Status.Arriving -> 22f; null -> 0f }
-            val balanceTop = heightDp - 16f - lines - (if (content?.fiat != null) 19f else 0f) - 34f
+            val balanceTop = heightDp - 16f - lines - (fiat ?: if (content?.fiat != null) 19f else 0f) - 34f
             // From the top: padding and the label row.
             val top = 15f + labelRow - 1f
             WidgetSea.Frame(0f, top, widthDp, heightDp - top, maxOf(26f, balanceTop - top - 4f), 26f, 16f)
@@ -423,7 +423,9 @@ internal object WidgetViews {
         val plans = sizes.associateWith { plan(context, content, it.width, it.height) }
         fun box(size: SizeF) = plans.getValue(size).let { balanceBox(it.layout, size.width, it.label) }
         fun frame(size: SizeF) =
-            plans.getValue(size).let { frame(it.layout, content, size.width, size.height, it.status?.tall ?: 0f, it.labelRow, it.label?.lift ?: 0f) }
+            plans.getValue(size).let {
+                frame(it.layout, content, size.width, size.height, it.status?.tall ?: 0f, it.labelRow, it.label?.lift ?: 0f, it.fiat?.tall ?: 0f)
+            }
         val balances = if (content == null) emptyMap() else plans.keys.map(::box).distinct()
             .associateWith { WidgetType.balance(context, content.balance, content.satsSuffix, it.sp, it.width, it.height, density, it.floor) }
         val frames = plans.keys.mapNotNull(::frame).distinct()

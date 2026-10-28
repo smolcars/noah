@@ -142,6 +142,9 @@ class NoahWidgetProviderTest {
         assertTrue(WidgetSea.boatTop(.76f * 26 + 2, 26f) + 18f / 256 * 26 >= 0f)
         val renew = WidgetViews.frame(WidgetLayout.small, content.copy(status = WidgetContent.Status.Renew("Renew", "x")), 180f, 180f)!!
         assertTrue("two-line Renew makes the band shallower", renew.band < small.band)
+        // A fiat row grown by large text (31 dp, measured by the plan) lowers the balance, so the band ends 12 dp higher.
+        val tallFiat = WidgetViews.frame(WidgetLayout.small, content, 180f, 180f, 22f, fiat = 31f)!!
+        assertEquals(small.band - 12f, tallFiat.band, .01f)
         val medium = WidgetViews.frame(WidgetLayout.medium, content, 372f, 180f)!!
         assertEquals(193f, medium.w, .01f); assertEquals(372f - 193f, medium.x, .01f); assertTrue(medium.fade)
         assertEquals(372f - 18 - 26, WidgetSea.draw(content.wave, medium, 1f).boatX, .01f)
