@@ -34,8 +34,8 @@ import java.util.TimeZone
  */
 object WidgetDataWriter {
     /**
-     * Activity's unified rows (the wave's changes and Home's Arriving rule), the chain tip they're dated against and
-     * Home's Renew (blocks to the soonest due expiry); each null when unreadable or none.
+     * The rows Activity reads, before it merges them (the wave's changes; merged, Home's Arriving rule), the chain tip
+     * they're dated against and Home's Renew (blocks to the soonest due expiry); each null when unreadable or none.
      */
     data class Extras(val rows: List<com.noahwallet.history.HistoryTransaction>? = null, val tip: Long? = null,
         val renewBlocks: Long? = null)
@@ -78,10 +78,10 @@ object WidgetDataWriter {
 
     /** Reads [Extras] inside the caller's counted session call. */
     internal suspend fun extras(handles: WalletSession.Handles, variant: String): Extras {
-        // Activity's own rows, merged as it shows them, so a board's two halves land on one day.
+        // Every movement, so one that only names a transaction (a free renewal) still claims it, as on iOS.
         val rows = optional {
-            HistoryRules.unified(handles.history().filter(HistoryMapping::include).map { HistoryMapping.transaction(it) } +
-                handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) })
+            handles.history().map { HistoryMapping.transaction(it) } +
+                handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
         }
         val tip = optional { handles.m6.tip() }
         val renew = optional {
@@ -100,7 +100,8 @@ object WidgetDataWriter {
         val total = balance.totalSats.toLong()
         val changes = extras?.rows?.let { WidgetWave.changes(it, chainDates) }
         val price = quote?.takeIf { it.currency == display.currency && it.price.isFinite() && it.price > 0 }?.price
-        return WidgetSnapshot(balance = total, arriving = HomeRules.arriving(balance, extras?.rows.orEmpty()).toLong(),
+        // Home counts what's arriving in Activity's merged rows.
+        return WidgetSnapshot(balance = total, arriving = HomeRules.arriving(balance, HistoryRules.unified(extras?.rows.orEmpty())).toLong(),
             daily = changes?.let { WidgetWave.dailyBalances(total, it, now, zone) }, writtenAt = now,
             amountUnit = display.unit.name, hidden = display.hidden,
             fiatCurrency = price?.let { display.currency }, fiatPrice = price,

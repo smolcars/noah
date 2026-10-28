@@ -1,7 +1,6 @@
 package com.noahwallet.widgets
 
 import com.noahwallet.fixtures.SharedFixtures
-import com.noahwallet.history.HistoryRules
 import com.noahwallet.history.HistoryTransaction
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
@@ -118,53 +117,84 @@ class WidgetWaveTest {
 
     private val now = instant("2026-10-27T15:00:00Z")
     private val board = HistoryTransaction("movement-7", "Onchain", 50_000, "2026-10-20T12:00:00.000Z", "incoming", source = "ark",
-        txid = "board-txid", movementKind = "onboard", movementStatus = "successful", effectiveBalanceSat = 50_000)
+        txid = "board-txid", movementKind = "onboard", movementStatus = "successful", effectiveBalanceSat = 50_000,
+        metadataJson = """{"chain_anchor":"board-txid:0"}""")
     private val chain = HistoryTransaction("onchain-wallet-board-txid", "Onchain", 50_500, "1970-01-01T00:00:00.000Z", "outgoing",
         source = "onchain-wallet", txid = "board-txid", balanceChangeSat = -50_500, hasConfirmation = true, confirmationHeight = 900u)
 
-    /** A board's two halves, merged as Activity shows them, move the balance by the fee alone, on the movement's day. */
-    @Test fun aMergedBoardMovesTheBalanceByItsFee() {
+    /** A board's two halves move the balance by the fee alone, on the movement's day. */
+    @Test fun aBoardMovesTheBalanceByItsFee() {
         val deposit = HistoryTransaction("onchain-wallet-deposit", "Onchain", 60_000, "1970-01-01T00:00:00.000Z", "incoming",
             source = "onchain-wallet", txid = "deposit", balanceChangeSat = 60_000, hasConfirmation = true, confirmationHeight = 880u)
         val pending = deposit.copy(id = "onchain-wallet-pending", txid = "pending", hasConfirmation = false, confirmationHeight = null)
         val dates = mapOf("deposit" to instant("2026-10-26T08:00:00Z"))
-        val changes = WidgetWave.changes(HistoryRules.unified(listOf(board, chain, deposit, pending)), dates)
-        assertEquals(setOf(WidgetWave.Change(instant("2026-10-20T12:00:00Z"), -500), WidgetWave.Change(instant("2026-10-26T08:00:00Z"), 60_000)),
-            changes.toSet())
+        val changes = WidgetWave.changes(listOf(board, chain, deposit, pending), dates)
+        assertEquals(setOf(WidgetWave.Change(instant("2026-10-20T12:00:00Z"), 50_000), WidgetWave.Change(instant("2026-10-20T12:00:00Z"), -50_500),
+            WidgetWave.Change(instant("2026-10-26T08:00:00Z"), 60_000)), changes.toSet())
         // An offboard counts its Ark half once settled, and its on-chain half once that's confirmed.
-        val offboard = board.copy(id = "movement-8", txid = "offboard-txid", movementKind = "offboard", effectiveBalanceSat = -30_000)
+        val offboard = board.copy(id = "movement-8", txid = "offboard-txid", movementKind = "offboard", effectiveBalanceSat = -30_000,
+            metadataJson = """{"offboard_txid":"offboard-txid"}""")
         val credit = chain.copy(id = "onchain-wallet-offboard-txid", txid = "offboard-txid", balanceChangeSat = 29_700, hasConfirmation = false,
             confirmationHeight = null)
-        assertEquals(listOf(-30_000L), WidgetWave.changes(HistoryRules.unified(listOf(offboard, credit)), emptyMap()).map { it.sats })
+        assertEquals(-30_000L, WidgetWave.changes(listOf(offboard, credit), emptyMap()).sumOf { it.sats })
         val confirmed = credit.copy(hasConfirmation = true, confirmationHeight = 990u)
-        assertEquals(listOf(-300L), WidgetWave.changes(HistoryRules.unified(listOf(offboard, confirmed)), emptyMap()).map { it.sats })
-        // Pending movements change nothing.
-        assertEquals(emptyList<WidgetWave.Change>(), WidgetWave.changes(listOf(board.copy(movementStatus = "pending")), emptyMap()))
+        assertEquals(-300L, WidgetWave.changes(listOf(offboard, confirmed), emptyMap()).sumOf { it.sats })
+        // A pending board changes nothing, either half.
+        assertEquals(emptyList<WidgetWave.Change>(), WidgetWave.changes(listOf(board.copy(movementStatus = "pending"), chain), emptyMap()))
     }
 
     /**
      * A round offboard names its transaction only as `funding_txid`: an old self-offboard whose debit is outside the
      * window must not read as income because its credit was confirmed inside it.
      */
-    @Test fun aRoundOffboardPairsByFundingTxidAcrossTheWindowEdge() {
+    @Test fun aRoundOffboardOwnsItsFundingTxidAcrossTheWindowEdge() {
         val old = HistoryTransaction("movement-9", "Onchain", 30_000, "2026-09-20T12:00:00.000Z", "outgoing", source = "ark",
             txid = "vtxo-in", movementKind = "offboard", movementStatus = "successful", effectiveBalanceSat = -30_000,
             metadataJson = """{"funding_txid":"round-txid"}""")
         val credit = chain.copy(id = "onchain-wallet-round-txid", txid = "round-txid", balanceChangeSat = 29_700, confirmationHeight = 995u)
-        val rows = HistoryRules.unified(listOf(old, credit))
-        assertEquals("Activity's merge leaves it unpaired", 2, rows.size)
-        // The credit's estimated date falls inside the window; paired, both halves stay on the offboard's day, outside it.
-        val dates = WidgetWave.chainDates(rows, emptyMap(), emptyMap(), 1_000, now).mapValues { it.value.at }
+        // The credit's estimated date falls inside the window; owned, both halves stay on the offboard's day, outside it.
+        val dates = WidgetWave.chainDates(listOf(old, credit), emptyMap(), emptyMap(), 1_000, now).mapValues { it.value.at }
         assertTrue(dates.getValue("round-txid") > instant("2026-10-27T00:00:00Z"))
-        val changes = WidgetWave.changes(rows, dates)
-        assertEquals(listOf(WidgetWave.Change(instant("2026-09-20T12:00:00Z"), -300)), changes)
+        val changes = WidgetWave.changes(listOf(old, credit), dates)
+        assertEquals(-300L, changes.sumOf { it.sats }); assertTrue(changes.all { it.at == instant("2026-09-20T12:00:00Z") })
         assertTrue(WidgetWave.calm(WidgetWave.dailyBalances(100_000, changes, now, TimeZone.getTimeZone("UTC"))))
-        // A recent one moves the wave by its fee, inside the window, whichever half is newer.
+        // A recent one moves the wave by its fee, inside the window.
         val recent = old.copy(date = "2026-10-26T12:00:00.000Z")
-        val wave = WidgetWave.dailyBalances(100_000, WidgetWave.changes(HistoryRules.unified(listOf(recent, credit)), dates), now, TimeZone.getTimeZone("UTC"))
+        val wave = WidgetWave.dailyBalances(100_000, WidgetWave.changes(listOf(recent, credit), dates), now, TimeZone.getTimeZone("UTC"))
         assertEquals(300L, wave.first() - wave.last())
-        // Unpaired, the credit alone would have read as +29,700 of income.
+        // Unowned, the credit alone would have read as +29,700 of income.
         assertEquals(29_700L, WidgetWave.change(WidgetWave.dailyBalances(100_000, WidgetWave.changes(listOf(credit), dates), now, TimeZone.getTimeZone("UTC"))))
+    }
+
+    /**
+     * A fee-paying renewal can share the round's funding transaction with an offboard (Sol review: a pending renewal
+     * took the offboard's credit, −50,300 instead of −300). The offboard owns it, in either order; an explicit
+     * reference beats both.
+     */
+    @Test fun anOffboardOwnsItsCreditOverARenewalSharingTheRound() {
+        val offboard = HistoryTransaction("movement-10", "Onchain", 50_000, "2026-10-25T12:00:00.000Z", "outgoing", source = "ark",
+            txid = "vtxo-a", movementKind = "offboard", movementStatus = "successful", effectiveBalanceSat = -50_000,
+            metadataJson = """{"funding_txid":"round-txid"}""")
+        val renewal = HistoryTransaction("movement-11", "Arkoor", 120, "2026-10-26T12:00:00.000Z", "outgoing", source = "ark",
+            txid = "vtxo-b", movementKind = "refresh", movementStatus = "pending", effectiveBalanceSat = -120,
+            metadataJson = """{"funding_txid":"round-txid"}""")
+        val credit = chain.copy(id = "onchain-wallet-round-txid", txid = "round-txid", balanceChangeSat = 49_700, confirmationHeight = 990u)
+        val statuses = listOf("pending", "successful")
+        for ((renewalStatus, offboardStatus) in statuses.flatMap { renewal -> statuses.map { renewal to it } }) {
+            val rows = listOf(offboard.copy(movementStatus = offboardStatus), renewal.copy(movementStatus = renewalStatus))
+            for (order in listOf(rows, rows.reversed())) {
+                val changes = WidgetWave.changes(order + credit, emptyMap())
+                val expected = (if (offboardStatus == "successful") -50_000L + 49_700 else 0L) + (if (renewalStatus == "successful") -120L else 0L)
+                assertEquals("offboard $offboardStatus, renewal $renewalStatus, ${order.first().movementKind} first", expected, changes.sumOf { it.sats })
+                // The credit lands on the offboard's day, never the renewal's.
+                if (offboardStatus == "successful") assertTrue(changes.filter { it.sats == 49_700L }.all { it.at == instant("2026-10-25T12:00:00Z") })
+                assertEquals("offboard owns it", "movement-10", WidgetWave.owners(order)["round-txid"]?.id)
+            }
+        }
+        // A movement naming the transaction outright beats a round's funding transaction.
+        val named = renewal.copy(id = "movement-12", movementKind = "send-onchain", metadataJson = """{"offboard_txid":"round-txid"}""")
+        assertEquals("movement-12", WidgetWave.owners(listOf(offboard, named))["round-txid"]?.id)
+        assertEquals("movement-12", WidgetWave.owners(listOf(named, offboard))["round-txid"]?.id)
     }
 
     /** A confirmation's date is estimated once and kept: a tip that stands still never makes it drift towards today. */

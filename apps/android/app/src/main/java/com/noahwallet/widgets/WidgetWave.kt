@@ -87,42 +87,52 @@ object WidgetWave {
     }
 
     /**
-     * Settled balance changes in Activity's unified rows ([com.noahwallet.history.HistoryRules.unified]), each movement
-     * first [paired] with the wallet transaction it names. A bark movement counts once successful, dated by its creation
-     * (the date Activity shows): its Ark delta, plus its on-chain half once that's confirmed, so a board moves the
-     * balance by its fee alone. Any other on-chain transaction counts once confirmed, dated by [chainDates] (txid →
-     * epoch ms, see [ChainDate]). Pending, failed and canceled movements, and unconfirmed transactions, are not changes.
+     * Settled balance changes in the rows Activity reads (bark's movements and the wallet's transactions, before
+     * Activity merges them), the same as the iOS widget. A movement counts once successful, dated by its creation (the
+     * date Activity shows). A confirmed transaction a movement names counts on that movement's day once the movement
+     * isn't pending, so a board moves the balance by its fee alone; any other confirmed transaction counts at its
+     * [chainDates] date (txid → epoch ms, see [ChainDate]), or not at all without one.
      */
-    fun changes(rows: List<HistoryTransaction>, chainDates: Map<String, Long>): List<Change> = paired(rows).mapNotNull { row ->
-        if (row.source == "onchain-wallet") {
-            if (row.hasConfirmation != true) return@mapNotNull null
-            val at = row.txid?.let(chainDates::get) ?: return@mapNotNull null
-            Change(at, row.balanceChangeSat ?: return@mapNotNull null)
-        } else {
-            if (row.movementStatus != "successful") return@mapNotNull null
-            val at = row.timestamp?.time ?: return@mapNotNull null
-            Change(at, (row.effectiveBalanceSat ?: 0L) + (row.balanceChangeSat?.takeIf { row.hasConfirmation == true } ?: 0L))
-        }
-    }.filter { it.sats != 0L }
+    fun changes(rows: List<HistoryTransaction>, chainDates: Map<String, Long>): List<Change> {
+        val movements = rows.filter { it.source != "onchain-wallet" }
+        val owners = owners(movements)
+        val changes = movements.mapNotNull { row ->
+            val sats = row.effectiveBalanceSat?.takeIf { it != 0L && row.movementStatus == "successful" } ?: return@mapNotNull null
+            row.timestamp?.let { Change(it.time, sats) }
+        }.toMutableList()
+        for (row in rows) chainChange(row, owners, chainDates)?.let { changes += it }
+        return changes
+    }
+
+    /** A confirmed wallet transaction's change: on its owner's day once the owner isn't pending, else at its chain date. */
+    private fun chainChange(row: HistoryTransaction, owners: Map<String, HistoryTransaction>, chainDates: Map<String, Long>): Change? {
+        if (row.source != "onchain-wallet" || row.hasConfirmation != true) return null
+        val sats = row.balanceChangeSat?.takeIf { it != 0L } ?: return null
+        val owner = row.txid?.let(owners::get)
+        if (owner != null) return if (owner.movementStatus != "pending") owner.timestamp?.let { Change(it.time, sats) } else null
+        return row.txid?.let(chainDates::get)?.let { Change(it, sats) }
+    }
 
     /**
-     * Activity merges a board or offboard with its transaction by the txid it shows; a round offboard names its
-     * transaction only as `funding_txid`. Any movement left unmerged takes the wallet transaction its offboard txid,
-     * chain anchor or funding txid names, so both halves of one transfer stay one change on the movement's day.
+     * Which movement owns each transaction it names: a board's anchor or an offboard's transaction outright first;
+     * among movements sharing a round's funding transaction, one that moved money on chain before a renewal; the first
+     * listed on a tie.
      */
-    internal fun paired(rows: List<HistoryTransaction>): List<HistoryTransaction> {
-        val chain = rows.filter { it.source == "onchain-wallet" && !it.txid.isNullOrEmpty() }.associateBy { it.txid!! }
-        val taken = mutableSetOf<String>()
-        val movements = rows.filter { it.source != "onchain-wallet" }.map { row ->
-            if (row.balanceChangeSat != null) return@map row
-            val metadata = row.metadataJson?.let(com.noahwallet.history.HistoryMetadata::parse) ?: return@map row
-            val txid = listOfNotNull(metadata.offboardTxid, metadata.chainAnchor?.substringBefore(':'), metadata.fundingTxid)
-                .firstOrNull { it in chain && it !in taken } ?: return@map row
-            taken += txid
-            val tx = chain.getValue(txid)
-            row.copy(balanceChangeSat = tx.balanceChangeSat, hasConfirmation = tx.hasConfirmation, confirmationHeight = tx.confirmationHeight)
+    internal fun owners(movements: List<HistoryTransaction>): Map<String, HistoryTransaction> {
+        val named = mutableMapOf<String, Pair<HistoryTransaction, Int>>()
+        for (movement in movements) claim(named, movement)
+        return named.mapValues { it.value.first }
+    }
+
+    /** Records the transactions [movement] names in [named], unless a movement listed earlier ranks as high. */
+    private fun claim(named: MutableMap<String, Pair<HistoryTransaction, Int>>, movement: HistoryTransaction) {
+        val metadata = movement.metadataJson?.let(com.noahwallet.history.HistoryMetadata::parse) ?: return
+        val onchain = movement.movementKind in setOf("onboard", "offboard", "send-onchain")
+        for ((txid, rank) in listOf(metadata.offboardTxid to 2, metadata.chainAnchor?.replace(Regex(":\\d+$"), "") to 2,
+            metadata.fundingTxid to if (onchain) 1 else 0)) {
+            if (txid.isNullOrEmpty()) continue
+            if (named[txid]?.let { it.second < rank } != false) named[txid] = movement to rank
         }
-        return movements + rows.filter { it.source == "onchain-wallet" && it.txid !in taken }
     }
 
     /**
